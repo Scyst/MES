@@ -1,10 +1,12 @@
 let modalTriggerElement = null;
+const PD_API_URL = '../../api/pdTable/pdTableManage.php';
+const WIP_API_URL = '../../api/wipManage/wipManage.php';
 
 /**
- * 
- * @param {string} modalId - 
+ * Helper function to open a Bootstrap modal.
+ * @param {string} modalId - The ID of the modal to show.
  */
-function showBootstrapModal(modalId) {
+function showBootstrapModal(modalId) { 
     const modalElement = document.getElementById(modalId);
     if (modalElement) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -13,8 +15,8 @@ function showBootstrapModal(modalId) {
 }
 
 /**
- * 
- * @param {HTMLElement} triggerEl 
+ * Opens the main data entry modal and sets current date/time.
+ * @param {HTMLElement} triggerEl - The button element that triggered the modal.
  */
 function openAddPartModal(triggerEl) {
     modalTriggerElement = triggerEl;
@@ -35,9 +37,9 @@ function openAddPartModal(triggerEl) {
 }
 
 /**
- * 
- * @param {object} rowData 
- * @param {HTMLElement} triggerEl 
+ * Opens the edit modal and populates it with data.
+ * @param {object} rowData - The data object for the row to be edited.
+ * @param {HTMLElement} triggerEl - The button element that triggered the modal.
  */
 function openEditModal(rowData, triggerEl) {
     modalTriggerElement = triggerEl; 
@@ -54,13 +56,12 @@ function openEditModal(rowData, triggerEl) {
             }
         }
     }
-
     showBootstrapModal('editPartModal');
 }
 
 /**
- * 
- * @param {HTMLElement} triggerEl
+ * Opens the summary modal and renders the summary table.
+ * @param {HTMLElement} triggerEl - The button element that triggered the modal.
  */
 function openSummaryModal(triggerEl) {
     modalTriggerElement = triggerEl; 
@@ -102,20 +103,15 @@ function openSummaryModal(triggerEl) {
     const tbody = table.createTBody();
     summaryData.forEach(row => {
         const tr = tbody.insertRow();
-        const createCell = (text, className = '') => {
-            const td = tr.insertCell();
-            td.textContent = text;
-            if (className) td.className = className;
-        };
-        createCell(row.model);
-        createCell(row.part_no);
-        createCell(row.lot_no || '');
-        createCell(row.FG || 0, 'text-center');
-        createCell(row.NG || 0, 'text-center');
-        createCell(row.HOLD || 0, 'text-center');
-        createCell(row.REWORK || 0, 'text-center');
-        createCell(row.SCRAP || 0, 'text-center');
-        createCell(row.ETC || 0, 'text-center');
+        tr.insertCell().textContent = row.model;
+        tr.insertCell().textContent = row.part_no;
+        tr.insertCell().textContent = row.lot_no || '';
+        tr.insertCell().textContent = row.FG || 0;
+        tr.insertCell().textContent = row.NG || 0;
+        tr.insertCell().textContent = row.HOLD || 0;
+        tr.insertCell().textContent = row.REWORK || 0;
+        tr.insertCell().textContent = row.SCRAP || 0;
+        tr.insertCell().textContent = row.ETC || 0;
     });
 
     tableContainer.appendChild(table);
@@ -124,14 +120,22 @@ function openSummaryModal(triggerEl) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const handleFormSubmit = async (form, action, modalId, onSuccess) => {
+    /**
+     * Generic function to handle form submissions via Fetch API.
+     * @param {HTMLFormElement} form - The form element.
+     * @param {string} apiUrl - The API endpoint URL.
+     * @param {string} action - The action parameter for the API.
+     * @param {string} modalId - The ID of the modal containing the form.
+     * @param {Function} onSuccess - Callback function to run on success.
+     */
+    const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(form).entries());
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
             try {
-                const response = await fetch(`${API_URL}?action=${action}`, {
+                const response = await fetch(`${apiUrl}?action=${action}`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -148,31 +152,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (modalInstance) {
                         modalElement.addEventListener('hidden.bs.modal', () => {
                             onSuccess(); 
-                            if (modalTriggerElement) {
-                                modalTriggerElement.focus(); 
-                            }
+                            if (modalTriggerElement) modalTriggerElement.focus(); 
                         }, { once: true });
                         modalInstance.hide();
                     }
                 }
             } catch (error) {
-                showToast(`An error occurred while ${action.replace('_', ' ')} data.`, '#dc3545');
+                showToast(`An error occurred while processing your request.`, '#dc3545');
             }
         });
     };
 
-    const addForm = document.getElementById('addPartForm');
-    if (addForm) {
-        handleFormSubmit(addForm, 'add_part', 'addPartModal', () => {
-            addForm.reset();
-            fetchPartsData(1); 
+    const addPartForm = document.getElementById('addPartForm');
+    if (addPartForm) {
+        handleFormSubmit(addPartForm, PD_API_URL, 'add_part', 'addPartModal', () => {
+            addPartForm.reset();
+           if (typeof fetchPartsData === 'function') fetchPartsData(1); 
         });
     }
 
-    const editForm = document.getElementById('editPartForm');
-    if (editForm) {
-        handleFormSubmit(editForm, 'update_part', 'editPartModal', () => {
-            fetchPartsData(currentPage); 
+    const editPartForm = document.getElementById('editPartForm');
+    if (editPartForm) {
+        handleFormSubmit(editPartForm, PD_API_URL, 'update_part', 'editPartModal', () => {
+            if (typeof fetchPartsData === 'function') fetchPartsData(window.currentPage || 1); 
+        });
+    }
+
+    const wipEntryForm = document.getElementById('wipEntryForm');
+    if (wipEntryForm) {
+        handleFormSubmit(wipEntryForm, WIP_API_URL, 'log_wip_entry', 'addPartModal', () => {
+            wipEntryForm.reset();
+            if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
+                if (typeof fetchWipReport === 'function') fetchWipReport();
+            }
         });
     }
 });

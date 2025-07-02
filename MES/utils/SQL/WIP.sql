@@ -12,7 +12,12 @@ BEGIN
         [remark] [nvarchar](255) NULL,
         CONSTRAINT [PK_WIP_ENTRIES] PRIMARY KEY CLUSTERED ([entry_id] ASC)
     );
+    -- ตั้งค่าให้ใส่วันที่และเวลาปัจจุบันให้อัตโนมัติ
     ALTER TABLE [dbo].[WIP_ENTRIES] ADD CONSTRAINT [DF_WIP_entry_time] DEFAULT (getdate()) FOR [entry_time];
     PRINT 'Table WIP_ENTRIES created successfully.';
+END
+ELSE
+BEGIN
+    PRINT 'Table WIP_ENTRIES already exists. Skipping creation.';
 END
 GO
