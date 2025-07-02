@@ -1,5 +1,7 @@
-﻿let oeeLineChart;
+﻿//-- ตัวแปรสำหรับเก็บ Instance ของ Line Chart --
+let oeeLineChart;
 
+//-- ฟังก์ชันสำหรับซ่อนข้อความ Error และทำให้กราฟแสดงผลปกติ --
 function hideErrors() {
     const el = document.getElementById("oeeLineError");
     if (el) el.style.display = "none";
@@ -7,6 +9,7 @@ function hideErrors() {
     if (canvas) canvas.style.opacity = "1";
 }
 
+//-- ฟังก์ชันสำหรับแสดงข้อความ Error บนพื้นที่ของกราฟ --
 function showError(chartId, messageId) {
     const canvas = document.getElementById(chartId);
     const errorMsg = document.getElementById(messageId);
@@ -14,10 +17,17 @@ function showError(chartId, messageId) {
     if (errorMsg) errorMsg.style.display = "block";
 }
 
+/**
+ * ฟังก์ชันสำหรับ Render Line Chart
+ * @param {string[]} labels - Array ของ Label แกน X (วันที่)
+ * @param {object[]} datasets - Array ของ Datasets สำหรับกราฟ (OEE, A, P, Q)
+ */
 function renderCombinedLineChart(labels, datasets) {
     const ctx = document.getElementById("oeeLineChart").getContext("2d");
+    //-- ทำลาย Instance ของ Chart เดิมก่อนที่จะสร้างใหม่ --
     if (oeeLineChart) oeeLineChart.destroy();
 
+    //-- สร้าง Line Chart ใหม่ด้วยข้อมูลและ Options ที่กำหนด --
     oeeLineChart = new Chart(ctx, {
         type: "line",
         data: {
@@ -36,7 +46,7 @@ function renderCombinedLineChart(labels, datasets) {
                 },
                 legend: {
                     display: true,
-                    labels: { color: "#ccc" }
+                    labels: { color: "#ccc" } //-- สีของ Label ใน Legend --
                 },
                 tooltip: {
                     backgroundColor: "#333",
@@ -44,6 +54,7 @@ function renderCombinedLineChart(labels, datasets) {
                     bodyColor: "#fff"
                 }
             },
+            //-- ตั้งค่าแกน X และ Y --
             scales: {
                 x: {
                     ticks: { color: "#ccc", font: { size: 10 } },
@@ -51,7 +62,7 @@ function renderCombinedLineChart(labels, datasets) {
                 },
                 y: {
                     beginAtZero: true,
-                    max: 100,
+                    max: 100, //-- แกน Y สูงสุดที่ 100% --
                     ticks: { color: "#ccc", font: { size: 10 } },
                     grid: { color: "#444" }
                 }
@@ -63,10 +74,14 @@ function renderCombinedLineChart(labels, datasets) {
     });
 }
 
+/**
+ * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Line Chart
+ */
 async function fetchAndRenderLineCharts() {
     try {
         hideErrors();
 
+        //-- สร้าง Parameters จากค่า Filter ปัจจุบัน --
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
@@ -74,10 +89,12 @@ async function fetchAndRenderLineCharts() {
             model: document.getElementById("modelFilter")?.value || ''
         });
 
+        //-- เรียก API เพื่อดึงข้อมูลสำหรับ Line Chart --
         const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_oee_linechart.php?${params.toString()}`);
         const data = await response.json();
         if (!data.success) throw new Error("Data error");
 
+        //-- แปลงข้อมูลจาก API ให้อยู่ในรูปแบบที่ Chart.js ต้องการ --
         const labels = data.records.map(r => r.date);
         const datasets = [
             {
@@ -122,9 +139,11 @@ async function fetchAndRenderLineCharts() {
             }
         ];
 
+        //-- เรียกฟังก์ชันเพื่อวาดกราฟ --
         renderCombinedLineChart(labels, datasets);
     } catch (err) {
+        //-- หากเกิดข้อผิดพลาด ให้แสดงข้อความ Error --
         console.error("Line chart fetch failed:", err);
         showError("oeeLineChart", "oeeLineError");
     }
-} 
+}

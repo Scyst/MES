@@ -1,4 +1,7 @@
-<?php session_start(); ?>
+<?php 
+//-- เริ่ม Session สำหรับการใช้งานตัวแปร Session ทั้งหมดในหน้านี้ --
+session_start(); 
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,6 +21,7 @@
 <body class="bg-dark text-white">
     <?php include('../components/nav_dropdown.php'); ?>
 
+    >
     <header class="dashboard-header-sticky">
         <div class="d-flex justify-content-between align-items-center mb-1">
             <h2 class="mb-0">OEE DASHBOARD</h2>
@@ -95,7 +99,8 @@
             </div>
         </section>
         
-    </div> <div id="toast"></div>
+    </div> 
+    <div id="toast"></div>
 
     <script src="../components/datetime.js"></script>
     <script src="../components/toast.js"></script>

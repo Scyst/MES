@@ -1,3 +1,4 @@
+//-- Object สำหรับเก็บ Instance ของ Chart ทั้งหมด --
 const charts = {
     oee: null,
     quality: null,
@@ -5,11 +6,7 @@ const charts = {
     availability: null
 };
 
-/**
- * Converts minutes into a formatted "Xh Ym" string.
- * @param {number} totalMinutes - The total minutes to format.
- * @returns {string} The formatted time string.
- */
+//-- ฟังก์ชันสำหรับแปลงนาทีเป็นรูปแบบ "Xh Ym" --
 function formatMinutes(totalMinutes) {
     if (isNaN(totalMinutes) || totalMinutes < 0) {
         return '0h 0m';
@@ -19,6 +16,7 @@ function formatMinutes(totalMinutes) {
     return `${h}h ${m}m`;
 }
 
+//-- ฟังก์ชันสำหรับซ่อนข้อความ Error ทั้งหมด --
 function hideErrors() {
     ['oee', 'quality', 'performance', 'availability'].forEach(type => {
         const errorEl = document.getElementById(`${type}Error`);
@@ -28,6 +26,7 @@ function hideErrors() {
     });
 }
 
+//-- ฟังก์ชันสำหรับแสดงข้อความ Error สำหรับ Chart ที่กำหนด --
 function showError(type) {
     const errorEl = document.getElementById(`${type}Error`);
     const chartEl = document.getElementById(`${type}PieChart`);
@@ -35,6 +34,7 @@ function showError(type) {
     if (chartEl) chartEl.style.opacity = '0.2';
 }
 
+//-- ฟังก์ชันสำหรับอัปเดตข้อมูลใน Info Box --
 function updateInfoBox(elementId, lines) {
     const infoBox = document.getElementById(elementId);
     if (!infoBox) return;
@@ -42,13 +42,22 @@ function updateInfoBox(elementId, lines) {
     infoBox.innerHTML = `<small>${content}</small>`;
 }
 
+/**
+ * ฟังก์ชันสำหรับ Render Doughnut Chart
+ * @param {string} chartName - Key สำหรับเก็บ Instance ใน Object `charts`
+ * @param {CanvasRenderingContext2D} ctx - Context ของ Canvas ที่จะวาดกราฟ
+ * @param {string} label - Label ของข้อมูลหลัก
+ * @param {number} rawValue - ค่าเปอร์เซ็นต์ (0-100)
+ * @param {string} mainColor - สีหลักของกราฟ
+ */
 function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
     if (!ctx) return;
+    //-- ทำลาย Instance ของ Chart เดิมก่อนสร้างใหม่ --
     if (charts[chartName]) {
         charts[chartName].destroy();
     }
 
-    const value = Math.max(0, Math.min(rawValue, 100));
+    const value = Math.max(0, Math.min(rawValue, 100)); //-- จำกัดค่าให้อยู่ระหว่าง 0-100 --
     const loss = 100 - value;
 
     charts[chartName] = new Chart(ctx, {
@@ -58,16 +67,14 @@ function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
             datasets: [{
                 data: [value, loss],
                 backgroundColor: [mainColor, '#424242'],
-                cutout: '80%',
+                cutout: '80%', //-- ทำให้เป็น Doughnut Chart --
                 borderWidth: 0.5,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            layout: {
-                padding: 5
-            },
+            layout: { padding: 5 },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -78,6 +85,7 @@ function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
                 title: { display: false },
             }
         },
+        //-- Custom Plugin สำหรับวาดข้อความตรงกลาง Doughnut Chart --
         plugins: [{
             id: 'centerText',
             beforeDraw(chart) {
@@ -97,34 +105,40 @@ function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
     });
 }
 
+/**
+ * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Pie Chart และ Info Box ทั้งหมด
+ */
 async function fetchAndRenderCharts() {
     try {
         hideErrors();
 
+        //-- สร้าง Parameters และอัปเดต URL --
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
             line: document.getElementById("lineFilter")?.value || '',
             model: document.getElementById("modelFilter")?.value || ''
         });
-
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         window.history.replaceState({}, '', newUrl);
 
+        //-- เรียก API เพื่อดึงข้อมูลสำหรับ Pie Chart --
         const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_oee_piechart.php?${params.toString()}`);
         if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-
         const data = await response.json();
         if (!data.success) throw new Error(data.message || "API returned an error.");
 
+        //-- Render Pie Chart ทั้ง 4 ตัว --
         renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"), 'OEE', data.oee || 0, '#00BF63');
         renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 'Quality', data.quality || 0, '#ab47bc');
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 'Performance', data.performance || 0, '#ffa726');
         renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"), 'Availability', data.availability || 0, '#42a5f5');
 
+        //-- ประมวลผลและอัปเดตข้อมูลใน Info Box --
         const { oee, quality, performance, availability } = data;
         let oeeInfoLines = [];
 
+        //-- คำนวณสัดส่วนของ Loss แต่ละตัวประกอบ (A, P, Q) --
         if ((oee || 0) > 0 && oee < 100) {
             const totalLoss = 100 - oee;
             const qualityLossRatio = Math.max(0, 1 - (quality / 100));
@@ -152,6 +166,7 @@ async function fetchAndRenderCharts() {
         }
         updateInfoBox("oeeInfo", oeeInfoLines);
         
+        //-- สร้างข้อมูลสำหรับ Quality Info Box (แสดงเฉพาะที่มีค่ามากกว่า 0) --
         const qualityLines = [`FG : <b>${(parseFloat(data.fg) || 0).toLocaleString()}</b> pcs`];
         if (data.ng > 0) qualityLines.push(`NG : <b>${(parseFloat(data.ng) || 0).toLocaleString()}</b> pcs`);
         if (data.rework > 0) qualityLines.push(`Rework : <b>${(parseFloat(data.rework) || 0).toLocaleString()}</b> pcs`);
@@ -160,6 +175,7 @@ async function fetchAndRenderCharts() {
         if (data.etc > 0) qualityLines.push(`Etc : <b>${(parseFloat(data.etc) || 0).toLocaleString()}</b> pcs`);
         updateInfoBox("qualityInfo", qualityLines);
 
+        //-- อัปเดต Performance และ Availability Info Box --
         updateInfoBox("performanceInfo", [
             `Actual : <b>${(parseFloat(data.actual_output) || 0).toLocaleString()}</b> pcs`,
             `Theo.T : <b>${formatMinutes(data.debug_info?.total_theoretical_minutes || 0)}</b>`,
@@ -173,6 +189,7 @@ async function fetchAndRenderCharts() {
         ]);
 
     } catch (err) {
+        //-- หากเกิดข้อผิดพลาด ให้แสดงข้อความ Error --
         console.error("Pie chart update failed:", err);
         ['oee', 'quality', 'performance', 'availability'].forEach(showError);
     }
