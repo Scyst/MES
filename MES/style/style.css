@@ -1,0 +1,240 @@
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: #1a1a1a;
+}
+
+ul {
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background-color: #212529;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.dashboard-container {
+    height: calc(100vh - 150px);
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+}
+
+.dashboard-section {
+    scroll-snap-align: start;
+    padding: 1rem 2rem 0rem 2rem;
+}
+
+.chart-card {
+    background-color: #2c3034;
+    border-radius: 0.75rem;
+    padding: 1.5rem 1rem 1.5rem 1.5rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.chart-card h4 {
+    margin-bottom: 0rem; 
+}
+
+.chart-card .chart-wrapper {
+    position: relative;
+    flex-grow: 1;
+}
+
+.chart-card .chart-info {
+    font-size: 0.9rem; 
+    color: #ffffff;
+}
+
+.pie-chart-card {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 250px;
+}
+
+.pie-chart-card .pie-chart-details {
+    flex-grow: 1;
+    max-width: 160px;
+}
+
+.pie-chart-card .chart-wrapper {
+    flex-shrink: 0;
+    width: 160px;
+    max-width: 200px;
+    height: 100%;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pie-chart-card .chart-info {
+    font-size: 1.2rem;
+    font-weight: 300;
+    margin-top: 0.75rem;
+    line-height: 2rem;
+}
+
+.line-chart-card .chart-wrapper {
+    height: 400px;
+}
+
+.bar-chart-card .chart-wrapper {
+    height: 300px;
+}
+
+.dropdown-menu-wrapper {
+  position: fixed;
+  top: 5px;
+  right: 0px;
+  z-index: 9999;
+}
+
+.dropdown-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius:8px;
+  background-color: #2c2c2c;
+  border: 1px solid #444;
+}
+
+.dropdown-toggle-btn:hover {
+  background-color: #444;
+}
+
+.dropdown-toggle-btn img {
+  width: 32px;
+  height: 32px;
+  transition: transform 0.2s;
+}
+
+.dropdown-toggle-btn:hover img {
+  transform: none;
+  background-color: #444;
+}
+
+.custom-dropdown {
+  min-width: auto;
+  background-color: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 250px;
+}
+
+.dropdown-username {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: normal;
+  color: #ccc;
+  font-size: 14px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 4px;
+}
+
+.dropdown-username img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+}
+
+.dropdown-item-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ddd;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item-icon:hover {
+  background-color: #444;
+}
+
+.dropdown-item-icon img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+}
+
+.custom-dropdown .dropdown-item-icon span {
+  font-size: 14px;
+}
+
+.custom-dropdown li {
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+}
+
+.dropdown-divider {
+    border-top: 1px solid #616161;
+}
+
+.filter-controls-wrapper {
+    display: flex;
+    gap: 0.5rem;      
+    align-items: center;
+}
+
+.filter-controls-wrapper .form-control,
+.filter-controls-wrapper .form-select {
+    flex-grow: 1;
+}
+
+.btn-group-equal > .btn {
+    flex-basis: 0;
+}
+
+#toast {
+    position: fixed; 
+    top: 20px; 
+    right: 20px;
+    background-color: #333; 
+    color: white; 
+    padding: 15px;
+    border-radius: 8px; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    opacity: 0; 
+    transition: all 0.4s ease; 
+    z-index: 9999;
+    transform: translateY(20px);
+}
+
+.sticky-bar {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0; 
+  z-index: 1020; 
+  background-color: #212529;
+  padding-top: 1rem;
+  padding-bottom: 0rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.sticky-bottom {
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+  z-index: 1020;
+  background-color: #212529;
+  padding-top: 0.75rem;
+  padding-bottom: 0.5rem;
+  box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.2);
+}

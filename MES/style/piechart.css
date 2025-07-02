@@ -1,0 +1,60 @@
+.oee-piechart {
+    display: flex;
+    gap: 5px;
+    padding-top: 5px;
+    height: 20%;
+    min-width: fit-content;
+}
+
+.pie-chart {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: space-between;
+    gap: 5px;
+    height: 100%;
+    width: 100%;
+    min-width: 1250px;
+}
+
+.pie-chart fieldset {
+    background-color: #0D0D0D;
+    width: calc(25% - 5px);
+    height: 100%;
+    border: 1px solid #545454;
+    border-radius: 10px;
+    position: relative;
+    display: inline-block;
+    text-align: right;
+    vertical-align: top;
+}
+
+.piechart-wrapper {
+    height: 100%;
+    aspect-ratio: 1/1;
+    position: absolute;
+    right: 0px;
+    padding: 10px;
+    align-content: center;
+}
+
+.error-message {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: red;
+    font-size: 32px;
+    font-weight: bold;
+    display: none; /* hidden by default */
+    z-index: 10;
+}
+
+.chart-info {
+    text-align: justify;
+    margin-top: 40px;
+    position: absolute;
+    margin-left: 20px;
+    font-size: 1.2rem;
+    font-weight: 300;
+}
