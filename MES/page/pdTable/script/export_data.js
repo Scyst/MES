@@ -1,12 +1,18 @@
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูลที่แสดงในตารางเป็นไฟล์ PDF
+ */
 async function exportToPDF() {
+    //-- โหลด Library jsPDF และเตรียม Document --
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
+    //-- ตรวจสอบว่า Plugin 'autoTable' ถูกโหลดแล้วหรือยัง --
     if (!doc.autoTable) {
         showToast("jsPDF AutoTable plugin not loaded.", '#dc3545');
         return;
     }
 
+    //-- รวบรวมค่า Filter ปัจจุบันเพื่อดึงข้อมูลทั้งหมด --
     const params = new URLSearchParams({
         action: 'get_parts',
         startDate: document.getElementById("filterStartDate").value,
@@ -17,10 +23,10 @@ async function exportToPDF() {
         lot_no: document.getElementById("filterLotNo")?.value.trim() || '',
         count_type: document.getElementById("filterCountType")?.value.trim() || '',
         page: 1,
-        limit: 100000
+        limit: 100000 //-- ดึงข้อมูลทั้งหมดโดยไม่แบ่งหน้า --
     });
-
-    // --- การเปลี่ยนแปลง ---
+    
+    //-- เรียก API เพื่อดึงข้อมูล --
     const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php?${params.toString()}`);
     const result = await response.json();
 
@@ -29,6 +35,7 @@ async function exportToPDF() {
         return;
     }
 
+    //-- เตรียมข้อมูล Header และ Body สำหรับตารางใน PDF --
     const headers = [["Date", "Time", "Line", "Model", "Part No.", "Lot No.", "Quantity", "Type"]];
     const rows = result.data.map(row => [
         row.log_date,
@@ -41,9 +48,9 @@ async function exportToPDF() {
         row.count_type,
     ]);
 
+    //-- สร้างเอกสาร PDF --
     doc.setFontSize(16);
     doc.text("Filtered Production History", 14, 16);
-
     doc.autoTable({
         head: headers,
         body: rows,
@@ -53,10 +60,15 @@ async function exportToPDF() {
         theme: 'striped',
     });
 
+    //-- สั่งดาวน์โหลดไฟล์ PDF --
     doc.save("Production_History.pdf");
 }
 
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูลทั้งหมด (Raw Data, Summary, Grand Total) เป็นไฟล์ Excel แบบหลาย Sheet
+ */
 async function exportToExcel() {
+    //-- รวบรวมค่า Filter ปัจบุนเพื่อดึงข้อมูลทั้งหมด --
     const params = new URLSearchParams({
         action: 'get_parts',
         startDate: document.getElementById("filterStartDate").value,
@@ -73,6 +85,7 @@ async function exportToExcel() {
     showToast('Exporting data... Please wait.', '#0dcaf0');
 
     try {
+        //-- เรียก API ซึ่งจะคืนค่าทั้ง Raw Data, Summary, และ Grand Total --
         const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php?${params.toString()}`);
         const result = await response.json();
 
@@ -81,6 +94,7 @@ async function exportToExcel() {
             return;
         }
 
+        //-- 1. เตรียมข้อมูลสำหรับ Sheet "Raw Data" --
         const dataToExport = result.data.map(row => ({
             ID: row.id,
             Date: row.log_date,
@@ -94,6 +108,7 @@ async function exportToExcel() {
             Note: row.note
         }));
 
+        //-- 2. เตรียมข้อมูลสำหรับ Sheet "Summary by Lot" --
         const summaryData = result.summary.map(row => ({
             Model: row.model,
             'Part No': row.part_no,
@@ -106,6 +121,7 @@ async function exportToExcel() {
             ETC: row.ETC || 0
         }));
 
+        //-- 3. เตรียมข้อมูลสำหรับ Sheet "Grand Total" --
         const grandTotal = [{
             " ": "Grand Total",
             FG: result.grand_total.FG || 0,
@@ -116,15 +132,18 @@ async function exportToExcel() {
             ETC: result.grand_total.ETC || 0
         }];
 
+        //-- สร้าง Worksheet จากข้อมูลแต่ละชุด --
         const ws1 = XLSX.utils.json_to_sheet(dataToExport);
         const ws2 = XLSX.utils.json_to_sheet(summaryData);
         const ws3 = XLSX.utils.json_to_sheet(grandTotal);
 
+        //-- สร้าง Workbook และเพิ่ม Worksheet ทั้งหมดเข้าไป --
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws1, "Raw Data");
         XLSX.utils.book_append_sheet(wb, ws2, "Summary by Lot");
         XLSX.utils.book_append_sheet(wb, ws3, "Grand Total");
         
+        //-- สั่งดาวน์โหลดไฟล์ Excel --
         const fileName = `Production_History_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, fileName);
 
@@ -134,7 +153,11 @@ async function exportToExcel() {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูล "Summary" ที่แสดงบนหน้าเว็บปัจจุบันเป็นไฟล์ Excel
+ */
 function exportSummaryToExcel() {
+    //-- ดึงข้อมูลที่ Cache ไว้จาก Global Variable --
     const summaryData = window.cachedSummary || [];
     const grandTotalData = window.cachedGrand || {};
 
@@ -142,24 +165,25 @@ function exportSummaryToExcel() {
         showToast("No summary data to export.", '#ffc107');
         return;
     }
-
-    const headers = ["Model", "Part No", "Lot No", "FG", "NG", "HOLD", "REWORK", "SCRAP", "ETC"];
     
+    //-- เตรียมข้อมูลในรูปแบบ Array of Arrays สำหรับ Library SheetJS --
+    const headers = ["Model", "Part No", "Lot No", "FG", "NG", "HOLD", "REWORK", "SCRAP", "ETC"];
     const dataRows = summaryData.map(row => [
         row.model, row.part_no, row.lot_no || '',
         row.FG || 0, row.NG || 0, row.HOLD || 0,
         row.REWORK || 0, row.SCRAP || 0, row.ETC || 0
     ]);
-
     const totalRow = [
         "Grand Total", "", "",
         grandTotalData.FG || 0, grandTotalData.NG || 0, grandTotalData.HOLD || 0,
         grandTotalData.REWORK || 0, grandTotalData.SCRAP || 0, grandTotalData.ETC || 0
     ];
 
+    //-- สร้าง Worksheet และ Workbook --
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows, totalRow]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Production Summary");
 
+    //-- สั่งดาวน์โหลดไฟล์ Excel --
     XLSX.writeFile(workbook, `Production_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

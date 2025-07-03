@@ -1,7 +1,10 @@
-// --- Constants ---
+// --- ค่าคงที่และฟังก์ชันกลาง ---
 const STOP_CAUSE_API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
-// --- Helper Functions ---
+/**
+ * ฟังก์ชันสำหรับรวบรวมค่า Filter ทั้งหมดและสร้าง URLSearchParams
+ * @returns {URLSearchParams} Object ที่มี Parameters ทั้งหมดสำหรับส่งไปกับ Request
+ */
 function getStopCauseFilterParams() {
     return new URLSearchParams({
         action: 'get_stop',
@@ -11,10 +14,15 @@ function getStopCauseFilterParams() {
         machine: document.getElementById("filterMachine")?.value.trim() || '',
         cause: document.getElementById("filterCause")?.value.trim() || '',
         page: 1,
-        limit: 100000 // A large number to get all records for export
+        limit: 100000 //-- กำหนด limit ให้สูงเพื่อดึงข้อมูลทั้งหมดสำหรับการ Export --
     });
 }
 
+/**
+ * ฟังก์ชันสำหรับแปลงนาทีเป็นรูปแบบ "Xh Ym"
+ * @param {number} totalMinutes - จำนวนนาทีทั้งหมด
+ * @returns {string} ข้อความที่จัดรูปแบบแล้ว
+ */
 function formatDurationForExport(totalMinutes) {
     if (isNaN(totalMinutes) || totalMinutes === null) return '0h 0m';
     const h = Math.floor(totalMinutes / 60);
@@ -22,10 +30,15 @@ function formatDurationForExport(totalMinutes) {
     return `${h}h ${m}m`;
 }
 
-// --- Main Export Functions ---
+// --- ฟังก์ชันหลักสำหรับการ Export ---
+
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ PDF
+ */
 async function exportToPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    //-- ตรวจสอบว่า Plugin 'autoTable' ถูกโหลดแล้ว --
     if (!doc.autoTable) {
         showToast("jsPDF AutoTable plugin not loaded.", '#dc3545');
         return;
@@ -34,6 +47,7 @@ async function exportToPDF() {
     showToast("Preparing PDF export... Please wait.", '#0dcaf0');
 
     try {
+        //-- ดึงข้อมูลจาก API ตาม Filter ปัจจุบัน --
         const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
         const result = await response.json();
 
@@ -42,6 +56,7 @@ async function exportToPDF() {
             return;
         }
 
+        //-- เตรียมข้อมูล Header และ Body สำหรับสร้างตาราง --
         const headers = [["Date", "Start", "End", "Duration (m)", "Line", "Machine", "Cause", "Recovered By", "Note"]];
         const rows = result.data.map(row => [
             row.log_date, row.stop_begin, row.stop_end,
@@ -49,6 +64,7 @@ async function exportToPDF() {
             row.cause, row.recovered_by, row.note || ''
         ]);
 
+        //-- สร้างเอกสาร PDF และสั่งดาวน์โหลด --
         doc.setFontSize(16);
         doc.text("Filtered Stop Cause History", 14, 16);
         doc.autoTable({
@@ -65,10 +81,14 @@ async function exportToPDF() {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ Excel แบบหลาย Sheet
+ */
 async function exportToExcel() {
     showToast("Preparing Excel export... Please wait.", '#0dcaf0');
     
     try {
+        //-- ดึงข้อมูลจาก API ซึ่งจะคืนค่าทั้ง Raw Data และ Summary --
         const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
         const result = await response.json();
 
@@ -79,9 +99,8 @@ async function exportToExcel() {
 
         const workbook = XLSX.utils.book_new();
 
-        // --- Summary Sheet ---
+        //-- 1. เตรียมข้อมูลสำหรับ Sheet "Stop Cause Summary" --
         const totalOccurrences = result.summary.reduce((acc, curr) => acc + Number(curr.count || 0), 0);
-
         const grandTotalRow = { 
             "Line": "Grand Total", 
             "Occurrences": totalOccurrences,
@@ -93,7 +112,7 @@ async function exportToExcel() {
             "Total Duration": formatDurationForExport(row.total_minutes)
         }));
 
-        // --- Raw Data Sheet ---
+        //-- 2. เตรียมข้อมูลสำหรับ Sheet "Raw Data" --
         const rawData = result.data.map(row => ({
             "ID": row.id,
             "Date": row.log_date,
@@ -106,11 +125,14 @@ async function exportToExcel() {
             "Recovered By": row.recovered_by,
             "Note": row.note || ''
         }));
+        
+        //-- สร้าง Worksheet และเพิ่มลงใน Workbook --
         const rawDataSheet = XLSX.utils.json_to_sheet(rawData);
         XLSX.utils.book_append_sheet(workbook, rawDataSheet, "Raw Data");
         const summarySheet = XLSX.utils.json_to_sheet([grandTotalRow, ...summaryData]);
         XLSX.utils.book_append_sheet(workbook, summarySheet, "Stop Cause Summary");
         
+        //-- สั่งดาวน์โหลดไฟล์ Excel --
         XLSX.writeFile(workbook, `Stop_Cause_History_${new Date().toISOString().split('T')[0]}.xlsx`);
 
     } catch (error) {

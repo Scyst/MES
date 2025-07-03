@@ -1,9 +1,15 @@
+//-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
 const API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php';
 
+/**
+ * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API ตาม Filter และหน้าปัจจุบัน
+ * @param {number} [page=1] - หมายเลขหน้าที่ต้องการดึงข้อมูล
+ */
 async function fetchPartsData(page = 1) {
     currentPage = page;
+    //-- รวบรวมค่า Filter ทั้งหมดจาก Input Fields --
     const filters = {
         part_no: document.getElementById('filterPartNo')?.value,
         lot_no: document.getElementById('filterLotNo')?.value,
@@ -16,29 +22,38 @@ async function fetchPartsData(page = 1) {
     const params = new URLSearchParams({ action: 'get_parts', page: currentPage, limit: 50, ...filters });
 
     try {
+        //-- เรียก API และแปลงผลลัพธ์เป็น JSON --
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        // เราจะใช้ตัวแปร canManage ที่ส่งมาจาก pdTable.php
-        renderTable(result.data, canManage);
+        //-- เรียกฟังก์ชันต่างๆ เพื่อแสดงผลข้อมูล, Pagination, และ Summary --
+        renderTable(result.data, canManage); //-- canManage เป็นตัวแปรที่ส่งมาจาก PHP --
         renderPagination(result.page, result.total, result.limit);
         renderSummary(result.summary, result.grand_total);
     } catch (error) {
+        //-- จัดการข้อผิดพลาดและแสดงในตาราง --
         console.error('Failed to fetch parts data:', error);
         document.getElementById('partTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Error loading data.</td></tr>`;
     }
 }
 
-function renderTable(data, canManage) { // รับตัวแปร canManage เข้ามา
+/**
+ * ฟังก์ชันสำหรับ Render ตารางข้อมูล Production
+ * @param {Array<object>} data - ข้อมูลที่ได้จาก API
+ * @param {boolean} canManage - ตัวแปรที่บอกว่าผู้ใช้มีสิทธิ์จัดการข้อมูลหรือไม่
+ */
+function renderTable(data, canManage) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = ''; 
+    //-- กรณีไม่พบข้อมูล --
     if (!data || data.length === 0) {
-        const colSpan = canManage ? 11 : 10;
+        const colSpan = canManage ? 11 : 10; //-- ปรับ Colspan ตามสิทธิ์ --
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
 
+    //-- สร้างแถวและ Cell ของตารางจากข้อมูล --
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
@@ -49,6 +64,7 @@ function renderTable(data, canManage) { // รับตัวแปร canManage
             return td;
         };
         
+        //-- จัดรูปแบบวันที่และเวลา --
         const formattedDate = row.log_date ? new Date(row.log_date).toLocaleDateString('en-GB') : '';
         const formattedTime = row.log_time ? row.log_time.substring(0, 8) : '';
         
@@ -62,6 +78,7 @@ function renderTable(data, canManage) { // รับตัวแปร canManage
         tr.appendChild(createCell(row.count_value));
         tr.appendChild(createCell(row.count_type));
         
+        //-- จัดการคอลัมน์ Note ให้แสดง Tooltip เมื่อข้อความยาวเกิน --
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
         noteDiv.className = 'note-truncate';
@@ -70,6 +87,7 @@ function renderTable(data, canManage) { // รับตัวแปร canManage
         noteTd.appendChild(noteDiv);
         tr.appendChild(noteTd);
         
+        //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ --
         if (canManage) {
             const actionsTd = document.createElement('td');
             
@@ -97,7 +115,9 @@ function renderTable(data, canManage) { // รับตัวแปร canManage
     });
 }
 
-
+/**
+ * ฟังก์ชันสำหรับ Render Pagination Controls
+ */
 function renderPagination(page, totalItems, limit) {
     totalPages = totalItems > 0 ? Math.ceil(totalItems / limit) : 1;
     currentPage = parseInt(page);
@@ -106,6 +126,7 @@ function renderPagination(page, totalItems, limit) {
 
     if (totalPages <= 1) return;
 
+    //-- ฟังก์ชันสร้าง item ของ Pagination --
     const createPageItem = (pageNum, text, isDisabled = false, isActive = false) => {
         const li = document.createElement('li');
         li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
@@ -125,19 +146,22 @@ function renderPagination(page, totalItems, limit) {
     };
 
     paginationContainer.appendChild(createPageItem(currentPage - 1, 'Previous', currentPage === 1));
-
-        for (let i = 1; i <= totalPages; i++) {
+    for (let i = 1; i <= totalPages; i++) {
         paginationContainer.appendChild(createPageItem(i, i, false, i === currentPage));
     }
-
     paginationContainer.appendChild(createPageItem(currentPage + 1, 'Next', currentPage === totalPages));
 }
 
+/**
+ * ฟังก์ชันสำหรับ Render Grand Total และเก็บข้อมูล Summary ไว้ใน Cache
+ */
 function renderSummary(summaryData, grandTotalData) {
+    //-- เก็บข้อมูลไว้ใน Global Variable เพื่อให้ฟังก์ชันอื่น (เช่น Export) เรียกใช้ได้ --
     window.cachedSummary = summaryData || [];
     window.cachedGrand = grandTotalData || {};
     const grandSummaryContainer = document.getElementById('grandSummary');
     if (!grandSummaryContainer) return;
+    //-- สร้าง HTML สำหรับ Grand Total (แสดงเฉพาะค่าที่มากกว่า 0) --
     let grandSummaryHTML = '<strong>Grand Total: </strong>';
     if (grandTotalData) {
         grandSummaryHTML += Object.entries(grandTotalData).filter(([, value]) => value > 0).map(([key, value]) => `${key.toUpperCase()}: ${value || 0}`).join(' | ');
@@ -145,6 +169,9 @@ function renderSummary(summaryData, grandTotalData) {
     grandSummaryContainer.innerHTML = grandSummaryHTML;
 }
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลมาเติมใน Datalist (สำหรับ Autocomplete)
+ */
 async function populateDatalist(datalistId, action) {
     try {
         const response = await fetch(`${API_URL}?action=${action}`);
@@ -165,6 +192,9 @@ async function populateDatalist(datalistId, action) {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับจัดการการลบข้อมูล
+ */
 async function handleDelete(id) {
     if (!confirm(`Are you sure you want to delete Part ID ${id}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -182,6 +212,7 @@ async function handleDelete(id) {
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
 
         if (result.success) {
+            //-- ตรวจสอบว่าควรจะกลับไปหน้าก่อนหน้าหรือไม่ (กรณีลบรายการสุดท้ายของหน้า) --
             const rowCount = document.querySelectorAll('#partTableBody tr').length;
             const newPage = (rowCount === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
             fetchPartsData(newPage);
@@ -191,23 +222,29 @@ async function handleDelete(id) {
     }
 }
 
+//-- ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter --
 function handleFilterChange() {
     fetchPartsData(1);
 }
 
+//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
+    //-- เพิ่ม Debouncing ให้กับ Filter Inputs เพื่อลดการยิง API ขณะพิมพ์ --
     const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
     filterInputs.forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => {
             clearTimeout(window.filterDebounceTimer);
+            //-- รอ 500ms หลังผู้ใช้หยุดพิมพ์ จึงจะยิง API --
             window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
         });
     });
 
+    //-- โหลดข้อมูลสำหรับ Datalist --
     populateDatalist('partNoList', 'get_part_nos');
     populateDatalist('lotList', 'get_lot_numbers');
     populateDatalist('lineList', 'get_lines');
     populateDatalist('modelList', 'get_models');
     
+    //-- โหลดข้อมูลตารางครั้งแรก --
     fetchPartsData(1);
 });

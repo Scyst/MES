@@ -1,9 +1,15 @@
+//-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
 const API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
+/**
+ * ฟังก์ชันหลักสำหรับดึงข้อมูล Stop Cause จาก API ตาม Filter และหน้าปัจจุบัน
+ * @param {number} [page=1] - หมายเลขหน้าที่ต้องการดึงข้อมูล
+ */
 async function fetchStopData(page = 1) {
     currentPage = page;
+    //-- รวบรวมค่า Filter ทั้งหมดจาก Input Fields --
     const filters = {
         cause: document.getElementById('filterCause')?.value,
         line: document.getElementById('filterLine')?.value,
@@ -14,29 +20,38 @@ async function fetchStopData(page = 1) {
     const params = new URLSearchParams({ action: 'get_stop', page: currentPage, limit: 50, ...filters });
 
     try {
+        //-- เรียก API และแปลงผลลัพธ์เป็น JSON --
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-            renderTable(result.data, canManage);
-
+        //-- เรียกฟังก์ชันต่างๆ เพื่อแสดงผล --
+        renderTable(result.data, canManage);
         renderPagination(result.page, result.total, result.limit);
         renderSummary(result.summary, result.grand_total_minutes);
     } catch (error) {
+        //-- จัดการข้อผิดพลาดและแสดงในตาราง --
         console.error('Failed to fetch stop data:', error);
         document.getElementById('stopTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Error loading data.</td></tr>`;
     }
 }
 
-function renderTable(data, canManage) { // รับ canManage เข้ามา
+/**
+ * ฟังก์ชันสำหรับ Render ตารางข้อมูล Stop Cause
+ * @param {Array<object>} data - ข้อมูลที่ได้จาก API
+ * @param {boolean} canManage - ตัวแปรที่บอกว่าผู้ใช้มีสิทธิ์จัดการข้อมูลหรือไม่
+ */
+function renderTable(data, canManage) {
     const tbody = document.getElementById('stopTableBody');
     tbody.innerHTML = '';
+    //-- กรณีไม่พบข้อมูล --
     if (!data || data.length === 0) {
         const colSpan = canManage ? 11 : 10;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
 
+    //-- สร้างแถวและ Cell ของตารางจากข้อมูล --
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
@@ -53,6 +68,7 @@ function renderTable(data, canManage) { // รับ canManage เข้าม�
         tr.appendChild(createCell(row.cause));
         tr.appendChild(createCell(row.recovered_by));
 
+        //-- จัดการคอลัมน์ Note ให้แสดง Tooltip เมื่อข้อความยาวเกิน --
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
         noteDiv.className = 'note-truncate';
@@ -61,6 +77,7 @@ function renderTable(data, canManage) { // รับ canManage เข้าม�
         noteTd.appendChild(noteDiv);
         tr.appendChild(noteTd);
         
+        //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ --
         if (canManage) {
             const actionsTd = document.createElement('td');
 
@@ -84,10 +101,13 @@ function renderTable(data, canManage) { // รับ canManage เข้าม�
             tr.appendChild(actionsTd);
         }
 
-                tbody.appendChild(tr);
-            });
-        }
+        tbody.appendChild(tr);
+    });
+}
 
+/**
+ * ฟังก์ชันสำหรับ Render Pagination Controls
+ */
 function renderPagination(page, totalItems, limit) {
     totalPages = totalItems > 0 ? Math.ceil(totalItems / limit) : 1;
     currentPage = parseInt(page);
@@ -96,6 +116,7 @@ function renderPagination(page, totalItems, limit) {
 
     if (totalPages <= 1) return;
 
+    //-- ฟังก์ชันสร้าง item ของ Pagination --
     const createPageItem = (pageNum, text, isDisabled = false, isActive = false) => {
         const li = document.createElement('li');
         li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
@@ -121,6 +142,9 @@ function renderPagination(page, totalItems, limit) {
     paginationContainer.appendChild(createPageItem(currentPage + 1, 'Next', currentPage === totalPages));
 }
 
+/**
+ * ฟังก์ชันสำหรับ Render ข้อมูลสรุป (Summary)
+ */
 function renderSummary(summaryData, grandTotalMinutes) {
     const summaryContainer = document.getElementById('causeSummary');
     if (!summaryContainer) return;
@@ -132,6 +156,7 @@ function renderSummary(summaryData, grandTotalMinutes) {
     strong.textContent = `Total Downtime: ${formatMins(grandTotalMinutes || 0)}`;
     summaryContainer.appendChild(strong);
 
+    //-- แสดงข้อมูลสรุปของแต่ละ Line --
     if (summaryData && summaryData.length > 0) {
         summaryData.forEach(item => {
             summaryContainer.appendChild(document.createTextNode(' | '));
@@ -141,6 +166,9 @@ function renderSummary(summaryData, grandTotalMinutes) {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลมาเติมใน Datalist (สำหรับ Autocomplete)
+ */
 async function populateDatalist(datalistId, action) {
     try {
         const response = await fetch(`${API_URL}?action=${action}`);
@@ -161,6 +189,9 @@ async function populateDatalist(datalistId, action) {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับจัดการการลบข้อมูล
+ */
 async function deleteStop(id) {
     if (!confirm(`Are you sure you want to delete Stop Cause ID ${id}?`)) return;
     try {
@@ -173,22 +204,28 @@ async function deleteStop(id) {
     }
 }
 
+//-- ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter --
 function handleFilterChange() {
     fetchStopData(1);
 }
 
+//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
+    //-- เพิ่ม Debouncing ให้กับ Filter Inputs เพื่อลดการยิง API ขณะพิมพ์ --
     const filterInputs = ['filterCause', 'filterLine', 'filterMachine', 'filterStartDate', 'filterEndDate'];
     filterInputs.forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => {
             clearTimeout(window.filterDebounceTimer);
+            //-- รอ 500ms หลังผู้ใช้หยุดพิมพ์ จึงจะยิง API --
             window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
         });
     });
 
+    //-- โหลดข้อมูลสำหรับ Datalist --
     populateDatalist('causeListFilter', 'get_causes');
     populateDatalist('lineListFilter', 'get_lines');
     populateDatalist('machineListFilter', 'get_machines');
     
+    //-- โหลดข้อมูลตารางครั้งแรก --
     fetchStopData(1);
-}); 
+});
