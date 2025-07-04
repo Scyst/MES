@@ -21,9 +21,9 @@
       </a>
     </li>
     <li>
-      <a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production History">
-        <img src="../../icons/db.png" alt="Production History">
-        <span>Production History</span>
+      <a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production & WIP">
+        <img src="../../icons/db.png" alt="Production & WIP">
+        <span>Production & WIP</span>
       </a>
     </li>
     <li>
@@ -35,23 +35,35 @@
 
     <li><hr class="dropdown-divider" style="padding: 0;"></li>
 
+    <?php 
+      // Grouping management pages together
+      $userRole = $_SESSION['user']['role'] ?? null;
+      if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): 
+    ?>
     <li>
       <a class="dropdown-item-icon" href="../paraManageUI/paraManageUI.php" title="Parameter Manager">
         <img src="../../icons/slider.png" alt="Parameter Manager">
         <span>Parameter Manager</span>
       </a>
     </li>
+    <?php endif; ?>
 
     <?php 
-      $userRole = $_SESSION['user']['role'] ?? null;
+      // Links for Admin and Creator roles only
       if ($userRole && in_array($userRole, ['admin', 'creator'])): 
     ?>
-      <li>
-        <a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager">
-          <img src="../../icons/admin.png" alt="User Manager">
-          <span>User Manager</span>
-        </a>
-      </li>
+    <li>
+      <a class="dropdown-item-icon" href="../bomManager/bomManager.php" title="BOM Manager">
+        <img src="../../icons/bom.png" alt="BOM Manager">
+        <span>BOM Manager</span>
+      </a>
+    </li>
+    <li>
+      <a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager">
+        <img src="../../icons/admin.png" alt="User Manager">
+        <span>User Manager</span>
+      </a>
+    </li>
     <?php endif; ?>
 
     <?php if (isset($_SESSION['user'])): ?>
