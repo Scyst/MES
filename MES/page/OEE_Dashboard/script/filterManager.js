@@ -53,8 +53,8 @@ async function applyFiltersAndInitCharts() {
 
   //-- ดึงข้อมูลสำหรับ Dropdown ทั้งสองพร้อมกันเพื่อความรวดเร็ว --
   await Promise.all([
-    populateDropdown("lineFilter", "https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_lines.php", line),
-    populateDropdown("modelFilter", "https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_models.php", model)
+    populateDropdown("lineFilter", "../../api/OEE_Dashboard/get_lines.php", line),
+    populateDropdown("modelFilter", "../../api/OEE_Dashboard/get_models.php", model)
   ]);
 
   //-- ตั้งค่าใน Input ตามค่าที่ได้จาก URL --

@@ -1,7 +1,7 @@
 "use strict";
 
 //-- ค่าคงที่และตัวแปร Global --
-const API_ENDPOINT = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/paraManage/paraManage.php';
+const API_ENDPOINT = '../../api/paraManage/paraManage.php';
 const ROWS_PER_PAGE = 100; //-- จำนวนแถวที่แสดงต่อหน้า --
 
 //-- ตัวแปรสำหรับเก็บข้อมูลทั้งหมดจาก API เพื่อลดการเรียกซ้ำ --

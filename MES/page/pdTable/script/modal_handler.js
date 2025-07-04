@@ -1,7 +1,7 @@
 //-- ตัวแปร Global สำหรับเก็บค่าคงที่และสถานะ --
 let modalTriggerElement = null; //-- เก็บ Element ที่กดเพื่อเปิด Modal (สำหรับคืน Focus) --
-const PD_API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล Production --
-const WIP_API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/wipManage/wipManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล WIP --
+const PD_API_URL = '../../api/pdTable/pdTableManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล Production --
+const WIP_API_URL = '../../api/wipManage/wipManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล WIP --
 
 /**
  * ฟังก์ชันกลางสำหรับเปิด Bootstrap Modal

@@ -1,5 +1,5 @@
 // --- ค่าคงที่และฟังก์ชันกลาง ---
-const STOP_CAUSE_API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/Stop_Cause/stopCauseManage.php';
+const STOP_CAUSE_API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
 /**
  * ฟังก์ชันสำหรับรวบรวมค่า Filter ทั้งหมดและสร้าง URLSearchParams

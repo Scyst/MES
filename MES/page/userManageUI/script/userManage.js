@@ -1,6 +1,6 @@
 //-- Global Variables & Constants --
 let allUsers = []; //-- Array สำหรับเก็บข้อมูลผู้ใช้ทั้งหมดที่ดึงมาจาก API --
-const API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/userManage/userManage.php';
+const API_URL = '../../api/userManage/userManage.php';
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API

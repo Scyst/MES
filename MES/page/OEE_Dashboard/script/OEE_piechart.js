@@ -123,7 +123,7 @@ async function fetchAndRenderCharts() {
         window.history.replaceState({}, '', newUrl);
 
         //-- เรียก API เพื่อดึงข้อมูลสำหรับ Pie Chart --
-        const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_oee_piechart.php?${params.toString()}`);
+        const response = await fetch(`../../api/OEE_Dashboard/get_oee_piechart.php?${params.toString()}`);
         if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         const data = await response.json();
         if (!data.success) throw new Error(data.message || "API returned an error.");

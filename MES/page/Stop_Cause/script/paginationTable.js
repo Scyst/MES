@@ -1,7 +1,7 @@
 //-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
-const API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/Stop_Cause/stopCauseManage.php';
+const API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
 /**
  * ฟังก์ชันหลักสำหรับดึงข้อมูล Stop Cause จาก API ตาม Filter และหน้าปัจจุบัน

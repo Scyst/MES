@@ -1,7 +1,7 @@
 //-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
-const API_URL = 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php';
+const API_URL = '../../api/pdTable/pdTableManage.php';
 
 /**
  * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API ตาม Filter และหน้าปัจจุบัน

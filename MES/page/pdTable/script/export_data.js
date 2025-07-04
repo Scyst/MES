@@ -27,7 +27,7 @@ async function exportToPDF() {
     });
     
     //-- เรียก API เพื่อดึงข้อมูล --
-    const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php?${params.toString()}`);
+    const response = await fetch(`../../api/pdTable/pdTableManage.php?${params.toString()}`);
     const result = await response.json();
 
     if (!result.success || result.data.length === 0) {
@@ -86,7 +86,7 @@ async function exportToExcel() {
 
     try {
         //-- เรียก API ซึ่งจะคืนค่าทั้ง Raw Data, Summary, และ Grand Total --
-        const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/pdTable/pdTableManage.php?${params.toString()}`);
+        const response = await fetch(`../../api/pdTable/pdTableManage.php?${params.toString()}`);
         const result = await response.json();
 
         if (!result.success || result.data.length === 0) {

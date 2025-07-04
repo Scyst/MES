@@ -90,7 +90,7 @@ async function fetchAndRenderLineCharts() {
         });
 
         //-- เรียก API เพื่อดึงข้อมูลสำหรับ Line Chart --
-        const response = await fetch(`https://oem.sncformer.com/iot-toolbox/sandbox-b9/oee_dashboard/oee_dashboard-main/OEE_Dashboard/api/OEE_Dashboard/get_oee_linechart.php?${params.toString()}`);
+        const response = await fetch(`../../api/OEE_Dashboard/get_oee_linechart.php?${params.toString()}`);
         const data = await response.json();
         if (!data.success) throw new Error("Data error");
 
