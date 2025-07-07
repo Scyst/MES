@@ -35,7 +35,7 @@ try {
     switch ($action) {
         //-- อ่านข้อมูลผู้ใช้ทั้งหมด (ยกเว้น creator) --
         case 'read':
-            $stmt = $pdo->query("SELECT id, username, role, created_at FROM IOT_TOOLBOX_USERS WHERE role != 'creator' ORDER BY id ASC");
+            $stmt = $pdo->query("SELECT id, username, role, created_at FROM USERS WHERE role != 'creator' ORDER BY id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             // จัดรูปแบบวันที่
             foreach ($users as &$user) {
@@ -68,7 +68,7 @@ try {
 
             // เข้ารหัสรหัสผ่านและบันทึกลง DB
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO IOT_TOOLBOX_USERS (username, password, role) VALUES (?, ?, ?)";
+            $sql = "INSERT INTO USERS (username, password, role) VALUES (?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$username, $hashedPassword, $role]);
 
@@ -82,7 +82,7 @@ try {
             if (!$targetId) throw new Exception("Target user ID is required.");
 
             // ดึงข้อมูลผู้ใช้เป้าหมาย
-            $stmt = $pdo->prepare("SELECT id, username, role FROM IOT_TOOLBOX_USERS WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, username, role FROM USERS WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("Target user not found.");
@@ -135,7 +135,7 @@ try {
             }
 
             // ประมวลผลการอัปเดตและบันทึก Log
-            $sql = "UPDATE IOT_TOOLBOX_USERS SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            $sql = "UPDATE USERS SET " . implode(', ', $updateFields) . " WHERE id = ?";
             $params[] = $targetId;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -155,7 +155,7 @@ try {
             }
 
             // ดึงข้อมูลผู้ใช้เป้าหมายเพื่อตรวจสอบ Role
-            $stmt = $pdo->prepare("SELECT username, role FROM IOT_TOOLBOX_USERS WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT username, role FROM USERS WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("User not found.");
@@ -168,7 +168,7 @@ try {
             }
 
             // ประมวลผลการลบและบันทึก Log
-            $deleteStmt = $pdo->prepare("DELETE FROM IOT_TOOLBOX_USERS WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM USERS WHERE id = ?");
             $deleteStmt->execute([$targetId]);
 
             logAction($pdo, $currentUser['username'], 'DELETE USER', $targetUser['username']);
@@ -177,7 +177,7 @@ try {
             
         //-- อ่าน Log การกระทำของผู้ใช้ 500 รายการล่าสุด --
         case 'logs':
-            $stmt = $pdo->query("SELECT TOP 500 * FROM IOT_TOOLBOX_USER_LOGS ORDER BY created_at DESC");
+            $stmt = $pdo->query("SELECT TOP 500 * FROM USER_LOGS ORDER BY created_at DESC");
             $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($logs as &$log) {
                 if ($log['created_at']) $log['created_at'] = (new DateTime($log['created_at']))->format('Y-m-d H:i:s');

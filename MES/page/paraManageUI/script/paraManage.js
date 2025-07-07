@@ -344,34 +344,38 @@ async function handleImport(event) {
     reader.readAsBinaryString(file);
 }
 
+// ในไฟล์ paraManage.js ของคุณ
+// ให้ลบฟังก์ชัน initializeBomManager เดิมทิ้งทั้งหมด แล้วใช้ฟังก์ชันนี้แทนที่
+
 function initializeBomManager() {
+    // --- Element References ---
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
-    const manageBomModalEl = document.getElementById('manageBomModal');
-    if (!manageBomModalEl) return;
+    const createNewBomBtn = document.getElementById('createNewBomBtn');
     
+    // Create BOM Modal elements
+    const createBomModalEl = document.getElementById('createBomModal');
+    const createBomModal = new bootstrap.Modal(createBomModalEl);
+    const createBomForm = document.getElementById('createBomForm');
+    
+    // Manage BOM Modal elements
+    const manageBomModalEl = document.getElementById('manageBomModal');
     const manageBomModal = new bootstrap.Modal(manageBomModalEl);
     const modalTitle = document.getElementById('bomModalTitle');
     const modalBomTableBody = document.getElementById('modalBomTableBody');
     const modalAddComponentForm = document.getElementById('modalAddComponentForm');
     const modalSelectedFgPartNo = document.getElementById('modalSelectedFgPartNo');
+    const modalSelectedFgModel = document.getElementById('modalSelectedFgModel');
     const modalPartDatalist = document.getElementById('bomModalPartDatalist');
 
+    // --- Helper Functions ---
     function renderBomFgTable(fgData) {
         fgListTableBody.innerHTML = '';
         if (fgData && fgData.length > 0) {
             fgData.forEach(fg => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${fg.fg_part_no || ''}</td>
-                    <td>${fg.line || 'N/A'}</td>
-                    <td>${fg.updated_by || 'N/A'}</td>
-                    <td>${fg.updated_at || 'N/A'}</td>
-                    <td class="text-center">
-                        <button class="btn btn-primary btn-sm" data-action="manage" data-fg="${fg.fg_part_no}">Manage BOM</button>
-                        <button class="btn btn-danger btn-sm" data-action="delete" data-fg="${fg.fg_part_no}">Delete BOM</button>
-                    </td>
-                `;
+                tr.innerHTML = `<td>${fg.fg_part_no||''}</td><td>${fg.line||'N/A'}</td><td>${fg.updated_by||'N/A'}</td><td>${fg.updated_at||'N/A'}</td>
+                    <td class="text-center"><button class="btn btn-primary btn-sm" data-action="manage" data-fg-part="${fg.fg_part_no}" data-fg-model="${fg.model || ''}">Manage BOM</button> <button class="btn btn-danger btn-sm" data-action="delete" data-fg-part="${fg.fg_part_no}">Delete BOM</button></td>`;
                 fgListTableBody.appendChild(tr);
             });
         } else {
@@ -387,14 +391,17 @@ function initializeBomManager() {
         }
     }
 
-    async function loadBomForModal(fgPartNo) {
+    async function loadBomForModal(fgPartNo, fgModel) {
         modalTitle.textContent = `Managing BOM for: ${fgPartNo}`;
         modalSelectedFgPartNo.value = fgPartNo;
+        modalSelectedFgModel.value = fgModel;
+
         modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
-        const result = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo });
+        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo });
+        
         modalBomTableBody.innerHTML = '';
-        if (result.success && result.data.length > 0) {
-            result.data.forEach(comp => {
+        if (bomResult.success && bomResult.data.length > 0) {
+            bomResult.data.forEach(comp => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Del</button></td>`;
                 modalBomTableBody.appendChild(tr);
@@ -402,32 +409,52 @@ function initializeBomManager() {
         } else {
             modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No components. Add one now!</td></tr>';
         }
+
+        const componentResult = await sendRequest(PARA_API_ENDPOINT, 'get_parts_by_model', 'GET', null, { model: fgModel });
+        if (componentResult.success) {
+            modalPartDatalist.innerHTML = componentResult.data.map(p => `<option value="${p.part_no}"></option>`).join('');
+        }
     }
     
-    async function populateModalDatalist() {
-        const result = await sendRequest(PART_API_ENDPOINT, 'get_part_nos', 'GET');
+    async function populateCreateBomDatalists() {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
         if (result.success) {
-            modalPartDatalist.innerHTML = result.data.map(p => `<option value="${p}"></option>`).join('');
+            const lines = [...new Set(result.data.map(item => item.line))];
+            const models = [...new Set(result.data.map(item => item.model))];
+            const partNos = [...new Set(result.data.map(item => item.part_no))];
+            document.getElementById('lineDatalist').innerHTML = lines.map(l => `<option value="${l}"></option>`).join('');
+            document.getElementById('modelDatalist').innerHTML = models.map(m => `<option value="${m}"></option>`).join('');
+            document.getElementById('partNoDatalist').innerHTML = partNos.map(p => `<option value="${p}"></option>`).join('');
         }
     }
 
-    // --- Event Listeners for BOM Tab ---
-    searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredData = allBomFgs.filter(fg => 
-            fg.fg_part_no.toLowerCase().includes(searchTerm) || 
-            (fg.line && fg.line.toLowerCase().includes(searchTerm))
-        );
-        renderBomFgTable(filteredData);
+    // --- Event Listeners ---
+    createNewBomBtn?.addEventListener('click', () => { createBomModal.show(); });
+
+    createBomForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const searchCriteria = Object.fromEntries(new FormData(createBomForm).entries());
+        const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
+        if (result.success && result.data) {
+            showToast('Finished Good found! Proceeding to Step 2.', '#28a745');
+            createBomModal.hide();
+            createBomForm.reset();
+            manageBomModal.show();
+            loadBomForModal(result.data.part_no, result.data.model);
+        } else {
+            showToast(result.message || 'Could not find a matching part.', '#dc3545');
+        }
     });
 
     fgListTableBody.addEventListener('click', async (e) => {
         if (e.target.tagName !== 'BUTTON') return;
         const action = e.target.dataset.action;
-        const fgPartNo = e.target.dataset.fg;
+        const fgPartNo = e.target.dataset.fgPart; // ** FIXED **
+        const fgModel = e.target.dataset.fgModel;   // ** FIXED **
+
         if (action === 'manage') {
             manageBomModal.show();
-            loadBomForModal(fgPartNo);
+            loadBomForModal(fgPartNo, fgModel);
         } else if (action === 'delete') {
             if (confirm(`Are you sure you want to delete the entire BOM for ${fgPartNo}?`)) {
                 const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo });
@@ -443,7 +470,7 @@ function initializeBomManager() {
         const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            loadBomForModal(payload.fg_part_no);
+            loadBomForModal(payload.fg_part_no, payload.model);
             e.target.reset();
         }
     });
@@ -454,13 +481,17 @@ function initializeBomManager() {
         if (confirm('Delete this component?')) {
             const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
             showToast(result.message, result.success ? '#28a745' : '#dc3545');
-            if(result.success) loadBomForModal(modalSelectedFgPartNo.value);
+            if (result.success) {
+                const fgPartNo = modalSelectedFgPartNo.value;
+                const fgModel = modalSelectedFgModel.value;
+                loadBomForModal(fgPartNo, fgModel);
+            }
         }
     });
     
-    // --- Initial Load for BOM Tab ---
+    // --- Initial Load ---
     loadAndRenderBomFgTable();
-    populateModalDatalist();
+    populateCreateBomDatalists();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -3,7 +3,7 @@ require_once __DIR__ . '/../db.php';
 
 try {
     // เตรียม SQL ดึงรายชื่อ model ที่ไม่ซ้ำกัน
-    $sql = "SELECT DISTINCT model FROM IOT_TOOLBOX_PARAMETER WHERE model IS NOT NULL ORDER BY model";
+    $sql = "SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL ORDER BY model";
     $stmt = $pdo->query($sql);
     $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

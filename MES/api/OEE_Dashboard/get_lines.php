@@ -3,7 +3,7 @@ require_once __DIR__ . '/../db.php';
 
 try {
     // เตรียม SQL ดึงรายชื่อ line ที่ไม่ซ้ำกัน
-    $sql = "SELECT DISTINCT line FROM IOT_TOOLBOX_PARAMETER WHERE line IS NOT NULL ORDER BY line";
+    $sql = "SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL ORDER BY line";
     $stmt = $pdo->query($sql);
     $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

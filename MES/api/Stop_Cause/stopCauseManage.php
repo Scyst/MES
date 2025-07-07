@@ -59,7 +59,7 @@ try {
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
             //-- Query เพื่อนับจำนวนข้อมูลทั้งหมด (สำหรับ Pagination) --
-            $totalSql = "SELECT COUNT(*) AS total FROM IOT_TOOLBOX_STOP_CAUSES $whereClause";
+            $totalSql = "SELECT COUNT(*) AS total FROM STOP_CAUSES $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
@@ -70,7 +70,7 @@ try {
                     SELECT 
                         id, log_date, stop_begin, stop_end, line, machine, cause, recovered_by, note, duration,
                         ROW_NUMBER() OVER (ORDER BY log_date DESC, stop_begin DESC, id DESC) AS RowNum
-                    FROM IOT_TOOLBOX_STOP_CAUSES
+                    FROM STOP_CAUSES
                     $whereClause
                 )
                 SELECT id, log_date, stop_begin, stop_end, line, machine, cause, recovered_by, note, duration
@@ -92,7 +92,7 @@ try {
 
             //-- Query สรุปยอดรวมเวลาและจำนวนครั้งที่หยุด ตามไลน์ผลิต --
             $summarySql = "SELECT line, COUNT(*) AS count, SUM(duration) AS total_minutes
-                               FROM IOT_TOOLBOX_STOP_CAUSES $whereClause
+                               FROM STOP_CAUSES $whereClause
                                GROUP BY line ORDER BY total_minutes DESC";
             $summaryStmt = $pdo->prepare($summarySql);
             $summaryStmt->execute($params);
@@ -125,7 +125,7 @@ try {
             }
 
             //-- เพิ่มข้อมูล Stop Cause ใหม่ลงในฐานข้อมูล --
-            $sql = "INSERT INTO IOT_TOOLBOX_STOP_CAUSES (log_date, stop_begin, stop_end, line, machine, cause, recovered_by, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO STOP_CAUSES (log_date, stop_begin, stop_end, line, machine, cause, recovered_by, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $params = [
                 $input['log_date'],
                 $stop_begin_dt->format('Y-m-d H:i:s'),
@@ -173,7 +173,7 @@ try {
             }
         
             //-- เตรียมข้อมูลและรันคำสั่ง UPDATE --
-            $sql = "UPDATE IOT_TOOLBOX_STOP_CAUSES SET log_date = ?, stop_begin = ?, stop_end = ?, line = ?, machine = ?, cause = ?, recovered_by = ?, note = ? WHERE id = ?";
+            $sql = "UPDATE STOP_CAUSES SET log_date = ?, stop_begin = ?, stop_end = ?, line = ?, machine = ?, cause = ?, recovered_by = ?, note = ? WHERE id = ?";
             $params = [
                 $log_date,
                 $stop_begin_dt->format('Y-m-d H:i:s'),
@@ -207,7 +207,7 @@ try {
             }
 
             //-- สั่งลบข้อมูล --
-            $sql = "DELETE FROM IOT_TOOLBOX_STOP_CAUSES WHERE id = ?";
+            $sql = "DELETE FROM STOP_CAUSES WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
 
@@ -230,7 +230,7 @@ try {
             }
             
             //-- ดึงข้อมูลรายการเดียวด้วย ID --
-            $sql = "SELECT * FROM IOT_TOOLBOX_STOP_CAUSES WHERE id = ?";
+            $sql = "SELECT * FROM STOP_CAUSES WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$id]);
             $stop_data = $stmt->fetch();
@@ -265,7 +265,7 @@ try {
                 'get_machines' => 'machine', 'get_recovered_by' => 'recovered_by'
             ];
             $column = $columns[$action];
-            $table = ($action === 'get_lines') ? 'IOT_TOOLBOX_PARAMETER' : 'IOT_TOOLBOX_STOP_CAUSES';
+            $table = ($action === 'get_lines') ? 'PARAMETER' : 'STOP_CAUSES';
 
             //-- ดึงข้อมูลที่ไม่ซ้ำกันจาก Column ที่กำหนด --
             $stmt = $pdo->query("SELECT DISTINCT {$column} FROM {$table} WHERE {$column} IS NOT NULL AND {$column} != '' ORDER BY {$column}");

@@ -90,7 +90,7 @@ try {
                 -- Join กับ Subquery ที่รวมยอด FG จากตาราง Parts --
                 LEFT JOIN 
                     (SELECT lot_no, SUM(count_value) as total_out 
-                       FROM IOT_TOOLBOX_PARTS 
+                       FROM PARTS 
                        WHERE count_type = 'FG' 
                        GROUP BY lot_no) prod 
                 ON 

@@ -31,7 +31,7 @@ try {
             MIN(CAST(log_date AS DATETIME) + CAST(log_time AS DATETIME)) as first_event_time,
             MAX(CAST(log_date AS DATETIME) + CAST(log_time AS DATETIME)) as last_event_time,
             SUM(CASE WHEN count_type = 'FG' THEN count_value ELSE 0 END) as total_fg
-        FROM IOT_TOOLBOX_PARTS
+        FROM PARTS
         WHERE lot_no = ?
         GROUP BY part_no, line, model;
     ";
@@ -56,7 +56,7 @@ try {
     // -- QUERY 2: ดึงประวัติการผลิตทั้งหมดของ Lot นี้ --
     $productionSql = "
         SELECT log_date, log_time, count_type, count_value, note
-        FROM IOT_TOOLBOX_PARTS
+        FROM PARTS
         WHERE lot_no = ?
         ORDER BY log_date, log_time;
     ";
@@ -67,7 +67,7 @@ try {
     // -- QUERY 3: ดึงประวัติ Downtime ที่เกิดขึ้นในช่วงเวลาที่ผลิต Lot นี้ --
     $downtimeSql = "
         SELECT stop_begin, stop_end, duration, machine, cause, recovered_by, note
-        FROM IOT_TOOLBOX_STOP_CAUSES
+        FROM STOP_CAUSES
         WHERE line = ? AND stop_begin BETWEEN ? AND ?
         ORDER BY stop_begin;
     ";

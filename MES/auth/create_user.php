@@ -17,7 +17,7 @@ echo "<pre style='font-family: monospace; background-color: #333; color: #fff; p
 echo "Starting user creation/validation process...\n\n";
 
 try {
-    $sql = "INSERT INTO IOT_TOOLBOX_USERS (username, password, role, created_at) VALUES (?, ?, ?, GETDATE())";
+    $sql = "INSERT INTO USERS (username, password, role, created_at) VALUES (?, ?, ?, GETDATE())";
     $stmt = $pdo->prepare($sql);
 
     // วนลูปเพื่อสร้างผู้ใช้แต่ละคน

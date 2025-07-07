@@ -8,7 +8,7 @@ function logAction(PDO $pdo, string $actor, string $action, ?string $target = nu
     }
 
     //-- เตรียมคำสั่ง SQL สำหรับเพิ่มข้อมูล Log --
-    $sql = "INSERT INTO IOT_TOOLBOX_USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, ?, ?, ?, GETDATE())";
+    $sql = "INSERT INTO USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, ?, ?, ?, GETDATE())";
     
     //-- พยายามบันทึก Log และดักจับข้อผิดพลาด (ถ้ามี) โดยไม่หยุดการทำงานหลัก --
     try {

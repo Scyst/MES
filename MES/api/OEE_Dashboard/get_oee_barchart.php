@@ -46,7 +46,7 @@ try {
     // SQL สำหรับรวมระยะเวลาที่เครื่องจักรหยุดทำงาน โดยจัดกลุ่มตามสาเหตุและไลน์ผลิต
     $stopSql = "
         SELECT cause, line, SUM(DATEDIFF(SECOND, stop_begin, stop_end)) AS total_seconds
-        FROM IOT_TOOLBOX_STOP_CAUSES
+        FROM STOP_CAUSES
         $stopWhere
         GROUP BY cause, line
     ";
@@ -115,7 +115,7 @@ try {
             SUM(CASE WHEN count_type = 'REWORK' THEN ISNULL(count_value, 0) ELSE 0 END) AS REWORK,
             SUM(CASE WHEN count_type = 'SCRAP' THEN ISNULL(count_value, 0) ELSE 0 END) AS SCRAP,
             SUM(CASE WHEN count_type = 'ETC.' THEN ISNULL(count_value, 0) ELSE 0 END) AS ETC
-        FROM IOT_TOOLBOX_PARTS
+        FROM PARTS
         $partWhere
         GROUP BY part_no
         ORDER BY SUM(ISNULL(count_value, 0)) DESC

@@ -28,7 +28,7 @@ try {
     switch ($action) {
         //-- อ่านข้อมูล Parameter ทั้งหมด --
         case 'read':
-            $stmt = $pdo->query("SELECT * FROM IOT_TOOLBOX_PARAMETER ORDER BY updated_at DESC");
+            $stmt = $pdo->query("SELECT * FROM PARAMETER ORDER BY updated_at DESC");
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             // จัดรูปแบบวันที่ให้อ่านง่าย
             foreach ($rows as &$row) {
@@ -41,7 +41,7 @@ try {
 
         //-- สร้าง Parameter ใหม่ --
         case 'create':
-            $sql = "INSERT INTO IOT_TOOLBOX_PARAMETER (line, model, part_no, sap_no, planned_output, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
+            $sql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
             $params = [
                 strtoupper($input['line']),
                 strtoupper($input['model']),
@@ -65,7 +65,7 @@ try {
             if (!$id) throw new Exception("Missing ID");
             
             // ดึงข้อมูลเก่าเพื่อใช้เป็นค่าเริ่มต้น
-            $stmt = $pdo->prepare("SELECT * FROM IOT_TOOLBOX_PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM PARAMETER WHERE id = ?");
             $stmt->execute([$id]);
             $row = $stmt->fetch();
             if (!$row) throw new Exception("Parameter not found");
@@ -77,7 +77,7 @@ try {
             $sap_no = strtoupper($input['sap_no'] ?? $row['sap_no']);
             $planned_output = isset($input['planned_output']) ? (int)$input['planned_output'] : (int)$row['planned_output'];
 
-            $updateSql = "UPDATE IOT_TOOLBOX_PARAMETER SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE PARAMETER SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, updated_at = GETDATE() WHERE id = ?";
             $params = [$line, $model, $part_no, $sap_no, $planned_output, $id];
             $stmt = $pdo->prepare($updateSql);
             $success = $stmt->execute($params);
@@ -93,7 +93,7 @@ try {
         case 'delete':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
-            $stmt = $pdo->prepare("DELETE FROM IOT_TOOLBOX_PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM PARAMETER WHERE id = ?");
             $success = $stmt->execute([(int)$id]);
             // บันทึก Log การทำงานหากมีการลบเกิดขึ้นจริง
             if ($success && $stmt->rowCount() > 0) {
@@ -110,11 +110,11 @@ try {
             $pdo->beginTransaction();
             
             // เตรียม SQL Statements ไว้ล่วงหน้าเพื่อประสิทธิภาพ
-            $checkSql = "SELECT id FROM IOT_TOOLBOX_PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $checkSql = "SELECT id FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
             $checkStmt = $pdo->prepare($checkSql);
-            $updateSql = "UPDATE IOT_TOOLBOX_PARAMETER SET sap_no = ?, planned_output = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE PARAMETER SET sap_no = ?, planned_output = ?, updated_at = GETDATE() WHERE id = ?";
             $updateStmt = $pdo->prepare($updateSql);
-            $insertSql = "INSERT INTO IOT_TOOLBOX_PARAMETER (line, model, part_no, sap_no, planned_output, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
+            $insertSql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
 
             $imported = 0;
@@ -192,6 +192,57 @@ try {
             $stmt->execute();
             $missingParams = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $missingParams]);
+            break;
+
+        // ** NEW ACTION 1: ค้นหา Parameter เพื่อนำไปสร้าง BOM **
+        case 'find_parameter_for_bom':
+            $sap_no = trim($input['sap_no'] ?? '');
+            $line = trim($input['line'] ?? '');
+            $model = trim($input['model'] ?? '');
+            $part_no = trim($input['part_no'] ?? '');
+
+            $sql = "SELECT * FROM PARAMETER WHERE ";
+            $params = [];
+
+            if (!empty($sap_no)) {
+                // ค้นหาด้วย SAP No. เป็นหลัก
+                $sql .= "sap_no = ?";
+                $params[] = $sap_no;
+            } elseif (!empty($line) && !empty($model) && !empty($part_no)) {
+                // ถ้าไม่มี SAP No. ให้ค้นหาด้วย 3 field หลัก
+                $sql .= "line = ? AND model = ? AND part_no = ?";
+                $params[] = $line;
+                $params[] = $model;
+                $params[] = $part_no;
+            } else {
+                // ถ้าข้อมูลไม่เพียงพอ ให้โยน Exception
+                throw new Exception("Insufficient data provided. Please provide SAP No. or Line/Model/Part No. combination.");
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($parameter) {
+                echo json_encode(['success' => true, 'data' => $parameter]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Parameter not found with the specified criteria.']);
+            }
+            break;
+
+        // ** NEW ACTION 2: ดึงรายการ Part No. ทั้งหมดที่อยู่ใน Model ที่กำหนด **
+        case 'get_parts_by_model':
+            $model = trim($_GET['model'] ?? '');
+            if (empty($model)) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+
+            $sql = "SELECT DISTINCT part_no FROM PARAMETER WHERE model = ? ORDER BY part_no";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$model]);
+            $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $parts]);
             break;
 
         //-- กรณีไม่พบ Action ที่ระบุ --

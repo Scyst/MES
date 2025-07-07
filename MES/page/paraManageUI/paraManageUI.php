@@ -170,6 +170,7 @@
         include('components/addScheduleModal.php');
         include('components/editScheduleModal.php');
         include('components/manageBomModal.php'); 
+        include('components/createBomModal.php'); 
     } ?>
 
     <script>

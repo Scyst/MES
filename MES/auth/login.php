@@ -19,7 +19,7 @@ if (empty($username) || empty($password)) {
 
 try {
     //-- ค้นหาผู้ใช้จาก Username ในฐานข้อมูล --
-    $sql = "SELECT id, username, password, role FROM IOT_TOOLBOX_USERS WHERE username = ?";
+    $sql = "SELECT id, username, password, role FROM USERS WHERE username = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$username]);
     $user = $stmt->fetch();

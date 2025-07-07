@@ -12,6 +12,7 @@
                             <h5>Add New Component</h5>
                             <form id="modalAddComponentForm">
                                 <input type="hidden" id="modalSelectedFgPartNo" name="fg_part_no">
+                                <input type="hidden" id="modalSelectedFgModel" name="model">
                                 
                                 <div class="mb-3">
                                     <label for="modalComponentPartNo" class="form-label">Component Part No.</label>
@@ -30,7 +31,6 @@
                             </form>
                         </div>
                     </div>
-
                     <div class="col-lg-8">
                         <div class="table-responsive" style="max-height: 60vh;">
                             <table class="table table-dark table-striped table-hover">
@@ -41,8 +41,7 @@
                                         <th style="width: 100px;" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="modalBomTableBody">
-                                    </tbody>
+                                <tbody id="modalBomTableBody"></tbody>
                             </table>
                         </div>
                     </div>

@@ -63,7 +63,7 @@ try {
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
             //-- Query เพื่อนับจำนวนข้อมูลทั้งหมด (สำหรับ Pagination) --
-            $totalSql = "SELECT COUNT(*) AS total FROM IOT_TOOLBOX_PARTS $whereClause";
+            $totalSql = "SELECT COUNT(*) AS total FROM PARTS $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
@@ -74,7 +74,7 @@ try {
                     SELECT 
                         id, log_date, log_time, line, model, part_no, lot_no, count_value, count_type, note,
                         ROW_NUMBER() OVER (ORDER BY log_date DESC, log_time DESC, id DESC) AS RowNum
-                    FROM IOT_TOOLBOX_PARTS
+                    FROM PARTS
                     $whereClause
                 )
                 SELECT id, log_date, log_time, line, model, part_no, lot_no, count_value, count_type, note
@@ -95,7 +95,7 @@ try {
                     SUM(CASE WHEN count_type = 'REWORK' THEN count_value ELSE 0 END) AS REWORK,
                     SUM(CASE WHEN count_type = 'SCRAP' THEN count_value ELSE 0 END) AS SCRAP,
                     SUM(CASE WHEN count_type = 'ETC.' THEN count_value ELSE 0 END) AS ETC
-                FROM IOT_TOOLBOX_PARTS $whereClause 
+                FROM PARTS $whereClause 
                 GROUP BY model, part_no, lot_no 
                 ORDER BY model, part_no, lot_no";
             $summaryStmt = $pdo->prepare($summarySql);
@@ -111,7 +111,7 @@ try {
                     SUM(CASE WHEN count_type = 'REWORK' THEN count_value ELSE 0 END) AS REWORK,
                     SUM(CASE WHEN count_type = 'SCRAP' THEN count_value ELSE 0 END) AS SCRAP,
                     SUM(CASE WHEN count_type = 'ETC.' THEN count_value ELSE 0 END) AS ETC
-                FROM IOT_TOOLBOX_PARTS $whereClause";
+                FROM PARTS $whereClause";
             $grandStmt = $pdo->prepare($grandSql);
             $grandStmt->execute($params);
             $grandTotal = $grandStmt->fetch();
@@ -149,7 +149,7 @@ try {
             //-- สร้าง Lot Number อัตโนมัติ (หากไม่ได้ระบุมา) --
             if (empty($lot_no)) {
                 // ค้นหา SAP No. จากตาราง Parameter
-                $sapQuery = "SELECT sap_no FROM IOT_TOOLBOX_PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+                $sapQuery = "SELECT sap_no FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
                 $sapStmt = $pdo->prepare($sapQuery);
                 $sapStmt->execute([$line, $model, $part_no]);
                 $sapRow = $sapStmt->fetch();
@@ -160,7 +160,7 @@ try {
                 $datePrefix = date('Ymd', strtotime($log_date));
 
                 // นับจำนวน Lot ที่มีอยู่แล้วในวันนั้นเพื่อสร้าง Running Number
-                $lotCountQuery = "SELECT COUNT(*) AS lot_count FROM IOT_TOOLBOX_PARTS WHERE part_no = ? AND log_date = ? AND lot_no LIKE ?";
+                $lotCountQuery = "SELECT COUNT(*) AS lot_count FROM PARTS WHERE part_no = ? AND log_date = ? AND lot_no LIKE ?";
                 $likePattern = $sap_no . '-' . $datePrefix . '%';
                 $countStmt = $pdo->prepare($lotCountQuery);
                 $countStmt->execute([$part_no, $log_date, $likePattern]);
@@ -172,7 +172,7 @@ try {
             }
 
             //-- เพิ่มข้อมูล Part ใหม่ลงในฐานข้อมูล --
-            $insertSql = "INSERT INTO IOT_TOOLBOX_PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $insertStmt = $pdo->prepare($insertSql);
             $success = $insertStmt->execute([
                 $log_date, $input['log_time'], $model, $line, $part_no, $lot_no,
@@ -195,7 +195,7 @@ try {
                 http_response_code(400);
                 throw new Exception('Invalid or missing Part ID.');
             }
-            $sql = "DELETE FROM IOT_TOOLBOX_PARTS WHERE id = ?";
+            $sql = "DELETE FROM PARTS WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
 
@@ -228,7 +228,7 @@ try {
             }
             
             //-- เตรียมข้อมูลและรันคำสั่ง UPDATE --
-            $sql = "UPDATE IOT_TOOLBOX_PARTS SET log_date = ?, log_time = ?, line = ?, model = ?, part_no = ?, lot_no = ?, count_value = ?, count_type = ?, note = ? WHERE id = ?";
+            $sql = "UPDATE PARTS SET log_date = ?, log_time = ?, line = ?, model = ?, part_no = ?, lot_no = ?, count_value = ?, count_type = ?, note = ? WHERE id = ?";
             $params = [
                 $input['log_date'], $input['log_time'],
                 strtoupper(trim($input['line'])), strtoupper(trim($input['model'])),
@@ -251,28 +251,28 @@ try {
 
         //-- ดึงรายชื่อ Line ที่ไม่ซ้ำกัน --
         case 'get_lines':
-            $stmt = $pdo->query("SELECT DISTINCT line FROM IOT_TOOLBOX_PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
+            $stmt = $pdo->query("SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
             $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
 
         //-- ดึงรายชื่อ Lot Number ที่ไม่ซ้ำกัน --
         case 'get_lot_numbers':
-            $stmt = $pdo->query("SELECT DISTINCT lot_no FROM IOT_TOOLBOX_PARTS WHERE lot_no IS NOT NULL AND lot_no != '' ORDER BY lot_no");
+            $stmt = $pdo->query("SELECT DISTINCT lot_no FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != '' ORDER BY lot_no");
             $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $lots]);
             break;
 
         //-- ดึงรายชื่อ Model ที่ไม่ซ้ำกัน --
         case 'get_models':
-            $stmt = $pdo->query("SELECT DISTINCT model FROM IOT_TOOLBOX_PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model");
+            $stmt = $pdo->query("SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         //-- ดึงรายชื่อ Part No. ที่ไม่ซ้ำกัน --
         case 'get_part_nos':
-            $stmt = $pdo->query("SELECT DISTINCT part_no FROM IOT_TOOLBOX_PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
+            $stmt = $pdo->query("SELECT DISTINCT part_no FROM PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -284,7 +284,7 @@ try {
                 http_response_code(400);
                 throw new Exception('Invalid or missing ID');
             }
-            $sql = "SELECT * FROM IOT_TOOLBOX_PARTS WHERE id = ?";
+            $sql = "SELECT * FROM PARTS WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$id]);
             $part = $stmt->fetch();
