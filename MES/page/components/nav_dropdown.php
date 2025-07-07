@@ -53,7 +53,7 @@
       if ($userRole && in_array($userRole, ['admin', 'creator'])): 
     ?>
     <li>
-      <a class="dropdown-item-icon" href="../bomManager/bomManager.php" title="BOM Manager">
+      <a class="dropdown-item-icon" href="../bomManage/bomManageUI.php" title="BOM Manager">
         <img src="../../icons/bom.png" alt="BOM Manager">
         <span>BOM Manager</span>
       </a>

@@ -3,10 +3,10 @@
 header('Content-Type: application/json; charset=utf-8');
 
 //-- กำหนดค่าเชื่อมต่อฐานข้อมูลสำหรับ Server ของบริษัท --
-$serverName = getenv('DB_SERVER')   ?: "10.1.1.31";      // <-- แก้ไข: IP Server ที่ถูกต้อง
-$database   = getenv('DB_DATABASE') ?: "IIOT_TOOLBOX";   // <-- แก้ไข: ชื่อ Database ใหม่
-$user       = getenv('DB_USER')     ?: "TOOLBOX";        // <-- แก้ไข: User ใหม่
-$password   = getenv('DB_PASSWORD') ?: "I1o1@T@#1boX";   // <-- แก้ไข: Password ใหม่
+$serverName = getenv('DB_SERVER')   ?: "LAPTOP-E0M0G0I9";      // <-- แก้ไข: IP Server ที่ถูกต้อง
+$database   = getenv('DB_DATABASE') ?: "oee_db";   // <-- แก้ไข: ชื่อ Database ใหม่
+$user       = getenv('DB_USER')     ?: "verymaron01";        // <-- แก้ไข: User ใหม่
+$password   = getenv('DB_PASSWORD') ?: "numthong01";   // <-- แก้ไข: Password ใหม่
 
 try {
     //-- สร้าง DSN (Data Source Name) สำหรับการเชื่อมต่อ --

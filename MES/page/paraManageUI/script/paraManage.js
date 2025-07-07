@@ -1,49 +1,51 @@
 "use strict";
 
 //-- ค่าคงที่และตัวแปร Global --
-const API_ENDPOINT = '../../api/paraManage/paraManage.php';
-const ROWS_PER_PAGE = 100; //-- จำนวนแถวที่แสดงต่อหน้า --
+const PARA_API_ENDPOINT = '../../api/paraManage/paraManage.php';
+const BOM_API_ENDPOINT = '../../api/paraManage/bomManager.php';
+const PART_API_ENDPOINT = '../../api/pdTable/pdTableManage.php';
+const ROWS_PER_PAGE = 100;
 
 //-- ตัวแปรสำหรับเก็บข้อมูลทั้งหมดจาก API เพื่อลดการเรียกซ้ำ --
-let allStandardParams = [], allSchedules = [], allMissingParams = [];
+let allStandardParams = [], allSchedules = [], allMissingParams = [], allBomFgs = [];
 //-- ตัวแปรสำหรับเก็บหน้าปัจจุบันของแต่ละตาราง --
 let paramCurrentPage = 1;
 let healthCheckCurrentPage = 1;
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
+ * @param {string} endpoint - URL ของ API ที่จะเรียก
  * @param {string} action - Action ที่จะส่งไปใน Query String
  * @param {string} method - HTTP Method (GET, POST, DELETE)
  * @param {object|null} body - ข้อมูลที่จะส่งไปใน Request Body (สำหรับ POST)
  * @param {object} urlParams - Parameters เพิ่มเติมสำหรับ URL
  * @returns {Promise<object>} ผลลัพธ์ที่ได้จาก API
  */
-async function sendRequest(action, method, body = null, urlParams = {}) {
+async function sendRequest(endpoint, action, method, body = null, urlParams = {}) {
     try {
         urlParams.action = action;
         const queryString = new URLSearchParams(urlParams).toString();
-        const url = `${API_ENDPOINT}?${queryString}`;
+        const url = `${endpoint}?${queryString}`;
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
         const options = { method, headers: {} };
-        //-- เพิ่ม CSRF Token ใน Header หากไม่ใช่ GET Request --
         if (method.toUpperCase() !== 'GET' && csrfToken) {
             options.headers['X-CSRF-TOKEN'] = csrfToken;
         }
-        //-- เพิ่ม Body หากมีข้อมูล --
         if (body) {
             options.headers['Content-Type'] = 'application/json';
             options.body = JSON.stringify(body);
         }
         
         const response = await fetch(url, options);
+        const result = await response.json();
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(result.message || `HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+        return result;
     } catch (error) {
         console.error(`Request for action '${action}' failed:`, error);
-        showToast('An unexpected error occurred.', '#dc3545');
+        showToast(error.message || 'An unexpected error occurred.', '#dc3545');
         return { success: false, message: "Network or server error." };
     }
 }
@@ -56,27 +58,22 @@ async function sendRequest(action, method, body = null, urlParams = {}) {
 function openEditModal(modalId, data) {
     const modalElement = document.getElementById(modalId);
     if (!modalElement) return;
-
-    //-- วนลูปเพื่อเติมข้อมูลลงในทุก Input ที่มี name ตรงกับ key ของ data --
     for (const key in data) {
         const input = modalElement.querySelector(`[name="${key}"]`);
         if (input) {
             if (input.type === 'checkbox') {
-                input.checked = !!parseInt(data[key]); //-- แปลง 1/0 เป็น true/false --
+                input.checked = !!parseInt(data[key]);
             } else {
                 input.value = data[key];
             }
         }
     }
-    openModal(modalId); //-- เรียกฟังก์ชันเปิด Modal (จากไฟล์อื่น) --
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    modal.show();
 }
 
 /**
  * ฟังก์ชันสำหรับสร้าง Pagination Control
- * @param {string} containerId - ID ของ <ul> ที่จะใส่ Pagination
- * @param {number} totalItems - จำนวนรายการทั้งหมด
- * @param {number} currentPage - หน้าปัจจุบัน
- * @param {function} callback - ฟังก์ชันที่จะถูกเรียกเมื่อมีการคลิกเปลี่ยนหน้า
  */
 function renderPagination(containerId, totalItems, currentPage, callback) {
     const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
@@ -88,24 +85,23 @@ function renderPagination(containerId, totalItems, currentPage, callback) {
         const li = document.createElement('li');
         li.className = `page-item ${isDisabled ? 'disabled' : ''} ${page === currentPage ? 'active' : ''}`;
         li.innerHTML = `<a class="page-link" href="#">${text}</a>`;
-        li.querySelector('a').onclick = (e) => { e.preventDefault(); if (!isDisabled) callback(page); };
+        if(!isDisabled) li.querySelector('a').onclick = (e) => { e.preventDefault(); callback(page); };
         return li;
     };
 
     pagination.appendChild(createPageItem(currentPage - 1, 'Prev', currentPage <= 1));
     for (let i = 1; i <= totalPages; i++) {
-        pagination.appendChild(createPageItem(i, i, false));
+        pagination.appendChild(createPageItem(i, i, false, i === currentPage));
     }
     pagination.appendChild(createPageItem(currentPage + 1, 'Next', currentPage >= totalPages));
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
-
 async function loadStandardParams() {
-    const result = await sendRequest('read', 'GET');
+    const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
     if (result?.success) {
-        allStandardParams = result.data; //-- เก็บข้อมูลทั้งหมดไว้ในตัวแปร Global --
-        filterAndRenderStandardParams(); //-- เรียกฟังก์ชันเพื่อกรองและแสดงผล --
+        allStandardParams = result.data;
+        filterAndRenderStandardParams();
     } else {
         showToast(result?.message || 'Failed to load parameters.', '#dc3545');
     }
@@ -113,8 +109,7 @@ async function loadStandardParams() {
 
 function getFilteredStandardParams() {
     const searchTerm = document.getElementById('searchInput').value.toUpperCase();
-    if (!searchTerm) return allStandardParams; //-- ถ้าไม่มีคำค้นหา ให้คืนข้อมูลทั้งหมด --
-    //-- กรองข้อมูลจาก Array ที่เก็บไว้ --
+    if (!searchTerm) return allStandardParams;
     return allStandardParams.filter(row => `${row.line || ''} ${row.model || ''} ${row.part_no || ''} ${row.sap_no || ''}`.toUpperCase().includes(searchTerm));
 }
 
@@ -172,7 +167,7 @@ function goToStandardParamPage(page) {
 
 async function deleteStandardParam(id) {
     if (!confirm(`Are you sure you want to delete parameter ID ${id}?`)) return;
-    const result = await sendRequest('delete', 'DELETE', { id });
+    const result = await sendRequest(PARA_API_ENDPOINT, 'delete', 'POST', { id });
     showToast(result.message, result.success ? '#28a745' : '#dc3545');
     if (result.success) loadStandardParams(); //-- โหลดข้อมูลใหม่หลังลบสำเร็จ --
 }
@@ -180,7 +175,7 @@ async function deleteStandardParam(id) {
 // --- ฟังก์ชันสำหรับ Tab "Line Schedules" ---
 
 async function loadSchedules() {
-    const result = await sendRequest('read_schedules', 'GET');
+    const result = await sendRequest(PARA_API_ENDPOINT, 'read_schedules', 'GET');
     if (result?.success) {
         allSchedules = result.data;
         renderSchedulesTable();
@@ -222,7 +217,7 @@ function renderSchedulesTable() {
 
 async function deleteSchedule(id) {
     if (!confirm(`Are you sure you want to delete schedule ID ${id}?`)) return;
-    const result = await sendRequest('delete_schedule', 'DELETE', { id });
+    const result = await sendRequest(PARA_API_ENDPOINT, 'delete_schedule', 'POST', { id });
     showToast(result.message, result.success ? '#28a745' : '#dc3545');
     if (result.success) loadSchedules();
 }
@@ -230,7 +225,7 @@ async function deleteSchedule(id) {
 // --- ฟังก์ชันสำหรับ Tab "Data Health Check" ---
 
 async function loadHealthCheckData() {
-    const result = await sendRequest('health_check_parameters', 'GET');
+    const result = await sendRequest(PARA_API_ENDPOINT, 'health_check_parameters', 'GET');
     const listBody = document.getElementById('missingParamsList');
     const paginationControls = document.getElementById('healthCheckPaginationControls');
     
@@ -330,7 +325,7 @@ async function handleImport(event) {
 
             //-- ยืนยันและส่งข้อมูลไปยัง API --
             if (rowsToImport.length > 0 && confirm(`Import ${rowsToImport.length} records?`)) {
-                const result = await sendRequest('bulk_import', 'POST', rowsToImport);
+                const result = await sendRequest(PARA_API_ENDPOINT, 'bulk_import', 'POST', rowsToImport);
                 if (result.success) {
                     showToast(result.message || "Import successful!", '#0d6efd');
                     loadStandardParams(); //-- โหลดข้อมูลใหม่หลัง Import --
@@ -349,29 +344,147 @@ async function handleImport(event) {
     reader.readAsBinaryString(file);
 }
 
-// --- Event Listeners และการเริ่มต้นทำงาน ---
-document.addEventListener('DOMContentLoaded', () => {
-    //-- โหลดข้อมูลของ Tab แรกเมื่อหน้าเว็บโหลดเสร็จ --
-    loadStandardParams();
-    document.getElementById('searchInput')?.addEventListener('input', filterAndRenderStandardParams);
+function initializeBomManager() {
+    const searchInput = document.getElementById('bomSearchInput');
+    const fgListTableBody = document.getElementById('bomFgListTableBody');
+    const manageBomModalEl = document.getElementById('manageBomModal');
+    if (!manageBomModalEl) return;
+    
+    const manageBomModal = new bootstrap.Modal(manageBomModalEl);
+    const modalTitle = document.getElementById('bomModalTitle');
+    const modalBomTableBody = document.getElementById('modalBomTableBody');
+    const modalAddComponentForm = document.getElementById('modalAddComponentForm');
+    const modalSelectedFgPartNo = document.getElementById('modalSelectedFgPartNo');
+    const modalPartDatalist = document.getElementById('bomModalPartDatalist');
 
+    function renderBomFgTable(fgData) {
+        fgListTableBody.innerHTML = '';
+        if (fgData && fgData.length > 0) {
+            fgData.forEach(fg => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${fg.fg_part_no || ''}</td>
+                    <td>${fg.line || 'N/A'}</td>
+                    <td>${fg.updated_by || 'N/A'}</td>
+                    <td>${fg.updated_at || 'N/A'}</td>
+                    <td class="text-center">
+                        <button class="btn btn-primary btn-sm" data-action="manage" data-fg="${fg.fg_part_no}">Manage BOM</button>
+                        <button class="btn btn-danger btn-sm" data-action="delete" data-fg="${fg.fg_part_no}">Delete BOM</button>
+                    </td>
+                `;
+                fgListTableBody.appendChild(tr);
+            });
+        } else {
+            fgListTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No BOMs found.</td></tr>';
+        }
+    }
+
+    async function loadAndRenderBomFgTable() {
+        const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs', 'GET');
+        if (result.success) {
+            allBomFgs = result.data;
+            renderBomFgTable(allBomFgs);
+        }
+    }
+
+    async function loadBomForModal(fgPartNo) {
+        modalTitle.textContent = `Managing BOM for: ${fgPartNo}`;
+        modalSelectedFgPartNo.value = fgPartNo;
+        modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+        const result = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo });
+        modalBomTableBody.innerHTML = '';
+        if (result.success && result.data.length > 0) {
+            result.data.forEach(comp => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Del</button></td>`;
+                modalBomTableBody.appendChild(tr);
+            });
+        } else {
+            modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No components. Add one now!</td></tr>';
+        }
+    }
+    
+    async function populateModalDatalist() {
+        const result = await sendRequest(PART_API_ENDPOINT, 'get_part_nos', 'GET');
+        if (result.success) {
+            modalPartDatalist.innerHTML = result.data.map(p => `<option value="${p}"></option>`).join('');
+        }
+    }
+
+    // --- Event Listeners for BOM Tab ---
+    searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredData = allBomFgs.filter(fg => 
+            fg.fg_part_no.toLowerCase().includes(searchTerm) || 
+            (fg.line && fg.line.toLowerCase().includes(searchTerm))
+        );
+        renderBomFgTable(filteredData);
+    });
+
+    fgListTableBody.addEventListener('click', async (e) => {
+        if (e.target.tagName !== 'BUTTON') return;
+        const action = e.target.dataset.action;
+        const fgPartNo = e.target.dataset.fg;
+        if (action === 'manage') {
+            manageBomModal.show();
+            loadBomForModal(fgPartNo);
+        } else if (action === 'delete') {
+            if (confirm(`Are you sure you want to delete the entire BOM for ${fgPartNo}?`)) {
+                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo });
+                showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                if (result.success) loadAndRenderBomFgTable();
+            }
+        }
+    });
+    
+    modalAddComponentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            loadBomForModal(payload.fg_part_no);
+            e.target.reset();
+        }
+    });
+
+    modalBomTableBody.addEventListener('click', async (e) => {
+        if (e.target.dataset.action !== 'delete-comp') return;
+        const bomId = parseInt(e.target.dataset.compId);
+        if (confirm('Delete this component?')) {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
+            showToast(result.message, result.success ? '#28a745' : '#dc3545');
+            if(result.success) loadBomForModal(modalSelectedFgPartNo.value);
+        }
+    });
+    
+    // --- Initial Load for BOM Tab ---
+    loadAndRenderBomFgTable();
+    populateModalDatalist();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Load data for the first active tab
+    loadStandardParams();
+    
+    document.getElementById('searchInput')?.addEventListener('input', filterAndRenderStandardParams);
     const importInput = document.getElementById('importFile');
     if (importInput) {
         importInput.addEventListener('change', handleImport);
     }
 
-    //-- เพิ่ม Event Listener ให้กับ Tab เพื่อโหลดข้อมูลเมื่อถูกเปิดใช้งาน (Lazy Loading) --
-    const tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
-    tabElms.forEach(tabElm => {
+    let bomTabLoaded = false;
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabElm => {
         tabElm.addEventListener('shown.bs.tab', event => {
             const targetTabId = event.target.getAttribute('data-bs-target');
             
-            if (targetTabId === '#standardParamsPane') {
-                loadStandardParams();
-            } else if (targetTabId === '#lineSchedulesPane') {
+            if (targetTabId === '#lineSchedulesPane') {
                 loadSchedules();
             } else if (targetTabId === '#healthCheckPane') {
                 loadHealthCheckData();
+            } else if (targetTabId === '#bomManagerPane' && !bomTabLoaded) {
+                initializeBomManager();
+                bomTabLoaded = true;
             }
         });
     });

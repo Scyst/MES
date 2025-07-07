@@ -26,7 +26,7 @@
 <body class="bg-dark text-white p-4">
     <?php include('../components/nav_dropdown.php'); ?>
     
-    <div class="container">
+    <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">System Parameters</h2>
         </div>
@@ -45,6 +45,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link text-warning" id="health-check-tab" data-bs-toggle="tab" data-bs-target="#healthCheckPane" type="button" role="tab">
                     <i class="fas fa-heartbeat"></i> Data Health Check
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bomManagerPane" type="button" role="tab">
+                    <i class="fas fa-sitemap"></i> BOM Manager
                 </button>
             </li>
         </ul>
@@ -76,15 +81,9 @@
                     <table class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Line</th>
-                                <th>Model</th>
-                                <th>Part No.</th>
-                                <th>SAP No.</th>
-                                <th>Planned Output</th>
-                                <th>Updated At</th>
-                                <?php if ($canManage): ?>
-                                    <th style="width: 150px; text-align: center;">Actions</th>
-                                <?php endif; ?>
+                                <th>Line</th><th>Model</th><th>Part No.</th><th>SAP No.</th>
+                                <th>Planned Output</th><th>Updated At</th>
+                                <?php if ($canManage): ?><th style="width: 150px; text-align: center;">Actions</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="paramTableBody"></tbody>
@@ -96,7 +95,7 @@
             </div>
 
             <div class="tab-pane fade" id="lineSchedulesPane" role="tabpanel">
-                 <div class="row my-3 align-items-center">
+                <div class="row my-3 align-items-center">
                     <div class="col-md-9"></div>
                     <div class="col-md-3">
                         <div class="d-flex justify-content-end">
@@ -110,15 +109,9 @@
                     <table class="table table-dark table-striped table-hover">
                          <thead>
                             <tr>
-                                <th>Line</th>
-                                <th>Shift Name</th>
-                                <th>Start Time</th>
-                                <th>End Time</th>
-                                <th>Break (min)</th>
-                                <th>Status</th>
-                                <?php if ($canManage): ?>
-                                    <th style="width: 150px; text-align: center;">Actions</th>
-                                <?php endif; ?>
+                                <th>Line</th><th>Shift Name</th><th>Start Time</th><th>End Time</th>
+                                <th>Break (min)</th><th>Status</th>
+                                <?php if ($canManage): ?><th style="width: 150px; text-align: center;">Actions</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="schedulesTableBody"></tbody>
@@ -127,18 +120,14 @@
             </div>
 
             <div class="tab-pane fade" id="healthCheckPane" role="tabpanel">
-                 <div class="alert alert-info mt-3">
+                <div class="alert alert-info mt-3">
                     <h4><i class="fas fa-info-circle"></i> Parts Requiring Attention</h4>
                     <p class="mb-0">The following parts have been produced but are missing standard time data (Planned Output). Please add them in the 'Standard Parameters' tab to ensure accurate OEE Performance calculation.</p>
                 </div>
                 <div class="table-responsive">
                      <table class="table table-dark table-striped">
                         <thead>
-                            <tr>
-                                <th>Line</th>
-                                <th>Model</th>
-                                <th>Part No.</th>
-                            </tr>
+                            <tr><th>Line</th><th>Model</th><th>Part No.</th></tr>
                         </thead>
                         <tbody id="missingParamsList"></tbody>
                     </table>
@@ -147,7 +136,29 @@
                     <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
                 </nav>
             </div>
-
+            
+            <div class="tab-pane fade" id="bomManagerPane" role="tabpanel">
+                <div class="row mb-3 align-items-center sticky-bar py-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number or Line...">
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-success" id="createNewBomBtn">+ Create New BOM</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Finished Good (FG) Part Number</th><th>Line</th>
+                                <th>Updated By</th><th>Updated At</th>
+                                <th style="width: 200px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomFgListTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -158,6 +169,7 @@
         include('components/editParamModal.php');
         include('components/addScheduleModal.php');
         include('components/editScheduleModal.php');
+        include('components/manageBomModal.php'); 
     } ?>
 
     <script>
@@ -167,7 +179,7 @@
     <script src="../components/datetime.js"></script>
     <script src="../components/auto_logout.js"></script>
     <script src="../components/toast.js"></script>
-    <script src="script/modal_handler.js"></script>
     <script src="script/paraManage.js"></script>
+    <script src="script/modal_handler.js"></script>
 </body>
 </html>
