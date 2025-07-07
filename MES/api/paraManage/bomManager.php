@@ -34,8 +34,8 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // ** FIXED: โค้ดส่วน 'เพิ่ม' ข้อมูลกลับมาอยู่ที่ case นี้ **
         case 'add_bom_component':
+            // 1. ตรวจสอบข้อมูล Input พื้นฐาน
             $fg_part_no = $input['fg_part_no'] ?? '';
             $component_part_no = $input['component_part_no'] ?? '';
             $quantity_required = $input['quantity_required'] ?? 0;
@@ -47,17 +47,26 @@ try {
                 throw new Exception("Finished Good and Component cannot be the same part.");
             }
 
-            // Validation (โค้ดส่วนนี้ถูกต้องแล้ว)
-            $validationSql = "SELECT (SELECT model FROM PARAMETER WHERE part_no = ?) AS fg_model, (SELECT model FROM PARAMETER WHERE part_no = ?) AS component_model";
-            $valStmt = $pdo->prepare($validationSql);
-            $valStmt->execute([$fg_part_no, $component_part_no]);
-            $models = $valStmt->fetch(PDO::FETCH_ASSOC);
+            // 2. ค้นหา Model ของ FG
+            $fgModelStmt = $pdo->prepare("SELECT model FROM PARAMETER WHERE part_no = ?");
+            $fgModelStmt->execute([$fg_part_no]);
+            $fg_model = $fgModelStmt->fetchColumn();
 
-            if (!$models['fg_model']) throw new Exception("Finished Good part ($fg_part_no) does not exist in Standard Parameters.");
-            if (!$models['component_model']) throw new Exception("Component part ($component_part_no) does not exist in Standard Parameters.");
-            if ($models['fg_model'] !== $models['component_model']) throw new Exception("Component's model ({$models['component_model']}) does not match FG's model ({$models['fg_model']}).");
+            if (!$fg_model) {
+                throw new Exception("Finished Good part ($fg_part_no) does not exist in Standard Parameters.");
+            }
 
-            // Check for duplicates before inserting
+            // 3. **ตรวจสอบ Component เทียบกับ Model ของ FG (ตามที่คุณแนะนำ)**
+            $compCheckSql = "SELECT COUNT(*) FROM PARAMETER WHERE part_no = ? AND model = ?";
+            $compCheckStmt = $pdo->prepare($compCheckSql);
+            $compCheckStmt->execute([$component_part_no, $fg_model]);
+            
+            if ($compCheckStmt->fetchColumn() == 0) {
+                // ถ้าไม่พบ แสดงว่า Component นี้ไม่มีอยู่ หรือไม่ได้อยู่ใน Model เดียวกับ FG
+                throw new Exception("Component part ($component_part_no) does not exist in model '$fg_model'.");
+            }
+
+            // 4. ตรวจสอบข้อมูลซ้ำใน BOM (ยังคงจำเป็น)
             $checkSql = "SELECT COUNT(*) FROM PRODUCT_BOM WHERE fg_part_no = ? AND component_part_no = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$fg_part_no, $component_part_no]);
@@ -65,7 +74,7 @@ try {
                 throw new Exception("This component ('$component_part_no') already exists in the BOM.");
             }
 
-            // Insert data
+            // 5. หากผ่านทั้งหมด ให้บันทึกข้อมูล
             $sql = "INSERT INTO PRODUCT_BOM (fg_part_no, component_part_no, quantity_required) VALUES (?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$fg_part_no, $component_part_no, (int)$quantity_required]);
