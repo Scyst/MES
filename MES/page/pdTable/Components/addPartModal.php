@@ -33,7 +33,7 @@
                         <input list="partList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type Part No." required>
                     </div>
                     
-                    <div class="mb-3">
+                    <div class="mb-3" style="display: none;">
                         <label for="add_lot_no" class="form-label">Lot No.</label>
                         <input type="text" name="lot_no" id="add_lot_no" class="form-control text-uppercase" placeholder="Scan or type Lot No. to record output">
                     </div>

@@ -131,6 +131,55 @@ function openEditEntryModal(rowData, triggerEl) {
     showBootstrapModal('editEntryModal');
 }
 
+/**
+ * ฟังก์ชันสำหรับเปิด Modal "Summary" ของ Entry History
+ */
+function openHistorySummaryModal() {
+    const tableContainer = document.getElementById('summaryTableContainer');
+    const grandTotalContainer = document.getElementById('summaryGrandTotalContainer');
+    const summaryData = window.cachedHistorySummary || [];
+
+    if (!tableContainer || !grandTotalContainer) return;
+
+    // ซ่อน Grand Total เพราะหน้านี้ไม่มี
+    grandTotalContainer.innerHTML = '';
+
+    tableContainer.innerHTML = '';
+    if (summaryData.length === 0) {
+        tableContainer.innerHTML = '<p class="text-center mt-3">No summary data to display.</p>';
+        showBootstrapModal('summaryModal');
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'table table-dark table-striped table-hover';
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+    
+    const headers = ["Line", "Model", "Part No.", "Total Quantity In"];
+    headers.forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+    });
+
+    const tbody = table.createTBody();
+    summaryData.forEach(row => {
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = row.line;
+        tr.insertCell().textContent = row.model;
+        tr.insertCell().textContent = row.part_no;
+        tr.insertCell().textContent = parseInt(row.total_quantity_in).toLocaleString();
+    });
+
+    tableContainer.appendChild(table);
+    // เปลี่ยน Title ของ Modal
+    document.querySelector('#summaryModal .modal-title').textContent = 'Entry History Summary';
+    // เปลี่ยนฟังก์ชันของปุ่ม Export ใน Modal
+    document.querySelector('#summaryModal button[onclick="exportSummaryToExcel()"]').setAttribute('onclick', 'exportHistorySummaryToExcel()');
+    showBootstrapModal('summaryModal');
+}
+
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
     const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {

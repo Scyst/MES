@@ -48,7 +48,6 @@ function renderTable(data, canManage) {
     tbody.innerHTML = ''; 
     
     if (!data || data.length === 0) {
-        // แก้ไข: ปรับ Colspan จาก 11 เป็น 10
         const colSpan = canManage ? 10 : 9;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
@@ -67,16 +66,22 @@ function renderTable(data, canManage) {
         const formattedDate = row.log_date ? new Date(row.log_date).toLocaleDateString('en-GB') : '';
         const formattedTime = row.log_time ? row.log_time.substring(0, 8) : '';
         
-        // แก้ไข: ลบการเพิ่ม Cell ของ ID ออก
-        // tr.appendChild(createCell(row.id)); 
         tr.appendChild(createCell(formattedDate));
         tr.appendChild(createCell(formattedTime));
         tr.appendChild(createCell(row.line));
         tr.appendChild(createCell(row.model));
         tr.appendChild(createCell(row.part_no));
         tr.appendChild(createCell(row.lot_no || ''));
-        tr.appendChild(createCell(row.count_value));
-        tr.appendChild(createCell(row.count_type));
+
+        // --- แก้ไข: เพิ่ม class ให้กับ Cell ของ Qty และ Type ---
+        const qtyCell = createCell(row.count_value);
+        qtyCell.classList.add('text-center-col');
+        tr.appendChild(qtyCell);
+
+        const typeCell = createCell(row.count_type);
+        typeCell.classList.add('text-center-col');
+        tr.appendChild(typeCell);
+        // ----------------------------------------------------
         
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
@@ -86,12 +91,12 @@ function renderTable(data, canManage) {
         noteTd.appendChild(noteDiv);
         tr.appendChild(noteTd);
         
-        //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ --
         if (canManage) {
             const actionsTd = document.createElement('td');
+            actionsTd.classList.add('text-center-col'); // จัดปุ่มให้อยู่กลางด้วย
             
             const buttonWrapper = document.createElement('div');
-            buttonWrapper.className = 'd-flex gap-1'; 
+            buttonWrapper.className = 'd-flex justify-content-center gap-1'; 
 
             const editButton = document.createElement('button');
             editButton.className = 'btn btn-sm btn-warning w-100'; 

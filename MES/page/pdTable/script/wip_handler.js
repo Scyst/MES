@@ -4,11 +4,13 @@
 async function fetchWipReport() {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
-    reportBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading Report...</td></tr>';
+    // แก้ไข: ปรับ colspan เป็น 6
+    reportBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Report...</td></tr>';
     
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
+        model: document.getElementById('filterModel')?.value || '', // เพิ่ม filter model
         lot_no: document.getElementById('filterLotNo')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
         endDate: document.getElementById('filterEndDate')?.value || ''
@@ -19,13 +21,12 @@ async function fetchWipReport() {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        // --- เพิ่มเข้ามา: Cache ข้อมูล WIP Report ---
         window.cachedWipReport = result.report;
-        // ------------------------------------------
 
         reportBody.innerHTML = '';
         if (result.report.length === 0) {
-            reportBody.innerHTML = '<tr><td colspan="5" class="text-center">No WIP data found for the selected filters.</td></tr>';
+            // แก้ไข: ปรับ colspan เป็น 6
+            reportBody.innerHTML = '<tr><td colspan="6" class="text-center">No WIP data found for the selected filters.</td></tr>';
         } else {
             result.report.forEach(item => {
                 const variance = parseInt(item.variance);
@@ -44,20 +45,23 @@ async function fetchWipReport() {
                 }
 
                 const tr = document.createElement('tr');
+                // แก้ไข: เพิ่ม td สำหรับ Model
                 tr.innerHTML = `
                     <td>${item.part_no}</td>
                     <td>${item.line}</td>
-                    <td>${parseInt(item.total_in).toLocaleString()}</td>
-                    <td>${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}">${varianceText}</td>
+                    <td>${item.model}</td>
+                    <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
+                    <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
-        window.cachedWipReport = []; // เคลียร์ cache หากเกิด error
-        reportBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        window.cachedWipReport = [];
+        // แก้ไข: ปรับ colspan เป็น 6
+        reportBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -81,6 +85,8 @@ async function fetchHistoryData() {
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
+        
+        window.cachedHistorySummary = result.history_summary || [];
         
         historyBody.innerHTML = '';
         if (result.history.length === 0) {
@@ -107,7 +113,7 @@ async function fetchHistoryData() {
                     <td>${item.model || '-'}</td>
                     <td>${item.part_no}</td>
                     <td>${item.lot_no || '-'}</td>
-                    <td>${parseInt(item.quantity_in).toLocaleString()}</td>
+                    <td style="text-align: center;">${parseInt(item.quantity_in).toLocaleString()}</td>
                 `;
                 tr.appendChild(noteTd);
                 

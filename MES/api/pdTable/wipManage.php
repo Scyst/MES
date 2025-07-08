@@ -58,7 +58,29 @@ try {
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             $partsWhereClause = $parts_conditions ? "WHERE " . implode(" AND ", $parts_conditions) : "";
 
-            $sql = "WITH TotalIn AS (SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model), TotalOut AS (SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS " . ($partsWhereClause ? $partsWhereClause . " AND count_type = 'FG'" : "WHERE count_type = 'FG'") . " GROUP BY part_no, line, model) SELECT ISNULL(tin.part_no, tout.part_no) AS part_no, ISNULL(tin.line, tout.line) AS line, ISNULL(tin.model, tout.model) as model, ISNULL(tin.total_in, 0) AS total_in, ISNULL(tout.total_out, 0) AS total_out, (ISNULL(tout.total_out, 0) - ISNULL(tin.total_in, 0)) AS variance FROM TotalIn tin FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model ORDER BY part_no, line, model;";
+            // แก้ไข: เพิ่ม model เข้าไปใน GROUP BY, SELECT, และ JOIN
+            $sql = "
+                WITH TotalIn AS (
+                    SELECT part_no, line, model, SUM(quantity_in) AS total_in 
+                    FROM WIP_ENTRIES wip $wipWhereClause 
+                    GROUP BY part_no, line, model
+                ), 
+                TotalOut AS (
+                    SELECT part_no, line, model, SUM(count_value) AS total_out 
+                    FROM PARTS " . ($partsWhereClause ? $partsWhereClause . " AND count_type = 'FG'" : "WHERE count_type = 'FG'") . " 
+                    GROUP BY part_no, line, model
+                ) 
+                SELECT 
+                    ISNULL(tin.part_no, tout.part_no) AS part_no, 
+                    ISNULL(tin.line, tout.line) AS line, 
+                    ISNULL(tin.model, tout.model) as model, 
+                    ISNULL(tin.total_in, 0) AS total_in, 
+                    ISNULL(tout.total_out, 0) AS total_out, 
+                    (ISNULL(tout.total_out, 0) - ISNULL(tin.total_in, 0)) AS variance 
+                FROM TotalIn tin 
+                FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model 
+                ORDER BY part_no, line, model;
+            ";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array_merge($params, $parts_params));
@@ -68,7 +90,8 @@ try {
             break;
             
         case 'get_wip_history':
-            $params = []; $wip_conditions = [];
+            $params = []; 
+            $wip_conditions = [];
             if (!empty($_GET['line'])) { $wip_conditions[] = "line = ?"; $params[] = $_GET['line']; }
             if (!empty($_GET['part_no'])) { $wip_conditions[] = "part_no = ?"; $params[] = $_GET['part_no']; }
             if (!empty($_GET['model'])) { $wip_conditions[] = "model = ?"; $params[] = $_GET['model']; }
@@ -77,12 +100,28 @@ try {
             if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
             
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
+            
             $history_sql = "SELECT * FROM WIP_ENTRIES AS wip $wipWhereClause ORDER BY entry_time DESC";
             $history_stmt = $pdo->prepare($history_sql);
             $history_stmt->execute($params);
             $history_data = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'history' => $history_data]);
+            $summary_sql = "
+                SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in
+                FROM WIP_ENTRIES wip
+                $wipWhereClause
+                GROUP BY line, model, part_no
+                ORDER BY line, model, part_no
+            ";
+            $summary_stmt = $pdo->prepare($summary_sql);
+            $summary_stmt->execute($params);
+            $summary_data = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'history' => $history_data,
+                'history_summary' => $summary_data 
+            ]);
             break;
 
         case 'update_wip_entry':

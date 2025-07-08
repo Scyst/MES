@@ -255,3 +255,28 @@ function exportWipReportToExcel() {
     XLSX.utils.book_append_sheet(wb, ws, "WIP Report");
     XLSX.writeFile(wb, `WIP_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูล "Summary" ของ Entry History เป็นไฟล์ Excel
+ */
+function exportHistorySummaryToExcel() {
+    const summaryData = window.cachedHistorySummary || [];
+
+    if (summaryData.length === 0) {
+        showToast("No summary data to export.", '#ffc107');
+        return;
+    }
+    
+    const dataToExport = summaryData.map(row => ({
+        'Line': row.line,
+        'Model': row.model,
+        'Part No': row.part_no,
+        'Total Quantity In': parseInt(row.total_quantity_in)
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Entry History Summary");
+
+    XLSX.writeFile(wb, `Entry_History_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
+}

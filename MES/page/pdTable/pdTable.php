@@ -22,6 +22,11 @@
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
     <link rel="stylesheet" href="../../style/style.css">
+    <style>
+        .text-center-col {
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body class="bg-dark text-white p-4">
@@ -92,8 +97,8 @@
                                 <th>Model</th>
                                 <th>Part No.</th>
                                 <th>Lot No.</th>
-                                <th>Qty</th>
-                                <th style="min-width: 200px;">Note</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="min-width: 200px; text-align: center;">Note</th>
                                 <?php if ($canManage): ?>
                                     <th style="width: 150px; text-align: center;">Actions</th>
                                 <?php endif; ?>
@@ -115,9 +120,9 @@
                                 <th>Model</th>
                                 <th>Part No.</th>
                                 <th>Lot No.</th>
-                                <th>Qty</th>
-                                <th>Type</th>
-                                <th style="min-width: 200px;">Note</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="text-align: center;">Type</th>
+                                <th style="min-width: 200px; text-align: center;">Note</th>
                                 <?php if ($canManage): ?>
                                     <th style="width: 150px; text-align: center;">Actions</th>
                                 <?php endif; ?>
@@ -133,10 +138,17 @@
                 <div class="table-responsive mb-4">
                     <table class="table table-dark table-striped">
                         <thead>
-                            <tr>
-                                <th>Part Number</th><th>Line</th><th>ยอดนำเข้ารวม (Total In)</th>
-                                <th>ยอดผลิตเสร็จ (Total Out)</th><th>คงค้าง/ส่วนต่าง (WIP/Variance)</th>
-                            </tr>
+                            <thead>
+                                <tr>
+                                    <th>Part Number</th>
+                                    <th>Line</th>
+                                    <th>Model</th>
+                                    <th style="text-align: center;">ยอดนำเข้ารวม (Total In)</th>
+                                    <th style="text-align: center;">ยอดผลิตเสร็จ (Total Out)</th>
+                                    <th style="text-align: center;">คงค้าง/ส่วนต่าง (WIP/Variance)</th>
+                                </tr>
+                            </thead>
+                        <tbody id="wipReportTableBody"></tbody>
                         </thead>
                         <tbody id="wipReportTableBody"></tbody>
                     </table>
@@ -199,6 +211,15 @@
                         // แก้ไข: เพิ่มปุ่ม Export
                         buttonGroup.innerHTML = `
                             <button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>
+                        `;
+                        break;
+                    
+                    case 'entry-history-tab':
+                        // เพิ่มปุ่ม Summary
+                        buttonGroup.innerHTML = `
+                            <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
+                            <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
+                            ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
                         `;
                         break;
                 }
