@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../logger.php';
 session_start();
 
 //-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
@@ -62,16 +62,19 @@ try {
 
             foreach ($allowed_string_filters as $filter) {
                 if (!empty($_GET[$filter])) {
-                    $conditions[] = "wip.{$filter} = ?";
+                    // ** FIXED: เอา "wip." ออกไป **
+                    $conditions[] = "{$filter} = ?"; 
                     $params[] = $_GET[$filter];
                 }
             }
             if (!empty($_GET['startDate'])) {
-                $conditions[] = "CAST(wip.entry_time AS DATE) >= ?";
+                // ** FIXED: เอา "wip." ออกไป **
+                $conditions[] = "CAST(entry_time AS DATE) >= ?";
                 $params[] = $_GET['startDate'];
             }
             if (!empty($_GET['endDate'])) {
-                $conditions[] = "CAST(wip.entry_time AS DATE) <= ?";
+                // ** FIXED: เอา "wip." ออกไป **
+                $conditions[] = "CAST(entry_time AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
@@ -79,15 +82,12 @@ try {
             //-- Query หลักสำหรับสร้างรายงานสรุป WIP --
             $sql = "
                 SELECT 
-                    wip.lot_no,
-                    wip.part_no,
-                    wip.line,
+                    wip.lot_no, wip.part_no, wip.line,
                     SUM(wip.quantity_in) AS total_in,
                     ISNULL(prod.total_out, 0) AS total_out,
                     (SUM(wip.quantity_in) - ISNULL(prod.total_out, 0)) AS variance
                 FROM 
                     WIP_ENTRIES wip
-                -- Join กับ Subquery ที่รวมยอด FG จากตาราง Parts --
                 LEFT JOIN 
                     (SELECT lot_no, SUM(count_value) as total_out 
                        FROM PARTS 

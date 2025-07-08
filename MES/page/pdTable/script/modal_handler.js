@@ -1,7 +1,7 @@
 //-- ตัวแปร Global สำหรับเก็บค่าคงที่และสถานะ --
 let modalTriggerElement = null; //-- เก็บ Element ที่กดเพื่อเปิด Modal (สำหรับคืน Focus) --
 const PD_API_URL = '../../api/pdTable/pdTableManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล Production --
-const WIP_API_URL = '../../api/wipManage/wipManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล WIP --
+const WIP_API_URL = '../../api/pdTable/wipManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล WIP --
 
 /**
  * ฟังก์ชันกลางสำหรับเปิด Bootstrap Modal

@@ -22,7 +22,7 @@ async function fetchWipReport() {
 
     try {
         //-- เรียก API เพื่อดึงข้อมูลรายงานและประวัติ --
-        const response = await fetch(`../../api/wipManage/wipManage.php?action=get_wip_report&${params.toString()}`);
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
 
         if (!result.success) {
