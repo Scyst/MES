@@ -106,6 +106,31 @@ function openSummaryModal(triggerEl) {
     showBootstrapModal('summaryModal');
 }
 
+function openAddEntryModal(triggerEl) {
+    modalTriggerElement = triggerEl;
+    showBootstrapModal('addEntryModal');
+}
+
+// ฟังก์ชันใหม่สำหรับเปิด Modal แก้ไข Entry
+function openEditEntryModal(rowData, triggerEl) {
+    modalTriggerElement = triggerEl;
+    const modal = document.getElementById('editEntryModal');
+    if (!modal) return;
+    
+    // แปลง Format ของ Date ให้ตรงกับ input type="datetime-local"
+    const localDateTime = new Date(new Date(rowData.entry_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+    modal.querySelector('#edit_entry_id').value = rowData.entry_id;
+    modal.querySelector('#edit_entry_time').value = localDateTime;
+    modal.querySelector('#edit_wipLine').value = rowData.line;
+    modal.querySelector('#edit_wipPartNo').value = rowData.part_no;
+    modal.querySelector('#edit_wipLotNo').value = rowData.lot_no || '';
+    modal.querySelector('#edit_wipQuantityIn').value = rowData.quantity_in;
+    modal.querySelector('#edit_wipRemark').value = rowData.remark || '';
+    
+    showBootstrapModal('editEntryModal');
+}
+
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
     const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
@@ -158,11 +183,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const wipEntryForm = document.getElementById('wipEntryForm');
     if (wipEntryForm) {
-        handleFormSubmit(wipEntryForm, WIP_API_URL, 'log_wip_entry', 'addPartModal', () => {
+        handleFormSubmit(wipEntryForm, WIP_API_URL, 'log_wip_entry', 'addEntryModal', () => {
             wipEntryForm.reset();
-            if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
-                if (typeof fetchWipReport === 'function') fetchWipReport();
+            if (document.getElementById('entry-history-pane')?.classList.contains('active')) {
+                if (typeof fetchHistoryData === 'function') fetchHistoryData();
             }
+        });
+    }
+
+    // เพิ่ม Listener สำหรับฟอร์มแก้ไข Entry
+    const editWipEntryForm = document.getElementById('editWipEntryForm');
+    if (editWipEntryForm) {
+        handleFormSubmit(editWipEntryForm, WIP_API_URL, 'update_wip_entry', 'editEntryModal', () => {
+            if (typeof fetchHistoryData === 'function') fetchHistoryData();
         });
     }
 });

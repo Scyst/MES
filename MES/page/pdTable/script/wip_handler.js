@@ -2,16 +2,10 @@
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
  */
 async function fetchWipReport() {
-    //-- ดึง Element ของ Table Body ทั้งสองตาราง --
     const reportBody = document.getElementById('wipReportTableBody');
-    const historyBody = document.getElementById('wipHistoryTableBody');
-    if (!reportBody || !historyBody) return;
-
-    //-- แสดงสถานะ "Loading..." ระหว่างรอข้อมูล --
+    if (!reportBody) return;
     reportBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading Report...</td></tr>';
-    historyBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading History...</td></tr>';
     
-    //-- รวบรวมค่า Filter ปัจจุบัน --
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
@@ -21,40 +15,71 @@ async function fetchWipReport() {
     });
 
     try {
-        //-- เรียก API เพื่อดึงข้อมูลรายงานและประวัติ --
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
+        if (!result.success) throw new Error(result.message);
 
-        if (!result.success) {
-            throw new Error(result.message);
-        }
-
-        //-- 1. Render ตารางสรุป WIP Report --
         reportBody.innerHTML = '';
         if (result.report.length === 0) {
             reportBody.innerHTML = '<tr><td colspan="5" class="text-center">No WIP data found for the selected filters.</td></tr>';
         } else {
             result.report.forEach(item => {
                 const variance = parseInt(item.variance);
-                //-- หากมีผลต่าง (Variance) ให้ไฮไลท์แถวเป็นสีเหลือง --
-                const rowClass = variance !== 0 ? 'table-warning' : ''; 
+                let textColorClass = '';
+                let varianceText = '';
+
+                if (variance > 0) {
+                    textColorClass = 'text-warning';
+                    varianceText = '+' + variance.toLocaleString();
+                } else if (variance < 0) {
+                    textColorClass = 'text-danger';
+                    varianceText = variance.toLocaleString();
+                } else {
+                    textColorClass = 'text-success';
+                    varianceText = variance.toLocaleString();
+                }
+
                 const tr = document.createElement('tr');
-                tr.className = rowClass;
                 tr.innerHTML = `
                     <td>${item.part_no}</td>
                     <td>${item.line}</td>
                     <td>${parseInt(item.total_in).toLocaleString()}</td>
                     <td>${parseInt(item.total_out).toLocaleString()}</td>
-                    <td><b>${variance.toLocaleString()}</b></td>
+                    <td class="fw-bold ${textColorClass}">${varianceText}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
+    } catch (error) {
+        console.error('Failed to fetch WIP report:', error);
+        reportBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+    }
+}
+
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
+ */
+async function fetchHistoryData() {
+    const historyBody = document.getElementById('wipHistoryTableBody');
+    if (!historyBody) return;
+    historyBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading History...</td></tr>';
+
+    const params = new URLSearchParams({
+        line: document.getElementById('filterLine')?.value || '',
+        part_no: document.getElementById('filterPartNo')?.value || '',
+        lot_no: document.getElementById('filterLotNo')?.value || '',
+        startDate: document.getElementById('filterStartDate')?.value || '',
+        endDate: document.getElementById('filterEndDate')?.value || ''
+    });
+
+    try {
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
         
-        //-- 2. Render ตารางประวัติการนำเข้า WIP --
         historyBody.innerHTML = '';
-         if (result.history.length === 0) {
-            historyBody.innerHTML = '<tr><td colspan="7" class="text-center">No entry history found for the selected filters.</td></tr>';
+        if (result.history.length === 0) {
+            historyBody.innerHTML = '<tr><td colspan="7" class="text-center">No entry history found.</td></tr>';
         } else {
             result.history.forEach(item => {
                 const tr = document.createElement('tr');
@@ -64,39 +89,87 @@ async function fetchWipReport() {
                     <td>${item.lot_no || '-'}</td>
                     <td>${item.part_no}</td>
                     <td>${parseInt(item.quantity_in).toLocaleString()}</td>
-                    <td>${item.operator}</td>
                     <td>${item.remark || '-'}</td>
                 `;
+                
+                if (canManage) {
+                    const actionsTd = document.createElement('td');
+                    actionsTd.className = 'text-center';
+                    const buttonWrapper = document.createElement('div');
+                    buttonWrapper.className = 'd-flex gap-1';
+
+                    const editButton = document.createElement('button');
+                    editButton.className = 'btn btn-sm btn-warning w-100';
+                    editButton.textContent = 'Edit';
+                    editButton.onclick = () => openEditEntryModal(item, editButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'btn btn-sm btn-danger w-100';
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.onclick = () => handleDeleteEntry(item.entry_id);
+
+                    buttonWrapper.appendChild(editButton);
+                    buttonWrapper.appendChild(deleteButton);
+                    actionsTd.appendChild(buttonWrapper);
+                    tr.appendChild(actionsTd);
+                }
                 historyBody.appendChild(tr);
             });
         }
-
     } catch (error) {
-        //-- จัดการข้อผิดพลาดและแสดงในตาราง --
-        console.error('Failed to fetch WIP report:', error);
-        reportBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
-        historyBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error loading history.</td></tr>`;
+        console.error('Failed to fetch entry history:', error);
+        historyBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
-//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
+async function handleDeleteEntry(entryId) {
+    if (!confirm(`Are you sure you want to delete Entry ID ${entryId}?`)) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    try {
+        const response = await fetch('../../api/pdTable/wipManage.php?action=delete_wip_entry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ entry_id: entryId })
+        });
+        const result = await response.json();
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            fetchHistoryData();
+        }
+    } catch (error) {
+        showToast('An error occurred while deleting the entry.', '#dc3545');
+    }
+}
+
+// --- Logic ใหม่ทั้งหมดสำหรับจัดการ Event Listener ---
 document.addEventListener('DOMContentLoaded', () => {
     const wipTabButton = document.getElementById('wip-report-tab');
-    const filterButton = document.getElementById('filterButton');
+    const historyTabButton = document.getElementById('entry-history-tab');
 
-    //-- หากมีการกด Tab "WIP Report" ให้โหลดข้อมูล --
     if (wipTabButton) {
-        wipTabButton.addEventListener('shown.bs.tab', () => {
-            fetchWipReport();
-        });
+        wipTabButton.addEventListener('shown.bs.tab', fetchWipReport);
     }
     
-    //-- หากมีการกดปุ่ม Filter ให้โหลดข้อมูลใหม่ (เฉพาะเมื่ออยู่บน Tab WIP) --
-    if (filterButton) {
-        filterButton.addEventListener('click', () => {
-            if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
-                 fetchWipReport();
-            }
-        });
+    if (historyTabButton) {
+        historyTabButton.addEventListener('shown.bs.tab', fetchHistoryData);
     }
+    
+    // ฟังก์ชันสำหรับจัดการการกรองข้อมูลในแท็บ WIP และ History
+    function handleWipAndHistoryFilter() {
+        if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
+            fetchWipReport();
+        } else if (document.getElementById('entry-history-pane')?.classList.contains('active')) {
+            fetchHistoryData();
+        }
+    }
+
+    // เพิ่ม Event Listener ให้กับทุกช่อง Filter
+    const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
+    filterInputs.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            // ใช้ Debounce เพื่อลดการยิง API ขณะพิมพ์
+            clearTimeout(window.wipFilterDebounceTimer);
+            window.wipFilterDebounceTimer = setTimeout(handleWipAndHistoryFilter, 500);
+        });
+    });
 });
