@@ -19,25 +19,25 @@
                             <input type="time" name="log_time" id="edit_log_time" step="1" class="form-control" required>
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="edit_line" class="form-label">Line</label>
-                        <input list="editLineList" name="line" id="edit_line" class="form-control" placeholder="Select or type Line" required>
-                        <datalist id="editLineList"></datalist>
-                    </div>
-
+                    
                     <div class="mb-3">
                         <label for="edit_model" class="form-label">Model</label>
                         <input list="editModelList" name="model" id="edit_model" class="form-control" placeholder="Select or type Model" required>
                         <datalist id="editModelList"></datalist>
                     </div>
-
+                    
                     <div class="mb-3">
                         <label for="edit_part_no" class="form-label">Part No.</label>
                         <input list="editPartList" name="part_no" id="edit_part_no" class="form-control" placeholder="Select or type Part No." required>
                         <datalist id="editPartList"></datalist>
                     </div>
-
+                    
+                    <div class="mb-3">
+                        <label for="edit_line" class="form-label">Line</label>
+                        <input list="editLineList" name="line" id="edit_line" class="form-control" placeholder="Select or type Line" required>
+                        <datalist id="editLineList"></datalist>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="edit_lot_no" class="form-label">Lot No.</label>
                         <input type="text" name="lot_no" id="edit_lot_no" class="form-control" placeholder="Lot No." readonly>

@@ -17,22 +17,27 @@
                             <input type="time" id="addPartLogTime" name="log_time" step="1" class="form-control" required>
                         </div>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="addPartLine" class="form-label">Line</label>
                         <input list="lineList" id="addPartLine" name="line" class="form-control text-uppercase" placeholder="Select or type Line" required>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="addPartModel" class="form-label">Model</label>
                         <input list="modelList" id="addPartModel" name="model" class="form-control text-uppercase" placeholder="Select or type Model" required>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="addPartPartNo" class="form-label">Part No.</label>
                         <input list="partList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type Part No." required>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="add_lot_no" class="form-label">Lot No.</label>
                         <input type="text" name="lot_no" id="add_lot_no" class="form-control text-uppercase" placeholder="Scan or type Lot No. to record output">
                     </div>
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="addPartCountValue" class="form-label">Count Value</label>
@@ -50,6 +55,7 @@
                             </select>
                         </div>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="addPartNote" class="form-label">Note</label>
                         <input type="text" id="addPartNote" name="note" class="form-control" placeholder="Optional note">

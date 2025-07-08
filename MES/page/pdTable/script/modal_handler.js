@@ -53,13 +53,11 @@ function openSummaryModal(triggerEl) {
     
     const grandTotalContainer = document.getElementById('summaryGrandTotalContainer');
     const tableContainer = document.getElementById('summaryTableContainer');
-    //-- ดึงข้อมูลที่ Cache ไว้จาก Global Variable --
     const summaryData = window.cachedSummary || [];
     const grandTotalData = window.cachedGrand || {};
 
     if (!tableContainer || !grandTotalContainer) return;
 
-    //-- สร้าง HTML สำหรับ Grand Total (แสดงเฉพาะค่าที่มากกว่า 0) --
     let grandTotalHTML = '<strong>Grand Total: </strong>';
     if (grandTotalData) {
         grandTotalHTML += Object.entries(grandTotalData)
@@ -69,7 +67,6 @@ function openSummaryModal(triggerEl) {
     }
     grandTotalContainer.innerHTML = grandTotalHTML;
 
-    //-- สร้างตารางสรุปผลแบบ Dynamic --
     tableContainer.innerHTML = '';
     if (summaryData.length === 0) {
         tableContainer.innerHTML = '<p class="text-center mt-3">No summary data to display.</p>';
@@ -81,7 +78,9 @@ function openSummaryModal(triggerEl) {
     table.className = 'table table-dark table-striped table-hover';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    const headers = ["Model", "Part No.", "Lot No.", "FG", "NG", "HOLD", "REWORK", "SCRAP", "ETC."];
+    
+    // แก้ไข: เปลี่ยน Headers ของตาราง
+    const headers = ["Model", "Part No.", "Line", "FG", "NG", "HOLD", "REWORK", "SCRAP", "ETC."];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -91,9 +90,10 @@ function openSummaryModal(triggerEl) {
     const tbody = table.createTBody();
     summaryData.forEach(row => {
         const tr = tbody.insertRow();
+        // แก้ไข: เปลี่ยนข้อมูลในแต่ละ Cell ให้ตรงกับ Headers ใหม่
         tr.insertCell().textContent = row.model;
         tr.insertCell().textContent = row.part_no;
-        tr.insertCell().textContent = row.lot_no || '';
+        tr.insertCell().textContent = row.line; // เพิ่ม Line
         tr.insertCell().textContent = row.FG || 0;
         tr.insertCell().textContent = row.NG || 0;
         tr.insertCell().textContent = row.HOLD || 0;
@@ -117,11 +117,11 @@ function openEditEntryModal(rowData, triggerEl) {
     const modal = document.getElementById('editEntryModal');
     if (!modal) return;
     
-    // แปลง Format ของ Date ให้ตรงกับ input type="datetime-local"
     const localDateTime = new Date(new Date(rowData.entry_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
     modal.querySelector('#edit_entry_id').value = rowData.entry_id;
     modal.querySelector('#edit_entry_time').value = localDateTime;
+    modal.querySelector('#edit_wipModel').value = rowData.model || ''; // เพิ่มบรรทัดนี้
     modal.querySelector('#edit_wipLine').value = rowData.line;
     modal.querySelector('#edit_wipPartNo').value = rowData.part_no;
     modal.querySelector('#edit_wipLotNo').value = rowData.lot_no || '';

@@ -187,3 +187,71 @@ function exportSummaryToExcel() {
     //-- สั่งดาวน์โหลดไฟล์ Excel --
     XLSX.writeFile(workbook, `Production_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูล Entry History เป็นไฟล์ Excel
+ */
+async function exportHistoryToExcel() {
+    showToast('Exporting Entry History...', '#0dcaf0');
+    const params = new URLSearchParams({
+        action: 'get_wip_history',
+        line: document.getElementById('filterLine')?.value || '',
+        part_no: document.getElementById('filterPartNo')?.value || '',
+        lot_no: document.getElementById('filterLotNo')?.value || '',
+        startDate: document.getElementById('filterStartDate')?.value || '',
+        endDate: document.getElementById('filterEndDate')?.value || ''
+    });
+
+    try {
+        const response = await fetch(`../../api/pdTable/wipManage.php?${params.toString()}`);
+        const result = await response.json();
+
+        if (!result.success || result.history.length === 0) {
+            showToast("No entry history data to export.", '#ffc107');
+            return;
+        }
+
+        const dataToExport = result.history.map(row => ({
+            'Timestamp': new Date(row.entry_time).toLocaleString('th-TH'),
+            'Line': row.line,
+            'Lot No': row.lot_no || '-',
+            'Part No': row.part_no,
+            'Quantity In': parseInt(row.quantity_in),
+            'Operator': row.operator,
+            'Remark': row.remark || '-'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Entry History");
+        XLSX.writeFile(wb, `Entry_History_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+    } catch (error) {
+        console.error('Export Entry History failed:', error);
+        showToast('Failed to export history data.', '#dc3545');
+    }
+}
+
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูล WIP Report เป็นไฟล์ Excel
+ */
+function exportWipReportToExcel() {
+    const reportData = window.cachedWipReport || [];
+    if (reportData.length === 0) {
+        showToast("No WIP report data to export.", '#ffc107');
+        return;
+    }
+
+    const dataToExport = reportData.map(row => ({
+        'Part Number': row.part_no,
+        'Line': row.line,
+        'Total In': parseInt(row.total_in),
+        'Total Out': parseInt(row.total_out),
+        'Variance': parseInt(row.variance)
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "WIP Report");
+    XLSX.writeFile(wb, `WIP_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+}

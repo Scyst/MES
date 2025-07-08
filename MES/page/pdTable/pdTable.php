@@ -28,10 +28,10 @@
     <?php include('../components/nav_dropdown.php'); ?>
 
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">Production & WIP Management</h2>
         </div>
-        
+
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History</button>
@@ -43,9 +43,9 @@
                 <button class="nav-link" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP Report</button>
             </li>
         </ul>
-
+        
         <div class="row my-3 align-items-center sticky-bar py-3">
-             <div class="col-md-12">
+            <div class="col-md-8">
                 <div class="filter-controls-wrapper" id="main-filters">
                     <input list="partNoList" id="filterPartNo" class="form-control" placeholder="Part No.">
                     <datalist id="partNoList"></datalist>
@@ -58,6 +58,7 @@
 
                     <input list="modelList" id="filterModel" class="form-control" placeholder="Model">
                     <datalist id="modelList"></datalist>
+                    
                     <select id="filterCountType" class="form-select">
                         <option value="">All Types</option>
                         <option value="FG">FG</option><option value="NG">NG</option><option value="HOLD">HOLD</option>
@@ -67,30 +68,30 @@
                     <input type="date" id="filterStartDate" class="form-control">
                     <span>-</span>
                     <input type="date" id="filterEndDate" class="form-control">
-                    <!--<button class="btn btn-primary" id="filterButton">Search</button>-->
                 </div>
+            </div>
+
+            <div class="col-md-4">
+                <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
+            </div>
+            
+            <div class="col-12 mt-3">
+                <div id="dynamic-summary-container" class="summary-grand-total"></div>
             </div>
         </div>
 
         <div class="tab-content" id="mainTabContent">
-            
             <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">ประวัติการนำเข้า (Entry History)</h4>
-                    <?php if ($canManage): ?>
-                        <button class="btn btn-success" onclick="openAddEntryModal(this)">Add Entry</button>
-                    <?php endif; ?>
-                </div>
                 <div class="table-responsive">
                     <table class="table table-dark table-hover table-sm">
                          <thead>
                             <tr>
                                 <th>เวลาเข้า</th>
                                 <th>ไลน์</th>
-                                <th>Lot No.</th>
                                 <th>Part No.</th>
+                                <th>Model</th>
+                                <th>Lot No.</th>
                                 <th>จำนวนเข้า</th>
-                                <!--<th>ผู้บันทึก</th>-->
                                 <th>หมายเหตุ</th>
                                 <?php if ($canManage): ?>
                                     <th style="width: 150px; text-align: center;">Actions</th>
@@ -103,33 +104,14 @@
             </div>
 
             <div class="tab-pane fade show active" id="production-history-pane" role="tabpanel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div id="grandSummary" class="summary-grand-total"></div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-info" onclick="openSummaryModal(this)">View Detailed Summary</button>
-                        <button class="btn btn-primary flex-fill" onclick="exportToExcel()">Export</button>
-                        <?php if ($canManage): ?>
-                            <button class="btn btn-success flex-fill" onclick="openAddPartModal(this)">Add Entry (IN/OUT)</button>
-                        <?php endif; ?>
-                    </div>
-                </div>
                 <div class="table-responsive">
                     <table id="partTable" class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Line</th>
-                                <th>Model</th>
-                                <th>Part No.</th>
-                                <th>Lot No.</th>
-                                <th>Qty</th>
-                                <th>Type</th>
+                                <th>ID</th><th>Date</th><th>Time</th><th>Line</th><th>Model</th>
+                                <th>Part No.</th><th>Lot No.</th><th>Qty</th><th>Type</th>
                                 <th style="min-width: 200px;">Note</th>
-                                <?php if ($canManage): ?>
-                                    <th style="width: 150px; text-align: center;">Actions</th>
-                                <?php endif; ?>
+                                <?php if ($canManage): ?><th style="width: 150px; text-align: center;">Actions</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>
@@ -139,16 +121,12 @@
             </div>
 
             <div class="tab-pane fade" id="wip-report-pane" role="tabpanel">
-                <h4 class="mb-3">ตารางสรุปผลต่าง (WIP Variance Summary)</h4>
                 <div class="table-responsive mb-4">
                     <table class="table table-dark table-striped">
                         <thead>
                             <tr>
-                                <th>Part Number</th>
-                                <th>Line</th>
-                                <th>ยอดนำเข้ารวม (Total In)</th>
-                                <th>ยอดผลิตเสร็จ (Total Out)</th>
-                                <th>คงค้าง/ส่วนต่าง (WIP/Variance)</th>
+                                <th>Part Number</th><th>Line</th><th>ยอดนำเข้ารวม (Total In)</th>
+                                <th>ยอดผลิตเสร็จ (Total Out)</th><th>คงค้าง/ส่วนต่าง (WIP/Variance)</th>
                             </tr>
                         </thead>
                         <tbody id="wipReportTableBody"></tbody>
@@ -172,15 +150,67 @@
     
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;
-        
+    </script>
+    
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             document.getElementById("filterStartDate").value = dateStr;
             document.getElementById("filterEndDate").value = dateStr;
+            
+            const buttonGroup = document.getElementById('dynamic-button-group');
+            const summaryContainer = document.getElementById('dynamic-summary-container');
+            const mainTabs = document.querySelectorAll('#mainTab .nav-link');
+            const canManage = <?php echo json_encode($canManage); ?>;
+
+            function updateControls(activeTabId) {
+                buttonGroup.innerHTML = '';
+                summaryContainer.innerHTML = '';
+
+                switch (activeTabId) {
+                    case 'production-history-tab':
+                        buttonGroup.innerHTML = `
+                            <button class="btn btn-info" onclick="openSummaryModal(this)">Summary</button>
+                            <button class="btn btn-primary" onclick="exportToExcel()">Export</button>
+                            ${canManage ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
+                        `;
+                        summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
+                        break;
+                        
+                    case 'entry-history-tab':
+                        // แก้ไข: เพิ่มปุ่ม Export
+                        buttonGroup.innerHTML = `
+                            <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
+                            ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
+                        `;
+                        break;
+                        
+                    case 'wip-report-tab':
+                        // แก้ไข: เพิ่มปุ่ม Export
+                        buttonGroup.innerHTML = `
+                            <button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>
+                        `;
+                        break;
+                }
+            }
+
+            mainTabs.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', (event) => {
+                    updateControls(event.target.id);
+                    if (event.target.id === 'production-history-tab' && typeof renderSummary === 'function') {
+                        renderSummary(window.cachedSummary, window.cachedGrand);
+                    }
+                });
+            });
+
+            const activeTab = document.querySelector('#mainTab .nav-link.active');
+            if (activeTab) {
+                updateControls(activeTab.id);
+            }
         });
     </script>
-    
+
     <script src="../components/auto_logout.js"></script>
     <script src="../components/datetime.js"></script>
     <script src="../components/toast.js"></script>

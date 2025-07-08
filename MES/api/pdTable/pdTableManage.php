@@ -86,9 +86,9 @@ try {
             $dataStmt->execute($paginationParams);
             $data = $dataStmt->fetchAll();
 
-            //-- Query สรุปยอดรวมตามกลุ่ม (model, part_no, lot_no) จากข้อมูลที่ Filter --
+            //-- Query สรุปยอดรวมตามกลุ่ม (แก้ไขใหม่) --
             $summarySql = "
-                SELECT model, part_no, lot_no,
+                SELECT model, part_no, line,
                     SUM(CASE WHEN count_type = 'FG' THEN count_value ELSE 0 END) AS FG,
                     SUM(CASE WHEN count_type = 'NG' THEN count_value ELSE 0 END) AS NG,
                     SUM(CASE WHEN count_type = 'HOLD' THEN count_value ELSE 0 END) AS HOLD,
@@ -96,8 +96,8 @@ try {
                     SUM(CASE WHEN count_type = 'SCRAP' THEN count_value ELSE 0 END) AS SCRAP,
                     SUM(CASE WHEN count_type = 'ETC.' THEN count_value ELSE 0 END) AS ETC
                 FROM PARTS $whereClause 
-                GROUP BY model, part_no, lot_no 
-                ORDER BY model, part_no, lot_no";
+                GROUP BY model, part_no, line
+                ORDER BY model, part_no, line";
             $summaryStmt = $pdo->prepare($summarySql);
             $summaryStmt->execute($params);
             $summary = $summaryStmt->fetchAll();
@@ -144,6 +144,16 @@ try {
             $model = strtoupper(trim($input['model']));
             $part_no = strtoupper(trim($input['part_no']));
             $log_date = $input['log_date'];
+            
+            // --- เพิ่มส่วนตรวจสอบนี้เข้ามา ---
+            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $checkStmt = $pdo->prepare($checkSql);
+            $checkStmt->execute([$line, $model, $part_no]);
+            if ($checkStmt->fetchColumn() == 0) {
+                throw new Exception("Invalid combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
+            }
+            // -----------------------------
+
             $lot_no = $input['lot_no'] ?? '';
             
             //-- สร้าง Lot Number อัตโนมัติ (หากไม่ได้ระบุมา) --
@@ -187,7 +197,7 @@ try {
             }
             echo json_encode(['success' => true, 'message' => 'Part inserted successfully.', 'lot_no' => $lot_no]);
             break;
-
+            
         //-- ลบข้อมูล Part --
         case 'delete_part':
             $id = $input['id'] ?? null;

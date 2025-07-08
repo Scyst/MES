@@ -19,6 +19,10 @@ async function fetchWipReport() {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
+        // --- เพิ่มเข้ามา: Cache ข้อมูล WIP Report ---
+        window.cachedWipReport = result.report;
+        // ------------------------------------------
+
         reportBody.innerHTML = '';
         if (result.report.length === 0) {
             reportBody.innerHTML = '<tr><td colspan="5" class="text-center">No WIP data found for the selected filters.</td></tr>';
@@ -52,6 +56,7 @@ async function fetchWipReport() {
         }
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
+        window.cachedWipReport = []; // เคลียร์ cache หากเกิด error
         reportBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
@@ -62,7 +67,7 @@ async function fetchWipReport() {
 async function fetchHistoryData() {
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
-    historyBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading History...</td></tr>';
+    historyBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading History...</td></tr>';
 
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
@@ -79,15 +84,18 @@ async function fetchHistoryData() {
         
         historyBody.innerHTML = '';
         if (result.history.length === 0) {
-            historyBody.innerHTML = '<tr><td colspan="7" class="text-center">No entry history found.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="8" class="text-center">No entry history found.</td></tr>';
         } else {
             result.history.forEach(item => {
                 const tr = document.createElement('tr');
+                
+                // แก้ไข: สลับลำดับให้ตรงกับ aีคุณต้องการ
                 tr.innerHTML = `
                     <td>${new Date(item.entry_time).toLocaleString('th-TH')}</td>
                     <td>${item.line}</td>
-                    <td>${item.lot_no || '-'}</td>
                     <td>${item.part_no}</td>
+                    <td>${item.model || '-'}</td>
+                    <td>${item.lot_no || '-'}</td>
                     <td>${parseInt(item.quantity_in).toLocaleString()}</td>
                     <td>${item.remark || '-'}</td>
                 `;
@@ -118,7 +126,7 @@ async function fetchHistoryData() {
         }
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
-        historyBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        historyBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
