@@ -28,14 +28,14 @@ try {
             // เพิ่มการตรวจสอบกับตาราง PARAMETER
             $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
             $checkStmt = $pdo->prepare($checkSql);
-            $checkStmt->execute([$input['line'], $input['model'], $input['part_no']]);
+            $checkStmt->execute([strtoupper(trim($input['line'])), strtoupper(trim($input['model'])), strtoupper(trim($input['part_no']))]);
             if ($checkStmt->fetchColumn() == 0) {
                 throw new Exception("Invalid combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
             }
 
             // แก้ไข: เพิ่ม model ใน SQL INSERT
             $sql = "INSERT INTO WIP_ENTRIES (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $params = [$input['model'], $input['line'], $input['lot_no'] ?? null, $input['part_no'], (int)$input['quantity_in'], $currentUser, $input['remark'] ?? null];
+            $params = [strtoupper(trim($input['model'])), strtoupper(trim($input['line'])), strtoupper(trim($input['lot_no'] ?? null)), strtoupper(trim($input['part_no'])), (int)$input['quantity_in'], $currentUser, $input['remark'] ?? null];
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
                 $detail = "Model: {$input['model']}, Line: {$input['line']}, Part: {$input['part_no']}, Qty: {$input['quantity_in']}";
@@ -98,10 +98,10 @@ try {
             $sql = "UPDATE WIP_ENTRIES SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
             $params = [
                 $formatted_entry_time,
-                $input['model'],
-                $input['line'], 
-                $input['part_no'], 
-                $input['lot_no'] ?? null, 
+                strtoupper(trim($input['model'])),
+                strtoupper(trim($input['line'])), 
+                strtoupper(trim($input['part_no'])), 
+                strtoupper(trim($input['lot_no'] ?? null)), 
                 (int)$input['quantity_in'], 
                 $input['remark'] ?? null, 
                 (int)$input['entry_id']

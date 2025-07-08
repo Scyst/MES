@@ -167,7 +167,7 @@ try {
                     throw new Exception("SAP No. not found for the given line/model/part combination.");
                 }
                 $sap_no = $sapRow['sap_no'];
-                $datePrefix = date('Ymd', strtotime($log_date));
+                $datePrefix = date('dmy', strtotime($log_date));
 
                 // นับจำนวน Lot ที่มีอยู่แล้วในวันนั้นเพื่อสร้าง Running Number
                 $lotCountQuery = "SELECT COUNT(*) AS lot_count FROM PARTS WHERE part_no = ? AND log_date = ? AND lot_no LIKE ?";
@@ -185,7 +185,7 @@ try {
             $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $insertStmt = $pdo->prepare($insertSql);
             $success = $insertStmt->execute([
-                $log_date, $input['log_time'], $model, $line, $part_no, $lot_no,
+                $log_date, $input['log_time'], $model, $line, $part_no, strtoupper(trim($lot_no)),
                 $count_type, (int)$input['count_value'],
                 isset($input['note']) ? strtoupper(trim($input['note'])) : null
             ]);
@@ -197,7 +197,7 @@ try {
             }
             echo json_encode(['success' => true, 'message' => 'Part inserted successfully.', 'lot_no' => $lot_no]);
             break;
-            
+
         //-- ลบข้อมูล Part --
         case 'delete_part':
             $id = $input['id'] ?? null;

@@ -46,14 +46,14 @@ async function fetchPartsData(page = 1) {
 function renderTable(data, canManage) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = ''; 
-    //-- กรณีไม่พบข้อมูล --
+    
     if (!data || data.length === 0) {
-        const colSpan = canManage ? 11 : 10; //-- ปรับ Colspan ตามสิทธิ์ --
+        // แก้ไข: ปรับ Colspan จาก 11 เป็น 10
+        const colSpan = canManage ? 10 : 9;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
 
-    //-- สร้างแถวและ Cell ของตารางจากข้อมูล --
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
@@ -64,11 +64,11 @@ function renderTable(data, canManage) {
             return td;
         };
         
-        //-- จัดรูปแบบวันที่และเวลา --
         const formattedDate = row.log_date ? new Date(row.log_date).toLocaleDateString('en-GB') : '';
         const formattedTime = row.log_time ? row.log_time.substring(0, 8) : '';
         
-        tr.appendChild(createCell(row.id));
+        // แก้ไข: ลบการเพิ่ม Cell ของ ID ออก
+        // tr.appendChild(createCell(row.id)); 
         tr.appendChild(createCell(formattedDate));
         tr.appendChild(createCell(formattedTime));
         tr.appendChild(createCell(row.line));
@@ -78,7 +78,6 @@ function renderTable(data, canManage) {
         tr.appendChild(createCell(row.count_value));
         tr.appendChild(createCell(row.count_type));
         
-        //-- จัดการคอลัมน์ Note ให้แสดง Tooltip เมื่อข้อความยาวเกิน --
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
         noteDiv.className = 'note-truncate';

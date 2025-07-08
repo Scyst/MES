@@ -83,16 +83,17 @@
         <div class="tab-content" id="mainTabContent">
             <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover table-sm">
+                    <table class="table table-dark table-hover table-striped">
                          <thead>
                             <tr>
-                                <th>เวลาเข้า</th>
-                                <th>ไลน์</th>
-                                <th>Part No.</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Line</th>
                                 <th>Model</th>
+                                <th>Part No.</th>
                                 <th>Lot No.</th>
-                                <th>จำนวนเข้า</th>
-                                <th>หมายเหตุ</th>
+                                <th>Qty</th>
+                                <th style="min-width: 200px;">Note</th>
                                 <?php if ($canManage): ?>
                                     <th style="width: 150px; text-align: center;">Actions</th>
                                 <?php endif; ?>
@@ -108,10 +109,18 @@
                     <table id="partTable" class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th><th>Date</th><th>Time</th><th>Line</th><th>Model</th>
-                                <th>Part No.</th><th>Lot No.</th><th>Qty</th><th>Type</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Part No.</th>
+                                <th>Lot No.</th>
+                                <th>Qty</th>
+                                <th>Type</th>
                                 <th style="min-width: 200px;">Note</th>
-                                <?php if ($canManage): ?><th style="width: 150px; text-align: center;">Actions</th><?php endif; ?>
+                                <?php if ($canManage): ?>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>

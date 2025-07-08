@@ -67,7 +67,7 @@ async function fetchWipReport() {
 async function fetchHistoryData() {
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
-    historyBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading History...</td></tr>';
+    historyBody.innerHTML = '<tr><td colspan="9" class="text-center">Loading History...</td></tr>';
 
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
@@ -84,21 +84,32 @@ async function fetchHistoryData() {
         
         historyBody.innerHTML = '';
         if (result.history.length === 0) {
-            historyBody.innerHTML = '<tr><td colspan="8" class="text-center">No entry history found.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="9" class="text-center">No entry history found.</td></tr>';
         } else {
             result.history.forEach(item => {
                 const tr = document.createElement('tr');
                 
-                // แก้ไข: สลับลำดับให้ตรงกับ aีคุณต้องการ
+                const entryDate = new Date(item.entry_time);
+                const formattedDate = entryDate.toLocaleDateString('en-GB');
+                const formattedTime = entryDate.toTimeString().substring(0, 8);
+
+                const noteTd = document.createElement('td');
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note-truncate';
+                noteDiv.title = item.remark || '';
+                noteDiv.textContent = item.remark || '';
+                noteTd.appendChild(noteDiv);
+
                 tr.innerHTML = `
-                    <td>${new Date(item.entry_time).toLocaleString('th-TH')}</td>
+                    <td>${formattedDate}</td>
+                    <td>${formattedTime}</td>
                     <td>${item.line}</td>
-                    <td>${item.part_no}</td>
                     <td>${item.model || '-'}</td>
+                    <td>${item.part_no}</td>
                     <td>${item.lot_no || '-'}</td>
                     <td>${parseInt(item.quantity_in).toLocaleString()}</td>
-                    <td>${item.remark || '-'}</td>
                 `;
+                tr.appendChild(noteTd);
                 
                 if (canManage) {
                     const actionsTd = document.createElement('td');
@@ -126,7 +137,7 @@ async function fetchHistoryData() {
         }
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
-        historyBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        historyBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
