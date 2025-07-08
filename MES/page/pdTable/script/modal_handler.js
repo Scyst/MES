@@ -1,59 +1,39 @@
-//-- ตัวแปร Global สำหรับเก็บค่าคงที่และสถานะ --
-let modalTriggerElement = null; //-- เก็บ Element ที่กดเพื่อเปิด Modal (สำหรับคืน Focus) --
-const PD_API_URL = '../../api/pdTable/pdTableManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล Production --
-const WIP_API_URL = '../../api/pdTable/wipManage.php'; //-- API Endpoint สำหรับจัดการข้อมูล WIP --
+"use strict";
 
-/**
- * ฟังก์ชันกลางสำหรับเปิด Bootstrap Modal
- * @param {string} modalId - ID ของ Modal ที่จะเปิด
- */
+let modalTriggerElement = null;
+const PD_API_URL = '../../api/pdTable/pdTableManage.php';
+const WIP_API_URL = '../../api/pdTable/wipManage.php';
+
 function showBootstrapModal(modalId) { 
     const modalElement = document.getElementById(modalId);
     if (modalElement) {
-        //-- ใช้ getOrCreateInstance เพื่อความปลอดภัยในการสร้างหรือดึง Instance ของ Modal --
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
     }
 }
 
-/**
- * ฟังก์ชันสำหรับเปิด Modal "Add Part" และตั้งค่าวันที่/เวลาเริ่มต้น
- * @param {HTMLElement} triggerEl - Element ที่ถูกกดเพื่อเปิด Modal
- */
 function openAddPartModal(triggerEl) {
     modalTriggerElement = triggerEl;
     const modal = document.getElementById('addPartModal');
     if (!modal) return;
-
-    //-- ตั้งค่าวันที่และเวลาปัจจุบัน (ปรับเป็น Timezone +7) --
     const now = new Date();
     const tzOffset = 7 * 60 * 60 * 1000;
     const localNow = new Date(now.getTime() + tzOffset);
-    
     const dateStr = localNow.toISOString().split('T')[0];
     const timeStr = localNow.toISOString().split('T')[1].substring(0, 8);
     
     modal.querySelector('input[name="log_date"]').value = dateStr;
     modal.querySelector('input[name="log_time"]').value = timeStr;
-
     showBootstrapModal('addPartModal');
 }
 
-/**
- * ฟังก์ชันสำหรับเปิด Modal "Edit Part" และเติมข้อมูลเดิมลงในฟอร์ม
- * @param {object} rowData - ข้อมูลของแถวที่ต้องการแก้ไข
- * @param {HTMLElement} triggerEl - Element ที่ถูกกดเพื่อเปิด Modal
- */
 function openEditModal(rowData, triggerEl) {
     modalTriggerElement = triggerEl; 
     const modal = document.getElementById('editPartModal');
     if (!modal) return;
-    
-    //-- วนลูปเพื่อเติมข้อมูลลงในทุก Input --
     for (const key in rowData) {
         const input = modal.querySelector(`#edit_${key}`);
         if (input) {
-            //-- จัดการรูปแบบเวลาให้เป็น HH:mm:ss --
             if (key === 'log_time' && typeof rowData[key] === 'string') {
                 input.value = rowData[key].substring(0, 8);
             } else {
@@ -128,23 +108,12 @@ function openSummaryModal(triggerEl) {
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
-
-    /**
-     * ฟังก์ชันกลางสำหรับจัดการการ Submit ฟอร์มผ่าน Fetch API
-     * @param {HTMLFormElement} form - The form element.
-     * @param {string} apiUrl - The API endpoint URL.
-     * @param {string} action - The action parameter for the API.
-     * @param {string} modalId - The ID of the modal containing the form.
-     * @param {Function} onSuccess - Callback function to run on success.
-     */
     const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(form).entries());
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
             try {
-                //-- ส่ง Request ไปยัง API --
                 const response = await fetch(`${apiUrl}?action=${action}`, {
                     method: 'POST',
                     headers: { 
@@ -155,17 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
-
                 if (result.success) {
                     const modalElement = document.getElementById(modalId);
                     const modalInstance = bootstrap.Modal.getInstance(modalElement);
                     if (modalInstance) {
-                        //-- รอให้ Animation การปิด Modal จบก่อน แล้วจึงค่อยเรียก onSuccess --
                         modalElement.addEventListener('hidden.bs.modal', () => {
                             onSuccess(); 
-                            //-- คืน Focus กลับไปที่ปุ่มที่กดเปิด Modal --
                             if (modalTriggerElement) modalTriggerElement.focus(); 
-                        }, { once: true }); //-- ให้ Event Listener ทำงานแค่ครั้งเดียว --
+                        }, { once: true });
                         modalInstance.hide();
                     }
                 }
@@ -175,31 +141,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    //-- ผูก Event Listener ให้กับฟอร์ม "Add Part" --
     const addPartForm = document.getElementById('addPartForm');
     if (addPartForm) {
         handleFormSubmit(addPartForm, PD_API_URL, 'add_part', 'addPartModal', () => {
             addPartForm.reset();
-            //-- โหลดข้อมูลตารางใหม่ --
             if (typeof fetchPartsData === 'function') fetchPartsData(1); 
         });
     }
 
-    //-- ผูก Event Listener ให้กับฟอร์ม "Edit Part" --
     const editPartForm = document.getElementById('editPartForm');
     if (editPartForm) {
         handleFormSubmit(editPartForm, PD_API_URL, 'update_part', 'editPartModal', () => {
-            //-- โหลดข้อมูลตารางใหม่ในหน้าเดิม --
             if (typeof fetchPartsData === 'function') fetchPartsData(window.currentPage || 1); 
         });
     }
 
-    //-- ผูก Event Listener ให้กับฟอร์ม "WIP Entry" --
     const wipEntryForm = document.getElementById('wipEntryForm');
     if (wipEntryForm) {
         handleFormSubmit(wipEntryForm, WIP_API_URL, 'log_wip_entry', 'addPartModal', () => {
             wipEntryForm.reset();
-            //-- หากอยู่บน Tab WIP ให้โหลดข้อมูล WIP ใหม่ --
             if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
                 if (typeof fetchWipReport === 'function') fetchWipReport();
             }

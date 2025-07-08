@@ -224,7 +224,11 @@ async function handleDelete(id) {
 
 //-- ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter --
 function handleFilterChange() {
-    fetchPartsData(1);
+    // เพิ่มเงื่อนไข: ตรวจสอบว่าแท็บ Production History กำลังแสดงอยู่หรือไม่
+    const prodHistoryPane = document.getElementById('production-history-pane');
+    if (prodHistoryPane && prodHistoryPane.classList.contains('active')) {
+        fetchPartsData(1);
+    }
 }
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --

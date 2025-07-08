@@ -62,19 +62,19 @@ try {
 
             foreach ($allowed_string_filters as $filter) {
                 if (!empty($_GET[$filter])) {
-                    // ** FIXED: เอา "wip." ออกไป **
-                    $conditions[] = "{$filter} = ?"; 
+                    // แก้ไข: เพิ่ม 'wip.' เพื่อระบุตารางให้ชัดเจน
+                    $conditions[] = "wip.{$filter} = ?"; 
                     $params[] = $_GET[$filter];
                 }
             }
             if (!empty($_GET['startDate'])) {
-                // ** FIXED: เอา "wip." ออกไป **
-                $conditions[] = "CAST(entry_time AS DATE) >= ?";
+                // แก้ไข: เพิ่ม 'wip.' เพื่อระบุตาราง
+                $conditions[] = "CAST(wip.entry_time AS DATE) >= ?";
                 $params[] = $_GET['startDate'];
             }
             if (!empty($_GET['endDate'])) {
-                // ** FIXED: เอา "wip." ออกไป **
-                $conditions[] = "CAST(entry_time AS DATE) <= ?";
+                // แก้ไข: เพิ่ม 'wip.' เพื่อระบุตาราง
+                $conditions[] = "CAST(wip.entry_time AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
@@ -107,7 +107,7 @@ try {
             $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             //-- ดึงประวัติการทำรายการ WIP ทั้งหมดตามเงื่อนไข --
-            $history_sql = "SELECT * FROM WIP_ENTRIES $whereClause ORDER BY entry_time DESC";
+            $history_sql = "SELECT * FROM WIP_ENTRIES AS wip $whereClause ORDER BY entry_time DESC";
             $history_stmt = $pdo->prepare($history_sql);
             $history_stmt->execute($params);
             $history_data = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
