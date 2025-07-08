@@ -348,17 +348,17 @@ async function handleImport(event) {
 // ให้ลบฟังก์ชัน initializeBomManager เดิมทิ้งทั้งหมด แล้วใช้ฟังก์ชันนี้แทนที่
 
 function initializeBomManager() {
-    // --- Element References ---
+    // --- Element References (เหมือนเดิม) ---
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
     const createNewBomBtn = document.getElementById('createNewBomBtn');
-    
-    // Create BOM Modal elements
     const createBomModalEl = document.getElementById('createBomModal');
     const createBomModal = new bootstrap.Modal(createBomModalEl);
     const createBomForm = document.getElementById('createBomForm');
-    
-    // Manage BOM Modal elements
+    const createBomSapInput = document.getElementById('createBomSapNo');
+    const createBomLineInput = document.getElementById('createBomLine');
+    const createBomModelInput = document.getElementById('createBomModel');
+    const createBomPartNoInput = document.getElementById('createBomPartNo');
     const manageBomModalEl = document.getElementById('manageBomModal');
     const manageBomModal = new bootstrap.Modal(manageBomModalEl);
     const modalTitle = document.getElementById('bomModalTitle');
@@ -366,7 +366,12 @@ function initializeBomManager() {
     const modalAddComponentForm = document.getElementById('modalAddComponentForm');
     const modalSelectedFgPartNo = document.getElementById('modalSelectedFgPartNo');
     const modalSelectedFgModel = document.getElementById('modalSelectedFgModel');
+    const modalSelectedFgLine = document.getElementById('modalSelectedFgLine'); // ** NEW: อ้างอิง input ใหม่ **
     const modalPartDatalist = document.getElementById('bomModalPartDatalist');
+
+    manageBomModalEl.addEventListener('hidden.bs.modal', () => {
+        loadAndRenderBomFgTable();
+    });
 
     // --- Helper Functions ---
     function renderBomFgTable(fgData) {
@@ -374,12 +379,34 @@ function initializeBomManager() {
         if (fgData && fgData.length > 0) {
             fgData.forEach(fg => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${fg.fg_part_no||''}</td><td>${fg.line||'N/A'}</td><td>${fg.updated_by||'N/A'}</td><td>${fg.updated_at||'N/A'}</td>
-                    <td class="text-center"><button class="btn btn-primary btn-sm" data-action="manage" data-fg-part="${fg.fg_part_no}" data-fg-model="${fg.model || ''}">Manage BOM</button> <button class="btn btn-danger btn-sm" data-action="delete" data-fg-part="${fg.fg_part_no}">Delete BOM</button></td>`;
+                // ** FIXED: เพิ่ม data-fg-line เข้าไปในปุ่ม **
+                tr.innerHTML = `
+                    <td>${fg.sap_no || 'N/A'}</td>
+                    <td>${fg.fg_part_no || ''}</td>
+                    <td>${fg.line || 'N/A'}</td>
+                    <td>${fg.model || 'N/A'}</td>
+                    <td>${fg.updated_by || 'N/A'}</td>
+                    <td>${fg.updated_at || 'N/A'}</td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm" data-action="manage" data-fg-part="${fg.fg_part_no}" data-fg-line="${fg.line}" data-fg-model="${fg.model || ''}">Edit</button> 
+                        <button class="btn btn-danger btn-sm" data-action="delete" data-fg-part="${fg.fg_part_no}" data-fg-line="${fg.line}" data-fg-model="${fg.model}">Delete</button>
+                    </td>`;
                 fgListTableBody.appendChild(tr);
             });
         } else {
-            fgListTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No BOMs found.</td></tr>';
+            fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
+        }
+    }
+
+    async function fetchParameterData(key, value) {
+        if (!value) return;
+        const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameter_by_key', 'GET', null, {[key]: value});
+        if (result.success && result.data) {
+            // กรอกข้อมูลที่ได้ลงในช่องอื่นๆ
+            createBomSapInput.value = result.data.sap_no || '';
+            createBomLineInput.value = result.data.line || '';
+            createBomModelInput.value = result.data.model || '';
+            createBomPartNoInput.value = result.data.part_no || '';
         }
     }
 
@@ -391,19 +418,20 @@ function initializeBomManager() {
         }
     }
 
-    async function loadBomForModal(fgPartNo, fgModel) {
-        modalTitle.textContent = `Managing BOM for: ${fgPartNo}`;
+    async function loadBomForModal(fgPartNo, fgLine, fgModel) {
+        modalTitle.textContent = `Managing BOM for: ${fgPartNo} (Line: ${fgLine}, Model: ${fgModel})`;
         modalSelectedFgPartNo.value = fgPartNo;
-        modalSelectedFgModel.value = fgModel;
+        modalSelectedFgLine.value = fgLine; // ** NEW: เก็บค่า line **
+        modalSelectedFgModel.value = fgModel; // ** NEW: เก็บค่า model **
 
         modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
-        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo });
+        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
         
         modalBomTableBody.innerHTML = '';
         if (bomResult.success && bomResult.data.length > 0) {
             bomResult.data.forEach(comp => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Del</button></td>`;
+                tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button></td>`;
                 modalBomTableBody.appendChild(tr);
             });
         } else {
@@ -429,6 +457,27 @@ function initializeBomManager() {
     }
 
     // --- Event Listeners ---
+    let debounceTimer;
+    createBomSapInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetchParameterData('sap_no', createBomSapInput.value);
+        }, 500); // หน่วงเวลา 0.5 วินาที
+    });
+
+    searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        // กรองข้อมูลจาก Array ที่เก็บไว้ โดยค้นหาจากทุก field ที่แสดงในตาราง
+        const filteredData = allBomFgs.filter(fg => 
+            (fg.sap_no && fg.sap_no.toLowerCase().includes(searchTerm)) ||
+            (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(searchTerm)) || 
+            (fg.line && fg.line.toLowerCase().includes(searchTerm)) ||
+            (fg.model && fg.model.toLowerCase().includes(searchTerm))
+        );
+        // แสดงผลตารางด้วยข้อมูลที่กรองแล้ว
+        renderBomFgTable(filteredData);
+    });
+
     createNewBomBtn?.addEventListener('click', () => { createBomModal.show(); });
 
     createBomForm?.addEventListener('submit', async (e) => {
@@ -440,7 +489,8 @@ function initializeBomManager() {
             createBomModal.hide();
             createBomForm.reset();
             manageBomModal.show();
-            loadBomForModal(result.data.part_no, result.data.model);
+            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+            loadBomForModal(result.data.part_no, result.data.line, result.data.model);
         } else {
             showToast(result.message || 'Could not find a matching part.', '#dc3545');
         }
@@ -449,15 +499,18 @@ function initializeBomManager() {
     fgListTableBody.addEventListener('click', async (e) => {
         if (e.target.tagName !== 'BUTTON') return;
         const action = e.target.dataset.action;
-        const fgPartNo = e.target.dataset.fgPart; // ** FIXED **
-        const fgModel = e.target.dataset.fgModel;   // ** FIXED **
+        const fgPartNo = e.target.dataset.fgPart;
+        const fgLine = e.target.dataset.fgLine;   // ** NEW **
+        const fgModel = e.target.dataset.fgModel; // ** NEW **
 
         if (action === 'manage') {
             manageBomModal.show();
-            loadBomForModal(fgPartNo, fgModel);
+            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+            loadBomForModal(fgPartNo, fgLine, fgModel);
         } else if (action === 'delete') {
-            if (confirm(`Are you sure you want to delete the entire BOM for ${fgPartNo}?`)) {
-                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo });
+            if (confirm(`Are you sure you want to delete the BOM for ${fgPartNo} on Line ${fgLine}?`)) {
+                // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
                 if (result.success) loadAndRenderBomFgTable();
             }
@@ -470,7 +523,8 @@ function initializeBomManager() {
         const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            loadBomForModal(payload.fg_part_no, payload.model);
+            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+            loadBomForModal(payload.fg_part_no, payload.line, payload.model);
             e.target.reset();
         }
     });
@@ -483,8 +537,10 @@ function initializeBomManager() {
             showToast(result.message, result.success ? '#28a745' : '#dc3545');
             if (result.success) {
                 const fgPartNo = modalSelectedFgPartNo.value;
+                const fgLine = modalSelectedFgLine.value;
                 const fgModel = modalSelectedFgModel.value;
-                loadBomForModal(fgPartNo, fgModel);
+                // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+                loadBomForModal(fgPartNo, fgLine, fgModel);
             }
         }
     });

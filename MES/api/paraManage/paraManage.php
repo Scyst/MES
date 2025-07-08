@@ -245,6 +245,42 @@ try {
             echo json_encode(['success' => true, 'data' => $parts]);
             break;
 
+        // In paraManage.php, inside the switch statement
+        case 'get_parameter_by_key':
+            // รับค่าจาก GET request
+            $sap_no = trim($_GET['sap_no'] ?? '');
+            $line = trim($_GET['line'] ?? '');
+            $model = trim($_GET['model'] ?? '');
+            $part_no = trim($_GET['part_no'] ?? '');
+
+            $sql = "SELECT * FROM PARAMETER WHERE ";
+            $params = [];
+
+            if (!empty($sap_no)) {
+                $sql .= "sap_no = ?";
+                $params[] = $sap_no;
+            } elseif (!empty($line) && !empty($model) && !empty($part_no)) {
+                $sql .= "line = ? AND model = ? AND part_no = ?";
+                $params[] = $line;
+                $params[] = $model;
+                $params[] = $part_no;
+            } else {
+                // ถ้าไม่มี key ที่ถูกต้องส่งมา ก็ไม่ต้องทำอะไร
+                echo json_encode(['success' => false, 'message' => 'Insufficient keys.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($parameter) {
+                echo json_encode(['success' => true, 'data' => $parameter]);
+            } else {
+                echo json_encode(['success' => false, 'data' => null]);
+            }
+            break;
+
         //-- กรณีไม่พบ Action ที่ระบุ --
         default:
             http_response_code(400);

@@ -150,8 +150,12 @@
                     <table class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Finished Good (FG) Part Number</th><th>Line</th>
-                                <th>Updated By</th><th>Updated At</th>
+                                <th>SAP No.</th>
+                                <th>Part No.</th>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Updated By</th>
+                                <th>Updated At</th>
                                 <th style="width: 200px;" class="text-center">Actions</th>
                             </tr>
                         </thead>

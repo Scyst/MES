@@ -12,6 +12,7 @@
                             <h5>Add New Component</h5>
                             <form id="modalAddComponentForm">
                                 <input type="hidden" id="modalSelectedFgPartNo" name="fg_part_no">
+                                <input type="hidden" id="modalSelectedFgLine" name="line">
                                 <input type="hidden" id="modalSelectedFgModel" name="model">
                                 
                                 <div class="mb-3">
@@ -46,6 +47,9 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
             </div>
         </div>
     </div>

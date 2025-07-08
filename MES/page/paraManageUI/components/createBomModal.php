@@ -6,9 +6,6 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted">
-                    Please specify the Finished Good by filling in the details OR by entering the SAP Number. The item must exist in Standard Parameters.
-                </p>
                 
                 <form id="createBomForm">
                     <div class="mb-3">
