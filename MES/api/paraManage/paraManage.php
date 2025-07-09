@@ -281,6 +281,12 @@ try {
             }
             break;
 
+        case 'get_lines':
+            $stmt = $pdo->query("SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
+            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $lines]);
+            break;
+
         //-- กรณีไม่พบ Action ที่ระบุ --
         default:
             http_response_code(400);

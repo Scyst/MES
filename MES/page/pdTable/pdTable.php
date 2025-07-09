@@ -39,13 +39,13 @@
 
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History</button>
+                <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance Report</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production History (OUT)</button>
+                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP Report</button>
+                <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production History (OUT)</button>
             </li>
         </ul>
         
@@ -109,7 +109,7 @@
                 </div>
             </div>
 
-            <div class="tab-pane fade show active" id="production-history-pane" role="tabpanel">
+            <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
                 <div class="table-responsive">
                     <table id="partTable" class="table table-dark table-striped table-hover">
                         <thead>
@@ -134,10 +134,9 @@
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
             </div>
 
-            <div class="tab-pane fade" id="wip-report-pane" role="tabpanel">
+            <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
                 <div class="table-responsive mb-4">
                     <table class="table table-dark table-striped">
-                        <thead>
                             <thead>
                                 <tr>
                                     <th>Part Number</th>
@@ -148,8 +147,6 @@
                                     <th style="text-align: center;">คงค้าง/ส่วนต่าง (WIP/Variance)</th>
                                 </tr>
                             </thead>
-                        <tbody id="wipReportTableBody"></tbody>
-                        </thead>
                         <tbody id="wipReportTableBody"></tbody>
                     </table>
                 </div>
@@ -200,26 +197,17 @@
                         break;
                         
                     case 'entry-history-tab':
-                        // แก้ไข: เพิ่มปุ่ม Export
+                        // แก้ไข: รวม case ที่ซ้ำกันและเพิ่มปุ่ม Summary
                         buttonGroup.innerHTML = `
+                            <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
                             <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
                             ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
                         `;
                         break;
                         
                     case 'wip-report-tab':
-                        // แก้ไข: เพิ่มปุ่ม Export
                         buttonGroup.innerHTML = `
                             <button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>
-                        `;
-                        break;
-                    
-                    case 'entry-history-tab':
-                        // เพิ่มปุ่ม Summary
-                        buttonGroup.innerHTML = `
-                            <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
-                            <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
-                            ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
                         `;
                         break;
                 }
@@ -237,6 +225,9 @@
             const activeTab = document.querySelector('#mainTab .nav-link.active');
             if (activeTab) {
                 updateControls(activeTab.id);
+                if (activeTab.id === 'wip-report-tab' && typeof fetchWipReport === 'function') {
+                    fetchWipReport();
+                }
             }
         });
     </script>

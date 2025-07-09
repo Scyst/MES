@@ -62,7 +62,8 @@ function openEditModal(modalId, data) {
         const input = modalElement.querySelector(`[name="${key}"]`);
         if (input) {
             if (input.type === 'checkbox') {
-                input.checked = !!parseInt(data[key]);
+                // แก้ไข: เปลี่ยนเงื่อนไขเป็น '== 1' เพื่อความแม่นยำ
+                input.checked = (data[key] == 1);
             } else {
                 input.value = data[key];
             }
@@ -202,7 +203,7 @@ function renderSchedulesTable() {
             <td>${schedule.start_time || ''}</td>
             <td>${schedule.end_time || ''}</td>
             <td>${schedule.planned_break_minutes || ''}</td>
-            <td><span class="badge ${schedule.is_active ? 'bg-success' : 'bg-secondary'}">${schedule.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td><span class="badge ${schedule.is_active == 1 ? 'bg-success' : 'bg-secondary'}">${schedule.is_active == 1 ? 'Active' : 'Inactive'}</span></td>
             ${canManage ? `
             <td class="text-center">
                 <div class="d-flex gap-1 justify-content-center">
@@ -342,6 +343,16 @@ async function handleImport(event) {
         }
     };
     reader.readAsBinaryString(file);
+}
+
+async function populateLineDatalist() {
+    const result = await sendRequest(PARA_API_ENDPOINT, 'get_lines', 'GET');
+    if (result?.success) {
+        const datalist = document.getElementById('lineDatalist');
+        if (datalist) {
+            datalist.innerHTML = result.data.map(line => `<option value="${line}"></option>`).join('');
+        }
+    }
 }
 
 // ในไฟล์ paraManage.js ของคุณ
@@ -553,7 +564,8 @@ function initializeBomManager() {
 document.addEventListener('DOMContentLoaded', () => {
     // Load data for the first active tab
     loadStandardParams();
-    
+    populateLineDatalist();
+
     document.getElementById('searchInput')?.addEventListener('input', filterAndRenderStandardParams);
     const importInput = document.getElementById('importFile');
     if (importInput) {

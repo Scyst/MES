@@ -8,16 +8,15 @@
             <div class="modal-body">
                 <form id="editScheduleForm">
                     <input type="hidden" id="editScheduleId" name="id">
-                    
                     <div class="mb-3">
                         <label for="editScheduleLine" class="form-label">Line:</label>
-                        <input type="text" id="editScheduleLine" name="line" class="form-control" placeholder="Enter Line" required>
+                        <input type="text" id="editScheduleLine" name="line" class="form-control text-uppercase" required list="lineDatalist">
                     </div>
                     <div class="mb-3">
                         <label for="editScheduleShiftName" class="form-label">Shift Name:</label>
                         <select id="editScheduleShiftName" name="shift_name" class="form-select" required>
-                            <option value="Day">Day</option>
-                            <option value="Night">Night</option>
+                            <option value="DAY">DAY</option>
+                            <option value="NIGHT">NIGHT</option>
                         </select>
                     </div>
                     <div class="row">

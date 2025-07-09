@@ -68,17 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
     //-- จัดการการ Submit ฟอร์มสำหรับ "Line Schedule" --
     document.getElementById('addScheduleForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
+        const form = e.target;
+        const payload = Object.fromEntries(new FormData(form).entries());
         payload.id = 0;
-        payload.is_active = payload.is_active ? 1 : 0;
         
-        // ** FIXED: แก้ไขการเรียก sendRequest **
+        // แก้ไข: เปลี่ยนมาใช้วิธีตรวจสอบที่แม่นยำกว่า
+        payload.is_active = form.querySelector('[name="is_active"]').checked ? 1 : 0;
+        
         const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
 
         if (result.success) {
             showToast('Schedule added successfully!', '#28a745');
             closeModal('addScheduleModal');
-            e.target.reset();
+            form.reset();
             loadSchedules();
         } else {
             showToast(result.message || 'Failed to add schedule.', '#dc3545');
@@ -87,10 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('editScheduleForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        payload.is_active = payload.is_active ? 1 : 0;
+        const form = e.target;
+        const payload = Object.fromEntries(new FormData(form).entries());
 
-        // ** FIXED: แก้ไขการเรียก sendRequest **
+        // แก้ไข: เปลี่ยนมาใช้วิธีตรวจสอบที่แม่นยำกว่า
+        payload.is_active = form.querySelector('[name="is_active"]').checked ? 1 : 0;
+
         const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
 
         if (result.success) {

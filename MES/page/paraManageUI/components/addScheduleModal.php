@@ -9,13 +9,14 @@
                 <form id="addScheduleForm">
                     <div class="mb-3">
                         <label for="addScheduleLine" class="form-label">Line:</label>
-                        <input type="text" id="addScheduleLine" name="line" class="form-control" placeholder="Enter Line" required>
+                        <input type="text" id="addScheduleLine" name="line" class="form-control text-uppercase" placeholder="Enter Line" required list="lineDatalist">
+                        <datalist id="lineDatalist"></datalist>
                     </div>
                     <div class="mb-3">
                         <label for="addScheduleShiftName" class="form-label">Shift Name:</label>
                         <select id="addScheduleShiftName" name="shift_name" class="form-select" required>
-                            <option value="Day">Day</option>
-                            <option value="Night">Night</option>
+                            <option value="DAY">DAY</option>
+                            <option value="NIGHT">NIGHT</option>
                         </select>
                     </div>
                     <div class="row">

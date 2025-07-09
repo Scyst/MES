@@ -237,6 +237,11 @@ function handleFilterChange() {
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
+    // --- เพิ่มเข้ามา: จัดการการเปิดแท็บ Production History ---
+    const prodHistoryTabButton = document.getElementById('production-history-tab');
+    if (prodHistoryTabButton) {
+        prodHistoryTabButton.addEventListener('shown.bs.tab', () => fetchPartsData(1));
+    }
     //-- เพิ่ม Debouncing ให้กับ Filter Inputs เพื่อลดการยิง API ขณะพิมพ์ --
     const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
     filterInputs.forEach(id => {
@@ -253,6 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
     populateDatalist('lineList', 'get_lines');
     populateDatalist('modelList', 'get_models');
     
-    //-- โหลดข้อมูลตารางครั้งแรก --
-    fetchPartsData(1);
+    //-- โหลดข้อมูลตารางครั้งแรกสำหรับแท็บที่ Active อยู่ --
+    const activeTab = document.querySelector('#mainTab .nav-link.active');
+    if (activeTab && activeTab.id === 'production-history-tab') {
+        fetchPartsData(1);
+    }
 });

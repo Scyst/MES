@@ -103,6 +103,14 @@ function openSummaryModal(triggerEl) {
     });
 
     tableContainer.appendChild(table);
+
+    document.querySelector('#summaryModal .modal-title').textContent = 'Detailed Summary';
+
+    const exportButton = document.getElementById('summaryModalExportButton');
+    if (exportButton) {
+        exportButton.setAttribute('onclick', 'exportSummaryToExcel()');
+    }
+
     showBootstrapModal('summaryModal');
 }
 
@@ -141,10 +149,9 @@ function openHistorySummaryModal() {
 
     if (!tableContainer || !grandTotalContainer) return;
 
-    // ซ่อน Grand Total เพราะหน้านี้ไม่มี
     grandTotalContainer.innerHTML = '';
-
     tableContainer.innerHTML = '';
+    
     if (summaryData.length === 0) {
         tableContainer.innerHTML = '<p class="text-center mt-3">No summary data to display.</p>';
         showBootstrapModal('summaryModal');
@@ -173,10 +180,14 @@ function openHistorySummaryModal() {
     });
 
     tableContainer.appendChild(table);
-    // เปลี่ยน Title ของ Modal
+
     document.querySelector('#summaryModal .modal-title').textContent = 'Entry History Summary';
-    // เปลี่ยนฟังก์ชันของปุ่ม Export ใน Modal
-    document.querySelector('#summaryModal button[onclick="exportSummaryToExcel()"]').setAttribute('onclick', 'exportHistorySummaryToExcel()');
+
+    const exportButton = document.getElementById('summaryModalExportButton');
+    if (exportButton) {
+        exportButton.setAttribute('onclick', 'exportHistorySummaryToExcel()');
+    }
+
     showBootstrapModal('summaryModal');
 }
 

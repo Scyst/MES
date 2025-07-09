@@ -125,77 +125,114 @@ try {
 
         //-- เพิ่มข้อมูล Part ใหม่ --
         case 'add_part':
-            //-- ตรวจสอบ Field ที่จำเป็น --
-            $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
-            foreach ($required_fields as $field) {
-                if (empty($input[$field])) {
-                    throw new Exception("Missing required field: " . $field);
+            //-- เริ่มต้น Transaction --
+            $pdo->beginTransaction();
+
+            try {
+                //-- ตรวจสอบ Field ที่จำเป็น --
+                $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
+                foreach ($required_fields as $field) {
+                    if (empty($input[$field])) {
+                        throw new Exception("Missing required field: " . $field);
+                    }
                 }
-            }
-            
-            //-- ตรวจสอบความถูกต้องของ Count Type --
-            $valid_types = ['FG', 'NG', 'HOLD', 'REWORK', 'SCRAP', 'ETC.'];
-            $count_type = strtoupper(trim($input['count_type']));
-            if (!in_array($count_type, $valid_types)) {
-                throw new Exception("Invalid count type");
-            }
-
-            $line = strtoupper(trim($input['line']));
-            $model = strtoupper(trim($input['model']));
-            $part_no = strtoupper(trim($input['part_no']));
-            $log_date = $input['log_date'];
-            
-            // --- เพิ่มส่วนตรวจสอบนี้เข้ามา ---
-            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
-            $checkStmt = $pdo->prepare($checkSql);
-            $checkStmt->execute([$line, $model, $part_no]);
-            if ($checkStmt->fetchColumn() == 0) {
-                throw new Exception("Invalid combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
-            }
-            // -----------------------------
-
-            $lot_no = $input['lot_no'] ?? '';
-            
-            //-- สร้าง Lot Number อัตโนมัติ (หากไม่ได้ระบุมา) --
-            if (empty($lot_no)) {
-                // ค้นหา SAP No. จากตาราง Parameter
-                $sapQuery = "SELECT sap_no FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
-                $sapStmt = $pdo->prepare($sapQuery);
-                $sapStmt->execute([$line, $model, $part_no]);
-                $sapRow = $sapStmt->fetch();
-                if (!$sapRow || empty($sapRow['sap_no'])) {
-                    throw new Exception("SAP No. not found for the given line/model/part combination.");
-                }
-                $sap_no = $sapRow['sap_no'];
-                $datePrefix = date('dmy', strtotime($log_date));
-
-                // นับจำนวน Lot ที่มีอยู่แล้วในวันนั้นเพื่อสร้าง Running Number
-                $lotCountQuery = "SELECT COUNT(*) AS lot_count FROM PARTS WHERE part_no = ? AND log_date = ? AND lot_no LIKE ?";
-                $likePattern = $sap_no . '-' . $datePrefix . '%';
-                $countStmt = $pdo->prepare($lotCountQuery);
-                $countStmt->execute([$part_no, $log_date, $likePattern]);
-                $countRow = $countStmt->fetch();
                 
-                // สร้าง Lot No. ใหม่
-                $count = ($countRow['lot_count'] ?? 0) + 1;
-                $lot_no = $sap_no . '-' . $datePrefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
-            }
+                $valid_types = ['FG', 'NG', 'HOLD', 'REWORK', 'SCRAP', 'ETC.'];
+                $count_type = strtoupper(trim($input['count_type']));
+                if (!in_array($count_type, $valid_types)) throw new Exception("Invalid count type");
 
-            //-- เพิ่มข้อมูล Part ใหม่ลงในฐานข้อมูล --
-            $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $insertStmt = $pdo->prepare($insertSql);
-            $success = $insertStmt->execute([
-                $log_date, $input['log_time'], $model, $line, $part_no, strtoupper(trim($lot_no)),
-                $count_type, (int)$input['count_value'],
-                isset($input['note']) ? strtoupper(trim($input['note'])) : null
-            ]);
+                $line = strtoupper(trim($input['line']));
+                $model = strtoupper(trim($input['model']));
+                $part_no = strtoupper(trim($input['part_no']));
+                $log_date = $input['log_date'];
+                
+                // --- ตรวจสอบกับตาราง PARAMETER ---
+                $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+                $checkStmt = $pdo->prepare($checkSql);
+                $checkStmt->execute([$line, $model, $part_no]);
+                if ($checkStmt->fetchColumn() == 0) {
+                    throw new Exception("Invalid combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
+                }
 
-            //-- บันทึก Log และส่งผลลัพธ์ --
-            if ($success) {
-                $detail = "{$line}-{$model}-{$part_no}, Qty: {$input['count_value']}, Type: {$count_type}";
-                logAction($pdo, $currentUser, 'ADD PART', $lot_no, $detail);
+                $lot_no = $input['lot_no'] ?? '';
+            
+                //-- สร้าง Lot Number อัตโนมัติ (หากไม่ได้ระบุมา) --
+                if (empty($lot_no)) {
+                    // ค้นหา SAP No. จากตาราง Parameter
+                    $sapQuery = "SELECT sap_no FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+                    $sapStmt = $pdo->prepare($sapQuery);
+                    $sapStmt->execute([$line, $model, $part_no]);
+                    $sapRow = $sapStmt->fetch();
+                    if (!$sapRow || empty($sapRow['sap_no'])) {
+                        throw new Exception("SAP No. not found for the given line/model/part combination.");
+                    }
+                    $sap_no = $sapRow['sap_no'];
+                    $datePrefix = date('dmy', strtotime($log_date));
+
+                    // นับจำนวน Lot ที่มีอยู่แล้วในวันนั้นเพื่อสร้าง Running Number
+                    $lotCountQuery = "SELECT COUNT(*) AS lot_count FROM PARTS WHERE part_no = ? AND log_date = ? AND lot_no LIKE ?";
+                    $likePattern = $sap_no . '-' . $datePrefix . '%';
+                    $countStmt = $pdo->prepare($lotCountQuery);
+                    $countStmt->execute([$part_no, $log_date, $likePattern]);
+                    $countRow = $countStmt->fetch();
+                    
+                    // สร้าง Lot No. ใหม่
+                    $count = ($countRow['lot_count'] ?? 0) + 1;
+                    $lot_no = $sap_no . '-' . $datePrefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                }
+
+                $fg_qty = (int)$input['count_value'];
+                $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $insertStmt = $pdo->prepare($insertSql);
+                $insertStmt->execute([
+                    $log_date, $input['log_time'], $model, $line, $part_no, strtoupper(trim($lot_no)),
+                    $count_type, $fg_qty,
+                    isset($input['note']) ? strtoupper(trim($input['note'])) : null
+                ]);
+
+                // --- 2. เริ่ม Logic การตัดสต็อกตาม BOM (เฉพาะเมื่อเป็น FG) ---
+                if ($count_type === 'FG' && $fg_qty > 0) {
+                    // ค้นหาส่วนประกอบทั้งหมดของ FG นี้จาก BOM
+                    $bomSql = "SELECT component_part_no, quantity_required FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ?";
+                    $bomStmt = $pdo->prepare($bomSql);
+                    $bomStmt->execute([$part_no, $line, $model]);
+                    $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    if ($components) {
+                        // เตรียมคำสั่ง INSERT สำหรับ Component
+                        $consumeSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note) VALUES (?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?)";
+                        $consumeStmt = $pdo->prepare($consumeSql);
+                        
+                        // วนลูปเพื่อบันทึกการใช้ Component แต่ละตัว
+                        foreach ($components as $comp) {
+                            $qty_to_consume = $fg_qty * (int)$comp['quantity_required'];
+                            $note = "Consumed for FG Lot: " . strtoupper(trim($lot_no));
+                            
+                            $consumeStmt->execute([
+                                $log_date, $input['log_time'], $model, $line, 
+                                $comp['component_part_no'], 
+                                strtoupper(trim($lot_no)), 
+                                $qty_to_consume, 
+                                $note
+                            ]);
+                        }
+                    }
+                }
+                
+                //-- 3. ยืนยัน Transaction หากทุกอย่างสำเร็จ --
+                $pdo->commit();
+                
+                logAction($pdo, $currentUser, 'ADD PART', $lot_no, "{$line}-{$model}-{$part_no}, Qty: {$fg_qty}, Type: {$count_type}");
+                echo json_encode(['success' => true, 'message' => 'Part and component consumption recorded successfully.', 'lot_no' => $lot_no]);
+
+            } catch (Exception $e) {
+                //-- หากมีข้อผิดพลาด ให้ยกเลิก Transaction ทั้งหมด --
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                //-- ส่งข้อความ Error กลับไป --
+                throw $e; // โยน Exception ต่อเพื่อให้ catch ด้านนอกจัดการ
             }
-            echo json_encode(['success' => true, 'message' => 'Part inserted successfully.', 'lot_no' => $lot_no]);
             break;
 
         //-- ลบข้อมูล Part --

@@ -9,7 +9,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div id="summaryGrandTotalContainer" class="summary-grand-total">
                         </div>
-                    <button class="btn btn-primary btn-sm" onclick="exportSummaryToExcel()">Export Summary</button>
+                    <button id="summaryModalExportButton" class="btn btn-primary btn-sm" onclick="exportSummaryToExcel()">Export Summary</button>
                 </div>
 
                 <div id="summaryTableContainer">

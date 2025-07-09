@@ -19,24 +19,35 @@ $currentUser = $_SESSION['user']['username'] ?? 'system';
 try {
     switch ($action) {
         case 'log_wip_entry':
-            // แก้ไข: เพิ่ม model เข้ามาในฟังก์ชัน
+            // ตรวจสอบ Field ที่จำเป็น
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
             }
 
-            // เพิ่มการตรวจสอบกับตาราง PARAMETER
-            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            // --- เพิ่มการตรวจสอบว่า Part No. นี้มีอยู่จริงใน Model ที่ระบุหรือไม่ ---
+            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE part_no = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
-            $checkStmt->execute([strtoupper(trim($input['line'])), strtoupper(trim($input['model'])), strtoupper(trim($input['part_no']))]);
+            $checkStmt->execute([strtoupper(trim($input['part_no'])), strtoupper(trim($input['model']))]);
             if ($checkStmt->fetchColumn() == 0) {
-                throw new Exception("Invalid combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
+                throw new Exception("This Part No. does not exist for the specified Model in the PARAMETER table.");
             }
+            // --------------------------------------------------------------------
 
-            // แก้ไข: เพิ่ม model ใน SQL INSERT
+            // เตรียมข้อมูลสำหรับ INSERT
             $sql = "INSERT INTO WIP_ENTRIES (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $params = [strtoupper(trim($input['model'])), strtoupper(trim($input['line'])), strtoupper(trim($input['lot_no'] ?? null)), strtoupper(trim($input['part_no'])), (int)$input['quantity_in'], $currentUser, $input['remark'] ?? null];
+            $params = [
+                strtoupper(trim($input['model'])), 
+                strtoupper(trim($input['line'])), 
+                strtoupper(trim($input['lot_no'] ?? null)), 
+                strtoupper(trim($input['part_no'])), 
+                (int)$input['quantity_in'], 
+                $currentUser, 
+                $input['remark'] ?? null
+            ];
             $stmt = $pdo->prepare($sql);
+            
+            // บันทึกข้อมูลและส่งผลลัพธ์
             if ($stmt->execute($params)) {
                 $detail = "Model: {$input['model']}, Line: {$input['line']}, Part: {$input['part_no']}, Qty: {$input['quantity_in']}";
                 logAction($pdo, $currentUser, 'WIP_ENTRY', $input['lot_no'], $detail);
@@ -58,7 +69,7 @@ try {
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             $partsWhereClause = $parts_conditions ? "WHERE " . implode(" AND ", $parts_conditions) : "";
 
-            // แก้ไข: เพิ่ม model เข้าไปใน GROUP BY, SELECT, และ JOIN
+            // แก้ไข: ใน TotalOut CTE ให้ WHERE count_type เป็น ('FG', 'BOM-ISSUE')
             $sql = "
                 WITH TotalIn AS (
                     SELECT part_no, line, model, SUM(quantity_in) AS total_in 
@@ -67,7 +78,8 @@ try {
                 ), 
                 TotalOut AS (
                     SELECT part_no, line, model, SUM(count_value) AS total_out 
-                    FROM PARTS " . ($partsWhereClause ? $partsWhereClause . " AND count_type = 'FG'" : "WHERE count_type = 'FG'") . " 
+                    FROM PARTS 
+                    " . ($partsWhereClause ? $partsWhereClause . " AND count_type IN ('FG', 'BOM-ISSUE')" : "WHERE count_type IN ('FG', 'BOM-ISSUE')") . " 
                     GROUP BY part_no, line, model
                 ) 
                 SELECT 

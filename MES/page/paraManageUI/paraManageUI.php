@@ -100,7 +100,7 @@
                     <div class="col-md-3">
                         <div class="d-flex justify-content-end">
                             <?php if ($canManage): ?>
-                                <button class="btn btn-success flex-fill" onclick="openModal('addScheduleModal')">Add New Schedule</button>
+                                <button class="btn btn-success" onclick="openModal('addScheduleModal')">Add New Schedule</button>
                             <?php endif; ?>
                         </div>
                     </div>
