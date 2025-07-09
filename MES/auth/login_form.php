@@ -12,6 +12,7 @@ if (isset($_SESSION['user'])) {
 <head>
     <title>Login</title>
     <link rel="stylesheet" href="../utils/libs/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* CSS สำหรับจัดหน้าและตกแต่งให้เป็น Dark Theme */
         body {
@@ -30,12 +31,17 @@ if (isset($_SESSION['user'])) {
             width: 100%;
             max-width: 400px;
         }
+        /* ลบ CSS ของปุ่มมุมบนขวาที่ไม่ได้ใช้ออกไป */
     </style>
 </head>
 <body>
     <div class="login-box">
-        <h3 class="text-center mb-4">Login</h3>
-        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">Login</h3>
+            <a href="../page/OEE_Dashboard/OEE_Dashboard.php" class="text-white-50" title="Back to Dashboard">
+                <i class="fas fa-home fs-5"></i>
+            </a>
+        </div>
         <div id="error-alert" class="alert alert-danger d-none"></div>
 
         <?php if (isset($_GET['timeout'])): ?>
@@ -91,4 +97,3 @@ if (isset($_SESSION['user'])) {
         });
     </script>
 </body>
-</html>

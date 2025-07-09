@@ -38,39 +38,24 @@
         <div id="reportContainer" class="d-none">
             <div id="summaryCard" class="card text-white bg-secondary mb-4"></div>
 
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <h4 class="mb-3">Bill of Materials (BOM)</h4>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Component Part Number</th>
-                                    <th>Quantity Required</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bomTableBody"></tbody>
-                        </table>
-                    </div>
+            <ul class="nav nav-tabs" id="traceTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="prod-history-tab" data-bs-toggle="tab" data-bs-target="#prod-history-pane" type="button" role="tab">Production History</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bom-tab" data-bs-toggle="tab" data-bs-target="#bom-pane" type="button" role="tab">Bill of Materials (BOM)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="wip-history-tab" data-bs-toggle="tab" data-bs-target="#wip-history-pane" type="button" role="tab">WIP Entry History</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="downtime-tab" data-bs-toggle="tab" data-bs-target="#downtime-pane" type="button" role="tab">Relevant Downtime</button>
+                </li>
+            </ul>
 
-                    <h4 class="mb-3 mt-4">WIP Entry History</h4>
-                     <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Entry Time</th>
-                                    <th>Quantity In</th>
-                                    <th>Operator</th>
-                                    <th>Remark</th>
-                                </tr>
-                            </thead>
-                            <tbody id="wipHistoryTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <h4 class="mb-3">Production History</h4>
-                    <div class="table-responsive" style="max-height: 400px;">
+            <div class="tab-content pt-3" id="traceTabContent">
+                <div class="tab-pane fade show active" id="prod-history-pane" role="tabpanel">
+                    <div class="table-responsive">
                         <table class="table table-dark table-striped table-hover table-sm">
                             <thead>
                                 <tr>
@@ -85,25 +70,53 @@
                         </table>
                     </div>
                 </div>
+                <div class="tab-pane fade" id="bom-pane" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Component Part Number</th>
+                                    <th>Quantity Required</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bomTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="wip-history-pane" role="tabpanel">
+                     <div class="table-responsive">
+                        <table class="table table-dark table-striped table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Entry Time</th>
+                                    <th>Quantity In</th>
+                                    <th>Operator</th>
+                                    <th>Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wipHistoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="downtime-pane" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Stop Begin</th>
+                                    <th>Stop End</th>
+                                    <th>Duration (m)</th>
+                                    <th>Machine/Station</th>
+                                    <th>Cause</th>
+                                    <th>Recovered By</th>
+                                </tr>
+                            </thead>
+                            <tbody id="downtimeHistoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-
-            <h4 class="mb-3 mt-4">Relevant Downtime History</h4>
-            <div class="table-responsive">
-                <table class="table table-dark table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Stop Begin</th>
-                            <th>Stop End</th>
-                            <th>Duration (m)</th>
-                            <th>Machine/Station</th>
-                            <th>Cause</th>
-                            <th>Recovered By</th>
-                        </tr>
-                    </thead>
-                    <tbody id="downtimeHistoryTableBody"></tbody>
-                </table>
-            </div>
-        </div>
+             </div>
         
         <div id="initialMessage" class="text-center text-muted" style="margin-top: 10rem;">
             <h4>Please enter a Lot Number to start the report.</h4>
@@ -111,7 +124,12 @@
     </div>
     
     <div id="toast"></div>
+    
+    <?php
+        include('../components/autoLogoutUI.php');
+    ?>
     <script src="../components/toast.js"></script>
+    <script src="../components/auto_logout.js"></script>
     <script src="script/traceability.js"></script> 
 </body>
 </html>

@@ -101,6 +101,7 @@
             include('components/addStopModal.php');
             include('components/editStopModal.php');
         }
+        include('../components/autoLogoutUI.php');
     ?>
     
     <script>

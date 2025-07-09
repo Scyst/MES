@@ -173,14 +173,17 @@
     
     <div id="toast"></div>
 
-    <?php if ($canManage) {
-        include('components/addParamModal.php');
-        include('components/editParamModal.php');
-        include('components/addScheduleModal.php');
-        include('components/editScheduleModal.php');
-        include('components/manageBomModal.php'); 
-        include('components/createBomModal.php'); 
-    } ?>
+    <?php 
+        if ($canManage) {
+            include('components/addParamModal.php');
+            include('components/editParamModal.php');
+            include('components/addScheduleModal.php');
+            include('components/editScheduleModal.php');
+            include('components/manageBomModal.php'); 
+            include('components/createBomModal.php');
+        } 
+        include('../components/autoLogoutUI.php');
+    ?>
 
     <script>
         const canManage = <?php echo json_encode($canManage ?? false); ?>;

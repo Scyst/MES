@@ -90,10 +90,10 @@ try {
     $bomSql = "
         SELECT component_part_no, quantity_required
         FROM PRODUCT_BOM
-        WHERE fg_part_no = ?;
+        WHERE fg_part_no = ? AND line = ? AND model = ?;
     ";
     $bomStmt = $pdo->prepare($bomSql);
-    $bomStmt->execute([$part_no]);
+    $bomStmt->execute([$part_no, $line, $summary['model']]);
     $data['bom_info'] = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
 

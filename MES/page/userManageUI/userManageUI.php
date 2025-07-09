@@ -73,6 +73,7 @@
             include('components/editUserModal.php');
         }
         include('components/logsModal.php'); 
+        include('../components/autoLogoutUI.php');
     ?>
 
     <script>

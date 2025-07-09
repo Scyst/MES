@@ -17,15 +17,7 @@ if (ini_get("session.use_cookies")) {
 //-- 3. ทำลาย Session บนเซิร์ฟเวอร์อย่างสมบูรณ์ --
 session_destroy();
 
-//-- กำหนด URL สำหรับ Redirect หลังจาก Logout --
-$redirect_url = 'login_form.php'; // ค่าเริ่มต้นคือหน้า Login
-
-//-- ตรวจสอบว่าต้องการให้กลับไปที่ Dashboard หรือไม่ --
-if (isset($_GET['return_to']) && $_GET['return_to'] === 'dashboard') {
-    $redirect_url = '../page/OEE_Dashboard/OEE_Dashboard.php';
-}
-
-//-- ส่งผู้ใช้ไปยังหน้าเว็บที่กำหนด --
-header("Location: " . $redirect_url);
+//-- 4. ส่งผู้ใช้กลับไปยังหน้า Dashboard เสมอ --
+header("Location: ../page/OEE_Dashboard/OEE_Dashboard.php");
 exit;
 ?>

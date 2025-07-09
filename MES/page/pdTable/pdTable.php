@@ -156,7 +156,6 @@
     
     <div id="toast"></div>
 
-    <?php include('components/summaryModal.php'); ?>
     <?php 
         if ($canManage) {
             include('components/addPartModal.php'); 
@@ -164,6 +163,8 @@
             include('components/addEntryModal.php');
             include('components/editEntryModal.php');
         }
+        include('components/summaryModal.php');
+        include('../components/autoLogoutUI.php');
     ?>
     
     <script>
