@@ -249,11 +249,29 @@ function renderHealthCheckTable() {
     const start = (healthCheckCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = allMissingParams.slice(start, start + ROWS_PER_PAGE);
 
+    // แก้ไข: ปรับ colspan เป็น 4
     if (allMissingParams.length === 0) {
-        listBody.innerHTML = `<tr><td colspan="3" class="text-success">Excellent! No missing data found.</td></tr>`;
+        listBody.innerHTML = `<tr><td colspan="4" class="text-center text-success">Excellent! No missing data found.</td></tr>`;
     } else {
          pageData.forEach(item => {
-            listBody.innerHTML += `<tr><td>${item.line}</td><td>${item.model}</td><td>${item.part_no}</td></tr>`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${item.line}</td><td>${item.model}</td><td>${item.part_no}</td>`;
+            
+            // --- เพิ่ม Cell และปุ่ม "Add" ---
+            const actionsTd = document.createElement('td');
+            actionsTd.className = 'text-center';
+            
+            const addButton = document.createElement('button');
+            addButton.className = 'btn btn-sm btn-success';
+            addButton.textContent = 'Add as Parameter';
+            // กำหนดให้ปุ่มเรียกฟังก์ชันใหม่พร้อมส่งข้อมูลของแถวนั้นๆ ไปด้วย
+            addButton.onclick = () => openAddParamFromHealthCheck(item);
+            
+            actionsTd.appendChild(addButton);
+            tr.appendChild(actionsTd);
+            // -----------------------------
+            
+            listBody.appendChild(tr);
         });
     }
     
@@ -299,6 +317,23 @@ function exportToExcel() {
 //-- ฟังก์ชันสำหรับกดปุ่ม <input type="file"> ที่ซ่อนอยู่ --
 function triggerImport() {
     document.getElementById('importFile')?.click();
+}
+
+/**
+ * ฟังก์ชันสำหรับเปิด Modal 'Add Parameter' และเติมข้อมูลจาก Health Check
+ * @param {object} item - ข้อมูลของแถวที่เลือก (line, model, part_no)
+ */
+function openAddParamFromHealthCheck(item) {
+    const modalElement = document.getElementById('addParamModal');
+    if (!modalElement) return;
+
+    // เติมข้อมูลลงในฟอร์มของ Modal
+    modalElement.querySelector('#addParamLine').value = item.line || '';
+    modalElement.querySelector('#addParamModel').value = item.model || '';
+    modalElement.querySelector('#addParamPartNo').value = item.part_no || '';
+    
+    // เรียกใช้ฟังก์ชันเปิด Modal ที่มีอยู่แล้ว
+    openModal('addParamModal');
 }
 
 //-- ฟังก์ชันสำหรับจัดการไฟล์ Excel ที่ถูกเลือก --

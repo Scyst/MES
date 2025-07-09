@@ -41,33 +41,29 @@ function truncateLabel(label, maxLength = 4) {
  * @param {object} customOptions - Options เพิ่มเติมสำหรับปรับแต่งกราฟ
  */
 function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}) {
-    //-- ทำลาย Instance ของ Chart เดิมก่อนที่จะสร้างใหม่ เพื่อป้องกัน Memory Leak --
     if (chartInstance) chartInstance.destroy();
 
-    //-- ตั้งค่า Options พื้นฐานจาก customOptions --
     const isStacked = customOptions.isStacked || false;
     const shouldRotateLabels = customOptions.rotateLabels || false;
-    const originalLabels = customOptions.originalLabels || labels; //-- เก็บ Label เดิมไว้ใช้ใน Tooltip --
+    const originalLabels = customOptions.originalLabels || labels;
+    const unitLabel = customOptions.unitLabel || ''; // รับหน่วยมาใช้ใน Tooltip
 
-    //-- กำหนด Options สำหรับแกน X --
+    // เพิ่มคุณสมบัติ maxBarThickness ให้กับทุก dataset
+    datasets.forEach(ds => {
+        ds.maxBarThickness = 250;
+    });
+
     const xScaleOptions = {
         stacked: isStacked,
         ticks: {
             color: '#ccc',
-            autoSkip: false, //-- แสดงทุก Label --
-            maxRotation: shouldRotateLabels ? 45 : 0, //-- หมุน Label หากจำเป็น --
+            autoSkip: false,
+            maxRotation: shouldRotateLabels ? 45 : 0,
             minRotation: shouldRotateLabels ? 45 : 0
         },
         grid: { display: false }
     };
-    
-    //-- ปรับแต่งความหนาของแท่งกราฟเฉพาะสำหรับ partsBarChart --
-    if (ctx.canvas.id === 'partsBarChart') {
-        xScaleOptions.categoryPercentage = 0.8;
-        xScaleOptions.barPercentage = 1.0;
-    }
 
-    //-- สร้าง Chart ใหม่ --
     return new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
@@ -80,12 +76,10 @@ function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}
                     labels: { color: '#ccc' }
                 },
                 title: { display: false },
-                //-- ปรับแต่ง Tooltip (ข้อความที่แสดงเมื่อเอาเมาส์ไปชี้) --
                 tooltip: {
                     mode: 'index',
                     intersect: false,
                     callbacks: {
-                        //-- แสดง Label ตัวเต็มในหัวข้อของ Tooltip --
                         title: function(tooltipItems) {
                             if (tooltipItems.length > 0) {
                                 const dataIndex = tooltipItems[0].dataIndex;
@@ -93,18 +87,27 @@ function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}
                             }
                             return '';
                         },
-                        //-- แสดงผลรวมของ Stacked Bar ในส่วนท้ายของ Tooltip --
+                        // แก้ไข: เพิ่มหน่วยต่อท้ายตัวเลข
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toLocaleString() + ' ' + unitLabel;
+                            }
+                            return label;
+                        },
                         footer: (tooltipItems) => {
                             if (!isStacked) return '';
                             let sum = 0;
                             tooltipItems.forEach(item => {
                                 sum += item.parsed.y || 0;
                             });
-                            return 'Total: ' + sum.toLocaleString();
+                            return 'Total: ' + sum.toLocaleString() + ' ' + unitLabel;
                         }
                     }
                 },
-                //-- ตั้งค่าการซูมและแพน --
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
                     zoom: {
@@ -114,8 +117,7 @@ function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}
                     }
                 }
             },
-            layout: { padding: 10 },
-            //-- ตั้งค่าแกน X และ Y --
+            layout: { padding: 5 },
             scales: {
                 x: xScaleOptions,
                 y: {
@@ -147,7 +149,6 @@ function padBarData(labels, values, minCount) {
     return { labels: paddedLabels, values: paddedValues };
 }
 
-
 /**
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Bar Chart ทั้งหมด
  */
@@ -155,13 +156,11 @@ async function fetchAndRenderBarCharts() {
     try {
         hideErrors();
 
-        //-- ดึงค่า Filter ปัจจุบัน --
         const startDate = document.getElementById("startDate")?.value || '';
         const endDate = document.getElementById("endDate")?.value || '';
         const line = document.getElementById("lineFilter")?.value || '';
         const model = document.getElementById("modelFilter")?.value || '';
 
-        //-- เรียก API เพื่อดึงข้อมูล --
         const params = new URLSearchParams({ startDate, endDate, line, model });
         const response = await fetch(`../../api/OEE_Dashboard/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
@@ -172,98 +171,97 @@ async function fetchAndRenderBarCharts() {
         
         const data = responseData.data;
         
-        //-- ส่วนที่ 1: ประมวลผลและ Render "Parts Bar Chart" --
-        const originalPartLabels = data.parts.labels;
-        const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label));
-
-        const countTypes = {
-            FG:     { label: "Good",   color: "#00C853" },
-            NG:     { label: "NG",     color: "#FF5252" },
-            HOLD:   { label: "Hold",   color: "#FFD600" },
-            REWORK: { label: "Rework", color: "#2979FF" },
-            SCRAP:  { label: "Scrap",  color: "#9E9E9E" },
-            ETC:    { label: "ETC",    color: "#AA00FF" }
-        };
-
-        //-- แปลงข้อมูลจาก API ให้อยู่ในรูปแบบ Datasets ของ Chart.js --
-        const partDatasets = Object.entries(countTypes).map(([type, { label, color }]) => {
-            return data.parts[type]
-                ? { label, data: data.parts[type], backgroundColor: color, borderRadius: 1 }
-                : null;
-        }).filter(Boolean); //-- กรองค่า null ออก --
-
-        partsBarChartInstance = renderBarChart(
-            partsBarChartInstance,
-            document.getElementById("partsBarChart").getContext("2d"),
-            truncatedPartLabels,
-            partDatasets,
-            { 
-                isStacked: true, 
-                rotateLabels: originalPartLabels.length > 8,
-                originalLabels: originalPartLabels
-            }
-        );
-
-        //-- ส่วนที่ 2: ประมวลผลและ Render "Stop Cause Bar Chart" --
-        const stopCauseLabels = data.stopCause.labels;
-        const rawDatasets = data.stopCause.datasets;
-
-        //-- จัดกลุ่ม Cause ที่หลากหลายให้เป็นกลุ่มมาตรฐาน (Man, Machine, etc.) --
-        const causeColors = {
-            'Man': '#42A5F5', 'Machine': '#FFA726', 'Method': '#66BB6A',
-            'Material': '#EF5350', 'Measurement': '#AB47BC', 'Environment': '#26C6DA',
-            'Other': '#BDBDBD'
-        };
-        const standardCauses = Object.keys(causeColors);
-        const consolidatedData = {};
-        const numLabels = stopCauseLabels.length;
-
-        //-- เตรียมโครงสร้างข้อมูลสำหรับแต่ละกลุ่มมาตรฐาน --
-        standardCauses.forEach(cause => {
-            consolidatedData[cause] = {
-                label: cause,
-                data: new Array(numLabels).fill(0),
-                backgroundColor: causeColors[cause],
-                borderRadius: 1
-            };
-        });
-
-        //-- วนลูปข้อมูลดิบจาก API เพื่อรวมยอดเข้ากลุ่มมาตรฐาน --
-        rawDatasets.forEach(causeSet => {
-            let targetCause = 'Other'; //-- ค่าเริ่มต้นคือ 'Other' --
-            const foundCause = standardCauses.find(sc => sc.toLowerCase() === causeSet.label.toLowerCase());
-
-            if (foundCause) {
-                targetCause = foundCause; //-- หากพบในกลุ่มมาตรฐาน ให้ใช้กลุ่มนั้น --
-            }
-
-            //-- เพิ่มข้อมูลเข้าไปในกลุ่มที่ถูกต้อง --
-            for (let i = 0; i < numLabels; i++) {
-                consolidatedData[targetCause].data[i] += causeSet.data[i] || 0;
-            }
-        });
-
-        //-- สร้าง Datasets สุดท้ายโดยกรองกลุ่มที่ไม่มีข้อมูลออก --
-        const stopCauseDatasets = Object.values(consolidatedData)
-        .filter(dataset => dataset.data.some(d => d > 0));
+        // --- ส่วนที่ 1: ประมวลผลและ Render "Parts Bar Chart" ---
+        const partsCtx = document.getElementById("partsBarChart").getContext("2d");
         
-        //-- กราฟจะเป็นแบบ Stacked ก็ต่อเมื่อไม่ได้เลือก Filter Line --
-        const shouldStackStopCauseChart = !line;
+        if (!data.parts || data.parts.labels.length === 0) {
+            partsBarChartInstance = renderBarChart(
+                partsBarChartInstance, partsCtx, ['N/A'], [{ label: 'No Data', data: [0], backgroundColor: '#424242' }]
+            );
+        } else {
+            const originalPartLabels = data.parts.labels;
+            const shouldTruncateParts = originalPartLabels.length > 8;
+            const truncatedPartLabels = shouldTruncateParts ? originalPartLabels.map(label => truncateLabel(label)) : originalPartLabels;
+            const countTypes = {
+                FG: { label: "Good", color: "#00C853" },
+                NG: { label: "NG", color: "#FF5252" },
+                HOLD: { label: "Hold", color: "#FFD600" },
+                REWORK: { label: "Rework", color: "#2979FF" },
+                SCRAP: { label: "Scrap", color: "#9E9E9E" },
+                ETC: { label: "ETC", color: "#AA00FF" }
+            };
+            const partDatasets = Object.entries(countTypes).map(([type, { label, color }]) => {
+                return data.parts[type]
+                    ? { label, data: data.parts[type], backgroundColor: color, borderRadius: 1 }
+                    : null;
+            }).filter(Boolean);
 
-        stopCauseBarChartInstance = renderBarChart(
-            stopCauseBarChartInstance,
-            document.getElementById("stopCauseBarChart").getContext("2d"),
-            stopCauseLabels,
-            stopCauseDatasets,
-            { isStacked: shouldStackStopCauseChart }
-        );
+            partsBarChartInstance = renderBarChart(
+                partsBarChartInstance,
+                partsCtx,
+                truncatedPartLabels,
+                partDatasets,
+                { 
+                    isStacked: true, 
+                    rotateLabels: shouldTruncateParts,
+                    originalLabels: originalPartLabels,
+                    unitLabel: 'pcs'
+                }
+            );
+        }
 
+        // --- ส่วนที่ 2: ประมวลผลและ Render "Stop Cause Bar Chart" ---
+        const stopCauseCtx = document.getElementById("stopCauseBarChart").getContext("2d");
+
+        if (!data.stopCause || data.stopCause.labels.length === 0) {
+            stopCauseBarChartInstance = renderBarChart(
+                stopCauseBarChartInstance, stopCauseCtx, ['N/A'], [{ label: 'No Data', data: [0], backgroundColor: '#424242' }]
+            );
+        } else {
+            // ... ส่วน Logic การรวมข้อมูล Stop Cause เหมือนเดิม ...
+            const stopCauseLabels = data.stopCause.labels;
+            const rawDatasets = data.stopCause.datasets;
+            const causeColors = { 'Man': '#42A5F5', 'Machine': '#FFA726', 'Method': '#66BB6A', 'Material': '#EF5350', 'Measurement': '#AB47BC', 'Environment': '#26C6DA', 'Other': '#BDBDBD' };
+            const standardCauses = Object.keys(causeColors);
+            const consolidatedData = {};
+            const numLabels = stopCauseLabels.length;
+            standardCauses.forEach(cause => {
+                consolidatedData[cause] = {
+                    label: cause,
+                    data: new Array(numLabels).fill(0),
+                    backgroundColor: causeColors[cause],
+                    borderRadius: 1
+                };
+            });
+            rawDatasets.forEach(causeSet => {
+                let targetCause = 'Other';
+                const foundCause = standardCauses.find(sc => sc.toLowerCase() === causeSet.label.toLowerCase());
+                if (foundCause) { targetCause = foundCause; }
+                for (let i = 0; i < numLabels; i++) {
+                    consolidatedData[targetCause].data[i] += causeSet.data[i] || 0;
+                }
+            });
+            const stopCauseDatasets = Object.values(consolidatedData).filter(dataset => dataset.data.some(d => d > 0));
+            const shouldStackStopCauseChart = !line;
+
+            stopCauseBarChartInstance = renderBarChart(
+                stopCauseBarChartInstance,
+                stopCauseCtx,
+                stopCauseLabels,
+                stopCauseDatasets,
+                { 
+                    isStacked: shouldStackStopCauseChart,
+                    unitLabel: 'min' // แก้ไข: เพิ่มหน่วย "นาที"
+                }
+            );
+        }
     } catch (err) {
         console.error("Bar chart fetch failed:", err);
         BarshowError('partsBarChart', 'partsBarError');
         BarshowError('stopCauseBarChart', 'stopCauseBarError');
     }
 }
+
 //-- ฟังก์ชันสำหรับสุ่มสี (ไม่ถูกใช้ในโค้ดส่วนนี้) --
 function getRandomColor() {
     return `hsl(${Math.floor(Math.random() * 360)}, 70%, 60%)`;

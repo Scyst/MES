@@ -44,21 +44,24 @@ async function fetchStopData(page = 1) {
 function renderTable(data, canManage) {
     const tbody = document.getElementById('stopTableBody');
     tbody.innerHTML = '';
-    //-- กรณีไม่พบข้อมูล --
+    
+    // กรณีไม่พบข้อมูล
     if (!data || data.length === 0) {
-        const colSpan = canManage ? 11 : 10;
+        // แก้ไข: ปรับ Colspan จาก 11 เป็น 10
+        const colSpan = canManage ? 10 : 9;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
 
-    //-- สร้างแถวและ Cell ของตารางจากข้อมูล --
+    // สร้างแถวและ Cell ของตารางจากข้อมูล
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
 
         const createCell = (text) => { const td = document.createElement('td'); td.textContent = text; return td; };
         
-        tr.appendChild(createCell(row.id));
+        // แก้ไข: ลบบรรทัดที่สร้าง Cell ของ ID ออก
+        // tr.appendChild(createCell(row.id));
         tr.appendChild(createCell(row.log_date));
         tr.appendChild(createCell(row.stop_begin));
         tr.appendChild(createCell(row.stop_end));
@@ -68,7 +71,6 @@ function renderTable(data, canManage) {
         tr.appendChild(createCell(row.cause));
         tr.appendChild(createCell(row.recovered_by));
 
-        //-- จัดการคอลัมน์ Note ให้แสดง Tooltip เมื่อข้อความยาวเกิน --
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
         noteDiv.className = 'note-truncate';
@@ -77,7 +79,6 @@ function renderTable(data, canManage) {
         noteTd.appendChild(noteDiv);
         tr.appendChild(noteTd);
         
-        //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ --
         if (canManage) {
             const actionsTd = document.createElement('td');
 

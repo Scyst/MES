@@ -127,7 +127,12 @@
                 <div class="table-responsive">
                      <table class="table table-dark table-striped">
                         <thead>
-                            <tr><th>Line</th><th>Model</th><th>Part No.</th></tr>
+                            <tr>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Part No.</th>
+                                <th style="width: 180px;" class="text-center">Actions</th>
+                            </tr>
                         </thead>
                         <tbody id="missingParamsList"></tbody>
                     </table>

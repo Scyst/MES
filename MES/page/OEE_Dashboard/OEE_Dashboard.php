@@ -19,9 +19,9 @@ session_start();
 </head>
 
 <body class="bg-dark text-white">
+    
     <?php include('../components/nav_dropdown.php'); ?>
 
-    >
     <header class="dashboard-header-sticky">
         <div class="d-flex justify-content-between align-items-center mb-1">
             <h2 class="mb-0">OEE DASHBOARD</h2>

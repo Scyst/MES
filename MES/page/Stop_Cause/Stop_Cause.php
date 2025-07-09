@@ -72,7 +72,6 @@
             <table id="stopTable" class="table table-dark table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Date</th>
                         <th>Start</th>
                         <th>End</th>
