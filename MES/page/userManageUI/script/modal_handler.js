@@ -43,28 +43,38 @@ function openEditUserModal(user) {
     const modal = document.getElementById('editUserModal');
     if (!modal) return;
 
-    //-- เติมข้อมูลผู้ใช้ลงในฟอร์ม --
+    // เติมข้อมูลผู้ใช้ลงในฟอร์ม
     document.getElementById('edit_id').value = user.id;
     document.getElementById('edit_username').value = user.username;
     document.getElementById('edit_role').value = user.role;
+    document.getElementById('editLine').value = user.line || ''; // เติมค่า line
 
-    //-- ตรวจสอบเงื่อนไขสิทธิ์ในการแก้ไข --
+    // ตรวจสอบเงื่อนไขสิทธิ์ในการแก้ไข
     const isSelf = (user.id === currentUserId);
-    const usernameInput = document.getElementById('edit_username');
-    const roleInput = document.getElementById('edit_role');
+    document.getElementById('edit_username').disabled = (currentUserRole === 'admin' && isSelf);
+    document.getElementById('edit_role').disabled = (currentUserRole === 'admin' && isSelf) || (currentUserRole === 'creator' && user.role === 'admin');
 
-    //-- ปิดการใช้งานช่อง Username และ Role หาก Admin กำลังแก้ไขข้อมูลของตัวเอง --
-    usernameInput.disabled = (currentUserRole === 'admin' && isSelf);
-    //-- ปิดการใช้งานช่อง Role หาก Admin แก้ไขตัวเอง หรือ Creator กำลังแก้ไขผู้ใช้ที่เป็น Admin --
-    roleInput.disabled = (currentUserRole === 'admin' && isSelf) || (currentUserRole === 'creator' && user.role === 'admin');
+    // แสดง/ซ่อนช่อง Line ตาม Role ที่มีอยู่
+    document.getElementById('editUserLineWrapper').classList.toggle('d-none', user.role !== 'supervisor');
     
     openModal('editUserModal');
 }
 
-//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
-    //-- หากผู้ใช้ไม่มีสิทธิ์จัดการ ให้จบการทำงาน --
     if (!canManage) return;
+
+    // --- เพิ่ม Logic จัดการการแสดงผลช่อง Line ---
+    function handleRoleChange(roleSelectId, lineWrapperId) {
+        const roleSelect = document.getElementById(roleSelectId);
+        const lineWrapper = document.getElementById(lineWrapperId);
+        if (roleSelect && lineWrapper) {
+            roleSelect.addEventListener('change', (e) => {
+                lineWrapper.classList.toggle('d-none', e.target.value !== 'supervisor');
+            });
+        }
+    }
+    handleRoleChange('addRole', 'addUserLineWrapper');
+    handleRoleChange('edit_role', 'editUserLineWrapper');
 
     //-- จัดการการ Submit ฟอร์ม "Add User" --
     const addUserForm = document.getElementById('addUserForm');

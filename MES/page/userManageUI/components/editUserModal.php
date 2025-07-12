@@ -3,7 +3,7 @@
         <div class="modal-content bg-dark text-white">
             <div class="modal-header">
                 <h5 class="modal-title">Edit User</h5>
-                <button type="button" class="btn-close btn-close-white" onclick="closeModal('editUserModal')"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="editUserForm">
@@ -25,10 +25,14 @@
                             <option value="operator">Operator</option>
                         </select>
                     </div>
+                     <div id="editUserLineWrapper" class="mb-3 d-none">
+                        <label for="editLine" class="form-label">Assigned Line</label>
+                        <input type="text" name="line" class="form-control text-uppercase" id="editLine" placeholder="Enter line for supervisor">
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="submit" form="editUserForm" class="btn btn-primary">Update User</button>
             </div>
         </div>

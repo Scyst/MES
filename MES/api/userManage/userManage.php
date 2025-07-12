@@ -53,10 +53,14 @@ try {
             $username = trim($input['username'] ?? '');
             $password = trim($input['password'] ?? '');
             $role = trim($input['role'] ?? '');
+            // รับค่า line เข้ามา
+            $line = ($role === 'supervisor') ? strtoupper(trim($input['line'] ?? '')) : null;
 
-            // ตรวจสอบข้อมูลพื้นฐาน
             if (empty($username) || empty($password) || empty($role)) {
                 throw new Exception("Username, password, and role are required.");
+            }
+            if ($role === 'supervisor' && empty($line)) {
+                throw new Exception("Line is required for supervisor role.");
             }
             // ตรวจสอบเงื่อนไขการสร้าง Role
             if ($role === 'creator') {
@@ -68,11 +72,11 @@ try {
 
             // เข้ารหัสรหัสผ่านและบันทึกลง DB
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO USERS (username, password, role) VALUES (?, ?, ?)";
+            $sql = "INSERT INTO USERS (username, password, role, line) VALUES (?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$username, $hashedPassword, $role]);
+            $stmt->execute([$username, $hashedPassword, $role, $line]);
 
-            logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role");
+            logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line");
             echo json_encode(['success' => true, 'message' => 'User created successfully.']);
             break;
 
@@ -119,6 +123,20 @@ try {
                     $params[] = trim($input['role']);
                     $logDetails[] = "role to " . trim($input['role']);
                 }
+            }
+
+            if (isset($input['role']) && $input['role'] === 'supervisor') {
+                $line = strtoupper(trim($input['line'] ?? ''));
+                 if (empty($line)) {
+                    throw new Exception("Line is required for supervisor role.");
+                }
+                $updateFields[] = "line = ?";
+                $params[] = $line;
+                $logDetails[] = "line to " . $line;
+            } elseif (isset($input['role']) && $input['role'] !== 'supervisor') {
+                // ถ้าเปลี่ยน role เป็นอย่างอื่น ให้ล้างค่า line
+                $updateFields[] = "line = NULL";
+                $logDetails[] = "line cleared";
             }
 
             // ตรวจสอบการเปลี่ยนรหัสผ่าน (ทำได้เสมอ)

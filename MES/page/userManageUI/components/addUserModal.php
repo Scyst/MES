@@ -3,7 +3,7 @@
         <div class="modal-content bg-dark text-white">
             <div class="modal-header">
                 <h5 class="modal-title">Add New User</h5>
-                <button type="button" class="btn-close btn-close-white" onclick="closeModal('addUserModal')"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="addUserForm">
@@ -24,10 +24,14 @@
                             <option value="operator">Operator</option>
                         </select>
                     </div>
+                    <div id="addUserLineWrapper" class="mb-3 d-none">
+                        <label for="addLine" class="form-label">Assigned Line</label>
+                        <input type="text" name="line" class="form-control text-uppercase" id="addLine" placeholder="Enter line for supervisor">
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="submit" form="addUserForm" class="btn btn-primary">Add User</button>
             </div>
         </div>

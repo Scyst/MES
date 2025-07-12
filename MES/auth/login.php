@@ -19,7 +19,7 @@ if (empty($username) || empty($password)) {
 
 try {
     //-- ค้นหาผู้ใช้จาก Username ในฐานข้อมูล --
-    $sql = "SELECT id, username, password, role FROM USERS WHERE username = ?";
+    $sql = "SELECT id, username, password, role, line FROM USERS WHERE username = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$username]);
     $user = $stmt->fetch();
@@ -33,7 +33,8 @@ try {
         $_SESSION['user'] = [
             'id' => $user['id'],
             'username' => $user['username'],
-            'role' => $user['role']
+            'role' => $user['role'],
+            'line' => $user['line']
         ];
 
         //-- สร้าง CSRF Token สำหรับป้องกันการโจมตี --
