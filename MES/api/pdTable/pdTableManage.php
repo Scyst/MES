@@ -27,7 +27,7 @@ if (empty($input) && !empty($_POST)) {
 
 try {
     //-- กำหนดผู้ใช้งานปัจจุบันสำหรับบันทึก Log --
-    $currentUser = $_SESSION['user']['username'] ?? 'system';
+    $currentUser = $_SESSION['user'];
 
     //-- แยกการทำงานตาม Action ที่ได้รับ --
     switch ($action) {

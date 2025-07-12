@@ -17,7 +17,7 @@ async function fetchStopData(page = 1) {
         startDate: document.getElementById('filterStartDate')?.value,
         endDate: document.getElementById('filterEndDate')?.value,
     };
-    const params = new URLSearchParams({ action: 'get_stop', page: currentPage, limit: 50, ...filters });
+    const params = new URLSearchParams({ action: 'get_stops', page: currentPage, limit: 50, ...filters });
 
     try {
         //-- เรียก API และแปลงผลลัพธ์เป็น JSON --
