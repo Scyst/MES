@@ -353,15 +353,16 @@ try {
 
         case 'search_lots':
             $term = $_GET['term'] ?? '';
-            if (strlen($term) < 3) { // เริ่มค้นหาเมื่อมีตัวอักษรอย่างน้อย 3 ตัว
+            if (strlen($term) < 3) {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            // ค้นหา Lot No. ที่มีคำที่กรอกเข้ามาเป็นส่วนประกอบ และจำกัดผลลัพธ์ที่ 20 รายการ
-            $sql = "SELECT DISTINCT lot_no FROM PARTS WHERE lot_no LIKE ? ORDER BY lot_no DESC LIMIT 20";
+            
+            $sql = "SELECT DISTINCT TOP (20) lot_no FROM PARTS WHERE lot_no LIKE ? ORDER BY lot_no DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['%' . $term . '%']);
             $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
             echo json_encode(['success' => true, 'data' => $lots]);
             break;
 

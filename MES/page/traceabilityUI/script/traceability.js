@@ -6,18 +6,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchDebounceTimer;
 
     // --- Search Logic ---
-    lotNoInput.addEventListener('input', () => {
-        clearTimeout(searchDebounceTimer);
-        searchDebounceTimer = setTimeout(() => {
-            const searchTerm = lotNoInput.value.trim();
-            if (searchTerm.length >= 3) {
-                searchForLots(searchTerm);
-            } else {
-                searchResultsContainer.innerHTML = ''; // เคลียร์ผลลัพธ์ถ้าข้อความสั้นไป
-            }
-        }, 500); // Debounce 0.5 วินาที
-    });
-
+    // ตรวจสอบให้แน่ใจว่า lotNoInput ไม่ใช่ null ก่อนเพิ่ม Event Listener
+    if (lotNoInput) {
+        lotNoInput.addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                const searchTerm = lotNoInput.value.trim();
+                if (searchTerm.length >= 3) {
+                    searchForLots(searchTerm);
+                } else {
+                    searchResultsContainer.innerHTML = ''; 
+                }
+            }, 500);
+        });
+    }
+    
     async function searchForLots(term) {
         searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-action disabled">Searching...</a>';
         try {
