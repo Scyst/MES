@@ -1,13 +1,10 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../../auth/check_auth.php'; // เพิ่ม: เรียกใช้ check_auth.php
 require_once __DIR__ . '/../logger.php';
-session_start();
 
-// --- CSRF Protection & Input Handling ---
+// session_start() ถูกเรียกแล้วใน check_auth.php
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -15,9 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         exit;
     }
 }
+
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
-$currentUser = $_SESSION['user']['username'] ?? 'system';
+$currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
@@ -26,6 +24,7 @@ try {
             $fg_part_no = $_GET['fg_part_no'] ?? '';
             $line = $_GET['line'] ?? '';
             $model = $_GET['model'] ?? '';
+            enforceLinePermission($line); // ตรวจสอบสิทธิ์
 
             if (empty($fg_part_no) || empty($line) || empty($model)) {
                 throw new Exception("FG Part No, Line, and Model are required to get components.");
@@ -43,6 +42,7 @@ try {
             $model = $input['model'] ?? '';
             $component_part_no = $input['component_part_no'] ?? '';
             $quantity_required = $input['quantity_required'] ?? 0;
+            enforceLinePermission($line); // ตรวจสอบสิทธิ์
 
             if (empty($fg_part_no) || empty($line) || empty($model) || empty($component_part_no) || empty($quantity_required)) {
                 throw new Exception("Missing required fields.");
@@ -62,16 +62,24 @@ try {
             // Insert data
             $sql = "INSERT INTO PRODUCT_BOM (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_part_no, $line, $model, $component_part_no, (int)$quantity_required, $currentUser]);
+            $stmt->execute([$fg_part_no, $line, $model, $component_part_no, (int)$quantity_required, $currentUser['username']]);
             
-            logAction($pdo, $currentUser, 'ADD BOM COMPONENT', "$fg_part_no ($line/$model)", "Component: $component_part_no");
+            logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "$fg_part_no ($line/$model)", "Component: $component_part_no");
             echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
             break;
 
         case 'delete_bom_component':
             $bom_id = $input['bom_id'] ?? 0;
-            if (empty($bom_id)) {
-                throw new Exception("Missing bom_id.");
+            if (empty($bom_id)) throw new Exception("Missing bom_id.");
+
+            // --- เพิ่ม: ตรวจสอบสิทธิ์ก่อนลบ ---
+            $findStmt = $pdo->prepare("SELECT line FROM PRODUCT_BOM WHERE bom_id = ?");
+            $findStmt->execute([$bom_id]);
+            $bom_item = $findStmt->fetch();
+            if ($bom_item) {
+                enforceLinePermission($bom_item['line']);
+            } else {
+                throw new Exception("BOM component not found.");
             }
 
             // 1. ก่อนลบ ให้ค้นหาข้อมูลของ BOM group (part, line, model) เพื่อใช้อัปเดต timestamp
@@ -90,11 +98,11 @@ try {
                 if ($bom_group) {
                     $updateSql = "UPDATE PRODUCT_BOM SET updated_at = GETDATE(), updated_by = ? WHERE fg_part_no = ? AND line = ? AND model = ?";
                     $updateStmt = $pdo->prepare($updateSql);
-                    $updateStmt->execute([$currentUser, $bom_group['fg_part_no'], $bom_group['line'], $bom_group['model']]);
+                    $updateStmt->execute([$currentUser['username'], $bom_group['fg_part_no'], $bom_group['line'], $bom_group['model']]);
                 }
                 
                 // 4. บันทึก Log และส่งผลลัพธ์
-                logAction($pdo, $currentUser, 'DELETE BOM COMPONENT', "BOM_ID: $bom_id");
+                logAction($pdo, $currentUser['username'], 'DELETE BOM COMPONENT', "BOM_ID: $bom_id");
                 echo json_encode(['success' => true, 'message' => 'Component deleted successfully.']);
             } else {
                 throw new Exception("Component with BOM ID $bom_id not found or could not be deleted.");
@@ -103,29 +111,27 @@ try {
 
         // ** UPDATED: แก้ไข SQL Query ให้ GROUP BY ครบทุก key และดึงข้อมูลล่าสุด **
         case 'get_all_fgs':
+            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
             $sql = "
                 WITH RankedBOMs AS (
-                    SELECT
-                        fg_part_no, line, model, updated_at, updated_by,
-                        ROW_NUMBER() OVER(PARTITION BY fg_part_no, line, model ORDER BY updated_at DESC) as rn
+                    SELECT fg_part_no, line, model, updated_at, updated_by,
+                           ROW_NUMBER() OVER(PARTITION BY fg_part_no, line, model ORDER BY updated_at DESC) as rn
                     FROM PRODUCT_BOM
                 )
-                SELECT DISTINCT
-                    b.fg_part_no,
-                    b.line,
-                    b.model,
-                    p.sap_no,
-                    rb.updated_by,
-                    rb.updated_at
-                FROM 
-                    PRODUCT_BOM b
-                LEFT JOIN 
-                    PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
-                LEFT JOIN 
-                    RankedBOMs rb ON b.fg_part_no = rb.fg_part_no AND b.line = rb.line AND b.model = rb.model AND rb.rn = 1
-                ORDER BY b.fg_part_no, b.line, b.model;
+                SELECT DISTINCT b.fg_part_no, b.line, b.model, p.sap_no, rb.updated_by, rb.updated_at
+                FROM PRODUCT_BOM b
+                LEFT JOIN PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
+                LEFT JOIN RankedBOMs rb ON b.fg_part_no = rb.fg_part_no AND b.line = rb.line AND b.model = rb.model AND rb.rn = 1
             ";
-            $stmt = $pdo->query($sql);
+            $params = [];
+            if ($currentUser['role'] === 'supervisor') {
+                $sql .= " WHERE b.line = ?";
+                $params[] = $currentUser['line'];
+            }
+            $sql .= " ORDER BY b.fg_part_no, b.line, b.model;";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rows as &$row) {
                 if ($row['updated_at']) {
@@ -140,6 +146,7 @@ try {
             $fg_part_no = $input['fg_part_no'] ?? '';
             $line = $input['line'] ?? '';
             $model = $input['model'] ?? '';
+            enforceLinePermission($line); // ตรวจสอบสิทธิ์
 
             if (empty($fg_part_no) || empty($line) || empty($model)) {
                 throw new Exception("FG Part No, Line, and Model are required to delete a BOM.");
@@ -148,7 +155,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ?");
             $stmt->execute([$fg_part_no, $line, $model]);
             
-            logAction($pdo, $currentUser, 'DELETE FULL BOM', "$fg_part_no ($line/$model)");
+            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "$fg_part_no ($line/$model)");
             echo json_encode(['success' => true, 'message' => 'BOM has been deleted.']);
             break;
 

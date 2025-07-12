@@ -3,23 +3,16 @@
 //-- ค่าคงที่และตัวแปร Global --
 const PARA_API_ENDPOINT = '../../api/paraManage/paraManage.php';
 const BOM_API_ENDPOINT = '../../api/paraManage/bomManager.php';
-const PART_API_ENDPOINT = '../../api/pdTable/pdTableManage.php';
 const ROWS_PER_PAGE = 100;
 
-//-- ตัวแปรสำหรับเก็บข้อมูลทั้งหมดจาก API เพื่อลดการเรียกซ้ำ --
+//-- ตัวแปรสำหรับเก็บข้อมูลทั้งหมดและหน้าปัจจุบัน --
 let allStandardParams = [], allSchedules = [], allMissingParams = [], allBomFgs = [];
-//-- ตัวแปรสำหรับเก็บหน้าปัจจุบันของแต่ละตาราง --
 let paramCurrentPage = 1;
 let healthCheckCurrentPage = 1;
+let bomTabLoaded = false;
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
- * @param {string} endpoint - URL ของ API ที่จะเรียก
- * @param {string} action - Action ที่จะส่งไปใน Query String
- * @param {string} method - HTTP Method (GET, POST, DELETE)
- * @param {object|null} body - ข้อมูลที่จะส่งไปใน Request Body (สำหรับ POST)
- * @param {object} urlParams - Parameters เพิ่มเติมสำหรับ URL
- * @returns {Promise<object>} ผลลัพธ์ที่ได้จาก API
  */
 async function sendRequest(endpoint, action, method, body = null, urlParams = {}) {
     try {
@@ -51,29 +44,6 @@ async function sendRequest(endpoint, action, method, body = null, urlParams = {}
 }
 
 /**
- * ฟังก์ชันสำหรับเปิด Modal แก้ไขและเติมข้อมูลลงในฟอร์ม
- * @param {string} modalId - ID ของ Modal
- * @param {object} data - ข้อมูลของแถวที่ต้องการแก้ไข
- */
-function openEditModal(modalId, data) {
-    const modalElement = document.getElementById(modalId);
-    if (!modalElement) return;
-    for (const key in data) {
-        const input = modalElement.querySelector(`[name="${key}"]`);
-        if (input) {
-            if (input.type === 'checkbox') {
-                // แก้ไข: เปลี่ยนเงื่อนไขเป็น '== 1' เพื่อความแม่นยำ
-                input.checked = (data[key] == 1);
-            } else {
-                input.value = data[key];
-            }
-        }
-    }
-    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
-    modal.show();
-}
-
-/**
  * ฟังก์ชันสำหรับสร้าง Pagination Control
  */
 function renderPagination(containerId, totalItems, currentPage, callback) {
@@ -97,21 +67,28 @@ function renderPagination(containerId, totalItems, currentPage, callback) {
     pagination.appendChild(createPageItem(currentPage + 1, 'Next', currentPage >= totalPages));
 }
 
+
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
 async function loadStandardParams() {
     const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
     if (result?.success) {
         allStandardParams = result.data;
-        filterAndRenderStandardParams();
-    } else {
-        showToast(result?.message || 'Failed to load parameters.', '#dc3545');
+        filterAndRenderStandardParams(); // ใช้ Filter ใหม่
     }
 }
 
 function getFilteredStandardParams() {
-    const searchTerm = document.getElementById('searchInput').value.toUpperCase();
-    if (!searchTerm) return allStandardParams;
-    return allStandardParams.filter(row => `${row.line || ''} ${row.model || ''} ${row.part_no || ''} ${row.sap_no || ''}`.toUpperCase().includes(searchTerm));
+    // แก้ไข: เพิ่มการกรองจาก filterLine และ filterModel
+    const lineFilter = document.getElementById('filterLine').value.toUpperCase();
+    const modelFilter = document.getElementById('filterModel').value.toUpperCase();
+    const searchFilter = document.getElementById('searchInput').value.toUpperCase();
+
+    return allStandardParams.filter(row => {
+        const lineMatch = !lineFilter || (row.line || '').toUpperCase().includes(lineFilter);
+        const modelMatch = !modelFilter || (row.model || '').toUpperCase().includes(modelFilter);
+        const searchMatch = !searchFilter || `${row.part_no || ''} ${row.sap_no || ''}`.toUpperCase().includes(searchFilter);
+        return lineMatch && modelMatch && searchMatch;
+    });
 }
 
 function renderStandardParamsTable() {
@@ -119,19 +96,19 @@ function renderStandardParamsTable() {
     const tbody = document.getElementById('paramTableBody');
     tbody.innerHTML = '';
     const start = (paramCurrentPage - 1) * ROWS_PER_PAGE;
-    const pageData = filteredData.slice(start, start + ROWS_PER_PAGE); //-- ตัดข้อมูลมาเฉพาะหน้าปัจจุบัน --
+    const pageData = filteredData.slice(start, start + ROWS_PER_PAGE);
 
     if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${canManage ? 7 : 6}" class="text-center">No parameters found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center">No parameters found.</td></tr>`;
         renderPagination('paginationControls', 0, 1, goToStandardParamPage);
         return;
     }
 
-    //-- สร้างแถวของตารางจากข้อมูล --
     pageData.forEach(row => {
         const tr = document.createElement('tr');
-        tr.dataset.id = row.id;
-        //-- สร้าง HTML ของแถว และแสดงปุ่ม Edit/Delete หากมีสิทธิ์ (canManage) --
+        // เพิ่ม Logic การแสดงปุ่มสำหรับ Supervisor
+        const canEditThisRow = (currentUser.role !== 'supervisor') || (currentUser.line === row.line);
+
         tr.innerHTML = `
             <td>${row.line || ''}</td>
             <td>${row.model || ''}</td>
@@ -139,28 +116,24 @@ function renderStandardParamsTable() {
             <td>${row.sap_no || ''}</td>
             <td>${row.planned_output || ''}</td>
             <td>${row.updated_at || ''}</td>
-            ${canManage ? `
             <td class="text-center">
                 <div class="d-flex gap-1 justify-content-center">
-                    <button class="btn btn-sm btn-warning" onclick='openEditModal("editParamModal", ${JSON.stringify(row)})'>Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteStandardParam(${row.id})">Delete</button>
+                    ${canEditThisRow ? `<button class="btn btn-sm btn-warning" onclick='openEditModal("editParamModal", ${JSON.stringify(row)})'>Edit</button>` : ''}
+                    ${canEditThisRow && canManage ? `<button class="btn btn-sm btn-danger" onclick="deleteStandardParam(${row.id})">Delete</button>` : ''}
                 </div>
-            </td>` : ''}
+            </td>
         `;
         tbody.appendChild(tr);
     });
     
-    //-- สร้าง Pagination --
     renderPagination('paginationControls', filteredData.length, paramCurrentPage, goToStandardParamPage);
 }
 
-//-- ฟังก์ชันสำหรับจัดการการกรอง (รีเซ็ตหน้าเป็น 1 แล้ว Render ใหม่) --
 function filterAndRenderStandardParams() {
     paramCurrentPage = 1;
     renderStandardParamsTable();
 }
 
-//-- ฟังก์ชัน Callback สำหรับเปลี่ยนหน้า --
 function goToStandardParamPage(page) {
     paramCurrentPage = page;
     renderStandardParamsTable();
@@ -170,7 +143,7 @@ async function deleteStandardParam(id) {
     if (!confirm(`Are you sure you want to delete parameter ID ${id}?`)) return;
     const result = await sendRequest(PARA_API_ENDPOINT, 'delete', 'POST', { id });
     showToast(result.message, result.success ? '#28a745' : '#dc3545');
-    if (result.success) loadStandardParams(); //-- โหลดข้อมูลใหม่หลังลบสำเร็จ --
+    if (result.success) loadStandardParams();
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Line Schedules" ---
@@ -597,25 +570,42 @@ function initializeBomManager() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Load data for the first active tab
+    // โหลดข้อมูลครั้งแรก
     loadStandardParams();
-    populateLineDatalist();
+    populateLineDatalist(); // <<<< เพิ่มการเรียกใช้ฟังก์ชันนี้กลับเข้ามา
 
-    document.getElementById('searchInput')?.addEventListener('input', filterAndRenderStandardParams);
+    // --- Logic สำหรับ Supervisor ---
+    if (currentUser.role === 'supervisor') {
+        const lineFilter = document.getElementById('filterLine');
+        if (lineFilter) {
+            lineFilter.value = currentUser.line;
+            lineFilter.disabled = true;
+            filterAndRenderStandardParams(); 
+        }
+    }
+
+    // Event Listeners สำหรับ Filter
+    ['filterLine', 'filterModel', 'searchInput'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            clearTimeout(window.debounceTimer);
+            window.debounceTimer = setTimeout(filterAndRenderStandardParams, 500);
+        });
+    });
+
     const importInput = document.getElementById('importFile');
     if (importInput) {
         importInput.addEventListener('change', handleImport);
     }
-
+    
+    // Logic การสลับ Tab
     let bomTabLoaded = false;
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabElm => {
         tabElm.addEventListener('shown.bs.tab', event => {
             const targetTabId = event.target.getAttribute('data-bs-target');
-            
             if (targetTabId === '#lineSchedulesPane') {
-                loadSchedules();
+                if (currentUser.role !== 'supervisor') loadSchedules();
             } else if (targetTabId === '#healthCheckPane') {
-                loadHealthCheckData();
+                if (currentUser.role !== 'supervisor') loadHealthCheckData();
             } else if (targetTabId === '#bomManagerPane' && !bomTabLoaded) {
                 initializeBomManager();
                 bomTabLoaded = true;
