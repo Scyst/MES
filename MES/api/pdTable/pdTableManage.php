@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
-session_start();
+//session_start();
 
 //-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -41,6 +42,12 @@ try {
             //-- สร้างเงื่อนไข (WHERE clause) แบบ Dynamic จาก Filter --
             $conditions = [];
             $params = [];
+
+            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "line = ?";
+                $params[] = $currentUser['line'];
+            }
             $all_possible_filters = ['startDate', 'endDate', 'line', 'model', 'part_no', 'count_type', 'lot_no'];
             $allowed_string_filters = ['line', 'model', 'part_no', 'count_type', 'lot_no'];
 
@@ -142,6 +149,8 @@ try {
                 if (!in_array($count_type, $valid_types)) throw new Exception("Invalid count type");
 
                 $line = strtoupper(trim($input['line']));
+                // --- เพิ่ม: ตรวจสอบสิทธิ์ก่อนการสร้างข้อมูล ---
+                enforceLinePermission($line);
                 $model = strtoupper(trim($input['model']));
                 $part_no = strtoupper(trim($input['part_no']));
                 $log_date = $input['log_date'];
@@ -242,57 +251,102 @@ try {
                 http_response_code(400);
                 throw new Exception('Invalid or missing Part ID.');
             }
-            $sql = "DELETE FROM PARTS WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$id]);
 
-            //-- ตรวจสอบว่ามีการลบข้อมูลจริงหรือไม่ก่อน Log --
-            if ($stmt->rowCount() > 0) {
-                logAction($pdo, $currentUser, 'DELETE PART', $id);
+            // --- 1. ดึงข้อมูลเก่าเพื่อตรวจสอบสิทธิ์ก่อนลบ ---
+            $stmt = $pdo->prepare("SELECT line FROM PARTS WHERE id = ?");
+            $stmt->execute([$id]);
+            $part = $stmt->fetch();
+
+            if ($part) {
+                // --- 2. ตรวจสอบสิทธิ์ ---
+                enforceLinePermission($part['line']);
+            } else {
+                // หากไม่พบ ID ก็ไม่จำเป็นต้องทำอะไรต่อ
+                http_response_code(404);
+                throw new Exception("Part with ID {$id} not found.");
+            }
+
+            // --- 3. สั่งลบข้อมูล ---
+            $deleteStmt = $pdo->prepare("DELETE FROM PARTS WHERE id = ?");
+            $deleteStmt->execute([$id]);
+
+            // --- 4. ตรวจสอบว่ามีการลบข้อมูลจริงหรือไม่ก่อน Log และส่งผลลัพธ์ (นำ Logic เดิมของคุณกลับมา) ---
+            if ($deleteStmt->rowCount() > 0) {
+                logAction($pdo, $currentUser['username'], 'DELETE PART', $id);
                 echo json_encode(['success' => true, 'message' => 'Part deleted successfully.']);
             } else {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Part not found or already deleted.']);
+                // ส่วนนี้อาจไม่ค่อยเกิดขึ้นเพราะเราตรวจสอบแล้วว่ามี ID อยู่จริง
+                echo json_encode(['success' => false, 'message' => 'Part could not be deleted.']);
             }
             break;
 
         //-- อัปเดตข้อมูล Part --
         case 'update_part':
-            //-- ตรวจสอบ Field ที่จำเป็นและความถูกต้องของข้อมูล --
+            //-- 1. ตรวจสอบ Field ที่จำเป็น --
             $required_fields = ['id', 'log_date', 'log_time', 'line', 'model', 'part_no', 'count_value', 'count_type'];
             foreach ($required_fields as $field) {
-                if (!isset($input[$field])) {
-                    throw new Exception('Missing required field: ' . $field);
-                }
+                if (!isset($input[$field])) throw new Exception('Missing required field: ' . $field);
             }
+
             $id = $input['id'];
-            $log_date = $input['log_date'];
-            if (!filter_var($id, FILTER_VALIDATE_INT)) {
-                throw new Exception('Invalid ID format.');
+            if (!filter_var($id, FILTER_VALIDATE_INT)) throw new Exception('Invalid ID format.');
+
+            //-- 2. ดึงข้อมูลเก่าเพื่อตรวจสอบสิทธิ์ --
+            $stmt = $pdo->prepare("SELECT line FROM PARTS WHERE id = ?");
+            $stmt->execute([$id]);
+            $part = $stmt->fetch();
+            if ($part) {
+                // ตรวจสอบสิทธิ์กับ Line เดิมของข้อมูล
+                enforceLinePermission($part['line']);
+            } else {
+                throw new Exception("Part not found.");
             }
-            if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $log_date)) {
-                throw new Exception('Invalid log_date format. Expected YYYY-MM-DD.');
+
+            $line = strtoupper(trim($input['line']));
+            $model = strtoupper(trim($input['model']));
+            $part_no = strtoupper(trim($input['part_no']));
+
+            //-- 3. ตรวจสอบสิทธิ์กับ Line ใหม่ (กรณีมีการย้ายไลน์) --
+            if ($line !== $part['line']) {
+                enforceLinePermission($line);
+            }
+
+            //-- 4. ตรวจสอบความถูกต้องของข้อมูลใหม่ --
+            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $checkStmt = $pdo->prepare($checkSql);
+            $checkStmt->execute([$line, $model, $part_no]);
+            if ($checkStmt->fetchColumn() == 0) {
+                throw new Exception("Invalid new combination: The specified Line, Model, and Part No. do not exist in the PARAMETER table.");
+            }
+            $valid_types = ['FG', 'NG', 'HOLD', 'REWORK', 'SCRAP', 'ETC.'];
+            $count_type = strtoupper(trim($input['count_type']));
+            if (!in_array($count_type, $valid_types)) {
+                throw new Exception("Invalid count type");
             }
             
-            //-- เตรียมข้อมูลและรันคำสั่ง UPDATE --
-            $sql = "UPDATE PARTS SET log_date = ?, log_time = ?, line = ?, model = ?, part_no = ?, lot_no = ?, count_value = ?, count_type = ?, note = ? WHERE id = ?";
+            //-- 5. เตรียมข้อมูลและรันคำสั่ง UPDATE (ไม่ให้แก้ไข Lot No.) --
+            $sql = "UPDATE PARTS SET log_date = ?, log_time = ?, line = ?, model = ?, part_no = ?, count_value = ?, count_type = ?, note = ? WHERE id = ?";
             $params = [
-                $input['log_date'], $input['log_time'],
-                strtoupper(trim($input['line'])), strtoupper(trim($input['model'])),
-                strtoupper(trim($input['part_no'])), $input['lot_no'],
-                (int)$input['count_value'], strtoupper(trim($input['count_type'])),
-                $input['note'], $input['id']
+                $input['log_date'], 
+                $input['log_time'],
+                $line, 
+                $model,
+                $part_no,
+                (int)$input['count_value'], 
+                $count_type,
+                $input['note'], 
+                $id
             ];
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             
-            //-- ตรวจสอบว่ามีการอัปเดตข้อมูลจริงหรือไม่ก่อน Log --
+            //-- 6. ตรวจสอบและส่งผลลัพธ์ --
             if ($stmt->rowCount() > 0) {
-                $detail = "Part No: {$params[4]}, Lot No: {$params[5]}";
-                logAction($pdo, $currentUser, 'UPDATE PART', $input['id'], $detail);
+                $detail = "Part No: {$part_no}";
+                logAction($pdo, $currentUser['username'], 'UPDATE PART', $id, $detail);
                 echo json_encode(['success' => true, 'message' => 'Part updated successfully.']);
             } else {
-                echo json_encode(['success' => true, 'message' => 'No changes made or part not found.']);
+                echo json_encode(['success' => true, 'message' => 'No changes were made.']);
             }
             break;
 
@@ -357,7 +411,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            
+
             $sql = "SELECT DISTINCT TOP (20) lot_no FROM PARTS WHERE lot_no LIKE ? ORDER BY lot_no DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['%' . $term . '%']);

@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
-session_start();
+
+// session_start() ถูกเรียกแล้วใน check_auth.php
 
 //-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -14,43 +16,41 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
-$currentUser = $_SESSION['user']['username'] ?? 'system';
+$currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
         case 'log_wip_entry':
-            // ตรวจสอบ Field ที่จำเป็น
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
             }
+            
+            $line = strtoupper(trim($input['line']));
+            enforceLinePermission($line);
 
-            // --- เพิ่มการตรวจสอบว่า Part No. นี้มีอยู่จริงใน Model ที่ระบุหรือไม่ ---
             $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE part_no = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([strtoupper(trim($input['part_no'])), strtoupper(trim($input['model']))]);
             if ($checkStmt->fetchColumn() == 0) {
                 throw new Exception("This Part No. does not exist for the specified Model in the PARAMETER table.");
             }
-            // --------------------------------------------------------------------
 
-            // เตรียมข้อมูลสำหรับ INSERT
             $sql = "INSERT INTO WIP_ENTRIES (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $params = [
                 strtoupper(trim($input['model'])), 
-                strtoupper(trim($input['line'])), 
+                $line, 
                 strtoupper(trim($input['lot_no'] ?? null)), 
                 strtoupper(trim($input['part_no'])), 
                 (int)$input['quantity_in'], 
-                $currentUser, 
+                $currentUser['username'],
                 $input['remark'] ?? null
             ];
             $stmt = $pdo->prepare($sql);
             
-            // บันทึกข้อมูลและส่งผลลัพธ์
             if ($stmt->execute($params)) {
-                $detail = "Model: {$input['model']}, Line: {$input['line']}, Part: {$input['part_no']}, Qty: {$input['quantity_in']}";
-                logAction($pdo, $currentUser, 'WIP_ENTRY', $input['lot_no'], $detail);
+                $detail = "Model: {$input['model']}, Line: {$line}, Part: {$input['part_no']}, Qty: {$input['quantity_in']}";
+                logAction($pdo, $currentUser['username'], 'WIP_ENTRY', $input['lot_no'], $detail);
                 echo json_encode(['success' => true, 'message' => 'WIP entry logged successfully.']);
             } else {
                 throw new Exception("Failed to log WIP entry.");
@@ -58,7 +58,18 @@ try {
             break;
 
         case 'get_wip_report':
-            $params = []; $parts_params = []; $wip_conditions = []; $parts_conditions = [];
+            $params = []; 
+            $parts_params = [];
+            $wip_conditions = [];
+            $parts_conditions = [];
+
+            if ($currentUser['role'] === 'supervisor') {
+                $wip_conditions[] = "wip.line = ?";
+                $params[] = $currentUser['line'];
+                $parts_conditions[] = "line = ?";
+                $parts_params[] = $currentUser['line'];
+            }
+
             if (!empty($_GET['line'])) { $wip_conditions[] = "wip.line = ?"; $params[] = $_GET['line']; $parts_conditions[] = "line = ?"; $parts_params[] = $_GET['line']; }
             if (!empty($_GET['part_no'])) { $wip_conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; $parts_conditions[] = "part_no = ?"; $parts_params[] = $_GET['part_no']; }
             if (!empty($_GET['model'])) { $wip_conditions[] = "wip.model = ?"; $params[] = $_GET['model']; $parts_conditions[] = "model = ?"; $parts_params[] = $_GET['model']; }
@@ -68,32 +79,8 @@ try {
 
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             $partsWhereClause = $parts_conditions ? "WHERE " . implode(" AND ", $parts_conditions) : "";
-
-            // แก้ไข: ใน TotalOut CTE ให้ WHERE count_type เป็น ('FG', 'BOM-ISSUE')
-            $sql = "
-                WITH TotalIn AS (
-                    SELECT part_no, line, model, SUM(quantity_in) AS total_in 
-                    FROM WIP_ENTRIES wip $wipWhereClause 
-                    GROUP BY part_no, line, model
-                ), 
-                TotalOut AS (
-                    SELECT part_no, line, model, SUM(count_value) AS total_out 
-                    FROM PARTS 
-                    " . ($partsWhereClause ? $partsWhereClause . " AND count_type IN ('FG', 'BOM-ISSUE')" : "WHERE count_type IN ('FG', 'BOM-ISSUE')") . " 
-                    GROUP BY part_no, line, model
-                ) 
-                SELECT 
-                    ISNULL(tin.part_no, tout.part_no) AS part_no, 
-                    ISNULL(tin.line, tout.line) AS line, 
-                    ISNULL(tin.model, tout.model) as model, 
-                    ISNULL(tin.total_in, 0) AS total_in, 
-                    ISNULL(tout.total_out, 0) AS total_out, 
-                    (ISNULL(tout.total_out, 0) - ISNULL(tin.total_in, 0)) AS variance 
-                FROM TotalIn tin 
-                FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model 
-                ORDER BY part_no, line, model;
-            ";
             
+            $sql = "WITH TotalIn AS (SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model), TotalOut AS (SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS " . ($partsWhereClause ? $partsWhereClause . " AND count_type IN ('FG', 'BOM-ISSUE')" : "WHERE count_type IN ('FG', 'BOM-ISSUE')") . " GROUP BY part_no, line, model) SELECT ISNULL(tin.part_no, tout.part_no) AS part_no, ISNULL(tin.line, tout.line) AS line, ISNULL(tin.model, tout.model) as model, ISNULL(tin.total_in, 0) AS total_in, ISNULL(tout.total_out, 0) AS total_out, (ISNULL(tout.total_out, 0) - ISNULL(tin.total_in, 0)) AS variance FROM TotalIn tin FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model ORDER BY part_no, line, model;";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array_merge($params, $parts_params));
             $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -102,14 +89,20 @@ try {
             break;
             
         case 'get_wip_history':
-            $params = []; 
+            $params = [];
             $wip_conditions = [];
-            if (!empty($_GET['line'])) { $wip_conditions[] = "line = ?"; $params[] = $_GET['line']; }
-            if (!empty($_GET['part_no'])) { $wip_conditions[] = "part_no = ?"; $params[] = $_GET['part_no']; }
-            if (!empty($_GET['model'])) { $wip_conditions[] = "model = ?"; $params[] = $_GET['model']; }
-            if (!empty($_GET['lot_no'])) { $wip_conditions[] = "lot_no = ?"; $params[] = $_GET['lot_no']; }
-            if (!empty($_GET['startDate'])) { $wip_conditions[] = "CAST(entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+
+            if ($currentUser['role'] === 'supervisor') {
+                $wip_conditions[] = "wip.line = ?";
+                $params[] = $currentUser['line'];
+            }
+
+            if (!empty($_GET['line'])) { $wip_conditions[] = "wip.line = ?"; $params[] = $_GET['line']; }
+            if (!empty($_GET['part_no'])) { $wip_conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; }
+            if (!empty($_GET['model'])) { $wip_conditions[] = "wip.model = ?"; $params[] = $_GET['model']; }
+            if (!empty($_GET['lot_no'])) { $wip_conditions[] = "wip.lot_no = ?"; $params[] = $_GET['lot_no']; }
+            if (!empty($_GET['startDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
             
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             
@@ -118,34 +111,35 @@ try {
             $history_stmt->execute($params);
             $history_data = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $summary_sql = "
-                SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in
-                FROM WIP_ENTRIES wip
-                $wipWhereClause
-                GROUP BY line, model, part_no
-                ORDER BY line, model, part_no
-            ";
+            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
             $summary_stmt = $pdo->prepare($summary_sql);
             $summary_stmt->execute($params);
             $summary_data = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode([
-                'success' => true, 
-                'history' => $history_data,
-                'history_summary' => $summary_data 
-            ]);
+            echo json_encode(['success' => true, 'history' => $history_data, 'history_summary' => $summary_data]);
             break;
 
         case 'update_wip_entry':
-            // แก้ไข: เพิ่ม model เข้ามาในฟังก์ชัน
             $required = ['entry_id', 'entry_time', 'model', 'line', 'part_no', 'quantity_in'];
             foreach ($required as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
             }
+
+            $stmt = $pdo->prepare("SELECT line FROM WIP_ENTRIES WHERE entry_id = ?");
+            $stmt->execute([$input['entry_id']]);
+            $entry = $stmt->fetch();
+            if ($entry) {
+                enforceLinePermission($entry['line']);
+                if ($input['line'] !== $entry['line']) {
+                    enforceLinePermission($input['line']);
+                }
+            } else {
+                throw new Exception("WIP Entry not found.");
+            }
+            
             $entry_time_obj = new DateTime($input['entry_time']);
             $formatted_entry_time = $entry_time_obj->format('Y-m-d H:i:s');
             
-            // แก้ไข: เพิ่ม model ใน SQL UPDATE
             $sql = "UPDATE WIP_ENTRIES SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
             $params = [
                 $formatted_entry_time,
@@ -159,7 +153,7 @@ try {
             ];
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
-                logAction($pdo, $currentUser, 'UPDATE WIP_ENTRY', $input['entry_id']);
+                logAction($pdo, $currentUser['username'], 'UPDATE WIP_ENTRY', $input['entry_id']);
                 echo json_encode(['success' => true, 'message' => 'WIP Entry updated successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'No changes made or entry not found.']);
@@ -169,10 +163,20 @@ try {
         case 'delete_wip_entry':
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
+
+            $stmt = $pdo->prepare("SELECT line FROM WIP_ENTRIES WHERE entry_id = ?");
+            $stmt->execute([$id]);
+            $entry = $stmt->fetch();
+            if ($entry) {
+                enforceLinePermission($entry['line']);
+            } else {
+                throw new Exception("WIP Entry not found.");
+            }
+
             $sql = "DELETE FROM WIP_ENTRIES WHERE entry_id = ?";
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute([$id]) && $stmt->rowCount() > 0) {
-                logAction($pdo, $currentUser, 'DELETE WIP_ENTRY', $id);
+                logAction($pdo, $currentUser['username'], 'DELETE WIP_ENTRY', $id);
                 echo json_encode(['success' => true, 'message' => 'WIP Entry deleted successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Entry not found or already deleted.']);

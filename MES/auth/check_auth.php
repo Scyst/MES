@@ -29,4 +29,34 @@ function hasRole($roles): bool {
     //-- กรณีตรวจสอบกับ Role เดียว (String) --
     return $userRole === $roles;
 }
+
+/**
+ * ฟังก์ชันสำหรับตรวจสอบว่าผู้ใช้ปัจจุบันมีสิทธิ์ในไลน์ที่ระบุหรือไม่
+ * @param string $requiredLine - ไลน์ที่ต้องการตรวจสอบ
+ * @return bool - คืนค่า true หากมีสิทธิ์, false หากไม่มี
+ */
+function checkLinePermission($requiredLine): bool {
+    // Admin และ Creator มีสิทธิ์ในทุกไลน์เสมอ
+    if (hasRole(['admin', 'creator'])) {
+        return true;
+    }
+    // Supervisor จะมีสิทธิ์ก็ต่อเมื่อไลน์ตรงกับของตัวเอง
+    if ($_SESSION['user']['role'] === 'supervisor') {
+        return isset($_SESSION['user']['line']) && ($_SESSION['user']['line'] === $requiredLine);
+    }
+    // Role อื่นๆ ไม่มีสิทธิ์
+    return false;
+}
+
+/**
+ * ฟังก์ชันสำหรับบังคับใช้สิทธิ์ของไลน์ หากไม่มีสิทธิ์จะโยน Exception
+ * @param string $requiredLine - ไลน์ที่ต้องการบังคับใช้สิทธิ์
+ */
+function enforceLinePermission($requiredLine) {
+    if (!checkLinePermission($requiredLine)) {
+        http_response_code(403); // Forbidden
+        throw new Exception("Permission Denied: You can only manage data for your assigned line.");
+    }
+}
 ?>
+
