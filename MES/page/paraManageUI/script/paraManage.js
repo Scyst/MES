@@ -106,9 +106,7 @@ function renderStandardParamsTable() {
 
     pageData.forEach(row => {
         const tr = document.createElement('tr');
-        // เพิ่ม Logic การแสดงปุ่มสำหรับ Supervisor
-        const canEditThisRow = (currentUser.role !== 'supervisor') || (currentUser.line === row.line);
-
+        tr.dataset.id = row.id;
         tr.innerHTML = `
             <td>${row.line || ''}</td>
             <td>${row.model || ''}</td>
@@ -116,13 +114,35 @@ function renderStandardParamsTable() {
             <td>${row.sap_no || ''}</td>
             <td>${row.planned_output || ''}</td>
             <td>${row.updated_at || ''}</td>
-            <td class="text-center">
-                <div class="d-flex gap-1 justify-content-center">
-                    ${canEditThisRow ? `<button class="btn btn-sm btn-warning" onclick='openEditModal("editParamModal", ${JSON.stringify(row)})'>Edit</button>` : ''}
-                    ${canEditThisRow && canManage ? `<button class="btn btn-sm btn-danger" onclick="deleteStandardParam(${row.id})">Delete</button>` : ''}
-                </div>
-            </td>
         `;
+
+        const canEditThisRow = (currentUser.role !== 'supervisor') || (currentUser.line === row.line);
+        const actionsTd = document.createElement('td');
+        actionsTd.className = 'text-center';
+        
+        const buttonWrapper = document.createElement('div');
+        buttonWrapper.className = 'd-flex gap-1 justify-content-center';
+
+        if (canEditThisRow) {
+            const editButton = document.createElement('button');
+            editButton.className = 'btn btn-sm btn-warning';
+            editButton.textContent = 'Edit';
+            // แก้ไข: เปลี่ยนมาใช้ addEventListener
+            editButton.addEventListener('click', () => openEditModal("editParamModal", row));
+            buttonWrapper.appendChild(editButton);
+        }
+        
+        if (canEditThisRow && canManage) {
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-sm btn-danger';
+            deleteButton.textContent = 'Delete';
+            // แก้ไข: เปลี่ยนมาใช้ addEventListener
+            deleteButton.addEventListener('click', () => deleteStandardParam(row.id));
+            buttonWrapper.appendChild(deleteButton);
+        }
+        
+        actionsTd.appendChild(buttonWrapper);
+        tr.appendChild(actionsTd);
         tbody.appendChild(tr);
     });
     
@@ -177,14 +197,31 @@ function renderSchedulesTable() {
             <td>${schedule.end_time || ''}</td>
             <td>${schedule.planned_break_minutes || ''}</td>
             <td><span class="badge ${schedule.is_active == 1 ? 'bg-success' : 'bg-secondary'}">${schedule.is_active == 1 ? 'Active' : 'Inactive'}</span></td>
-            ${canManage ? `
-            <td class="text-center">
-                <div class="d-flex gap-1 justify-content-center">
-                    <button class="btn btn-sm btn-warning" onclick='openEditModal("editScheduleModal", ${JSON.stringify(schedule)})'>Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${schedule.id})">Delete</button>
-                </div>
-            </td>` : ''}
         `;
+
+        if (canManage) {
+            const actionsTd = document.createElement('td');
+            actionsTd.className = 'text-center';
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.className = 'd-flex gap-1 justify-content-center';
+            
+            const editButton = document.createElement('button');
+            editButton.className = 'btn btn-sm btn-warning';
+            editButton.textContent = 'Edit';
+            // แก้ไข: เปลี่ยนมาใช้ addEventListener
+            editButton.addEventListener('click', () => openEditModal("editScheduleModal", schedule));
+            buttonWrapper.appendChild(editButton);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-sm btn-danger';
+            deleteButton.textContent = 'Delete';
+             // แก้ไข: เปลี่ยนมาใช้ addEventListener
+            deleteButton.addEventListener('click', () => deleteSchedule(schedule.id));
+            buttonWrapper.appendChild(deleteButton);
+
+            actionsTd.appendChild(buttonWrapper);
+            tr.appendChild(actionsTd);
+        }
         tbody.appendChild(tr);
     });
 }

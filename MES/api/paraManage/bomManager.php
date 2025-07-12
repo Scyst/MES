@@ -24,7 +24,9 @@ try {
             $fg_part_no = $_GET['fg_part_no'] ?? '';
             $line = $_GET['line'] ?? '';
             $model = $_GET['model'] ?? '';
-            enforceLinePermission($line); // ตรวจสอบสิทธิ์
+            
+            // --- เพิ่ม: ตรวจสอบสิทธิ์ ---
+            enforceLinePermission($line); 
 
             if (empty($fg_part_no) || empty($line) || empty($model)) {
                 throw new Exception("FG Part No, Line, and Model are required to get components.");
