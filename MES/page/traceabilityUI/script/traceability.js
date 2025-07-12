@@ -1,74 +1,95 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('traceabilityForm');
     const lotNoInput = document.getElementById('lotNoInput');
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
     const reportContainer = document.getElementById('reportContainer');
     const initialMessage = document.getElementById('initialMessage');
-    const summaryCard = document.getElementById('summaryCard');
-    const bomTableBody = document.getElementById('bomTableBody');
-    const wipHistoryTableBody = document.getElementById('wipHistoryTableBody');
-    const productionHistoryTableBody = document.getElementById('productionHistoryTableBody');
-    const downtimeHistoryTableBody = document.getElementById('downtimeHistoryTableBody');
+    let searchDebounceTimer;
 
-    // Populate Datalist for Lot Numbers
-    async function populateLotDatalist() {
+    // --- Search Logic ---
+    lotNoInput.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            const searchTerm = lotNoInput.value.trim();
+            if (searchTerm.length >= 3) {
+                searchForLots(searchTerm);
+            } else {
+                searchResultsContainer.innerHTML = ''; // เคลียร์ผลลัพธ์ถ้าข้อความสั้นไป
+            }
+        }, 500); // Debounce 0.5 วินาที
+    });
+
+    async function searchForLots(term) {
+        searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-action disabled">Searching...</a>';
         try {
-            // เราสามารถยืม API จากหน้าอื่นมาใช้ได้
-            const response = await fetch('../../api/pdTable/pdTableManage.php?action=get_lot_numbers');
+            const response = await fetch(`../../api/pdTable/pdTableManage.php?action=search_lots&term=${term}`);
             const result = await response.json();
             if (result.success) {
-                const datalist = document.getElementById('lotList');
-                datalist.innerHTML = result.data.map(lot => `<option value="${lot}"></option>`).join('');
+                renderSearchResults(result.data);
+            } else {
+                searchResultsContainer.innerHTML = `<a href="#" class="list-group-item list-group-item-danger">${result.message}</a>`;
             }
         } catch (error) {
-            console.error('Failed to populate lot datalist:', error);
+            console.error('Lot search failed:', error);
+            searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-danger">Search failed.</a>';
         }
     }
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const lotNo = lotNoInput.value.trim();
-        if (!lotNo) {
-            showToast('Please enter a Lot Number.', '#ffc107');
+    function renderSearchResults(lots) {
+        searchResultsContainer.innerHTML = '';
+        if (lots.length === 0) {
+            searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-action disabled">No matching lots found.</a>';
             return;
         }
+        lots.forEach(lot => {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action list-group-item-dark';
+            item.textContent = lot;
+            item.onclick = (e) => {
+                e.preventDefault();
+                lotNoInput.value = lot; // เติม Lot ที่เลือกในช่องค้นหา
+                searchResultsContainer.innerHTML = ''; // ซ่อนผลการค้นหา
+                generateTraceabilityReport(lot);
+            };
+            searchResultsContainer.appendChild(item);
+        });
+    }
 
-        // แสดงสถานะ Loading และซ่อนข้อมูลเก่า
+    // --- Report Generation Logic ---
+    async function generateTraceabilityReport(lotNo) {
         initialMessage.classList.add('d-none');
         reportContainer.classList.add('d-none');
-        showToast('Searching for Lot Number...', '#0dcaf0');
+        showToast('Generating report for ' + lotNo, '#0dcaf0');
 
         try {
             const response = await fetch(`../../api/Traceability/traceability.php?lot_no=${lotNo}`);
             const result = await response.json();
 
-            if (!result.success) {
-                throw new Error(result.message);
-            }
+            if (!result.success) throw new Error(result.message);
             if (!result.data.summary) {
-                showToast(`Lot Number '${lotNo}' not found.`, '#ffc107');
-                initialMessage.classList.remove('d-none');
+                showToast(`Data for Lot Number '${lotNo}' not found.`, '#ffc107');
                 return;
             }
 
-            renderAllSections(result.data);
+            renderAllSections(result.data, lotNo);
             reportContainer.classList.remove('d-none');
             showToast('Report generated successfully.', '#28a745');
 
         } catch (error) {
-            console.error('Traceability search failed:', error);
+            console.error('Traceability report failed:', error);
             showToast(error.message, '#dc3545');
-            initialMessage.classList.remove('d-none');
         }
-    });
+    }
 
-    function renderAllSections(data) {
-        // Render Summary Card
+    function renderAllSections(data, lotNo) {
         const { summary, bom_info, wip_history, production_history, downtime_history } = data;
+        const summaryCard = document.getElementById('summaryCard');
+        
         summaryCard.innerHTML = `
             <div class="card-body">
                 <h5 class="card-title">Lot Summary: ${summary.part_no}</h5>
                 <p class="card-text mb-1">
-                    <strong>Lot No:</strong> ${lotNoInput.value} | 
+                    <strong>Lot No:</strong> ${lotNo} | 
                     <strong>Line:</strong> ${summary.line} | 
                     <strong>Model:</strong> ${summary.model}
                 </p>
@@ -79,32 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Render BOM Table
-        renderTable(bomTableBody, bom_info, 
-            (row) => `<td>${row.component_part_no}</td><td>${row.quantity_required}</td>`, 
-            2, "This FG has no defined BOM."
-        );
-
-        // Render WIP History Table
-        renderTable(wipHistoryTableBody, wip_history,
-            (row) => `<td>${formatDateTime(row.entry_time)}</td><td>${row.quantity_in}</td><td>${row.operator}</td><td>${row.remark || '-'}</td>`,
-            4, "No WIP entry records found for this Lot."
-        );
-        
-        // Render Production History Table
-        renderTable(productionHistoryTableBody, production_history,
-            (row) => `<td>${row.log_date}</td><td>${row.log_time.substring(0,8)}</td><td>${row.count_type}</td><td>${row.count_value}</td><td>${row.note || '-'}</td>`,
-            5, "No production records found for this Lot."
-        );
-
-        // Render Downtime History Table
-        renderTable(downtimeHistoryTableBody, downtime_history,
-            (row) => `<td>${formatDateTime(row.stop_begin)}</td><td>${formatDateTime(row.stop_end)}</td><td>${row.duration}</td><td>${row.machine}</td><td>${row.cause}</td><td>${row.recovered_by}</td>`,
-            6, "No relevant downtime recorded during the production window."
-        );
+        renderTable(document.getElementById('productionHistoryTableBody'), production_history, (row) => `<td>${row.log_date}</td><td>${row.log_time.substring(0,8)}</td><td>${row.count_type}</td><td>${row.count_value}</td><td>${row.note || '-'}</td>`, 5, "No production records found for this Lot.");
+        renderTable(document.getElementById('bomTableBody'), bom_info, (row) => `<td>${row.component_part_no}</td><td>${row.quantity_required}</td>`, 2, "This FG has no defined BOM.");
+        renderTable(document.getElementById('wipHistoryTableBody'), wip_history, (row) => `<td>${formatDateTime(row.entry_time)}</td><td>${row.quantity_in}</td><td>${row.operator}</td><td>${row.remark || '-'}</td>`, 4, "No WIP entry records found for this Lot.");
+        renderTable(document.getElementById('downtimeHistoryTableBody'), downtime_history, (row) => `<td>${formatDateTime(row.stop_begin)}</td><td>${formatDateTime(row.stop_end)}</td><td>${row.duration}</td><td>${row.machine}</td><td>${row.cause}</td><td>${row.recovered_by}</td>`, 6, "No relevant downtime recorded.");
     }
-    
-    // Helper function to render any table
+
     function renderTable(tbody, data, rowTemplate, colspan, emptyMessage) {
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
@@ -117,12 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
     }
-
+    
     function formatDateTime(dateTimeString) {
         if (!dateTimeString) return '-';
         return new Date(dateTimeString).toLocaleString('th-TH', { hour12: false });
     }
-
-    // Initial load
-    populateLotDatalist();
 });

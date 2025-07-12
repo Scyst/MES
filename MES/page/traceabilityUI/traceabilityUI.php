@@ -25,15 +25,13 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">Traceability Report</h2>
         </div>
-        <div class="row mb-4 align-items-center sticky-bar py-3">
+        <div class="row mb-3 align-items-center sticky-bar py-3">
             <div class="col-md-6">
-                <form id="traceabilityForm" class="d-flex gap-2">
-                    <input list="lotList" id="lotNoInput" class="form-control form-control-lg" placeholder="Enter or select a Lot Number..." required>
-                    <datalist id="lotList"></datalist>
-                    <button type="submit" class="btn btn-primary btn-lg">Search</button>
-                </form>
+                <input id="lotNoInput" class="form-control form-control-lg" placeholder="Start typing a Lot Number to search...">
             </div>
         </div>
+
+        <div id="searchResultsContainer" class="list-group mb-4" style="max-height: 250px; overflow-y: auto;"></div>
 
         <div id="reportContainer" class="d-none">
             <div id="summaryCard" class="card text-white bg-secondary mb-4"></div>
