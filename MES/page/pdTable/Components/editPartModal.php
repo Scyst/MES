@@ -57,6 +57,7 @@
                                 <option value="HOLD">HOLD</option>
                                 <option value="REWORK">REWORK</option>
                                 <option value="SCRAP">SCRAP</option>
+                                <option value="BOM-ISSUE">BOM-ISSUE</option>
                                 <option value="ETC.">ETC.</option>
                             </select>
                         </div>
