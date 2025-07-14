@@ -27,7 +27,7 @@
         </div>
         <div class="row mb-3 align-items-center sticky-bar py-3">
             <div class="col-md-6">
-                <input id="lotNoInput" class="form-control form-control-lg" placeholder="Start typing a Lot Number to search...">
+                <input id="lotNoInput" class="form-control form-control" placeholder="Start typing a Lot Number to search...">
             </div>
         </div>
 

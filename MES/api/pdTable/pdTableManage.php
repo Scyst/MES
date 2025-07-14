@@ -231,7 +231,7 @@ try {
                 //-- 3. ยืนยัน Transaction หากทุกอย่างสำเร็จ --
                 $pdo->commit();
                 
-                logAction($pdo, $currentUser, 'ADD PART', $lot_no, "{$line}-{$model}-{$part_no}, Qty: {$fg_qty}, Type: {$count_type}");
+                logAction($pdo, $currentUser['username'], 'ADD PART', $lot_no, "{$line}-{$model}-{$part_no}, Qty: {$fg_qty}, Type: {$count_type}");
                 echo json_encode(['success' => true, 'message' => 'Part and component consumption recorded successfully.', 'lot_no' => $lot_no]);
 
             } catch (Exception $e) {

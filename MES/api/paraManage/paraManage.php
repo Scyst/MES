@@ -200,7 +200,7 @@ try {
             $success = $stmt->execute([(int)$id]);
             // บันทึก Log การทำงาน
             if ($success && $stmt->rowCount() > 0) {
-                 logAction($pdo, $currentUser, 'DELETE SCHEDULE', $id);
+                 logAction($pdo, $currentUser['username'], 'DELETE SCHEDULE', $id);
             }
             echo json_encode(['success' => $success, 'message' => 'Schedule deleted.']);
             break;
