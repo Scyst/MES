@@ -68,6 +68,30 @@ try {
             echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $data, 'summary' => $summary, 'grand_total_minutes' => $totalMinutes]);
             break;
 
+        case 'get_stop_by_id':
+            if (!isset($_GET['id']) || !filter_var($_GET['id'], FILTER_VALIDATE_INT)) {
+                http_response_code(400);
+                throw new Exception('Invalid or missing ID for editing.');
+            }
+            $id = $_GET['id'];
+
+            $stmt = $pdo->prepare("SELECT * FROM STOP_CAUSES WHERE id = ?");
+            $stmt->execute([$id]);
+            $stop = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($stop) {
+                // ตรวจสอบสิทธิ์การเข้าถึงข้อมูล
+                enforceLinePermission($stop['line']);
+                // แปลงเวลาให้เป็น H:i:s ก่อนส่งกลับ
+                $stop['stop_begin'] = (new DateTime($stop['stop_begin']))->format('H:i:s');
+                $stop['stop_end'] = (new DateTime($stop['stop_end']))->format('H:i:s');
+                echo json_encode(['success' => true, 'data' => $stop]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Record not found.']);
+            }
+            break;
+
         case 'add_stop':
             $required_fields = ['log_date', 'stop_begin', 'stop_end', 'line', 'machine', 'cause', 'recovered_by'];
             foreach ($required_fields as $field) {
@@ -142,8 +166,8 @@ try {
             break;
 
         case 'delete_stop':
-            // แก้ไข: รับค่าจาก $input
-            $id = $input['id'] ?? null;
+            // และตรวจสอบการส่งค่าจาก body (JSON) ก่อน
+            $id = $input['id'] ?? $_REQUEST['id'] ?? null;
             if (!$id || !filter_var($id, FILTER_VALIDATE_INT)) {
                 http_response_code(400);
                 throw new Exception('Invalid or missing Stop Cause ID.');

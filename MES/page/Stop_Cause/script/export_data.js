@@ -7,7 +7,7 @@ const STOP_CAUSE_API_URL = '../../api/Stop_Cause/stopCauseManage.php';
  */
 function getStopCauseFilterParams() {
     return new URLSearchParams({
-        action: 'get_stop',
+        action: 'get_stops',
         startDate: document.getElementById("filterStartDate")?.value,
         endDate: document.getElementById("filterEndDate")?.value,
         line: document.getElementById("filterLine")?.value.trim() || '',

@@ -159,22 +159,37 @@ try {
 
         //-- บันทึกข้อมูล Schedule (สร้าง/อัปเดต) --
         case 'save_schedule':
-            $stmt = $pdo->prepare("EXEC dbo.sp_SaveSchedule @id=?, @line=?, @shift_name=?, @start_time=?, @end_time=?, @planned_break_minutes=?, @is_active=?");
-            $success = $stmt->execute([
-                $input['id'] ?? 0,
-                $input['line'],
-                $input['shift_name'],
-                $input['start_time'],
-                $input['end_time'],
-                $input['planned_break_minutes'],
-                $input['is_active']
-            ]);
-            // บันทึก Log การทำงาน
-            if ($success) {
-                $actionType = ($input['id'] ?? 0) > 0 ? 'UPDATE SCHEDULE' : 'CREATE SCHEDULE';
-                logAction($pdo, $currentUser, $actionType, $input['id'] ?? null, "{$input['line']}-{$input['shift_name']}");
+            try {
+                $stmt = $pdo->prepare("EXEC dbo.sp_SaveSchedule @id=?, @line=?, @shift_name=?, @start_time=?, @end_time=?, @planned_break_minutes=?, @is_active=?");
+                $success = $stmt->execute([
+                    $input['id'] ?? 0,
+                    $input['line'],
+                    $input['shift_name'],
+                    $input['start_time'],
+                    $input['end_time'],
+                    $input['planned_break_minutes'],
+                    $input['is_active']
+                ]);
+
+                if ($success) {
+                    $actionType = ($input['id'] ?? 0) > 0 ? 'UPDATE SCHEDULE' : 'CREATE SCHEDULE';
+                    // แก้ไข: ส่ง $currentUser['username'] แทน object ทั้งหมด
+                    logAction($pdo, $currentUser['username'], $actionType, $input['id'] ?? null, "{$input['line']}-{$input['shift_name']}");
+                    echo json_encode(['success' => true, 'message' => 'Schedule saved successfully.']);
+                } else {
+                    throw new Exception("The stored procedure did not execute successfully, but did not throw an error.");
+                }
+
+            } catch (PDOException $e) {
+                // ตรวจสอบรหัส Error ของ SQL Server ถ้าเป็น 23000 คือข้อมูลซ้ำ
+                if ($e->getCode() == '23000') {
+                    http_response_code(409); // 409 Conflict เป็นสถานะที่เหมาะสมสำหรับข้อมูลซ้ำ
+                    echo json_encode(['success' => false, 'message' => "Schedule for this Line and Shift already exists. Please choose a different combination."]);
+                } else {
+                    // หากเป็น Error อื่นๆ ให้โยนออกไปให้ catch ตัวนอกจัดการ
+                    throw $e;
+                }
             }
-            echo json_encode(['success' => $success, 'message' => 'Schedule saved successfully.']);
             break;
 
         //-- ลบข้อมูล Schedule --

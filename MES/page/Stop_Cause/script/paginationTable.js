@@ -195,12 +195,32 @@ async function populateDatalist(datalistId, action) {
  */
 async function deleteStop(id) {
     if (!confirm(`Are you sure you want to delete Stop Cause ID ${id}?`)) return;
+
+    // แก้ไข: เปลี่ยนวิธีการส่ง Request จาก GET เป็น DELETE และแนบ CSRF Token
     try {
-        const response = await fetch(`${API_URL}?action=delete_stop&id=${id}`);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`${API_URL}?action=delete_stop`, { // action ยังคงอยู่ใน URL
+            method: 'POST', // ใช้ POST แทน DELETE เพื่อหลีกเลี่ยงปัญหา preflight request ที่ซับซ้อน
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ id: id }) // ส่ง id ใน body
+        });
+
         const result = await response.json();
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
-        if (result.success) fetchStopData(currentPage);
+        if (result.success) {
+            // โหลดข้อมูลใหม่ถ้าจำนวนรายการในหน้าปัจจุบันหมดไป
+            const rowCount = document.getElementById('stopTableBody').rows.length;
+            if (rowCount <= 1 && currentPage > 1) {
+                fetchStopData(currentPage - 1);
+            } else {
+                fetchStopData(currentPage);
+            }
+        }
     } catch (error) {
+        console.error('An error occurred during deletion:', error);
         showToast('An error occurred while deleting.', '#dc3545');
     }
 }

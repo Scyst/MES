@@ -606,6 +606,46 @@ function initializeBomManager() {
     populateCreateBomDatalists();
 }
 
+/**
+ * ฟังก์ชันสำหรับเปิด Modal แก้ไขและเติมข้อมูลลงในฟอร์ม
+ * @param {string} modalId - ID ของ Modal
+ * @param {object} data - ข้อมูลของแถวที่ต้องการแก้ไข
+ */
+function openEditModal(modalId, data) {
+    const modalElement = document.getElementById(modalId);
+    if (!modalElement) return;
+
+    // เติมข้อมูลลงในฟอร์ม (ส่วนนี้ทำงานได้ปกติ)
+    for (const key in data) {
+        const input = modalElement.querySelector(`[name="${key}"]`);
+        if (input) {
+            if (input.type === 'checkbox') {
+                input.checked = (data[key] == 1);
+            } else {
+                input.value = data[key];
+            }
+        }
+    }
+
+    // --- เพิ่ม: Logic สำหรับ Supervisor ---
+    if (currentUser.role === 'supervisor') {
+        if (modalId === 'editParamModal') {
+            const lineInput = modalElement.querySelector('#edit_line');
+            if (lineInput) lineInput.disabled = true;
+        }
+    } else {
+        // ถ้าเป็น Admin/Creator ให้แน่ใจว่าช่องไม่ถูกปิดไว้
+        if (modalId === 'editParamModal') {
+            const lineInput = modalElement.querySelector('#edit_line');
+            if (lineInput) lineInput.disabled = false;
+        }
+    }
+    
+    // แสดง Modal
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // โหลดข้อมูลครั้งแรก
     loadStandardParams();
