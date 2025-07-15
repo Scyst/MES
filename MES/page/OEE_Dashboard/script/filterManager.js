@@ -1,3 +1,15 @@
+let dashboardAutoUpdateInterval;
+
+function startAutoUpdate() {
+    //เคลียร์การนับเวลาครั้งเก่าทิ้งก่อนเสมอ (ป้องกันการทำงานซ้ำซ้อน)
+    clearInterval(dashboardAutoUpdateInterval);
+
+    dashboardAutoUpdateInterval = setInterval(() => {
+        console.log('Auto-updating dashboard data...');
+        handleFilterChange();
+    }, 60000); // คุณสามารถปรับเวลาตรงนี้ได้ (1 นาที = 60000)
+}
+
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลจาก API มาใส่ใน Dropdown
  * @param {string} id - ID ของ <select> element
@@ -116,14 +128,26 @@ function formatMinutes(minutes) {
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 window.addEventListener("load", () => {
-  //-- 1. ตั้งค่าวันที่เริ่มต้น --
-  ensureDefaultDateInputs();
+    // 1. ตั้งค่าวันที่เริ่มต้น (เหมือนเดิม)
+    ensureDefaultDateInputs();
 
-  //-- 2. ผูก Event Listener 'change' ให้กับทุก Filter --
-  ["startDate", "endDate", "lineFilter", "modelFilter"].forEach(id => {
-    document.getElementById(id)?.addEventListener("change", handleFilterChange);
-  });
+    // 2. ผูก Event Listener 'change' ให้กับทุก Filter (แก้ไขส่วนนี้)
+    ["startDate", "endDate", "lineFilter", "modelFilter"].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener("change", () => {
+                // เมื่อผู้ใช้เปลี่ยนฟิลเตอร์เอง:
+                console.log('User changed filter. Restarting auto-update timer.');
+                clearInterval(dashboardAutoUpdateInterval); //-- ก. หยุดการอัปเดตอัตโนมัติ
+                handleFilterChange();                       //-- ข. อัปเดตข้อมูลตามฟิลเตอร์ใหม่ทันที
+                setTimeout(startAutoUpdate, 10000);         //-- ค. รอ 10 วินาทีแล้วค่อยเริ่มนับเวลาใหม่
+            });
+        }
+    });
 
-  //-- 3. เริ่มต้นการทำงานหลักของหน้าเว็บ --
-  applyFiltersAndInitCharts();
+    // 3. เริ่มต้นการทำงานหลักของหน้าเว็บ (เหมือนเดิม)
+    applyFiltersAndInitCharts();
+
+    // 4. เริ่มการอัปเดตอัตโนมัติเป็นครั้งแรก (เพิ่มส่วนนี้เข้ามา)
+    startAutoUpdate();
 });
