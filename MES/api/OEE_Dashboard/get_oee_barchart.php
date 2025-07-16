@@ -108,66 +108,67 @@ try {
 
     // SQL สำหรับรวมจำนวน Parts ประเภทต่างๆ โดยจัดกลุ่มตาม Part Number และแสดง 50 อันดับแรก
     $partSql = "
-        SELECT TOP 50 part_no,
-            SUM(CASE WHEN count_type = 'FG' THEN ISNULL(count_value, 0) ELSE 0 END) AS FG,
-            SUM(CASE WHEN count_type = 'NG' THEN ISNULL(count_value, 0) ELSE 0 END) AS NG,
-            SUM(CASE WHEN count_type = 'HOLD' THEN ISNULL(count_value, 0) ELSE 0 END) AS HOLD,
-            SUM(CASE WHEN count_type = 'REWORK' THEN ISNULL(count_value, 0) ELSE 0 END) AS REWORK,
-            SUM(CASE WHEN count_type = 'SCRAP' THEN ISNULL(count_value, 0) ELSE 0 END) AS SCRAP,
-            SUM(CASE WHEN count_type = 'ETC.' THEN ISNULL(count_value, 0) ELSE 0 END) AS ETC
-        FROM PARTS
-        $partWhere
-        GROUP BY part_no
-        ORDER BY SUM(ISNULL(count_value, 0)) DESC
-    ";
+    SELECT TOP 50 
+        part_no + ' (' + model + ' / ' + line + ')' AS group_label,
+        SUM(CASE WHEN count_type = 'FG' THEN ISNULL(count_value, 0) ELSE 0 END) AS FG,
+        SUM(CASE WHEN count_type = 'NG' THEN ISNULL(count_value, 0) ELSE 0 END) AS NG,
+        SUM(CASE WHEN count_type = 'HOLD' THEN ISNULL(count_value, 0) ELSE 0 END) AS HOLD,
+        SUM(CASE WHEN count_type = 'REWORK' THEN ISNULL(count_value, 0) ELSE 0 END) AS REWORK,
+        SUM(CASE WHEN count_type = 'SCRAP' THEN ISNULL(count_value, 0) ELSE 0 END) AS SCRAP,
+        SUM(CASE WHEN count_type = 'ETC.' THEN ISNULL(count_value, 0) ELSE 0 END) AS ETC
+    FROM PARTS
+    $partWhere
+    GROUP BY line, model, part_no
+    ORDER BY SUM(ISNULL(count_value, 0)) DESC
+";
 
-    // ประมวลผล SQL
-    $partStmt = $pdo->prepare($partSql);
-    $partStmt->execute($partParams);
-    $partResults = $partStmt->fetchAll();
-    
-    // เตรียม Array สำหรับเก็บข้อมูลแต่ละประเภทของ Part
-    $partLabels = [];
-    $FG = [];
-    $NG = [];
-    $HOLD = [];
-    $REWORK = [];
-    $SCRAP = [];
-    $ETC = [];
+// ประมวลผล SQL
+$partStmt = $pdo->prepare($partSql);
+$partStmt->execute($partParams);
+$partResults = $partStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // วนลูปเพื่อแยกข้อมูลแต่ละประเภทออกจากผลลัพธ์
-    foreach ($partResults as $row) {
-        $partLabels[] = $row['part_no'];
-        $FG[] = (int) $row['FG'];
-        $NG[] = (int) $row['NG'];
-        $HOLD[] = (int) $row['HOLD'];
-        $REWORK[] = (int) $row['REWORK'];
-        $SCRAP[] = (int) $row['SCRAP'];
-        $ETC[] = (int) $row['ETC'];
-    }
-    
-    // --- 5. รวบรวมข้อมูลทั้งหมดและส่งออกเป็น JSON ---
+// เตรียม Array สำหรับเก็บข้อมูลแต่ละประเภทของ Part
+$partLabels = [];
+$FG = [];
+$NG = [];
+$HOLD = [];
+$REWORK = [];
+$SCRAP = [];
+$ETC = [];
 
-    // จัดโครงสร้างข้อมูลสุดท้ายที่จะส่งกลับไปให้ Frontend
-    $finalData = [
-        "stopCause" => [
-            "labels" => $lineList,
-            "datasets" => $stopDatasets,
-            "tooltipInfo" => $lineTooltipInfo
-        ],
-        "parts" => [
-            "labels"   => $partLabels,
-            "FG"       => $FG,
-            "NG"       => $NG,
-            "HOLD"     => $HOLD,
-            "REWORK"   => $REWORK,
-            "SCRAP"    => $SCRAP,
-            "ETC"      => $ETC
-        ]
-    ];
+// วนลูปเพื่อแยกข้อมูลแต่ละประเภทออกจากผลลัพธ์
+foreach ($partResults as $row) {
+    $partLabels[] = $row['group_label'];
+    $FG[] = (int) $row['FG'];
+    $NG[] = (int) $row['NG'];
+    $HOLD[] = (int) $row['HOLD'];
+    $REWORK[] = (int) $row['REWORK'];
+    $SCRAP[] = (int) $row['SCRAP'];
+    $ETC[] = (int) $row['ETC'];
+}
     
-    // ส่งข้อมูลกลับในรูปแบบ JSON
-    echo json_encode(['success' => true, 'data' => $finalData]);
+// --- 5. รวบรวมข้อมูลทั้งหมดและส่งออกเป็น JSON ---
+
+// จัดโครงสร้างข้อมูลสุดท้ายที่จะส่งกลับไปให้ Frontend
+$finalData = [
+    "stopCause" => [
+        "labels" => $lineList,
+        "datasets" => $stopDatasets,
+        "tooltipInfo" => $lineTooltipInfo
+    ],
+    "parts" => [
+        "labels"   => $partLabels,
+        "FG"       => $FG,
+        "NG"       => $NG,
+        "HOLD"     => $HOLD,
+        "REWORK"   => $REWORK,
+        "SCRAP"    => $SCRAP,
+        "ETC"      => $ETC
+    ]
+];
+    
+// ส่งข้อมูลกลับในรูปแบบ JSON
+echo json_encode(['success' => true, 'data' => $finalData]);
 
 } catch (PDOException $e) {
     // กรณีเกิดข้อผิดพลาด: ตอบกลับด้วยสถานะ 500 และบันทึก log

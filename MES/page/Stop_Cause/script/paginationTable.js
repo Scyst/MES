@@ -4,6 +4,32 @@ let totalPages = 1;
 const API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
 /**
+ * ฟังก์ชันสำหรับแปลงรูปแบบวันที่และเวลาจาก YYYY-MM-DD HH:MM:SS เป็น DD/MM/YYYY HH:MM:SS
+ * @param {string} dateTimeString - ข้อความวันที่และเวลาที่ต้องการแปลง
+ * @returns {string} ข้อความที่จัดรูปแบบใหม่แล้ว
+ */
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) {
+        return ''; // คืนค่าว่างถ้าไม่มีข้อมูล
+    }
+
+    // สร้าง Object Date จาก String ที่ได้รับมา
+    const date = new Date(dateTimeString);
+    if (isNaN(date.getTime())) {
+        return dateTimeString; // ถ้าแปลงไม่ได้ ให้คืนค่าเดิม
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() เริ่มจาก 0
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * ฟังก์ชันหลักสำหรับดึงข้อมูล Stop Cause จาก API ตาม Filter และหน้าปัจจุบัน
  * @param {number} [page=1] - หมายเลขหน้าที่ต้องการดึงข้อมูล
  */
@@ -63,8 +89,8 @@ function renderTable(data, canManage) {
         // แก้ไข: ลบบรรทัดที่สร้าง Cell ของ ID ออก
         // tr.appendChild(createCell(row.id));
         tr.appendChild(createCell(row.log_date));
-        tr.appendChild(createCell(row.stop_begin));
-        tr.appendChild(createCell(row.stop_end));
+        tr.appendChild(createCell(formatDateTime(row.stop_begin)));
+        tr.appendChild(createCell(formatDateTime(row.stop_end)));
         tr.appendChild(createCell(row.duration));
         tr.appendChild(createCell(row.line));
         tr.appendChild(createCell(row.machine));
