@@ -166,35 +166,57 @@ async function handleDeleteEntry(entryId) {
     }
 }
 
-// --- Logic ใหม่ทั้งหมดสำหรับจัดการ Event Listener ---
-document.addEventListener('DOMContentLoaded', () => {
-    const wipTabButton = document.getElementById('wip-report-tab');
-    const historyTabButton = document.getElementById('entry-history-tab');
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน Stock Count
+ */
+async function fetchStockCountReport() {
+    const tableBody = document.getElementById('stockCountTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Stock Count...</td></tr>';
 
-    if (wipTabButton) {
-        wipTabButton.addEventListener('shown.bs.tab', fetchWipReport);
-    }
-    
-    if (historyTabButton) {
-        historyTabButton.addEventListener('shown.bs.tab', fetchHistoryData);
-    }
-    
-    // ฟังก์ชันสำหรับจัดการการกรองข้อมูลในแท็บ WIP และ History
-    function handleWipAndHistoryFilter() {
-        if (document.getElementById('wip-report-pane')?.classList.contains('active')) {
-            fetchWipReport();
-        } else if (document.getElementById('entry-history-pane')?.classList.contains('active')) {
-            fetchHistoryData();
-        }
-    }
-
-    // เพิ่ม Event Listener ให้กับทุกช่อง Filter
-    const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
-    filterInputs.forEach(id => {
-        document.getElementById(id)?.addEventListener('input', () => {
-            // ใช้ Debounce เพื่อลดการยิง API ขณะพิมพ์
-            clearTimeout(window.wipFilterDebounceTimer);
-            window.wipFilterDebounceTimer = setTimeout(handleWipAndHistoryFilter, 500);
-        });
+    const params = new URLSearchParams({
+        line: document.getElementById('filterLine')?.value || '',
+        part_no: document.getElementById('filterPartNo')?.value || '',
+        model: document.getElementById('filterModel')?.value || '',
+        startDate: document.getElementById('filterStartDate')?.value || '',
+        endDate: document.getElementById('filterEndDate')?.value || ''
     });
-});
+
+    try {
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_stock_count&${params.toString()}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+
+        tableBody.innerHTML = '';
+        if (!result.data || result.data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No parts found in parameters.</td></tr>';
+        } else {
+            result.data.forEach(row => {
+                const tr = document.createElement('tr');
+                const variance = parseInt(row.variance, 10);
+
+                // --- ตรรกะการเปลี่ยนสีใหม่ ---
+                let varianceClass = '';
+                if (variance < 0) {
+                    varianceClass = 'text-danger'; // ยอดติดลบ (Out > In) - สีแดง
+                } else if (variance > 0) {
+                    varianceClass = 'text-success'; // ยอดคงเหลือ - สีเขียว
+                }
+                // ถ้าเป็น 0 จะไม่มีสี
+
+                tr.innerHTML = `
+                    <td>${row.line}</td>
+                    <td>${row.model}</td>
+                    <td>${row.part_no}</td>
+                    <td class="text-end">${parseInt(row.total_in).toLocaleString()}</td>
+                    <td class="text-end">${parseInt(row.total_out).toLocaleString()}</td>
+                    <td class="text-end fw-bold ${varianceClass}">${variance.toLocaleString()}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+    } catch (error) {
+        console.error("Failed to fetch Stock Count report:", error);
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load report.</td></tr>`;
+    }
+}

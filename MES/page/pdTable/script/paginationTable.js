@@ -226,41 +226,82 @@ async function handleDelete(id) {
     }
 }
 
-//-- ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter --
+/**
+ * ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter
+ * (แก้ไขใหม่) จะตรวจสอบว่าแท็บใดกำลัง Active อยู่ และเรียกฟังก์ชันโหลดข้อมูลที่ถูกต้อง
+ */
 function handleFilterChange() {
-    // เพิ่มเงื่อนไข: ตรวจสอบว่าแท็บ Production History กำลังแสดงอยู่หรือไม่
-    const prodHistoryPane = document.getElementById('production-history-pane');
-    if (prodHistoryPane && prodHistoryPane.classList.contains('active')) {
-        fetchPartsData(1);
+    // ค้นหา Tab Pane ที่กำลังแสดงผลอยู่ (มี class 'active')
+    const activePane = document.querySelector('#mainTabContent .tab-pane.active');
+    if (!activePane) return; // หากไม่พบ ให้หยุดทำงาน
+
+    // ตรวจสอบ ID ของ Pane ที่ Active แล้วเรียกฟังก์ชันที่เหมาะสม
+    switch (activePane.id) {
+        case 'production-history-pane':
+            fetchPartsData(1); // โหลดข้อมูลของ Production History (OUT)
+            break;
+            
+        case 'entry-history-pane':
+            // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้ (เพราะอยู่คนละไฟล์)
+            if (typeof fetchHistoryData === 'function') {
+                fetchHistoryData(); // โหลดข้อมูลของ Entry History (IN)
+            }
+            break;
+
+        case 'wip-report-pane':
+            // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้
+            if (typeof fetchWipReport === 'function') {
+                fetchWipReport(); // โหลดข้อมูลของ WIP Report
+            }
+            break;
+
+        case 'stock-count-pane':
+             // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้
+            if (typeof fetchStockCountReport === 'function') {
+                fetchStockCountReport(); // โหลดข้อมูลของ Stock Count
+            }
+            break;
     }
 }
 
+// paginationTable.js
+
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
-    // --- เพิ่มเข้ามา: จัดการการเปิดแท็บ Production History ---
-    const prodHistoryTabButton = document.getElementById('production-history-tab');
-    if (prodHistoryTabButton) {
-        prodHistoryTabButton.addEventListener('shown.bs.tab', () => fetchPartsData(1));
-    }
-    //-- เพิ่ม Debouncing ให้กับ Filter Inputs เพื่อลดการยิง API ขณะพิมพ์ --
+
+    // --- 1. จัดการการกรองข้อมูล (Centralized Filter Handler) ---
+    // เพิ่ม Debouncing ให้กับ Filter Inputs ทั้งหมด
     const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
     filterInputs.forEach(id => {
-        document.getElementById(id)?.addEventListener('input', () => {
-            clearTimeout(window.filterDebounceTimer);
-            //-- รอ 500ms หลังผู้ใช้หยุดพิมพ์ จึงจะยิง API --
-            window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
-        });
+        const inputElement = document.getElementById(id);
+        if (inputElement) {
+            inputElement.addEventListener('input', () => {
+                clearTimeout(window.filterDebounceTimer);
+                // รอ 500ms หลังผู้ใช้หยุดพิมพ์ จึงจะเรียก handleFilterChange
+                window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
+            });
+        }
     });
 
-    //-- โหลดข้อมูลสำหรับ Datalist --
+    // --- 2. โหลดข้อมูลสำหรับ Datalist (Autocomplete) ---
     populateDatalist('partNoList', 'get_part_nos');
     populateDatalist('lotList', 'get_lot_numbers');
     populateDatalist('lineList', 'get_lines');
     populateDatalist('modelList', 'get_models');
     
-    //-- โหลดข้อมูลตารางครั้งแรกสำหรับแท็บที่ Active อยู่ --
-    const activeTab = document.querySelector('#mainTab .nav-link.active');
-    if (activeTab && activeTab.id === 'production-history-tab') {
-        fetchPartsData(1);
+    // --- 3. จัดการการโหลดข้อมูลเมื่อสลับแท็บ และตอนเปิดหน้าครั้งแรก ---
+
+    // 3.1 เพิ่ม Event Listener ให้กับทุกแท็บ
+    // เมื่อมีการสลับแท็บ จะเรียก handleFilterChange เพื่อโหลดข้อมูลของแท็บใหม่
+    document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', handleFilterChange);
+    });
+
+    // 3.2 โหลดข้อมูลสำหรับแท็บที่ Active อยู่ตอนเปิดหน้าเว็บครั้งแรก
+    // ต้องทำหลังจากตั้งค่า Event Listener แล้ว เพื่อให้แน่ใจว่าทุกอย่างพร้อม
+    const activeTabPane = document.querySelector('#mainTabContent .tab-pane.active');
+    if (activeTabPane) {
+        // เรียกใช้ handleFilterChange() หนึ่งครั้งเพื่อโหลดข้อมูลของแท็บที่เปิดอยู่
+        handleFilterChange();
     }
 });

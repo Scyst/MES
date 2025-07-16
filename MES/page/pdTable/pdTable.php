@@ -47,6 +47,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production History (OUT)</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock Count</button>
+            </li>
         </ul>
         
         <div class="row my-3 align-items-center sticky-bar py-3">
@@ -148,6 +151,25 @@
                                 </tr>
                             </thead>
                         <tbody id="wipReportTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
+                <div class="table-responsive mt-3">
+                    <table class="table table-dark table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Part No.</th>
+                                <th class="text-end">Total IN</th>
+                                <th class="text-end">Total OUT</th>
+                                <th class="text-end">On Hand (Variance)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockCountTableBody">
+                            </tbody>
                     </table>
                 </div>
             </div>

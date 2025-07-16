@@ -24,6 +24,14 @@ function openAddPartModal(triggerEl) {
     
     modal.querySelector('input[name="log_date"]').value = dateStr;
     modal.querySelector('input[name="log_time"]').value = timeStr;
+
+    // --- ส่วนที่เพิ่ม: กรอกข้อมูลล่าสุดอัตโนมัติ ---
+    const lastData = JSON.parse(localStorage.getItem('lastEntryData'));
+    if (lastData) {
+        modal.querySelector('input[name="line"]').value = lastData.line || '';
+        modal.querySelector('input[name="model"]').value = lastData.model || '';
+        modal.querySelector('input[name="part_no"]').value = lastData.part_no || '';
+    }
     showBootstrapModal('addPartModal');
 }
 
@@ -116,6 +124,17 @@ function openSummaryModal(triggerEl) {
 
 function openAddEntryModal(triggerEl) {
     modalTriggerElement = triggerEl;
+
+    // --- ส่วนที่เพิ่ม: กรอกข้อมูลล่าสุดอัตโนมัติ ---
+    const modal = document.getElementById('addEntryModal');
+    if (modal) {
+        const lastData = JSON.parse(localStorage.getItem('lastEntryData'));
+        if (lastData) {
+            modal.querySelector('input[name="line"]').value = lastData.line || '';
+            modal.querySelector('input[name="model"]').value = lastData.model || '';
+            modal.querySelector('input[name="part_no"]').value = lastData.part_no || '';
+        }
+    }
     showBootstrapModal('addEntryModal');
 }
 
@@ -210,6 +229,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await response.json();
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
                 if (result.success) {
+
+                    if (modalId === 'addPartModal' || modalId === 'addEntryModal') {
+                        const dataToStore = {
+                            line: payload.line,
+                            model: payload.model,
+                            part_no: payload.part_no
+                        };
+                        localStorage.setItem('lastEntryData', JSON.stringify(dataToStore));
+                    }
+
                     const modalElement = document.getElementById(modalId);
                     const modalInstance = bootstrap.Modal.getInstance(modalElement);
                     if (modalInstance) {

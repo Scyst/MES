@@ -206,6 +206,87 @@ try {
             }
             break;
 
+        case 'get_stock_count':
+            // สร้าง Array สำหรับเก็บเงื่อนไขและพารามิเตอร์แยกตามแต่ละตาราง
+            $param_conditions = [];
+            $param_params = [];
+
+            $wip_conditions = [];
+            $wip_params = [];
+
+            $parts_conditions = [];
+            $parts_params = [];
+
+            // --- สร้างเงื่อนไขจาก Filter ---
+            // 1. เงื่อนไขสำหรับ Line, Model, Part No. (ใช้กับทุกตาราง)
+            if (!empty($_GET['line'])) {
+                $param_conditions[] = "p.line = ?"; $param_params[] = $_GET['line'];
+                $wip_conditions[] = "wip.line = ?"; $wip_params[] = $_GET['line'];
+                $parts_conditions[] = "line = ?"; $parts_params[] = $_GET['line'];
+            }
+            if (!empty($_GET['part_no'])) {
+                $param_conditions[] = "p.part_no LIKE ?"; $param_params[] = "%".$_GET['part_no']."%";
+                $wip_conditions[] = "wip.part_no LIKE ?"; $wip_params[] = "%".$_GET['part_no']."%";
+                $parts_conditions[] = "part_no LIKE ?"; $parts_params[] = "%".$_GET['part_no']."%";
+            }
+            if (!empty($_GET['model'])) {
+                $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%";
+                $wip_conditions[] = "wip.model LIKE ?"; $wip_params[] = "%".$_GET['model']."%";
+                $parts_conditions[] = "model LIKE ?"; $parts_params[] = "%".$_GET['model']."%";
+            }
+            
+            // 2. เงื่อนไขสำหรับวันที่ (ใช้เฉพาะกับ WIP_ENTRIES และ PARTS)
+            if (!empty($_GET['startDate'])) {
+                $wip_conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $wip_params[] = $_GET['startDate'];
+                $parts_conditions[] = "log_date >= ?"; $parts_params[] = $_GET['startDate'];
+            }
+            if (!empty($_GET['endDate'])) {
+                $wip_conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $wip_params[] = $_GET['endDate'];
+                $parts_conditions[] = "log_date <= ?"; $parts_params[] = $_GET['endDate'];
+            }
+
+            // สร้าง WHERE clause จากเงื่อนไข
+            $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
+            $wipWhereClause = !empty($wip_conditions) ? "WHERE " . implode(" AND ", $wip_conditions) : "";
+            $partsWhereClause = !empty($parts_conditions) ? "WHERE " . implode(" AND ", $parts_conditions) : "";
+
+            $sql = "
+                WITH TotalIn AS (
+                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total_in
+                    FROM WIP_ENTRIES wip
+                    $wipWhereClause
+                    GROUP BY line, model, part_no
+                ), TotalOut AS (
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total_out
+                    FROM PARTS
+                    $partsWhereClause
+                    GROUP BY line, model, part_no
+                )
+                SELECT
+                    p.line, p.model, p.part_no,
+                    ISNULL(tin.total_in, 0) AS total_in,
+                    ISNULL(tout.total_out, 0) AS total_out,
+                    (ISNULL(tin.total_in, 0) - ISNULL(tout.total_out, 0)) AS variance
+                FROM PARAMETER p
+                LEFT JOIN TotalIn tin ON p.line = tin.line AND p.model = tin.model AND p.part_no = tin.part_no
+                LEFT JOIN TotalOut tout ON p.line = tout.line AND p.model = tout.model AND p.part_no = tout.part_no
+                $paramWhereClause
+                ORDER BY p.line, p.model, p.part_no;
+            ";
+
+            // --- ส่วนที่แก้ไขที่สำคัญที่สุด ---
+            // รวมพารามิเตอร์ตามลำดับที่ '?' ปรากฏใน SQL Query
+            // 1. จาก TotalIn (WIP) -> 2. จาก TotalOut (Parts) -> 3. จาก PARAMETER
+            $executeParams = array_merge($wip_params, $parts_params, $param_params);
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($executeParams);
+            $stock_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // เปลี่ยน Key กลับไปเป็น 'data' เพื่อให้ Frontend ทำงานได้ถูกต้อง
+            echo json_encode(['success' => true, 'data' => $stock_data]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");
