@@ -34,7 +34,7 @@ try {
 
     switch ($action) {
         case 'get_parts':
-            // ... ส่วนนี้ไม่ต้องแก้ไข ...
+            // ... ไม่มีการแก้ไข ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
@@ -134,7 +134,7 @@ try {
                 $note_input = isset($input['note']) ? strtoupper(trim($input['note'])) : null;
                 $lot_no = $input['lot_no'] ?? '';
                 
-                if (empty($lot_no)) {
+                if (empty($lot_no) && $count_type === 'FG') {
                     $sapQuery = "SELECT sap_no FROM PARAMETER WHERE line=? AND model=? AND part_no=?";
                     $sapStmt = $pdo->prepare($sapQuery);
                     $sapStmt->execute([$line, $model, $part_no]);
@@ -163,14 +163,15 @@ try {
                     $count_type, $fg_qty, $note_input,
                     $transaction_id
                 ]);
-                $lastInsertId = $pdo->lastInsertId();
-
+                
                 if (!empty($components)) {
                     $consumeSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?)";
                     $consumeStmt = $pdo->prepare($consumeSql);
                     foreach ($components as $comp) {
                         $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                        $note_for_comp = "Auto-issued for FG ID: " . $lastInsertId;
+                        // === การแก้ไข ===
+                        // เปลี่ยน Note ให้อ้างอิงจาก Lot No. ของ FG
+                        $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
                         $consumeStmt->execute([
                             $log_date, $log_time, $model, $line, 
                             $comp['component_part_no'], strtoupper(trim($lot_no)), 
@@ -240,14 +241,15 @@ try {
                         isset($input['note']) ? strtoupper(trim($input['note'])) : null,
                         $new_transaction_id
                     ]);
-                    $lastInsertId = $pdo->lastInsertId();
                     
                     if (!empty($components)) {
                         $consumeSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?)";
                         $consumeStmt = $pdo->prepare($consumeSql);
                         foreach ($components as $comp) {
                             $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                            $note_for_comp = "Auto-issued for FG ID: " . $lastInsertId;
+                            // === การแก้ไข ===
+                            // เปลี่ยน Note ให้อ้างอิงจาก Lot No. ของ FG
+                            $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
                             $consumeStmt->execute([
                                 $log_date, $input['log_time'], $model, $line, 
                                 $comp['component_part_no'], strtoupper(trim($lot_no)), 
@@ -277,7 +279,7 @@ try {
             break;
 
         case 'delete_part':
-            // ... ส่วนนี้ไม่ต้องแก้ไข ...
+            // ... ไม่มีการแก้ไข ...
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             $pdo->beginTransaction();
@@ -312,7 +314,7 @@ try {
             }
             break;
         
-        // ... เคสอื่นๆ ของคุณ (get_lines, get_models, etc.) ไม่ต้องแก้ไข ...
+        // ... เคสอื่นๆ ไม่มีการแก้ไข ...
         case 'get_lines':
             $stmt = $pdo->query("SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
             $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
