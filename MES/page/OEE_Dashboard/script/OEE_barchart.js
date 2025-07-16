@@ -33,48 +33,58 @@ function truncateLabel(label, maxLength = 4) {
 }
 
 /**
- * ฟังก์ชันหลักสำหรับ Render Bar Chart (เป็นฟังก์ชันกลางที่ใช้ซ้ำได้)
+ * ฟังก์ชันหลักสำหรับ Render หรือ Update Bar Chart
  * @param {Chart} chartInstance - Instance ของ Chart เดิม (ถ้ามี)
  * @param {CanvasRenderingContext2D} ctx - Context ของ Canvas ที่จะวาดกราฟ
  * @param {string[]} labels - Array ของ Label แกน X
  * @param {object[]} datasets - Array ของ Datasets สำหรับกราฟ
  * @param {object} customOptions - Options เพิ่มเติมสำหรับปรับแต่งกราฟ
+ * @returns {Chart} Instance ของ Chart ที่สร้างหรืออัปเดตแล้ว
  */
 function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}) {
-    if (chartInstance) chartInstance.destroy();
+    // --- ส่วนที่แก้ไข ---
+    // ถ้า Chart มีอยู่แล้ว ให้อัปเดตข้อมูลแล้วเรียก .update()
+    if (chartInstance) {
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets = datasets; // ส่ง datasets ทั้งชุดเข้าไปใหม่
+        chartInstance.options.plugins.tooltip.callbacks.title = function(tooltipItems) {
+            // อัปเดต originalLabels ใน Tooltip ด้วย
+            if (tooltipItems.length > 0) {
+                const dataIndex = tooltipItems[0].dataIndex;
+                return (customOptions.originalLabels || labels)[dataIndex]; 
+            }
+            return '';
+        };
+        chartInstance.update();
+        return chartInstance; // คืนค่า instance เดิม
+    }
+    // --- สิ้นสุดส่วนที่แก้ไข ---
 
     const isStacked = customOptions.isStacked || false;
     const shouldRotateLabels = customOptions.rotateLabels || false;
     const originalLabels = customOptions.originalLabels || labels;
-    const unitLabel = customOptions.unitLabel || ''; // รับหน่วยมาใช้ใน Tooltip
+    const unitLabel = customOptions.unitLabel || '';
 
-    // เพิ่มคุณสมบัติ maxBarThickness ให้กับทุก dataset
     datasets.forEach(ds => {
         ds.maxBarThickness = 250;
     });
 
     const xScaleOptions = {
         stacked: isStacked,
-        ticks: {
-            color: '#ccc',
-            autoSkip: false,
-            maxRotation: shouldRotateLabels ? 45 : 0,
-            minRotation: shouldRotateLabels ? 45 : 0
-        },
+        ticks: { color: '#ccc', autoSkip: false, maxRotation: shouldRotateLabels ? 45 : 0, minRotation: shouldRotateLabels ? 45 : 0 },
         grid: { display: false }
     };
 
+    // ถ้า Chart ยังไม่มี ให้สร้างใหม่
     return new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 800 },
             plugins: {
-                legend: { 
-                    display: true,
-                    labels: { color: '#ccc' }
-                },
+                legend: { display: true, labels: { color: '#ccc' } },
                 title: { display: false },
                 tooltip: {
                     mode: 'index',
@@ -87,45 +97,29 @@ function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}
                             }
                             return '';
                         },
-                        // แก้ไข: เพิ่มหน่วยต่อท้ายตัวเลข
                         label: function(context) {
                             let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += context.parsed.y.toLocaleString() + ' ' + unitLabel;
-                            }
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) label += context.parsed.y.toLocaleString() + ' ' + unitLabel;
                             return label;
                         },
                         footer: (tooltipItems) => {
                             if (!isStacked) return '';
                             let sum = 0;
-                            tooltipItems.forEach(item => {
-                                sum += item.parsed.y || 0;
-                            });
+                            tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
                             return 'Total: ' + sum.toLocaleString() + ' ' + unitLabel;
                         }
                     }
                 },
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
-                    zoom: {
-                        wheel: { enabled: true },
-                        pinch: { enabled: true },
-                        mode: 'x'
-                    }
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
                 }
             },
             layout: { padding: 5 },
             scales: {
                 x: xScaleOptions,
-                y: {
-                    beginAtZero: true,
-                    stacked: isStacked,
-                    ticks: { color: '#ccc' },
-                    grid: { drawBorder: false, color: '#444' }
-                }
+                y: { beginAtZero: true, stacked: isStacked, ticks: { color: '#ccc' }, grid: { drawBorder: false, color: '#444' } }
             }
         }
     });
