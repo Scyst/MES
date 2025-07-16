@@ -37,6 +37,7 @@ try {
     //-- แยกการทำงานตาม Action ที่ได้รับ --
     switch ($action) {
         case 'read':
+            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             $stmt = $pdo->query("SELECT id, username, role, created_at, line FROM USERS WHERE role != 'creator' ORDER BY id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($users as &$user) {
@@ -46,142 +47,91 @@ try {
             break;
 
         case 'create':
-            if (!hasRole(['admin', 'creator'])) {
-                throw new Exception("Permission denied.");
-            }
+            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
+            if (!hasRole(['admin', 'creator'])) { throw new Exception("Permission denied."); }
             $username = trim($input['username'] ?? '');
             $password = trim($input['password'] ?? '');
             $role = trim($input['role'] ?? '');
             $line = ($role === 'supervisor') ? strtoupper(trim($input['line'] ?? '')) : null;
-
-            if (empty($username) || empty($password) || empty($role)) {
-                throw new Exception("Username, password, and role are required.");
-            }
-            if ($role === 'supervisor' && empty($line)) {
-                throw new Exception("Line is required for supervisor role.");
-            }
-            if ($role === 'creator') {
-                throw new Exception("Cannot create a user with the 'creator' role.");
-            }
-            if ($role === 'admin' && !hasRole('creator')) {
-                throw new Exception("Only creators can create admin users.");
-            }
-
+            if (empty($username) || empty($password) || empty($role)) { throw new Exception("Username, password, and role are required."); }
+            if ($role === 'supervisor' && empty($line)) { throw new Exception("Line is required for supervisor role.");}
+            if ($role === 'creator') { throw new Exception("Cannot create a user with the 'creator' role."); }
+            if ($role === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can create admin users."); }
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $sql = "INSERT INTO USERS (username, password, role, line) VALUES (?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            
-            // ===== จุดที่แก้ไข =====
             $stmt->execute([$username, $hashedPassword, $role, $line]);
-
             logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line");
             echo json_encode(['success' => true, 'message' => 'User created successfully.']);
             break;
 
         case 'update':
+            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             $targetId = (int)($input['id'] ?? 0);
             if (!$targetId) throw new Exception("Target user ID is required.");
-
             $stmt = $pdo->prepare("SELECT id, username, role FROM USERS WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("Target user not found.");
-
             if ($targetUser['role'] === 'creator') throw new Exception("Creator accounts cannot be modified.");
-            
             $isEditingSelf = ($targetId === (int)$currentUser['id']);
-            
             if (hasRole('admin') && !hasRole('creator')) {
-                if (!$isEditingSelf && $targetUser['role'] === 'admin') {
-                    throw new Exception("Admins cannot modify other admins.");
-                }
+                if (!$isEditingSelf && $targetUser['role'] === 'admin') { throw new Exception("Admins cannot modify other admins."); }
             }
-
-            $updateFields = [];
-            $params = [];
-            $logDetails = [];
-
+            $updateFields = []; $params = []; $logDetails = [];
             if (!$isEditingSelf || hasRole('creator')) {
                 if (isset($input['username']) && $input['username'] !== $targetUser['username']) {
-                    $updateFields[] = "username = ?";
-                    $params[] = trim($input['username']);
-                    $logDetails[] = "username to " . trim($input['username']);
+                    $updateFields[] = "username = ?"; $params[] = trim($input['username']); $logDetails[] = "username to " . trim($input['username']);
                 }
                 if (isset($input['role']) && $input['role'] !== $targetUser['role']) {
-                    if ($input['role'] === 'admin' && !hasRole('creator')) {
-                         throw new Exception("Only creators can promote users to admin.");
-                    }
-                    $updateFields[] = "role = ?";
-                    $params[] = trim($input['role']);
-                    $logDetails[] = "role to " . trim($input['role']);
+                    if ($input['role'] === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can promote users to admin."); }
+                    $updateFields[] = "role = ?"; $params[] = trim($input['role']); $logDetails[] = "role to " . trim($input['role']);
                 }
             }
-
             if (isset($input['role']) && $input['role'] === 'supervisor') {
                 $line = strtoupper(trim($input['line'] ?? ''));
-                 if (empty($line)) {
-                     throw new Exception("Line is required for supervisor role.");
-                 }
-                $updateFields[] = "line = ?";
-                $params[] = $line;
-                $logDetails[] = "line to " . $line;
+                if (empty($line)) { throw new Exception("Line is required for supervisor role."); }
+                $updateFields[] = "line = ?"; $params[] = $line; $logDetails[] = "line to " . $line;
             } elseif (isset($input['role']) && $input['role'] !== 'supervisor') {
-                $updateFields[] = "line = NULL";
-                $logDetails[] = "line cleared";
+                $updateFields[] = "line = NULL"; $logDetails[] = "line cleared";
             }
-
             if (!empty($input['password'])) {
-                $updateFields[] = "password = ?";
-                $params[] = password_hash(trim($input['password']), PASSWORD_DEFAULT);
-                $logDetails[] = "password changed";
+                $updateFields[] = "password = ?"; $params[] = password_hash(trim($input['password']), PASSWORD_DEFAULT); $logDetails[] = "password changed";
             }
-            
-            if (empty($updateFields)) {
-                echo json_encode(['success' => true, 'message' => 'No changes were made.']);
-                break;
-            }
-
+            if (empty($updateFields)) { echo json_encode(['success' => true, 'message' => 'No changes were made.']); break; }
             $sql = "UPDATE USERS SET " . implode(', ', $updateFields) . " WHERE id = ?";
             $params[] = $targetId;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            
             logAction($pdo, $currentUser['username'], 'UPDATE USER', $targetUser['username'], implode(', ', $logDetails));
             echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             break;
             
         case 'delete':
+            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             $targetId = (int)($_REQUEST['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
-
-            if ($targetId === (int)$currentUser['id']) {
-                throw new Exception("You cannot delete your own account.");
-            }
-
+            if ($targetId === (int)$currentUser['id']) { throw new Exception("You cannot delete your own account."); }
             $stmt = $pdo->prepare("SELECT username, role FROM USERS WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("User not found.");
-
-            if ($targetUser['role'] === 'creator') {
-                throw new Exception("Creator accounts cannot be deleted."); 
-            }
-            if ($targetUser['role'] === 'admin' && !hasRole('creator')) {
-                throw new Exception("Permission denied. Only creators can delete other admins.");
-            }
-
+            if ($targetUser['role'] === 'creator') { throw new Exception("Creator accounts cannot be deleted."); }
+            if ($targetUser['role'] === 'admin' && !hasRole('creator')) { throw new Exception("Permission denied. Only creators can delete other admins."); }
             $deleteStmt = $pdo->prepare("DELETE FROM USERS WHERE id = ?");
             $deleteStmt->execute([$targetId]);
-
             logAction($pdo, $currentUser['username'], 'DELETE USER', $targetUser['username']);
             echo json_encode(['success' => true, 'message' => 'User deleted successfully.']);
             break;
             
+        // ===== จุดที่แก้ไข: case 'logs' =====
         case 'logs':
+            // รับค่าฟิลเตอร์ทั้งหมด
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startDate = $_GET['startDate'] ?? null;
             $endDate = $_GET['endDate'] ?? null;
+            // -- รับค่าฟิลเตอร์ใหม่ --
             $userFilter = $_GET['user'] ?? null;
             $actionFilter = $_GET['action_type'] ?? null;
             $targetFilter = $_GET['target'] ?? null;
@@ -191,6 +141,7 @@ try {
             $conditions = [];
             $params = [];
 
+            // -- สร้างเงื่อนไขจากฟิลเตอร์ทั้งหมด --
             if ($startDate) {
                 $conditions[] = "CAST(created_at AS DATE) >= ?";
                 $params[] = $startDate;

@@ -1,15 +1,10 @@
-// userManage.js (เวอร์ชันปรับปรุง)
+// userManage.js (เวอร์ชันปรับปรุง Pagination)
 
 //-- Global Variables & Constants --
 const API_URL = '../../api/userManage/userManage.php';
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
- * @param {string} action - Action ที่จะส่งไปใน Query String
- * @param {string} method - HTTP Method (GET, POST)
- * @param {object|null} body - ข้อมูลที่จะส่งไปใน Request Body
- * @param {object} urlParams - Parameters เพิ่มเติมสำหรับ URL
- * @returns {Promise<object>} ผลลัพธ์ที่ได้จาก API
  */
 async function sendRequest(action, method, body = null, urlParams = {}) {
     try {
@@ -18,10 +13,7 @@ async function sendRequest(action, method, body = null, urlParams = {}) {
         const url = `${API_URL}?${queryString}`;
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const options = {
-            method,
-            headers: {},
-        };
+        const options = { method, headers: {} };
 
         if (body) {
             options.headers['Content-Type'] = 'application/json';
@@ -64,6 +56,7 @@ async function loadUsers() {
 
 function renderUserTable(usersToRender) {
     const tbody = document.getElementById('userTable');
+    if (!tbody) return;
     tbody.innerHTML = '';
     if (!usersToRender || usersToRender.length === 0) {
         const colSpan = canManage ? 6 : 5;
@@ -126,7 +119,6 @@ async function deleteUser(id) {
 let logTabInitialized = false;
 
 async function fetchLogs(page = 1) {
-    // ===== ดึงค่าจากฟิลเตอร์ใหม่ =====
     const userFilter = document.getElementById('logUserFilter').value;
     const actionFilter = document.getElementById('logActionFilter').value;
     const targetFilter = document.getElementById('logTargetFilter').value;
@@ -135,7 +127,6 @@ async function fetchLogs(page = 1) {
     
     const params = { page, limit: 50 };
 
-    // ===== เพิ่มฟิลเตอร์ใหม่เข้าไปใน Parameters หากมีค่า =====
     if (userFilter) params.user = userFilter;
     if (actionFilter) params.action_type = actionFilter;
     if (targetFilter) params.target = targetFilter;
@@ -147,12 +138,16 @@ async function fetchLogs(page = 1) {
         renderLogTable(result.data);
         renderLogPagination(result.page, Math.ceil(result.total / result.limit));
     } else {
-        document.getElementById('log-table').innerHTML = `<tbody><tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr></tbody>`;
+        const logTable = document.getElementById('log-table');
+        if (logTable) {
+            logTable.innerHTML = `<tbody><tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr></tbody>`;
+        }
     }
 }
 
 function renderLogTable(logs) {
     const table = document.getElementById('log-table');
+    if (!table) return;
     table.innerHTML = `
         <thead class="table-dark">
             <tr>
@@ -167,7 +162,7 @@ function renderLogTable(logs) {
     const tbody = table.querySelector('tbody');
 
     if (!logs || logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No logs found for the selected period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No logs found for the selected filters.</td></tr>`;
         return;
     }
 
@@ -183,8 +178,12 @@ function renderLogTable(logs) {
     });
 }
 
+/**
+ * ===== ฟังก์ชัน Pagination ที่ปรับปรุงใหม่ =====
+ */
 function renderLogPagination(currentPage, totalPages) {
     const container = document.getElementById('log-pagination');
+    if (!container) return;
     container.innerHTML = '';
     if (totalPages <= 1) return;
 
@@ -202,11 +201,58 @@ function renderLogPagination(currentPage, totalPages) {
         li.appendChild(a);
         return li;
     };
+    
+    const createEllipsis = () => {
+        const li = document.createElement('li');
+        li.className = 'page-item disabled';
+        const span = document.createElement('span');
+        span.className = 'page-link';
+        span.textContent = '...';
+        li.appendChild(span);
+        return li;
+    };
 
     ul.appendChild(createPageItem('Previous', currentPage - 1, currentPage === 1));
-    for (let i = 1; i <= totalPages; i++) {
-        ul.appendChild(createPageItem(i, i, false, i === currentPage));
+
+    if (totalPages <= 7) { // ถ้ามีไม่เกิน 7 หน้า ให้แสดงทั้งหมด
+        for (let i = 1; i <= totalPages; i++) {
+            ul.appendChild(createPageItem(i, i, false, i === currentPage));
+        }
+    } else { // ถ้ามีมากกว่า 7 หน้า ให้แสดงแบบย่อ
+        // แสดงหน้า 1 เสมอ
+        ul.appendChild(createPageItem(1, 1, false, currentPage === 1));
+
+        // แสดง ... หลังหน้า 1
+        if (currentPage > 4) {
+            ul.appendChild(createEllipsis());
+        }
+
+        // คำนวณช่วงของหน้าที่แสดง
+        let startPage = Math.max(2, currentPage - 2);
+        let endPage = Math.min(totalPages - 1, currentPage + 2);
+
+        if (currentPage <= 4) {
+            startPage = 2;
+            endPage = 5;
+        }
+        if (currentPage >= totalPages - 3) {
+            startPage = totalPages - 4;
+            endPage = totalPages - 1;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            ul.appendChild(createPageItem(i, i, false, i === currentPage));
+        }
+
+        // แสดง ... ก่อนหน้าสุดท้าย
+        if (currentPage < totalPages - 3) {
+            ul.appendChild(createEllipsis());
+        }
+        
+        // แสดงหน้าสุดท้ายเสมอ
+        ul.appendChild(createPageItem(totalPages, totalPages, false, currentPage === totalPages));
     }
+
     ul.appendChild(createPageItem('Next', currentPage + 1, currentPage === totalPages));
     container.appendChild(ul);
 }
@@ -220,6 +266,8 @@ function updateControls(activeTabId) {
     const userFilters = document.getElementById('user-filters');
     const logFilters = document.getElementById('log-filters');
     const buttonGroup = document.getElementById('dynamic-button-group');
+
+    if (!userFilters || !logFilters || !buttonGroup) return;
 
     buttonGroup.innerHTML = '';
 
@@ -244,42 +292,57 @@ function updateControls(activeTabId) {
 document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
 
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filteredUsers = allUsers.filter(user =>
-            user.username.toLowerCase().includes(searchTerm) ||
-            user.role.toLowerCase().includes(searchTerm) ||
-            (user.line && user.line.toLowerCase().includes(searchTerm))
-        );
-        renderUserTable(filteredUsers);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user =>
+                user.username.toLowerCase().includes(searchTerm) ||
+                user.role.toLowerCase().includes(searchTerm) ||
+                (user.line && user.line.toLowerCase().includes(searchTerm))
+            );
+            renderUserTable(filteredUsers);
+        });
+    }
+
+    const logFilterIds = ['logUserFilter', 'logActionFilter', 'logTargetFilter', 'logStartDate', 'logEndDate'];
+    logFilterIds.forEach(id => {
+        const inputElement = document.getElementById(id);
+        if (inputElement) {
+            inputElement.addEventListener('input', () => {
+                clearTimeout(window.logFilterTimer);
+                window.logFilterTimer = setTimeout(() => fetchLogs(1), 500);
+            });
+        }
     });
 
     const mainTabs = document.querySelectorAll('#userManagementTab button[data-bs-toggle="tab"]');
-    mainTabs.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', (event) => {
-            const activeTabId = event.target.id;
-            updateControls(activeTabId);
+    if (mainTabs) {
+        mainTabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', (event) => {
+                const activeTabId = event.target.id;
+                updateControls(activeTabId);
 
-            if (activeTabId === 'logs-tab' && !logTabInitialized) {
-                fetchLogs(1);
-                logTabInitialized = true;
+                if (activeTabId === 'logs-tab' && !logTabInitialized) {
+                    fetchLogs(1);
+                    logTabInitialized = true;
+                }
+            });
+        });
+    }
+    
+    const logPagination = document.getElementById('log-pagination');
+    if (logPagination) {
+        logPagination.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') {
+                e.preventDefault();
+                const page = parseInt(e.target.dataset.page);
+                if (!isNaN(page)) {
+                    fetchLogs(page);
+                }
             }
         });
-    });
-
-    document.getElementById('filterLogsBtn').addEventListener('click', () => {
-        fetchLogs(1);
-    });
-
-    document.getElementById('log-pagination').addEventListener('click', (e) => {
-        if (e.target.tagName === 'A') {
-            e.preventDefault();
-            const page = parseInt(e.target.dataset.page);
-            if (!isNaN(page)) {
-                fetchLogs(page);
-            }
-        }
-    });
+    }
     
     const activeTab = document.querySelector('#userManagementTab .nav-link.active');
     if (activeTab) {

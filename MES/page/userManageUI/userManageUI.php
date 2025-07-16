@@ -1,5 +1,5 @@
 <?php
-// userManageUI.php (เวอร์ชันปรับปรุง)
+// userManageUI.php (เวอร์ชันปรับปรุงสไตล์ฟิลเตอร์)
 include_once("../../auth/check_auth.php");
 
 if (!hasRole(['admin', 'creator'])) {
@@ -17,10 +17,6 @@ $canManage = hasRole(['admin', 'creator']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <title>User Manager</title>
-    <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
-    <script src="../../utils/libs/jspdf.umd.min.js"></script>
-    <script src="../../utils/libs/jspdf.plugin.autotable.js"></script>
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
     <link rel="stylesheet" href="../../style/style.css">
@@ -44,30 +40,26 @@ $canManage = hasRole(['admin', 'creator']);
         </ul>
 
         <div class="row my-3 align-items-center sticky-bar py-3">
-            <div class="col-md-8">
+            <div class="col-lg-9 col-md-8">
                 <div class="filter-controls-wrapper">
                     <div id="user-filters">
                         <input type="text" class="form-control" id="searchInput" placeholder="Search users by username, role, or line...">
                     </div>
                     <div id="log-filters" class="d-none">
-                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <input type="text" id="logUserFilter" class="form-control form-control-sm" placeholder="Filter User...">
-                            <input type="text" id="logActionFilter" class="form-control form-control-sm" placeholder="Filter Action...">
-                            <input type="text" id="logTargetFilter" class="form-control form-control-sm" placeholder="Filter Target...">
-                            <input type="date" id="logStartDate" class="form-control form-control-sm">
+                         <div class="filter-controls-wrapper">
+                            <input type="text" id="logUserFilter" class="form-control" placeholder="User">
+                            <input type="text" id="logActionFilter" class="form-control" placeholder="Action">
+                            <input type="text" id="logTargetFilter" class="form-control" placeholder="Target">
+                            <input type="date" id="logStartDate" class="form-control">
                             <span>-</span>
-                            <input type="date" id="logEndDate" class="form-control form-control-sm">
-                            <button id="filterLogsBtn" class="btn btn-info btn-sm text-nowrap">Search</button>
+                            <input type="date" id="logEndDate" class="form-control">
                          </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-lg-3 col-md-4">
                 <div id="dynamic-button-group" class="d-flex justify-content-end gap-2">
-                     <?php if ($canManage): ?>
-                        <button class="btn btn-success" onclick="openModal('addUserModal')">Add New User</button>
-                    <?php endif; ?>
-                </div>
+                    </div>
             </div>
         </div>
 
@@ -97,8 +89,7 @@ $canManage = hasRole(['admin', 'creator']);
                     <table class="table table-dark table-striped table-hover" id="log-table">
                         </table>
                 </div>
-                <div id="log-pagination" class="d-flex justify-content-end mt-3">
-                    </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="log-pagination"></ul></nav>
             </div>
         </div>
     </div>
