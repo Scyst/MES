@@ -1,22 +1,22 @@
+// userManage.js (เวอร์ชันปรับปรุง)
+
 //-- Global Variables & Constants --
-let allUsers = []; //-- Array สำหรับเก็บข้อมูลผู้ใช้ทั้งหมดที่ดึงมาจาก API --
 const API_URL = '../../api/userManage/userManage.php';
 
 /**
- * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
- * @param {string} action - Action ที่จะส่งไปใน Query String
- * @param {string} method - HTTP Method (GET, POST)
- * @param {object|null} body - ข้อมูลที่จะส่งไปใน Request Body
- * @param {object} urlParams - Parameters เพิ่มเติมสำหรับ URL
- * @returns {Promise<object>} ผลลัพธ์ที่ได้จาก API
- */
+ * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
+ * @param {string} action - Action ที่จะส่งไปใน Query String
+ * @param {string} method - HTTP Method (GET, POST)
+ * @param {object|null} body - ข้อมูลที่จะส่งไปใน Request Body
+ * @param {object} urlParams - Parameters เพิ่มเติมสำหรับ URL
+ * @returns {Promise<object>} ผลลัพธ์ที่ได้จาก API
+ */
 async function sendRequest(action, method, body = null, urlParams = {}) {
     try {
         urlParams.action = action;
         const queryString = new URLSearchParams(urlParams).toString();
         const url = `${API_URL}?${queryString}`;
 
-        //-- ดึง CSRF Token จาก Meta Tag --
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const options = {
             method,
@@ -28,11 +28,10 @@ async function sendRequest(action, method, body = null, urlParams = {}) {
             options.body = JSON.stringify(body);
         }
 
-        //-- เพิ่ม CSRF Token ใน Header หากไม่ใช่ GET Request --
         if (method.toUpperCase() !== 'GET' && csrfToken) {
             options.headers['X-CSRF-TOKEN'] = csrfToken;
         }
-        
+
         const response = await fetch(url, options);
         if (!response.ok) {
             const errorText = await response.text();
@@ -46,80 +45,57 @@ async function sendRequest(action, method, body = null, urlParams = {}) {
     }
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูลผู้ใช้ทั้งหมดและสั่ง Render ตาราง
- */
+
+// ==============================================
+//  SECTION: USER LIST MANAGEMENT
+// ==============================================
+
+let allUsers = [];
+
 async function loadUsers() {
     const result = await sendRequest('read', 'GET');
     if (result && result.success) {
-        allUsers = result.data; //-- เก็บข้อมูลไว้ในตัวแปร Global --
-        renderTable();
+        allUsers = result.data;
+        renderUserTable(allUsers);
     } else {
         showToast(result?.message || 'Failed to load users.', '#dc3545');
     }
 }
 
-/**
- * ฟังก์ชันสำหรับ Render ตารางข้อมูลผู้ใช้
- */
-function renderTable() {
+function renderUserTable(usersToRender) {
     const tbody = document.getElementById('userTable');
     tbody.innerHTML = '';
-    //-- กรณีไม่พบข้อมูล --
-    if (!allUsers || allUsers.length === 0) {
+    if (!usersToRender || usersToRender.length === 0) {
         const colSpan = canManage ? 6 : 5;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No users found.</td></tr>`;
         return;
     }
 
-    allUsers.forEach(user => {
+    usersToRender.forEach(user => {
         const tr = document.createElement('tr');
-        tr.dataset.id = user.id;
+        tr.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td>${user.role}</td>
+            <td>${user.line || '-'}</td>
+            <td>${user.created_at || 'N/A'}</td>
+            ${canManage ? `<td class="text-center"></td>` : ''}
+        `;
 
-        const createCell = (text) => {
-            const td = document.createElement('td');
-            td.textContent = text;
-            return td;
-        };
-
-        tr.appendChild(createCell(user.id));
-        tr.appendChild(createCell(user.username));
-        tr.appendChild(createCell(user.role));
-        tr.appendChild(createCell(user.line || '-'));
-        tr.appendChild(createCell(user.created_at || 'N/A'));
-
-        //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ (canManage มาจาก PHP) --
         if (canManage) {
-            const actionsTd = document.createElement('td');
-            actionsTd.className = 'text-center';
-
+            const actionsTd = tr.querySelector('.text-center');
             const buttonWrapper = document.createElement('div');
             buttonWrapper.className = 'd-flex gap-1 btn-group-equal';
 
             const isSelf = (user.id === currentUserId);
+            const canEditTarget = (currentUserRole === 'creator') || (currentUserRole === 'admin' && user.role !== 'admin' && user.role !== 'creator') || isSelf;
+            const canDeleteTarget = !isSelf && ((currentUserRole === 'creator' && user.role !== 'creator') || (currentUserRole === 'admin' && user.role !== 'admin' && user.role !== 'creator'));
 
-            //-- ตรรกะตรวจสอบสิทธิ์ในการแก้ไข (Edit) --
-            // 1. Creator แก้ไขได้ทุกคน
-            // 2. Admin แก้ไขคนที่ไม่ใช่ Admin/Creator ได้
-            // 3. ทุกคนแก้ไขตัวเองได้
-            const canEditTarget = (currentUserRole === 'creator') || 
-                                  (currentUserRole === 'admin' && user.role !== 'admin' && user.role !== 'creator') ||
-                                  isSelf;
-
-            //-- ตรรกะตรวจสอบสิทธิ์ในการลบ (Delete) --
-            // 1. ห้ามลบตัวเอง
-            // 2. Creator ลบได้ทุกคนที่ไม่ใช่ Creator
-            // 3. Admin ลบได้ทุกคนที่ไม่ใช่ Admin/Creator
-            const canDeleteTarget = !isSelf && 
-                                    ((currentUserRole === 'creator' && user.role !== 'creator') || 
-                                     (currentUserRole === 'admin' && user.role !== 'admin' && user.role !== 'creator'));
-
-            //-- สร้างปุ่มตามสิทธิ์ --
             if (canEditTarget) {
                 const editButton = document.createElement('button');
                 editButton.className = 'btn btn-sm btn-warning flex-fill';
                 editButton.textContent = 'Edit';
-                editButton.addEventListener('click', () => openEditUserModal(user));
+                editButton.onclick = () => openEditUserModal(user);
                 buttonWrapper.appendChild(editButton);
             }
 
@@ -127,21 +103,15 @@ function renderTable() {
                 const deleteButton = document.createElement('button');
                 deleteButton.className = 'btn btn-sm btn-danger flex-fill';
                 deleteButton.textContent = 'Delete';
-                deleteButton.addEventListener('click', () => deleteUser(user.id));
+                deleteButton.onclick = () => deleteUser(user.id);
                 buttonWrapper.appendChild(deleteButton);
             }
-            
             actionsTd.appendChild(buttonWrapper);
-            tr.appendChild(actionsTd);
         }
-
         tbody.appendChild(tr);
     });
 }
 
-/**
- * ฟังก์ชันสำหรับจัดการการลบข้อมูลผู้ใช้
- */
 async function deleteUser(id) {
     if (!confirm(`Are you sure you want to delete user ID ${id}?`)) return;
     const result = await sendRequest('delete', 'GET', null, { id });
@@ -149,56 +119,170 @@ async function deleteUser(id) {
     if (result.success) loadUsers();
 }
 
-/**
- * ฟังก์ชันสำหรับดึงและแสดงผลข้อมูล Log
- */
-async function loadLogs() {
-    const tbody = document.getElementById('logTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+// ==============================================
+//  SECTION: USER LOGS MANAGEMENT
+// ==============================================
+
+let logTabInitialized = false;
+
+async function fetchLogs(page = 1) {
+    // ===== ดึงค่าจากฟิลเตอร์ใหม่ =====
+    const userFilter = document.getElementById('logUserFilter').value;
+    const actionFilter = document.getElementById('logActionFilter').value;
+    const targetFilter = document.getElementById('logTargetFilter').value;
+    const startDate = document.getElementById('logStartDate').value;
+    const endDate = document.getElementById('logEndDate').value;
     
-    //-- ฟังก์ชันย่อยสำหรับแสดง Error ในตาราง --
-    const renderError = (message) => {
-        tbody.innerHTML = '';
-        const tr = tbody.insertRow();
-        const td = tr.insertCell();
-        td.colSpan = 6;
-        td.className = 'text-center text-danger';
-        td.textContent = message;
-    };
+    const params = { page, limit: 50 };
 
-    try {
-        const result = await sendRequest('logs', 'GET');
-        tbody.innerHTML = '';
+    // ===== เพิ่มฟิลเตอร์ใหม่เข้าไปใน Parameters หากมีค่า =====
+    if (userFilter) params.user = userFilter;
+    if (actionFilter) params.action_type = actionFilter;
+    if (targetFilter) params.target = targetFilter;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
 
-        if (result.success) {
-            if (result.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No logs found.</td></tr>';
-                return;
-            }
-            result.data.forEach(log => {
-                const tr = tbody.insertRow();
-                const createCell = (text) => {
-                    const td = tr.insertCell();
-                    td.textContent = text;
-                };
-
-                createCell(log.id);
-                createCell(log.action_by);
-                createCell(log.action_type);
-                createCell(log.target_user || '-');
-                createCell(log.detail || '-');
-                createCell(log.created_at);
-            });
-        } else {
-            renderError(result.message || 'An error occurred.');
-        }
-    } catch (error) {
-        renderError('Failed to load logs.');
+    const result = await sendRequest('logs', 'GET', null, params);
+    if (result.success) {
+        renderLogTable(result.data);
+        renderLogPagination(result.page, Math.ceil(result.total / result.limit));
+    } else {
+        document.getElementById('log-table').innerHTML = `<tbody><tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr></tbody>`;
     }
 }
 
-//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
+function renderLogTable(logs) {
+    const table = document.getElementById('log-table');
+    table.innerHTML = `
+        <thead class="table-dark">
+            <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody></tbody>`;
+    const tbody = table.querySelector('tbody');
+
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No logs found for the selected period.</td></tr>`;
+        return;
+    }
+
+    logs.forEach(log => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${log.created_at}</td>
+            <td>${log.action_by}</td>
+            <td>${log.action_type}</td>
+            <td>${log.target_user || '-'}</td>
+            <td>${log.detail || '-'}</td>
+        `;
+    });
+}
+
+function renderLogPagination(currentPage, totalPages) {
+    const container = document.getElementById('log-pagination');
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const ul = document.createElement('ul');
+    ul.className = 'pagination pagination-sm';
+
+    const createPageItem = (text, page, isDisabled = false, isActive = false) => {
+        const li = document.createElement('li');
+        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = text;
+        a.dataset.page = page;
+        li.appendChild(a);
+        return li;
+    };
+
+    ul.appendChild(createPageItem('Previous', currentPage - 1, currentPage === 1));
+    for (let i = 1; i <= totalPages; i++) {
+        ul.appendChild(createPageItem(i, i, false, i === currentPage));
+    }
+    ul.appendChild(createPageItem('Next', currentPage + 1, currentPage === totalPages));
+    container.appendChild(ul);
+}
+
+
+// ==============================================
+//  SECTION: DYNAMIC UI & EVENT LISTENERS
+// ==============================================
+
+function updateControls(activeTabId) {
+    const userFilters = document.getElementById('user-filters');
+    const logFilters = document.getElementById('log-filters');
+    const buttonGroup = document.getElementById('dynamic-button-group');
+
+    buttonGroup.innerHTML = '';
+
+    if (activeTabId === 'users-tab') {
+        userFilters.classList.remove('d-none');
+        logFilters.classList.add('d-none');
+        
+        if (canManage) {
+            const addButton = document.createElement('button');
+            addButton.className = 'btn btn-success';
+            addButton.textContent = 'Add New User';
+            addButton.onclick = () => openModal('addUserModal');
+            buttonGroup.appendChild(addButton);
+        }
+    } else if (activeTabId === 'logs-tab') {
+        userFilters.classList.add('d-none');
+        logFilters.classList.remove('d-none');
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
-    //-- โหลดข้อมูลตารางผู้ใช้ครั้งแรก --
     loadUsers();
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredUsers = allUsers.filter(user =>
+            user.username.toLowerCase().includes(searchTerm) ||
+            user.role.toLowerCase().includes(searchTerm) ||
+            (user.line && user.line.toLowerCase().includes(searchTerm))
+        );
+        renderUserTable(filteredUsers);
+    });
+
+    const mainTabs = document.querySelectorAll('#userManagementTab button[data-bs-toggle="tab"]');
+    mainTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', (event) => {
+            const activeTabId = event.target.id;
+            updateControls(activeTabId);
+
+            if (activeTabId === 'logs-tab' && !logTabInitialized) {
+                fetchLogs(1);
+                logTabInitialized = true;
+            }
+        });
+    });
+
+    document.getElementById('filterLogsBtn').addEventListener('click', () => {
+        fetchLogs(1);
+    });
+
+    document.getElementById('log-pagination').addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') {
+            e.preventDefault();
+            const page = parseInt(e.target.dataset.page);
+            if (!isNaN(page)) {
+                fetchLogs(page);
+            }
+        }
+    });
+    
+    const activeTab = document.querySelector('#userManagementTab .nav-link.active');
+    if (activeTab) {
+        updateControls(activeTab.id);
+    }
 });

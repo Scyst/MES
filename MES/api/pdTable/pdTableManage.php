@@ -30,7 +30,7 @@ function findBomComponents($pdo, $part_no, $line, $model) {
 }
 
 try {
-    $currentUser = $_SESSION['user'];
+    $currentUser = $_SESSION['user']; // สมมติว่า 'username' อยู่ใน $_SESSION['user']['username']
 
     switch ($action) {
         case 'get_parts':
@@ -118,6 +118,7 @@ try {
         case 'add_part':
             $pdo->beginTransaction();
             try {
+                // ... (โค้ดส่วนตรวจสอบข้อมูลและสร้าง Lot No. เหมือนเดิม)
                 $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
                 foreach ($required_fields as $field) {
                     if (empty($input[$field])) throw new Exception("Missing field: " . $field);
@@ -169,8 +170,6 @@ try {
                     $consumeStmt = $pdo->prepare($consumeSql);
                     foreach ($components as $comp) {
                         $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                        // === การแก้ไข ===
-                        // เปลี่ยน Note ให้อ้างอิงจาก Lot No. ของ FG
                         $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
                         $consumeStmt->execute([
                             $log_date, $log_time, $model, $line, 
@@ -182,7 +181,12 @@ try {
                 }
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'ADD PART', $lot_no, "{$line}-{$model}-{$part_no}");
+                
+                // ===== LOG ACTION (ADD_PART) - START =====
+                $detail = "Model: {$model}, Part No: {$part_no}, Lot No: " . strtoupper(trim($lot_no)) . ", Qty: {$fg_qty}, Type: {$count_type}";
+                logAction($pdo, $currentUser['username'], 'ADD_PART', $line, $detail);
+                // ===== LOG ACTION (ADD_PART) - END =====
+
                 echo json_encode(['success' => true, 'message' => 'Part recorded successfully.', 'lot_no' => $lot_no]);
 
             } catch (Exception $e) {
@@ -196,7 +200,8 @@ try {
             if (!$id) throw new Exception("Missing ID");
             $pdo->beginTransaction();
             try {
-                $findSql = "SELECT line, source_transaction_id FROM PARTS WHERE id = ?";
+                // ... (โค้ดส่วน update เหมือนเดิม)
+                $findSql = "SELECT * FROM PARTS WHERE id = ?"; // ดึงข้อมูลทั้งหมดเพื่อใช้ Log
                 $findStmt = $pdo->prepare($findSql);
                 $findStmt->execute([$id]);
                 $originalPart = $findStmt->fetch();
@@ -209,10 +214,10 @@ try {
                 $transaction_id = $originalPart['source_transaction_id'];
 
                 if ($transaction_id) {
+                    // ... โค้ดส่วน Re-add logic เหมือนเดิม ...
                     $deleteSql = "DELETE FROM PARTS WHERE source_transaction_id = ?";
                     $pdo->prepare($deleteSql)->execute([$transaction_id]);
                     
-                    // Re-add Logic (เหมือน add_part)
                     $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
                     foreach ($required_fields as $field) {
                         if (empty($input[$field])) throw new Exception("Missing field: " . $field);
@@ -247,8 +252,6 @@ try {
                         $consumeStmt = $pdo->prepare($consumeSql);
                         foreach ($components as $comp) {
                             $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                            // === การแก้ไข ===
-                            // เปลี่ยน Note ให้อ้างอิงจาก Lot No. ของ FG
                             $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
                             $consumeStmt->execute([
                                 $log_date, $input['log_time'], $model, $line, 
@@ -257,7 +260,12 @@ try {
                             ]);
                         }
                     }
-                    logAction($pdo, $currentUser['username'], 'REBUILD PART', $id, "Rebuilt part data.");
+
+                    // ===== LOG ACTION (UPDATE_PART - REBUILD) - START =====
+                    $detail = "ID: {$id}, Model: {$model}, Part No: {$part_no}, Lot No: " . strtoupper(trim($lot_no)) . ", Qty: {$fg_qty}, Type: {$count_type}";
+                    logAction($pdo, $currentUser['username'], 'UPDATE_PART', $line, $detail);
+                    // ===== LOG ACTION (UPDATE_PART - REBUILD) - END =====
+                    
                     echo json_encode(['success' => true, 'message' => 'Part and components updated successfully.']);
                 
                 } else {
@@ -268,7 +276,12 @@ try {
                         (int)$input['count_value'], strtoupper(trim($input['count_type'])),
                         $input['note'], $id
                     ]);
-                    logAction($pdo, $currentUser['username'], 'UPDATE PART', $id);
+
+                    // ===== LOG ACTION (UPDATE_PART - SIMPLE) - START =====
+                    $detail = "ID: {$id}, Model: {$input['model']}, Part No: {$input['part_no']}, Qty: {$input['count_value']}, Type: {$input['count_type']}";
+                    logAction($pdo, $currentUser['username'], 'UPDATE_PART', $input['line'], $detail);
+                    // ===== LOG ACTION (UPDATE_PART - SIMPLE) - END =====
+                    
                     echo json_encode(['success' => true, 'message' => 'Part updated successfully.']);
                 }
                 $pdo->commit();
@@ -279,32 +292,38 @@ try {
             break;
 
         case 'delete_part':
-            // ... ไม่มีการแก้ไข ...
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             $pdo->beginTransaction();
             try {
-                $findSql = "SELECT line, source_transaction_id FROM PARTS WHERE id = ?";
+                // ดึงข้อมูล Part ที่จะลบเพื่อใช้ในการบันทึก Log
+                $findSql = "SELECT * FROM PARTS WHERE id = ?";
                 $findStmt = $pdo->prepare($findSql);
                 $findStmt->execute([$id]);
                 $part = $findStmt->fetch();
+
                 if (!$part) throw new Exception("Part not found.");
                 
                 enforceLinePermission($part['line']);
                 $transaction_id = $part['source_transaction_id'];
 
+                // ===== สร้าง Detail สำหรับ Log ก่อนที่จะลบข้อมูล =====
+                $detail = "Deleted Part ID: {$id} | Model: {$part['model']}, Part No: {$part['part_no']}, Lot No: {$part['lot_no']}, Qty: {$part['count_value']}, Type: {$part['count_type']}";
+
                 if ($transaction_id) {
                     $deleteSql = "DELETE FROM PARTS WHERE source_transaction_id = ?";
                     $deleteStmt = $pdo->prepare($deleteSql);
                     $deleteStmt->execute([$transaction_id]);
-                    $rowCount = $deleteStmt->rowCount();
-                    logAction($pdo, $currentUser['username'], 'DELETE PART GROUP', $id, "Deleted $rowCount rows with transaction_id: $transaction_id");
+                    
+                    logAction($pdo, $currentUser['username'], 'DELETE_PART_GROUP', $part['line'], $detail . " | Tran. ID: {$transaction_id}");
                     echo json_encode(['success' => true, 'message' => 'FG and related components deleted successfully.']);
+
                 } else {
                     $deleteSql = "DELETE FROM PARTS WHERE id = ?";
                     $deleteStmt = $pdo->prepare($deleteSql);
                     $deleteStmt->execute([$id]);
-                    logAction($pdo, $currentUser['username'], 'DELETE PART', $id);
+                    
+                    logAction($pdo, $currentUser['username'], 'DELETE_PART', $part['line'], $detail);
                     echo json_encode(['success' => true, 'message' => 'Part deleted successfully.']);
                 }
                 $pdo->commit();
