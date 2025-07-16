@@ -58,7 +58,7 @@ try {
             break;
 
         case 'get_wip_report':
-            $params = []; 
+            $params = [];
             $parts_params = [];
             $wip_conditions = [];
             $parts_conditions = [];
@@ -73,14 +73,37 @@ try {
             if (!empty($_GET['line'])) { $wip_conditions[] = "wip.line = ?"; $params[] = $_GET['line']; $parts_conditions[] = "line = ?"; $parts_params[] = $_GET['line']; }
             if (!empty($_GET['part_no'])) { $wip_conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; $parts_conditions[] = "part_no = ?"; $parts_params[] = $_GET['part_no']; }
             if (!empty($_GET['model'])) { $wip_conditions[] = "wip.model = ?"; $params[] = $_GET['model']; $parts_conditions[] = "model = ?"; $parts_params[] = $_GET['model']; }
-            if (!empty($_GET['lot_no'])) { $wip_conditions[] = "wip.lot_no = ?"; $params[] = $_GET['lot_no']; $parts_conditions[] = "lot_no = ?"; $parts_params[] = $_GET['lot_no']; }
             if (!empty($_GET['startDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; $parts_conditions[] = "log_date >= ?"; $parts_params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; $parts_conditions[] = "log_date <= ?"; $parts_params[] = $_GET['endDate']; }
 
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             $partsWhereClause = $parts_conditions ? "WHERE " . implode(" AND ", $parts_conditions) : "";
+
+            $sql = "
+                WITH TotalIn AS (
+                    SELECT part_no, line, model, SUM(quantity_in) AS total_in 
+                    FROM WIP_ENTRIES wip 
+                    $wipWhereClause 
+                    GROUP BY part_no, line, model
+                ), 
+                TotalOut AS (
+                    SELECT part_no, line, model, SUM(count_value) AS total_out 
+                    FROM PARTS 
+                    $partsWhereClause 
+                    GROUP BY part_no, line, model
+                ) 
+                SELECT 
+                    ISNULL(tin.part_no, tout.part_no) AS part_no, 
+                    ISNULL(tin.line, tout.line) AS line, 
+                    ISNULL(tin.model, tout.model) as model, 
+                    ISNULL(tin.total_in, 0) AS total_in, 
+                    ISNULL(tout.total_out, 0) AS total_out, 
+                    (ISNULL(tin.total_in, 0) - ISNULL(tout.total_out, 0)) AS variance 
+                FROM TotalIn tin 
+                FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model 
+                ORDER BY line, model, part_no;
+            ";
             
-            $sql = "WITH TotalIn AS (SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model), TotalOut AS (SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS " . ($partsWhereClause ? $partsWhereClause . " AND count_type IN ('FG', 'BOM-ISSUE')" : "WHERE count_type IN ('FG', 'BOM-ISSUE')") . " GROUP BY part_no, line, model) SELECT ISNULL(tin.part_no, tout.part_no) AS part_no, ISNULL(tin.line, tout.line) AS line, ISNULL(tin.model, tout.model) as model, ISNULL(tin.total_in, 0) AS total_in, ISNULL(tout.total_out, 0) AS total_out, (ISNULL(tout.total_out, 0) - ISNULL(tin.total_in, 0)) AS variance FROM TotalIn tin FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model ORDER BY part_no, line, model;";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array_merge($params, $parts_params));
             $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
