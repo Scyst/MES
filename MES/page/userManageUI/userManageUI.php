@@ -53,6 +53,7 @@
                         <th>ID</th>
                         <th>Username</th>
                         <th>Role</th>
+                        <th>Line</th>
                         <th>Created at</th>
                         <?php if ($canManage): ?>
                             <th style="width: 150px; text-align: center;">Actions</th>

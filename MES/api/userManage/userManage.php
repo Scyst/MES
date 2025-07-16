@@ -35,7 +35,7 @@ try {
     switch ($action) {
         //-- อ่านข้อมูลผู้ใช้ทั้งหมด (ยกเว้น creator) --
         case 'read':
-            $stmt = $pdo->query("SELECT id, username, role, created_at FROM USERS WHERE role != 'creator' ORDER BY id ASC");
+            $stmt = $pdo->query("SELECT id, username, role, created_at, line FROM USERS WHERE role != 'creator' ORDER BY id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             // จัดรูปแบบวันที่
             foreach ($users as &$user) {

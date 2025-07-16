@@ -67,7 +67,7 @@ function renderTable() {
     tbody.innerHTML = '';
     //-- กรณีไม่พบข้อมูล --
     if (!allUsers || allUsers.length === 0) {
-        const colSpan = canManage ? 5 : 4;
+        const colSpan = canManage ? 6 : 5;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No users found.</td></tr>`;
         return;
     }
@@ -85,6 +85,7 @@ function renderTable() {
         tr.appendChild(createCell(user.id));
         tr.appendChild(createCell(user.username));
         tr.appendChild(createCell(user.role));
+        tr.appendChild(createCell(user.line || '-'));
         tr.appendChild(createCell(user.created_at || 'N/A'));
 
         //-- แสดงคอลัมน์ Actions หากผู้ใช้มีสิทธิ์ (canManage มาจาก PHP) --
