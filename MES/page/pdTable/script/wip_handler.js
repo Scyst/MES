@@ -66,6 +66,67 @@ async function fetchWipReport() {
 }
 
 /**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP แยกตาม Lot Number
+ */
+async function fetchWipReportByLot() {
+    const reportBody = document.getElementById('wipReportByLotTableBody');
+    if (!reportBody) return;
+    // ปรับ colspan เป็น 7 สำหรับตารางใหม่
+    reportBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Report by Lot...</td></tr>';
+    
+    const params = new URLSearchParams({
+        line: document.getElementById('filterLine')?.value || '',
+        part_no: document.getElementById('filterPartNo')?.value || '',
+        model: document.getElementById('filterModel')?.value || '',
+        lot_no: document.getElementById('filterLotNo')?.value || '',
+        startDate: document.getElementById('filterStartDate')?.value || '',
+        endDate: document.getElementById('filterEndDate')?.value || ''
+    });
+
+    try {
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+
+        // เก็บข้อมูลไว้ใน cache ชื่อใหม่
+        window.cachedWipReportByLot = result.report;
+
+        reportBody.innerHTML = '';
+        if (result.report.length === 0) {
+            reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP Lot found for the selected filters.</td></tr>';
+        } else {
+            result.report.forEach(item => {
+                const variance = parseInt(item.variance);
+                let textColorClass = '';
+                let varianceText = variance.toLocaleString();
+
+                if (variance > 0) {
+                    textColorClass = 'text-warning'; // WIP > 0
+                } else if (variance < 0) {
+                    textColorClass = 'text-danger'; // Over-produced
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.lot_no}</td>
+                    <td>${item.part_no}</td>
+                    <td>${item.line}</td>
+                    <td>${item.model}</td>
+                    <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
+                    <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
+                `;
+                reportBody.appendChild(tr);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to fetch WIP report by lot:', error);
+        window.cachedWipReportByLot = [];
+        reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+    }
+}
+
+/**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
  */
 async function fetchHistoryData() {

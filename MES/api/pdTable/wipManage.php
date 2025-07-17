@@ -197,6 +197,57 @@ try {
 
             echo json_encode(['success' => true, 'report' => $report_data]);
             break;
+
+        case 'get_wip_report_by_lot':
+            $params = [];
+            $conditions = [];
+
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "wip.line = ?";
+                $params[] = $currentUser['line'];
+            }
+
+            if (!empty($_GET['line'])) { $conditions[] = "wip.line = ?"; $params[] = $_GET['line']; }
+            if (!empty($_GET['part_no'])) { $conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; }
+            if (!empty($_GET['model'])) { $conditions[] = "wip.model = ?"; $params[] = $_GET['model']; }
+            if (!empty($_GET['lot_no'])) { $conditions[] = "wip.lot_no LIKE ?"; $params[] = "%".$_GET['lot_no']."%"; }
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+
+            $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            $sql = "
+                WITH 
+                WipLots AS (
+                    SELECT 
+                        wip.lot_no, wip.part_no, wip.line, wip.model, wip.quantity_in
+                    FROM WIP_ENTRIES wip
+                    $whereClause
+                ),
+                TotalOutByLot AS (
+                    SELECT 
+                        lot_no, SUM(ISNULL(count_value, 0)) as total_out
+                    FROM PARTS
+                    WHERE lot_no IS NOT NULL AND lot_no != ''
+                    GROUP BY lot_no
+                )
+                SELECT 
+                    w.lot_no, w.part_no, w.line, w.model,
+                    w.quantity_in AS total_in,
+                    ISNULL(o.total_out, 0) AS total_out,
+                    (w.quantity_in - ISNULL(o.total_out, 0)) AS variance
+                FROM WipLots w
+                LEFT JOIN TotalOutByLot o ON w.lot_no = o.lot_no
+                WHERE (w.quantity_in - ISNULL(o.total_out, 0)) != 0 
+                ORDER BY w.line, w.model, w.part_no, w.lot_no;
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'report' => $report_data]);
+            break;
             
         case 'get_wip_history':
             $params = [];

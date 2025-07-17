@@ -16,10 +16,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <title>Production & WIP</title>
-    <script src="../../utils/libs/jspdf.umd.min.js"></script>
-    <script src="../../utils/libs/jspdf.plugin.autotable.js"></script>
+
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
+    
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
     <link rel="stylesheet" href="../../style/style.css">
     <style>
@@ -40,6 +40,9 @@
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="wip-report-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-report-by-lot-pane" type="button" role="tab">WIP/Variance (Lot No.)</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
@@ -155,6 +158,25 @@
                 </div>
             </div>
 
+            <div class="tab-pane fade" id="wip-report-by-lot-pane" role="tabpanel">
+                <div class="table-responsive mb-4">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Lot Number</th>
+                                <th>Part Number</th>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th style="text-align: center;">Total In</th>
+                                <th style="text-align: center;">Total Out</th>
+                                <th style="text-align: center;">WIP/Variance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wipReportByLotTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
                 <div class="table-responsive mt-3">
                     <table class="table table-dark table-striped table-hover">
@@ -232,6 +254,12 @@
                     case 'wip-report-tab':
                         buttonGroup.innerHTML = `
                             <button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>
+                        `;
+                        break;
+
+                    case 'wip-report-by-lot-tab':
+                        buttonGroup.innerHTML = `
+                            <button class="btn btn-primary" onclick="exportWipReportByLotToExcel()">Export</button>
                         `;
                         break;
                 }

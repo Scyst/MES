@@ -255,6 +255,12 @@ function handleFilterChange() {
             }
             break;
 
+        case 'wip-report-by-lot-pane':
+            if (typeof fetchWipReportByLot === 'function') {
+                fetchWipReportByLot();
+            }
+            break;
+
         case 'stock-count-pane':
              // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้
             if (typeof fetchStockCountReport === 'function') {

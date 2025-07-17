@@ -280,3 +280,31 @@ function exportHistorySummaryToExcel() {
 
     XLSX.writeFile(wb, `Entry_History_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+// ===== ฟังก์ชันใหม่ที่เพิ่มเข้ามา =====
+/**
+ * ฟังก์ชันสำหรับ Export ข้อมูล WIP Report by Lot เป็นไฟล์ Excel
+ */
+function exportWipReportByLotToExcel() {
+    const reportData = window.cachedWipReportByLot || [];
+    if (reportData.length === 0) {
+        showToast("No WIP by Lot data to export.", '#ffc107');
+        return;
+    }
+
+    const dataToExport = reportData.map(row => ({
+        'Lot Number': row.lot_no,
+        'Part Number': row.part_no,
+        'Line': row.line,
+        'Model': row.model,
+        'Total In': parseInt(row.total_in),
+        'Total Out': parseInt(row.total_out),
+        'WIP/Variance': parseInt(row.variance)
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "WIP Report by Lot");
+    XLSX.writeFile(wb, `WIP_Report_by_Lot_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+// ===== สิ้นสุดฟังก์ชันใหม่ =====
