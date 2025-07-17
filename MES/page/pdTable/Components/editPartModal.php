@@ -10,15 +10,15 @@
                     <input type="hidden" name="id" id="edit_id">
 
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="mb-3">
                             <label for="edit_log_date" class="form-label">Log Date</label>
                             <input type="date" name="log_date" id="edit_log_date" class="form-control" required>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label for="edit_start_time" class="form-label">Start Time</label>
                             <input type="time" name="start_time" id="edit_start_time" step="1" class="form-control" required>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label for="edit_end_time" class="form-label">End Time</label>
                             <input type="time" name="end_time" id="edit_end_time" step="1" class="form-control" required>
                         </div>
