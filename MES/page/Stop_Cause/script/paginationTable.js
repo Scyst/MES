@@ -4,7 +4,7 @@ let totalPages = 1;
 const API_URL = '../../api/Stop_Cause/stopCauseManage.php';
 
 /**
- * ฟังก์ชันสำหรับแปลงรูปแบบวันที่และเวลาจาก YYYY-MM-DD HH:MM:SS เป็น DD/MM/YYYY HH:MM:SS
+ * ฟังก์ชันสำหรับแปลงรูปแบบวันที่และเวลาเป็น DD/MM/YYYY HH:MM:SS
  * @param {string} dateTimeString - ข้อความวันที่และเวลาที่ต้องการแปลง
  * @returns {string} ข้อความที่จัดรูปแบบใหม่แล้ว
  */
