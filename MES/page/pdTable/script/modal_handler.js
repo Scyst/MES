@@ -16,6 +16,7 @@ function openAddPartModal(triggerEl) {
     modalTriggerElement = triggerEl;
     const modal = document.getElementById('addPartModal');
     if (!modal) return;
+    
     const now = new Date();
     const tzOffset = 7 * 60 * 60 * 1000;
     const localNow = new Date(now.getTime() + tzOffset);
@@ -23,9 +24,9 @@ function openAddPartModal(triggerEl) {
     const timeStr = localNow.toISOString().split('T')[1].substring(0, 8);
     
     modal.querySelector('input[name="log_date"]').value = dateStr;
-    modal.querySelector('input[name="log_time"]').value = timeStr;
+    modal.querySelector('input[name="start_time"]').value = timeStr; // ตั้งค่าเวลาเริ่มต้น
+    modal.querySelector('input[name="end_time"]').value = timeStr;   // ตั้งค่าเวลาสิ้นสุด
 
-    // --- ส่วนที่เพิ่ม: กรอกข้อมูลล่าสุดอัตโนมัติ ---
     const lastData = JSON.parse(localStorage.getItem('lastEntryData'));
     if (lastData) {
         modal.querySelector('input[name="line"]').value = lastData.line || '';
@@ -35,14 +36,21 @@ function openAddPartModal(triggerEl) {
     showBootstrapModal('addPartModal');
 }
 
+
 function openEditModal(rowData, triggerEl) {
     modalTriggerElement = triggerEl; 
     const modal = document.getElementById('editPartModal');
     if (!modal) return;
+    
+    // ===== ส่วนที่แก้ไข: เติมข้อมูลลงในช่องที่ถูกต้อง =====
     for (const key in rowData) {
-        const input = modal.querySelector(`#edit_${key}`);
+        // เปลี่ยน log_time เป็น end_time สำหรับ input field
+        const inputKey = key === 'log_time' ? 'end_time' : key;
+        const input = modal.querySelector(`#edit_${inputKey}`);
+        
         if (input) {
-            if (key === 'log_time' && typeof rowData[key] === 'string') {
+            // จัดการ format ของเวลาให้เป็น HH:mm:ss
+            if ((key === 'log_time' || key === 'start_time') && typeof rowData[key] === 'string') {
                 input.value = rowData[key].substring(0, 8);
             } else {
                 input.value = rowData[key];
@@ -277,6 +285,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const addPartLotNoInput = document.getElementById('addPartLotNo');
+    const activeLotList = document.getElementById('activeLotList');
+
+    if (addPartLotNoInput && activeLotList) {
+        let debounceTimer;
+        addPartLotNoInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                const term = addPartLotNoInput.value;
+                const partNo = document.getElementById('addPartPartNo').value;
+                const line = document.getElementById('addPartLine').value;
+
+                if (term.length < 2 || !partNo || !line) {
+                    activeLotList.innerHTML = '';
+                    return;
+                }
+
+                try {
+                    const params = new URLSearchParams({ action: 'search_active_lots', part_no: partNo, line: line, term: term });
+                    const response = await fetch(`${WIP_API_URL}?${params.toString()}`);
+                    const result = await response.json();
+                    
+                    activeLotList.innerHTML = '';
+                    if (result.success && result.data) {
+                        result.data.forEach(lot => {
+                            const option = document.createElement('option');
+                            option.value = lot;
+                            activeLotList.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to search active lots:', error);
+                }
+            }, 500); // Debounce 500ms
+        });
+    }
 
     const addPartForm = document.getElementById('addPartForm');
     if (addPartForm) {

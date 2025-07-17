@@ -7,40 +7,47 @@
             </div>
             <div class="modal-body">
                 <form id="addPartForm">
+                    <div class="mb-3">
+                        <label for="addPartLogDate" class="form-label">Log Date</label>
+                        <input type="date" id="addPartLogDate" name="log_date" class="form-control" required>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="addPartLogDate" class="form-label">Log Date</label>
-                            <input type="date" id="addPartLogDate" name="log_date" class="form-control" required>
+                            <label for="addPartStartTime" class="form-label">Start Time</label>
+                            <input type="time" id="addPartStartTime" name="start_time" step="1" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="addPartLogTime" class="form-label">Log Time</label>
-                            <input type="time" id="addPartLogTime" name="log_time" step="1" class="form-control" required>
+                            <label for="addPartEndTime" class="form-label">End Time</label>
+                            <input type="time" id="addPartEndTime" name="end_time" step="1" class="form-control" required>
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="addPartLine" class="form-label">Line</label>
-                        <input list="lineList" id="addPartLine" name="line" class="form-control text-uppercase" placeholder="Select or type Line" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="addPartModel" class="form-label">Model</label>
-                        <input list="modelList" id="addPartModel" name="model" class="form-control text-uppercase" placeholder="Select or type Model" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="addPartPartNo" class="form-label">Part No.</label>
-                        <input list="partList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type Part No." required>
-                    </div>
-                    
-                    <div class="mb-3" style="display: none;">
-                        <label for="add_lot_no" class="form-label">Lot No.</label>
-                        <input type="text" name="lot_no" id="add_lot_no" class="form-control text-uppercase" placeholder="Scan or type Lot No. to record output">
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="addPartCountValue" class="form-label">Count Value</label>
+                           <label for="addPartLine" class="form-label">Line</label>
+                           <input list="lineList" id="addPartLine" name="line" class="form-control text-uppercase" placeholder="Select or type Line" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                           <label for="addPartModel" class="form-label">Model</label>
+                           <input list="modelList" id="addPartModel" name="model" class="form-control text-uppercase" placeholder="Select or type Model" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                       <label for="addPartPartNo" class="form-label">Part No.</label>
+                       <input list="partNoList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type part no..." required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="addPartLotNo" class="form-label">Base Lot No. (ค้นหาจาก Lot ที่ยังค้างใน WIP)</label>
+                        <input list="activeLotList" id="addPartLotNo" name="lot_no" class="form-control text-uppercase" placeholder="ค้นหา Lot No. ที่ยังผลิตไม่เสร็จ..." required>
+                        <datalist id="activeLotList"></datalist>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="addPartCountValue" class="form-label">Quantity</label>
                             <input type="number" id="addPartCountValue" name="count_value" class="form-control" placeholder="Enter value" required>
                         </div>
                         <div class="col-md-6 mb-3">

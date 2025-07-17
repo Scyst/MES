@@ -408,6 +408,51 @@ try {
             echo json_encode(['success' => true, 'data' => $stock_data]);
             break;
 
+        case 'search_active_lots':
+            $part_no = $_GET['part_no'] ?? '';
+            $line = $_GET['line'] ?? '';
+            $term = $_GET['term'] ?? '';
+
+            if (empty($part_no) || empty($line)) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+
+            $params = [$part_no, $line];
+            $lot_condition = "";
+            if (!empty($term)) {
+                $lot_condition = " AND wip.lot_no LIKE ?";
+                $params[] = '%' . $term . '%';
+            }
+
+            $sql = "
+                WITH TotalOutByLot AS (
+                    SELECT 
+                        lot_no, 
+                        SUM(ISNULL(count_value, 0)) as total_out
+                    FROM PARTS
+                    WHERE lot_no IS NOT NULL AND lot_no != ''
+                    GROUP BY lot_no
+                )
+                SELECT TOP 20 wip.lot_no 
+                FROM WIP_ENTRIES wip
+                LEFT JOIN TotalOutByLot o ON wip.lot_no = o.lot_no
+                WHERE 
+                    wip.part_no = ? 
+                    AND wip.line = ?
+                    AND (wip.quantity_in - ISNULL(o.total_out, 0)) > 0
+                    $lot_condition
+                GROUP BY wip.lot_no
+                ORDER BY wip.lot_no;
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'data' => $lots]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");

@@ -121,7 +121,8 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Time</th>
+                                <th>Start</th>
+                                <th>End</th>
                                 <th>Line</th>
                                 <th>Model</th>
                                 <th>Part No.</th>

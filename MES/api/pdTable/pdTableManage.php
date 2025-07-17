@@ -34,7 +34,6 @@ try {
 
     switch ($action) {
         case 'get_parts':
-            // ... ไม่มีการแก้ไข ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
@@ -67,15 +66,17 @@ try {
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
+            
+            // เพิ่ม start_time เข้ามาใน SELECT statement
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        id, log_date, log_time, line, model, part_no, lot_no, count_value, count_type, note, source_transaction_id,
+                        id, log_date, start_time, log_time, line, model, part_no, lot_no, count_value, count_type, note, source_transaction_id,
                         ROW_NUMBER() OVER (ORDER BY log_date DESC, log_time DESC, id DESC) AS RowNum
                     FROM PARTS
                     $whereClause
                 )
-                SELECT id, log_date, log_time, line, model, part_no, lot_no, count_value, count_type, note, source_transaction_id
+                SELECT id, log_date, start_time, log_time, line, model, part_no, lot_no, count_value, count_type, note, source_transaction_id
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -83,6 +84,7 @@ try {
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
             $data = $dataStmt->fetchAll();
+
             $summarySql = "
                 SELECT model, part_no, line,
                     SUM(CASE WHEN count_type = 'FG' THEN count_value ELSE 0 END) AS FG,
@@ -118,8 +120,7 @@ try {
         case 'add_part':
             $pdo->beginTransaction();
             try {
-                // ... (โค้ดส่วนตรวจสอบข้อมูลและสร้าง Lot No. เหมือนเดิม)
-                $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
+                $required_fields = ['log_date', 'start_time', 'end_time', 'part_no', 'model', 'line', 'count_type', 'count_value', 'lot_no'];
                 foreach ($required_fields as $field) {
                     if (empty($input[$field])) throw new Exception("Missing field: " . $field);
                 }
@@ -130,27 +131,30 @@ try {
                 $part_no = strtoupper(trim($input['part_no']));
                 $count_type = strtoupper(trim($input['count_type']));
                 $log_date = $input['log_date'];
-                $log_time = $input['log_time'];
+                $start_time = $input['start_time'];
+                $end_time = $input['end_time'];
                 $fg_qty = (int)$input['count_value'];
-                $note_input = isset($input['note']) ? strtoupper(trim($input['note'])) : null;
-                $lot_no = $input['lot_no'] ?? '';
-                
-                if (empty($lot_no) && $count_type === 'FG') {
-                    $sapQuery = "SELECT sap_no FROM PARAMETER WHERE line=? AND model=? AND part_no=?";
-                    $sapStmt = $pdo->prepare($sapQuery);
-                    $sapStmt->execute([$line, $model, $part_no]);
-                    $sap_no = $sapStmt->fetchColumn();
-                    if (!$sap_no) throw new Exception("SAP No. not found to generate Lot No.");
+                $note_input = isset($input['note']) ? trim($input['note']) : '';
+                $base_lot_no = strtoupper(trim($input['lot_no']));
+
+                $fg_lot_no = '';
+                if ($count_type === 'FG') {
                     $datePrefix = date('dmy', strtotime($log_date));
-                    $lotCountQuery = "SELECT COUNT(*) FROM PARTS WHERE part_no=? AND log_date=?";
+                    
+                    // ===== ส่วนที่แก้ไข: เพิ่ม Wildcard '%' ใน Query =====
+                    $lotCountQuery = "SELECT COUNT(*) FROM PARTS WHERE lot_no LIKE ? AND log_date = ? AND count_type = 'FG'";
                     $countStmt = $pdo->prepare($lotCountQuery);
-                    $countStmt->execute([$part_no, $log_date]);
+                    $countStmt->execute([$base_lot_no . '-%', $log_date]); // แก้ไขที่นี่
                     $count = $countStmt->fetchColumn() + 1;
-                    $lot_no = $sap_no . '-' . $datePrefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                    
+                    $fg_lot_no = $base_lot_no . '-' . $datePrefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                } else {
+                    $fg_lot_no = $base_lot_no;
                 }
 
                 $transaction_id = null;
                 $components = [];
+
                 if ($count_type === 'FG' && $fg_qty > 0) {
                     $components = findBomComponents($pdo, $part_no, $line, $model);
                     if (!empty($components)) {
@@ -158,36 +162,37 @@ try {
                     }
                 }
                 
-                $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $insertSql = "INSERT INTO PARTS (log_date, start_time, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $pdo->prepare($insertSql)->execute([
-                    $log_date, $log_time, $model, $line, $part_no, strtoupper(trim($lot_no)),
-                    $count_type, $fg_qty, $note_input,
-                    $transaction_id
+                    $log_date, $start_time, $end_time, $model, $line, $part_no, $fg_lot_no,
+                    $count_type, $fg_qty, $note_input, $transaction_id
                 ]);
                 
                 if (!empty($components)) {
-                    $consumeSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?)";
+                    $consumeSql = "INSERT INTO PARTS (log_date, start_time, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?)";
                     $consumeStmt = $pdo->prepare($consumeSql);
                     foreach ($components as $comp) {
                         $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                        $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
+                        $note_for_comp = "Auto-issued for FG Lot: " . $fg_lot_no; 
+
+                        // ===== ส่วนที่แก้ไข: เรียงลำดับพารามิเตอร์ให้ถูกต้อง =====
                         $consumeStmt->execute([
-                            $log_date, $log_time, $model, $line, 
-                            $comp['component_part_no'], strtoupper(trim($lot_no)), 
-                            $qty_to_consume, $note_for_comp,
-                            $transaction_id
+                            $log_date, $start_time, $end_time, $model, $line, 
+                            $comp['component_part_no'], 
+                            $base_lot_no, // lot_no ของ component
+                            $qty_to_consume, // count_value
+                            $note_for_comp, // note
+                            $transaction_id // source_transaction_id
                         ]);
                     }
                 }
 
                 $pdo->commit();
                 
-                // ===== LOG ACTION (ADD_PART) - START =====
-                $detail = "Model: {$model}, Part No: {$part_no}, Lot No: " . strtoupper(trim($lot_no)) . ", Qty: {$fg_qty}, Type: {$count_type}";
+                $detail = "Model: {$model}, Part No: {$part_no}, Lot No: {$fg_lot_no}, Qty: {$fg_qty}, Type: {$count_type}";
                 logAction($pdo, $currentUser['username'], 'ADD_PART', $line, $detail);
-                // ===== LOG ACTION (ADD_PART) - END =====
 
-                echo json_encode(['success' => true, 'message' => 'Part recorded successfully.', 'lot_no' => $lot_no]);
+                echo json_encode(['success' => true, 'message' => 'Part recorded successfully.', 'lot_no' => $fg_lot_no]);
 
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -200,8 +205,7 @@ try {
             if (!$id) throw new Exception("Missing ID");
             $pdo->beginTransaction();
             try {
-                // ... (โค้ดส่วน update เหมือนเดิม)
-                $findSql = "SELECT * FROM PARTS WHERE id = ?"; // ดึงข้อมูลทั้งหมดเพื่อใช้ Log
+                $findSql = "SELECT * FROM PARTS WHERE id = ?";
                 $findStmt = $pdo->prepare($findSql);
                 $findStmt->execute([$id]);
                 $originalPart = $findStmt->fetch();
@@ -211,80 +215,26 @@ try {
                 if (strtoupper(trim($input['line'])) !== $originalPart['line']) {
                     enforceLinePermission(strtoupper(trim($input['line'])));
                 }
-                $transaction_id = $originalPart['source_transaction_id'];
 
-                if ($transaction_id) {
-                    // ... โค้ดส่วน Re-add logic เหมือนเดิม ...
-                    $deleteSql = "DELETE FROM PARTS WHERE source_transaction_id = ?";
-                    $pdo->prepare($deleteSql)->execute([$transaction_id]);
-                    
-                    $required_fields = ['log_date', 'log_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
-                    foreach ($required_fields as $field) {
-                        if (empty($input[$field])) throw new Exception("Missing field: " . $field);
-                    }
-                    $line = strtoupper(trim($input['line']));
-                    $model = strtoupper(trim($input['model']));
-                    $part_no = strtoupper(trim($input['part_no']));
-                    $log_date = $input['log_date'];
-                    $count_type = strtoupper(trim($input['count_type']));
-                    $fg_qty = (int)$input['count_value'];
-                    $lot_no = $input['lot_no'] ?? '';
-                    
-                    $new_transaction_id = null;
-                    $components = [];
-                    if ($count_type === 'FG' && $fg_qty > 0) {
-                        $components = findBomComponents($pdo, $part_no, $line, $model);
-                        if (!empty($components)) {
-                            $new_transaction_id = uniqid('tran_');
-                        }
-                    }
-                    
-                    $insertSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    $pdo->prepare($insertSql)->execute([
-                        $log_date, $input['log_time'], $model, $line, $part_no, strtoupper(trim($lot_no)),
-                        $count_type, $fg_qty,
-                        isset($input['note']) ? strtoupper(trim($input['note'])) : null,
-                        $new_transaction_id
-                    ]);
-                    
-                    if (!empty($components)) {
-                        $consumeSql = "INSERT INTO PARTS (log_date, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id) VALUES (?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?)";
-                        $consumeStmt = $pdo->prepare($consumeSql);
-                        foreach ($components as $comp) {
-                            $qty_to_consume = $fg_qty * (float)$comp['quantity_required'];
-                            $note_for_comp = "Auto-issued for Lot No.: " . strtoupper(trim($lot_no)); 
-                            $consumeStmt->execute([
-                                $log_date, $input['log_time'], $model, $line, 
-                                $comp['component_part_no'], strtoupper(trim($lot_no)), 
-                                $qty_to_consume, $note_for_comp, $new_transaction_id
-                            ]);
-                        }
-                    }
-
-                    // ===== LOG ACTION (UPDATE_PART - REBUILD) - START =====
-                    $detail = "ID: {$id}, Model: {$model}, Part No: {$part_no}, Lot No: " . strtoupper(trim($lot_no)) . ", Qty: {$fg_qty}, Type: {$count_type}";
-                    logAction($pdo, $currentUser['username'], 'UPDATE_PART', $line, $detail);
-                    // ===== LOG ACTION (UPDATE_PART - REBUILD) - END =====
-                    
-                    echo json_encode(['success' => true, 'message' => 'Part and components updated successfully.']);
-                
-                } else {
-                    $sql = "UPDATE PARTS SET log_date=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=? WHERE id = ?";
-                    $pdo->prepare($sql)->execute([
-                        $input['log_date'], $input['log_time'], strtoupper(trim($input['line'])), 
-                        strtoupper(trim($input['model'])), strtoupper(trim($input['part_no'])),
-                        (int)$input['count_value'], strtoupper(trim($input['count_type'])),
-                        $input['note'], $id
-                    ]);
-
-                    // ===== LOG ACTION (UPDATE_PART - SIMPLE) - START =====
-                    $detail = "ID: {$id}, Model: {$input['model']}, Part No: {$input['part_no']}, Qty: {$input['count_value']}, Type: {$input['count_type']}";
-                    logAction($pdo, $currentUser['username'], 'UPDATE_PART', $input['line'], $detail);
-                    // ===== LOG ACTION (UPDATE_PART - SIMPLE) - END =====
-                    
-                    echo json_encode(['success' => true, 'message' => 'Part updated successfully.']);
+                $required_fields = ['log_date', 'start_time', 'end_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
+                foreach ($required_fields as $field) {
+                    if (!isset($input[$field])) throw new Exception("Missing required field: " . $field);
                 }
+                
+                $sql = "UPDATE PARTS SET log_date=?, start_time=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=? WHERE id = ?";
+                $pdo->prepare($sql)->execute([
+                    $input['log_date'], $input['start_time'], $input['end_time'], strtoupper(trim($input['line'])), 
+                    strtoupper(trim($input['model'])), strtoupper(trim($input['part_no'])),
+                    (int)$input['count_value'], strtoupper(trim($input['count_type'])),
+                    $input['note'], $id
+                ]);
+
+                $detail = "Updated Part ID: {$id}, Model: {$input['model']}, Part No: {$input['part_no']}, Qty: {$input['count_value']}";
+                logAction($pdo, $currentUser['username'], 'UPDATE_PART', $input['line'], $detail);
+                
                 $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Part updated successfully.']);
+
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;

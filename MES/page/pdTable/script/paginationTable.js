@@ -9,7 +9,6 @@ const API_URL = '../../api/pdTable/pdTableManage.php';
  */
 async function fetchPartsData(page = 1) {
     currentPage = page;
-    //-- รวบรวมค่า Filter ทั้งหมดจาก Input Fields --
     const filters = {
         part_no: document.getElementById('filterPartNo')?.value,
         lot_no: document.getElementById('filterLotNo')?.value,
@@ -22,19 +21,18 @@ async function fetchPartsData(page = 1) {
     const params = new URLSearchParams({ action: 'get_parts', page: currentPage, limit: 50, ...filters });
 
     try {
-        //-- เรียก API และแปลงผลลัพธ์เป็น JSON --
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        //-- เรียกฟังก์ชันต่างๆ เพื่อแสดงผลข้อมูล, Pagination, และ Summary --
-        renderTable(result.data, canManage); //-- canManage เป็นตัวแปรที่ส่งมาจาก PHP --
+        renderTable(result.data, canManage);
         renderPagination(result.page, result.total, result.limit);
         renderSummary(result.summary, result.grand_total);
     } catch (error) {
-        //-- จัดการข้อผิดพลาดและแสดงในตาราง --
         console.error('Failed to fetch parts data:', error);
-        document.getElementById('partTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Error loading data.</td></tr>`;
+        // ===== ส่วนที่แก้ไข: ทำให้ Colspan เป็นไดนามิก =====
+        const errorColSpan = canManage ? 11 : 10;
+        document.getElementById('partTableBody').innerHTML = `<tr><td colspan="${errorColSpan}" class="text-center text-danger">Error loading data.</td></tr>`;
     }
 }
 
@@ -48,7 +46,8 @@ function renderTable(data, canManage) {
     tbody.innerHTML = ''; 
     
     if (!data || data.length === 0) {
-        const colSpan = canManage ? 10 : 9;
+        // ===== ส่วนที่แก้ไข: ปรับตัวเลข Colspan ให้ถูกต้อง =====
+        const colSpan = canManage ? 11 : 10;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
@@ -64,16 +63,17 @@ function renderTable(data, canManage) {
         };
         
         const formattedDate = row.log_date ? new Date(row.log_date).toLocaleDateString('en-GB') : '';
+        const formattedStartTime = row.start_time ? row.start_time.substring(0, 8) : '';
         const formattedTime = row.log_time ? row.log_time.substring(0, 8) : '';
         
         tr.appendChild(createCell(formattedDate));
+        tr.appendChild(createCell(formattedStartTime));
         tr.appendChild(createCell(formattedTime));
         tr.appendChild(createCell(row.line));
         tr.appendChild(createCell(row.model));
         tr.appendChild(createCell(row.part_no));
         tr.appendChild(createCell(row.lot_no || ''));
 
-        // --- แก้ไข: เพิ่ม class ให้กับ Cell ของ Qty และ Type ---
         const qtyCell = createCell(row.count_value);
         qtyCell.classList.add('text-center-col');
         tr.appendChild(qtyCell);
@@ -81,7 +81,6 @@ function renderTable(data, canManage) {
         const typeCell = createCell(row.count_type);
         typeCell.classList.add('text-center-col');
         tr.appendChild(typeCell);
-        // ----------------------------------------------------
         
         const noteTd = document.createElement('td');
         const noteDiv = document.createElement('div');
@@ -93,7 +92,7 @@ function renderTable(data, canManage) {
         
         if (canManage) {
             const actionsTd = document.createElement('td');
-            actionsTd.classList.add('text-center-col'); // จัดปุ่มให้อยู่กลางด้วย
+            actionsTd.classList.add('text-center-col');
             
             const buttonWrapper = document.createElement('div');
             buttonWrapper.className = 'd-flex justify-content-center gap-1'; 
