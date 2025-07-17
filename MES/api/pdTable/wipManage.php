@@ -199,51 +199,95 @@ try {
             break;
 
         case 'get_wip_report_by_lot':
+            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
             $params = [];
             $conditions = [];
+            $having_conditions = []; // สำหรับกรองหลัง GROUP BY
 
+            // สร้าง WHERE clause สำหรับ Query หลัก
             if ($currentUser['role'] === 'supervisor') {
-                $conditions[] = "wip.line = ?";
+                $conditions[] = "MasterLots.line = ?";
                 $params[] = $currentUser['line'];
             }
 
-            if (!empty($_GET['line'])) { $conditions[] = "wip.line = ?"; $params[] = $_GET['line']; }
-            if (!empty($_GET['part_no'])) { $conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; }
-            if (!empty($_GET['model'])) { $conditions[] = "wip.model = ?"; $params[] = $_GET['model']; }
-            if (!empty($_GET['lot_no'])) { $conditions[] = "wip.lot_no LIKE ?"; $params[] = "%".$_GET['lot_no']."%"; }
-            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['line'])) { $conditions[] = "MasterLots.line = ?"; $params[] = $_GET['line']; }
+            if (!empty($_GET['part_no'])) { $conditions[] = "MasterLots.part_no = ?"; $params[] = $_GET['part_no']; }
+            if (!empty($_GET['model'])) { $conditions[] = "MasterLots.model = ?"; $params[] = $_GET['model']; }
+            if (!empty($_GET['lot_no'])) { $conditions[] = "MasterLots.base_lot_no LIKE ?"; $params[] = "%".$_GET['lot_no']."%"; }
+            
+            // สร้าง WHERE clause สำหรับกรองวันที่ในแต่ละตารางย่อย
+            $date_conditions_wip = [];
+            $date_params_wip = [];
+             if (!empty($_GET['startDate'])) { $date_conditions_wip[] = "CAST(wip.entry_time AS DATE) >= ?"; $date_params_wip[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $date_conditions_wip[] = "CAST(wip.entry_time AS DATE) <= ?"; $date_params_wip[] = $_GET['endDate']; }
+            
+            $date_conditions_parts = [];
+            $date_params_parts = [];
+            if (!empty($_GET['startDate'])) { $date_conditions_parts[] = "p.log_date >= ?"; $date_params_parts[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $date_conditions_parts[] = "p.log_date <= ?"; $date_params_parts[] = $_GET['endDate']; }
 
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
+            $wipDateWhere = $date_conditions_wip ? "WHERE " . implode(" AND ", $date_conditions_wip) : "";
+            $partsDateWhere = $date_conditions_parts ? "WHERE " . implode(" AND ", $date_conditions_parts) : "";
+
 
             $sql = "
                 WITH 
-                WipLots AS (
-                    SELECT 
-                        wip.lot_no, wip.part_no, wip.line, wip.model, wip.quantity_in
-                    FROM WIP_ENTRIES wip
-                    $whereClause
+                -- 1. สร้าง Master List ของ Lot ทั้งหมดจากทั้งสองตาราง
+                MasterLots AS (
+                    SELECT line, model, part_no, lot_no AS base_lot_no FROM WIP_ENTRIES
+                    UNION
+                    SELECT line, model, part_no, 
+                           CASE 
+                               WHEN CHARINDEX('-', lot_no) > 0 THEN LEFT(lot_no, CHARINDEX('-', lot_no) - 1)
+                               ELSE lot_no 
+                           END AS base_lot_no 
+                    FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
-                TotalOutByLot AS (
-                    SELECT 
-                        lot_no, SUM(ISNULL(count_value, 0)) as total_out
-                    FROM PARTS
-                    WHERE lot_no IS NOT NULL AND lot_no != ''
+                -- 2. คำนวณยอด IN ทั้งหมดของแต่ละ Lot
+                TotalIn AS (
+                    SELECT lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
+                    FROM WIP_ENTRIES wip
+                    $wipDateWhere
                     GROUP BY lot_no
+                ),
+                -- 3. คำนวณยอด OUT ทั้งหมดของแต่ละ Lot (โดยใช้ Base Lot)
+                TotalOut AS (
+                    SELECT 
+                        CASE 
+                            WHEN CHARINDEX('-', p.lot_no) > 0 THEN LEFT(p.lot_no, CHARINDEX('-', p.lot_no) - 1)
+                            ELSE p.lot_no 
+                        END AS base_lot_no,
+                        SUM(ISNULL(p.count_value, 0)) as total_out
+                    FROM PARTS p
+                    $partsDateWhere
+                    GROUP BY 
+                        CASE 
+                            WHEN CHARINDEX('-', p.lot_no) > 0 THEN LEFT(p.lot_no, CHARINDEX('-', p.lot_no) - 1)
+                            ELSE p.lot_no 
+                        END
                 )
+                -- 4. นำข้อมูลทั้งหมดมาประกอบร่าง
                 SELECT 
-                    w.lot_no, w.part_no, w.line, w.model,
-                    w.quantity_in AS total_in,
-                    ISNULL(o.total_out, 0) AS total_out,
-                    (w.quantity_in - ISNULL(o.total_out, 0)) AS variance
-                FROM WipLots w
-                LEFT JOIN TotalOutByLot o ON w.lot_no = o.lot_no
-                WHERE (w.quantity_in - ISNULL(o.total_out, 0)) != 0 
-                ORDER BY w.line, w.model, w.part_no, w.lot_no;
+                    MasterLots.line,
+                    MasterLots.model,
+                    MasterLots.part_no,
+                    MasterLots.base_lot_no,
+                    ISNULL(ti.total_in, 0) as total_in,
+                    ISNULL(to_out.total_out, 0) as total_out,
+                    (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance
+                FROM 
+                    (SELECT DISTINCT line, model, part_no, base_lot_no FROM MasterLots) AS MasterLots
+                LEFT JOIN TotalIn ti ON MasterLots.base_lot_no = ti.lot_no
+                LEFT JOIN TotalOut to_out ON MasterLots.base_lot_no = to_out.base_lot_no
+                $whereClause
+                ORDER BY MasterLots.line, MasterLots.model, MasterLots.part_no, MasterLots.base_lot_no;
             ";
-            
+
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            // รวมพารามิเตอร์ทั้งหมดในลำดับที่ถูกต้อง
+            $execute_params = array_merge($date_params_wip, $date_params_parts, $params);
+            $stmt->execute($execute_params);
             $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'report' => $report_data]);
