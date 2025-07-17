@@ -172,14 +172,28 @@ async function handleDeleteEntry(entryId) {
 async function fetchStockCountReport() {
     const tableBody = document.getElementById('stockCountTableBody');
     if (!tableBody) return;
+
+    const tableHead = tableBody.previousElementSibling; // Get thead
+    if (tableHead) {
+        tableHead.innerHTML = `
+            <tr>
+                <th>Line</th>
+                <th>Model</th>
+                <th>Part No.</th>
+                <th class="text-end">Total IN</th>
+                <th class="text-end">Total OUT</th>
+                <th class="text-end">On-Hand</th>
+                ${canManage ? '<th class="text-center">Actions</th>' : ''}
+            </tr>
+        `;
+    }
+    
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Stock Count...</td></tr>';
 
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
-        model: document.getElementById('filterModel')?.value || '',
-        startDate: document.getElementById('filterStartDate')?.value || '',
-        endDate: document.getElementById('filterEndDate')?.value || ''
+        model: document.getElementById('filterModel')?.value || ''
     });
 
     try {
@@ -204,6 +218,17 @@ async function fetchStockCountReport() {
                 }
                 // ถ้าเป็น 0 จะไม่มีสี
 
+                let actionsHtml = '';
+                if (canManage) {
+                    actionsHtml = `
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-warning" onclick='openAdjustStockModal(${JSON.stringify(row)})'>
+                                Adjust
+                            </button>
+                        </td>
+                    `;
+                }
+
                 tr.innerHTML = `
                     <td>${row.line}</td>
                     <td>${row.model}</td>
@@ -211,6 +236,7 @@ async function fetchStockCountReport() {
                     <td class="text-end">${parseInt(row.total_in).toLocaleString()}</td>
                     <td class="text-end">${parseInt(row.total_out).toLocaleString()}</td>
                     <td class="text-end fw-bold ${varianceClass}">${variance.toLocaleString()}</td>
+                    ${actionsHtml}
                 `;
                 tableBody.appendChild(tr);
             });

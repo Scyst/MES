@@ -210,6 +210,29 @@ function openHistorySummaryModal() {
     showBootstrapModal('summaryModal');
 }
 
+/**
+ * ฟังก์ชันสำหรับเปิด Modal "Stock Adjustment"
+ * @param {object} rowData ข้อมูลของแถวที่ถูกเลือก (line, model, part_no, variance)
+ */
+function openAdjustStockModal(rowData) {
+    const modal = document.getElementById('adjustStockModal');
+    if (!modal) return;
+
+    // เติมข้อมูลที่ซ่อนไว้และที่แสดงบนฟอร์ม
+    modal.querySelector('#adjust_part_no').value = rowData.part_no;
+    modal.querySelector('#adjust_line').value = rowData.line;
+    modal.querySelector('#adjust_model').value = rowData.model;
+    
+    modal.querySelector('#display_part_no').value = `${rowData.part_no} (${rowData.model} / ${rowData.line})`;
+    modal.querySelector('#adjust_system_count').value = rowData.variance; // 'variance' is the on-hand count
+    
+    // ล้างค่าที่เคยกรอกไว้
+    modal.querySelector('#adjust_physical_count').value = '';
+    modal.querySelector('#adjust_note').value = '';
+
+    showBootstrapModal('adjustStockModal');
+}
+
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
     const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
@@ -285,6 +308,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editWipEntryForm) {
         handleFormSubmit(editWipEntryForm, WIP_API_URL, 'update_wip_entry', 'editEntryModal', () => {
             if (typeof fetchHistoryData === 'function') fetchHistoryData();
+        });
+    }
+
+    const adjustStockForm = document.getElementById('adjustStockForm');
+    if (adjustStockForm) {
+        // เราจะใช้ wipManage.php สำหรับ action นี้
+        handleFormSubmit(adjustStockForm, WIP_API_URL, 'adjust_stock', 'adjustStockModal', () => {
+            // โหลดข้อมูลของ On-Hand Inventory ใหม่หลังจากปรับยอดสำเร็จ
+            if (typeof fetchStockCountReport === 'function') {
+                fetchStockCountReport();
+            }
         });
     }
 });

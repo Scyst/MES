@@ -144,7 +144,6 @@ try {
             }
             break;
 
-        // ... เคสอื่นๆ ไม่มีการเปลี่ยนแปลง ...
         case 'get_wip_report':
             $params = [];
             $parts_params = [];
@@ -230,73 +229,129 @@ try {
             echo json_encode(['success' => true, 'history' => $history_data, 'history_summary' => $summary_data]);
             break;
 
+        case 'adjust_stock':
+            $pdo->beginTransaction();
+            try {
+                $required = ['part_no', 'line', 'model', 'system_count', 'physical_count'];
+                foreach ($required as $field) {
+                    if (!isset($input[$field])) {
+                        throw new Exception("Missing required field: " . $field);
+                    }
+                }
+
+                $line = strtoupper(trim($input['line']));
+                enforceLinePermission($line);
+
+                $part_no = strtoupper(trim($input['part_no']));
+                $model = strtoupper(trim($input['model']));
+                $system_count = (int)$input['system_count'];
+                $physical_count = (int)$input['physical_count'];
+                $note = trim($input['note'] ?? 'Stock Adjustment');
+
+                $variance = $physical_count - $system_count;
+
+                if ($variance == 0) {
+                    echo json_encode(['success' => true, 'message' => 'No adjustment needed. Stock count is already correct.']);
+                    $pdo->commit();
+                    exit;
+                }
+
+                $adjustment_type = $variance > 0 ? 'ADJUST-IN' : 'ADJUST-OUT';
+                $adjustment_value = abs($variance); // ค่าที่บันทึกต้องเป็นบวกเสมอ
+
+                $sql = "INSERT INTO PARTS (log_date, log_time, line, model, part_no, count_type, count_value, note) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $params = [
+                    $line,
+                    $model,
+                    $part_no,
+                    $adjustment_type,
+                    $adjustment_value,
+                    $note
+                ];
+                
+                $stmt->execute($params);
+
+                // Log การกระทำ
+                $log_detail = "Part: {$part_no}, Model: {$model}, System: {$system_count}, Physical: {$physical_count}, Variance: {$variance}, Type: {$adjustment_type}";
+                logAction($pdo, $currentUser['username'], 'STOCK_ADJUST', $line, $log_detail);
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Stock adjusted successfully.']);
+
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e; // ส่งต่อไปให้ catch block ด้านนอก
+            }
+            break;
+
         case 'get_stock_count':
             $param_conditions = [];
             $param_params = [];
 
-            $wip_conditions = [];
-            $wip_params = [];
-
-            $parts_conditions = [];
-            $parts_params = [];
-
             if (!empty($_GET['line'])) {
                 $param_conditions[] = "p.line = ?"; $param_params[] = $_GET['line'];
-                $wip_conditions[] = "wip.line = ?"; $wip_params[] = $_GET['line'];
-                $parts_conditions[] = "line = ?"; $parts_params[] = $_GET['line'];
             }
             if (!empty($_GET['part_no'])) {
                 $param_conditions[] = "p.part_no LIKE ?"; $param_params[] = "%".$_GET['part_no']."%";
-                $wip_conditions[] = "wip.part_no LIKE ?"; $wip_params[] = "%".$_GET['part_no']."%";
-                $parts_conditions[] = "part_no LIKE ?"; $parts_params[] = "%".$_GET['part_no']."%";
             }
             if (!empty($_GET['model'])) {
                 $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%";
-                $wip_conditions[] = "wip.model LIKE ?"; $wip_params[] = "%".$_GET['model']."%";
-                $parts_conditions[] = "model LIKE ?"; $parts_params[] = "%".$_GET['model']."%";
             }
             
-            if (!empty($_GET['startDate'])) {
-                $wip_conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $wip_params[] = $_GET['startDate'];
-                $parts_conditions[] = "log_date >= ?"; $parts_params[] = $_GET['startDate'];
-            }
-            if (!empty($_GET['endDate'])) {
-                $wip_conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $wip_params[] = $_GET['endDate'];
-                $parts_conditions[] = "log_date <= ?"; $parts_params[] = $_GET['endDate'];
-            }
-
             $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
-            $wipWhereClause = !empty($wip_conditions) ? "WHERE " . implode(" AND ", $wip_conditions) : "";
-            $partsWhereClause = !empty($parts_conditions) ? "WHERE " . implode(" AND ", $parts_conditions) : "";
-
+            
+            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
             $sql = "
-                WITH TotalIn AS (
-                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM WIP_ENTRIES wip
-                    $wipWhereClause
+                WITH 
+                -- 1. ยอดนำเข้าทั้งหมด (จาก WIP_ENTRIES)
+                TotalWipIn AS (
+                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total
+                    FROM WIP_ENTRIES
                     GROUP BY line, model, part_no
-                ), TotalOut AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total_out
+                ),
+                -- 2. ยอดปรับปรุงเข้า (จาก PARTS)
+                TotalAdjustIn AS (
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
                     FROM PARTS
-                    $partsWhereClause
+                    WHERE count_type = 'ADJUST-IN'
+                    GROUP BY line, model, part_no
+                ),
+                -- 3. ยอดปรับปรุงออก (จาก PARTS)
+                TotalAdjustOut AS (
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
+                    FROM PARTS
+                    WHERE count_type = 'ADJUST-OUT'
+                    GROUP BY line, model, part_no
+                ),
+                -- 4. ยอดผลิตออกทั้งหมด (ไม่รวมรายการปรับปรุง)
+                TotalProductionOut AS (
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
+                    FROM PARTS
+                    WHERE count_type NOT LIKE 'ADJUST%' 
                     GROUP BY line, model, part_no
                 )
+                -- 5. รวมผลลัพธ์ทั้งหมด
                 SELECT
                     p.line, p.model, p.part_no,
-                    ISNULL(tin.total_in, 0) AS total_in,
-                    ISNULL(tout.total_out, 0) AS total_out,
-                    (ISNULL(tin.total_in, 0) - ISNULL(tout.total_out, 0)) AS variance
-                FROM PARAMETER p
-                LEFT JOIN TotalIn tin ON p.line = tin.line AND p.model = tin.model AND p.part_no = tin.part_no
-                LEFT JOIN TotalOut tout ON p.line = tout.line AND p.model = tout.model AND p.part_no = tout.part_no
+                    (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
+                    (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out,
+                    -- สูตรคำนวณ Variance ที่ถูกต้อง
+                    (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) - (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS variance
+                FROM 
+                    PARAMETER p
+                LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
+                LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
+                LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no
+                LEFT JOIN TotalProductionOut prod_out ON p.line = prod_out.line AND p.model = prod_out.model AND p.part_no = prod_out.part_no
                 $paramWhereClause
                 ORDER BY p.line, p.model, p.part_no;
             ";
             
-            $executeParams = array_merge($wip_params, $parts_params, $param_params);
-
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($executeParams);
+            $stmt->execute($param_params);
             $stock_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $stock_data]);

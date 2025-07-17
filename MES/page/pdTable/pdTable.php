@@ -39,7 +39,7 @@
 
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance Report</button>
+                <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
@@ -48,7 +48,7 @@
                 <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production History (OUT)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock Count</button>
+                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock/Inventory</button>
             </li>
         </ul>
         
@@ -184,6 +184,7 @@
             include('components/editPartModal.php');
             include('components/addEntryModal.php');
             include('components/editEntryModal.php');
+            include('components/adjustStockModal.php');
         }
         include('components/summaryModal.php');
         include('../components/autoLogoutUI.php');
