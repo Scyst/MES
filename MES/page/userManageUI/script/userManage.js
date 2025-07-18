@@ -188,7 +188,7 @@ function renderLogPagination(currentPage, totalPages) {
     if (totalPages <= 1) return;
 
     const ul = document.createElement('ul');
-    ul.className = 'pagination pagination-sm';
+    ul.className = 'pagination pagination';
 
     const createPageItem = (text, page, isDisabled = false, isActive = false) => {
         const li = document.createElement('li');

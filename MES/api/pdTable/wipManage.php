@@ -203,7 +203,7 @@ try {
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
                 )
-                SELECT part_no, line, model, total_in, total_out, (total_in - total_out) as variance
+                SELECT part_no, line, model, total_in, total_out, (total_out - total_in) as variance
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?;
             ";
@@ -277,7 +277,7 @@ try {
                 FinalResult AS (
                     SELECT 
                         MasterLots.lot_no,
-                        (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance,
+                        (ISNULL(to_out.total_out, 0) - ISNULL(ti.total_in, 0)) as variance,
                         ISNULL(ti.total_in, 0) as total_in,
                         ISNULL(to_out.total_out, 0) as total_out
                     FROM MasterLots
@@ -315,7 +315,7 @@ try {
                     SELECT 
                         MasterLots.line, MasterLots.model, MasterLots.part_no, MasterLots.lot_no,
                         ISNULL(ti.total_in, 0) as total_in, ISNULL(to_out.total_out, 0) as total_out,
-                        (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance
+                        (ISNULL(to_out.total_out, 0) - ISNULL(ti.total_in, 0)) as variance
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
@@ -512,7 +512,7 @@ try {
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FinalResult
                 )
-                SELECT line, model, part_no, total_in, total_out, (total_in - total_out) AS variance 
+                SELECT line, model, part_no, total_in, total_out, (total_out - total_in) AS variance 
                 FROM NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?
             ";

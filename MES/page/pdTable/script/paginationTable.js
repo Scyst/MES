@@ -4,8 +4,91 @@ let totalPages = 1;
 const API_URL = '../../api/pdTable/pdTableManage.php';
 
 /**
- * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API ตาม Filter และหน้าปัจจุบัน
- * @param {number} [page=1] - หมายเลขหน้าที่ต้องการดึงข้อมูล
+ * =================================================================
+ * ฟังก์ชัน Pagination ที่ปรับปรุงใหม่ (ใช้เป็นฟังก์ชันกลาง)
+ * =================================================================
+ */
+function renderAdvancedPagination(containerId, currentPage, totalPages, callbackFunction) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const ul = document.createElement('ul');
+    ul.className = 'pagination justify-content-center';
+
+    const createPageItem = (text, page) => {
+        const li = document.createElement('li');
+        const isActive = page === currentPage;
+        const isDisabled = !page;
+        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
+        
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = text;
+        if (!isDisabled) {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                callbackFunction(page);
+            });
+        }
+        li.appendChild(a);
+        return li;
+    };
+    
+    const createEllipsis = () => {
+        const li = document.createElement('li');
+        li.className = 'page-item disabled';
+        const span = document.createElement('span');
+        span.className = 'page-link';
+        span.textContent = '...';
+        li.appendChild(span);
+        return li;
+    };
+
+    ul.appendChild(createPageItem('Previous', currentPage > 1 ? currentPage - 1 : null));
+
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+            ul.appendChild(createPageItem(i, i));
+        }
+    } else {
+        ul.appendChild(createPageItem(1, 1));
+        if (currentPage > 4) {
+            ul.appendChild(createEllipsis());
+        }
+
+        let startPage = Math.max(2, currentPage - 1);
+        let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 4) {
+            startPage = 2;
+            endPage = 4;
+        }
+        if (currentPage >= totalPages - 3) {
+            startPage = totalPages - 3;
+            endPage = totalPages - 1;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            ul.appendChild(createPageItem(i, i));
+        }
+
+        if (currentPage < totalPages - 3) {
+            ul.appendChild(createEllipsis());
+        }
+        
+        ul.appendChild(createPageItem(totalPages, totalPages));
+    }
+
+    ul.appendChild(createPageItem('Next', currentPage < totalPages ? currentPage + 1 : null));
+    container.appendChild(ul);
+}
+
+
+/**
+ * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API
  */
 async function fetchPartsData(page = 1) {
     currentPage = page;
@@ -26,11 +109,12 @@ async function fetchPartsData(page = 1) {
         if (!result.success) throw new Error(result.message);
 
         renderTable(result.data, canManage);
-        renderPagination(result.page, result.total, result.limit);
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('paginationControls', result.page, totalPages, fetchPartsData);
         renderSummary(result.summary, result.grand_total);
     } catch (error) {
         console.error('Failed to fetch parts data:', error);
-        // ===== ส่วนที่แก้ไข: ทำให้ Colspan เป็นไดนามิก =====
         const errorColSpan = canManage ? 11 : 10;
         document.getElementById('partTableBody').innerHTML = `<tr><td colspan="${errorColSpan}" class="text-center text-danger">Error loading data.</td></tr>`;
     }

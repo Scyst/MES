@@ -1,45 +1,12 @@
-function renderGenericPagination(containerId, page, totalItems, limit, callbackFunction) {
-    const totalPages = totalItems > 0 ? Math.ceil(totalItems / limit) : 1;
-    const currentPage = parseInt(page);
-    const paginationContainer = document.getElementById(containerId);
-    if (!paginationContainer) return;
-
-    paginationContainer.innerHTML = ''; 
-
-    if (totalPages <= 1) return;
-
-    const createPageItem = (pageNum, text, isDisabled = false, isActive = false) => {
-        const li = document.createElement('li');
-        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
-        
-        const a = document.createElement('a');
-        a.className = 'page-link';
-        a.href = '#';
-        a.textContent = text;
-        if (!isDisabled) {
-            a.onclick = (e) => {
-                e.preventDefault();
-                callbackFunction(pageNum);
-            };
-        }
-        li.appendChild(a);
-        return li;
-    };
-
-    paginationContainer.appendChild(createPageItem(currentPage - 1, 'Previous', currentPage === 1));
-    for (let i = 1; i <= totalPages; i++) {
-        paginationContainer.appendChild(createPageItem(i, i, false, i === currentPage));
-    }
-    paginationContainer.appendChild(createPageItem(currentPage + 1, 'Next', currentPage === totalPages));
-}
-
-
 /**
  * =================================================================
  * ฟังก์ชันที่ถูกปรับปรุง
  * =================================================================
  */
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
+ */
 async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
@@ -59,38 +26,42 @@ async function fetchWipReport(page = 1) {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        window.cachedWipReport = result.data; // แก้ไข: ใช้ result.data
+        // API ใหม่จะส่งข้อมูล data กลับมาใน key 'data'
+        window.cachedWipReport = result.data;
 
         reportBody.innerHTML = '';
         if (result.data.length === 0) {
             reportBody.innerHTML = '<tr><td colspan="6" class="text-center">No WIP data found.</td></tr>';
         } else {
             result.data.forEach(item => {
-                // ... (ส่วน render ตารางเหมือนเดิม) ...
-                 const variance = parseInt(item.variance);
-                 let textColorClass = '';
-                 let varianceText = variance.toLocaleString();
+                const variance = parseInt(item.variance);
+                let textColorClass = '';
+                let varianceText = variance.toLocaleString();
 
-                 if (variance > 0) {
-                     textColorClass = 'text-warning';
-                 } else if (variance < 0) {
-                     textColorClass = 'text-danger';
-                 }
+                if (variance > 0) {
+                    textColorClass = 'text-warning';
+                } else if (variance < 0) {
+                    textColorClass = 'text-danger';
+                } else if (variance == 0) {
+                    textColorClass = 'text-success';
+                }
 
-                 const tr = document.createElement('tr');
-                 tr.innerHTML = `
-                     <td>${item.part_no}</td>
-                     <td>${item.line}</td>
-                     <td>${item.model}</td>
-                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
-                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                     <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
-                 `;
-                 reportBody.appendChild(tr);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.part_no}</td>
+                    <td>${item.line}</td>
+                    <td>${item.model}</td>
+                    <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
+                    <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
+                `;
+                reportBody.appendChild(tr);
             });
         }
-        // เรียกใช้ฟังก์ชัน render pagination
-        renderGenericPagination('wipReportPagination', result.page, result.total, result.limit, fetchWipReport);
+        
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('wipReportPagination', result.page, totalPages, fetchWipReport);
 
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
@@ -99,6 +70,9 @@ async function fetchWipReport(page = 1) {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP แยกตาม Lot Number
+ */
 async function fetchWipReportByLot(page = 1) {
     const reportBody = document.getElementById('wipReportByLotTableBody');
     if (!reportBody) return;
@@ -119,22 +93,22 @@ async function fetchWipReportByLot(page = 1) {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        window.cachedWipReportByLot = result.data; // แก้ไข: ใช้ result.data
+        window.cachedWipReportByLot = result.data;
 
         reportBody.innerHTML = '';
         if (result.data.length === 0) {
             reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP Lot found.</td></tr>';
         } else {
             result.data.forEach(item => {
-                // ... (ส่วน render ตารางเหมือนเดิม) ...
                 const variance = parseInt(item.variance);
                 let textColorClass = '';
                 let varianceText = variance.toLocaleString();
-
                 if (variance > 0) {
                     textColorClass = 'text-warning';
                 } else if (variance < 0) {
                     textColorClass = 'text-danger';
+                } else if (variance == 0) {
+                    textColorClass = 'text-success';
                 }
 
                 const tr = document.createElement('tr');
@@ -150,8 +124,10 @@ async function fetchWipReportByLot(page = 1) {
                 reportBody.appendChild(tr);
             });
         }
-        // เรียกใช้ฟังก์ชัน render pagination
-        renderGenericPagination('wipReportByLotPagination', result.page, result.total, result.limit, fetchWipReportByLot);
+        
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('wipReportByLotPagination', result.page, totalPages, fetchWipReportByLot);
 
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
@@ -160,10 +136,14 @@ async function fetchWipReportByLot(page = 1) {
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
+ */
 async function fetchHistoryData(page = 1) {
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
-    historyBody.innerHTML = '<tr><td colspan="9" class="text-center">Loading History...</td></tr>';
+    const colspan = canManage ? 9 : 8;
+    historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">Loading History...</td></tr>`;
 
     const params = new URLSearchParams({
         page: page, // เพิ่ม page
@@ -182,11 +162,10 @@ async function fetchHistoryData(page = 1) {
         window.cachedHistorySummary = result.history_summary || [];
         
         historyBody.innerHTML = '';
-        if (result.data.length === 0) { // แก้ไข: ใช้ result.data
-            historyBody.innerHTML = '<tr><td colspan="9" class="text-center">No entry history found.</td></tr>';
+        if (result.data.length === 0) {
+            historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No entry history found.</td></tr>`;
         } else {
             result.data.forEach(item => {
-                // ... (ส่วน render ตารางเหมือนเดิม) ...
                  const tr = document.createElement('tr');
                  const entryDate = new Date(item.entry_time);
                  const formattedDate = entryDate.toLocaleDateString('en-GB');
@@ -221,7 +200,7 @@ async function fetchHistoryData(page = 1) {
                      const deleteButton = document.createElement('button');
                      deleteButton.className = 'btn btn-sm btn-danger w-100';
                      deleteButton.textContent = 'Delete';
-                     deleteButton.onclick = () => handleDeleteEntry(item.entry_id);
+                     deleteButton.onclick = () => handleDeleteEntry(item.entry_id, page); // ส่ง page เข้าไปด้วย
                      buttonWrapper.appendChild(editButton);
                      buttonWrapper.appendChild(deleteButton);
                      actionsTd.appendChild(buttonWrapper);
@@ -230,16 +209,18 @@ async function fetchHistoryData(page = 1) {
                  historyBody.appendChild(tr);
             });
         }
-        // เรียกใช้ฟังก์ชัน render pagination
-        renderGenericPagination('entryHistoryPagination', result.page, result.total, result.limit, fetchHistoryData);
+        
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('entryHistoryPagination', result.page, totalPages, fetchHistoryData);
 
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
-        historyBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
-async function handleDeleteEntry(entryId) {
+async function handleDeleteEntry(entryId, currentPage) {
     if (!confirm(`Are you sure you want to delete Entry ID ${entryId}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     try {
@@ -251,12 +232,15 @@ async function handleDeleteEntry(entryId) {
         const result = await response.json();
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            fetchHistoryData();
+            const rowCount = document.querySelectorAll('#wipHistoryTableBody tr').length;
+            const newPage = (rowCount === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
+            fetchHistoryData(newPage);
         }
     } catch (error) {
         showToast('An error occurred while deleting the entry.', '#dc3545');
     }
 }
+
 
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน Stock Count
@@ -300,15 +284,21 @@ async function fetchStockCountReport(page = 1) {
             tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No parts found in parameters.</td></tr>`;
         } else {
             result.data.forEach(row => {
-                // ... (ส่วน render ตารางเหมือนเดิม) ...
                 const tr = document.createElement('tr');
                 const variance = parseInt(row.variance, 10);
                 let varianceClass = '';
-                if (variance < 0) {
+                if (variance == 0) {
+                    varianceClass = 'text-secondary';
+                } else if (variance > 0 && variance <= 100) {
                     varianceClass = 'text-danger';
-                } else if (variance > 0) {
+                } else if (variance > 100 && variance < 400) {
+                    varianceClass = 'text-warning';
+                } else if (variance > 400) {
                     varianceClass = 'text-success';
+                } else if (variance < 0) {
+                    varianceClass = 'text-info';
                 }
+
                 let actionsHtml = '';
                 if (canManage) {
                     actionsHtml = `
@@ -331,8 +321,10 @@ async function fetchStockCountReport(page = 1) {
                 tableBody.appendChild(tr);
             });
         }
-        // เรียกใช้ฟังก์ชัน render pagination
-        renderGenericPagination('stockCountPagination', result.page, result.total, result.limit, fetchStockCountReport);
+        
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('stockCountPagination', result.page, totalPages, fetchStockCountReport);
 
     } catch (error) {
         console.error("Failed to fetch Stock Count report:", error);
