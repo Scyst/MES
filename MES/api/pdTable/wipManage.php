@@ -145,6 +145,11 @@ try {
             break;
 
         case 'get_wip_report':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
+            $startRow = ($page - 1) * $limit;
+            $endRow = $startRow + $limit;
+
             $params = [];
             $parts_params = [];
             $wip_conditions = [];
@@ -166,40 +171,56 @@ try {
             $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             $partsWhereClause = $parts_conditions ? "WHERE " . implode(" AND ", $parts_conditions) : "";
 
-            $sql = "
-                WITH TotalIn AS (
-                    SELECT part_no, line, model, SUM(quantity_in) AS total_in 
-                    FROM WIP_ENTRIES wip 
-                    $wipWhereClause 
-                    GROUP BY part_no, line, model
-                ), 
-                TotalOut AS (
-                    SELECT part_no, line, model, SUM(count_value) AS total_out 
-                    FROM PARTS 
-                    $partsWhereClause 
-                    GROUP BY part_no, line, model
-                ) 
-                SELECT 
-                    ISNULL(tin.part_no, tout.part_no) AS part_no, 
-                    ISNULL(tin.line, tout.line) AS line, 
-                    ISNULL(tin.model, tout.model) as model, 
-                    ISNULL(tin.total_in, 0) AS total_in, 
-                    ISNULL(tout.total_out, 0) AS total_out, 
-                    (ISNULL(tin.total_in, 0) - ISNULL(tout.total_out, 0)) AS variance 
-                FROM TotalIn tin 
-                FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model 
-                ORDER BY line, model, part_no;
+            $countSql = "
+                SELECT COUNT(*) FROM (
+                    SELECT ISNULL(tin.part_no, tout.part_no) AS part_no
+                    FROM 
+                        (SELECT DISTINCT part_no, line, model FROM WIP_ENTRIES wip $wipWhereClause) tin 
+                    FULL JOIN 
+                        (SELECT DISTINCT part_no, line, model FROM PARTS $partsWhereClause) tout 
+                        ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
+                ) AS FullData
             ";
+            $totalStmt = $pdo->prepare($countSql);
+            $totalStmt->execute(array_merge($params, $parts_params));
+            $total = (int)$totalStmt->fetchColumn();
             
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array_merge($params, $parts_params));
-            $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $dataSql = "
+                WITH TotalIn AS (
+                    SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model
+                ), TotalOut AS (
+                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS $partsWhereClause GROUP BY part_no, line, model
+                ), FullData AS (
+                    SELECT 
+                        ISNULL(tin.part_no, tout.part_no) AS part_no, 
+                        ISNULL(tin.line, tout.line) AS line, 
+                        ISNULL(tin.model, tout.model) as model, 
+                        ISNULL(tin.total_in, 0) AS total_in, 
+                        ISNULL(tout.total_out, 0) AS total_out
+                    FROM TotalIn tin 
+                    FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
+                ), NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
+                    FROM FullData
+                )
+                SELECT part_no, line, model, total_in, total_out, (total_in - total_out) as variance
+                FROM NumberedRows
+                WHERE RowNum > ? AND RowNum <= ?;
+            ";
 
-            echo json_encode(['success' => true, 'report' => $report_data]);
+            $paginationParams = array_merge($params, $parts_params, [$startRow, $endRow]);
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute($paginationParams);
+            $report_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $report_data]);
             break;
 
         case 'get_wip_report_by_lot':
-            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
+            $startRow = ($page - 1) * $limit;
+
             $params = [];
             $conditions = [];
             
@@ -213,116 +234,156 @@ try {
             if (!empty($_GET['model'])) { $conditions[] = "MasterLots.model = ?"; $params[] = $_GET['model']; }
             if (!empty($_GET['lot_no'])) { $conditions[] = "MasterLots.lot_no LIKE ?"; $params[] = "%".$_GET['lot_no']."%"; }
             
-            $date_conditions_wip = [];
             $date_params_wip = [];
-             if (!empty($_GET['startDate'])) { $date_conditions_wip[] = "CAST(entry_time AS DATE) >= ?"; $date_params_wip[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $date_conditions_wip[] = "CAST(entry_time AS DATE) <= ?"; $date_params_wip[] = $_GET['endDate']; }
+            if (!empty($_GET['startDate'])) { $date_params_wip[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $date_params_wip[] = $_GET['endDate']; }
             
-            $date_conditions_parts = [];
             $date_params_parts = [];
-            if (!empty($_GET['startDate'])) { $date_conditions_parts[] = "log_date >= ?"; $date_params_parts[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $date_conditions_parts[] = "log_date <= ?"; $date_params_parts[] = $_GET['endDate']; }
+            if (!empty($_GET['startDate'])) { $date_params_parts[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $date_params_parts[] = $_GET['endDate']; }
 
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
-            $wipDateWhere = $date_conditions_wip ? "WHERE " . implode(" AND ", $date_conditions_wip) : "";
-            $partsDateWhere = $date_conditions_parts ? "WHERE " . implode(" AND ", $date_conditions_parts) : "";
+            $wipDateWhere = !empty($_GET['startDate']) || !empty($_GET['endDate']) ? "WHERE " . implode(" AND ", array_merge(
+                !empty($_GET['startDate']) ? ["CAST(entry_time AS DATE) >= ?"] : [],
+                !empty($_GET['endDate']) ? ["CAST(entry_time AS DATE) <= ?"] : []
+            )) : "";
+            $partsDateWhere = !empty($_GET['startDate']) || !empty($_GET['endDate']) ? "WHERE " . implode(" AND ", array_merge(
+                !empty($_GET['startDate']) ? ["log_date >= ?"] : [],
+                !empty($_GET['endDate']) ? ["log_date <= ?"] : []
+            )) : "";
 
-            $sql = "
+            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
+            
+            // 1. SQL สำหรับนับจำนวนทั้งหมด
+            $countSql = "
                 WITH 
                 MasterLots AS (
                     SELECT DISTINCT line, model, part_no, lot_no FROM WIP_ENTRIES
                     UNION
                     SELECT DISTINCT line, model, part_no, 
-                        CASE 
-                            WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 
-                            THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1)
-                            ELSE lot_no 
-                        END 
+                        CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
                     FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
                 TotalIn AS (
                     SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM WIP_ENTRIES
-                    $wipDateWhere
-                    GROUP BY line, model, part_no, lot_no
+                    FROM WIP_ENTRIES $wipDateWhere GROUP BY line, model, part_no, lot_no
                 ),
                 TotalOut AS (
-                    SELECT 
-                        line, model, part_no,
-                        CASE 
-                            WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 
-                            THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1)
-                            ELSE lot_no 
-                        END AS base_lot_no,
+                    SELECT line, model, part_no,
+                        CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM PARTS
-                    $partsDateWhere
-                    GROUP BY line, model, part_no,
-                        CASE 
-                            WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 
-                            THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1)
-                            ELSE lot_no 
-                        END
+                    FROM PARTS $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
                 ),
-                -- สร้าง Final Result Set ก่อนกรอง
                 FinalResult AS (
                     SELECT 
-                        MasterLots.line,
-                        MasterLots.model,
-                        MasterLots.part_no,
                         MasterLots.lot_no,
+                        (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance,
                         ISNULL(ti.total_in, 0) as total_in,
-                        ISNULL(to_out.total_out, 0) as total_out,
-                        (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance
+                        ISNULL(to_out.total_out, 0) as total_out
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
                     $whereClause
                 )
-                -- ใช้ WHERE เพื่อกรองผลลัพธ์สุดท้าย
-                SELECT * FROM FinalResult
-                WHERE variance != 0 OR total_in != 0 OR total_out != 0
-                ORDER BY line, model, part_no, lot_no;
+                SELECT COUNT(*) FROM FinalResult WHERE variance != 0 OR total_in != 0 OR total_out != 0
             ";
-            
-            $execute_params = array_merge($date_params_wip, $date_params_parts, $params);
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($execute_params);
-            $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $totalStmt = $pdo->prepare($countSql);
+            $totalStmt->execute(array_merge($date_params_wip, $date_params_parts, $params));
+            $total = (int)$totalStmt->fetchColumn();
 
-            echo json_encode(['success' => true, 'report' => $report_data]);
+            // 2. SQL สำหรับดึงข้อมูลแบบแบ่งหน้า
+            $dataSql = "
+                WITH 
+                MasterLots AS (
+                    SELECT DISTINCT line, model, part_no, lot_no FROM WIP_ENTRIES
+                    UNION
+                    SELECT DISTINCT line, model, part_no, 
+                        CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
+                    FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != ''
+                ),
+                TotalIn AS (
+                    SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
+                    FROM WIP_ENTRIES $wipDateWhere GROUP BY line, model, part_no, lot_no
+                ),
+                TotalOut AS (
+                    SELECT line, model, part_no,
+                        CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
+                        SUM(ISNULL(count_value, 0)) as total_out
+                    FROM PARTS $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
+                ),
+                FinalResult AS (
+                    SELECT 
+                        MasterLots.line, MasterLots.model, MasterLots.part_no, MasterLots.lot_no,
+                        ISNULL(ti.total_in, 0) as total_in, ISNULL(to_out.total_out, 0) as total_out,
+                        (ISNULL(ti.total_in, 0) - ISNULL(to_out.total_out, 0)) as variance
+                    FROM MasterLots
+                    LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
+                    LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
+                    $whereClause
+                ),
+                NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no, lot_no) as RowNum
+                    FROM FinalResult
+                    WHERE variance != 0 OR total_in != 0 OR total_out != 0
+                )
+                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?;
+            ";
+
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute(array_merge($date_params_wip, $date_params_parts, $params, [$startRow, $startRow + $limit]));
+            $report_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $report_data]);
             break;
             
         case 'get_wip_history':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
+            $startRow = ($page - 1) * $limit;
+            
             $params = [];
             $wip_conditions = [];
-
             if ($currentUser['role'] === 'supervisor') {
-                $wip_conditions[] = "wip.line = ?";
+                $wip_conditions[] = "line = ?";
                 $params[] = $currentUser['line'];
             }
 
-            if (!empty($_GET['line'])) { $wip_conditions[] = "wip.line = ?"; $params[] = $_GET['line']; }
-            if (!empty($_GET['part_no'])) { $wip_conditions[] = "wip.part_no = ?"; $params[] = $_GET['part_no']; }
-            if (!empty($_GET['model'])) { $wip_conditions[] = "wip.model = ?"; $params[] = $_GET['model']; }
-            if (!empty($_GET['lot_no'])) { $wip_conditions[] = "wip.lot_no = ?"; $params[] = $_GET['lot_no']; }
-            if (!empty($_GET['startDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(wip.entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['line'])) { $wip_conditions[] = "line = ?"; $params[] = $_GET['line']; }
+            if (!empty($_GET['part_no'])) { $wip_conditions[] = "part_no = ?"; $params[] = $_GET['part_no']; }
+            if (!empty($_GET['model'])) { $wip_conditions[] = "model = ?"; $params[] = $_GET['model']; }
+            if (!empty($_GET['lot_no'])) { $wip_conditions[] = "lot_no = ?"; $params[] = $_GET['lot_no']; }
+            if (!empty($_GET['startDate'])) { $wip_conditions[] = "CAST(entry_time AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $wip_conditions[] = "CAST(entry_time AS DATE) <= ?"; $params[] = $_GET['endDate']; }
             
-            $wipWhereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
+            $whereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             
-            $history_sql = "SELECT * FROM WIP_ENTRIES AS wip $wipWhereClause ORDER BY entry_time DESC";
-            $history_stmt = $pdo->prepare($history_sql);
-            $history_stmt->execute($params);
-            $history_data = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
+            // 1. นับจำนวนทั้งหมด
+            $totalSql = "SELECT COUNT(*) FROM WIP_ENTRIES $whereClause";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
 
-            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
+            // 2. ดึงข้อมูลแบบแบ่งหน้า
+            $dataSql = "
+                SELECT * FROM (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY entry_time DESC, entry_id DESC) as RowNum
+                    FROM WIP_ENTRIES
+                    $whereClause
+                ) AS NumberedRows 
+                WHERE RowNum > ? AND RowNum <= ?
+            ";
+            $paginationParams = array_merge($params, [$startRow, $startRow + $limit]);
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute($paginationParams);
+            $history_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. ดึงข้อมูลสรุป (ส่วนนี้ไม่แบ่งหน้า)
+            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM WIP_ENTRIES wip $whereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
             $summary_stmt = $pdo->prepare($summary_sql);
             $summary_stmt->execute($params);
             $summary_data = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'history' => $history_data, 'history_summary' => $summary_data]);
+            echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $history_data, 'history_summary' => $summary_data]);
             break;
 
         case 'adjust_stock':
@@ -384,6 +445,10 @@ try {
             break;
 
         case 'get_stock_count':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
+            $startRow = ($page - 1) * $limit;
+
             $param_conditions = [];
             $param_params = [];
 
@@ -399,58 +464,65 @@ try {
             
             $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
             
-            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
-            $sql = "
+            // 1. SQL สำหรับนับจำนวนทั้งหมด
+            $countSql = "SELECT COUNT(*) FROM PARAMETER p $paramWhereClause";
+            $totalStmt = $pdo->prepare($countSql);
+            $totalStmt->execute($param_params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            // 2. SQL สำหรับดึงข้อมูลแบบแบ่งหน้า
+            $dataSql = "
                 WITH 
-                -- 1. ยอดนำเข้าทั้งหมด (จาก WIP_ENTRIES)
                 TotalWipIn AS (
                     SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total
                     FROM WIP_ENTRIES
                     GROUP BY line, model, part_no
                 ),
-                -- 2. ยอดปรับปรุงเข้า (จาก PARTS)
                 TotalAdjustIn AS (
                     SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
                     FROM PARTS
                     WHERE count_type = 'ADJUST-IN'
                     GROUP BY line, model, part_no
                 ),
-                -- 3. ยอดปรับปรุงออก (จาก PARTS)
                 TotalAdjustOut AS (
                     SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
                     FROM PARTS
                     WHERE count_type = 'ADJUST-OUT'
                     GROUP BY line, model, part_no
                 ),
-                -- 4. ยอดผลิตออกทั้งหมด (ไม่รวมรายการปรับปรุง)
                 TotalProductionOut AS (
                     SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
                     FROM PARTS
                     WHERE count_type NOT LIKE 'ADJUST%' 
                     GROUP BY line, model, part_no
+                ),
+                FinalResult AS (
+                    SELECT
+                        p.line, p.model, p.part_no,
+                        (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
+                        (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out
+                    FROM PARAMETER p
+                    LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
+                    LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
+                    LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no
+                    LEFT JOIN TotalProductionOut prod_out ON p.line = prod_out.line AND p.model = prod_out.model AND p.part_no = prod_out.part_no
+                    $paramWhereClause
+                ),
+                NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
+                    FROM FinalResult
                 )
-                -- 5. รวมผลลัพธ์ทั้งหมด
-                SELECT
-                    p.line, p.model, p.part_no,
-                    (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
-                    (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out,
-                    -- สูตรคำนวณ Variance ที่ถูกต้อง
-                    (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) - (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS variance
-                FROM 
-                    PARAMETER p
-                LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
-                LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
-                LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no
-                LEFT JOIN TotalProductionOut prod_out ON p.line = prod_out.line AND p.model = prod_out.model AND p.part_no = prod_out.part_no
-                $paramWhereClause
-                ORDER BY p.line, p.model, p.part_no;
+                SELECT line, model, part_no, total_in, total_out, (total_in - total_out) AS variance 
+                FROM NumberedRows 
+                WHERE RowNum > ? AND RowNum <= ?
             ";
             
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($param_params);
-            $stock_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $paginationParams = array_merge($param_params, [$startRow, $startRow + $limit]);
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute($paginationParams);
+            $stock_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $stock_data]);
+            echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $stock_data]);
             break;
 
         case 'search_active_lots':

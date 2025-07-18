@@ -1,17 +1,55 @@
+function renderGenericPagination(containerId, page, totalItems, limit, callbackFunction) {
+    const totalPages = totalItems > 0 ? Math.ceil(totalItems / limit) : 1;
+    const currentPage = parseInt(page);
+    const paginationContainer = document.getElementById(containerId);
+    if (!paginationContainer) return;
+
+    paginationContainer.innerHTML = ''; 
+
+    if (totalPages <= 1) return;
+
+    const createPageItem = (pageNum, text, isDisabled = false, isActive = false) => {
+        const li = document.createElement('li');
+        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
+        
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = text;
+        if (!isDisabled) {
+            a.onclick = (e) => {
+                e.preventDefault();
+                callbackFunction(pageNum);
+            };
+        }
+        li.appendChild(a);
+        return li;
+    };
+
+    paginationContainer.appendChild(createPageItem(currentPage - 1, 'Previous', currentPage === 1));
+    for (let i = 1; i <= totalPages; i++) {
+        paginationContainer.appendChild(createPageItem(i, i, false, i === currentPage));
+    }
+    paginationContainer.appendChild(createPageItem(currentPage + 1, 'Next', currentPage === totalPages));
+}
+
+
 /**
- * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
+ * =================================================================
+ * ฟังก์ชันที่ถูกปรับปรุง
+ * =================================================================
  */
-async function fetchWipReport() {
+
+async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
-    // แก้ไข: ปรับ colspan เป็น 6
     reportBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Report...</td></tr>';
     
     const params = new URLSearchParams({
+        page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
-        model: document.getElementById('filterModel')?.value || '', // เพิ่ม filter model
-        lot_no: document.getElementById('filterLotNo')?.value || '',
+        model: document.getElementById('filterModel')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
@@ -21,60 +59,53 @@ async function fetchWipReport() {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        window.cachedWipReport = result.report;
+        window.cachedWipReport = result.data; // แก้ไข: ใช้ result.data
 
         reportBody.innerHTML = '';
-        if (result.report.length === 0) {
-            // แก้ไข: ปรับ colspan เป็น 6
-            reportBody.innerHTML = '<tr><td colspan="6" class="text-center">No WIP data found for the selected filters.</td></tr>';
+        if (result.data.length === 0) {
+            reportBody.innerHTML = '<tr><td colspan="6" class="text-center">No WIP data found.</td></tr>';
         } else {
-            result.report.forEach(item => {
-                const variance = parseInt(item.variance);
-                let textColorClass = '';
-                let varianceText = '';
+            result.data.forEach(item => {
+                // ... (ส่วน render ตารางเหมือนเดิม) ...
+                 const variance = parseInt(item.variance);
+                 let textColorClass = '';
+                 let varianceText = variance.toLocaleString();
 
-                if (variance > 0) {
-                    textColorClass = 'text-warning';
-                    varianceText = '+' + variance.toLocaleString();
-                } else if (variance < 0) {
-                    textColorClass = 'text-danger';
-                    varianceText = variance.toLocaleString();
-                } else {
-                    textColorClass = 'text-success';
-                    varianceText = variance.toLocaleString();
-                }
+                 if (variance > 0) {
+                     textColorClass = 'text-warning';
+                 } else if (variance < 0) {
+                     textColorClass = 'text-danger';
+                 }
 
-                const tr = document.createElement('tr');
-                // แก้ไข: เพิ่ม td สำหรับ Model
-                tr.innerHTML = `
-                    <td>${item.part_no}</td>
-                    <td>${item.line}</td>
-                    <td>${item.model}</td>
-                    <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
-                    <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
-                `;
-                reportBody.appendChild(tr);
+                 const tr = document.createElement('tr');
+                 tr.innerHTML = `
+                     <td>${item.part_no}</td>
+                     <td>${item.line}</td>
+                     <td>${item.model}</td>
+                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
+                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
+                     <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
+                 `;
+                 reportBody.appendChild(tr);
             });
         }
+        // เรียกใช้ฟังก์ชัน render pagination
+        renderGenericPagination('wipReportPagination', result.page, result.total, result.limit, fetchWipReport);
+
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
         window.cachedWipReport = [];
-        // แก้ไข: ปรับ colspan เป็น 6
         reportBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP แยกตาม Lot Number
- */
-async function fetchWipReportByLot() {
+async function fetchWipReportByLot(page = 1) {
     const reportBody = document.getElementById('wipReportByLotTableBody');
     if (!reportBody) return;
-    // ปรับ colspan เป็น 7 สำหรับตารางใหม่
     reportBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Report by Lot...</td></tr>';
     
     const params = new URLSearchParams({
+        page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         model: document.getElementById('filterModel')?.value || '',
@@ -88,22 +119,22 @@ async function fetchWipReportByLot() {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        // เก็บข้อมูลไว้ใน cache ชื่อใหม่
-        window.cachedWipReportByLot = result.report;
+        window.cachedWipReportByLot = result.data; // แก้ไข: ใช้ result.data
 
         reportBody.innerHTML = '';
-        if (result.report.length === 0) {
-            reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP Lot found for the selected filters.</td></tr>';
+        if (result.data.length === 0) {
+            reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP Lot found.</td></tr>';
         } else {
-            result.report.forEach(item => {
+            result.data.forEach(item => {
+                // ... (ส่วน render ตารางเหมือนเดิม) ...
                 const variance = parseInt(item.variance);
                 let textColorClass = '';
                 let varianceText = variance.toLocaleString();
 
                 if (variance > 0) {
-                    textColorClass = 'text-warning'; // WIP > 0
+                    textColorClass = 'text-warning';
                 } else if (variance < 0) {
-                    textColorClass = 'text-danger'; // Over-produced
+                    textColorClass = 'text-danger';
                 }
 
                 const tr = document.createElement('tr');
@@ -119,6 +150,9 @@ async function fetchWipReportByLot() {
                 reportBody.appendChild(tr);
             });
         }
+        // เรียกใช้ฟังก์ชัน render pagination
+        renderGenericPagination('wipReportByLotPagination', result.page, result.total, result.limit, fetchWipReportByLot);
+
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
         window.cachedWipReportByLot = [];
@@ -126,15 +160,13 @@ async function fetchWipReportByLot() {
     }
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
- */
-async function fetchHistoryData() {
+async function fetchHistoryData(page = 1) {
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
     historyBody.innerHTML = '<tr><td colspan="9" class="text-center">Loading History...</td></tr>';
 
     const params = new URLSearchParams({
+        page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         lot_no: document.getElementById('filterLotNo')?.value || '',
@@ -150,58 +182,57 @@ async function fetchHistoryData() {
         window.cachedHistorySummary = result.history_summary || [];
         
         historyBody.innerHTML = '';
-        if (result.history.length === 0) {
+        if (result.data.length === 0) { // แก้ไข: ใช้ result.data
             historyBody.innerHTML = '<tr><td colspan="9" class="text-center">No entry history found.</td></tr>';
         } else {
-            result.history.forEach(item => {
-                const tr = document.createElement('tr');
-                
-                const entryDate = new Date(item.entry_time);
-                const formattedDate = entryDate.toLocaleDateString('en-GB');
-                const formattedTime = entryDate.toTimeString().substring(0, 8);
+            result.data.forEach(item => {
+                // ... (ส่วน render ตารางเหมือนเดิม) ...
+                 const tr = document.createElement('tr');
+                 const entryDate = new Date(item.entry_time);
+                 const formattedDate = entryDate.toLocaleDateString('en-GB');
+                 const formattedTime = entryDate.toTimeString().substring(0, 8);
+                 const noteTd = document.createElement('td');
+                 const noteDiv = document.createElement('div');
+                 noteDiv.className = 'note-truncate';
+                 noteDiv.title = item.remark || '';
+                 noteDiv.textContent = item.remark || '';
+                 noteTd.appendChild(noteDiv);
 
-                const noteTd = document.createElement('td');
-                const noteDiv = document.createElement('div');
-                noteDiv.className = 'note-truncate';
-                noteDiv.title = item.remark || '';
-                noteDiv.textContent = item.remark || '';
-                noteTd.appendChild(noteDiv);
-
-                tr.innerHTML = `
-                    <td>${formattedDate}</td>
-                    <td>${formattedTime}</td>
-                    <td>${item.line}</td>
-                    <td>${item.model || '-'}</td>
-                    <td>${item.part_no}</td>
-                    <td>${item.lot_no || '-'}</td>
-                    <td style="text-align: center;">${parseInt(item.quantity_in).toLocaleString()}</td>
-                `;
-                tr.appendChild(noteTd);
-                
-                if (canManage) {
-                    const actionsTd = document.createElement('td');
-                    actionsTd.className = 'text-center';
-                    const buttonWrapper = document.createElement('div');
-                    buttonWrapper.className = 'd-flex gap-1';
-
-                    const editButton = document.createElement('button');
-                    editButton.className = 'btn btn-sm btn-warning w-100';
-                    editButton.textContent = 'Edit';
-                    editButton.onclick = () => openEditEntryModal(item, editButton);
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.className = 'btn btn-sm btn-danger w-100';
-                    deleteButton.textContent = 'Delete';
-                    deleteButton.onclick = () => handleDeleteEntry(item.entry_id);
-
-                    buttonWrapper.appendChild(editButton);
-                    buttonWrapper.appendChild(deleteButton);
-                    actionsTd.appendChild(buttonWrapper);
-                    tr.appendChild(actionsTd);
-                }
-                historyBody.appendChild(tr);
+                 tr.innerHTML = `
+                     <td>${formattedDate}</td>
+                     <td>${formattedTime}</td>
+                     <td>${item.line}</td>
+                     <td>${item.model || '-'}</td>
+                     <td>${item.part_no}</td>
+                     <td>${item.lot_no || '-'}</td>
+                     <td style="text-align: center;">${parseInt(item.quantity_in).toLocaleString()}</td>
+                 `;
+                 tr.appendChild(noteTd);
+                 
+                 if (canManage) {
+                     const actionsTd = document.createElement('td');
+                     actionsTd.className = 'text-center';
+                     const buttonWrapper = document.createElement('div');
+                     buttonWrapper.className = 'd-flex gap-1';
+                     const editButton = document.createElement('button');
+                     editButton.className = 'btn btn-sm btn-warning w-100';
+                     editButton.textContent = 'Edit';
+                     editButton.onclick = () => openEditEntryModal(item, editButton);
+                     const deleteButton = document.createElement('button');
+                     deleteButton.className = 'btn btn-sm btn-danger w-100';
+                     deleteButton.textContent = 'Delete';
+                     deleteButton.onclick = () => handleDeleteEntry(item.entry_id);
+                     buttonWrapper.appendChild(editButton);
+                     buttonWrapper.appendChild(deleteButton);
+                     actionsTd.appendChild(buttonWrapper);
+                     tr.appendChild(actionsTd);
+                 }
+                 historyBody.appendChild(tr);
             });
         }
+        // เรียกใช้ฟังก์ชัน render pagination
+        renderGenericPagination('entryHistoryPagination', result.page, result.total, result.limit, fetchHistoryData);
+
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
         historyBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error: ${error.message}</td></tr>`;
@@ -230,11 +261,11 @@ async function handleDeleteEntry(entryId) {
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน Stock Count
  */
-async function fetchStockCountReport() {
+async function fetchStockCountReport(page = 1) {
     const tableBody = document.getElementById('stockCountTableBody');
     if (!tableBody) return;
 
-    const tableHead = tableBody.previousElementSibling; // Get thead
+    const tableHead = tableBody.previousElementSibling;
     if (tableHead) {
         tableHead.innerHTML = `
             <tr>
@@ -249,9 +280,11 @@ async function fetchStockCountReport() {
         `;
     }
     
-    tableBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Stock Count...</td></tr>';
+    const colspan = canManage ? 7 : 6;
+    tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">Loading Stock Count...</td></tr>`;
 
     const params = new URLSearchParams({
+        page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         model: document.getElementById('filterModel')?.value || ''
@@ -264,21 +297,18 @@ async function fetchStockCountReport() {
 
         tableBody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No parts found in parameters.</td></tr>';
+            tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No parts found in parameters.</td></tr>`;
         } else {
             result.data.forEach(row => {
+                // ... (ส่วน render ตารางเหมือนเดิม) ...
                 const tr = document.createElement('tr');
                 const variance = parseInt(row.variance, 10);
-
-                // --- ตรรกะการเปลี่ยนสีใหม่ ---
                 let varianceClass = '';
                 if (variance < 0) {
-                    varianceClass = 'text-danger'; // ยอดติดลบ (Out > In) - สีแดง
+                    varianceClass = 'text-danger';
                 } else if (variance > 0) {
-                    varianceClass = 'text-success'; // ยอดคงเหลือ - สีเขียว
+                    varianceClass = 'text-success';
                 }
-                // ถ้าเป็น 0 จะไม่มีสี
-
                 let actionsHtml = '';
                 if (canManage) {
                     actionsHtml = `
@@ -289,7 +319,6 @@ async function fetchStockCountReport() {
                         </td>
                     `;
                 }
-
                 tr.innerHTML = `
                     <td>${row.line}</td>
                     <td>${row.model}</td>
@@ -302,8 +331,11 @@ async function fetchStockCountReport() {
                 tableBody.appendChild(tr);
             });
         }
+        // เรียกใช้ฟังก์ชัน render pagination
+        renderGenericPagination('stockCountPagination', result.page, result.total, result.limit, fetchStockCountReport);
+
     } catch (error) {
         console.error("Failed to fetch Stock Count report:", error);
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load report.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Failed to load report.</td></tr>`;
     }
 }
