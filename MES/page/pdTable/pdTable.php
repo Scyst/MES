@@ -42,7 +42,7 @@
                 <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wip-report-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-report-by-lot-pane" type="button" role="tab">อยู่ระหว่างการพัฒนา</button><!-- WIP/Variance (Lot No.) -->
+                <button class="nav-link" id="wip-report-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-report-by-lot-pane" type="button" role="tab">WIP/Variance (Lot No.)</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
