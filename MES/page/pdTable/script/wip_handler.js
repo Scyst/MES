@@ -249,7 +249,7 @@ async function fetchStockCountReport() {
         `;
     }
     
-    tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Stock Count...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Stock Count...</td></tr>';
 
     const params = new URLSearchParams({
         line: document.getElementById('filterLine')?.value || '',
@@ -264,7 +264,7 @@ async function fetchStockCountReport() {
 
         tableBody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No parts found in parameters.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No parts found in parameters.</td></tr>';
         } else {
             result.data.forEach(row => {
                 const tr = document.createElement('tr');
