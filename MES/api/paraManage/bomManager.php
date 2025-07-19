@@ -161,11 +161,101 @@ try {
             echo json_encode(['success' => true, 'message' => 'BOM has been deleted.']);
             break;
 
+        case 'get_full_bom_export':
+            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
+            $sql = "
+                SELECT
+                    p.sap_no AS fg_sap_no,
+                    b.fg_part_no,
+                    b.line,
+                    b.model,
+                    b.component_part_no,
+                    b.quantity_required,
+                    b.updated_by,
+                    b.updated_at
+                FROM
+                    PRODUCT_BOM b
+                LEFT JOIN
+                    PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
+            ";
+            $params = [];
+            if ($currentUser['role'] === 'supervisor') {
+                $sql .= " WHERE b.line = ?";
+                $params[] = $currentUser['line'];
+            }
+            $sql .= " ORDER BY b.line, b.model, b.fg_part_no, b.component_part_no";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'bulk_import_bom':
+            if (!is_array($input) || empty($input)) {
+                throw new Exception("Invalid or empty data received for BOM import.");
+            }
+
+            // เริ่ม Transaction เพื่อความปลอดภัยของข้อมูล
+            $pdo->beginTransaction();
+            
+            // เตรียมคำสั่ง SQL
+            $deleteSql = "DELETE FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ?";
+            $deleteStmt = $pdo->prepare($deleteSql);
+
+            $insertSql = "INSERT INTO PRODUCT_BOM (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $insertStmt = $pdo->prepare($insertSql);
+
+            $importedFgCount = 0;
+            $importedComponentCount = 0;
+
+            // วนลูปตามข้อมูล BOM ที่ถูกจัดกลุ่มมาแล้ว
+            foreach ($input as $bomGroup) {
+                $fg_part_no = $bomGroup['fg_part_no'] ?? null;
+                $line = $bomGroup['line'] ?? null;
+                $model = $bomGroup['model'] ?? null;
+                $components = $bomGroup['components'] ?? [];
+
+                if (!$fg_part_no || !$line || !$model || empty($components)) {
+                    continue; // ข้ามข้อมูลที่ไม่สมบูรณ์
+                }
+
+                // ตรวจสอบสิทธิ์สำหรับ Line ที่จะ import
+                enforceLinePermission($line);
+
+                // 1. ลบ BOM เก่าของ FG นี้ทั้งหมดทิ้งก่อน
+                $deleteStmt->execute([$fg_part_no, $line, $model]);
+
+                // 2. เพิ่ม Component ใหม่ทั้งหมดเข้าไป
+                foreach ($components as $component) {
+                    $insertStmt->execute([
+                        $fg_part_no,
+                        $line,
+                        $model,
+                        $component['component_part_no'],
+                        (int)$component['quantity_required'],
+                        $currentUser['username']
+                    ]);
+                    $importedComponentCount++;
+                }
+                $importedFgCount++;
+            }
+
+            // ยืนยันการเปลี่ยนแปลงข้อมูลในฐานข้อมูล
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', null, "Imported $importedFgCount FGs with a total of $importedComponentCount components.");
+            echo json_encode(["success" => true, "message" => "Successfully imported BOM for $importedFgCount Finished Goods."]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid BOM action.");
     }
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     error_log("BOM Manager Error: " . $e->getMessage());

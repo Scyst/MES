@@ -408,6 +408,9 @@ function initializeBomManager() {
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
     const createNewBomBtn = document.getElementById('createNewBomBtn');
+    const importBomBtn = document.getElementById('importBomBtn');
+    const bomImportFile = document.getElementById('bomImportFile');
+    const exportBomBtn = document.getElementById('exportBomBtn');
     const createBomModalEl = document.getElementById('createBomModal');
     const createBomModal = new bootstrap.Modal(createBomModalEl);
     const createBomForm = document.getElementById('createBomForm');
@@ -512,6 +515,97 @@ function initializeBomManager() {
         }
     }
 
+    async function handleBomImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        showToast('Processing BOM file...', '#0dcaf0');
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const fileData = e.target.result;
+                const workbook = XLSX.read(fileData, { type: "binary" });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                // แปลงข้อมูลให้เป็นโครงสร้างที่ API ต้องการ
+                const bomData = rawRows.reduce((acc, row) => {
+                    // อ่านค่าจากคอลัมน์ โดยไม่สนใจว่าเป็นตัวพิมพ์เล็กหรือใหญ่
+                    const fg_part_no = String(row["FG_PART_NO"] || row["fg_part_no"] || '').trim();
+                    const line = String(row["LINE"] || row["line"] || '').trim().toUpperCase();
+                    const model = String(row["MODEL"] || row["model"] || '').trim().toUpperCase();
+                    const component_part_no = String(row["COMPONENT_PART_NO"] || row["component_part_no"] || '').trim();
+                    const quantity_required = parseInt(row["QUANTITY_REQUIRED"] || row["quantity_required"] || 0);
+
+                    // ตรวจสอบข้อมูลสำคัญ
+                    if (fg_part_no && line && model && component_part_no && quantity_required > 0) {
+                        const fgKey = `${fg_part_no}|${line}|${model}`;
+                        if (!acc[fgKey]) {
+                            acc[fgKey] = {
+                                fg_part_no,
+                                line,
+                                model,
+                                components: []
+                            };
+                        }
+                        acc[fgKey].components.push({ component_part_no, quantity_required });
+                    }
+                    return acc;
+                }, {});
+
+                const payload = Object.values(bomData);
+
+                if (payload.length > 0 && confirm(`This will overwrite existing BOMs. Import BOM for ${payload.length} Finished Good(s)?`)) {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_import_bom', 'POST', payload);
+                    showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                    if (result.success) {
+                        loadAndRenderBomFgTable(); // โหลดข้อมูลตารางใหม่
+                    }
+                } else {
+                    showToast('No valid BOM data found in the file or import was cancelled.', '#ffc107');
+                }
+
+            } catch (error) {
+                console.error("BOM Import process failed:", error);
+                showToast('Failed to process file. Check console for details.', '#dc3545');
+            } finally {
+                event.target.value = ''; // ล้างค่า input file เพื่อให้เลือกไฟล์เดิมซ้ำได้
+            }
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    async function exportBomToExcel() {
+        showToast('Exporting all BOM data... Please wait.', '#0dcaf0');
+
+        const result = await sendRequest(BOM_API_ENDPOINT, 'get_full_bom_export', 'GET');
+
+        if (!result.success || !result.data || result.data.length === 0) {
+            showToast('No BOM data available to export.', '#ffc107');
+            return;
+        }
+
+        // จัดรูปแบบข้อมูลสำหรับไฟล์ Excel
+        const worksheetData = result.data.map(row => ({
+            "FG_SAP_NO": row.fg_sap_no || '',
+            "FG_PART_NO": row.fg_part_no,
+            "LINE": row.line,
+            "MODEL": row.model,
+            "COMPONENT_PART_NO": row.component_part_no,
+            "QUANTITY_REQUIRED": row.quantity_required
+        }));
+
+        // ใช้ Library SheetJS (XLSX) เพื่อสร้างไฟล์ Excel
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "BOM_Export");
+        const fileName = `BOM_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+
+        showToast('BOM data exported successfully!', '#28a745');
+    }
+
     // --- Event Listeners ---
     let debounceTimer;
     createBomSapInput.addEventListener('input', () => {
@@ -535,6 +629,9 @@ function initializeBomManager() {
     });
 
     createNewBomBtn?.addEventListener('click', () => { createBomModal.show(); });
+    importBomBtn?.addEventListener('click', () => bomImportFile?.click());
+    bomImportFile?.addEventListener('change', handleBomImport);
+    exportBomBtn?.addEventListener('click', exportBomToExcel);
 
     createBomForm?.addEventListener('submit', async (e) => {
         e.preventDefault();

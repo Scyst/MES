@@ -156,6 +156,13 @@
                         <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number or Line...">
                     </div>
                     <div class="col-md-6 text-end">
+                        <button class="btn btn-primary" id="exportBomBtn">
+                            <i class="fas fa-file-export"></i> Export BOM
+                        </button>
+                        <button class="btn btn-info" id="importBomBtn">
+                            <i class="fas fa-file-import"></i> Import BOM
+                        </button>
+                        <input type="file" id="bomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
                         <button class="btn btn-success" id="createNewBomBtn">+ Create New BOM</button>
                     </div>
                 </div>
