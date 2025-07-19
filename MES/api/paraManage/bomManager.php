@@ -122,7 +122,7 @@ try {
                 )
                 SELECT DISTINCT b.fg_part_no, b.line, b.model, p.sap_no, rb.updated_by, rb.updated_at
                 FROM PRODUCT_BOM b
-                LEFT JOIN  PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
+                LEFT JOIN PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
                 LEFT JOIN RankedBOMs rb ON b.fg_part_no = rb.fg_part_no AND b.line = rb.line AND b.model = rb.model AND rb.rn = 1
             ";
             $params = [];

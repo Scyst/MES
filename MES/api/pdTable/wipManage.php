@@ -194,16 +194,18 @@ try {
                     SELECT 
                         ISNULL(tin.part_no, tout.part_no) AS part_no, 
                         ISNULL(tin.line, tout.line) AS line, 
-                        ISNULL(tin.model, tout.model) as model, 
+                        ISNULL(tin.model, tout.model) as model,
+                        p.part_description, 
                         ISNULL(tin.total_in, 0) AS total_in, 
                         ISNULL(tout.total_out, 0) AS total_out
                     FROM TotalIn tin 
                     FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
+                    LEFT JOIN PARAMETER p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
                 ), NumberedRows AS (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
                 )
-                SELECT part_no, line, model, total_in, total_out, (total_out - total_in) as variance
+                SELECT part_no, line, model, part_description, total_in, total_out, (total_in - total_out) as variance
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?;
             ";
@@ -314,11 +316,14 @@ try {
                 FinalResult AS (
                     SELECT 
                         MasterLots.line, MasterLots.model, MasterLots.part_no, MasterLots.lot_no,
-                        ISNULL(ti.total_in, 0) as total_in, ISNULL(to_out.total_out, 0) as total_out,
+                        p.part_description,
+                        ISNULL(ti.total_in, 0) as total_in, 
+                        ISNULL(to_out.total_out, 0) as total_out,
                         (ISNULL(to_out.total_out, 0) - ISNULL(ti.total_in, 0)) as variance
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
+                    LEFT JOIN PARAMETER p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
                     $whereClause
                 ),
                 NumberedRows AS (
@@ -499,6 +504,7 @@ try {
                 FinalResult AS (
                     SELECT
                         p.line, p.model, p.part_no,
+                        p.part_description,
                         (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
                         (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out
                     FROM PARAMETER p
@@ -512,7 +518,7 @@ try {
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FinalResult
                 )
-                SELECT line, model, part_no, total_in, total_out, (total_out - total_in) AS variance 
+                SELECT line, model, part_no, part_description, total_in, total_out, (total_in - total_out) AS variance 
                 FROM NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?
             ";

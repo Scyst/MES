@@ -22,7 +22,7 @@ try {
     switch ($action) {
         //-- อ่านข้อมูล  PARAMETER ทั้งหมด (พร้อมกรองสำหรับ Supervisor) --
         case 'read':
-            $sql = "SELECT * FROM  PARAMETER";
+            $sql = "SELECT id, line, model, part_no, sap_no, planned_output, part_description, updated_at FROM PARAMETER";
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
                 $sql .= " WHERE line = ?";
@@ -41,34 +41,33 @@ try {
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
-        //-- สร้าง  PARAMETER ใหม่ (พร้อมตรวจสอบสิทธิ์) --
+        //-- สร้าง PARAMETER ใหม่ (พร้อมตรวจสอบสิทธิ์) --
         case 'create':
             $line = strtoupper($input['line']);
             enforceLinePermission($line);
 
-            // แก้ไข: เพิ่ม part_description ใน INSERT
-            $sql = "INSERT INTO  PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $sql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $params = [
                 $line, 
                 strtoupper($input['model']), 
                 strtoupper($input['part_no']), 
                 strtoupper($input['sap_no'] ?? ''), 
                 (int)$input['planned_output'],
-                $input['part_description'] ?? null // รับค่าใหม่ (ถ้าไม่มีให้เป็น null)
+                $input['part_description'] ?? null
             ];
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             
-            logAction($pdo, $currentUser['username'], 'CREATE  PARAMETER', null, "{$params[0]}-{$params[1]}-{$params[2]}");
-            echo json_encode(['success' => true, 'message' => ' PARAMETER created.']);
+            logAction($pdo, $currentUser['username'], 'CREATE PARAMETER', null, "{$params[0]}-{$params[1]}-{$params[2]}");
+            echo json_encode(['success' => true, 'message' => 'Parameter created.']);
             break;
 
-        //-- อัปเดตข้อมูล  PARAMETER ที่มีอยู่ (พร้อมตรวจสอบสิทธิ์) --
+        //-- อัปเดตข้อมูล PARAMETER ที่มีอยู่ (พร้อมตรวจสอบสิทธิ์) --
         case 'update':
             $id = $input['id'] ?? null;
             if (!$id) throw new Exception("Missing ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM  PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM PARAMETER WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
             if ($param) {
@@ -77,62 +76,61 @@ try {
                     enforceLinePermission($input['line']);
                 }
             } else {
-                throw new Exception(" PARAMETER not found.");
+                throw new Exception("Parameter not found.");
             }
             
             $line = strtoupper($input['line']);
-            // แก้ไข: เพิ่ม part_description ใน UPDATE
-            $updateSql = "UPDATE  PARAMETER SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE PARAMETER SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
             $params = [
                 $line, 
                 strtoupper($input['model']), 
                 strtoupper($input['part_no']), 
                 strtoupper($input['sap_no']), 
                 (int)$input['planned_output'], 
-                $input['part_description'] ?? null, // รับค่าใหม่
+                $input['part_description'] ?? null,
                 $id
             ];
             $stmt = $pdo->prepare($updateSql);
             $stmt->execute($params);
 
-            logAction($pdo, $currentUser['username'], 'UPDATE  PARAMETER', $id, "Data updated for ID: $id");
-            echo json_encode(["success" => true, 'message' => ' PARAMETER updated.']);
+            logAction($pdo, $currentUser['username'], 'UPDATE PARAMETER', $id, "Data updated for ID: $id");
+            echo json_encode(["success" => true, 'message' => 'Parameter updated.']);
             break;
 
-        //-- ลบข้อมูล  PARAMETER (พร้อมตรวจสอบสิทธิ์) --
+        //-- ลบข้อมูล PARAMETER (พร้อมตรวจสอบสิทธิ์) --
         case 'delete':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM  PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM PARAMETER WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
             if ($param) {
                 enforceLinePermission($param['line']);
             } else {
-                throw new Exception(" PARAMETER not found.");
+                throw new Exception("Parameter not found.");
             }
 
-            $deleteStmt = $pdo->prepare("DELETE FROM  PARAMETER WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM PARAMETER WHERE id = ?");
             $deleteStmt->execute([(int)$id]);
 
             if ($deleteStmt->rowCount() > 0) {
-                 logAction($pdo, $currentUser['username'], 'DELETE  PARAMETER', $id);
+                 logAction($pdo, $currentUser['username'], 'DELETE PARAMETER', $id);
             }
-            echo json_encode(["success" => true, 'message' => ' PARAMETER deleted.']);
+            echo json_encode(["success" => true, 'message' => 'Parameter deleted.']);
             break;
             
-        //-- นำเข้าข้อมูล  PARAMETER จำนวนมาก (Bulk Import) --
+        //-- นำเข้าข้อมูล PARAMETER จำนวนมาก (Bulk Import) --
         case 'bulk_import':
             if (!is_array($input) || empty($input)) throw new Exception("Invalid data");
             
             $pdo->beginTransaction();
             
-            $checkSql = "SELECT id FROM  PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $checkSql = "SELECT id FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
             $checkStmt = $pdo->prepare($checkSql);
-            $updateSql = "UPDATE  PARAMETER SET sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE PARAMETER SET sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
             $updateStmt = $pdo->prepare($updateSql);
-            $insertSql = "INSERT INTO  PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $insertSql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
 
             $imported = 0;
@@ -140,7 +138,6 @@ try {
                 $line = strtoupper(trim($row['line'] ?? ''));
                 if (empty($line)) continue;
 
-                // --- เพิ่ม: ตรวจสอบสิทธิ์สำหรับทุกแถวในไฟล์ Import ---
                 enforceLinePermission($line);
 
                 $model = strtoupper(trim($row['model'] ?? ''));
@@ -163,7 +160,7 @@ try {
             }
 
             $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'BULK IMPORT  PARAMETER', null, "Imported $imported rows");
+            logAction($pdo, $currentUser['username'], 'BULK IMPORT PARAMETER', null, "Imported $imported rows");
             echo json_encode(["success" => true, "imported" => $imported, "message" => "Imported $imported row(s) successfully."]);
             break;
 
@@ -223,7 +220,7 @@ try {
             echo json_encode(['success' => $success, 'message' => 'Schedule deleted.']);
             break;
             
-        //-- ตรวจสอบข้อมูล  PARAMETER ที่ขาดหายไป --
+        //-- ตรวจสอบข้อมูล PARAMETER ที่ขาดหายไป --
         case 'health_check_parameters':
             $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
             $stmt->execute();
@@ -231,39 +228,37 @@ try {
             echo json_encode(['success' => true, 'data' => $missingParams]);
             break;
 
-        // ** NEW ACTION 1: ค้นหา  PARAMETER เพื่อนำไปสร้าง BOM **
+        // ** NEW ACTION 1: ค้นหา PARAMETER เพื่อนำไปสร้าง BOM **
         case 'find_parameter_for_bom':
             $sap_no = trim($input['sap_no'] ?? '');
             $model = trim($input['model'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
             $line = trim($input['line'] ?? '');
 
-            $sql = "SELECT * FROM  PARAMETER WHERE ";
+            $sql = "SELECT * FROM PARAMETER WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
-                // ค้นหาด้วย SAP No. เป็นหลัก
                 $sql .= "sap_no = ?";
                 $params[] = $sap_no;
             } elseif (!empty($line) && !empty($model) && !empty($part_no)) {
-                // ถ้าไม่มี SAP No. ให้ค้นหาด้วย 3 field หลัก
                 $sql .= "line = ? AND model = ? AND part_no = ?";
                 $params[] = $line;
                 $params[] = $model;
                 $params[] = $part_no;
             } else {
-                // ถ้าข้อมูลไม่เพียงพอ ให้โยน Exception
                 throw new Exception("Insufficient data provided. Please provide SAP No. or Line/Model/Part No. combination.");
             }
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            $ PARAMETER = $stmt->fetch(PDO::FETCH_ASSOC);
+            // ** แก้ไข: ลบช่องว่างออกจากชื่อตัวแปร **
+            $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($ PARAMETER) {
-                echo json_encode(['success' => true, 'data' => $ PARAMETER]);
+            if ($parameter) {
+                echo json_encode(['success' => true, 'data' => $parameter]);
             } else {
-                echo json_encode(['success' => false, 'message' => ' PARAMETER not found with the specified criteria.']);
+                echo json_encode(['success' => false, 'message' => 'Parameter not found with the specified criteria.']);
             }
             break;
 
@@ -275,22 +270,20 @@ try {
                 exit;
             }
 
-            $sql = "SELECT DISTINCT part_no FROM  PARAMETER WHERE model = ? ORDER BY part_no";
+            $sql = "SELECT DISTINCT part_no FROM PARAMETER WHERE model = ? ORDER BY part_no";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$model]);
             $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $parts]);
             break;
 
-        // In paraManage.php, inside the switch statement
         case 'get_parameter_by_key':
-            // รับค่าจาก GET request
             $sap_no = trim($_GET['sap_no'] ?? '');
             $line = trim($_GET['line'] ?? '');
             $model = trim($_GET['model'] ?? '');
             $part_no = trim($_GET['part_no'] ?? '');
 
-            $sql = "SELECT * FROM  PARAMETER WHERE ";
+            $sql = "SELECT * FROM PARAMETER WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
@@ -302,28 +295,27 @@ try {
                 $params[] = $model;
                 $params[] = $part_no;
             } else {
-                // ถ้าไม่มี key ที่ถูกต้องส่งมา ก็ไม่ต้องทำอะไร
                 echo json_encode(['success' => false, 'message' => 'Insufficient keys.']);
                 exit;
             }
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            $ PARAMETER = $stmt->fetch(PDO::FETCH_ASSOC);
+            // ** แก้ไข: ลบช่องว่างออกจากชื่อตัวแปร **
+            $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($ PARAMETER) {
-                echo json_encode(['success' => true, 'data' => $ PARAMETER]);
+            if ($parameter) {
+                echo json_encode(['success' => true, 'data' => $parameter]);
             } else {
                 echo json_encode(['success' => false, 'data' => null]);
             }
             break;
 
         case 'get_lines':
-            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
             if ($currentUser['role'] === 'supervisor') {
                 echo json_encode(['success' => true, 'data' => [$currentUser['line']]]);
             } else {
-                $stmt = $pdo->query("SELECT DISTINCT line FROM  PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
+                $stmt = $pdo->query("SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
                 $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 echo json_encode(['success' => true, 'data' => $lines]);
             }

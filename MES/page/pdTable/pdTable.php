@@ -145,20 +145,21 @@
             <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
                 <div class="table-responsive mb-4">
                     <table class="table table-dark table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Part Number</th>
-                                    <th>Line</th>
-                                    <th>Model</th>
-                                    <th style="text-align: center;">ยอดนำเข้ารวม (Total In)</th>
-                                    <th style="text-align: center;">ยอดผลิตเสร็จ (Total Out)</th>
-                                    <th style="text-align: center;">คงค้าง/ส่วนต่าง (WIP/Variance)</th>
-                                </tr>
-                            </thead>
+                        <thead>
+                            <tr>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th style="text-align: center;">Total In</th>
+                                <th style="text-align: center;">Total Out</th>
+                                <th style="text-align: center;">WIP/Variance</th>
+                            </tr>
+                        </thead>
                         <tbody id="wipReportTableBody"></tbody>
                     </table>
                 </div>
-                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
             </div>
 
             <div class="tab-pane fade" id="wip-report-by-lot-pane" role="tabpanel">
@@ -166,10 +167,11 @@
                     <table class="table table-dark table-striped">
                         <thead>
                             <tr>
-                                <th>Lot Number</th>
-                                <th>Part Number</th>
                                 <th>Line</th>
                                 <th>Model</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th>Lot Number</th>
                                 <th style="text-align: center;">Total In</th>
                                 <th style="text-align: center;">Total Out</th>
                                 <th style="text-align: center;">WIP/Variance</th>
@@ -185,23 +187,23 @@
                 <div class="table-responsive mt-3">
                     <table class="table table-dark table-striped table-hover">
                         <thead>
-                            <tr>
+                             <tr>
                                 <th>Line</th>
                                 <th>Model</th>
                                 <th>Part No.</th>
+                                <th>Part Description</th>
                                 <th class="text-end">Total IN</th>
                                 <th class="text-end">Total OUT</th>
-                                <th class="text-end">On Hand (Variance)</th>
+                                <th class="text-end">On Hand</th>
                                 <?php if ($canManage): ?>
                                     <th class="text-center">Actions</th>
                                 <?php endif; ?>
                             </tr>
                         </thead>
-                        <tbody id="stockCountTableBody">
-                            </tbody>
+                        <tbody id="stockCountTableBody"></tbody>
                     </table>
                 </div>
-                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
             </div>
         </div>
     </div>

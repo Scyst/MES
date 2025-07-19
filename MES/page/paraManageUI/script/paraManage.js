@@ -98,6 +98,7 @@ function renderStandardParamsTable() {
     const start = (paramCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = filteredData.slice(start, start + ROWS_PER_PAGE);
 
+    // แก้ไข: เพิ่ม colspan เป็น 8
     if (pageData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center">No parameters found.</td></tr>`;
         renderPagination('paginationControls', 0, 1, goToStandardParamPage);
@@ -107,6 +108,7 @@ function renderStandardParamsTable() {
     pageData.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
+        // แก้ไข: เพิ่ม <td> สำหรับ part_description
         tr.innerHTML = `
             <td>${row.line || ''}</td>
             <td>${row.model || ''}</td>
@@ -128,7 +130,6 @@ function renderStandardParamsTable() {
             const editButton = document.createElement('button');
             editButton.className = 'btn btn-sm btn-warning';
             editButton.textContent = 'Edit';
-            // แก้ไข: เปลี่ยนมาใช้ addEventListener
             editButton.addEventListener('click', () => openEditModal("editParamModal", row));
             buttonWrapper.appendChild(editButton);
         }
@@ -137,7 +138,6 @@ function renderStandardParamsTable() {
             const deleteButton = document.createElement('button');
             deleteButton.className = 'btn btn-sm btn-danger';
             deleteButton.textContent = 'Delete';
-            // แก้ไข: เปลี่ยนมาใช้ addEventListener
             deleteButton.addEventListener('click', () => deleteStandardParam(row.id));
             buttonWrapper.appendChild(deleteButton);
         }
@@ -299,7 +299,6 @@ function goToHealthCheckPage(page) {
 function exportToExcel() {
     showToast('Exporting data... Please wait.', '#0dcaf0');
     
-    //-- Export ข้อมูลที่ผ่านการกรองแล้วเท่านั้น --
     const dataToExport = getFilteredStandardParams();
 
     if (!dataToExport || dataToExport.length === 0) {
@@ -307,18 +306,19 @@ function exportToExcel() {
         return;
     }
 
-    //-- จัดรูปแบบข้อมูลให้ตรงกับ Header ที่ต้องการ --
+    // ========== แก้ไขโค้ดส่วนนี้ ==========
+    // เพิ่ม "Part Description" ในข้อมูลที่จะ Export
     const worksheetData = dataToExport.map(row => ({
         "Line": row.line,
         "Model": row.model,
         "Part No": row.part_no,
         "SAP No": row.sap_no || '',
-        "Part Description": row.part_description || '',
+        "Part Description": row.part_description || '', // <-- เพิ่มฟิลด์นี้
         "Planned Output": row.planned_output,
         "Updated At": row.updated_at
     }));
+    // ===================================
     
-    //-- ใช้ Library SheetJS (XLSX) เพื่อสร้างไฟล์ Excel --
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Parameters");
@@ -356,13 +356,12 @@ async function handleImport(event) {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            //-- อ่านและ Parse ข้อมูลจากไฟล์ Excel --
             const fileData = e.target.result;
             const workbook = XLSX.read(fileData, { type: "binary" });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
             
-            //-- ทำความสะอาดและจัดรูปแบบข้อมูลให้พร้อมส่งไปยัง API --
+            // เพิ่มการอ่าน part_description จากไฟล์
             const rowsToImport = rawRows.map(row => ({
                 line: String(row["Line"] || row["line"] || '').trim().toUpperCase(),
                 model: String(row["Model"] || row["model"] || '').trim().toUpperCase(),
@@ -372,12 +371,11 @@ async function handleImport(event) {
                 planned_output: parseInt(row["Planned Output"] || row["planned_output"] || 0)
             }));
 
-            //-- ยืนยันและส่งข้อมูลไปยัง API --
             if (rowsToImport.length > 0 && confirm(`Import ${rowsToImport.length} records?`)) {
                 const result = await sendRequest(PARA_API_ENDPOINT, 'bulk_import', 'POST', rowsToImport);
                 if (result.success) {
                     showToast(result.message || "Import successful!", '#0d6efd');
-                    loadStandardParams(); //-- โหลดข้อมูลใหม่หลัง Import --
+                    loadStandardParams(); 
                 } else {
                     showToast(result.message || "Import failed.", '#dc3545');
                 }
@@ -386,7 +384,6 @@ async function handleImport(event) {
             console.error("Import process failed:", error);
             showToast('Failed to process file.', '#dc3545');
         } finally {
-            //-- ล้างค่าใน Input เพื่อให้สามารถเลือกไฟล์เดิมซ้ำได้ --
             event.target.value = '';
         }
     };

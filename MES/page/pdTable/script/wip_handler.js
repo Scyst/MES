@@ -1,17 +1,11 @@
 /**
- * =================================================================
- * ฟังก์ชันที่ถูกปรับปรุง
- * =================================================================
- */
-
-/**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
  */
 async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
-    reportBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading Report...</td></tr>';
-    
+    reportBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Report...</td></tr>';
+     
     const params = new URLSearchParams({
         page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
@@ -26,12 +20,11 @@ async function fetchWipReport(page = 1) {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        // API ใหม่จะส่งข้อมูล data กลับมาใน key 'data'
         window.cachedWipReport = result.data;
 
         reportBody.innerHTML = '';
         if (result.data.length === 0) {
-            reportBody.innerHTML = '<tr><td colspan="6" class="text-center">No WIP data found.</td></tr>';
+            reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No WIP data found.</td></tr>';
         } else {
             result.data.forEach(item => {
                 const variance = parseInt(item.variance);
@@ -48,9 +41,10 @@ async function fetchWipReport(page = 1) {
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.part_no}</td>
                     <td>${item.line}</td>
                     <td>${item.model}</td>
+                    <td>${item.part_no}</td>
+                    <td>${item.part_description || ''}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
                     <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
@@ -66,7 +60,7 @@ async function fetchWipReport(page = 1) {
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
         window.cachedWipReport = [];
-        reportBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -76,7 +70,8 @@ async function fetchWipReport(page = 1) {
 async function fetchWipReportByLot(page = 1) {
     const reportBody = document.getElementById('wipReportByLotTableBody');
     if (!reportBody) return;
-    reportBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Report by Lot...</td></tr>';
+    reportBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading Report by Lot...</td></tr>';
+    
     
     const params = new URLSearchParams({
         page: page, // เพิ่ม page
@@ -97,7 +92,7 @@ async function fetchWipReportByLot(page = 1) {
 
         reportBody.innerHTML = '';
         if (result.data.length === 0) {
-            reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP Lot found.</td></tr>';
+            reportBody.innerHTML = '<tr><td colspan="8" class="text-center">No active WIP Lot found.</td></tr>';
         } else {
             result.data.forEach(item => {
                 const variance = parseInt(item.variance);
@@ -113,10 +108,11 @@ async function fetchWipReportByLot(page = 1) {
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.lot_no}</td>
-                    <td>${item.part_no}</td>
                     <td>${item.line}</td>
                     <td>${item.model}</td>
+                    <td>${item.part_no}</td>
+                    <td>${item.part_description || ''}</td>
+                    <td>${item.lot_no}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
                     <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
@@ -132,7 +128,7 @@ async function fetchWipReportByLot(page = 1) {
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
         window.cachedWipReportByLot = [];
-        reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -256,6 +252,7 @@ async function fetchStockCountReport(page = 1) {
                 <th>Line</th>
                 <th>Model</th>
                 <th>Part No.</th>
+                <th>Part Description</th>
                 <th class="text-end">Total IN</th>
                 <th class="text-end">Total OUT</th>
                 <th class="text-end">On-Hand</th>
@@ -263,8 +260,8 @@ async function fetchStockCountReport(page = 1) {
             </tr>
         `;
     }
-    
-    const colspan = canManage ? 7 : 6;
+
+    const colspan = canManage ? 8 : 7;
     tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">Loading Stock Count...</td></tr>`;
 
     const params = new URLSearchParams({
@@ -313,6 +310,7 @@ async function fetchStockCountReport(page = 1) {
                     <td>${row.line}</td>
                     <td>${row.model}</td>
                     <td>${row.part_no}</td>
+                    <td>${row.part_description || ''}</td>
                     <td class="text-end">${parseInt(row.total_in).toLocaleString()}</td>
                     <td class="text-end">${parseInt(row.total_out).toLocaleString()}</td>
                     <td class="text-end fw-bold ${varianceClass}">${variance.toLocaleString()}</td>
