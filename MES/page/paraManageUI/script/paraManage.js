@@ -99,7 +99,7 @@ function renderStandardParamsTable() {
     const pageData = filteredData.slice(start, start + ROWS_PER_PAGE);
 
     if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center">No parameters found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">No parameters found.</td></tr>`;
         renderPagination('paginationControls', 0, 1, goToStandardParamPage);
         return;
     }
@@ -112,6 +112,7 @@ function renderStandardParamsTable() {
             <td>${row.model || ''}</td>
             <td>${row.part_no || ''}</td>
             <td>${row.sap_no || ''}</td>
+            <td>${row.part_description || ''}</td>
             <td>${row.planned_output || ''}</td>
             <td>${row.updated_at || ''}</td>
         `;
@@ -312,6 +313,7 @@ function exportToExcel() {
         "Model": row.model,
         "Part No": row.part_no,
         "SAP No": row.sap_no || '',
+        "Part Description": row.part_description || '',
         "Planned Output": row.planned_output,
         "Updated At": row.updated_at
     }));
@@ -366,6 +368,7 @@ async function handleImport(event) {
                 model: String(row["Model"] || row["model"] || '').trim().toUpperCase(),
                 part_no: String(row["Part No"] || row["part_no"] || '').trim().toUpperCase(),
                 sap_no: String(row["SAP No"] || row["sap_no"] || '').trim().toUpperCase(),
+                part_description: String(row["Part Description"] || row["part_description"] || '').trim(),
                 planned_output: parseInt(row["Planned Output"] || row["planned_output"] || 0)
             }));
 

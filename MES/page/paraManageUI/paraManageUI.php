@@ -85,6 +85,7 @@
                                 <th>Model</th>
                                 <th>Part No.</th>
                                 <th>SAP No.</th>
+                                <th>Part Description</th> 
                                 <th>Planned Output</th>
                                 <th>Updated At</th>
                                 <?php if (hasRole(['supervisor', 'admin', 'creator'])): ?>
