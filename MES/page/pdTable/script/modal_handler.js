@@ -282,7 +282,7 @@ async function openWipDetailModal(item) {
     }
 
     const WIP_API_URL = '../../api/pdTable/wipManage.php';
-
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`${WIP_API_URL}?${params.toString()}`);
         const result = await response.json();
@@ -336,6 +336,8 @@ async function openWipDetailModal(item) {
         console.error('Failed to fetch drill-down details:', error);
         inTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Error: ${error.message}</td></tr>`;
         outTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error loading data.</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -346,6 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(form).entries());
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            showSpinner(); // <-- เพิ่ม: แสดง Spinner
             try {
                 const response = await fetch(`${apiUrl}?action=${action}`, {
                     method: 'POST',
@@ -380,6 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 showToast(`An error occurred while processing your request.`, '#dc3545');
+            } finally {
+                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
             }
         });
     };

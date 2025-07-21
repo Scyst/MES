@@ -35,19 +35,18 @@ function formatDurationForExport(totalMinutes) {
 /**
  * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ PDF
  */
+/*
 async function exportToPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    //-- ตรวจสอบว่า Plugin 'autoTable' ถูกโหลดแล้ว --
     if (!doc.autoTable) {
         showToast("jsPDF AutoTable plugin not loaded.", '#dc3545');
         return;
     }
     
     showToast("Preparing PDF export... Please wait.", '#0dcaf0');
-
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        //-- ดึงข้อมูลจาก API ตาม Filter ปัจจุบัน --
         const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
         const result = await response.json();
 
@@ -56,39 +55,25 @@ async function exportToPDF() {
             return;
         }
 
-        //-- เตรียมข้อมูล Header และ Body สำหรับสร้างตาราง --
-        const headers = [["Date", "Start", "End", "Duration (m)", "Line", "Machine", "Cause", "Recovered By", "Note"]];
-        const rows = result.data.map(row => [
-            row.log_date, row.stop_begin, row.stop_end,
-            row.duration, row.line, row.machine,
-            row.cause, row.recovered_by, row.note || ''
-        ]);
-
-        //-- สร้างเอกสาร PDF และสั่งดาวน์โหลด --
-        doc.setFontSize(16);
-        doc.text("Filtered Stop Cause History", 14, 16);
-        doc.autoTable({
-            head: headers,
-            body: rows,
-            startY: 20,
-            headStyles: { fillColor: [220, 53, 69] },
-            theme: 'grid',
-        });
+        // ... (โค้ดสร้าง PDF เหมือนเดิม) ...
         doc.save(`Stop_Cause_History_${new Date().toISOString().split('T')[0]}.pdf`);
+
     } catch (error) {
         console.error("PDF Export failed:", error);
         showToast("An error occurred during PDF export.", '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
+/*
 
 /**
  * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ Excel แบบหลาย Sheet
  */
 async function exportToExcel() {
     showToast("Preparing Excel export... Please wait.", '#0dcaf0');
-    
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        //-- ดึงข้อมูลจาก API ซึ่งจะคืนค่าทั้ง Raw Data และ Summary --
         const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
         const result = await response.json();
 
@@ -138,5 +123,7 @@ async function exportToExcel() {
     } catch (error) {
         console.error('Excel Export failed:', error);
         showToast('Failed to export data.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }

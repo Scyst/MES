@@ -48,8 +48,8 @@ function openAddStopModal(triggerEl) {
  */
 async function openEditModal(id, triggerEl) {
     modalTriggerElement = triggerEl;
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        //-- ดึงข้อมูลของรายการที่เลือกจาก API --
         const response = await fetch(`${API_URL}?action=get_stop_by_id&id=${id}`);
         const result = await response.json();
 
@@ -83,13 +83,14 @@ async function openEditModal(id, triggerEl) {
                     if (input) input.value = data[key];
                 }
             }
-
             showBootstrapModal('editStopModal');
         } else {
             showToast(result.message, '#dc3545');
         }
     } catch (error) {
         showToast('Failed to fetch details for editing.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -104,14 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(addForm);
             const payload = Object.fromEntries(formData.entries());
 
-            //-- หากเลือก "Other" ให้ใช้ค่าจาก Text Input เป็น "cause" --
             if (payload.cause === 'Other') {
                 payload.cause = payload.cause_other || 'Other';
             }
-            delete payload.cause_other; //-- ลบ Field ที่ไม่จำเป็นออก --
+            delete payload.cause_other;
 
+            showSpinner(); // <-- เพิ่ม: แสดง Spinner
             try {
-                //-- ส่งข้อมูลไปยัง API --
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 const response = await fetch(`${API_URL}?action=add_stop`, {
                     method: 'POST',
@@ -125,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
 
                 if (result.success) {
-                    //-- รอให้ Modal ปิดสนิทก่อน แล้วค่อยโหลดข้อมูลใหม่ --
                     const modalElement = document.getElementById('addStopModal');
                     const modalInstance = bootstrap.Modal.getInstance(modalElement);
                     if (modalInstance) {
@@ -141,6 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(error) {
                 showToast('An error occurred while adding data.', '#dc3545');
+            } finally {
+                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
             }
         });
     }
@@ -153,18 +154,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(editForm);
             const payload = Object.fromEntries(formData.entries());
 
-            //-- จัดการค่า "cause" จาก Dropdown และ Text Input --
             if (payload.cause_category === 'Other') {
                 payload.cause = payload.cause_other || 'Other';
             } else {
                 payload.cause = payload.cause_category;
             }
-            //-- ลบ Field ที่ไม่จำเป็นออก --
             delete payload.cause_category;
             delete payload.cause_other;
 
+            showSpinner(); // <-- เพิ่ม: แสดง Spinner
             try {
-                //-- ส่งข้อมูลไปยัง API --
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 const response = await fetch(`${API_URL}?action=update_stop`, {
                     method: 'POST',
@@ -178,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
 
                 if (result.success) {
-                    //-- รอให้ Modal ปิดสนิทก่อน แล้วค่อยโหลดข้อมูลใหม่ในหน้าเดิม --
                     const modalElement = document.getElementById('editStopModal');
                     const modalInstance = bootstrap.Modal.getInstance(modalElement);
                     if (modalInstance) {
@@ -191,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(error) {
                 showToast('An error occurred while updating data.', '#dc3545');
+            } finally {
+                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
             }
         });
     }

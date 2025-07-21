@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchDebounceTimer;
 
     // --- Search Logic ---
-    // ตรวจสอบให้แน่ใจว่า lotNoInput ไม่ใช่ null ก่อนเพิ่ม Event Listener
     if (lotNoInput) {
         lotNoInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
@@ -23,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function searchForLots(term) {
         searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-action disabled">Searching...</a>';
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
         try {
             const response = await fetch(`../../api/pdTable/pdTableManage.php?action=search_lots&term=${term}`);
             const result = await response.json();
@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Lot search failed:', error);
             searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-danger">Search failed.</a>';
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     }
 
@@ -64,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reportContainer.classList.add('d-none');
         showToast('Generating report for ' + lotNo, '#0dcaf0');
 
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
         try {
             const response = await fetch(`../../api/Traceability/traceability.php?lot_no=${lotNo}`);
             const result = await response.json();
@@ -71,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!result.success) throw new Error(result.message);
             if (!result.data.summary) {
                 showToast(`Data for Lot Number '${lotNo}' not found.`, '#ffc107');
+                initialMessage.classList.remove('d-none'); // แสดงข้อความเริ่มต้นอีกครั้ง
                 return;
             }
 
@@ -81,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Traceability report failed:', error);
             showToast(error.message, '#dc3545');
+            initialMessage.classList.remove('d-none'); // แสดงข้อความเริ่มต้นอีกครั้ง
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     }
 

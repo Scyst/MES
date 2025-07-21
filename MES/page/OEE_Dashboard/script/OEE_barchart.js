@@ -147,6 +147,7 @@ function padBarData(labels, values, minCount) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Bar Chart ทั้งหมด
  */
 async function fetchAndRenderBarCharts() {
+    showSpinner();
     try {
         hideErrors();
 
@@ -253,6 +254,8 @@ async function fetchAndRenderBarCharts() {
         console.error("Bar chart fetch failed:", err);
         BarshowError('partsBarChart', 'partsBarError');
         BarshowError('stopCauseBarChart', 'stopCauseBarError');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 

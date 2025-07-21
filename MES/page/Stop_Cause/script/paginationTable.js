@@ -35,7 +35,6 @@ function formatDateTime(dateTimeString) {
  */
 async function fetchStopData(page = 1) {
     currentPage = page;
-    //-- รวบรวมค่า Filter ทั้งหมดจาก Input Fields --
     const filters = {
         cause: document.getElementById('filterCause')?.value,
         line: document.getElementById('filterLine')?.value,
@@ -45,20 +44,20 @@ async function fetchStopData(page = 1) {
     };
     const params = new URLSearchParams({ action: 'get_stops', page: currentPage, limit: 50, ...filters });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        //-- เรียก API และแปลงผลลัพธ์เป็น JSON --
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        //-- เรียกฟังก์ชันต่างๆ เพื่อแสดงผล --
         renderTable(result.data, canManage);
         renderPagination(result.page, result.total, result.limit);
         renderSummary(result.summary, result.grand_total_minutes);
     } catch (error) {
-        //-- จัดการข้อผิดพลาดและแสดงในตาราง --
         console.error('Failed to fetch stop data:', error);
         document.getElementById('stopTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Error loading data.</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -197,16 +196,17 @@ function renderSummary(summaryData, grandTotalMinutes) {
  * ฟังก์ชันสำหรับดึงข้อมูลมาเติมใน Datalist (สำหรับ Autocomplete)
  */
 async function populateDatalist(datalistId, action) {
+    // ฟังก์ชันนี้ทำงานเร็วมาก ไม่จำเป็นต้องใช้ Spinner
     try {
         const response = await fetch(`${API_URL}?action=${action}`);
         const result = await response.json();
         if (result.success) {
             const datalist = document.getElementById(datalistId);
             if (datalist) {
-                datalist.innerHTML = '';
+                datalist.innerHTML = ''; 
                 result.data.forEach(item => {
                     const option = document.createElement('option');
-                    option.value = item;
+                    option.value = item; 
                     datalist.appendChild(option);
                 });
             }
@@ -222,34 +222,36 @@ async function populateDatalist(datalistId, action) {
 async function deleteStop(id) {
     if (!confirm(`Are you sure you want to delete Stop Cause ID ${id}?`)) return;
 
-    // แก้ไข: เปลี่ยนวิธีการส่ง Request จาก GET เป็น DELETE และแนบ CSRF Token
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const response = await fetch(`${API_URL}?action=delete_stop`, { // action ยังคงอยู่ใน URL
-            method: 'POST', // ใช้ POST แทน DELETE เพื่อหลีกเลี่ยงปัญหา preflight request ที่ซับซ้อน
+        const response = await fetch(`${API_URL}?action=delete_stop`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({ id: id }) // ส่ง id ใน body
+            body: JSON.stringify({ id: id })
         });
 
         const result = await response.json();
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            // โหลดข้อมูลใหม่ถ้าจำนวนรายการในหน้าปัจจุบันหมดไป
             const rowCount = document.getElementById('stopTableBody').rows.length;
             if (rowCount <= 1 && currentPage > 1) {
-                fetchStopData(currentPage - 1);
+                await fetchStopData(currentPage - 1); // ใช้ await เพื่อให้ spinner แสดงต่อเนื่อง
             } else {
-                fetchStopData(currentPage);
+                await fetchStopData(currentPage); // ใช้ await
             }
         }
     } catch (error) {
         console.error('An error occurred during deletion:', error);
         showToast('An error occurred while deleting.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
+
 
 //-- ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter --
 function handleFilterChange() {

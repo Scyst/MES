@@ -70,10 +70,15 @@ function renderPagination(containerId, totalItems, currentPage, callback) {
 
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
 async function loadStandardParams() {
-    const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
-    if (result?.success) {
-        allStandardParams = result.data;
-        filterAndRenderStandardParams(); // ใช้ Filter ใหม่
+    showSpinner(); // <-- เพิ่ม
+    try {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
+        if (result?.success) {
+            allStandardParams = result.data;
+            filterAndRenderStandardParams();
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
@@ -162,20 +167,33 @@ function goToStandardParamPage(page) {
 
 async function deleteStandardParam(id) {
     if (!confirm(`Are you sure you want to delete parameter ID ${id}?`)) return;
-    const result = await sendRequest(PARA_API_ENDPOINT, 'delete', 'POST', { id });
-    showToast(result.message, result.success ? '#28a745' : '#dc3545');
-    if (result.success) loadStandardParams();
+    
+    showSpinner(); // <-- เพิ่ม
+    try {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'delete', 'POST', { id });
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            await loadStandardParams(); // ใช้ await เพื่อให้ spinner แสดงผลต่อเนื่อง
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
+    }
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Line Schedules" ---
 
 async function loadSchedules() {
-    const result = await sendRequest(PARA_API_ENDPOINT, 'read_schedules', 'GET');
-    if (result?.success) {
-        allSchedules = result.data;
-        renderSchedulesTable();
-    } else {
-        showToast(result?.message || 'Failed to load schedules.', '#dc3545');
+    showSpinner(); // <-- เพิ่ม
+    try {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'read_schedules', 'GET');
+        if (result?.success) {
+            allSchedules = result.data;
+            renderSchedulesTable();
+        } else {
+            showToast(result?.message || 'Failed to load schedules.', '#dc3545');
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
@@ -229,28 +247,42 @@ function renderSchedulesTable() {
 
 async function deleteSchedule(id) {
     if (!confirm(`Are you sure you want to delete schedule ID ${id}?`)) return;
-    const result = await sendRequest(PARA_API_ENDPOINT, 'delete_schedule', 'POST', { id });
-    showToast(result.message, result.success ? '#28a745' : '#dc3545');
-    if (result.success) loadSchedules();
+
+    showSpinner(); // <-- เพิ่ม
+    try {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'delete_schedule', 'POST', { id });
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            await loadSchedules(); // ใช้ await
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
+    }
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Data Health Check" ---
 
 async function loadHealthCheckData() {
-    const result = await sendRequest(PARA_API_ENDPOINT, 'health_check_parameters', 'GET');
-    const listBody = document.getElementById('missingParamsList');
-    const paginationControls = document.getElementById('healthCheckPaginationControls');
-    
-    listBody.innerHTML = '';
-    paginationControls.innerHTML = '';
+    showSpinner(); // <-- เพิ่ม
+    try {
+        const result = await sendRequest(PARA_API_ENDPOINT, 'health_check_parameters', 'GET');
+        const listBody = document.getElementById('missingParamsList');
+        const paginationControls = document.getElementById('healthCheckPaginationControls');
+        
+        listBody.innerHTML = '';
+        paginationControls.innerHTML = '';
 
-    if (result?.success) {
-        allMissingParams = result.data;
-        healthCheckCurrentPage = 1;
-        renderHealthCheckTable();
-    } else {
-        listBody.innerHTML = `<tr><td colspan="3" class="text-danger">Failed to load data.</td></tr>`;
+        if (result?.success) {
+            allMissingParams = result.data;
+            healthCheckCurrentPage = 1;
+            renderHealthCheckTable();
+        } else {
+            listBody.innerHTML = `<tr><td colspan="3" class="text-danger">Failed to load data.</td></tr>`;
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
+
 }
 
 function renderHealthCheckTable() {
@@ -355,6 +387,7 @@ async function handleImport(event) {
 
     const reader = new FileReader();
     reader.onload = async (e) => {
+        showSpinner();
         try {
             const fileData = e.target.result;
             const workbook = XLSX.read(fileData, { type: "binary" });
@@ -375,7 +408,7 @@ async function handleImport(event) {
                 const result = await sendRequest(PARA_API_ENDPOINT, 'bulk_import', 'POST', rowsToImport);
                 if (result.success) {
                     showToast(result.message || "Import successful!", '#0d6efd');
-                    loadStandardParams(); 
+                    await loadStandardParams(); // ใช้ await
                 } else {
                     showToast(result.message || "Import failed.", '#dc3545');
                 }
@@ -385,6 +418,7 @@ async function handleImport(event) {
             showToast('Failed to process file.', '#dc3545');
         } finally {
             event.target.value = '';
+            hideSpinner(); // <-- เพิ่ม
         }
     };
     reader.readAsBinaryString(file);
@@ -470,36 +504,46 @@ function initializeBomManager() {
     }
 
     async function loadAndRenderBomFgTable() {
-        const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs', 'GET');
-        if (result.success) {
-            allBomFgs = result.data;
-            renderBomFgTable(allBomFgs);
+        showSpinner(); // <-- เพิ่ม
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs', 'GET');
+            if (result.success) {
+                allBomFgs = result.data;
+                renderBomFgTable(allBomFgs);
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม
         }
     }
 
     async function loadBomForModal(fgPartNo, fgLine, fgModel) {
-        modalTitle.textContent = `Managing BOM for: ${fgPartNo} (Line: ${fgLine}, Model: ${fgModel})`;
-        modalSelectedFgPartNo.value = fgPartNo;
-        modalSelectedFgLine.value = fgLine; // ** NEW: เก็บค่า line **
-        modalSelectedFgModel.value = fgModel; // ** NEW: เก็บค่า model **
+        showSpinner(); // <-- เพิ่ม
+        try {
+            modalTitle.textContent = `Managing BOM for: ${fgPartNo} (Line: ${fgLine}, Model: ${fgModel})`;
+            modalSelectedFgPartNo.value = fgPartNo;
+            modalSelectedFgLine.value = fgLine; // ** NEW: เก็บค่า line **
+            modalSelectedFgModel.value = fgModel; // ** NEW: เก็บค่า model **
 
-        modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
-        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
-        
-        modalBomTableBody.innerHTML = '';
-        if (bomResult.success && bomResult.data.length > 0) {
-            bomResult.data.forEach(comp => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button></td>`;
-                modalBomTableBody.appendChild(tr);
-            });
-        } else {
-            modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No components. Add one now!</td></tr>';
-        }
+            modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
+            
+            modalBomTableBody.innerHTML = '';
+            if (bomResult.success && bomResult.data.length > 0) {
+                bomResult.data.forEach(comp => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button></td>`;
+                    modalBomTableBody.appendChild(tr);
+                });
+            } else {
+                modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No components. Add one now!</td></tr>';
+            }
 
-        const componentResult = await sendRequest(PARA_API_ENDPOINT, 'get_parts_by_model', 'GET', null, { model: fgModel });
-        if (componentResult.success) {
-            modalPartDatalist.innerHTML = componentResult.data.map(p => `<option value="${p.part_no}"></option>`).join('');
+            const componentResult = await sendRequest(PARA_API_ENDPOINT, 'get_parts_by_model', 'GET', null, { model: fgModel });
+            if (componentResult.success) {
+                modalPartDatalist.innerHTML = componentResult.data.map(p => `<option value="${p.part_no}"></option>`).join('');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม
         }
     }
     
@@ -523,6 +567,7 @@ function initializeBomManager() {
 
         const reader = new FileReader();
         reader.onload = async (e) => {
+            showSpinner(); // <-- เพิ่ม
             try {
                 const fileData = e.target.result;
                 const workbook = XLSX.read(fileData, { type: "binary" });
@@ -560,7 +605,7 @@ function initializeBomManager() {
                     const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_import_bom', 'POST', payload);
                     showToast(result.message, result.success ? '#28a745' : '#dc3545');
                     if (result.success) {
-                        loadAndRenderBomFgTable(); // โหลดข้อมูลตารางใหม่
+                        await loadAndRenderBomFgTable(); // ใช้ await
                     }
                 } else {
                     showToast('No valid BOM data found in the file or import was cancelled.', '#ffc107');
@@ -570,7 +615,8 @@ function initializeBomManager() {
                 console.error("BOM Import process failed:", error);
                 showToast('Failed to process file. Check console for details.', '#dc3545');
             } finally {
-                event.target.value = ''; // ล้างค่า input file เพื่อให้เลือกไฟล์เดิมซ้ำได้
+                event.target.value = '';
+                hideSpinner(); // <-- เพิ่ม
             }
         };
         reader.readAsBinaryString(file);
@@ -578,32 +624,37 @@ function initializeBomManager() {
 
     async function exportBomToExcel() {
         showToast('Exporting all BOM data... Please wait.', '#0dcaf0');
+        showSpinner(); // <-- เพิ่ม
 
-        const result = await sendRequest(BOM_API_ENDPOINT, 'get_full_bom_export', 'GET');
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'get_full_bom_export', 'GET');
 
-        if (!result.success || !result.data || result.data.length === 0) {
-            showToast('No BOM data available to export.', '#ffc107');
-            return;
+            if (!result.success || !result.data || result.data.length === 0) {
+                showToast('No BOM data available to export.', '#ffc107');
+                return;
+            }
+
+            // จัดรูปแบบข้อมูลสำหรับไฟล์ Excel
+            const worksheetData = result.data.map(row => ({
+                "FG_SAP_NO": row.fg_sap_no || '',
+                "FG_PART_NO": row.fg_part_no,
+                "LINE": row.line,
+                "MODEL": row.model,
+                "COMPONENT_PART_NO": row.component_part_no,
+                "QUANTITY_REQUIRED": row.quantity_required
+            }));
+
+            // ใช้ Library SheetJS (XLSX) เพื่อสร้างไฟล์ Excel
+            const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "BOM_Export");
+            const fileName = `BOM_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+
+            showToast('BOM data exported successfully!', '#28a745');
+        } finally {
+            hideSpinner(); // <-- เพิ่ม
         }
-
-        // จัดรูปแบบข้อมูลสำหรับไฟล์ Excel
-        const worksheetData = result.data.map(row => ({
-            "FG_SAP_NO": row.fg_sap_no || '',
-            "FG_PART_NO": row.fg_part_no,
-            "LINE": row.line,
-            "MODEL": row.model,
-            "COMPONENT_PART_NO": row.component_part_no,
-            "QUANTITY_REQUIRED": row.quantity_required
-        }));
-
-        // ใช้ Library SheetJS (XLSX) เพื่อสร้างไฟล์ Excel
-        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "BOM_Export");
-        const fileName = `BOM_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
-
-        showToast('BOM data exported successfully!', '#28a745');
     }
 
     // --- Event Listeners ---
@@ -633,19 +684,24 @@ function initializeBomManager() {
     bomImportFile?.addEventListener('change', handleBomImport);
     exportBomBtn?.addEventListener('click', exportBomToExcel);
 
-    createBomForm?.addEventListener('submit', async (e) => {
+     createBomForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const searchCriteria = Object.fromEntries(new FormData(createBomForm).entries());
+        
+        showSpinner(); // <-- เพิ่ม
+        try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
-        if (result.success && result.data) {
-            showToast('Finished Good found! Proceeding to Step 2.', '#28a745');
-            createBomModal.hide();
-            createBomForm.reset();
-            manageBomModal.show();
-            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
-            loadBomForModal(result.data.part_no, result.data.line, result.data.model);
-        } else {
-            showToast(result.message || 'Could not find a matching part.', '#dc3545');
+            if (result.success && result.data) {
+                showToast('Finished Good found! Proceeding to Step 2.', '#28a745');
+                createBomModal.hide();
+                createBomForm.reset();
+                manageBomModal.show();
+                await loadBomForModal(result.data.part_no, result.data.line, result.data.model);
+            } else {
+                showToast(result.message || 'Could not find a matching part.', '#dc3545');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม
         }
     });
 
@@ -658,14 +714,17 @@ function initializeBomManager() {
 
         if (action === 'manage') {
             manageBomModal.show();
-            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
-            loadBomForModal(fgPartNo, fgLine, fgModel);
+            await loadBomForModal(fgPartNo, fgLine, fgModel);
         } else if (action === 'delete') {
             if (confirm(`Are you sure you want to delete the BOM for ${fgPartNo} on Line ${fgLine}?`)) {
-                // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
-                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
-                showToast(result.message, result.success ? '#28a745' : '#dc3545');
-                if (result.success) loadAndRenderBomFgTable();
+                showSpinner(); // <-- เพิ่ม
+                try {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fgPartNo, line: fgLine, model: fgModel });
+                    showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                    if (result.success) await loadAndRenderBomFgTable();
+                } finally {
+                    hideSpinner(); // <-- เพิ่ม
+                }
             }
         }
     });
@@ -673,12 +732,16 @@ function initializeBomManager() {
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = Object.fromEntries(new FormData(e.target).entries());
-        const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
-        showToast(result.message, result.success ? '#28a745' : '#dc3545');
-        if (result.success) {
-            // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
-            loadBomForModal(payload.fg_part_no, payload.line, payload.model);
-            e.target.reset();
+        showSpinner(); // <-- เพิ่ม
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
+            showToast(result.message, result.success ? '#28a745' : '#dc3545');
+            if (result.success) {
+                await loadBomForModal(payload.fg_part_no, payload.line, payload.model);
+                e.target.reset();
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม
         }
     });
 
@@ -686,14 +749,19 @@ function initializeBomManager() {
         if (e.target.dataset.action !== 'delete-comp') return;
         const bomId = parseInt(e.target.dataset.compId);
         if (confirm('Delete this component?')) {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
-            showToast(result.message, result.success ? '#28a745' : '#dc3545');
-            if (result.success) {
-                const fgPartNo = modalSelectedFgPartNo.value;
-                const fgLine = modalSelectedFgLine.value;
-                const fgModel = modalSelectedFgModel.value;
-                // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
-                loadBomForModal(fgPartNo, fgLine, fgModel);
+            showSpinner(); // <-- เพิ่ม
+            try {
+                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
+                showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                if (result.success) {
+                    const fgPartNo = modalSelectedFgPartNo.value;
+                    const fgLine = modalSelectedFgLine.value;
+                    const fgModel = modalSelectedFgModel.value;
+                    // ** FIXED: ส่งพารามิเตอร์ให้ครบ **
+                    await loadBomForModal(fgPartNo, fgLine, fgModel);
+                }
+            } finally {
+                hideSpinner(); // <-- เพิ่ม
             }
         }
     });

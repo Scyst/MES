@@ -36,16 +36,20 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const payload = Object.fromEntries(new FormData(e.target).entries());
         
-        // ** FIXED: แก้ไขการเรียก sendRequest **
-        const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'create', 'POST', payload);
-        
-        if (result.success) {
-            showToast('Parameter added successfully!', '#28a745');
-            closeModal('addParamModal');
-            e.target.reset();
-            loadStandardParams();
-        } else {
-            showToast(result.message || 'Failed to add parameter.', '#dc3545');
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
+        try {
+            const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'create', 'POST', payload);
+            
+            if (result.success) {
+                showToast('Parameter added successfully!', '#28a745');
+                closeModal('addParamModal');
+                e.target.reset();
+                loadStandardParams();
+            } else {
+                showToast(result.message || 'Failed to add parameter.', '#dc3545');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     });
 
@@ -53,15 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const payload = Object.fromEntries(new FormData(e.target).entries());
         
-        // ** FIXED: แก้ไขการเรียก sendRequest **
-        const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'update', 'POST', payload);
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
+        try {
+            const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'update', 'POST', payload);
 
-        if (result.success) {
-            showToast('Parameter updated successfully!', '#28a745');
-            closeModal('editParamModal');
-            loadStandardParams();
-        } else {
-            showToast(result.message || 'Failed to update parameter.', '#dc3545');
+            if (result.success) {
+                showToast('Parameter updated successfully!', '#28a745');
+                closeModal('editParamModal');
+                loadStandardParams();
+            } else {
+                showToast(result.message || 'Failed to update parameter.', '#dc3545');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     });
 
@@ -71,19 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = e.target;
         const payload = Object.fromEntries(new FormData(form).entries());
         payload.id = 0;
-        
-        // แก้ไข: เปลี่ยนมาใช้วิธีตรวจสอบที่แม่นยำกว่า
         payload.is_active = form.querySelector('[name="is_active"]').checked ? 1 : 0;
         
-        const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
+        try {
+            const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
 
-        if (result.success) {
-            showToast('Schedule added successfully!', '#28a745');
-            closeModal('addScheduleModal');
-            form.reset();
-            loadSchedules();
-        } else {
-            showToast(result.message || 'Failed to add schedule.', '#dc3545');
+            if (result.success) {
+                showToast('Schedule added successfully!', '#28a745');
+                closeModal('addScheduleModal');
+                form.reset();
+                loadSchedules();
+            } else {
+                showToast(result.message || 'Failed to add schedule.', '#dc3545');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     });
 
@@ -91,18 +102,21 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const form = e.target;
         const payload = Object.fromEntries(new FormData(form).entries());
-
-        // แก้ไข: เปลี่ยนมาใช้วิธีตรวจสอบที่แม่นยำกว่า
         payload.is_active = form.querySelector('[name="is_active"]').checked ? 1 : 0;
 
-        const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
+        showSpinner(); // <-- เพิ่ม: แสดง Spinner
+        try {
+            const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
 
-        if (result.success) {
-            showToast('Schedule updated successfully!', '#28a745');
-            closeModal('editScheduleModal');
-            loadSchedules();
-        } else {
-            showToast(result.message || 'Failed to update schedule.', '#dc3545');
+            if (result.success) {
+                showToast('Schedule updated successfully!', '#28a745');
+                closeModal('editScheduleModal');
+                loadSchedules();
+            } else {
+                showToast(result.message || 'Failed to update schedule.', '#dc3545');
+            }
+        } finally {
+            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
         }
     });
 });

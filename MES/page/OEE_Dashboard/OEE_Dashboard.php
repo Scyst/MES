@@ -19,7 +19,7 @@ session_start();
 </head>
 
 <body class="bg-dark text-white">
-    
+    <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
 
     <header class="dashboard-header-sticky">
@@ -102,6 +102,7 @@ session_start();
     </div> 
     <div id="toast"></div>
 
+    <script src="../components/spinner.js"></script>
     <script src="../components/datetime.js"></script>
     <script src="../components/toast.js"></script>
     <script src="script/OEE_piechart.js"></script>

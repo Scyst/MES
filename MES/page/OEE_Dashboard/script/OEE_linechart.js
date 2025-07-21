@@ -21,6 +21,7 @@ function showError(chartId, messageId) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render/Update Line Chart
  */
 async function fetchAndRenderLineCharts() {
+    showSpinner();
     try {
         hideErrors();
 
@@ -43,7 +44,6 @@ async function fetchAndRenderLineCharts() {
             availability: data.records.map(r => r.availability)
         };
 
-        // --- ส่วนที่แก้ไข ---
         // ถ้า Chart ยังไม่มี (โหลดครั้งแรก) ให้สร้างใหม่
         if (!oeeLineChart) {
             initializeLineChart(labels, chartData);
@@ -56,11 +56,12 @@ async function fetchAndRenderLineCharts() {
             oeeLineChart.data.datasets[3].data = chartData.availability;
             oeeLineChart.update();
         }
-        // --- สิ้นสุดส่วนที่แก้ไข ---
 
     } catch (err) {
         console.error("Line chart fetch failed:", err);
         showError("oeeLineChart", "oeeLineError");
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 

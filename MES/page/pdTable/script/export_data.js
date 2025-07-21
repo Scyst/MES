@@ -1,6 +1,7 @@
 /**
  * ฟังก์ชันสำหรับ Export ข้อมูลที่แสดงในตารางเป็นไฟล์ PDF
  */
+/*
 async function exportToPDF() {
     //-- โหลด Library jsPDF และเตรียม Document --
     const { jsPDF } = window.jspdf;
@@ -63,6 +64,7 @@ async function exportToPDF() {
     //-- สั่งดาวน์โหลดไฟล์ PDF --
     doc.save("Production_History.pdf");
 }
+*/
 
 /**
  * ฟังก์ชันสำหรับ Export ข้อมูลทั้งหมด (Raw Data, Summary, Grand Total) เป็นไฟล์ Excel แบบหลาย Sheet
@@ -83,6 +85,7 @@ async function exportToExcel() {
     });
     
     showToast('Exporting data... Please wait.', '#0dcaf0');
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
 
     try {
         //-- เรียก API ซึ่งจะคืนค่าทั้ง Raw Data, Summary, และ Grand Total --
@@ -150,6 +153,8 @@ async function exportToExcel() {
     } catch (error) {
         console.error('Export to Excel failed:', error);
         showToast('Failed to export data. Please check the console for errors.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -206,6 +211,7 @@ async function exportHistoryToExcel() {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`../../api/pdTable/wipManage.php?${params.toString()}`);
         const result = await response.json();
@@ -243,6 +249,8 @@ async function exportHistoryToExcel() {
     } catch (error) {
         console.error('Export Entry History failed:', error);
         showToast('Failed to export history data.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 

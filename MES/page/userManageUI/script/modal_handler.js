@@ -43,18 +43,17 @@ function openEditUserModal(user) {
     const modal = document.getElementById('editUserModal');
     if (!modal) return;
 
-    // เติมข้อมูลผู้ใช้ลงในฟอร์ม
+    // เติมข้อมูลผู้ใช้ลงในฟอร์ม (ส่วนนี้เหมือนเดิม)
     document.getElementById('edit_id').value = user.id;
     document.getElementById('edit_username').value = user.username;
     document.getElementById('edit_role').value = user.role;
-    document.getElementById('editLine').value = user.line || ''; // เติมค่า line
+    document.getElementById('editLine').value = user.line || '';
 
-    // ตรวจสอบเงื่อนไขสิทธิ์ในการแก้ไข
+    // ตรวจสอบเงื่อนไขสิทธิ์ในการแก้ไข (ส่วนนี้เหมือนเดิม)
     const isSelf = (user.id === currentUserId);
     document.getElementById('edit_username').disabled = (currentUserRole === 'admin' && isSelf);
     document.getElementById('edit_role').disabled = (currentUserRole === 'admin' && isSelf) || (currentUserRole === 'creator' && user.role === 'admin');
-
-    // แสดง/ซ่อนช่อง Line ตาม Role ที่มีอยู่
+    
     document.getElementById('editUserLineWrapper').classList.toggle('d-none', user.role !== 'supervisor');
     
     openModal('editUserModal');
@@ -83,26 +82,27 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(e.target).entries());
 
-            //-- ตรวจสอบข้อมูลเบื้องต้น --
             if (!payload.username || !payload.password || !payload.role) {
                 showToast("Please fill all required fields.", "#ffc107");
                 return;
             }
 
-            //-- ส่งข้อมูลไปยัง API --
-            const result = await sendRequest('create', 'POST', payload);
-            showToast(result.message, result.success ? '#28a745' : '#dc3545');
-            
-            if (result.success) {
-                const addUserModalElement = document.getElementById('addUserModal');
-                const modal = bootstrap.Modal.getInstance(addUserModalElement);
-
-                //-- รอให้ Modal ปิดสนิทก่อน แล้วจึงรีเซ็ตฟอร์มและโหลดข้อมูลใหม่ --
-                addUserModalElement.addEventListener('hidden.bs.modal', () => {
-                    e.target.reset();
-                    loadUsers();
-                }, { once: true }); 
-                modal.hide();
+            showSpinner(); // <-- เพิ่ม: แสดง Spinner
+            try {
+                const result = await sendRequest('create', 'POST', payload);
+                showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                
+                if (result.success) {
+                    const addUserModalElement = document.getElementById('addUserModal');
+                    const modal = bootstrap.Modal.getInstance(addUserModalElement);
+                    addUserModalElement.addEventListener('hidden.bs.modal', () => {
+                        e.target.reset();
+                        loadUsers();
+                    }, { once: true }); 
+                    modal.hide();
+                }
+            } finally {
+                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
             }
         });
     }
@@ -114,19 +114,21 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(e.target).entries());
 
-            //-- ส่งข้อมูลไปยัง API --
-            const result = await sendRequest('update', 'POST', payload);
-            showToast(result.message, result.success ? '#28a745' : '#dc3545');
-            
-            if (result.success) {
-                const editUserModalElement = document.getElementById('editUserModal');
-                const modal = bootstrap.Modal.getInstance(editUserModalElement);
-
-                //-- รอให้ Modal ปิดสนิทก่อน แล้วจึงโหลดข้อมูลใหม่ --
-                editUserModalElement.addEventListener('hidden.bs.modal', () => {
-                    loadUsers();
-                }, { once: true });
-                modal.hide();
+            showSpinner(); // <-- เพิ่ม: แสดง Spinner
+            try {
+                const result = await sendRequest('update', 'POST', payload);
+                showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                
+                if (result.success) {
+                    const editUserModalElement = document.getElementById('editUserModal');
+                    const modal = bootstrap.Modal.getInstance(editUserModalElement);
+                    editUserModalElement.addEventListener('hidden.bs.modal', () => {
+                        loadUsers();
+                    }, { once: true });
+                    modal.hide();
+                }
+            } finally {
+                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
             }
         });
     }

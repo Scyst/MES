@@ -5,9 +5,9 @@ async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
     reportBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Report...</td></tr>';
-     
+    
     const params = new URLSearchParams({
-        page: page, // เพิ่ม page
+        page: page,
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         model: document.getElementById('filterModel')?.value || '',
@@ -15,6 +15,7 @@ async function fetchWipReport(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
@@ -70,6 +71,8 @@ async function fetchWipReport(page = 1) {
         console.error('Failed to fetch WIP report:', error);
         window.cachedWipReport = [];
         reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -81,7 +84,6 @@ async function fetchWipReportByLot(page = 1) {
     if (!reportBody) return;
     reportBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading Report by Lot...</td></tr>';
     
-    
     const params = new URLSearchParams({
         page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
@@ -92,6 +94,7 @@ async function fetchWipReportByLot(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
         const result = await response.json();
@@ -147,6 +150,8 @@ async function fetchWipReportByLot(page = 1) {
         console.error('Failed to fetch WIP report by lot:', error);
         window.cachedWipReportByLot = [];
         reportBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -159,8 +164,6 @@ async function fetchHistoryData(page = 1) {
     const colspan = canManage ? 9 : 8;
     historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">Loading History...</td></tr>`;
 
-    // ========== แก้ไขจุดที่ 1 ==========
-    // เพิ่ม 'model' เข้าไปในรายการ parameter ที่จะส่งไป
     const params = new URLSearchParams({
         page: page,
         line: document.getElementById('filterLine')?.value || '',
@@ -171,15 +174,13 @@ async function fetchHistoryData(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
-        // ========== แก้ไขจุดที่ 2 ==========
-        // เก็บข้อมูลที่ดึงมาลงใน cache เพื่อให้ฟังก์ชัน Export ใช้งานได้
         window.cachedHistoryData = result.data || [];
-        
         window.cachedHistorySummary = result.history_summary || [];
         
         historyBody.innerHTML = '';
@@ -238,12 +239,16 @@ async function fetchHistoryData(page = 1) {
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
         historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
 async function handleDeleteEntry(entryId, currentPage) {
     if (!confirm(`Are you sure you want to delete Entry ID ${entryId}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch('../../api/pdTable/wipManage.php?action=delete_wip_entry', {
             method: 'POST',
@@ -255,10 +260,12 @@ async function handleDeleteEntry(entryId, currentPage) {
         if (result.success) {
             const rowCount = document.querySelectorAll('#wipHistoryTableBody tr').length;
             const newPage = (rowCount === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
-            fetchHistoryData(newPage);
+            await fetchHistoryData(newPage); // ใช้ await เพื่อให้ spinner แสดงต่อเนื่อง
         }
     } catch (error) {
         showToast('An error occurred while deleting the entry.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -296,11 +303,12 @@ async function fetchStockCountReport(page = 1) {
         model: document.getElementById('filterModel')?.value || ''
     });
 
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`../../api/pdTable/wipManage.php?action=get_stock_count&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
-
+        
         tableBody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No parts found in parameters.</td></tr>`;
@@ -352,5 +360,7 @@ async function fetchStockCountReport(page = 1) {
     } catch (error) {
         console.error("Failed to fetch Stock Count report:", error);
         tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Failed to load report.</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }

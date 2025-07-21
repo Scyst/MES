@@ -116,6 +116,7 @@ function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Pie Chart และ Info Box ทั้งหมด
  */
 async function fetchAndRenderCharts() {
+    showSpinner();
     try {
         hideErrors();
 
@@ -193,5 +194,7 @@ async function fetchAndRenderCharts() {
     } catch (err) {
         console.error("Pie chart update failed:", err);
         ['oee', 'quality', 'performance', 'availability'].forEach(showError);
+    } finally {
+        hideSpinner();
     }
 }

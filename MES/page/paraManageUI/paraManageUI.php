@@ -24,6 +24,7 @@
 </head>
 
 <body class="bg-dark text-white p-4">
+    <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
     
     <div class="container-fluid">
@@ -208,6 +209,7 @@
         const currentUser = <?php echo json_encode($currentUser); ?>;
     </script>
     
+    <script src="../components/spinner.js"></script>
     <script src="../components/datetime.js"></script>
     <script src="../components/auto_logout.js"></script>
     <script src="../components/toast.js"></script>

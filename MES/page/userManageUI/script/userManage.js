@@ -45,12 +45,17 @@ async function sendRequest(action, method, body = null, urlParams = {}) {
 let allUsers = [];
 
 async function loadUsers() {
-    const result = await sendRequest('read', 'GET');
-    if (result && result.success) {
-        allUsers = result.data;
-        renderUserTable(allUsers);
-    } else {
-        showToast(result?.message || 'Failed to load users.', '#dc3545');
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    try {
+        const result = await sendRequest('read', 'GET');
+        if (result && result.success) {
+            allUsers = result.data;
+            renderUserTable(allUsers);
+        } else {
+            showToast(result?.message || 'Failed to load users.', '#dc3545');
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -107,9 +112,17 @@ function renderUserTable(usersToRender) {
 
 async function deleteUser(id) {
     if (!confirm(`Are you sure you want to delete user ID ${id}?`)) return;
-    const result = await sendRequest('delete', 'GET', null, { id });
-    showToast(result.message, result.success ? '#28a745' : '#dc3545');
-    if (result.success) loadUsers();
+
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    try {
+        const result = await sendRequest('delete', 'GET', null, { id });
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            await loadUsers(); // ใช้ await เพื่อให้ spinner แสดงต่อเนื่อง
+        }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+    }
 }
 
 // ==============================================
@@ -133,15 +146,20 @@ async function fetchLogs(page = 1) {
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
 
-    const result = await sendRequest('logs', 'GET', null, params);
-    if (result.success) {
-        renderLogTable(result.data);
-        renderLogPagination(result.page, Math.ceil(result.total / result.limit));
-    } else {
-        const logTable = document.getElementById('log-table');
-        if (logTable) {
-            logTable.innerHTML = `<tbody><tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr></tbody>`;
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    try {
+        const result = await sendRequest('logs', 'GET', null, params);
+        if (result.success) {
+            renderLogTable(result.data);
+            renderLogPagination(result.page, Math.ceil(result.total / result.limit));
+        } else {
+            const logTable = document.getElementById('log-table');
+            if (logTable) {
+                logTable.innerHTML = `<tbody><tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr></tbody>`;
+            }
         }
+    } finally {
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 

@@ -135,21 +135,26 @@ function updateDatalist(datalistElement, options) {
  */
 async function updateModelOptions() {
     const selectedLine = filterLine.value;
-    filterModel.value = ''; // ล้างค่า Model เดิม
-    filterPartNo.value = ''; // ล้างค่า Part No. เดิม
-    updateDatalist(partNoList, []); // ล้างตัวเลือก Part No.
+    filterModel.value = '';
+    filterPartNo.value = '';
+    updateDatalist(partNoList, []);
 
-    if (selectedLine) {
-        const response = await fetch(`${API_URL}?action=get_models_by_line&line=${selectedLine}`);
-        const result = await response.json();
-        if (result.success) {
-            updateDatalist(modelList, result.data);
+    showSpinner(); // <-- เพิ่ม
+    try {
+        if (selectedLine) {
+            const response = await fetch(`${API_URL}?action=get_models_by_line&line=${selectedLine}`);
+            const result = await response.json();
+            if (result.success) {
+                updateDatalist(modelList, result.data);
+            }
+        } else {
+            updateDatalist(modelList, window.allModels || []);
         }
-    } else {
-        // ถ้า Line ว่าง, ให้โหลด Model ทั้งหมดกลับมา
-        updateDatalist(modelList, window.allModels || []);
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
+
 
 /**
  * ดึงข้อมูล Part No. ตาม Model และ Line ที่เลือก และอัปเดต Datalist
@@ -157,18 +162,22 @@ async function updateModelOptions() {
 async function updatePartNoOptions() {
     const selectedLine = filterLine.value;
     const selectedModel = filterModel.value;
-    filterPartNo.value = ''; // ล้างค่า Part No. เดิม
+    filterPartNo.value = '';
 
-    if (selectedModel) {
-        const params = new URLSearchParams({ action: 'get_parts_by_model', model: selectedModel, line: selectedLine });
-        const response = await fetch(`${API_URL}?${params.toString()}`);
-        const result = await response.json();
-        if (result.success) {
-            updateDatalist(partNoList, result.data);
+    showSpinner(); // <-- เพิ่ม
+    try {
+        if (selectedModel) {
+            const params = new URLSearchParams({ action: 'get_parts_by_model', model: selectedModel, line: selectedLine });
+            const response = await fetch(`${API_URL}?${params.toString()}`);
+            const result = await response.json();
+            if (result.success) {
+                updateDatalist(partNoList, result.data);
+            }
+        } else {
+            updateDatalist(partNoList, window.allPartNos || []);
         }
-    } else {
-        // ถ้า Model ว่าง, ให้กลับไปใช้ตัวเลือก Part No. ทั้งหมด (ถ้ามี)
-        updateDatalist(partNoList, window.allPartNos || []);
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
@@ -176,6 +185,7 @@ async function updatePartNoOptions() {
  * (ฟังก์ชันใหม่) ดึงข้อมูลทั้งหมดสำหรับ Datalist ในครั้งแรกที่โหลดหน้า
  */
 async function populateAllDatalistsOnLoad() {
+    showSpinner(); // <-- เพิ่ม
     try {
         const response = await fetch(`${API_URL}?action=get_datalist_options`);
         const result = await response.json();
@@ -189,6 +199,8 @@ async function populateAllDatalistsOnLoad() {
         }
     } catch (error) {
         console.error('Failed to populate datalists:', error);
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
@@ -208,13 +220,13 @@ async function fetchPartsData(page = 1) {
     };
     const params = new URLSearchParams({ action: 'get_parts', page: currentPage, limit: 50, ...filters });
 
+    showSpinner(); // <-- เพิ่ม
     try {
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
         renderTable(result.data, canManage);
-        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
         totalPages = Math.ceil(result.total / result.limit);
         renderAdvancedPagination('paginationControls', result.page, totalPages, fetchPartsData);
         renderSummary(result.summary, result.grand_total);
@@ -222,6 +234,8 @@ async function fetchPartsData(page = 1) {
         console.error('Failed to fetch parts data:', error);
         const errorColSpan = canManage ? 11 : 10;
         document.getElementById('partTableBody').innerHTML = `<tr><td colspan="${errorColSpan}" class="text-center text-danger">Error loading data.</td></tr>`;
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
@@ -390,6 +404,8 @@ async function populateDatalist(datalistId, action) {
 async function handleDelete(id) {
     if (!confirm(`Are you sure you want to delete Part ID ${id}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    showSpinner(); // <-- เพิ่ม
     try {
         const response = await fetch(`${API_URL}?action=delete_part`, {
             method: 'POST',
@@ -404,13 +420,14 @@ async function handleDelete(id) {
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
 
         if (result.success) {
-            //-- ตรวจสอบว่าควรจะกลับไปหน้าก่อนหน้าหรือไม่ (กรณีลบรายการสุดท้ายของหน้า) --
             const rowCount = document.querySelectorAll('#partTableBody tr').length;
             const newPage = (rowCount === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
-            fetchPartsData(newPage);
+            await fetchPartsData(newPage); // ใช้ await เพื่อให้ spinner แสดงต่อเนื่อง
         }
     } catch (error) {
         showToast('An error occurred while deleting the part.', '#dc3545');
+    } finally {
+        hideSpinner(); // <-- เพิ่ม
     }
 }
 
