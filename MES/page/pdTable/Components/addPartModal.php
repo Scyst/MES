@@ -29,18 +29,20 @@
                            <input list="lineList" id="addPartLine" name="line" class="form-control text-uppercase" placeholder="Select or type Line" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                           <label for="addPartModel" class="form-label">Model</label>
-                           <input list="modelList" id="addPartModel" name="model" class="form-control text-uppercase" placeholder="Select or type Model" required>
+                            <label for="addPartModel" class="form-label">Model</label>
+                            <input list="addModelList" id="addPartModel" name="model" class="form-control text-uppercase" placeholder="Select or type Model" required>
+                            <datalist id="addModelList"></datalist>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                       <label for="addPartPartNo" class="form-label">Part No.</label>
-                       <div class="input-group">
-                           <input list="partNoList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type part no..." required>
-                           <span class="input-group-text" id="addPartNoValidationIcon"></span>
-                       </div>
-                       <div id="addPartNoHelp" class="form-text"></div>
+                        <label for="addPartPartNo" class="form-label">Part No.</label>
+                        <div class="input-group">
+                            <input list="addPartNoList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type part no..." required>
+                            <span class="input-group-text" id="addPartNoValidationIcon"></span>
+                        </div>
+                        <datalist id="addPartNoList"></datalist>
+                        <div id="addPartNoHelp" class="form-text"></div>
                     </div>
 
                     <div class="mb-3">

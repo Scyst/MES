@@ -130,16 +130,13 @@ function updateDatalist(datalistElement, options) {
     }
 }
 
-/**
- * ดึงข้อมูล Model ตาม Line ที่เลือก และอัปเดต Datalist
- */
 async function updateModelOptions() {
     const selectedLine = filterLine.value;
     filterModel.value = '';
     filterPartNo.value = '';
     updateDatalist(partNoList, []);
 
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         if (selectedLine) {
             const response = await fetch(`${API_URL}?action=get_models_by_line&line=${selectedLine}`);
@@ -151,20 +148,16 @@ async function updateModelOptions() {
             updateDatalist(modelList, window.allModels || []);
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
-
-/**
- * ดึงข้อมูล Part No. ตาม Model และ Line ที่เลือก และอัปเดต Datalist
- */
 async function updatePartNoOptions() {
     const selectedLine = filterLine.value;
     const selectedModel = filterModel.value;
     filterPartNo.value = '';
 
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         if (selectedModel) {
             const params = new URLSearchParams({ action: 'get_parts_by_model', model: selectedModel, line: selectedLine });
@@ -177,22 +170,18 @@ async function updatePartNoOptions() {
             updateDatalist(partNoList, window.allPartNos || []);
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
-/**
- * (ฟังก์ชันใหม่) ดึงข้อมูลทั้งหมดสำหรับ Datalist ในครั้งแรกที่โหลดหน้า
- */
 async function populateAllDatalistsOnLoad() {
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const response = await fetch(`${API_URL}?action=get_datalist_options`);
         const result = await response.json();
         if (result.success) {
             window.allModels = result.models;
             window.allPartNos = result.partNos;
-
             updateDatalist(lineList, result.lines);
             updateDatalist(modelList, result.models);
             updateDatalist(partNoList, result.partNos);
@@ -200,7 +189,7 @@ async function populateAllDatalistsOnLoad() {
     } catch (error) {
         console.error('Failed to populate datalists:', error);
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
@@ -220,7 +209,7 @@ async function fetchPartsData(page = 1) {
     };
     const params = new URLSearchParams({ action: 'get_parts', page: currentPage, limit: 50, ...filters });
 
-    showSpinner(); // <-- เพิ่ม
+    showSpinner(); // <-- Spinner เดิมของคุณ
     try {
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
@@ -235,7 +224,7 @@ async function fetchPartsData(page = 1) {
         const errorColSpan = canManage ? 11 : 10;
         document.getElementById('partTableBody').innerHTML = `<tr><td colspan="${errorColSpan}" class="text-center text-danger">Error loading data.</td></tr>`;
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner(); // <-- Spinner เดิมของคุณ
     }
 }
 
@@ -376,36 +365,13 @@ function renderSummary(summaryData, grandTotalData) {
 }
 
 /**
- * ฟังก์ชันสำหรับดึงข้อมูลมาเติมใน Datalist (สำหรับ Autocomplete)
- */
-async function populateDatalist(datalistId, action) {
-    try {
-        const response = await fetch(`${API_URL}?action=${action}`);
-        const result = await response.json();
-        if (result.success) {
-            const datalist = document.getElementById(datalistId);
-            if (datalist) {
-                datalist.innerHTML = ''; 
-                result.data.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item; 
-                    datalist.appendChild(option);
-                });
-            }
-        }
-    } catch (error) {
-        console.error(`Failed to populate ${datalistId}:`, error);
-    }
-}
-
-/**
  * ฟังก์ชันสำหรับจัดการการลบข้อมูล
  */
 async function handleDelete(id) {
     if (!confirm(`Are you sure you want to delete Part ID ${id}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
-    showSpinner(); // <-- เพิ่ม
+    showSpinner(); // <-- Spinner เดิมของคุณ
     try {
         const response = await fetch(`${API_URL}?action=delete_part`, {
             method: 'POST',
@@ -422,21 +388,16 @@ async function handleDelete(id) {
         if (result.success) {
             const rowCount = document.querySelectorAll('#partTableBody tr').length;
             const newPage = (rowCount === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
-            await fetchPartsData(newPage); // ใช้ await เพื่อให้ spinner แสดงต่อเนื่อง
+            await fetchPartsData(newPage);
         }
     } catch (error) {
         showToast('An error occurred while deleting the part.', '#dc3545');
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner(); // <-- Spinner เดิมของคุณ
     }
 }
 
-/**
- * ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลงค่าใน Filter
- * (แก้ไขใหม่) จะตรวจสอบว่าแท็บใดกำลัง Active อยู่ และเรียกฟังก์ชันโหลดข้อมูลที่ถูกต้อง
- */
 function handleFilterChange() {
-    // >> เพิ่ม: เรียกใช้ฟังก์ชันบันทึกทุกครั้งที่มีการกรอง <<
     saveFiltersToLocalStorage(); 
     
     const activePane = document.querySelector('#mainTabContent .tab-pane.active');
@@ -447,27 +408,19 @@ function handleFilterChange() {
             break;
 
         case 'entry-history-pane':
-            if (typeof fetchHistoryData === 'function') {
-                fetchHistoryData();
-            }
+            if (typeof fetchHistoryData === 'function') fetchHistoryData();
             break;
-
+            
         case 'wip-report-pane':
-            if (typeof fetchWipReport === 'function') {
-                fetchWipReport();
-            }
+            if (typeof fetchWipReport === 'function') fetchWipReport();
             break;
 
         case 'wip-report-by-lot-pane':
-            if (typeof fetchWipReportByLot === 'function') {
-                fetchWipReportByLot();
-            }
+            if (typeof fetchWipReportByLot === 'function') fetchWipReportByLot();
             break;
-
+            
         case 'stock-count-pane':
-            if (typeof fetchStockCountReport === 'function') {
-                fetchStockCountReport();
-            }
+            if (typeof fetchStockCountReport === 'function') fetchStockCountReport();
             break;
 
     }
@@ -476,13 +429,9 @@ function handleFilterChange() {
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. โหลดค่า Filter ที่บันทึกไว้ก่อน ---
     loadFiltersFromLocalStorage();
+    populateAllDatalistsOnLoad(); // <-- เรียกใช้ฟังก์ชันใหม่
 
-    // --- 2. โหลดข้อมูลสำหรับ Datalist ทั้งหมด ---
-    populateAllDatalistsOnLoad();
-
-    // --- 3. ตั้งค่า Event Listeners ทั้งหมด ---
     const debouncedFilterChange = () => {
         clearTimeout(window.filterDebounceTimer);
         window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
@@ -494,6 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterStartDate')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate')?.addEventListener('change', handleFilterChange);
     
+    // --- เพิ่ม Event Listener พิเศษสำหรับ Datalist อัจฉริยะ ---
     if (filterLine) {
         filterLine.addEventListener('change', () => {
             updateModelOptions().then(() => {
@@ -509,13 +459,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 4. จัดการการสลับแท็บ ---
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', handleFilterChange);
     });
 
-    // --- 5. โหลดข้อมูลสำหรับแท็บแรกที่เปิดอยู่ ---
-    // (ใช้ setTimeout เล็กน้อยเพื่อให้แน่ใจว่า Datalist โหลดเสร็จก่อน)
     setTimeout(() => {
         const activeTabPane = document.querySelector('#mainTabContent .tab-pane.active');
         if (activeTabPane) {
