@@ -3,6 +3,33 @@ let currentPage = 1;
 let totalPages = 1;
 const API_URL = '../../api/pdTable/pdTableManage.php';
 
+function saveFiltersToLocalStorage() {
+    const filters = {
+        part_no: document.getElementById('filterPartNo')?.value,
+        lot_no: document.getElementById('filterLotNo')?.value,
+        line: document.getElementById('filterLine')?.value,
+        model: document.getElementById('filterModel')?.value,
+        count_type: document.getElementById('filterCountType')?.value,
+        startDate: document.getElementById('filterStartDate')?.value,
+        endDate: document.getElementById('filterEndDate')?.value,
+    };
+    localStorage.setItem('pdTableFilters', JSON.stringify(filters));
+}
+
+function loadFiltersFromLocalStorage() {
+    const savedFilters = localStorage.getItem('pdTableFilters');
+    if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        document.getElementById('filterPartNo').value = filters.part_no || '';
+        document.getElementById('filterLotNo').value = filters.lot_no || '';
+        document.getElementById('filterLine').value = filters.line || '';
+        document.getElementById('filterModel').value = filters.model || '';
+        document.getElementById('filterCountType').value = filters.count_type || '';
+        document.getElementById('filterStartDate').value = filters.startDate || '';
+        document.getElementById('filterEndDate').value = filters.endDate || '';
+    }
+}
+
 /**
  * =================================================================
  * ฟังก์ชัน Pagination ที่ปรับปรุงใหม่ (ใช้เป็นฟังก์ชันกลาง)
@@ -392,27 +419,25 @@ async function handleDelete(id) {
  * (แก้ไขใหม่) จะตรวจสอบว่าแท็บใดกำลัง Active อยู่ และเรียกฟังก์ชันโหลดข้อมูลที่ถูกต้อง
  */
 function handleFilterChange() {
-    // ค้นหา Tab Pane ที่กำลังแสดงผลอยู่ (มี class 'active')
+    // >> เพิ่ม: เรียกใช้ฟังก์ชันบันทึกทุกครั้งที่มีการกรอง <<
+    saveFiltersToLocalStorage(); 
+    
     const activePane = document.querySelector('#mainTabContent .tab-pane.active');
-    if (!activePane) return; // หากไม่พบ ให้หยุดทำงาน
-
-    // ตรวจสอบ ID ของ Pane ที่ Active แล้วเรียกฟังก์ชันที่เหมาะสม
+    if (!activePane) return;
     switch (activePane.id) {
         case 'production-history-pane':
-            fetchPartsData(1); // โหลดข้อมูลของ Production History (OUT)
+            fetchPartsData(1);
             break;
-            
+
         case 'entry-history-pane':
-            // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้ (เพราะอยู่คนละไฟล์)
             if (typeof fetchHistoryData === 'function') {
-                fetchHistoryData(); // โหลดข้อมูลของ Entry History (IN)
+                fetchHistoryData();
             }
             break;
 
         case 'wip-report-pane':
-            // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้
             if (typeof fetchWipReport === 'function') {
-                fetchWipReport(); // โหลดข้อมูลของ WIP Report
+                fetchWipReport();
             }
             break;
 
@@ -423,57 +448,61 @@ function handleFilterChange() {
             break;
 
         case 'stock-count-pane':
-             // ตรวจสอบว่ามีฟังก์ชันนี้อยู่จริงก่อนเรียกใช้
             if (typeof fetchStockCountReport === 'function') {
-                fetchStockCountReport(); // โหลดข้อมูลของ Stock Count
+                fetchStockCountReport();
             }
             break;
+
     }
 }
-
-// paginationTable.js
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. โหลดข้อมูล Datalist ทั้งหมดเมื่อเปิดหน้าเว็บ ---
-    populateAllDatalistsOnLoad();
-    // **เราจะไม่เรียก populateDatalist แบบเดิมอีกต่อไป**
+    // --- 1. โหลดค่า Filter ที่บันทึกไว้ก่อน ---
+    loadFiltersFromLocalStorage();
 
-    // --- 2. จัดการการกรองข้อมูล (Centralized Filter Handler) ---
+    // --- 2. โหลดข้อมูลสำหรับ Datalist ทั้งหมด ---
+    populateAllDatalistsOnLoad();
+
+    // --- 3. ตั้งค่า Event Listeners ทั้งหมด ---
     const debouncedFilterChange = () => {
         clearTimeout(window.filterDebounceTimer);
         window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
     };
 
-    // --- 3. เพิ่ม Event Listener ให้กับ Filter ทั้งหมด ---
     document.getElementById('filterPartNo')?.addEventListener('input', debouncedFilterChange);
     document.getElementById('filterLotNo')?.addEventListener('input', debouncedFilterChange);
     document.getElementById('filterCountType')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterStartDate')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate')?.addEventListener('change', handleFilterChange);
     
-    // --- 4. เพิ่ม Event Listener พิเศษสำหรับ Datalist อัจฉริยะ ---
     if (filterLine) {
         filterLine.addEventListener('change', () => {
-            updateModelOptions();
-            handleFilterChange(); // สั่งให้กรองข้อมูลในตารางใหม่ทันที
+            updateModelOptions().then(() => {
+                handleFilterChange();
+            });
         });
     }
     if (filterModel) {
         filterModel.addEventListener('change', () => {
-            updatePartNoOptions();
-            handleFilterChange(); // สั่งให้กรองข้อมูลในตารางใหม่ทันที
+            updatePartNoOptions().then(() => {
+                handleFilterChange();
+            });
         });
     }
 
-    // --- 5. จัดการการโหลดข้อมูลเมื่อสลับแท็บ และตอนเปิดหน้าครั้งแรก ---
+    // --- 4. จัดการการสลับแท็บ ---
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', handleFilterChange);
     });
 
-    const activeTabPane = document.querySelector('#mainTabContent .tab-pane.active');
-    if (activeTabPane) {
-        handleFilterChange();
-    }
+    // --- 5. โหลดข้อมูลสำหรับแท็บแรกที่เปิดอยู่ ---
+    // (ใช้ setTimeout เล็กน้อยเพื่อให้แน่ใจว่า Datalist โหลดเสร็จก่อน)
+    setTimeout(() => {
+        const activeTabPane = document.querySelector('#mainTabContent .tab-pane.active');
+        if (activeTabPane) {
+            handleFilterChange();
+        }
+    }, 100); 
 });
