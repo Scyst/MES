@@ -40,6 +40,15 @@ async function fetchWipReport(page = 1) {
                 }
 
                 const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.title = 'Click to see details';
+                
+                tr.addEventListener('click', () => {
+                    if (typeof openWipDetailModal === 'function') {
+                        openWipDetailModal(item);
+                    }
+                });
+
                 tr.innerHTML = `
                     <td>${item.line}</td>
                     <td>${item.model}</td>
@@ -47,7 +56,7 @@ async function fetchWipReport(page = 1) {
                     <td>${item.part_description || ''}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });
@@ -107,6 +116,15 @@ async function fetchWipReportByLot(page = 1) {
                 }
 
                 const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.title = 'Click to see details for this Lot';
+
+                tr.addEventListener('click', () => {
+                    if (typeof openWipDetailModal === 'function') {
+                        openWipDetailModal(item);
+                    }
+                });
+
                 tr.innerHTML = `
                     <td>${item.line}</td>
                     <td>${item.model}</td>
@@ -115,7 +133,7 @@ async function fetchWipReportByLot(page = 1) {
                     <td>${item.lot_no}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${varianceText}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });

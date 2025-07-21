@@ -240,6 +240,104 @@ function openAdjustStockModal(rowData) {
 
     showBootstrapModal('adjustStockModal');
 }
+/**
+ * ฟังก์ชันสำหรับเปิด Modal "Drill-Down Detail" และดึงข้อมูลมาแสดง
+ * @param {object} item - ข้อมูลของแถวที่ถูกคลิก (ต้องมี line, model, part_no)
+ */
+async function openWipDetailModal(item) {
+    const modalElement = document.getElementById('wipDetailModal');
+    if (!modalElement) return;
+
+    // 1. เตรียม Modal และแสดงสถานะ "Loading..."
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const modalTitle = document.getElementById('wipDetailModalLabel');
+    const inTableBody = document.getElementById('wipDetailInTableBody');
+    const outTableBody = document.getElementById('wipDetailOutTableBody');
+    const totalInSpan = document.getElementById('wipDetailTotalIn');
+    const totalOutSpan = document.getElementById('wipDetailTotalOut');
+
+    let titleText = `Details for: ${item.part_no} (${item.line} / ${item.model})`;
+    if (item.lot_no) {
+        titleText += ` | Lot: ${item.lot_no}`;
+    }
+    modalTitle.textContent = titleText;
+    inTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading IN records...</td></tr>';
+    outTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading OUT records...</td></tr>';
+    totalInSpan.textContent = '...';
+    totalOutSpan.textContent = '...';
+    modal.show();
+
+    // 2. สร้าง URL และยิง API เพื่อดึงข้อมูล
+    const params = new URLSearchParams({
+        action: 'get_wip_drilldown_details',
+        line: item.line,
+        model: item.model,
+        part_no: item.part_no,
+        startDate: document.getElementById('filterStartDate')?.value || '',
+        endDate: document.getElementById('filterEndDate')?.value || ''
+    });
+
+    if (item.lot_no) {
+        params.append('lot_no', item.lot_no);
+    }
+
+    const WIP_API_URL = '../../api/pdTable/wipManage.php';
+
+    try {
+        const response = await fetch(`${WIP_API_URL}?${params.toString()}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+
+        // 3. แสดงผลข้อมูลฝั่ง IN
+        inTableBody.innerHTML = '';
+        let totalIn = 0;
+        if (result.data.in_records.length > 0) {
+            result.data.in_records.forEach(rec => {
+                const tr = document.createElement('tr');
+                const entryDate = new Date(rec.entry_time);
+                // ========== แก้ไข: ลบ Operator และเพิ่ม class ให้ Qty ==========
+                tr.innerHTML = `
+                    <td>${entryDate.toLocaleDateString('en-GB')} ${entryDate.toTimeString().substring(0, 8)}</td>
+                    <td class="text-center px-3">${rec.lot_no || '-'}</td>
+                    <td class="text-center px-3">${parseInt(rec.quantity_in).toLocaleString()}</td>
+                `;
+                inTableBody.appendChild(tr);
+                totalIn += parseInt(rec.quantity_in);
+            });
+        } else {
+            // แก้ไข: ปรับ colspan
+            inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No IN records found.</td></tr>';
+        }
+        totalInSpan.textContent = totalIn.toLocaleString();
+        
+        // 4. แสดงผลข้อมูลฝั่ง OUT
+        outTableBody.innerHTML = '';
+        let totalOut = 0;
+        if (result.data.out_records.length > 0) {
+            result.data.out_records.forEach(rec => {
+                const tr = document.createElement('tr');
+                const endTime = rec.log_time ? rec.log_time.substring(0, 8) : 'N/A';
+                
+                tr.innerHTML = `
+                    <td>${new Date(rec.log_date).toLocaleDateString('en-GB')} ${endTime}</td>
+                    <td class="text-center px-3">${rec.lot_no || '-'}</td>
+                    <td class="text-center px-3">${parseInt(rec.count_value).toLocaleString()}</td>
+                    <td class="text-center px-3"><span class="badge bg-secondary">${rec.count_type}</span></td>
+                `;
+                outTableBody.appendChild(tr);
+                totalOut += parseInt(rec.count_value);
+            });
+        } else {
+            outTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No OUT records found.</td></tr>';
+        }
+        totalOutSpan.textContent = totalOut.toLocaleString();
+
+    } catch (error) {
+        console.error('Failed to fetch drill-down details:', error);
+        inTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Error: ${error.message}</td></tr>`;
+        outTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error loading data.</td></tr>`;
+    }
+}
 
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {

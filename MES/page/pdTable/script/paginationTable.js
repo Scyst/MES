@@ -86,6 +86,84 @@ function renderAdvancedPagination(containerId, currentPage, totalPages, callback
     container.appendChild(ul);
 }
 
+// -- Element References --
+const filterLine = document.getElementById('filterLine');
+const filterModel = document.getElementById('filterModel');
+const filterPartNo = document.getElementById('filterPartNo');
+const lineList = document.getElementById('lineList');
+const modelList = document.getElementById('modelList');
+const partNoList = document.getElementById('partNoList');
+
+/**
+ * ฟังก์ชันกลางสำหรับอัปเดต Datalist
+ */
+function updateDatalist(datalistElement, options) {
+    if (datalistElement) {
+        datalistElement.innerHTML = options.map(opt => `<option value="${opt}"></option>`).join('');
+    }
+}
+
+/**
+ * ดึงข้อมูล Model ตาม Line ที่เลือก และอัปเดต Datalist
+ */
+async function updateModelOptions() {
+    const selectedLine = filterLine.value;
+    filterModel.value = ''; // ล้างค่า Model เดิม
+    filterPartNo.value = ''; // ล้างค่า Part No. เดิม
+    updateDatalist(partNoList, []); // ล้างตัวเลือก Part No.
+
+    if (selectedLine) {
+        const response = await fetch(`${API_URL}?action=get_models_by_line&line=${selectedLine}`);
+        const result = await response.json();
+        if (result.success) {
+            updateDatalist(modelList, result.data);
+        }
+    } else {
+        // ถ้า Line ว่าง, ให้โหลด Model ทั้งหมดกลับมา
+        updateDatalist(modelList, window.allModels || []);
+    }
+}
+
+/**
+ * ดึงข้อมูล Part No. ตาม Model และ Line ที่เลือก และอัปเดต Datalist
+ */
+async function updatePartNoOptions() {
+    const selectedLine = filterLine.value;
+    const selectedModel = filterModel.value;
+    filterPartNo.value = ''; // ล้างค่า Part No. เดิม
+
+    if (selectedModel) {
+        const params = new URLSearchParams({ action: 'get_parts_by_model', model: selectedModel, line: selectedLine });
+        const response = await fetch(`${API_URL}?${params.toString()}`);
+        const result = await response.json();
+        if (result.success) {
+            updateDatalist(partNoList, result.data);
+        }
+    } else {
+        // ถ้า Model ว่าง, ให้กลับไปใช้ตัวเลือก Part No. ทั้งหมด (ถ้ามี)
+        updateDatalist(partNoList, window.allPartNos || []);
+    }
+}
+
+/**
+ * (ฟังก์ชันใหม่) ดึงข้อมูลทั้งหมดสำหรับ Datalist ในครั้งแรกที่โหลดหน้า
+ */
+async function populateAllDatalistsOnLoad() {
+    try {
+        const response = await fetch(`${API_URL}?action=get_datalist_options`);
+        const result = await response.json();
+        if (result.success) {
+            window.allModels = result.models;
+            window.allPartNos = result.partNos;
+
+            updateDatalist(lineList, result.lines);
+            updateDatalist(modelList, result.models);
+            updateDatalist(partNoList, result.partNos);
+        }
+    } catch (error) {
+        console.error('Failed to populate datalists:', error);
+    }
+}
 
 /**
  * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API
@@ -358,39 +436,44 @@ function handleFilterChange() {
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. จัดการการกรองข้อมูล (Centralized Filter Handler) ---
-    // เพิ่ม Debouncing ให้กับ Filter Inputs ทั้งหมด
-    const filterInputs = ['filterPartNo', 'filterLotNo', 'filterLine', 'filterModel', 'filterCountType', 'filterStartDate', 'filterEndDate'];
-    filterInputs.forEach(id => {
-        const inputElement = document.getElementById(id);
-        if (inputElement) {
-            inputElement.addEventListener('input', () => {
-                clearTimeout(window.filterDebounceTimer);
-                // รอ 500ms หลังผู้ใช้หยุดพิมพ์ จึงจะเรียก handleFilterChange
-                window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
-            });
-        }
-    });
+    // --- 1. โหลดข้อมูล Datalist ทั้งหมดเมื่อเปิดหน้าเว็บ ---
+    populateAllDatalistsOnLoad();
+    // **เราจะไม่เรียก populateDatalist แบบเดิมอีกต่อไป**
 
-    // --- 2. โหลดข้อมูลสำหรับ Datalist (Autocomplete) ---
-    populateDatalist('partNoList', 'get_part_nos');
-    populateDatalist('lotList', 'get_lot_numbers');
-    populateDatalist('lineList', 'get_lines');
-    populateDatalist('modelList', 'get_models');
+    // --- 2. จัดการการกรองข้อมูล (Centralized Filter Handler) ---
+    const debouncedFilterChange = () => {
+        clearTimeout(window.filterDebounceTimer);
+        window.filterDebounceTimer = setTimeout(handleFilterChange, 500);
+    };
+
+    // --- 3. เพิ่ม Event Listener ให้กับ Filter ทั้งหมด ---
+    document.getElementById('filterPartNo')?.addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterLotNo')?.addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterCountType')?.addEventListener('change', handleFilterChange);
+    document.getElementById('filterStartDate')?.addEventListener('change', handleFilterChange);
+    document.getElementById('filterEndDate')?.addEventListener('change', handleFilterChange);
     
-    // --- 3. จัดการการโหลดข้อมูลเมื่อสลับแท็บ และตอนเปิดหน้าครั้งแรก ---
+    // --- 4. เพิ่ม Event Listener พิเศษสำหรับ Datalist อัจฉริยะ ---
+    if (filterLine) {
+        filterLine.addEventListener('change', () => {
+            updateModelOptions();
+            handleFilterChange(); // สั่งให้กรองข้อมูลในตารางใหม่ทันที
+        });
+    }
+    if (filterModel) {
+        filterModel.addEventListener('change', () => {
+            updatePartNoOptions();
+            handleFilterChange(); // สั่งให้กรองข้อมูลในตารางใหม่ทันที
+        });
+    }
 
-    // 3.1 เพิ่ม Event Listener ให้กับทุกแท็บ
-    // เมื่อมีการสลับแท็บ จะเรียก handleFilterChange เพื่อโหลดข้อมูลของแท็บใหม่
+    // --- 5. จัดการการโหลดข้อมูลเมื่อสลับแท็บ และตอนเปิดหน้าครั้งแรก ---
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', handleFilterChange);
     });
 
-    // 3.2 โหลดข้อมูลสำหรับแท็บที่ Active อยู่ตอนเปิดหน้าเว็บครั้งแรก
-    // ต้องทำหลังจากตั้งค่า Event Listener แล้ว เพื่อให้แน่ใจว่าทุกอย่างพร้อม
     const activeTabPane = document.querySelector('#mainTabContent .tab-pane.active');
     if (activeTabPane) {
-        // เรียกใช้ handleFilterChange() หนึ่งครั้งเพื่อโหลดข้อมูลของแท็บที่เปิดอยู่
         handleFilterChange();
     }
 });

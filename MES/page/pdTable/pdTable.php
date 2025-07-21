@@ -219,6 +219,7 @@
             include('components/adjustStockModal.php');
         }
         include('components/summaryModal.php');
+        include('components/wipDetailModal.php');
         include('../components/autoLogoutUI.php');
     ?>
     

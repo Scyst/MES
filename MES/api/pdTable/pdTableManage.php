@@ -338,6 +338,61 @@ try {
             $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $lots]);
             break;
+
+        case 'get_datalist_options':
+            $lineSql = "SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line";
+            $modelSql = "SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model";
+            $partNoSql = "SELECT DISTINCT part_no FROM PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
+
+            $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
+            $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
+            $partNos = $pdo->query($partNoSql)->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode([
+                'success' => true,
+                'lines' => $lines,
+                'models' => $models,
+                'partNos' => $partNos
+            ]);
+            break;
+
+        // 2. ดึง Model ตาม Line ที่เลือก
+        case 'get_models_by_line':
+            $line = $_GET['line'] ?? '';
+            if (empty($line)) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+            $sql = "SELECT DISTINCT model FROM PARAMETER WHERE line = ? ORDER BY model";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$line]);
+            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $models]);
+            break;
+
+        // 3. ดึง Part No. ตาม Model (และ Line) ที่เลือก
+        case 'get_parts_by_model':
+            $line = $_GET['line'] ?? '';
+            $model = $_GET['model'] ?? '';
+            if (empty($model)) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+
+            $sql = "SELECT DISTINCT part_no FROM PARAMETER WHERE model = ?";
+            $params = [$model];
+            if (!empty($line)) {
+                $sql .= " AND line = ?";
+                $params[] = $line;
+            }
+            $sql .= " ORDER BY part_no";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $parts = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $parts]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");

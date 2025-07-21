@@ -533,6 +533,82 @@ try {
             echo json_encode(['success' => true, 'page' => $page, 'limit' => $limit, 'total' => $total, 'data' => $stock_data]);
             break;
 
+        case 'get_wip_drilldown_details':
+            // 1. รับค่า Parameter ที่จำเป็นจาก Frontend (เหมือนเดิม)
+            $line = $_GET['line'] ?? '';
+            $model = $_GET['model'] ?? '';
+            $part_no = $_GET['part_no'] ?? '';
+            $lot_no = $_GET['lot_no'] ?? null;
+            $startDate = $_GET['startDate'] ?? null;
+            $endDate = $_GET['endDate'] ?? null;
+
+            if (empty($line) || empty($model) || empty($part_no)) {
+                throw new Exception("Line, Model, and Part No. are required for drill-down.");
+            }
+            
+            enforceLinePermission($line);
+
+            // 2. ดึงข้อมูลฝั่งขาเข้า (IN) จากตาราง WIP_ENTRIES (โค้ดส่วนนี้ถูกต้องแล้ว)
+            $in_sql = "
+                SELECT entry_time, lot_no, quantity_in, operator 
+                FROM WIP_ENTRIES 
+                WHERE line = ? AND model = ? AND part_no = ?
+            ";
+            $in_params = [$line, $model, $part_no];
+            
+            if (!empty($lot_no)) {
+                $in_sql .= " AND lot_no = ?";
+                $in_params[] = $lot_no;
+            }
+            if (!empty($startDate)) {
+                $in_sql .= " AND CAST(entry_time AS DATE) >= ?";
+                $in_params[] = $startDate;
+            }
+            if (!empty($endDate)) {
+                $in_sql .= " AND CAST(entry_time AS DATE) <= ?";
+                $in_params[] = $endDate;
+            }
+            $in_sql .= " ORDER BY entry_time DESC";
+            $in_stmt = $pdo->prepare($in_sql);
+            $in_stmt->execute($in_params);
+            $in_records = $in_stmt->fetchAll(PDO::FETCH_ASSOC);
+            // 3. ดึงข้อมูลฝั่งขาออก (OUT) จากตาราง PARTS (โค้ดชุดเดียวที่ถูกต้อง)
+            $out_sql = "
+                SELECT log_date, CONVERT(varchar(8), log_time, 108) AS log_time, lot_no, count_value, count_type 
+                FROM PARTS 
+                WHERE line = ? AND model = ? AND part_no = ? AND count_type <> 'ADJUST-IN'
+            ";
+            $out_params = [$line, $model, $part_no];
+            
+            if (!empty($lot_no)) {
+                $out_sql .= " AND (lot_no = ? OR lot_no LIKE ?)";
+                $out_params[] = $lot_no;
+                $out_params[] = $lot_no . '-%';
+            }
+            if (!empty($startDate)) {
+                $out_sql .= " AND log_date >= ?";
+                $out_params[] = $startDate;
+            }
+            if (!empty($endDate)) {
+                $out_sql .= " AND log_date <= ?";
+                $out_params[] = $endDate;
+            }
+            $out_sql .= " ORDER BY log_date DESC, log_time DESC";
+
+            $out_stmt = $pdo->prepare($out_sql);
+            $out_stmt->execute($out_params);
+            $out_records = $out_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 4. ส่งข้อมูลทั้งหมดกลับไปเป็น JSON (เหมือนเดิม)
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'in_records' => $in_records,
+                    'out_records' => $out_records
+                ]
+            ]);
+            break;
+
         case 'search_active_lots':
             $part_no = $_GET['part_no'] ?? '';
             $line = $_GET['line'] ?? '';
