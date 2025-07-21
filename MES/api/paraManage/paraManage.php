@@ -126,42 +126,62 @@ try {
             
             $pdo->beginTransaction();
             
-            $checkSql = "SELECT id FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            // --- แก้ไข: เพิ่ม sap_no ในเงื่อนไขการค้นหา ---
+            $checkSql = "SELECT id FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ? AND (sap_no = ? OR (sap_no IS NULL AND ? IS NULL))";
             $checkStmt = $pdo->prepare($checkSql);
-            $updateSql = "UPDATE PARAMETER SET sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
+
+            // --- แก้ไข: ปรับปรุง SQL สำหรับ INSERT และ UPDATE ให้ครบถ้วน ---
+            $updateSql = "UPDATE PARAMETER SET planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
             $updateStmt = $pdo->prepare($updateSql);
             $insertSql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
 
             $imported = 0;
+            $updated = 0;
+
             foreach ($input as $row) {
+                // ดึงข้อมูลจากแถว
                 $line = strtoupper(trim($row['line'] ?? ''));
-                if (empty($line)) continue;
-
-                enforceLinePermission($line);
-
                 $model = strtoupper(trim($row['model'] ?? ''));
                 $part_no = strtoupper(trim($row['part_no'] ?? ''));
-                if (empty($model) || empty($part_no)) continue;
-                
-                $sap_no = strtoupper(trim($row['sap_no'] ?? ''));
-                $planned_output = (int)($row['planned_output'] ?? 0);
-                $part_description = trim($row['part_description'] ?? '');
+                // ทำให้ sap_no เป็น null ได้หากไม่มีค่า
+                $sap_no = !empty($row['sap_no']) ? strtoupper(trim($row['sap_no'])) : null;
 
-                $checkStmt->execute([$line, $model, $part_no]);
+                // **เงื่อนไขสำคัญ: ข้อมูลใหม่ต้องมี Line, Model, Part No. เสมอ**
+                if (empty($line) || empty($model) || empty($part_no)) {
+                    continue; 
+                }
+                
+                // ตรวจสอบสิทธิ์สำหรับ Line
+                enforceLinePermission($line);
+
+                // --- แก้ไข: ใช้ 4 ค่าในการค้นหา ---
+                $checkStmt->execute([$line, $model, $part_no, $sap_no, $sap_no]);
                 $existing = $checkStmt->fetch();
 
                 if ($existing) {
-                    $updateStmt->execute([$sap_no, $planned_output, $part_description, $existing['id']]);
+                    // **ถ้ามีข้อมูลอยู่แล้ว: อัปเดตเฉพาะ planned_output และ part_description**
+                    // (เราจะไม่ให้ import อัปเดต key หลักๆ เช่น sap_no, model อีกต่อไป)
+                    if (isset($row['planned_output']) || isset($row['part_description'])) {
+                        $planned_output = (int)($row['planned_output'] ?? 0);
+                        $part_description = trim($row['part_description'] ?? '');
+                        
+                        $updateStmt->execute([$planned_output, $part_description, $existing['id']]);
+                        $updated++;
+                    }
                 } else {
+                    // **ถ้าเป็นข้อมูลใหม่: ทำการ INSERT**
+                    $planned_output = (int)($row['planned_output'] ?? 0);
+                    $part_description = trim($row['part_description'] ?? null);
+
                     $insertStmt->execute([$line, $model, $part_no, $sap_no, $planned_output, $part_description]);
+                    $imported++;
                 }
-                $imported++;
             }
 
             $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'BULK IMPORT PARAMETER', null, "Imported $imported rows");
-            echo json_encode(["success" => true, "imported" => $imported, "message" => "Imported $imported row(s) successfully."]);
+            logAction($pdo, $currentUser['username'], 'BULK IMPORT/UPDATE PARAMETER', null, "Imported $imported rows, Updated $updated rows");
+            echo json_encode(["success" => true, "imported" => $imported, "updated" => $updated, "message" => "Imported $imported new row(s) and updated $updated existing row(s) successfully."]);
             break;
 
         //-- อ่านข้อมูล Schedule ทั้งหมด --
