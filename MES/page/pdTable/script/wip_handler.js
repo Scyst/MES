@@ -141,9 +141,12 @@ async function fetchHistoryData(page = 1) {
     const colspan = canManage ? 9 : 8;
     historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">Loading History...</td></tr>`;
 
+    // ========== แก้ไขจุดที่ 1 ==========
+    // เพิ่ม 'model' เข้าไปในรายการ parameter ที่จะส่งไป
     const params = new URLSearchParams({
-        page: page, // เพิ่ม page
+        page: page,
         line: document.getElementById('filterLine')?.value || '',
+        model: document.getElementById('filterModel')?.value || '', // <-- เพิ่มบรรทัดนี้
         part_no: document.getElementById('filterPartNo')?.value || '',
         lot_no: document.getElementById('filterLotNo')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
@@ -155,6 +158,10 @@ async function fetchHistoryData(page = 1) {
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
+        // ========== แก้ไขจุดที่ 2 ==========
+        // เก็บข้อมูลที่ดึงมาลงใน cache เพื่อให้ฟังก์ชัน Export ใช้งานได้
+        window.cachedHistoryData = result.data || [];
+        
         window.cachedHistorySummary = result.history_summary || [];
         
         historyBody.innerHTML = '';
@@ -162,51 +169,51 @@ async function fetchHistoryData(page = 1) {
             historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No entry history found.</td></tr>`;
         } else {
             result.data.forEach(item => {
-                 const tr = document.createElement('tr');
-                 const entryDate = new Date(item.entry_time);
-                 const formattedDate = entryDate.toLocaleDateString('en-GB');
-                 const formattedTime = entryDate.toTimeString().substring(0, 8);
-                 const noteTd = document.createElement('td');
-                 const noteDiv = document.createElement('div');
-                 noteDiv.className = 'note-truncate';
-                 noteDiv.title = item.remark || '';
-                 noteDiv.textContent = item.remark || '';
-                 noteTd.appendChild(noteDiv);
+                // ... (ส่วนที่เหลือของโค้ดในการสร้างตารางเหมือนเดิมทั้งหมด)
+                const tr = document.createElement('tr');
+                const entryDate = new Date(item.entry_time);
+                const formattedDate = entryDate.toLocaleDateString('en-GB');
+                const formattedTime = entryDate.toTimeString().substring(0, 8);
+                const noteTd = document.createElement('td');
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note-truncate';
+                noteDiv.title = item.remark || '';
+                noteDiv.textContent = item.remark || '';
+                noteTd.appendChild(noteDiv);
 
-                 tr.innerHTML = `
-                     <td>${formattedDate}</td>
-                     <td>${formattedTime}</td>
-                     <td>${item.line}</td>
-                     <td>${item.model || '-'}</td>
-                     <td>${item.part_no}</td>
-                     <td>${item.lot_no || '-'}</td>
-                     <td style="text-align: center;">${parseInt(item.quantity_in).toLocaleString()}</td>
-                 `;
-                 tr.appendChild(noteTd);
-                 
-                 if (canManage) {
-                     const actionsTd = document.createElement('td');
-                     actionsTd.className = 'text-center';
-                     const buttonWrapper = document.createElement('div');
-                     buttonWrapper.className = 'd-flex gap-1';
-                     const editButton = document.createElement('button');
-                     editButton.className = 'btn btn-sm btn-warning w-100';
-                     editButton.textContent = 'Edit';
-                     editButton.onclick = () => openEditEntryModal(item, editButton);
-                     const deleteButton = document.createElement('button');
-                     deleteButton.className = 'btn btn-sm btn-danger w-100';
-                     deleteButton.textContent = 'Delete';
-                     deleteButton.onclick = () => handleDeleteEntry(item.entry_id, page); // ส่ง page เข้าไปด้วย
-                     buttonWrapper.appendChild(editButton);
-                     buttonWrapper.appendChild(deleteButton);
-                     actionsTd.appendChild(buttonWrapper);
-                     tr.appendChild(actionsTd);
-                 }
-                 historyBody.appendChild(tr);
+                tr.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td>${formattedTime}</td>
+                    <td>${item.line}</td>
+                    <td>${item.model || '-'}</td>
+                    <td>${item.part_no}</td>
+                    <td>${item.lot_no || '-'}</td>
+                    <td style="text-align: center;">${parseInt(item.quantity_in).toLocaleString()}</td>
+                `;
+                tr.appendChild(noteTd);
+                
+                if (canManage) {
+                    const actionsTd = document.createElement('td');
+                    actionsTd.className = 'text-center';
+                    const buttonWrapper = document.createElement('div');
+                    buttonWrapper.className = 'd-flex gap-1';
+                    const editButton = document.createElement('button');
+                    editButton.className = 'btn btn-sm btn-warning w-100';
+                    editButton.textContent = 'Edit';
+                    editButton.onclick = () => openEditEntryModal(item, editButton);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'btn btn-sm btn-danger w-100';
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.onclick = () => handleDeleteEntry(item.entry_id, page);
+                    buttonWrapper.appendChild(editButton);
+                    buttonWrapper.appendChild(deleteButton);
+                    actionsTd.appendChild(buttonWrapper);
+                    tr.appendChild(actionsTd);
+                }
+                historyBody.appendChild(tr);
             });
         }
         
-        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
         const totalPages = Math.ceil(result.total / result.limit);
         renderAdvancedPagination('entryHistoryPagination', result.page, totalPages, fetchHistoryData);
 

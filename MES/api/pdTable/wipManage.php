@@ -189,7 +189,7 @@ try {
                 WITH TotalIn AS (
                     SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model
                 ), TotalOut AS (
-                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS $partsWhereClause GROUP BY part_no, line, model
+                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS $partsWhereClause AND count_type <> 'BOM-ISSUE' GROUP BY part_no, line, model
                 ), FullData AS (
                     SELECT 
                         ISNULL(tin.part_no, tout.part_no) AS part_no, 
@@ -205,7 +205,8 @@ try {
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
                 )
-                SELECT part_no, line, model, part_description, total_in, total_out, (total_in - total_out) as variance
+                -- ========== แก้ไขสูตรการคำนวณ Variance ==========
+                SELECT part_no, line, model, part_description, total_in, total_out, (total_out - total_in) as variance
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?;
             ";
@@ -319,6 +320,7 @@ try {
                         p.part_description,
                         ISNULL(ti.total_in, 0) as total_in, 
                         ISNULL(to_out.total_out, 0) as total_out,
+                        -- ========== แก้ไขสูตรการคำนวณ Variance ==========
                         (ISNULL(to_out.total_out, 0) - ISNULL(ti.total_in, 0)) as variance
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no

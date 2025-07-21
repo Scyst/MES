@@ -193,9 +193,13 @@ function exportSummaryToExcel() {
  */
 async function exportHistoryToExcel() {
     showToast('Exporting Entry History...', '#0dcaf0');
+    
+    // ========== แก้ไขจุดที่ 1 ==========
+    // เพิ่ม 'model' เข้าไปในรายการ parameter ที่จะส่งไป
     const params = new URLSearchParams({
         action: 'get_wip_history',
         line: document.getElementById('filterLine')?.value || '',
+        model: document.getElementById('filterModel')?.value || '', // <-- เพิ่มบรรทัดนี้
         part_no: document.getElementById('filterPartNo')?.value || '',
         lot_no: document.getElementById('filterLotNo')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
@@ -206,21 +210,31 @@ async function exportHistoryToExcel() {
         const response = await fetch(`../../api/pdTable/wipManage.php?${params.toString()}`);
         const result = await response.json();
 
-        if (!result.success || result.history.length === 0) {
+        // ========== แก้ไขจุดที่ 2 ==========
+        // เปลี่ยนจาก result.history เป็น result.data
+        if (!result.success || !result.data || result.data.length === 0) {
             showToast("No entry history data to export.", '#ffc107');
             return;
         }
 
-        const dataToExport = result.history.map(row => ({
-            'Timestamp': new Date(row.entry_time).toLocaleString('th-TH'),
-            'Line': row.line,
-            'Lot No': row.lot_no || '-',
-            'Part No': row.part_no,
-            'Quantity In': parseInt(row.quantity_in),
-            'Operator': row.operator,
-            'Remark': row.remark || '-'
-        }));
-
+        // ========== แก้ไขจุดที่ 3 ==========
+        // เปลี่ยนจาก result.history เป็น result.data และปรับปรุงฟิลด์ข้อมูล
+        const dataToExport = result.data.map(row => {
+            const entryDate = new Date(row.entry_time);
+            return {
+                'Date': entryDate.toLocaleDateString('en-GB'),
+                'Time': entryDate.toTimeString().substring(0, 8),
+                'Line': row.line,
+                'Model': row.model,
+                'Part No': row.part_no,
+                'Lot No': row.lot_no,
+                'Quantity In': parseInt(row.quantity_in),
+                'Operator': row.operator,
+                'Remark': row.remark
+            };
+        });
+        
+        // ... (ส่วนที่เหลือของการสร้าง Excel เหมือนเดิม)
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Entry History");
