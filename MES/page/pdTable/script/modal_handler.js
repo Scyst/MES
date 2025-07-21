@@ -341,6 +341,69 @@ async function openWipDetailModal(item) {
     }
 }
 
+let validationDebounceTimer;
+
+/**
+ * ฟังก์ชันสำหรับตรวจสอบ Part No. ผ่าน API
+ * @param {string} formType - 'add' หรือ 'edit' เพื่อระบุฟอร์มที่กำลังใช้งาน
+ */
+function handlePartNoValidation(formType) {
+    clearTimeout(validationDebounceTimer);
+    validationDebounceTimer = setTimeout(async () => {
+        // 1. ดึงค่าจากฟอร์มที่กำลังใช้งาน
+        const idPrefix = formType === 'add' ? 'addPart' : 'edit_';
+        // ใช้ Ternary Operator เพื่อเปลี่ยนชื่อฟิลด์ตาม formType
+        const lineId = formType === 'add' ? `${idPrefix}Line` : `${idPrefix}line`;
+        const modelId = formType === 'add' ? `${idPrefix}Model` : `${idPrefix}model`;
+        const partNoId = formType === 'add' ? `${idPrefix}PartNo` : `${idPrefix}part_no`;
+
+        const line = document.getElementById(lineId).value;
+        const model = document.getElementById(modelId).value;
+        const partNo = document.getElementById(partNoId).value;
+        const iconElement = document.getElementById(`${formType}PartNoValidationIcon`);
+        const helpTextElement = document.getElementById(`${formType}PartNoHelp`);
+
+        // 2. ล้างสถานะเดิม
+        iconElement.innerHTML = '';
+        helpTextElement.textContent = '';
+        
+        // 3. ตรวจสอบว่ามีข้อมูลครบหรือไม่
+        if (!line || !model || !partNo) {
+            helpTextElement.textContent = 'Please select Line and Model first.';
+            helpTextElement.className = 'form-text text-warning';
+            return;
+        }
+
+        // 4. แสดงสถานะกำลังตรวจสอบ
+        iconElement.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+        try {
+            const params = new URLSearchParams({ action: 'validate_part_no', line, model, part_no: partNo });
+            const response = await fetch(`${PD_API_URL}?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                if (result.exists) {
+                    // ถ้าพบข้อมูล
+                    iconElement.innerHTML = '<span class="text-success">✔</span>';
+                    helpTextElement.textContent = 'Part No. is valid for this model.';
+                    helpTextElement.className = 'form-text text-success';
+                } else {
+                    // ถ้าไม่พบข้อมูล
+                    iconElement.innerHTML = '<span class="text-danger">✖</span>';
+                    helpTextElement.textContent = 'Part No. not found in this Line/Model combination.';
+                    helpTextElement.className = 'form-text text-danger';
+                }
+            } else {
+                iconElement.innerHTML = '<span class="text-warning">?</span>';
+            }
+        } catch (error) {
+            console.error('Validation failed:', error);
+            iconElement.innerHTML = '<span class="text-warning">?</span>';
+        }
+    }, 800); // หน่วงเวลา 0.8 วินาทีหลังผู้ใช้หยุดพิมพ์
+}
+
 //-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
     const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
@@ -470,4 +533,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    document.getElementById('addPartPartNo')?.addEventListener('input', () => handlePartNoValidation('add'));
+    document.getElementById('addPartLine')?.addEventListener('change', () => handlePartNoValidation('add'));
+    document.getElementById('addPartModel')?.addEventListener('change', () => handlePartNoValidation('add'));
+
+    document.getElementById('edit_part_no')?.addEventListener('input', () => handlePartNoValidation('edit'));
+    document.getElementById('edit_line')?.addEventListener('change', () => handlePartNoValidation('edit'));
+    document.getElementById('edit_model')?.addEventListener('change', () => handlePartNoValidation('edit'));
+    
 });

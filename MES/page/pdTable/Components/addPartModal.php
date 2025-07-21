@@ -36,7 +36,11 @@
 
                     <div class="mb-3">
                        <label for="addPartPartNo" class="form-label">Part No.</label>
-                       <input list="partNoList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type part no..." required>
+                       <div class="input-group">
+                           <input list="partNoList" id="addPartPartNo" name="part_no" class="form-control text-uppercase" placeholder="Select or type part no..." required>
+                           <span class="input-group-text" id="addPartNoValidationIcon"></span>
+                       </div>
+                       <div id="addPartNoHelp" class="form-text"></div>
                     </div>
 
                     <div class="mb-3">

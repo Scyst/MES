@@ -393,6 +393,31 @@ try {
             echo json_encode(['success' => true, 'data' => $parts]);
             break;
 
+        case 'validate_part_no':
+            // 1. รับค่าที่จำเป็นจาก Frontend
+            $line = $_GET['line'] ?? '';
+            $model = $_GET['model'] ?? '';
+            $part_no = $_GET['part_no'] ?? '';
+
+            // 2. ตรวจสอบว่ามีข้อมูลครบถ้วนหรือไม่
+            if (empty($line) || empty($model) || empty($part_no)) {
+                // ส่งข้อมูลกลับไปว่า "ยังตรวจสอบไม่ได้"
+                echo json_encode(['success' => true, 'exists' => false, 'message' => 'Incomplete data for validation.']);
+                exit;
+            }
+            
+            // 3. ค้นหาข้อมูลในฐานข้อมูล
+            $sql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$line, $model, $part_no]);
+            
+            // 4. ตรวจสอบผลลัพธ์
+            $exists = $stmt->fetchColumn() > 0;
+            
+            // 5. ส่งผลลัพธ์กลับไปเป็น JSON
+            echo json_encode(['success' => true, 'exists' => $exists]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");

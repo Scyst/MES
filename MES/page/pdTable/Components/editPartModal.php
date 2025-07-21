@@ -39,8 +39,11 @@
                     
                     <div class="mb-3">
                         <label for="edit_part_no" class="form-label">Part No.</label>
-                        <input list="editPartList" name="part_no" id="edit_part_no" class="form-control" placeholder="Select or type Part No." required>
-                        <datalist id="editPartList"></datalist>
+                        <div class="input-group">
+                            <input list="partNoList" name="part_no" id="edit_part_no" class="form-control" placeholder="Select or type Part No." required>
+                            <span class="input-group-text" id="editPartNoValidationIcon"></span>
+                        </div>
+                        <div id="editPartNoHelp" class="form-text"></div>
                     </div>
                     
                     <div class="mb-3">
