@@ -21,7 +21,7 @@
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css">
+    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
     <style>
         .text-center-col {
             text-align: center;
@@ -228,14 +228,14 @@
         const canManage = <?php echo json_encode($canManage); ?>;
     </script>
     
-    <script src="../components/spinner.js" defer></script>
-    <script src="../components/auto_logout.js" defer></script>
-    <script src="../components/datetime.js" defer></script>
-    <script src="../components/toast.js" defer></script>
-    <script src="script/paginationTable.js" defer></script>
-    <script src="script/export_data.js" defer></script>
-    <script src="script/modal_handler.js" defer></script> 
-    <script src="script/wip_handler.js" defer></script> 
+    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>" defer></script>
+    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>" defer></script>
+    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>" defer></script>
+    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>" defer></script>
+    <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
+    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 
+    <script src="script/wip_handler.js?v=<?php echo filemtime('script/wip_handler.js'); ?>" defer></script> 
 
     <script defer>
         // โค้ดที่เคยอยู่ใน DOMContentLoaded สามารถวางตรงนี้ได้เลยเมื่อใช้ defer

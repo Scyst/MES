@@ -19,7 +19,7 @@ $canManage = hasRole(['admin', 'creator']);
     <title>User Manager</title>
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css">
+    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
 <body class="bg-dark text-white p-4">
@@ -111,10 +111,10 @@ $canManage = hasRole(['admin', 'creator']);
         const currentUserRole = <?php echo json_encode($_SESSION['user']['role'] ?? ''); ?>;
     </script>
 
-    <script src="../components/spinner.js"></script>
-    <script src="../components/toast.js"></script>
-    <script src="../components/auto_logout.js"></script>
-    <script src="script/modal_handler.js"></script>
-    <script src="script/userManage.js"></script>
+    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
+    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
+    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
+    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
+    <script src="script/userManage.js?v=<?php echo filemtime('script/userManage.js'); ?>"></script>
 </body>
 </html>

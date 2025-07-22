@@ -14,7 +14,7 @@ session_start();
     <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>
     <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css">
+    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
     
 </head>
 
@@ -102,12 +102,12 @@ session_start();
     </div> 
     <div id="toast"></div>
 
-    <script src="../components/spinner.js"></script>
-    <script src="../components/datetime.js"></script>
-    <script src="../components/toast.js"></script>
-    <script src="script/OEE_piechart.js"></script>
-    <script src="script/OEE_linechart.js"></script>
-    <script src="script/OEE_barchart.js"></script>
-    <script src="script/filterManager.js"></script>
+    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
+    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
+    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
+    <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
+    <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
+    <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
+    <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
 </body>
 </html>
