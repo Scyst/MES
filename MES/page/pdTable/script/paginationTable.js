@@ -406,23 +406,18 @@ function handleFilterChange() {
         case 'production-history-pane':
             fetchPartsData(1);
             break;
-
         case 'entry-history-pane':
             if (typeof fetchHistoryData === 'function') fetchHistoryData();
             break;
-            
         case 'wip-report-pane':
             if (typeof fetchWipReport === 'function') fetchWipReport();
             break;
-
         case 'wip-report-by-lot-pane':
             if (typeof fetchWipReportByLot === 'function') fetchWipReportByLot();
             break;
-            
         case 'stock-count-pane':
             if (typeof fetchStockCountReport === 'function') fetchStockCountReport();
             break;
-
     }
 }
 
