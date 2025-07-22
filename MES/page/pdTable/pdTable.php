@@ -228,7 +228,17 @@
         const canManage = <?php echo json_encode($canManage); ?>;
     </script>
     
-    <script>
+    <script src="../components/spinner.js" defer></script>
+    <script src="../components/auto_logout.js" defer></script>
+    <script src="../components/datetime.js" defer></script>
+    <script src="../components/toast.js" defer></script>
+    <script src="script/paginationTable.js" defer></script>
+    <script src="script/export_data.js" defer></script>
+    <script src="script/modal_handler.js" defer></script> 
+    <script src="script/wip_handler.js" defer></script> 
+
+    <script defer>
+        // โค้ดที่เคยอยู่ใน DOMContentLoaded สามารถวางตรงนี้ได้เลยเมื่อใช้ defer
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
@@ -253,7 +263,6 @@
                         `;
                         summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
                         break;
-                        
                     case 'entry-history-tab':
                         buttonGroup.innerHTML = `
                             <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
@@ -261,17 +270,11 @@
                             ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
                         `;
                         break;
-                        
                     case 'wip-report-tab':
-                        buttonGroup.innerHTML = `
-                            <button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>
-                        `;
+                        buttonGroup.innerHTML = `<button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>`;
                         break;
-
                     case 'wip-report-by-lot-tab':
-                        buttonGroup.innerHTML = `
-                            <button class="btn btn-primary" onclick="exportWipReportByLotToExcel()">Export</button>
-                        `;
+                        buttonGroup.innerHTML = `<button class="btn btn-primary" onclick="exportWipReportByLotToExcel()">Export</button>`;
                         break;
                 }
             }
@@ -294,14 +297,4 @@
             }
         });
     </script>
-
-    <script src="../components/spinner.js"></script>
-    <script src="../components/auto_logout.js"></script>
-    <script src="../components/datetime.js"></script>
-    <script src="../components/toast.js"></script>
-    <script src="script/paginationTable.js"></script>
-    <script src="script/export_data.js"></script>
-    <script src="script/modal_handler.js"></script> 
-    <script src="script/wip_handler.js"></script> 
 </body>
-</html>
