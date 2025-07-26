@@ -88,6 +88,7 @@
                                 <th>SAP No.</th>
                                 <th>Part Description</th> 
                                 <th>Planned Output</th>
+                                <th>Part Value</th>
                                 <th>Updated At</th>
                                 <?php if (hasRole(['supervisor', 'admin', 'creator'])): ?>
                                     <th style="width: 150px; text-align: center;">Actions</th>

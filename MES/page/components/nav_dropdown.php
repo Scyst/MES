@@ -20,6 +20,19 @@
         <span>OEE Dashboard</span>
       </a>
     </li>
+
+    <?php 
+      $userRole = $_SESSION['user']['role'] ?? null;
+      if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): 
+    ?>
+    <li>
+      <a class="dropdown-item-icon" href="../performanceReport/performanceReportUI.php" title="Operator Performance">
+        <img src="../../icons/reports-icon.png" alt="Operator Performance">
+        <span>Operator Performance</span>
+      </a>
+    </li>
+    <?php endif; ?>
+
     <li>
       <a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production & WIP">
         <img src="../../icons/db.png" alt="Production & WIP">
@@ -37,7 +50,6 @@
 
     <?php 
       // Grouping management pages together
-      $userRole = $_SESSION['user']['role'] ?? null;
       if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): 
     ?>
     <li>

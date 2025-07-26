@@ -70,7 +70,7 @@ function renderPagination(containerId, totalItems, currentPage, callback) {
 
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
 async function loadStandardParams() {
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
         if (result?.success) {
@@ -78,12 +78,11 @@ async function loadStandardParams() {
             filterAndRenderStandardParams();
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
 function getFilteredStandardParams() {
-    // แก้ไข: เพิ่มการกรองจาก filterLine และ filterModel
     const lineFilter = document.getElementById('filterLine').value.toUpperCase();
     const modelFilter = document.getElementById('filterModel').value.toUpperCase();
     const searchFilter = document.getElementById('searchInput').value.toUpperCase();
@@ -103,9 +102,9 @@ function renderStandardParamsTable() {
     const start = (paramCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = filteredData.slice(start, start + ROWS_PER_PAGE);
 
-    // แก้ไข: เพิ่ม colspan เป็น 8
+    // --- MODIFIED: เพิ่ม colspan เป็น 9 ---
     if (pageData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center">No parameters found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No parameters found.</td></tr>`;
         renderPagination('paginationControls', 0, 1, goToStandardParamPage);
         return;
     }
@@ -113,7 +112,7 @@ function renderStandardParamsTable() {
     pageData.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
-        // แก้ไข: เพิ่ม <td> สำหรับ part_description
+        // --- MODIFIED: เพิ่ม <td> สำหรับ part_value ---
         tr.innerHTML = `
             <td>${row.line || ''}</td>
             <td>${row.model || ''}</td>
@@ -121,6 +120,7 @@ function renderStandardParamsTable() {
             <td>${row.sap_no || ''}</td>
             <td>${row.part_description || ''}</td>
             <td>${row.planned_output || ''}</td>
+            <td>${parseFloat(row.part_value || 0).toFixed(2)}</td>
             <td>${row.updated_at || ''}</td>
         `;
 
@@ -168,22 +168,22 @@ function goToStandardParamPage(page) {
 async function deleteStandardParam(id) {
     if (!confirm(`Are you sure you want to delete parameter ID ${id}?`)) return;
     
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'delete', 'POST', { id });
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            await loadStandardParams(); // ใช้ await เพื่อให้ spinner แสดงผลต่อเนื่อง
+            await loadStandardParams();
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Line Schedules" ---
 
 async function loadSchedules() {
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'read_schedules', 'GET');
         if (result?.success) {
@@ -193,7 +193,7 @@ async function loadSchedules() {
             showToast(result?.message || 'Failed to load schedules.', '#dc3545');
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
@@ -227,14 +227,12 @@ function renderSchedulesTable() {
             const editButton = document.createElement('button');
             editButton.className = 'btn btn-sm btn-warning';
             editButton.textContent = 'Edit';
-            // แก้ไข: เปลี่ยนมาใช้ addEventListener
             editButton.addEventListener('click', () => openEditModal("editScheduleModal", schedule));
             buttonWrapper.appendChild(editButton);
 
             const deleteButton = document.createElement('button');
             deleteButton.className = 'btn btn-sm btn-danger';
             deleteButton.textContent = 'Delete';
-             // แก้ไข: เปลี่ยนมาใช้ addEventListener
             deleteButton.addEventListener('click', () => deleteSchedule(schedule.id));
             buttonWrapper.appendChild(deleteButton);
 
@@ -248,22 +246,22 @@ function renderSchedulesTable() {
 async function deleteSchedule(id) {
     if (!confirm(`Are you sure you want to delete schedule ID ${id}?`)) return;
 
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'delete_schedule', 'POST', { id });
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
-            await loadSchedules(); // ใช้ await
+            await loadSchedules();
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Data Health Check" ---
 
 async function loadHealthCheckData() {
-    showSpinner(); // <-- เพิ่ม
+    showSpinner();
     try {
         const result = await sendRequest(PARA_API_ENDPOINT, 'health_check_parameters', 'GET');
         const listBody = document.getElementById('missingParamsList');
@@ -280,9 +278,8 @@ async function loadHealthCheckData() {
             listBody.innerHTML = `<tr><td colspan="3" class="text-danger">Failed to load data.</td></tr>`;
         }
     } finally {
-        hideSpinner(); // <-- เพิ่ม
+        hideSpinner();
     }
-
 }
 
 function renderHealthCheckTable() {
@@ -292,7 +289,6 @@ function renderHealthCheckTable() {
     const start = (healthCheckCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = allMissingParams.slice(start, start + ROWS_PER_PAGE);
 
-    // แก้ไข: ปรับ colspan เป็น 4
     if (allMissingParams.length === 0) {
         listBody.innerHTML = `<tr><td colspan="4" class="text-center text-success">Excellent! No missing data found.</td></tr>`;
     } else {
@@ -300,19 +296,16 @@ function renderHealthCheckTable() {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${item.line}</td><td>${item.model}</td><td>${item.part_no}</td>`;
             
-            // --- เพิ่ม Cell และปุ่ม "Add" ---
             const actionsTd = document.createElement('td');
             actionsTd.className = 'text-center';
             
             const addButton = document.createElement('button');
             addButton.className = 'btn btn-sm btn-success';
             addButton.textContent = 'Add as Parameter';
-            // กำหนดให้ปุ่มเรียกฟังก์ชันใหม่พร้อมส่งข้อมูลของแถวนั้นๆ ไปด้วย
             addButton.onclick = () => openAddParamFromHealthCheck(item);
             
             actionsTd.appendChild(addButton);
             tr.appendChild(actionsTd);
-            // -----------------------------
             
             listBody.appendChild(tr);
         });
@@ -338,18 +331,17 @@ function exportToExcel() {
         return;
     }
 
-    // ========== แก้ไขโค้ดส่วนนี้ ==========
-    // เพิ่ม "Part Description" ในข้อมูลที่จะ Export
+    // --- MODIFIED: เพิ่ม "Part Value" ในข้อมูลที่จะ Export ---
     const worksheetData = dataToExport.map(row => ({
         "Line": row.line,
         "Model": row.model,
         "Part No": row.part_no,
         "SAP No": row.sap_no || '',
-        "Part Description": row.part_description || '', // <-- เพิ่มฟิลด์นี้
+        "Part Description": row.part_description || '',
         "Planned Output": row.planned_output,
+        "Part Value": parseFloat(row.part_value || 0).toFixed(2), // <-- เพิ่มฟิลด์นี้
         "Updated At": row.updated_at
     }));
-    // ===================================
     
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
@@ -358,29 +350,21 @@ function exportToExcel() {
     XLSX.writeFile(workbook, fileName);
 }
 
-//-- ฟังก์ชันสำหรับกดปุ่ม <input type="file"> ที่ซ่อนอยู่ --
 function triggerImport() {
     document.getElementById('importFile')?.click();
 }
 
-/**
- * ฟังก์ชันสำหรับเปิด Modal 'Add Parameter' และเติมข้อมูลจาก Health Check
- * @param {object} item - ข้อมูลของแถวที่เลือก (line, model, part_no)
- */
 function openAddParamFromHealthCheck(item) {
     const modalElement = document.getElementById('addParamModal');
     if (!modalElement) return;
 
-    // เติมข้อมูลลงในฟอร์มของ Modal
     modalElement.querySelector('#addParamLine').value = item.line || '';
     modalElement.querySelector('#addParamModel').value = item.model || '';
     modalElement.querySelector('#addParamPartNo').value = item.part_no || '';
     
-    // เรียกใช้ฟังก์ชันเปิด Modal ที่มีอยู่แล้ว
     openModal('addParamModal');
 }
 
-//-- ฟังก์ชันสำหรับจัดการไฟล์ Excel ที่ถูกเลือก --
 async function handleImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -394,21 +378,22 @@ async function handleImport(event) {
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
             
-            // เพิ่มการอ่าน part_description จากไฟล์
+            // --- MODIFIED: เพิ่มการอ่าน part_value จากไฟล์ ---
             const rowsToImport = rawRows.map(row => ({
                 line: String(row["Line"] || row["line"] || '').trim().toUpperCase(),
                 model: String(row["Model"] || row["model"] || '').trim().toUpperCase(),
                 part_no: String(row["Part No"] || row["part_no"] || '').trim().toUpperCase(),
                 sap_no: String(row["SAP No"] || row["sap_no"] || '').trim().toUpperCase(),
                 part_description: String(row["Part Description"] || row["part_description"] || '').trim(),
-                planned_output: parseInt(row["Planned Output"] || row["planned_output"] || 0)
+                planned_output: parseInt(row["Planned Output"] || row["planned_output"] || 0),
+                part_value: parseFloat(row["Part Value"] || row["part_value"] || 0) // <-- เพิ่มฟิลด์นี้
             }));
 
             if (rowsToImport.length > 0 && confirm(`Import ${rowsToImport.length} records?`)) {
                 const result = await sendRequest(PARA_API_ENDPOINT, 'bulk_import', 'POST', rowsToImport);
                 if (result.success) {
                     showToast(result.message || "Import successful!", '#0d6efd');
-                    await loadStandardParams(); // ใช้ await
+                    await loadStandardParams();
                 } else {
                     showToast(result.message || "Import failed.", '#dc3545');
                 }
@@ -418,7 +403,7 @@ async function handleImport(event) {
             showToast('Failed to process file.', '#dc3545');
         } finally {
             event.target.value = '';
-            hideSpinner(); // <-- เพิ่ม
+            hideSpinner();
         }
     };
     reader.readAsBinaryString(file);
@@ -780,7 +765,6 @@ function openEditModal(modalId, data) {
     const modalElement = document.getElementById(modalId);
     if (!modalElement) return;
 
-    // เติมข้อมูลลงในฟอร์ม (ส่วนนี้ทำงานได้ปกติ)
     for (const key in data) {
         const input = modalElement.querySelector(`[name="${key}"]`);
         if (input) {
@@ -792,31 +776,26 @@ function openEditModal(modalId, data) {
         }
     }
 
-    // --- เพิ่ม: Logic สำหรับ Supervisor ---
     if (currentUser.role === 'supervisor') {
         if (modalId === 'editParamModal') {
             const lineInput = modalElement.querySelector('#edit_line');
             if (lineInput) lineInput.disabled = true;
         }
     } else {
-        // ถ้าเป็น Admin/Creator ให้แน่ใจว่าช่องไม่ถูกปิดไว้
         if (modalId === 'editParamModal') {
             const lineInput = modalElement.querySelector('#edit_line');
             if (lineInput) lineInput.disabled = false;
         }
     }
     
-    // แสดง Modal
     const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
     modal.show();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // โหลดข้อมูลครั้งแรก
     loadStandardParams();
-    populateLineDatalist(); // <<<< เพิ่มการเรียกใช้ฟังก์ชันนี้กลับเข้ามา
+    populateLineDatalist();
 
-    // --- Logic สำหรับ Supervisor ---
     if (currentUser.role === 'supervisor') {
         const lineFilter = document.getElementById('filterLine');
         if (lineFilter) {
@@ -826,7 +805,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Event Listeners สำหรับ Filter
     ['filterLine', 'filterModel', 'searchInput'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => {
             clearTimeout(window.debounceTimer);
@@ -839,7 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
         importInput.addEventListener('change', handleImport);
     }
     
-    // Logic การสลับ Tab
     let bomTabLoaded = false;
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabElm => {
         tabElm.addEventListener('shown.bs.tab', event => {

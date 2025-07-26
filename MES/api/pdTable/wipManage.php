@@ -3,9 +3,6 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
-// session_start() ถูกเรียกแล้วใน check_auth.php
-
-//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -14,6 +11,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
+// =================================================================
+// DEVELOPMENT SWITCH
+// สวิตช์สำหรับโหมดพัฒนา
+// ตั้งเป็น true เพื่อใช้ตารางทดสอบ (_TEST)
+// ตั้งเป็น false เพื่อใช้ตารางจริง
+$is_development = true; 
+
+$parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
+$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+$wip_table = 'WIP_ENTRIES'; 
+
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
@@ -21,6 +29,7 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'log_wip_entry':
+            // This action interacts with PARAMETER table for validation.
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
@@ -34,30 +43,28 @@ try {
             $lot_no = strtoupper(trim($input['lot_no'] ?? null));
             $quantity_in = (int)$input['quantity_in'];
 
-            $checkSql = "SELECT COUNT(*) FROM PARAMETER WHERE part_no = ? AND model = ?";
+            $checkSql = "SELECT COUNT(*) FROM {$param_table} WHERE part_no = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$part_no, $model]);
             if ($checkStmt->fetchColumn() == 0) {
                 throw new Exception("This Part No. does not exist for the specified Model in the PARAMETER table.");
             }
 
-            $sql = "INSERT INTO WIP_ENTRIES (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO {$wip_table} (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $params = [
-                $model, 
-                $line, 
-                $lot_no, 
-                $part_no, 
-                $quantity_in, 
+                $model,
+                $line,
+                $lot_no,
+                $part_no,
+                $quantity_in,
                 $currentUser['username'],
                 $input['remark'] ?? null
             ];
             $stmt = $pdo->prepare($sql);
             
             if ($stmt->execute($params)) {
-                // ===== LOG ACTION (WIP_IN) - START =====
                 $detail = "Model: {$model}, Part: {$part_no}, Lot No: {$lot_no}, Qty: {$quantity_in}";
                 logAction($pdo, $currentUser['username'], 'WIP_IN', $line, $detail);
-                // ===== LOG ACTION (WIP_IN) - END =====
                 echo json_encode(['success' => true, 'message' => 'WIP entry logged successfully.']);
             } else {
                 throw new Exception("Failed to log WIP entry.");
@@ -72,7 +79,7 @@ try {
             
             $entry_id = (int)$input['entry_id'];
 
-            $stmt = $pdo->prepare("SELECT line FROM WIP_ENTRIES WHERE entry_id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$entry_id]);
             $entry = $stmt->fetch();
             if ($entry) {
@@ -93,23 +100,21 @@ try {
             $lot_no = strtoupper(trim($input['lot_no'] ?? null));
             $quantity_in = (int)$input['quantity_in'];
             
-            $sql = "UPDATE WIP_ENTRIES SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
+            $sql = "UPDATE {$wip_table} SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
             $params = [
                 $formatted_entry_time,
                 $model,
-                $line, 
-                $part_no, 
-                $lot_no, 
-                $quantity_in, 
-                $input['remark'] ?? null, 
+                $line,
+                $part_no,
+                $lot_no,
+                $quantity_in,
+                $input['remark'] ?? null,
                 $entry_id
             ];
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
-                // ===== LOG ACTION (UPDATE_WIP) - START =====
                 $detail = "ID: {$entry_id}, Model: {$model}, Part: {$part_no}, Lot No: {$lot_no}, Qty: {$quantity_in}";
                 logAction($pdo, $currentUser['username'], 'UPDATE_WIP', $line, $detail);
-                // ===== LOG ACTION (UPDATE_WIP) - END =====
                 echo json_encode(['success' => true, 'message' => 'WIP Entry updated successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'No changes made or entry not found.']);
@@ -120,8 +125,7 @@ try {
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
 
-            // --- ดึงข้อมูลก่อนลบเพื่อใช้ใน Log ---
-            $stmt = $pdo->prepare("SELECT * FROM WIP_ENTRIES WHERE entry_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$id]);
             $entryToDelete = $stmt->fetch();
             
@@ -131,13 +135,11 @@ try {
                 throw new Exception("WIP Entry not found.");
             }
 
-            $sql = "DELETE FROM WIP_ENTRIES WHERE entry_id = ?";
+            $sql = "DELETE FROM {$wip_table} WHERE entry_id = ?";
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute([$id]) && $stmt->rowCount() > 0) {
-                // ===== LOG ACTION (DELETE_WIP) - START =====
                 $detail = "Deleted WIP ID: {$id} | Model: {$entryToDelete['model']}, Part: {$entryToDelete['part_no']}, Lot No: {$entryToDelete['lot_no']}, Qty: {$entryToDelete['quantity_in']}";
                 logAction($pdo, $currentUser['username'], 'DELETE_WIP', $entryToDelete['line'], $detail);
-                // ===== LOG ACTION (DELETE_WIP) - END =====
                 echo json_encode(['success' => true, 'message' => 'WIP Entry deleted successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Entry not found or already deleted.']);
@@ -148,7 +150,6 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
-            $endRow = $startRow + $limit;
 
             $params = [];
             $parts_params = [];
@@ -175,9 +176,9 @@ try {
                 SELECT COUNT(*) FROM (
                     SELECT ISNULL(tin.part_no, tout.part_no) AS part_no
                     FROM 
-                        (SELECT DISTINCT part_no, line, model FROM WIP_ENTRIES wip $wipWhereClause) tin 
+                        (SELECT DISTINCT part_no, line, model FROM {$wip_table} wip $wipWhereClause) tin 
                     FULL JOIN 
-                        (SELECT DISTINCT part_no, line, model FROM PARTS $partsWhereClause) tout 
+                        (SELECT DISTINCT part_no, line, model FROM {$parts_table} $partsWhereClause) tout 
                         ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
                 ) AS FullData
             ";
@@ -187,9 +188,9 @@ try {
             
             $dataSql = "
                 WITH TotalIn AS (
-                    SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM WIP_ENTRIES wip $wipWhereClause GROUP BY part_no, line, model
+                    SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM {$wip_table} wip $wipWhereClause GROUP BY part_no, line, model
                 ), TotalOut AS (
-                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM PARTS $partsWhereClause AND count_type <> 'BOM-ISSUE' GROUP BY part_no, line, model
+                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM {$parts_table} $partsWhereClause AND count_type <> 'BOM-ISSUE' GROUP BY part_no, line, model
                 ), FullData AS (
                     SELECT 
                         ISNULL(tin.part_no, tout.part_no) AS part_no, 
@@ -200,18 +201,17 @@ try {
                         ISNULL(tout.total_out, 0) AS total_out
                     FROM TotalIn tin 
                     FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
-                    LEFT JOIN PARAMETER p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
+                    LEFT JOIN {$param_table} p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
                 ), NumberedRows AS (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
                 )
-                -- ========== แก้ไขสูตรการคำนวณ Variance ==========
                 SELECT part_no, line, model, part_description, total_in, total_out, (total_out - total_in) as variance
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?;
             ";
 
-            $paginationParams = array_merge($params, $parts_params, [$startRow, $endRow]);
+            $paginationParams = array_merge($params, $parts_params, [$startRow, $startRow + $limit]);
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
             $report_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -394,13 +394,12 @@ try {
             break;
 
         case 'adjust_stock':
+            // This action writes to the PARTS table, so it needs modification.
             $pdo->beginTransaction();
             try {
                 $required = ['part_no', 'line', 'model', 'system_count', 'physical_count'];
                 foreach ($required as $field) {
-                    if (!isset($input[$field])) {
-                        throw new Exception("Missing required field: " . $field);
-                    }
+                    if (!isset($input[$field])) { throw new Exception("Missing required field: " . $field); }
                 }
 
                 $line = strtoupper(trim($input['line']));
@@ -415,39 +414,32 @@ try {
                 $variance = $physical_count - $system_count;
 
                 if ($variance == 0) {
-                    echo json_encode(['success' => true, 'message' => 'No adjustment needed. Stock count is already correct.']);
+                    echo json_encode(['success' => true, 'message' => 'No adjustment needed.']);
                     $pdo->commit();
                     exit;
                 }
 
                 $adjustment_type = $variance > 0 ? 'ADJUST-IN' : 'ADJUST-OUT';
-                $adjustment_value = abs($variance); // ค่าที่บันทึกต้องเป็นบวกเสมอ
+                $adjustment_value = abs($variance);
 
-                $sql = "INSERT INTO PARTS (log_date, log_time, line, model, part_no, count_type, count_value, note) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?)";
+                // --- MODIFIED: Insert into the correct parts table ---
+                $sql = "INSERT INTO {$parts_table} (log_date, log_time, line, model, part_no, count_type, count_value, note, operator_id) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 $params = [
-                    $line,
-                    $model,
-                    $part_no,
-                    $adjustment_type,
-                    $adjustment_value,
-                    $note
+                    $line, $model, $part_no,
+                    $adjustment_type, $adjustment_value, $note,
+                    $currentUser['id'] // Also log who did the adjustment
                 ];
                 
                 $stmt->execute($params);
-
-                // Log การกระทำ
-                $log_detail = "Part: {$part_no}, Model: {$model}, System: {$system_count}, Physical: {$physical_count}, Variance: {$variance}, Type: {$adjustment_type}";
+                $log_detail = "Part: {$part_no}, Model: {$model}, System: {$system_count}, Physical: {$physical_count}, Var: {$variance}";
                 logAction($pdo, $currentUser['username'], 'STOCK_ADJUST', $line, $log_detail);
-
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Stock adjusted successfully.']);
 
             } catch (Exception $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                throw $e; // ส่งต่อไปให้ catch block ด้านนอก
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                throw $e;
             }
             break;
 
@@ -458,58 +450,36 @@ try {
 
             $param_conditions = [];
             $param_params = [];
-
-            if (!empty($_GET['line'])) {
-                $param_conditions[] = "p.line = ?"; $param_params[] = $_GET['line'];
-            }
-            if (!empty($_GET['part_no'])) {
-                $param_conditions[] = "p.part_no LIKE ?"; $param_params[] = "%".$_GET['part_no']."%";
-            }
-            if (!empty($_GET['model'])) {
-                $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%";
-            }
-            
+            if (!empty($_GET['line'])) { $param_conditions[] = "p.line = ?"; $param_params[] = $_GET['line']; }
+            if (!empty($_GET['part_no'])) { $param_conditions[] = "p.part_no LIKE ?"; $param_params[] = "%".$_GET['part_no']."%"; }
+            if (!empty($_GET['model'])) { $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%"; }
             $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
             
-            // 1. SQL สำหรับนับจำนวนทั้งหมด
-            $countSql = "SELECT COUNT(*) FROM PARAMETER p $paramWhereClause";
+            $countSql = "SELECT COUNT(*) FROM {$param_table} p $paramWhereClause";
             $totalStmt = $pdo->prepare($countSql);
             $totalStmt->execute($param_params);
             $total = (int)$totalStmt->fetchColumn();
 
-            // 2. SQL สำหรับดึงข้อมูลแบบแบ่งหน้า
             $dataSql = "
                 WITH 
                 TotalWipIn AS (
-                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total
-                    FROM WIP_ENTRIES
-                    GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total FROM {$wip_table} GROUP BY line, model, part_no
                 ),
                 TotalAdjustIn AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
-                    FROM PARTS
-                    WHERE count_type = 'ADJUST-IN'
-                    GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type = 'ADJUST-IN' GROUP BY line, model, part_no
                 ),
                 TotalAdjustOut AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
-                    FROM PARTS
-                    WHERE count_type = 'ADJUST-OUT'
-                    GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type = 'ADJUST-OUT' GROUP BY line, model, part_no
                 ),
                 TotalProductionOut AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total
-                    FROM PARTS
-                    WHERE count_type NOT LIKE 'ADJUST%' 
-                    GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type NOT LIKE 'ADJUST%' GROUP BY line, model, part_no
                 ),
                 FinalResult AS (
                     SELECT
-                        p.line, p.model, p.part_no,
-                        p.part_description,
+                        p.line, p.model, p.part_no, p.part_description,
                         (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
                         (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out
-                    FROM PARAMETER p
+                    FROM {$param_table} p
                     LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
                     LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
                     LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no

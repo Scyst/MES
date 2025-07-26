@@ -1,9 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../../auth/check_auth.php'; // เพิ่ม: เรียกใช้ check_auth.php
+require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
-
-// session_start() ถูกเรียกแล้วใน check_auth.php
 
 //-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -14,15 +12,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
+// =================================================================
+// DEVELOPMENT SWITCH
+// สวิตช์สำหรับโหมดพัฒนา
+$is_development = true; 
+
+$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        //-- อ่านข้อมูล  PARAMETER ทั้งหมด (พร้อมกรองสำหรับ Supervisor) --
+        
         case 'read':
-            $sql = "SELECT id, line, model, part_no, sap_no, planned_output, part_description, updated_at FROM PARAMETER";
+            $sql = "SELECT id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM {$param_table}";
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
                 $sql .= " WHERE line = ?";
@@ -41,19 +46,21 @@ try {
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
-        //-- สร้าง PARAMETER ใหม่ (พร้อมตรวจสอบสิทธิ์) --
         case 'create':
             $line = strtoupper($input['line']);
             enforceLinePermission($line);
 
-            $sql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            // --- MODIFIED: เพิ่ม part_value ใน INSERT ---
+            $sql = "INSERT INTO {$param_table} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $params = [
                 $line, 
                 strtoupper($input['model']), 
                 strtoupper($input['part_no']), 
                 strtoupper($input['sap_no'] ?? ''), 
                 (int)$input['planned_output'],
-                $input['part_description'] ?? null
+                $input['part_description'] ?? null,
+                // เพิ่ม part_value (ถ้าไม่มีค่ามา ให้เป็น 0)
+                isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00
             ];
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -62,12 +69,11 @@ try {
             echo json_encode(['success' => true, 'message' => 'Parameter created.']);
             break;
 
-        //-- อัปเดตข้อมูล PARAMETER ที่มีอยู่ (พร้อมตรวจสอบสิทธิ์) --
         case 'update':
             $id = $input['id'] ?? null;
             if (!$id) throw new Exception("Missing ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM {$param_table} WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
             if ($param) {
@@ -80,7 +86,7 @@ try {
             }
             
             $line = strtoupper($input['line']);
-            $updateSql = "UPDATE PARAMETER SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE {$param_table} SET line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
             $params = [
                 $line, 
                 strtoupper($input['model']), 
@@ -88,6 +94,7 @@ try {
                 strtoupper($input['sap_no']), 
                 (int)$input['planned_output'], 
                 $input['part_description'] ?? null,
+                isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00,
                 $id
             ];
             $stmt = $pdo->prepare($updateSql);
@@ -97,12 +104,11 @@ try {
             echo json_encode(["success" => true, 'message' => 'Parameter updated.']);
             break;
 
-        //-- ลบข้อมูล PARAMETER (พร้อมตรวจสอบสิทธิ์) --
         case 'delete':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM PARAMETER WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM {$param_table} WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
             if ($param) {
@@ -111,73 +117,68 @@ try {
                 throw new Exception("Parameter not found.");
             }
 
-            $deleteStmt = $pdo->prepare("DELETE FROM PARAMETER WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM {$param_table} WHERE id = ?");
             $deleteStmt->execute([(int)$id]);
 
             if ($deleteStmt->rowCount() > 0) {
-                 logAction($pdo, $currentUser['username'], 'DELETE PARAMETER', $id);
+                logAction($pdo, $currentUser['username'], 'DELETE PARAMETER', $id);
             }
             echo json_encode(["success" => true, 'message' => 'Parameter deleted.']);
             break;
             
-        //-- นำเข้าข้อมูล PARAMETER จำนวนมาก (Bulk Import) --
         case 'bulk_import':
             if (!is_array($input) || empty($input)) throw new Exception("Invalid data");
             
             $pdo->beginTransaction();
             
-            // --- แก้ไข: เพิ่ม sap_no ในเงื่อนไขการค้นหา ---
-            $checkSql = "SELECT id FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ? AND (sap_no = ? OR (sap_no IS NULL AND ? IS NULL))";
+            $checkSql = "SELECT id FROM {$param_table} WHERE line = ? AND model = ? AND part_no = ? AND (sap_no = ? OR (sap_no IS NULL AND ? IS NULL))";
             $checkStmt = $pdo->prepare($checkSql);
 
-            // --- แก้ไข: ปรับปรุง SQL สำหรับ INSERT และ UPDATE ให้ครบถ้วน ---
-            $updateSql = "UPDATE PARAMETER SET planned_output = ?, part_description = ?, updated_at = GETDATE() WHERE id = ?";
+            $updateSql = "UPDATE {$param_table} SET planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
             $updateStmt = $pdo->prepare($updateSql);
-            $insertSql = "INSERT INTO PARAMETER (line, model, part_no, sap_no, planned_output, part_description, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $insertSql = "INSERT INTO {$param_table} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
 
             $imported = 0;
             $updated = 0;
 
             foreach ($input as $row) {
-                // ดึงข้อมูลจากแถว
                 $line = strtoupper(trim($row['line'] ?? ''));
                 $model = strtoupper(trim($row['model'] ?? ''));
                 $part_no = strtoupper(trim($row['part_no'] ?? ''));
-                // ทำให้ sap_no เป็น null ได้หากไม่มีค่า
                 $sap_no = !empty($row['sap_no']) ? strtoupper(trim($row['sap_no'])) : null;
 
-                // **เงื่อนไขสำคัญ: ข้อมูลใหม่ต้องมี Line, Model, Part No. เสมอ**
                 if (empty($line) || empty($model) || empty($part_no)) {
                     continue; 
                 }
                 
-                // ตรวจสอบสิทธิ์สำหรับ Line
                 enforceLinePermission($line);
-
-                // --- แก้ไข: ใช้ 4 ค่าในการค้นหา ---
                 $checkStmt->execute([$line, $model, $part_no, $sap_no, $sap_no]);
                 $existing = $checkStmt->fetch();
 
                 if ($existing) {
-                    // **ถ้ามีข้อมูลอยู่แล้ว: อัปเดตเฉพาะ planned_output และ part_description**
-                    // (เราจะไม่ให้ import อัปเดต key หลักๆ เช่น sap_no, model อีกต่อไป)
-                    if (isset($row['planned_output']) || isset($row['part_description'])) {
+                    if (isset($row['planned_output']) || isset($row['part_description']) || isset($row['part_value'])) {
                         $planned_output = (int)($row['planned_output'] ?? 0);
                         $part_description = trim($row['part_description'] ?? '');
+                        $part_value = isset($row['part_value']) && is_numeric($row['part_value']) ? (float)$row['part_value'] : 0.00;
                         
-                        $updateStmt->execute([$planned_output, $part_description, $existing['id']]);
+                        $updateStmt->execute([$planned_output, $part_description, $part_value, $existing['id']]);
                         $updated++;
                     }
                 } else {
-                    // **ถ้าเป็นข้อมูลใหม่: ทำการ INSERT**
                     $planned_output = (int)($row['planned_output'] ?? 0);
                     $part_description = trim($row['part_description'] ?? null);
+                    $part_value = isset($row['part_value']) && is_numeric($row['part_value']) ? (float)$row['part_value'] : 0.00;
 
-                    $insertStmt->execute([$line, $model, $part_no, $sap_no, $planned_output, $part_description]);
+                    $insertStmt->execute([$line, $model, $part_no, $sap_no, $planned_output, $part_description, $part_value]);
                     $imported++;
                 }
             }
+
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'BULK IMPORT/UPDATE PARAMETER', null, "Imported $imported rows, Updated $updated rows");
+            echo json_encode(["success" => true, "imported" => $imported, "updated" => $updated, "message" => "Imported $imported new row(s) and updated $updated existing row(s) successfully."]);
+            break;
 
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'BULK IMPORT/UPDATE PARAMETER', null, "Imported $imported rows, Updated $updated rows");
@@ -208,7 +209,6 @@ try {
 
                 if ($success) {
                     $actionType = ($input['id'] ?? 0) > 0 ? 'UPDATE SCHEDULE' : 'CREATE SCHEDULE';
-                    // แก้ไข: ส่ง $currentUser['username'] แทน object ทั้งหมด
                     logAction($pdo, $currentUser['username'], $actionType, $input['id'] ?? null, "{$input['line']}-{$input['shift_name']}");
                     echo json_encode(['success' => true, 'message' => 'Schedule saved successfully.']);
                 } else {
@@ -216,12 +216,10 @@ try {
                 }
 
             } catch (PDOException $e) {
-                // ตรวจสอบรหัส Error ของ SQL Server ถ้าเป็น 23000 คือข้อมูลซ้ำ
                 if ($e->getCode() == '23000') {
-                    http_response_code(409); // 409 Conflict เป็นสถานะที่เหมาะสมสำหรับข้อมูลซ้ำ
+                    http_response_code(409); 
                     echo json_encode(['success' => false, 'message' => "Schedule for this Line and Shift already exists. Please choose a different combination."]);
                 } else {
-                    // หากเป็น Error อื่นๆ ให้โยนออกไปให้ catch ตัวนอกจัดการ
                     throw $e;
                 }
             }
@@ -233,9 +231,8 @@ try {
             if (!$id) throw new Exception("Missing Schedule ID");
             $stmt = $pdo->prepare("EXEC dbo.sp_DeleteSchedule @id=?");
             $success = $stmt->execute([(int)$id]);
-            // บันทึก Log การทำงาน
             if ($success && $stmt->rowCount() > 0) {
-                 logAction($pdo, $currentUser['username'], 'DELETE SCHEDULE', $id);
+                logAction($pdo, $currentUser['username'], 'DELETE SCHEDULE', $id);
             }
             echo json_encode(['success' => $success, 'message' => 'Schedule deleted.']);
             break;

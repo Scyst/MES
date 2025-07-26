@@ -23,16 +23,22 @@
                         <label for="addParamSapNo" class="form-label">SAP No. (Optional)</label>
                         <input type="text" class="form-control" id="addParamSapNo" name="sap_no">
                     </div>
-                    <div class="mb-3">
-                        <label for="addParamPlannedOutput" class="form-label">Planned Output (UPH)</label>
-                        <input type="number" class="form-control" id="addParamPlannedOutput" name="planned_output" required min="0">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="addParamPlannedOutput" class="form-label">Planned Output (UPH)</label>
+                            <input type="number" class="form-control" id="addParamPlannedOutput" name="planned_output" required min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addParamPartValue" class="form-label">Part Value</label>
+                            <input type="number" class="form-control" id="addParamPartValue" name="part_value" min="0" step="0.01" placeholder="0.00">
+                        </div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="addParamPartDesc" class="form-label">Part Description (Optional)</label>
                         <textarea class="form-control" id="addParamPartDesc" name="part_description" rows="2" placeholder="Enter a short description..."></textarea>
                     </div>
-                    </form>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
