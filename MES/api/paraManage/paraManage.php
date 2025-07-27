@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // =================================================================
 // DEVELOPMENT SWITCH
 // สวิตช์สำหรับโหมดพัฒนา
-$is_development = true; 
+$is_development = false; // <-- ตั้งเป็น false เพื่อใช้ตารางจริง
 
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 

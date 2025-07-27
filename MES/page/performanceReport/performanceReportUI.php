@@ -65,6 +65,7 @@
     <div id="toast"></div>
 
     <?php include('../components/autoLogoutUI.php'); ?>
+    <?php include('components/performanceDetailModal.php'); ?>
 
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
