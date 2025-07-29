@@ -21,7 +21,7 @@ function showError(chartId, messageId) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render/Update Line Chart
  */
 async function fetchAndRenderLineCharts() {
-    showSpinner();
+    //showSpinner();
     try {
         hideErrors();
 

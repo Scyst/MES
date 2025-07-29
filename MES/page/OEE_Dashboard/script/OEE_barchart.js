@@ -147,7 +147,7 @@ function padBarData(labels, values, minCount) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Bar Chart ทั้งหมด
  */
 async function fetchAndRenderBarCharts() {
-    showSpinner();
+    //showSpinner();
     try {
         hideErrors();
 

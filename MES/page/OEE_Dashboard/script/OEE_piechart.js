@@ -116,7 +116,7 @@ function renderSimplePieChart(chartName, ctx, label, rawValue, mainColor) {
  * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render Pie Chart และ Info Box ทั้งหมด
  */
 async function fetchAndRenderCharts() {
-    showSpinner();
+    //showSpinner();
     try {
         hideErrors();
 
