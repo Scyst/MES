@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // สวิตช์สำหรับโหมดพัฒนา
 // ตั้งเป็น true เพื่อใช้ตารางทดสอบ (_TEST)
 // ตั้งเป็น false เพื่อใช้ตารางจริง
-$is_development = false; 
+$is_development = true; 
 
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
@@ -79,16 +79,32 @@ try {
             
             $entry_id = (int)$input['entry_id'];
 
-            $stmt = $pdo->prepare("SELECT line FROM {$wip_table} WHERE entry_id = ?");
+            // --- MODIFIED: Custom permission check for WIP Entry ---
+            $stmt = $pdo->prepare("SELECT line, operator FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$entry_id]);
-            $entry = $stmt->fetch();
-            if ($entry) {
-                enforceLinePermission($entry['line']);
-                if ($input['line'] !== $entry['line']) {
-                    enforceLinePermission($input['line']);
-                }
-            } else {
+            $entry = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$entry) {
                 throw new Exception("WIP Entry not found.");
+            }
+
+            // Enforce permissions
+            if (!in_array($currentUser['role'], ['admin', 'creator'])) {
+                if ($currentUser['role'] === 'supervisor') {
+                    enforceLinePermission($entry['line']);
+                    // Also check if the line is being changed
+                    if ($input['line'] !== $entry['line']) {
+                        enforceLinePermission($input['line']);
+                    }
+                } elseif ($currentUser['role'] === 'operator') {
+                    if ($entry['operator'] !== $currentUser['username']) {
+                        http_response_code(403);
+                        throw new Exception("Permission Denied: You can only edit your own entries.");
+                    }
+                } else {
+                    http_response_code(403);
+                    throw new Exception("Permission Denied.");
+                }
             }
             
             $entry_time_obj = new DateTime($input['entry_time']);
@@ -125,14 +141,28 @@ try {
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
 
+            // --- MODIFIED: Custom permission check before deleting ---
             $stmt = $pdo->prepare("SELECT * FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$id]);
-            $entryToDelete = $stmt->fetch();
+            $entryToDelete = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($entryToDelete) {
-                enforceLinePermission($entryToDelete['line']);
-            } else {
+            if (!$entryToDelete) {
                 throw new Exception("WIP Entry not found.");
+            }
+            
+            // Enforce permissions
+            if (!in_array($currentUser['role'], ['admin', 'creator'])) {
+                if ($currentUser['role'] === 'supervisor') {
+                    enforceLinePermission($entryToDelete['line']);
+                } elseif ($currentUser['role'] === 'operator') {
+                    if ($entryToDelete['operator'] !== $currentUser['username']) {
+                        http_response_code(403);
+                        throw new Exception("Permission Denied: You can only delete your own entries.");
+                    }
+                } else {
+                    http_response_code(403);
+                    throw new Exception("Permission Denied.");
+                }
             }
 
             $sql = "DELETE FROM {$wip_table} WHERE entry_id = ?";

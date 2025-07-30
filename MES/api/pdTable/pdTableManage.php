@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // สวิตช์สำหรับโหมดพัฒนา
 // ตั้งเป็น true เพื่อใช้ตารางทดสอบ (_TEST)
 // ตั้งเป็น false เพื่อใช้ตารางจริง
-$is_development = false; 
+$is_development = true; 
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 $bom_table = 'PRODUCT_BOM'; 
