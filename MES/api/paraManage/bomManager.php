@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../../auth/check_auth.php'; // เพิ่ม: เรียกใช้ check_auth.php
+require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
 // session_start() ถูกเรียกแล้วใน check_auth.php
@@ -13,38 +13,43 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
+// =================================================================
+// DEVELOPMENT SWITCH
+$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
+$bom_table   = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
+$param_table = $is_development ? 'PARAMETER_TEST'   : 'PARAMETER';
+// =================================================================
+
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
 
+
 try {
     switch ($action) {
-        // ** UPDATED: เพิ่มเงื่อนไข line และ model ในการค้นหา **
         case 'get_bom_components':
             $fg_part_no = $_GET['fg_part_no'] ?? '';
             $line = $_GET['line'] ?? '';
             $model = $_GET['model'] ?? '';
             
-            // --- เพิ่ม: ตรวจสอบสิทธิ์ ---
             enforceLinePermission($line); 
 
             if (empty($fg_part_no) || empty($line) || empty($model)) {
                 throw new Exception("FG Part No, Line, and Model are required to get components.");
             }
 
-            $stmt = $pdo->prepare("SELECT * FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ? ORDER BY component_part_no");
+            $stmt = $pdo->prepare("SELECT * FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ? ORDER BY component_part_no");
             $stmt->execute([$fg_part_no, $line, $model]);
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // ** UPDATED: เพิ่ม line, model, และ updated_by/at ในการบันทึก **
         case 'add_bom_component':
             $fg_part_no = $input['fg_part_no'] ?? '';
             $line = $input['line'] ?? '';
             $model = $input['model'] ?? '';
             $component_part_no = $input['component_part_no'] ?? '';
             $quantity_required = $input['quantity_required'] ?? 0;
-            enforceLinePermission($line); // ตรวจสอบสิทธิ์
+            enforceLinePermission($line);
 
             if (empty($fg_part_no) || empty($line) || empty($model) || empty($component_part_no) || empty($quantity_required)) {
                 throw new Exception("Missing required fields.");
@@ -53,29 +58,15 @@ try {
                 throw new Exception("Finished Good and Component cannot be the same part.");
             }
 
-            /*
-            // Validation: ตรวจสอบว่า Component อยู่ใน Model เดียวกันกับ FG
-            $compCheckSql = "SELECT COUNT(*) FROM  PARAMETER WHERE part_no = ? AND model = ?";
-            $compCheckStmt = $pdo->prepare($compCheckSql);
-            $compCheckStmt->execute([$component_part_no, $model]);
-            if ($compCheckStmt->fetchColumn() == 0) {
-                throw new Exception("Component part ($component_part_no) does not exist in model '$model'.");
-            }
-            */
-
-            // --- MODIFICATION START ---
-            // Check for duplicate component before inserting
-            $checkSql = "SELECT COUNT(*) FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ? AND component_part_no = ?";
+            $checkSql = "SELECT COUNT(*) FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ? AND component_part_no = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$fg_part_no, $line, $model, $component_part_no]);
             if ($checkStmt->fetchColumn() > 0) {
-                http_response_code(409); // 409 Conflict
+                http_response_code(409);
                 throw new Exception("This component ({$component_part_no}) already exists in this BOM.");
             }
-            // --- MODIFICATION END ---
 
-            // Insert data
-            $sql = "INSERT INTO PRODUCT_BOM (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $sql = "INSERT INTO {$bom_table} (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$fg_part_no, $line, $model, $component_part_no, (int)$quantity_required, $currentUser['username']]);
             
@@ -87,8 +78,7 @@ try {
             $bom_id = $input['bom_id'] ?? 0;
             if (empty($bom_id)) throw new Exception("Missing bom_id.");
 
-            // --- เพิ่ม: ตรวจสอบสิทธิ์ก่อนลบ ---
-            $findStmt = $pdo->prepare("SELECT line FROM PRODUCT_BOM WHERE bom_id = ?");
+            $findStmt = $pdo->prepare("SELECT line FROM {$bom_table} WHERE bom_id = ?");
             $findStmt->execute([$bom_id]);
             $bom_item = $findStmt->fetch();
             if ($bom_item) {
@@ -97,26 +87,21 @@ try {
                 throw new Exception("BOM component not found.");
             }
 
-            // 1. ก่อนลบ ให้ค้นหาข้อมูลของ BOM group (part, line, model) เพื่อใช้อัปเดต timestamp
-            $findSql = "SELECT fg_part_no, line, model FROM PRODUCT_BOM WHERE bom_id = ?";
+            $findSql = "SELECT fg_part_no, line, model FROM {$bom_table} WHERE bom_id = ?";
             $findStmt = $pdo->prepare($findSql);
             $findStmt->execute([$bom_id]);
             $bom_group = $findStmt->fetch(PDO::FETCH_ASSOC);
 
-            // 2. ทำการลบ Component ที่ต้องการ
-            $deleteStmt = $pdo->prepare("DELETE FROM PRODUCT_BOM WHERE bom_id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM {$bom_table} WHERE bom_id = ?");
             $deleteStmt->execute([$bom_id]);
 
-            // 3. ตรวจสอบว่าการลบสำเร็จหรือไม่ ก่อนอัปเดต timestamp
             if ($deleteStmt->rowCount() > 0) {
-                // อัปเดต timestamp ของ component ที่เหลือใน BOM group เดียวกัน
                 if ($bom_group) {
-                    $updateSql = "UPDATE PRODUCT_BOM SET updated_at = GETDATE(), updated_by = ? WHERE fg_part_no = ? AND line = ? AND model = ?";
+                    $updateSql = "UPDATE {$bom_table} SET updated_at = GETDATE(), updated_by = ? WHERE fg_part_no = ? AND line = ? AND model = ?";
                     $updateStmt = $pdo->prepare($updateSql);
                     $updateStmt->execute([$currentUser['username'], $bom_group['fg_part_no'], $bom_group['line'], $bom_group['model']]);
                 }
                 
-                // 4. บันทึก Log และส่งผลลัพธ์
                 logAction($pdo, $currentUser['username'], 'DELETE BOM COMPONENT', "BOM_ID: $bom_id");
                 echo json_encode(['success' => true, 'message' => 'Component deleted successfully.']);
             } else {
@@ -124,18 +109,16 @@ try {
             }
             break;
 
-        // ** UPDATED: แก้ไข SQL Query ให้ GROUP BY ครบทุก key และดึงข้อมูลล่าสุด **
         case 'get_all_fgs':
-            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
             $sql = "
                 WITH RankedBOMs AS (
                     SELECT fg_part_no, line, model, updated_at, updated_by,
                            ROW_NUMBER() OVER(PARTITION BY fg_part_no, line, model ORDER BY updated_at DESC) as rn
-                    FROM PRODUCT_BOM
+                    FROM {$bom_table}
                 )
                 SELECT DISTINCT b.fg_part_no, b.line, b.model, p.sap_no, rb.updated_by, rb.updated_at
-                FROM PRODUCT_BOM b
-                LEFT JOIN PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
+                FROM {$bom_table} b
+                LEFT JOIN {$param_table} p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
                 LEFT JOIN RankedBOMs rb ON b.fg_part_no = rb.fg_part_no AND b.line = rb.line AND b.model = rb.model AND rb.rn = 1
             ";
             $params = [];
@@ -156,18 +139,17 @@ try {
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
-        // ** UPDATED: เพิ่มเงื่อนไข line และ model ในการลบ **
         case 'delete_full_bom':
             $fg_part_no = $input['fg_part_no'] ?? '';
             $line = $input['line'] ?? '';
             $model = $input['model'] ?? '';
-            enforceLinePermission($line); // ตรวจสอบสิทธิ์
+            enforceLinePermission($line);
 
             if (empty($fg_part_no) || empty($line) || empty($model)) {
                 throw new Exception("FG Part No, Line, and Model are required to delete a BOM.");
             }
             
-            $stmt = $pdo->prepare("DELETE FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ?");
+            $stmt = $pdo->prepare("DELETE FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ?");
             $stmt->execute([$fg_part_no, $line, $model]);
             
             logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "$fg_part_no ($line/$model)");
@@ -175,7 +157,6 @@ try {
             break;
 
         case 'get_full_bom_export':
-            // --- เพิ่ม: การกรองข้อมูลตามสิทธิ์ของ Supervisor ---
             $sql = "
                 SELECT
                     p.sap_no AS fg_sap_no,
@@ -187,9 +168,9 @@ try {
                     b.updated_by,
                     b.updated_at
                 FROM
-                    PRODUCT_BOM b
+                    {$bom_table} b
                 LEFT JOIN
-                     PARAMETER p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
+                     {$param_table} p ON b.fg_part_no = p.part_no AND b.line = p.line AND b.model = p.model
             ";
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
@@ -201,7 +182,6 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
@@ -209,21 +189,13 @@ try {
             if (!is_array($input) || empty($input)) {
                 throw new Exception("Invalid or empty data received for BOM import.");
             }
-
-            // เริ่ม Transaction เพื่อความปลอดภัยของข้อมูล
             $pdo->beginTransaction();
-            
-            // เตรียมคำสั่ง SQL
-            $deleteSql = "DELETE FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ?";
+            $deleteSql = "DELETE FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ?";
             $deleteStmt = $pdo->prepare($deleteSql);
-
-            $insertSql = "INSERT INTO PRODUCT_BOM (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            $insertSql = "INSERT INTO {$bom_table} (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
-
             $importedFgCount = 0;
             $importedComponentCount = 0;
-
-            // วนลูปตามข้อมูล BOM ที่ถูกจัดกลุ่มมาแล้ว
             foreach ($input as $bomGroup) {
                 $fg_part_no = $bomGroup['fg_part_no'] ?? null;
                 $line = $bomGroup['line'] ?? null;
@@ -231,16 +203,10 @@ try {
                 $components = $bomGroup['components'] ?? [];
 
                 if (!$fg_part_no || !$line || !$model || empty($components)) {
-                    continue; // ข้ามข้อมูลที่ไม่สมบูรณ์
+                    continue; 
                 }
-
-                // ตรวจสอบสิทธิ์สำหรับ Line ที่จะ import
                 enforceLinePermission($line);
-
-                // 1. ลบ BOM เก่าของ FG นี้ทั้งหมดทิ้งก่อน
                 $deleteStmt->execute([$fg_part_no, $line, $model]);
-
-                // 2. เพิ่ม Component ใหม่ทั้งหมดเข้าไป
                 foreach ($components as $component) {
                     $insertStmt->execute([
                         $fg_part_no,
@@ -254,13 +220,77 @@ try {
                 }
                 $importedFgCount++;
             }
-
-            // ยืนยันการเปลี่ยนแปลงข้อมูลในฐานข้อมูล
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', null, "Imported $importedFgCount FGs with a total of $importedComponentCount components.");
             echo json_encode(["success" => true, "message" => "Successfully imported BOM for $importedFgCount Finished Goods."]);
             break;
 
+        case 'copy_bom':
+            $source_fg_part_no = $input['source_fg_part_no'] ?? '';
+            $source_line = $input['source_line'] ?? '';
+            $source_model = $input['source_model'] ?? '';
+            $target_fg_part_no = $input['target_fg_part_no'] ?? '';
+            
+            $target_line = $source_line;
+            $target_model = $source_model;
+
+            if (empty($source_fg_part_no) || empty($source_line) || empty($source_model) || empty($target_fg_part_no)) {
+                throw new Exception("Missing source or target information for BOM copy.");
+            }
+            if ($source_fg_part_no === $target_fg_part_no && $source_line === $target_line && $source_model === $target_model) {
+                throw new Exception("Source and Target BOM cannot be the same.");
+            }
+            
+            enforceLinePermission($source_line);
+
+            $pdo->beginTransaction();
+            try {
+                $checkParamSql = "SELECT COUNT(*) FROM {$param_table} WHERE part_no = ? AND line = ? AND model = ?";
+                $checkParamStmt = $pdo->prepare($checkParamSql);
+                $checkParamStmt->execute([$target_fg_part_no, $target_line, $target_model]);
+                if ($checkParamStmt->fetchColumn() == 0) {
+                    throw new Exception("Target Finished Good '{$target_fg_part_no}' does not exist in Parameters for this Line/Model. Please create it first.");
+                }
+
+                $deleteStmt = $pdo->prepare("DELETE FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ?");
+                $deleteStmt->execute([$target_fg_part_no, $target_line, $target_model]);
+
+                $sourceComponentsStmt = $pdo->prepare("SELECT component_part_no, quantity_required FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ?");
+                $sourceComponentsStmt->execute([$source_fg_part_no, $source_line, $source_model]);
+                $components = $sourceComponentsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (count($components) === 0) {
+                    $pdo->commit();
+                    echo json_encode(['success' => true, 'message' => "Source BOM was empty. Target BOM for '{$target_fg_part_no}' is now also empty."]);
+                    exit;
+                }
+
+                $insertSql = "INSERT INTO {$bom_table} (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+                $insertStmt = $pdo->prepare($insertSql);
+                
+                foreach ($components as $comp) {
+                    $insertStmt->execute([
+                        $target_fg_part_no,
+                        $target_line,
+                        $target_model,
+                        $comp['component_part_no'],
+                        $comp['quantity_required'],
+                        $currentUser['username']
+                    ]);
+                }
+
+                $pdo->commit();
+
+                $logDetail = "From: {$source_fg_part_no} To: {$target_fg_part_no} ({$target_line}/{$target_model})";
+                logAction($pdo, $currentUser['username'], 'COPY BOM', $source_fg_part_no, $logDetail);
+                echo json_encode(['success' => true, 'message' => "BOM successfully copied to '{$target_fg_part_no}'."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+        
         default:
             http_response_code(400);
             throw new Exception("Invalid BOM action.");

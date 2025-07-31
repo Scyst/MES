@@ -60,28 +60,47 @@
         <div class="tab-content pt-3" id="paramTabContent">
 
             <div class="tab-pane fade show active" id="standardParamsPane" role="tabpanel">
-                <div class="row mb-3 align-items-center sticky-bar">
-                    <div class="col-md-5">
-                        <div class="filter-controls-wrapper">
-                            <input type="text" class="form-control" id="filterLine" placeholder="Filter by Line...">
-                            <input type="text" class="form-control" id="filterModel" placeholder="Filter by Model...">
-                            <input type="text" class="form-control" id="searchInput" placeholder="Search Part/SAP No...">
+                <div class="sticky-bar pb-1">
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-md-6">
+                            <div class="filter-controls-wrapper">
+                                <input type="text" class="form-control" id="filterLine" placeholder="Filter by Line...">
+                                <input type="text" class="form-control" id="filterModel" placeholder="Filter by Model...">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search Part/SAP No...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-info" onclick="triggerImport()"><i class="fas fa-file-import"></i> Import</button>
+                                <button class="btn btn-primary" onclick="exportToExcel()"><i class="fas fa-file-export"></i> Export</button>
+                                <button class="btn btn-success" onclick="openModal('addParamModal')"><i class="fas fa-plus"></i> Add</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4"></div>
-                    <div class="col-md-3">
-                        <div class="d-flex justify-content-end gap-2 btn-group-equal my-3">
-                            <button class="btn btn-info flex-fill" onclick="triggerImport()">Import</button>
-                            <button class="btn btn-primary flex-fill" onclick="exportToExcel()">Export</button>
-                            <button class="btn btn-success flex-fill" onclick="openModal('addParamModal')">Add</button>
+                    <div id="bulk-actions-container" class="d-none row align-items-center mb-2">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end gap-2">
+                                <div class="btn-group d-flex justify-content-end gap-2" role="group">
+                                    <button class="btn btn-info" id="bulkCreateVariantsBtn">
+                                        <i class="fas fa-plus-square"></i> Create Variants
+                                    </button>
+                                    <button class="btn btn-danger" id="deleteSelectedBtn">
+                                        <i class="fas fa-trash-alt"></i> Delete Selected
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <input type="file" id="importFile" accept=".csv, .xlsx, .xls" class="d-none">
                 </div>
+                <input type="file" id="importFile" accept=".csv, .xlsx, .xls" class="d-none">
+
                 <div class="table-responsive">
                     <table class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
+                                <th style="width: 50px;" class="text-center">
+                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                                </th>
                                 <th>Line</th>
                                 <th>Model</th>
                                 <th>Part No.</th>
@@ -89,11 +108,8 @@
                                 <th>Part Description</th> 
                                 <th>Planned Output</th>
                                 <th>Part Value</th>
-                                <th>Updated At</th>
-                                <?php if (hasRole(['supervisor', 'admin', 'creator'])): ?>
-                                    <th style="width: 150px; text-align: center;">Actions</th>
-                                <?php endif; ?>
-                            </tr>
+                                <th class="text-end">Updated At</th>
+                                </tr>
                         </thead>
                         <tbody id="paramTableBody"></tbody>
                     </table>
@@ -197,6 +213,9 @@
             include('components/editParamModal.php');
             include('components/manageBomModal.php'); 
             include('components/createBomModal.php');
+            include('components/createVariantsModal.php');
+            include('components/bulkCreateVariantsModal.php');
+            include('components/copyBomModal.php');
         }
         if ($canManage) {
             include('components/addScheduleModal.php');

@@ -3,7 +3,6 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
-//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -14,10 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-// สวิตช์สำหรับโหมดพัฒนา
-$is_development = true; // <-- ตั้งเป็น false เพื่อใช้ตารางจริง
-
+$is_development = true;
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+$bom_table = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
+// =================================================================
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -50,7 +49,6 @@ try {
             $line = strtoupper($input['line']);
             enforceLinePermission($line);
 
-            // --- MODIFIED: เพิ่ม part_value ใน INSERT ---
             $sql = "INSERT INTO {$param_table} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $params = [
                 $line, 
@@ -59,7 +57,6 @@ try {
                 strtoupper($input['sap_no'] ?? ''), 
                 (int)$input['planned_output'],
                 $input['part_description'] ?? null,
-                // เพิ่ม part_value (ถ้าไม่มีค่ามา ให้เป็น 0)
                 isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00
             ];
             $stmt = $pdo->prepare($sql);
@@ -100,7 +97,7 @@ try {
             $stmt = $pdo->prepare($updateSql);
             $stmt->execute($params);
 
-            logAction($pdo, $currentUser['username'], 'UPDATE PARAMETER', $id, "Data updated for ID: $id");
+            logAction($pdo, $currentUser['username'], 'UPDATE $param_table', $id, "Data updated for ID: $id");
             echo json_encode(["success" => true, 'message' => 'Parameter updated.']);
             break;
 
@@ -124,6 +121,44 @@ try {
                 logAction($pdo, $currentUser['username'], 'DELETE PARAMETER', $id);
             }
             echo json_encode(["success" => true, 'message' => 'Parameter deleted.']);
+            break;
+
+        case 'bulk_delete':
+            $ids = $input['ids'] ?? [];
+            if (empty($ids) || !is_array($ids)) {
+                throw new Exception("No IDs provided for bulk deletion.");
+            }
+
+            // ตรวจสอบสิทธิ์ Supervisor - สามารถลบได้เฉพาะ Line ของตัวเอง
+            if ($currentUser['role'] === 'supervisor') {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $checkSql = "SELECT COUNT(DISTINCT line) as line_count, MAX(line) as line_name FROM {$param_table} WHERE id IN ({$placeholders})";
+                $checkStmt = $pdo->prepare($checkSql);
+                $checkStmt->execute($ids);
+                $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['line_count'] > 1 || $result['line_name'] !== $currentUser['line']) {
+                     throw new Exception("Supervisors can only bulk delete parameters from their own line.");
+                }
+            }
+            // Admin/Creator สามารถลบได้ทุก Line (enforceLinePermission ไม่จำเป็นสำหรับ role เหล่านี้)
+
+            $pdo->beginTransaction();
+            try {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $sql = "DELETE FROM {$param_table} WHERE id IN ({$placeholders})";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($ids);
+                $deletedCount = $stmt->rowCount();
+                $pdo->commit();
+                
+                logAction($pdo, $currentUser['username'], 'BULK DELETE PARAMETER', null, "Deleted {$deletedCount} records. IDs: " . implode(', ', $ids));
+                echo json_encode(['success' => true, 'message' => "Successfully deleted {$deletedCount} parameters."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
             
         case 'bulk_import':
@@ -180,12 +215,124 @@ try {
             echo json_encode(["success" => true, "imported" => $imported, "updated" => $updated, "message" => "Imported $imported new row(s) and updated $updated existing row(s) successfully."]);
             break;
 
-            $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'BULK IMPORT/UPDATE PARAMETER', null, "Imported $imported rows, Updated $updated rows");
-            echo json_encode(["success" => true, "imported" => $imported, "updated" => $updated, "message" => "Imported $imported new row(s) and updated $updated existing row(s) successfully."]);
+        case 'create_variants':
+            $source_id = $input['source_param_id'] ?? null;
+            $variants_str = $input['variants'] ?? '';
+
+            if (!$source_id || empty($variants_str)) {
+                throw new Exception("Source Parameter ID and Variant suffixes are required.");
+            }
+
+            $pdo->beginTransaction();
+
+            try {
+                $sourceStmt = $pdo->prepare("SELECT * FROM {$param_table} WHERE id = ?");
+                $sourceStmt->execute([$source_id]);
+                $sourceParam = $sourceStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$sourceParam) {
+                    throw new Exception("Source Parameter with ID {$source_id} not found.");
+                }
+                
+                enforceLinePermission($sourceParam['line']);
+
+                $paramInsertSql = "INSERT INTO {$param_table} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                $paramInsertStmt = $pdo->prepare($paramInsertSql);
+
+                $checkParamSql = "SELECT COUNT(*) FROM {$param_table} WHERE line = ? AND model = ? AND part_no = ?";
+                $checkParamStmt = $pdo->prepare($checkParamSql);
+
+                $variants = array_map('trim', explode(',', strtoupper($variants_str)));
+                $createdCount = 0;
+
+                foreach ($variants as $suffix) {
+                    if (empty($suffix)) continue;
+
+                    $new_part_no = $sourceParam['part_no'] . '-' . $suffix;
+                    
+                    $checkParamStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no]);
+                    if ($checkParamStmt->fetchColumn() == 0) {
+                         $paramInsertStmt->execute([
+                            $sourceParam['line'],
+                            $sourceParam['model'],
+                            $new_part_no,
+                            null, 
+                            $sourceParam['planned_output'],
+                            $sourceParam['part_description'] . ' (' . $suffix . ')',
+                            $sourceParam['part_value']
+                        ]);
+                        $createdCount++;
+                    }
+                }
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'CREATE VARIANTS', $source_id, "Created {$createdCount} variants for Part: {$sourceParam['part_no']}");
+                echo json_encode(['success' => true, 'message' => "Successfully created {$createdCount} new variants."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
-        //-- อ่านข้อมูล Schedule ทั้งหมด --
+        case 'bulk_create_variants':
+            $source_ids = $input['ids'] ?? [];
+            $variants_str = $input['variants'] ?? '';
+
+            if (empty($source_ids) || !is_array($source_ids) || empty($variants_str)) {
+                throw new Exception("Source Parameter IDs and Variant suffixes are required.");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // เตรียม SQL Statements ไว้ล่วงหน้า
+                $sourceStmt = $pdo->prepare("SELECT * FROM {$param_table} WHERE id = ?");
+                $paramInsertStmt = $pdo->prepare("INSERT INTO {$param_table} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())");
+                $checkParamStmt = $pdo->prepare("SELECT COUNT(*) FROM {$param_table} WHERE line = ? AND model = ? AND part_no = ?");
+                
+                $variants = array_map('trim', explode(',', strtoupper($variants_str)));
+                $totalCreatedCount = 0;
+                $processedParts = [];
+
+                // วนลูปตาม ID ของ Part ต้นทางที่ส่งมา
+                foreach ($source_ids as $source_id) {
+                    $sourceStmt->execute([$source_id]);
+                    $sourceParam = $sourceStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$sourceParam) continue; // ข้ามถ้าหา ID ไม่เจอ
+
+                    enforceLinePermission($sourceParam['line']);
+                    
+                    // วนลูปตาม Suffix (สี) ที่กรอกเข้ามา
+                    foreach ($variants as $suffix) {
+                        if (empty($suffix)) continue;
+
+                        $new_part_no = $sourceParam['part_no'] . '-' . $suffix;
+                        
+                        $checkParamStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no]);
+                        if ($checkParamStmt->fetchColumn() == 0) {
+                             $paramInsertStmt->execute([
+                                $sourceParam['line'], $sourceParam['model'], $new_part_no,
+                                null, $sourceParam['planned_output'],
+                                $sourceParam['part_description'] . ' (' . $suffix . ')',
+                                $sourceParam['part_value']
+                            ]);
+                            $totalCreatedCount++;
+                        }
+                    }
+                    $processedParts[] = $sourceParam['part_no'];
+                }
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'BULK CREATE VARIANTS', null, "Created {$totalCreatedCount} variants for Parts: " . implode(', ', $processedParts));
+                echo json_encode(['success' => true, 'message' => "Successfully created {$totalCreatedCount} new variants."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         case 'read_schedules':
             $stmt = $pdo->prepare("EXEC dbo.sp_GetSchedules");
             $stmt->execute();
@@ -193,7 +340,6 @@ try {
             echo json_encode(['success' => true, 'data' => $schedules]);
             break;
 
-        //-- บันทึกข้อมูล Schedule (สร้าง/อัปเดต) --
         case 'save_schedule':
             try {
                 $stmt = $pdo->prepare("EXEC dbo.sp_SaveSchedule @id=?, @line=?, @shift_name=?, @start_time=?, @end_time=?, @planned_break_minutes=?, @is_active=?");
@@ -225,7 +371,6 @@ try {
             }
             break;
 
-        //-- ลบข้อมูล Schedule --
         case 'delete_schedule':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing Schedule ID");
@@ -237,7 +382,6 @@ try {
             echo json_encode(['success' => $success, 'message' => 'Schedule deleted.']);
             break;
             
-        //-- ตรวจสอบข้อมูล PARAMETER ที่ขาดหายไป --
         case 'health_check_parameters':
             $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
             $stmt->execute();
@@ -245,14 +389,13 @@ try {
             echo json_encode(['success' => true, 'data' => $missingParams]);
             break;
 
-        // ** NEW ACTION 1: ค้นหา PARAMETER เพื่อนำไปสร้าง BOM **
         case 'find_parameter_for_bom':
             $sap_no = trim($input['sap_no'] ?? '');
             $model = trim($input['model'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
             $line = trim($input['line'] ?? '');
 
-            $sql = "SELECT * FROM PARAMETER WHERE ";
+            $sql = "SELECT * FROM {$param_table} WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
@@ -269,7 +412,6 @@ try {
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            // ** แก้ไข: ลบช่องว่างออกจากชื่อตัวแปร **
             $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($parameter) {
@@ -279,7 +421,6 @@ try {
             }
             break;
 
-        // ** NEW ACTION 2: ดึงรายการ Part No. ทั้งหมดที่อยู่ใน Model ที่กำหนด **
         case 'get_parts_by_model':
             $model = trim($_GET['model'] ?? '');
             if (empty($model)) {
@@ -287,7 +428,7 @@ try {
                 exit;
             }
 
-            $sql = "SELECT DISTINCT part_no FROM PARAMETER WHERE model = ? ORDER BY part_no";
+            $sql = "SELECT DISTINCT part_no FROM {$param_table} WHERE model = ? ORDER BY part_no";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$model]);
             $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -300,7 +441,7 @@ try {
             $model = trim($_GET['model'] ?? '');
             $part_no = trim($_GET['part_no'] ?? '');
 
-            $sql = "SELECT * FROM PARAMETER WHERE ";
+            $sql = "SELECT * FROM {$param_table} WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
@@ -318,7 +459,6 @@ try {
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            // ** แก้ไข: ลบช่องว่างออกจากชื่อตัวแปร **
             $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($parameter) {
@@ -332,19 +472,17 @@ try {
             if ($currentUser['role'] === 'supervisor') {
                 echo json_encode(['success' => true, 'data' => [$currentUser['line']]]);
             } else {
-                $stmt = $pdo->query("SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line");
+                $stmt = $pdo->query("SELECT DISTINCT line FROM {$param_table} WHERE line IS NOT NULL AND line != '' ORDER BY line");
                 $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 echo json_encode(['success' => true, 'data' => $lines]);
             }
             break;
 
-        //-- กรณีไม่พบ Action ที่ระบุ --
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");
     }
 } catch (Exception $e) {
-    //-- จัดการข้อผิดพลาด และยกเลิก Transaction หากยังค้างอยู่ --
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }

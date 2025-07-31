@@ -3,7 +3,6 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
-//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -14,10 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-$is_development = true; 
-$parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
-$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-$wip_table = 'WIP_ENTRIES'; 
+$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
+$parts_table = $is_development ? 'PARTS_TEST'       : 'PARTS';
+$param_table = $is_development ? 'PARAMETER_TEST'   : 'PARAMETER';
+$wip_table   = $is_development ? 'WIP_ENTRIES_TEST' : 'WIP_ENTRIES';
+// =================================================================
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -26,7 +26,6 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'log_wip_entry':
-            // This case remains unchanged from the original
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
@@ -76,13 +75,8 @@ try {
             
             $entry_id = (int)$input['entry_id'];
 
-            // --- MODIFICATION START ---
-            // Replace the old, custom permission logic with the new central function.
-            // Note that the owner column is 'operator' (username), not 'operator_id'.
             enforceRecordPermission($pdo, $wip_table, $entry_id, 'entry_id', 'operator');
-            // --- MODIFICATION END ---
 
-            // Secondary check for supervisors changing the line
             if (hasRole(['supervisor', 'admin', 'creator'])) {
                 $stmt = $pdo->prepare("SELECT line FROM {$wip_table} WHERE entry_id = ?");
                 $stmt->execute([$entry_id]);
@@ -120,10 +114,7 @@ try {
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
 
-            // --- MODIFICATION START ---
-            // Use the central permission function here as well.
             enforceRecordPermission($pdo, $wip_table, $id, 'entry_id', 'operator');
-            // --- MODIFICATION END ---
 
             $stmt = $pdo->prepare("SELECT * FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$id]);
@@ -251,28 +242,25 @@ try {
                 !empty($_GET['startDate']) ? ["log_date >= ?"] : [],
                 !empty($_GET['endDate']) ? ["log_date <= ?"] : []
             )) : "";
-
-            // ===== SQL ที่แก้ไขใหม่ทั้งหมด =====
             
-            // 1. SQL สำหรับนับจำนวนทั้งหมด
             $countSql = "
                 WITH 
                 MasterLots AS (
-                    SELECT DISTINCT line, model, part_no, lot_no FROM WIP_ENTRIES
+                    SELECT DISTINCT line, model, part_no, lot_no FROM {$wip_table}
                     UNION
                     SELECT DISTINCT line, model, part_no, 
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
-                    FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != ''
+                    FROM {$parts_table} WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
                 TotalIn AS (
                     SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM WIP_ENTRIES $wipDateWhere GROUP BY line, model, part_no, lot_no
+                    FROM {$wip_table} $wipDateWhere GROUP BY line, model, part_no, lot_no
                 ),
                 TotalOut AS (
                     SELECT line, model, part_no,
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM PARTS $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
+                    FROM {$parts_table} $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
                 ),
                 FinalResult AS (
                     SELECT 
@@ -291,25 +279,24 @@ try {
             $totalStmt->execute(array_merge($date_params_wip, $date_params_parts, $params));
             $total = (int)$totalStmt->fetchColumn();
 
-            // 2. SQL สำหรับดึงข้อมูลแบบแบ่งหน้า
             $dataSql = "
                 WITH 
                 MasterLots AS (
-                    SELECT DISTINCT line, model, part_no, lot_no FROM WIP_ENTRIES
+                    SELECT DISTINCT line, model, part_no, lot_no FROM {$wip_table}
                     UNION
                     SELECT DISTINCT line, model, part_no, 
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
-                    FROM PARTS WHERE lot_no IS NOT NULL AND lot_no != ''
+                    FROM {$parts_table} WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
                 TotalIn AS (
                     SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM WIP_ENTRIES $wipDateWhere GROUP BY line, model, part_no, lot_no
+                    FROM {$wip_table} $wipDateWhere GROUP BY line, model, part_no, lot_no
                 ),
                 TotalOut AS (
                     SELECT line, model, part_no,
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM PARTS $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
+                    FROM {$parts_table} $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
                 ),
                 FinalResult AS (
                     SELECT 
@@ -317,12 +304,11 @@ try {
                         p.part_description,
                         ISNULL(ti.total_in, 0) as total_in, 
                         ISNULL(to_out.total_out, 0) as total_out,
-                        -- ========== แก้ไขสูตรการคำนวณ Variance ==========
                         (ISNULL(to_out.total_out, 0) - ISNULL(ti.total_in, 0)) as variance
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
-                    LEFT JOIN PARAMETER p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
+                    LEFT JOIN {$param_table} p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
                     $whereClause
                 ),
                 NumberedRows AS (
@@ -361,17 +347,15 @@ try {
             
             $whereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             
-            // 1. นับจำนวนทั้งหมด
-            $totalSql = "SELECT COUNT(*) FROM WIP_ENTRIES $whereClause";
+            $totalSql = "SELECT COUNT(*) FROM {$wip_table} $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
-            // 2. ดึงข้อมูลแบบแบ่งหน้า
             $dataSql = "
                 SELECT * FROM (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY entry_time DESC, entry_id DESC) as RowNum
-                    FROM WIP_ENTRIES
+                    FROM {$wip_table}
                     $whereClause
                 ) AS NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?
@@ -381,8 +365,7 @@ try {
             $dataStmt->execute($paginationParams);
             $history_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 3. ดึงข้อมูลสรุป (ส่วนนี้ไม่แบ่งหน้า)
-            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM WIP_ENTRIES wip $whereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
+            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM {$wip_table} wip $whereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
             $summary_stmt = $pdo->prepare($summary_sql);
             $summary_stmt->execute($params);
             $summary_data = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -391,7 +374,6 @@ try {
             break;
 
         case 'adjust_stock':
-            // This action writes to the PARTS table, so it needs modification.
             $pdo->beginTransaction();
             try {
                 $required = ['part_no', 'line', 'model', 'system_count', 'physical_count'];
@@ -419,13 +401,12 @@ try {
                 $adjustment_type = $variance > 0 ? 'ADJUST-IN' : 'ADJUST-OUT';
                 $adjustment_value = abs($variance);
 
-                // --- MODIFIED: Insert into the correct parts table ---
                 $sql = "INSERT INTO {$parts_table} (log_date, log_time, line, model, part_no, count_type, count_value, note, operator_id) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 $params = [
                     $line, $model, $part_no,
                     $adjustment_type, $adjustment_value, $note,
-                    $currentUser['id'] // Also log who did the adjustment
+                    $currentUser['id']
                 ];
                 
                 $stmt->execute($params);
@@ -501,7 +482,6 @@ try {
             break;
 
         case 'get_wip_drilldown_details':
-            // 1. รับค่า Parameter ที่จำเป็นจาก Frontend (เหมือนเดิม)
             $line = $_GET['line'] ?? '';
             $model = $_GET['model'] ?? '';
             $part_no = $_GET['part_no'] ?? '';
@@ -515,10 +495,9 @@ try {
             
             enforceLinePermission($line);
 
-            // 2. ดึงข้อมูลฝั่งขาเข้า (IN) จากตาราง WIP_ENTRIES (โค้ดส่วนนี้ถูกต้องแล้ว)
             $in_sql = "
                 SELECT entry_time, lot_no, quantity_in, operator 
-                FROM WIP_ENTRIES 
+                FROM {$wip_table} 
                 WHERE line = ? AND model = ? AND part_no = ?
             ";
             $in_params = [$line, $model, $part_no];
@@ -539,10 +518,10 @@ try {
             $in_stmt = $pdo->prepare($in_sql);
             $in_stmt->execute($in_params);
             $in_records = $in_stmt->fetchAll(PDO::FETCH_ASSOC);
-            // 3. ดึงข้อมูลฝั่งขาออก (OUT) จากตาราง PARTS (โค้ดชุดเดียวที่ถูกต้อง)
+            
             $out_sql = "
                 SELECT log_date, CONVERT(varchar(8), log_time, 108) AS log_time, lot_no, count_value, count_type 
-                FROM PARTS 
+                FROM {$parts_table} 
                 WHERE line = ? AND model = ? AND part_no = ? AND count_type <> 'ADJUST-IN'
             ";
             $out_params = [$line, $model, $part_no];
@@ -566,7 +545,6 @@ try {
             $out_stmt->execute($out_params);
             $out_records = $out_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 4. ส่งข้อมูลทั้งหมดกลับไปเป็น JSON (เหมือนเดิม)
             echo json_encode([
                 'success' => true,
                 'data' => [
@@ -598,12 +576,12 @@ try {
                     SELECT 
                         lot_no, 
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM PARTS
+                    FROM {$parts_table}
                     WHERE lot_no IS NOT NULL AND lot_no != ''
                     GROUP BY lot_no
                 )
                 SELECT TOP 20 wip.lot_no 
-                FROM WIP_ENTRIES wip
+                FROM {$wip_table} wip
                 LEFT JOIN TotalOutByLot o ON wip.lot_no = o.lot_no
                 WHERE 
                     wip.part_no = ? 

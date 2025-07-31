@@ -3,7 +3,6 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
-//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (
         !isset($_SERVER['HTTP_X_CSRF_TOKEN']) ||
@@ -18,11 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-$is_development = true; 
+$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-$bom_table = 'PRODUCT_BOM'; 
-$wip_table = 'WIP_ENTRIES';
+$bom_table = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
+$users_table = $is_development ? 'USERS_TEST' : 'USERS'; // ** NEW **
+// =================================================================
 
 
 $action = $_REQUEST['action'] ?? 'get_parts';
@@ -44,7 +44,6 @@ try {
 
     switch ($action) {
         case 'get_parts':
-            // This case remains unchanged from the original
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
@@ -92,7 +91,7 @@ try {
                         u.username as operator_name,
                         ROW_NUMBER() OVER (ORDER BY p.log_date DESC, p.log_time DESC, p.id DESC) AS RowNum
                     FROM {$parts_table} p
-                    LEFT JOIN USERS u ON p.operator_id = u.id
+                    LEFT JOIN {$users_table} u ON p.operator_id = u.id
                     $whereClause
                 )
                 SELECT id, log_date, start_time, log_time, line, model, part_no, lot_no, count_value, count_type, note, source_transaction_id, operator_name
@@ -139,7 +138,6 @@ try {
             break;
 
         case 'add_part':
-            // This case remains unchanged from the original
             $pdo->beginTransaction();
             try {
                 $required_fields = ['log_date', 'start_time', 'end_time', 'part_no', 'model', 'line', 'count_type', 'count_value', 'lot_no'];
@@ -221,10 +219,7 @@ try {
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             
-            // --- MODIFICATION START ---
-            // Replace the old permission check with the new, more specific one.
             enforceRecordPermission($pdo, $parts_table, $id, 'id', 'operator_id');
-            // --- MODIFICATION END ---
             
             $pdo->beginTransaction();
             try {
@@ -234,7 +229,6 @@ try {
                 $originalPart = $findStmt->fetch();
                 if (!$originalPart) throw new Exception("Part not found.");
                 
-                // This check is now secondary, for supervisors changing the line of a record
                 if (strtoupper(trim($input['line'])) !== $originalPart['line']) {
                     enforceLinePermission(strtoupper(trim($input['line'])));
                 }
@@ -244,8 +238,6 @@ try {
                     if (!isset($input[$field])) throw new Exception("Missing required field: " . $field);
                 }
                 
-                // NOTE: We no longer change the operator_id on update. The original creator remains.
-                // The log file will record who made the change.
                 $sql = "UPDATE {$parts_table} SET log_date=?, start_time=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=? WHERE id = ?";
                 $pdo->prepare($sql)->execute([
                     $input['log_date'], $input['start_time'], $input['end_time'], strtoupper(trim($input['line'])), 
@@ -271,10 +263,7 @@ try {
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
 
-            // --- MODIFICATION START ---
-            // Use the new permission check before doing anything else.
             enforceRecordPermission($pdo, $parts_table, $id, 'id', 'operator_id');
-            // --- MODIFICATION END ---
 
             $pdo->beginTransaction();
             try {
@@ -317,12 +306,12 @@ try {
             echo json_encode(['success' => true, 'data' => $lots]);
             break;
         case 'get_models':
-            $stmt = $pdo->query("SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model");
+            $stmt = $pdo->query("SELECT DISTINCT model FROM {$param_table} WHERE model IS NOT NULL AND model != '' ORDER BY model");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
         case 'get_part_nos':
-            $stmt = $pdo->query("SELECT DISTINCT part_no FROM PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
+            $stmt = $pdo->query("SELECT DISTINCT part_no FROM {$param_table} WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -332,7 +321,7 @@ try {
                 http_response_code(400);
                 throw new Exception('Invalid or missing ID');
             }
-            $sql = "SELECT * FROM PARTS WHERE id = ?";
+            $sql = "SELECT * FROM {$parts_table} WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$id]);
             $part = $stmt->fetch();
@@ -354,7 +343,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            $sql = "SELECT DISTINCT TOP (20) lot_no FROM PARTS WHERE lot_no LIKE ? ORDER BY lot_no DESC";
+            $sql = "SELECT DISTINCT TOP (20) lot_no FROM {$parts_table} WHERE lot_no LIKE ? ORDER BY lot_no DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['%' . $term . '%']);
             $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -362,9 +351,9 @@ try {
             break;
 
         case 'get_datalist_options':
-            $lineSql = "SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line";
-            $modelSql = "SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model";
-            $partNoSql = "SELECT DISTINCT part_no FROM PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
+            $lineSql = "SELECT DISTINCT line FROM {$param_table} WHERE line IS NOT NULL AND line != '' ORDER BY line";
+            $modelSql = "SELECT DISTINCT model FROM {$param_table} WHERE model IS NOT NULL AND model != '' ORDER BY model";
+            $partNoSql = "SELECT DISTINCT part_no FROM {$param_table} WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
 
             $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
             $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
@@ -421,7 +410,7 @@ try {
                 exit;
             }
             
-            $sql = "SELECT COUNT(*) FROM PARAMETER WHERE line = ? AND model = ? AND part_no = ?";
+            $sql = "SELECT COUNT(*) FROM {$param_table} WHERE line = ? AND model = ? AND part_no = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$line, $model, $part_no]);
             
@@ -429,59 +418,7 @@ try {
             
             echo json_encode(['success' => true, 'exists' => $exists]);
             break;
-
-        case 'get_datalist_options':
-            $lineSql = "SELECT DISTINCT line FROM PARAMETER WHERE line IS NOT NULL AND line != '' ORDER BY line";
-            $modelSql = "SELECT DISTINCT model FROM PARAMETER WHERE model IS NOT NULL AND model != '' ORDER BY model";
-            $partNoSql = "SELECT DISTINCT part_no FROM PARAMETER WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
-
-            $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
-            $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
-            $partNos = $pdo->query($partNoSql)->fetchAll(PDO::FETCH_COLUMN);
-
-            echo json_encode([
-                'success' => true,
-                'lines' => $lines,
-                'models' => $models,
-                'partNos' => $partNos
-            ]);
-            break;
-
-        case 'get_models_by_line':
-            $line = $_GET['line'] ?? '';
-            if (empty($line)) {
-                echo json_encode(['success' => true, 'data' => []]);
-                exit;
-            }
-            $sql = "SELECT DISTINCT model FROM PARAMETER WHERE line = ? ORDER BY model";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$line]);
-            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            echo json_encode(['success' => true, 'data' => $models]);
-            break;
-
-        case 'get_parts_by_model':
-            $line = $_GET['line'] ?? '';
-            $model = $_GET['model'] ?? '';
-            if (empty($model)) {
-                echo json_encode(['success' => true, 'data' => []]);
-                exit;
-            }
-
-            $sql = "SELECT DISTINCT part_no FROM PARAMETER WHERE model = ?";
-            $params = [$model];
-            if (!empty($line)) {
-                $sql .= " AND line = ?";
-                $params[] = $line;
-            }
-            $sql .= " ORDER BY part_no";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $parts = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            echo json_encode(['success' => true, 'data' => $parts]);
-            break;
-
+        
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled in this modified script."]);
