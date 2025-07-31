@@ -30,11 +30,6 @@ function loadFiltersFromLocalStorage() {
     }
 }
 
-/**
- * =================================================================
- * ฟังก์ชัน Pagination ที่ปรับปรุงใหม่ (ใช้เป็นฟังก์ชันกลาง)
- * =================================================================
- */
 function renderAdvancedPagination(containerId, currentPage, totalPages, callbackFunction) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -121,9 +116,6 @@ const lineList = document.getElementById('lineList');
 const modelList = document.getElementById('modelList');
 const partNoList = document.getElementById('partNoList');
 
-/**
- * ฟังก์ชันกลางสำหรับอัปเดต Datalist
- */
 function updateDatalist(datalistElement, options) {
     if (datalistElement) {
         datalistElement.innerHTML = options.map(opt => `<option value="${opt}"></option>`).join('');
@@ -193,9 +185,6 @@ async function populateAllDatalistsOnLoad() {
     }
 }
 
-/**
- * ฟังก์ชันหลักสำหรับดึงข้อมูล Parts จาก API
- */
 async function fetchPartsData(page = 1) {
     currentPage = page;
     const filters = {
@@ -209,37 +198,40 @@ async function fetchPartsData(page = 1) {
     };
     const params = new URLSearchParams({ action: 'get_parts', page: currentPage, limit: 50, ...filters });
 
-    showSpinner(); // <-- Spinner เดิมของคุณ
+    showSpinner();
     try {
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        renderTable(result.data, canManage);
+        renderTable(result.data); 
         totalPages = Math.ceil(result.total / result.limit);
         renderAdvancedPagination('paginationControls', result.page, totalPages, fetchPartsData);
         renderSummary(result.summary, result.grand_total);
     } catch (error) {
         console.error('Failed to fetch parts data:', error);
-        const errorColSpan = canManage ? 11 : 10;
-        document.getElementById('partTableBody').innerHTML = `<tr><td colspan="${errorColSpan}" class="text-center text-danger">Error loading data.</td></tr>`;
+        // We will calculate colspan inside renderTable, so we can simplify it here
+        document.getElementById('partTableBody').innerHTML = `<tr><td colspan="12" class="text-center text-danger">Error loading data.</td></tr>`;
     } finally {
-        hideSpinner(); // <-- Spinner เดิมของคุณ
+        hideSpinner();
     }
 }
 
 /**
  * ฟังก์ชันสำหรับ Render ตารางข้อมูล Production
  * @param {Array<object>} data - ข้อมูลที่ได้จาก API
- * @param {boolean} canManage - ตัวแปรที่บอกว่าผู้ใช้มีสิทธิ์จัดการข้อมูลหรือไม่
  */
-function renderTable(data, canManage) {
+function renderTable(data) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = ''; 
     
+    // --- MODIFICATION: Determine if the actions column should be shown for any row ---
+    const showActionsColumn = data.some(row => 
+        canManage || (currentUser && currentUser.role === 'operator' && currentUser.username === row.operator_name)
+    );
+    const colSpan = showActionsColumn ? 11 : 10;
+
     if (!data || data.length === 0) {
-        // ===== ส่วนที่แก้ไข: ปรับตัวเลข Colspan ให้ถูกต้อง =====
-        const colSpan = canManage ? 11 : 10;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">No records found.</td></tr>`;
         return;
     }
@@ -282,37 +274,40 @@ function renderTable(data, canManage) {
         noteTd.appendChild(noteDiv);
         tr.appendChild(noteTd);
         
-        if (canManage) {
+        // --- MODIFICATION START ---
+        // Conditionally create the actions cell
+        if (showActionsColumn) {
             const actionsTd = document.createElement('td');
             actionsTd.classList.add('text-center-col');
             
-            const buttonWrapper = document.createElement('div');
-            buttonWrapper.className = 'd-flex justify-content-center gap-1'; 
+            // Show buttons only if user is a manager OR if the operator owns the record
+            if (canManage || (currentUser && currentUser.role === 'operator' && currentUser.username === row.operator_name)) {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'd-flex justify-content-center gap-1'; 
 
-            const editButton = document.createElement('button');
-            editButton.className = 'btn btn-sm btn-warning w-100'; 
-            editButton.textContent = 'Edit';
-            editButton.addEventListener('click', () => openEditModal(row, editButton));
-            
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'btn btn-sm btn-danger w-100'; 
-            deleteButton.textContent = 'Delete';
-            deleteButton.addEventListener('click', () => handleDelete(row.id));
+                const editButton = document.createElement('button');
+                editButton.className = 'btn btn-sm btn-warning w-100'; 
+                editButton.textContent = 'Edit';
+                editButton.addEventListener('click', () => openEditModal(row, editButton));
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'btn btn-sm btn-danger w-100'; 
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => handleDelete(row.id));
 
-            buttonWrapper.appendChild(editButton);
-            buttonWrapper.appendChild(deleteButton);
-
-            actionsTd.appendChild(buttonWrapper);
+                buttonWrapper.appendChild(editButton);
+                buttonWrapper.appendChild(deleteButton);
+                actionsTd.appendChild(buttonWrapper);
+            }
             tr.appendChild(actionsTd);
         }
+        // --- MODIFICATION END ---
 
         tbody.appendChild(tr);
     });
 }
 
-/**
- * ฟังก์ชันสำหรับ Render Pagination Controls
- */
+// -- No longer used because renderAdvancedPagination is used for pagination. --
 function renderPagination(page, totalItems, limit) {
     totalPages = totalItems > 0 ? Math.ceil(totalItems / limit) : 1;
     currentPage = parseInt(page);
@@ -321,7 +316,6 @@ function renderPagination(page, totalItems, limit) {
 
     if (totalPages <= 1) return;
 
-    //-- ฟังก์ชันสร้าง item ของ Pagination --
     const createPageItem = (pageNum, text, isDisabled = false, isActive = false) => {
         const li = document.createElement('li');
         li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
@@ -347,16 +341,11 @@ function renderPagination(page, totalItems, limit) {
     paginationContainer.appendChild(createPageItem(currentPage + 1, 'Next', currentPage === totalPages));
 }
 
-/**
- * ฟังก์ชันสำหรับ Render Grand Total และเก็บข้อมูล Summary ไว้ใน Cache
- */
 function renderSummary(summaryData, grandTotalData) {
-    //-- เก็บข้อมูลไว้ใน Global Variable เพื่อให้ฟังก์ชันอื่น (เช่น Export) เรียกใช้ได้ --
     window.cachedSummary = summaryData || [];
     window.cachedGrand = grandTotalData || {};
     const grandSummaryContainer = document.getElementById('grandSummary');
     if (!grandSummaryContainer) return;
-    //-- สร้าง HTML สำหรับ Grand Total (แสดงเฉพาะค่าที่มากกว่า 0) --
     let grandSummaryHTML = '<strong>Grand Total: </strong>';
     if (grandTotalData) {
         grandSummaryHTML += Object.entries(grandTotalData).filter(([, value]) => value > 0).map(([key, value]) => `${key.toUpperCase()}: ${value || 0}`).join(' | ');
@@ -364,14 +353,11 @@ function renderSummary(summaryData, grandTotalData) {
     grandSummaryContainer.innerHTML = grandSummaryHTML;
 }
 
-/**
- * ฟังก์ชันสำหรับจัดการการลบข้อมูล
- */
 async function handleDelete(id) {
     if (!confirm(`Are you sure you want to delete Part ID ${id}?`)) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
-    showSpinner(); // <-- Spinner เดิมของคุณ
+    showSpinner();
     try {
         const response = await fetch(`${API_URL}?action=delete_part`, {
             method: 'POST',
@@ -383,6 +369,11 @@ async function handleDelete(id) {
         });
 
         const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.message || `HTTP error! status: ${response.status}`);
+        }
+
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
 
         if (result.success) {
@@ -391,9 +382,9 @@ async function handleDelete(id) {
             await fetchPartsData(newPage);
         }
     } catch (error) {
-        showToast('An error occurred while deleting the part.', '#dc3545');
+        showToast(error.message, '#dc3545');
     } finally {
-        hideSpinner(); // <-- Spinner เดิมของคุณ
+        hideSpinner();
     }
 }
 
@@ -421,11 +412,9 @@ function handleFilterChange() {
     }
 }
 
-//-- Event Listener ที่จะทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ --
 document.addEventListener('DOMContentLoaded', () => {
-
     loadFiltersFromLocalStorage();
-    populateAllDatalistsOnLoad(); // <-- เรียกใช้ฟังก์ชันใหม่
+    populateAllDatalistsOnLoad(); 
 
     const debouncedFilterChange = () => {
         clearTimeout(window.filterDebounceTimer);
@@ -438,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterStartDate')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate')?.addEventListener('change', handleFilterChange);
     
-    // --- เพิ่ม Event Listener พิเศษสำหรับ Datalist อัจฉริยะ ---
     if (filterLine) {
         filterLine.addEventListener('change', () => {
             updateModelOptions().then(() => {

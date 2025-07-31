@@ -53,6 +53,7 @@ try {
                 throw new Exception("Finished Good and Component cannot be the same part.");
             }
 
+            /*
             // Validation: ตรวจสอบว่า Component อยู่ใน Model เดียวกันกับ FG
             $compCheckSql = "SELECT COUNT(*) FROM  PARAMETER WHERE part_no = ? AND model = ?";
             $compCheckStmt = $pdo->prepare($compCheckSql);
@@ -60,7 +61,19 @@ try {
             if ($compCheckStmt->fetchColumn() == 0) {
                 throw new Exception("Component part ($component_part_no) does not exist in model '$model'.");
             }
-            
+            */
+
+            // --- MODIFICATION START ---
+            // Check for duplicate component before inserting
+            $checkSql = "SELECT COUNT(*) FROM PRODUCT_BOM WHERE fg_part_no = ? AND line = ? AND model = ? AND component_part_no = ?";
+            $checkStmt = $pdo->prepare($checkSql);
+            $checkStmt->execute([$fg_part_no, $line, $model, $component_part_no]);
+            if ($checkStmt->fetchColumn() > 0) {
+                http_response_code(409); // 409 Conflict
+                throw new Exception("This component ({$component_part_no}) already exists in this BOM.");
+            }
+            // --- MODIFICATION END ---
+
             // Insert data
             $sql = "INSERT INTO PRODUCT_BOM (fg_part_no, line, model, component_part_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $stmt = $pdo->prepare($sql);

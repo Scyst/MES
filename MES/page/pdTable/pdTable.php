@@ -7,6 +7,9 @@
     }
 
     $canManage = hasRole(['supervisor', 'admin', 'creator']);
+    $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
+    $currentUserForJS = $_SESSION['user'] ?? null;
+    
 ?>
 
 <!DOCTYPE html>
@@ -211,13 +214,15 @@
     
     <div id="toast"></div>
 
-    <?php 
-        if ($canManage) {
+    <?php
+        if ($canAdd) { 
             include('components/addPartModal.php'); 
             include('components/editPartModal.php');
             include('components/addEntryModal.php');
             include('components/editEntryModal.php');
-            include('components/adjustStockModal.php');
+        }
+        if ($canManage) {
+             include('components/adjustStockModal.php');
         }
         include('components/summaryModal.php');
         include('components/wipDetailModal.php');
@@ -226,6 +231,8 @@
     
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;
+        const canAdd = <?php echo json_encode($canAdd); ?>;
+        const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
     
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>" defer></script>
@@ -259,7 +266,7 @@
                         buttonGroup.innerHTML = `
                             <button class="btn btn-info" onclick="openSummaryModal(this)">Summary</button>
                             <button class="btn btn-primary" onclick="exportToExcel()">Export</button>
-                            ${canManage ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
+                            ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
                         `;
                         summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
                         break;
@@ -267,7 +274,7 @@
                         buttonGroup.innerHTML = `
                             <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
                             <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
-                            ${canManage ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
+                            ${canAdd ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
                         `;
                         break;
                     case 'wip-report-tab':

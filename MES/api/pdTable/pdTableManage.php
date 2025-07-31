@@ -18,9 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-// สวิตช์สำหรับโหมดพัฒนา
-// ตั้งเป็น true เพื่อใช้ตารางทดสอบ (_TEST)
-// ตั้งเป็น false เพื่อใช้ตารางจริง
 $is_development = true; 
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
@@ -47,6 +44,7 @@ try {
 
     switch ($action) {
         case 'get_parts':
+            // This case remains unchanged from the original
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
@@ -141,6 +139,7 @@ try {
             break;
 
         case 'add_part':
+            // This case remains unchanged from the original
             $pdo->beginTransaction();
             try {
                 $required_fields = ['log_date', 'start_time', 'end_time', 'part_no', 'model', 'line', 'count_type', 'count_value', 'lot_no'];
@@ -221,6 +220,12 @@ try {
         case 'update_part':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
+            
+            // --- MODIFICATION START ---
+            // Replace the old permission check with the new, more specific one.
+            enforceRecordPermission($pdo, $parts_table, $id, 'id', 'operator_id');
+            // --- MODIFICATION END ---
+            
             $pdo->beginTransaction();
             try {
                 $findSql = "SELECT * FROM {$parts_table} WHERE id = ?";
@@ -229,7 +234,7 @@ try {
                 $originalPart = $findStmt->fetch();
                 if (!$originalPart) throw new Exception("Part not found.");
                 
-                enforceLinePermission($originalPart['line']);
+                // This check is now secondary, for supervisors changing the line of a record
                 if (strtoupper(trim($input['line'])) !== $originalPart['line']) {
                     enforceLinePermission(strtoupper(trim($input['line'])));
                 }
@@ -239,15 +244,14 @@ try {
                     if (!isset($input[$field])) throw new Exception("Missing required field: " . $field);
                 }
                 
-                $operator_id = $currentUser['id'] ?? null;
-
-                $sql = "UPDATE {$parts_table} SET log_date=?, start_time=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=?, operator_id=? WHERE id = ?";
+                // NOTE: We no longer change the operator_id on update. The original creator remains.
+                // The log file will record who made the change.
+                $sql = "UPDATE {$parts_table} SET log_date=?, start_time=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=? WHERE id = ?";
                 $pdo->prepare($sql)->execute([
                     $input['log_date'], $input['start_time'], $input['end_time'], strtoupper(trim($input['line'])), 
                     strtoupper(trim($input['model'])), strtoupper(trim($input['part_no'])),
                     (int)$input['count_value'], strtoupper(trim($input['count_type'])),
                     $input['note'], 
-                    $operator_id,
                     $id
                 ]);
 
@@ -266,6 +270,12 @@ try {
         case 'delete_part':
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
+
+            // --- MODIFICATION START ---
+            // Use the new permission check before doing anything else.
+            enforceRecordPermission($pdo, $parts_table, $id, 'id', 'operator_id');
+            // --- MODIFICATION END ---
+
             $pdo->beginTransaction();
             try {
                 $findSql = "SELECT * FROM {$parts_table} WHERE id = ?";
@@ -275,7 +285,6 @@ try {
 
                 if (!$part) throw new Exception("Part not found.");
                 
-                enforceLinePermission($part['line']);
                 $transaction_id = $part['source_transaction_id'];
                 $detail = "Deleted Part ID: {$id} | Model: {$part['model']}, Part No: {$part['part_no']}, Lot No: {$part['lot_no']}, Qty: {$part['count_value']}, Type: {$part['count_type']}";
 

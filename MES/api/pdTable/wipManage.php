@@ -3,6 +3,7 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
+//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -13,11 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-// สวิตช์สำหรับโหมดพัฒนา
-// ตั้งเป็น true เพื่อใช้ตารางทดสอบ (_TEST)
-// ตั้งเป็น false เพื่อใช้ตารางจริง
 $is_development = true; 
-
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 $wip_table = 'WIP_ENTRIES'; 
@@ -29,7 +26,7 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'log_wip_entry':
-            // This action interacts with PARAMETER table for validation.
+            // This case remains unchanged from the original
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
                 if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
@@ -79,58 +76,40 @@ try {
             
             $entry_id = (int)$input['entry_id'];
 
-            // --- MODIFIED: Custom permission check for WIP Entry ---
-            $stmt = $pdo->prepare("SELECT line, operator FROM {$wip_table} WHERE entry_id = ?");
-            $stmt->execute([$entry_id]);
-            $entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            // --- MODIFICATION START ---
+            // Replace the old, custom permission logic with the new central function.
+            // Note that the owner column is 'operator' (username), not 'operator_id'.
+            enforceRecordPermission($pdo, $wip_table, $entry_id, 'entry_id', 'operator');
+            // --- MODIFICATION END ---
 
-            if (!$entry) {
-                throw new Exception("WIP Entry not found.");
-            }
-
-            // Enforce permissions
-            if (!in_array($currentUser['role'], ['admin', 'creator'])) {
-                if ($currentUser['role'] === 'supervisor') {
-                    enforceLinePermission($entry['line']);
-                    // Also check if the line is being changed
-                    if ($input['line'] !== $entry['line']) {
-                        enforceLinePermission($input['line']);
-                    }
-                } elseif ($currentUser['role'] === 'operator') {
-                    if ($entry['operator'] !== $currentUser['username']) {
-                        http_response_code(403);
-                        throw new Exception("Permission Denied: You can only edit your own entries.");
-                    }
-                } else {
-                    http_response_code(403);
-                    throw new Exception("Permission Denied.");
+            // Secondary check for supervisors changing the line
+            if (hasRole(['supervisor', 'admin', 'creator'])) {
+                $stmt = $pdo->prepare("SELECT line FROM {$wip_table} WHERE entry_id = ?");
+                $stmt->execute([$entry_id]);
+                $entry = $stmt->fetch();
+                if ($entry && $input['line'] !== $entry['line']) {
+                    enforceLinePermission($input['line']);
                 }
             }
             
             $entry_time_obj = new DateTime($input['entry_time']);
             $formatted_entry_time = $entry_time_obj->format('Y-m-d H:i:s');
             
-            $line = strtoupper(trim($input['line']));
-            $model = strtoupper(trim($input['model']));
-            $part_no = strtoupper(trim($input['part_no']));
-            $lot_no = strtoupper(trim($input['lot_no'] ?? null));
-            $quantity_in = (int)$input['quantity_in'];
-            
             $sql = "UPDATE {$wip_table} SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
             $params = [
                 $formatted_entry_time,
-                $model,
-                $line,
-                $part_no,
-                $lot_no,
-                $quantity_in,
+                strtoupper(trim($input['model'])),
+                strtoupper(trim($input['line'])),
+                strtoupper(trim($input['part_no'])),
+                strtoupper(trim($input['lot_no'] ?? null)),
+                (int)$input['quantity_in'],
                 $input['remark'] ?? null,
                 $entry_id
             ];
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
-                $detail = "ID: {$entry_id}, Model: {$model}, Part: {$part_no}, Lot No: {$lot_no}, Qty: {$quantity_in}";
-                logAction($pdo, $currentUser['username'], 'UPDATE_WIP', $line, $detail);
+                $detail = "Updated WIP ID: {$entry_id} by {$currentUser['username']}";
+                logAction($pdo, $currentUser['username'], 'UPDATE_WIP', $input['line'], $detail);
                 echo json_encode(['success' => true, 'message' => 'WIP Entry updated successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'No changes made or entry not found.']);
@@ -141,34 +120,22 @@ try {
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
 
-            // --- MODIFIED: Custom permission check before deleting ---
+            // --- MODIFICATION START ---
+            // Use the central permission function here as well.
+            enforceRecordPermission($pdo, $wip_table, $id, 'entry_id', 'operator');
+            // --- MODIFICATION END ---
+
             $stmt = $pdo->prepare("SELECT * FROM {$wip_table} WHERE entry_id = ?");
             $stmt->execute([$id]);
-            $entryToDelete = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+            $entryToDelete = $stmt->fetch();
             if (!$entryToDelete) {
-                throw new Exception("WIP Entry not found.");
-            }
-            
-            // Enforce permissions
-            if (!in_array($currentUser['role'], ['admin', 'creator'])) {
-                if ($currentUser['role'] === 'supervisor') {
-                    enforceLinePermission($entryToDelete['line']);
-                } elseif ($currentUser['role'] === 'operator') {
-                    if ($entryToDelete['operator'] !== $currentUser['username']) {
-                        http_response_code(403);
-                        throw new Exception("Permission Denied: You can only delete your own entries.");
-                    }
-                } else {
-                    http_response_code(403);
-                    throw new Exception("Permission Denied.");
-                }
+                throw new Exception("WIP Entry not found after permission check.");
             }
 
             $sql = "DELETE FROM {$wip_table} WHERE entry_id = ?";
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute([$id]) && $stmt->rowCount() > 0) {
-                $detail = "Deleted WIP ID: {$id} | Model: {$entryToDelete['model']}, Part: {$entryToDelete['part_no']}, Lot No: {$entryToDelete['lot_no']}, Qty: {$entryToDelete['quantity_in']}";
+                $detail = "Deleted WIP ID: {$id} | Model: {$entryToDelete['model']}, Part: {$entryToDelete['part_no']}";
                 logAction($pdo, $currentUser['username'], 'DELETE_WIP', $entryToDelete['line'], $detail);
                 echo json_encode(['success' => true, 'message' => 'WIP Entry deleted successfully.']);
             } else {
