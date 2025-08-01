@@ -170,33 +170,44 @@
             <?php endif; ?>
             
             <div class="tab-pane fade" id="bomManagerPane" role="tabpanel">
-                <div class="row mb-3 align-items-center sticky-bar py-3">
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number or Line...">
+                <div class="sticky-bar pb-1">
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number, Line, Model...">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-primary" id="exportBomBtn"><i class="fas fa-file-export"></i> Export</button>
+                                <button class="btn btn-info" id="importBomBtn"><i class="fas fa-file-import"></i> Import</button>
+                                <input type="file" id="bomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
+                                <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <button class="btn btn-primary" id="exportBomBtn">
-                            <i class="fas fa-file-export"></i> Export BOM
-                        </button>
-                        <button class="btn btn-info" id="importBomBtn">
-                            <i class="fas fa-file-import"></i> Import BOM
-                        </button>
-                        <input type="file" id="bomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
-                        <button class="btn btn-success" id="createNewBomBtn">+ Create New BOM</button>
+                    <div id="bom-bulk-actions-container" class="d-none row align-items-center mb-2">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-danger" id="deleteSelectedBomBtn">
+                                    <i class="fas fa-trash-alt"></i> Delete Selected
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
+                                <th style="width: 50px;" class="text-center">
+                                    <input class="form-check-input" type="checkbox" id="selectAllBomCheckbox">
+                                </th>
                                 <th>SAP No.</th>
                                 <th>Part No.</th>
                                 <th>Line</th>
                                 <th>Model</th>
                                 <th>Updated By</th>
-                                <th>Updated At</th>
-                                <th style="width: 200px;" class="text-center">Actions</th>
-                            </tr>
+                                <th class="text-end">Updated At</th>
+                                </tr>
                         </thead>
                         <tbody id="bomFgListTableBody"></tbody>
                     </table>

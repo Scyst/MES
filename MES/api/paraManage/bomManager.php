@@ -74,6 +74,31 @@ try {
             echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
             break;
 
+        case 'update_bom_component':
+            $bom_id = $input['bom_id'] ?? 0;
+            $quantity_required = $input['quantity_required'] ?? null;
+
+            if (empty($bom_id) || !is_numeric($quantity_required)) {
+                throw new Exception("BOM ID and a numeric Quantity are required.");
+            }
+
+            $findStmt = $pdo->prepare("SELECT line FROM {$bom_table} WHERE bom_id = ?");
+            $findStmt->execute([$bom_id]);
+            $bom_item = $findStmt->fetch();
+            if ($bom_item) {
+                enforceLinePermission($bom_item['line']);
+            } else {
+                throw new Exception("BOM component not found.");
+            }
+
+            $sql = "UPDATE {$bom_table} SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([(int)$quantity_required, $currentUser['username'], $bom_id]);
+
+            logAction($pdo, $currentUser['username'], 'UPDATE BOM COMPONENT', "BOM_ID: $bom_id", "New Qty: $quantity_required");
+            echo json_encode(['success' => true, 'message' => 'Component quantity updated.']);
+            break;
+
         case 'delete_bom_component':
             $bom_id = $input['bom_id'] ?? 0;
             if (empty($bom_id)) throw new Exception("Missing bom_id.");
@@ -154,6 +179,44 @@ try {
             
             logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "$fg_part_no ($line/$model)");
             echo json_encode(['success' => true, 'message' => 'BOM has been deleted.']);
+            break;
+
+        case 'bulk_delete_bom':
+            $boms_to_delete = $input['boms'] ?? [];
+            if (empty($boms_to_delete) || !is_array($boms_to_delete)) {
+                throw new Exception("No BOMs provided for bulk deletion.");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $deleteStmt = $pdo->prepare("DELETE FROM {$bom_table} WHERE fg_part_no = ? AND line = ? AND model = ?");
+                $deletedCount = 0;
+
+                foreach($boms_to_delete as $bom) {
+                    $fg_part_no = $bom['fg_part_no'] ?? '';
+                    $line = $bom['line'] ?? '';
+                    $model = $bom['model'] ?? '';
+                    
+                    if (empty($fg_part_no) || empty($line) || empty($model)) {
+                        continue;
+                    }
+
+                    enforceLinePermission($line);
+                    
+                    $deleteStmt->execute([$fg_part_no, $line, $model]);
+                    if ($deleteStmt->rowCount() > 0) {
+                        $deletedCount++;
+                    }
+                }
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'BULK DELETE BOM', null, "Deleted {$deletedCount} BOMs.");
+                echo json_encode(['success' => true, 'message' => "Successfully deleted {$deletedCount} BOMs."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         case 'get_full_bom_export':

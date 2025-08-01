@@ -511,20 +511,28 @@ async function populateLineDatalist() {
 }
 
 function initializeBomManager() {
+    // --- Element References ---
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
     const createNewBomBtn = document.getElementById('createNewBomBtn');
     const importBomBtn = document.getElementById('importBomBtn');
     const bomImportFile = document.getElementById('bomImportFile');
     const exportBomBtn = document.getElementById('exportBomBtn');
+    
+    // Modals
     const createBomModalEl = document.getElementById('createBomModal');
     const createBomModal = new bootstrap.Modal(createBomModalEl);
-    const createBomForm = document.getElementById('createBomForm');
-    const createBomSapInput = document.getElementById('createBomSapNo');
     const manageBomModalEl = document.getElementById('manageBomModal');
     const manageBomModal = new bootstrap.Modal(manageBomModalEl);
     const copyBomModalEl = document.getElementById('copyBomModal');
     const copyBomModal = new bootstrap.Modal(copyBomModalEl);
+
+    // Forms & Inputs
+    const createBomSapInput = document.getElementById('createBomSapNo');
+    const createBomLineInput = document.getElementById('createBomLine');
+    const createBomModelInput = document.getElementById('createBomModel');
+    const createBomPartNoInput = document.getElementById('createBomPartNo');
+    const createBomForm = document.getElementById('createBomForm');
     const modalTitle = document.getElementById('bomModalTitle');
     const modalBomTableBody = document.getElementById('modalBomTableBody');
     const modalAddComponentForm = document.getElementById('modalAddComponentForm');
@@ -533,7 +541,22 @@ function initializeBomManager() {
     const modalSelectedFgLine = document.getElementById('modalSelectedFgLine');
     const modalPartDatalist = document.getElementById('bomModalPartDatalist');
     const copyBomForm = document.getElementById('copyBomForm');
+    
+    // ** NEW: Bulk Actions Elements **
+    const selectAllBomCheckbox = document.getElementById('selectAllBomCheckbox');
+    const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
+    let currentEditingBom = null;
+    let bomDebounceTimer;
 
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .bom-input-readonly {
+            background-color: #495057; /* สีพื้นหลังเทาทึบ */
+            opacity: 1; /* ทำให้ไม่โปร่งใส */
+            color: #fff; /* ทำให้ข้อความอ่านง่าย */
+        }
+    `;
+    document.head.appendChild(style);
 
     manageBomModalEl.addEventListener('hidden.bs.modal', () => {
         loadAndRenderBomFgTable();
@@ -545,28 +568,38 @@ function initializeBomManager() {
         if (fgData && fgData.length > 0) {
             fgData.forEach(fg => {
                 const tr = document.createElement('tr');
-                const fgDataString = JSON.stringify(fg).replace(/"/g, '&quot;');
-                tr.innerHTML = `
+                tr.style.cursor = 'pointer';
+                tr.title = 'Click to edit BOM';
+                const fgDataString = JSON.stringify(fg);
+
+                tr.addEventListener('click', (event) => {
+                    if (event.target.closest('.form-check-input')) return;
+                    initializeBomManager.manageBom(fg);
+                });
+
+                const checkboxTd = document.createElement('td');
+                checkboxTd.className = 'text-center';
+                checkboxTd.innerHTML = `<input class="form-check-input bom-row-checkbox" type="checkbox" value='${fgDataString.replace(/'/g, "&apos;")}'>`;
+                checkboxTd.addEventListener('click', e => e.stopPropagation());
+                tr.appendChild(checkboxTd);
+
+                tr.innerHTML += `
                     <td>${fg.sap_no || 'N/A'}</td>
                     <td>${fg.fg_part_no || ''}</td>
                     <td>${fg.line || 'N/A'}</td>
                     <td>${fg.model || 'N/A'}</td>
                     <td>${fg.updated_by || 'N/A'}</td>
-                    <td>${fg.updated_at || 'N/A'}</td>
-                    <td class="text-center">
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-primary btn-sm" onclick='initializeBomManager.openCopyBomModal(${fgDataString})'>Copy</button>
-                            <button class="btn btn-warning btn-sm" onclick='initializeBomManager.manageBom(${fgDataString})'>Edit</button> 
-                            <button class="btn btn-danger btn-sm" onclick='initializeBomManager.deleteBom(${fgDataString})'>Delete</button>
-                        </div>
-                    </td>`;
+                    <td class="text-end">${fg.updated_at || 'N/A'}</td>
+                `;
+                
                 fgListTableBody.appendChild(tr);
             });
         } else {
             fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
         }
+        updateBomBulkActionsVisibility();
     }
-
+    
     async function fetchParameterData(key, value) {
         if (!value) return;
         const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameter_by_key', 'GET', null, {[key]: value});
@@ -608,7 +641,22 @@ function initializeBomManager() {
             if (bomResult.success && bomResult.data.length > 0) {
                 bomResult.data.forEach(comp => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${comp.component_part_no}</td><td>${comp.quantity_required}</td><td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button></td>`;
+                    tr.innerHTML = `
+                        <td style="width: 40%;">${comp.component_part_no}</td>
+                        <td class="text-center" style="width: 40%;">
+                            <input type="number" class="form-control form-control-sm bom-quantity-input text-center bom-input-readonly w-50" 
+                                   value="${comp.quantity_required}" 
+                                   data-bom-id="${comp.bom_id}" 
+                                   min="1"
+                                   readonly>
+                        </td>
+                        <td class="text-center" style="width: 20%;">
+                            <div class="btn-group gap-2 justify-content-center">
+                                <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
+                                <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
+                            </div>
+                        </td>
+                    `;
                     modalBomTableBody.appendChild(tr);
                 });
             } else {
@@ -734,6 +782,37 @@ function initializeBomManager() {
         }
     }
 
+    function updateBomBulkActionsVisibility() {
+        const container = document.getElementById('bom-bulk-actions-container');
+        const selected = document.querySelectorAll('.bom-row-checkbox:checked');
+        if (selected.length > 0) {
+            container.classList.remove('d-none');
+        } else {
+            container.classList.add('d-none');
+        }
+    }
+
+    async function deleteSelectedBoms() {
+        const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
+        const bomsToDelete = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value.replace(/&apos;/g, "'")));
+        
+        if (bomsToDelete.length === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${bomsToDelete.length} selected BOM(s)?`)) return;
+
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_delete_bom', 'POST', { boms: bomsToDelete });
+            showToast(result.message, result.success ? '#28a745' : '#dc3545');
+            if (result.success) {
+                selectAllBomCheckbox.checked = false;
+                await loadAndRenderBomFgTable();
+            }
+        } finally {
+            hideSpinner();
+        }
+    }
+
     // --- Event Listeners ---
     let debounceTimer;
     createBomSapInput.addEventListener('input', () => {
@@ -760,6 +839,20 @@ function initializeBomManager() {
     importBomBtn?.addEventListener('click', () => bomImportFile?.click());
     bomImportFile?.addEventListener('change', handleBomImport);
     exportBomBtn?.addEventListener('click', exportBomToExcel);
+    
+    selectAllBomCheckbox.addEventListener('change', (e) => {
+        document.querySelectorAll('.bom-row-checkbox').forEach(cb => cb.checked = e.target.checked);
+        updateBomBulkActionsVisibility();
+    });
+
+    fgListTableBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('bom-row-checkbox')) {
+            updateBomBulkActionsVisibility();
+            if(!e.target.checked) selectAllBomCheckbox.checked = false;
+        }
+    });
+
+    deleteSelectedBomBtn.addEventListener('click', deleteSelectedBoms);
 
     createBomForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -772,8 +865,7 @@ function initializeBomManager() {
                 showToast('Finished Good found! Proceeding to Step 2.', '#28a745');
                 createBomModal.hide();
                 createBomForm.reset();
-                await loadBomForModal(result.data);
-                manageBomModal.show();
+                initializeBomManager.manageBom(result.data); // Use the public method
             } else {
                 showToast(result.message || 'Could not find a matching part.', '#dc3545');
             }
@@ -823,24 +915,65 @@ function initializeBomManager() {
         }
     });
 
-    modalBomTableBody.addEventListener('click', async (e) => {
-        if (e.target.dataset.action !== 'delete-comp') return;
-        const bomId = parseInt(e.target.dataset.compId);
-        if (confirm('Delete this component?')) {
-            showSpinner();
-            try {
-                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
-                showToast(result.message, result.success ? '#28a745' : '#dc3545');
-                if (result.success) {
-                    const currentBom = {
-                        fg_part_no: modalSelectedFgPartNo.value,
-                        line: modalSelectedFgLine.value,
-                        model: modalSelectedFgModel.value
-                    };
-                    await loadBomForModal(currentBom);
+    modalBomTableBody.addEventListener('input', (e) => {
+        if (e.target.classList.contains('bom-quantity-input')) {
+            clearTimeout(bomDebounceTimer);
+            const input = e.target;
+            const bomId = input.dataset.bomId;
+            const newQuantity = input.value;
+
+            if (!bomId || newQuantity === '' || newQuantity < 1) return;
+
+            bomDebounceTimer = setTimeout(async () => {
+                showSpinner();
+                try {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'update_bom_component', 'POST', {
+                        bom_id: bomId,
+                        quantity_required: newQuantity
+                    });
+                    if (!result.success) showToast(result.message, '#dc3545');
+                } finally {
+                    hideSpinner();
                 }
-            } finally {
-                hideSpinner();
+            }, 1000);
+        }
+    });
+
+    modalBomTableBody.addEventListener('click', async (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const tr = button.closest('tr');
+
+        if (action === 'delete-comp') {
+            const bomId = button.dataset.compId;
+            if (confirm('Delete this component?')) {
+                showSpinner();
+                try {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
+                    showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                    if (result.success) {
+                        await loadBomForModal(currentEditingBom);
+                    }
+                } finally {
+                    hideSpinner();
+                }
+            }
+        } else if (action === 'edit-comp') {
+            const input = tr.querySelector('.bom-quantity-input');
+            if (input.readOnly) {
+                input.readOnly = false;
+                input.classList.remove('bom-input-readonly');
+                button.textContent = 'Done';
+                button.classList.replace('btn-warning', 'btn-success');
+                input.focus();
+                input.select();
+            } else {
+                input.readOnly = true;
+                input.classList.add('bom-input-readonly');
+                button.textContent = 'Edit';
+                button.classList.replace('btn-success', 'btn-warning');
             }
         }
     });
@@ -863,17 +996,22 @@ function initializeBomManager() {
     });
     
     initializeBomManager.manageBom = (fg) => {
+        currentEditingBom = fg;
         manageBomModal.show();
         loadBomForModal(fg);
     };
 
     initializeBomManager.deleteBom = async (fg) => {
+        if (!fg) return;
         if (confirm(`Are you sure you want to delete the BOM for ${fg.fg_part_no} on Line ${fg.line}?`)) {
             showSpinner();
             try {
                 const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fg.fg_part_no, line: fg.line, model: fg.model });
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
-                if (result.success) await loadAndRenderBomFgTable();
+                if (result.success) {
+                    manageBomModal.hide();
+                    await loadAndRenderBomFgTable();
+                }
             } finally {
                 hideSpinner();
             }
@@ -881,6 +1019,7 @@ function initializeBomManager() {
     };
     
     initializeBomManager.openCopyBomModal = (fg) => {
+        if (!fg) return;
         document.getElementById('copySourceBomDisplay').value = `${fg.fg_part_no} (Line: ${fg.line})`;
         document.getElementById('copy_source_fg_part_no').value = fg.fg_part_no;
         document.getElementById('copy_source_line').value = fg.line;
@@ -888,6 +1027,22 @@ function initializeBomManager() {
         document.getElementById('target_fg_part_no').value = '';
         copyBomModal.show();
     };
+
+    const deleteBomFromModalBtn = document.getElementById('deleteBomFromModalBtn');
+    const copyBomFromModalBtn = document.getElementById('copyBomFromModalBtn');
+
+    deleteBomFromModalBtn.addEventListener('click', () => {
+        initializeBomManager.deleteBom(currentEditingBom);
+    });
+
+    copyBomFromModalBtn.addEventListener('click', () => {
+        if (currentEditingBom) {
+            manageBomModal.hide();
+            manageBomModalEl.addEventListener('hidden.bs.modal', () => {
+                initializeBomManager.openCopyBomModal(currentEditingBom);
+            }, { once: true });
+        }
+    });
 
     loadAndRenderBomFgTable();
     populateCreateBomDatalists();
@@ -899,7 +1054,7 @@ function initializeBomManager() {
  * @param {object} data - ข้อมูลของแถวที่ต้องการแก้ไข
  */
 function openEditModal(modalId, data) {
-    currentEditingParam = data; // ** NEW: เก็บข้อมูลที่กำลังแก้ไขไว้ในตัวแปร global
+    currentEditingParam = data;
     const modalElement = document.getElementById(modalId);
     if (!modalElement) return;
 
@@ -990,7 +1145,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bulkCreateVariantsBtn = document.getElementById('bulkCreateVariantsBtn');
     const bulkCreateVariantsForm = document.getElementById('bulkCreateVariantsForm');
 
-    // Event listener สำหรับปุ่ม "เลือกทั้งหมด"
     selectAllCheckbox.addEventListener('change', (event) => {
         const checkboxes = document.querySelectorAll('.row-checkbox');
         checkboxes.forEach(checkbox => {
@@ -999,7 +1153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBulkActionsVisibility();
     });
 
-    // Event listener สำหรับ checkbox ในแต่ละแถว (ใช้ event delegation)
     paramTableBody.addEventListener('change', (event) => {
         if (event.target.classList.contains('row-checkbox')) {
             updateBulkActionsVisibility();
@@ -1007,9 +1160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectAllCheckbox.checked = false;
             }
         }
-    });;
+    });
 
-    // Event listener สำหรับปุ่ม "ลบรายการที่เลือก"
     deleteSelectedBtn.addEventListener('click', deleteSelectedParams);
     bulkCreateVariantsBtn.addEventListener('click', openBulkCreateVariantsModal);
     bulkCreateVariantsForm.addEventListener('submit', bulkCreateVariants);
@@ -1017,16 +1169,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteFromModalBtn = document.getElementById('deleteFromModalBtn');
     const variantsFromModalBtn = document.getElementById('variantsFromModalBtn');
 
-    // Event Listener สำหรับปุ่ม Delete ใน Modal
     deleteFromModalBtn.addEventListener('click', () => {
         if (currentEditingParam && currentEditingParam.id) {
             const editModal = bootstrap.Modal.getInstance(document.getElementById('editParamModal'));
-            editModal.hide(); // ซ่อน Modal แก้ไขก่อน
+            editModal.hide();
             deleteStandardParam(currentEditingParam.id);
         }
     });
 
-    // Event Listener สำหรับปุ่ม Create Variants ใน Modal
     variantsFromModalBtn.addEventListener('click', () => {
         if (currentEditingParam) {
             const editModal = bootstrap.Modal.getInstance(document.getElementById('editParamModal'));
