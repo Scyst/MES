@@ -74,6 +74,7 @@ try {
             echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
             break;
 
+        // ** START: โค้ดใหม่ที่เพิ่มเข้ามา **
         case 'update_bom_component':
             $bom_id = $input['bom_id'] ?? 0;
             $quantity_required = $input['quantity_required'] ?? null;
@@ -82,6 +83,7 @@ try {
                 throw new Exception("BOM ID and a numeric Quantity are required.");
             }
 
+            // --- ตรวจสอบสิทธิ์ก่อนแก้ไข ---
             $findStmt = $pdo->prepare("SELECT line FROM {$bom_table} WHERE bom_id = ?");
             $findStmt->execute([$bom_id]);
             $bom_item = $findStmt->fetch();
@@ -91,6 +93,7 @@ try {
                 throw new Exception("BOM component not found.");
             }
 
+            // --- อัปเดตข้อมูล ---
             $sql = "UPDATE {$bom_table} SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$quantity_required, $currentUser['username'], $bom_id]);
@@ -98,6 +101,7 @@ try {
             logAction($pdo, $currentUser['username'], 'UPDATE BOM COMPONENT', "BOM_ID: $bom_id", "New Qty: $quantity_required");
             echo json_encode(['success' => true, 'message' => 'Component quantity updated.']);
             break;
+        // ** END: โค้ดใหม่ที่เพิ่มเข้ามา **
 
         case 'delete_bom_component':
             $bom_id = $input['bom_id'] ?? 0;
