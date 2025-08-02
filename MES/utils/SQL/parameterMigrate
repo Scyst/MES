@@ -1,0 +1,118 @@
+USE [IIOT_TOOLBOX];
+GO
+
+PRINT 'Starting Data Migration Script (Corrected Version)...';
+PRINT '---------------------------------';
+
+-- =================================================================
+-- Step 1: Migrate data for PRODUCTION tables
+-- =================================================================
+
+-- 1.1: Migrate unique SAP Numbers from PARAMETER to ITEMS
+PRINT 'Phase 1.1: Merging data into ITEMS table...';
+WITH SourceParameters AS (
+    SELECT 
+        sap_no, part_no, part_description, part_value,
+        ROW_NUMBER() OVER(PARTITION BY sap_no ORDER BY updated_at DESC, id DESC) as rn
+    FROM [dbo].[PARAMETER]
+    WHERE sap_no IS NOT NULL AND sap_no != ''
+)
+MERGE INTO [dbo].[ITEMS] AS Target
+USING (
+    SELECT sap_no, part_no, part_description, part_value FROM SourceParameters WHERE rn = 1
+) AS Source
+ON Target.sap_no = Source.sap_no
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (sap_no, part_no, part_description, part_value)
+    VALUES (Source.sap_no, Source.part_no, Source.part_description, Source.part_value)
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.part_no = Source.part_no,
+        Target.part_description = Source.part_description,
+        Target.part_value = Source.part_value;
+PRINT CAST(@@ROWCOUNT AS VARCHAR) + ' rows merged into ITEMS.';
+GO
+
+-- 1.2: Migrate manufacturing routes from PARAMETER to MANUFACTURING_ROUTES
+PRINT 'Phase 1.2: Merging data into MANUFACTURING_ROUTES table...';
+WITH SourceRoutes AS (
+    -- ** NEW: Added ROW_NUMBER() to handle duplicates **
+    SELECT
+        i.item_id, p.line, p.model, p.planned_output,
+        ROW_NUMBER() OVER(PARTITION BY i.item_id, p.line, p.model ORDER BY p.updated_at DESC, p.id DESC) as rn
+    FROM [dbo].[PARAMETER] p
+    JOIN [dbo].[ITEMS] i ON p.sap_no = i.sap_no
+)
+MERGE INTO [dbo].[MANUFACTURING_ROUTES] AS Target
+USING (
+    SELECT item_id, line, model, planned_output FROM SourceRoutes WHERE rn = 1
+) AS Source
+ON (Target.item_id = Source.item_id AND Target.line = Source.line AND Target.model = Source.model)
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (item_id, line, model, planned_output)
+    VALUES (Source.item_id, Source.line, Source.model, Source.planned_output)
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.planned_output = Source.planned_output,
+        Target.updated_at = GETDATE();
+PRINT CAST(@@ROWCOUNT AS VARCHAR) + ' rows merged into MANUFACTURING_ROUTES.';
+GO
+
+PRINT '---------------------------------';
+
+-- =================================================================
+-- Step 2: Migrate data for TEST tables
+-- =================================================================
+
+-- 2.1: Migrate unique SAP Numbers from PARAMETER_TEST to ITEMS_TEST
+PRINT 'Phase 2.1: Merging data into ITEMS_TEST table...';
+WITH SourceParametersTest AS (
+    SELECT 
+        sap_no, part_no, part_description, part_value,
+        ROW_NUMBER() OVER(PARTITION BY sap_no ORDER BY updated_at DESC, id DESC) as rn
+    FROM [dbo].[PARAMETER_TEST]
+    WHERE sap_no IS NOT NULL AND sap_no != ''
+)
+MERGE INTO [dbo].[ITEMS_TEST] AS Target
+USING (
+    SELECT sap_no, part_no, part_description, part_value FROM SourceParametersTest WHERE rn = 1
+) AS Source
+ON Target.sap_no = Source.sap_no
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (sap_no, part_no, part_description, part_value)
+    VALUES (Source.sap_no, Source.part_no, Source.part_description, Source.part_value)
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.part_no = Source.part_no,
+        Target.part_description = Source.part_description,
+        Target.part_value = Source.part_value;
+PRINT CAST(@@ROWCOUNT AS VARCHAR) + ' rows merged into ITEMS_TEST.';
+GO
+
+-- 2.2: Migrate manufacturing routes from PARAMETER_TEST to MANUFACTURING_ROUTES_TEST
+PRINT 'Phase 2.2: Merging data into MANUFACTURING_ROUTES_TEST table...';
+WITH SourceRoutesTest AS (
+    -- ** NEW: Added ROW_NUMBER() to handle duplicates **
+    SELECT
+        i.item_id, p.line, p.model, p.planned_output,
+        ROW_NUMBER() OVER(PARTITION BY i.item_id, p.line, p.model ORDER BY p.updated_at DESC, p.id DESC) as rn
+    FROM [dbo].[PARAMETER_TEST] p
+    JOIN [dbo].[ITEMS_TEST] i ON p.sap_no = i.sap_no
+)
+MERGE INTO [dbo].[MANUFACTURING_ROUTES_TEST] AS Target
+USING (
+    SELECT item_id, line, model, planned_output FROM SourceRoutesTest WHERE rn = 1
+) AS Source
+ON (Target.item_id = Source.item_id AND Target.line = Source.line AND Target.model = Source.model)
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (item_id, line, model, planned_output)
+    VALUES (Source.item_id, Source.line, Source.model, Source.planned_output)
+WHEN MATCHED THEN
+    UPDATE SET
+        Target.planned_output = Source.planned_output,
+        Target.updated_at = GETDATE();
+PRINT CAST(@@ROWCOUNT AS VARCHAR) + ' rows merged into MANUFACTURING_ROUTES_TEST.';
+GO
+
+PRINT '---------------------------------';
+PRINT 'Data Migration Script completed successfully.';
