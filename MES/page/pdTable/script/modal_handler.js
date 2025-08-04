@@ -1,8 +1,33 @@
 "use strict";
 
-let modalTriggerElement = null;
-const PD_API_URL = '../../api/pdTable/pdTableManage.php';
-const WIP_API_URL = '../../api/pdTable/wipManage.php';
+let currentlyEditingData = null;
+let wipAllItems = []; // Moved from wip_handler.js to be accessible here
+
+// --- Central function to populate datalists needed by modals ---
+async function populateModalDatalists() {
+    const result = await sendRequest(PD_API_URL, 'get_datalist_options', 'GET');
+    if (result.success) {
+        const lineDatalist = document.getElementById('lineDatalist');
+        const modelDatalist = document.getElementById('modelDatalist');
+        const partNoDatalist = document.getElementById('partNoDatalist');
+
+        if(lineDatalist) lineDatalist.innerHTML = result.lines.map(l => `<option value="${l}"></option>`).join('');
+        if(modelDatalist) modelDatalist.innerHTML = result.models.map(m => `<option value="${m}"></option>`).join('');
+        if(partNoDatalist) partNoDatalist.innerHTML = result.partNos.map(p => `<option value="${p}"></option>`).join('');
+    }
+    
+    const wipResult = await sendRequest(WIP_API_URL, 'get_initial_data', 'GET');
+     if (wipResult.success) {
+        wipAllItems = wipResult.items;
+        const locationSelect = document.getElementById('entry_location_id');
+        if (locationSelect) {
+            locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
+            wipResult.locations.forEach(loc => {
+                locationSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
+            });
+        }
+    }
+}
 
 //======================================================================
 // SECTION: UTILITY & HELPER FUNCTIONS
@@ -117,78 +142,38 @@ function handlePartNoValidation(formType) {
 // SECTION: MODAL OPENING FUNCTIONS
 //======================================================================
 
-async function openAddPartModal(triggerEl) {
-    modalTriggerElement = triggerEl;
-    const modal = document.getElementById('addPartModal');
-    if (!modal) return;
-
+function openAddPartModal() {
     document.getElementById('addPartForm')?.reset();
-    document.getElementById('addPartNoValidationIcon').innerHTML = '';
-    document.getElementById('addPartNoHelp').textContent = '';
-    updateModalDatalist('addModelList', []);
-    updateModalDatalist('addPartNoList', []);
-
     const now = new Date();
     const tzOffset = 7 * 60 * 60 * 1000;
     const localNow = new Date(now.getTime() + tzOffset);
-    modal.querySelector('input[name="log_date"]').value = localNow.toISOString().split('T')[0];
-    modal.querySelector('input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
-    modal.querySelector('input[name="end_time"]').value = modal.querySelector('input[name="start_time"]').value;
-
-    const lastData = JSON.parse(localStorage.getItem('lastEntryData'));
-    if (lastData) {
-        modal.querySelector('#addPartLine').value = lastData.line || '';
-        modal.querySelector('#addPartModel').value = lastData.model || '';
-        modal.querySelector('#addPartPartNo').value = lastData.part_no || '';
-    }
-
-    showBootstrapModal('addPartModal');
-    
-    await updateModelOptions('add');
-    await updatePartNoOptions('add');
-    handlePartNoValidation('add');
+    document.querySelector('#addPartModal input[name="log_date"]').value = localNow.toISOString().split('T')[0];
+    document.querySelector('#addPartModal input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
+    document.querySelector('#addPartModal input[name="end_time"]').value = document.querySelector('#addPartModal input[name="start_time"]').value;
+    new bootstrap.Modal(document.getElementById('addPartModal')).show();
 }
 
-async function openEditModal(rowData, triggerEl) {
-    modalTriggerElement = triggerEl; 
+function openEditPartModal(data) {
+    currentlyEditingData = data;
     const modal = document.getElementById('editPartModal');
-    if (!modal) return;
-
-    document.getElementById('editPartForm')?.reset();
-    document.getElementById('editPartNoValidationIcon').innerHTML = '';
-    document.getElementById('editPartNoHelp').textContent = '';
-    updateModalDatalist('editModelList', []);
-    updateModalDatalist('editPartNoList', []);
-
-    for (const key in rowData) {
-        const inputKey = key === 'log_time' ? 'end_time' : key;
-        const input = modal.querySelector(`#edit_${inputKey}`);
-        if (input) {
-            input.value = (key === 'log_time' || key === 'start_time') && typeof rowData[key] === 'string'
-                ? rowData[key].substring(0, 8)
-                : rowData[key];
-        }
+    for (const key in data) {
+        const input = modal.querySelector(`[name="${key}"]`);
+        if (input) input.value = data[key];
     }
-
-    showBootstrapModal('editPartModal');
-    
-    await updateModelOptions('edit');
-    await updatePartNoOptions('edit');
-    handlePartNoValidation('edit');
+    new bootstrap.Modal(modal).show();
 }
 
-function openAddEntryModal(triggerEl) {
-    modalTriggerElement = triggerEl;
-    const modal = document.getElementById('addEntryModal');
-    if (modal) {
-        const lastData = JSON.parse(localStorage.getItem('lastEntryData'));
-        if (lastData) {
-            modal.querySelector('input[name="line"]').value = lastData.line || '';
-            modal.querySelector('input[name="model"]').value = lastData.model || '';
-            modal.querySelector('input[name="part_no"]').value = lastData.part_no || '';
-        }
-    }
-    showBootstrapModal('addEntryModal');
+function openAddEntryModal() {
+    const modalId = 'addEntryModal';
+    const form = document.getElementById('addEntryForm');
+    if(form) form.reset();
+    
+    wipSelectedItem = null; 
+    document.getElementById('entry_item_id').value = '';
+    document.getElementById('entry_item_search').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
 }
 
 function openEditEntryModal(rowData, triggerEl) {
@@ -443,103 +428,78 @@ function openHistorySummaryModal() {
 // SECTION: DOMCONTENTLOADED - EVENT LISTENERS & FORM SUBMISSION
 //======================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
-
-    // --- Setup for Add/Edit Part Modals ---
-    const setupFormEventListeners = (formType) => {
-        const isAdd = formType === 'add';
-        const lineInput = document.getElementById(isAdd ? 'addPartLine' : 'edit_line');
-        const modelInput = document.getElementById(isAdd ? 'addPartModel' : 'edit_model');
-        const partNoInput = document.getElementById(isAdd ? 'addPartPartNo' : 'edit_part_no');
-
-        lineInput?.addEventListener('change', async () => {
-            if (modelInput) modelInput.value = '';
-            if (partNoInput) partNoInput.value = '';
-            await updateModelOptions(formType);
-            updatePartNoOptions(formType); 
-            handlePartNoValidation(formType);
-        });
-
-        modelInput?.addEventListener('change', async () => {
-            if (partNoInput) partNoInput.value = '';
-            await updatePartNoOptions(formType);
-            handlePartNoValidation(formType);
-        });
-
-        partNoInput?.addEventListener('input', () => {
-            handlePartNoValidation(formType);
-        });
-    };
-
-    setupFormEventListeners('add');
-    setupFormEventListeners('edit');
+/**
+ * ฟังก์ชันกลางสำหรับจัดการการ Submit ฟอร์มทั้งหมดในหน้านี้
+ */
+async function handleFormSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const action = form.dataset.action;
+    let endpoint = form.dataset.endpoint;
     
-    // --- Central Form Submission Handler ---
-    const handleFormSubmit = async (form, apiUrl, action, modalId, onSuccess) => {
-        if (!form) return;
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = Object.fromEntries(new FormData(form).entries());
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            showSpinner();
-            try {
-                const response = await fetch(`${apiUrl}?action=${action}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                showToast(result.message, result.success ? '#28a745' : '#dc3545');
-                if (result.success) {
-                    if (modalId === 'addPartModal' || modalId === 'addEntryModal') {
-                        localStorage.setItem('lastEntryData', JSON.stringify({
-                            line: payload.line, model: payload.model, part_no: payload.part_no
-                        }));
-                    }
-                    const modalElement = document.getElementById(modalId);
-                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (modalInstance) {
-                         modalElement.addEventListener('hidden.bs.modal', () => {
-                            if(onSuccess) onSuccess(); 
-                            if (modalTriggerElement) modalTriggerElement.focus(); 
-                        }, { once: true });
-                        modalInstance.hide();
-                    } else {
-                       if(onSuccess) onSuccess(); // Fallback
-                    }
-                }
-            } catch (error) {
-                console.error("Form submission error:", error);
-                showToast(`An error occurred while processing your request.`, '#dc3545');
-            } finally {
-                hideSpinner();
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    let apiAction = '';
+    let successCallback = null;
+
+    // ตรวจสอบ data-action ของฟอร์ม เพื่อเลือกว่าจะให้ทำงานอย่างไร
+    switch(action) {
+        case 'addPart':
+            apiAction = 'add_part';
+            endpoint = PD_API_URL;
+            successCallback = fetchPartsData;
+            break;
+        case 'editPart':
+            apiAction = 'update_part';
+            endpoint = PD_API_URL;
+            successCallback = () => fetchPartsData(currentPage);
+            break;
+        case 'addEntry':
+            // ** นี่คือ Logic ใหม่สำหรับระบบสต็อกกลาง **
+            apiAction = 'execute_receipt';
+            endpoint = WIP_API_URL;
+            if (!data.item_id) {
+                showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
+                return;
             }
-        });
-    };
+            successCallback = fetchReceiptHistory; // เรียกฟังก์ชันแสดงผลตารางใหม่
+            break;
+        case 'editEntry':
+            // ** Logic เก่ายังคงอยู่เหมือนเดิม **
+            apiAction = 'update_wip_entry';
+            endpoint = WIP_API_URL;
+            successCallback = () => fetchOldHistoryData(wipCurrentPage); // เรียกฟังก์ชันแสดงผลตารางเก่า
+            break;
+    }
 
-    // --- Link all forms to the handler ---
-    handleFormSubmit(document.getElementById('addPartForm'), PD_API_URL, 'add_part', 'addPartModal', () => {
-        if (typeof fetchPartsData === 'function') fetchPartsData(1);
-    });
+    if (!apiAction || !endpoint) {
+        showToast('Form configuration error.', 'var(--bs-danger)');
+        return;
+    }
 
-    handleFormSubmit(document.getElementById('editPartForm'), PD_API_URL, 'update_part', 'editPartModal', () => {
-        if (typeof fetchPartsData === 'function') fetchPartsData(window.currentPage || 1);
-    });
-    
-    const wipEntryForm = document.getElementById('wipEntryForm');
-    handleFormSubmit(wipEntryForm, WIP_API_URL, 'log_wip_entry', 'addEntryModal', () => {
-        if(wipEntryForm) wipEntryForm.reset();
-        if (document.getElementById('entry-history-pane')?.classList.contains('active')) {
-            if (typeof fetchHistoryData === 'function') fetchHistoryData();
+    showSpinner();
+    try {
+        const result = await sendRequest(endpoint, apiAction, 'POST', data);
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        if (result.success) {
+            const modalId = form.closest('.modal').id;
+            bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
+            if (successCallback && typeof successCallback === 'function') {
+                await successCallback();
+            }
         }
-    });
+    } finally {
+        hideSpinner();
+    }
+}
 
-    handleFormSubmit(document.getElementById('editWipEntryForm'), WIP_API_URL, 'update_wip_entry', 'editEntryModal', () => {
-        if (typeof fetchHistoryData === 'function') fetchHistoryData();
-    });
+// --- Main Event Listener ---
+document.addEventListener('DOMContentLoaded', () => {
+    populateModalDatalists();
+    setupEntryAutocomplete(); // เรียกใช้ฟังก์ชัน Autocomplete จาก wip_handler.js
 
-    handleFormSubmit(document.getElementById('adjustStockForm'), WIP_API_URL, 'adjust_stock', 'adjustStockModal', () => {
-        if (typeof fetchStockCountReport === 'function') fetchStockCountReport();
+    document.querySelectorAll('form[data-action]').forEach(form => {
+        form.addEventListener('submit', handleFormSubmit);
     });
 });

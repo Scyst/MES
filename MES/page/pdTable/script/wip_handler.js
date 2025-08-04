@@ -1,3 +1,116 @@
+"use strict";
+
+const WIP_API_ENDPOINT = '../../api/pdTable/wipManage.php';
+// --- State variables for NEW inventory system ---
+let wipAllItems = []; 
+let wipSelectedItem = null;
+let receiptHistoryCurrentPage = 1;
+
+// --- State variables for OLD WIP system ---
+let wipCurrentPage = 1; 
+const WIP_ROWS_PER_PAGE = 50;
+
+
+// =================================================================
+// SECTION: NEW INVENTORY SYSTEM FUNCTIONS (for Entry History Tab)
+// =================================================================
+
+/**
+ * Sets up the autocomplete search box in the "Add Entry" modal.
+ */
+function setupEntryAutocomplete() {
+    const searchInput = document.getElementById('entry_item_search');
+    if (!searchInput) return;
+
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    searchInput.addEventListener('input', () => {
+        const value = searchInput.value.toLowerCase();
+        resultsWrapper.innerHTML = '';
+        wipSelectedItem = null;
+        document.getElementById('entry_item_id').value = '';
+
+        if (value.length < 2) return;
+
+        const filteredItems = wipAllItems.filter(item => 
+            item.sap_no.toLowerCase().includes(value) ||
+            item.part_no.toLowerCase().includes(value) ||
+            (item.part_description || '').toLowerCase().includes(value)
+        ).slice(0, 10);
+
+        filteredItems.forEach(item => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'autocomplete-item';
+            resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
+            resultItem.addEventListener('click', () => {
+                searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                wipSelectedItem = item;
+                document.getElementById('entry_item_id').value = item.item_id;
+                resultsWrapper.innerHTML = '';
+            });
+            resultsWrapper.appendChild(resultItem);
+        });
+        resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+}
+
+
+/**
+ * Fetches the receipt history from the new STOCK_TRANSACTIONS table.
+ */
+async function fetchReceiptHistory(page = 1) {
+    receiptHistoryCurrentPage = page;
+    showSpinner();
+    
+    const params = { page: receiptHistoryCurrentPage };
+
+    try {
+        const result = await sendRequest(WIP_API_ENDPOINT, 'get_receipt_history', 'GET', null, params);
+        if (result.success) {
+            renderReceiptHistoryTable(result.data);
+            renderPagination('entryHistoryPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchReceiptHistory);
+        } else {
+            document.getElementById('entryHistoryTableBody').innerHTML = `<tr><td colspan="8" class="text-center text-danger">${result.message}</td></tr>`;
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+/**
+ * Renders the new receipt history table.
+ */
+function renderReceiptHistoryTable(data) {
+    const tbody = document.getElementById('entryHistoryTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No receipt history found in the new system.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td>${row.to_location || 'N/A'}</td>
+            <td>${row.lot_no || ''}</td>
+            <td>${row.created_by || 'N/A'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
  */
@@ -364,3 +477,29 @@ async function fetchStockCountReport(page = 1) {
         hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Listener for the NEW Entry History Tab
+    const entryHistoryTab = document.getElementById('entry-history-tab'); 
+    if (entryHistoryTab) {
+        entryHistoryTab.addEventListener('shown.bs.tab', () => {
+            fetchReceiptHistory(1); // Calls the NEW function
+        }, { once: true }); 
+    }
+    
+    // Listeners for OLD Report Tabs
+    const wipTab = document.getElementById('wip-tab');
+    if(wipTab){
+        wipTab.addEventListener('shown.bs.tab', () => fetchWipReport(1), { once: true });
+    }
+
+    const wipLotTab = document.getElementById('wip-lot-tab');
+    if(wipLotTab){
+        wipLotTab.addEventListener('shown.bs.tab', () => fetchWipReportByLot(1), { once: true });
+    }
+
+    const stockTab = document.getElementById('stock-inventory-tab');
+    if (stockTab) {
+        stockTab.addEventListener('shown.bs.tab', () => fetchStockCountReport(1), { once: true });
+    }
+});

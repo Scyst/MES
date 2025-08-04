@@ -13,11 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
-$parts_table = $is_development ? 'PARTS_TEST'       : 'PARTS';
-$param_table = $is_development ? 'PARAMETER_TEST'   : 'PARAMETER';
-$wip_table   = $is_development ? 'WIP_ENTRIES_TEST' : 'WIP_ENTRIES';
-// =================================================================
+$is_development = true;
+$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
+$items_table = $is_development ? 'ITEMS_TEST' : 'ITEMS';
+$onhand_table = $is_development ? 'INVENTORY_ONHAND_TEST' : 'INVENTORY_ONHAND';
+$transactions_table = $is_development ? 'STOCK_TRANSACTIONS_TEST' : 'STOCK_TRANSACTIONS';
+$users_table = $is_development ? 'USERS_TEST' : 'USERS';
+$parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
+$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+$wip_table = $is_development ? 'WIP_ENTRIES_TEST' : 'WIP_ENTRIES';
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -25,6 +29,74 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
+
+        // --- NEW ACTIONS FOR INVENTORY SYSTEM ---
+        case 'get_initial_data': // Action ใหม่สำหรับดึงข้อมูลเริ่มต้นสำหรับ Modal
+            $locationsStmt = $pdo->query("SELECT location_id, location_name FROM {$locations_table} WHERE is_active = 1 ORDER BY location_name");
+            $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM {$items_table} ORDER BY sap_no");
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
+            break;
+
+        case 'execute_receipt': // Action ใหม่สำหรับบันทึกการรับของ (IN)
+            $item_id = $input['item_id'] ?? 0;
+            $location_id = $input['location_id'] ?? 0;
+            $quantity = $input['quantity'] ?? 0;
+            $lot_no = $input['lot_no'] ?? null;
+            $notes = $input['notes'] ?? null;
+            
+            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0) {
+                throw new Exception("Invalid data provided for receipt.");
+            }
+
+            $pdo->beginTransaction();
+            
+            // 1. เพิ่มสต็อก (ถ้าไม่มีให้สร้างใหม่)
+            $mergeSql = "MERGE {$onhand_table} AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+            $mergeStmt = $pdo->prepare($mergeSql);
+            $mergeStmt->execute([$item_id, $location_id, $quantity, $item_id, $location_id, $quantity]);
+
+            // 2. บันทึก Transaction
+            $transSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
+            $transStmt = $pdo->prepare($transSql);
+            $transStmt->execute([$item_id, $quantity, $location_id, $currentUser['id'], $notes, $lot_no]);
+
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'STOCK RECEIPT', $item_id, "Qty: {$quantity}, To: {$location_id}, Lot: {$lot_no}");
+            echo json_encode(['success' => true, 'message' => 'Stock receipt logged successfully.']);
+            break;
+
+        case 'get_receipt_history': // Action ใหม่สำหรับดึงประวัติการรับของ
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+            
+            $totalSql = "SELECT COUNT(*) FROM {$transactions_table} WHERE transaction_type = 'RECEIPT'";
+            $total = (int)$pdo->query($totalSql)->fetchColumn();
+
+            $dataSql = "
+                SELECT t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity, loc_to.location_name AS to_location, u.username AS created_by, t.reference_id as lot_no
+                FROM {$transactions_table} t
+                JOIN {$items_table} i ON t.parameter_id = i.item_id
+                JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN {$users_table} u ON t.created_by_user_id = u.id
+                WHERE t.transaction_type = 'RECEIPT'
+                ORDER BY t.transaction_timestamp DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->bindValue(1, (int)$startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue(2, (int)$limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
+            break;
+            
         case 'log_wip_entry':
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
@@ -604,8 +676,10 @@ try {
             throw new Exception("Invalid action specified.");
     }
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    error_log("Error in wipManage.php: " . $e->getMessage());
 }
 ?>
