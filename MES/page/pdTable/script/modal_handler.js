@@ -1,8 +1,8 @@
 "use strict";
 
 let modalTriggerElement = null;
-const PD_API_URL = '../../api/pdTable/pdTableManage.php';
-const WIP_API_URL = '../../api/pdTable/wipManage.php';
+const PD_API_URL = 'api/pdTableManage.php';
+const WIP_API_URL = 'api/wipManage.php';
 
 //======================================================================
 // SECTION: UTILITY & HELPER FUNCTIONS

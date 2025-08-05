@@ -1,7 +1,7 @@
 //-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
-const API_URL = '../../api/pdTable/pdTableManage.php';
+const API_URL = 'api/pdTableManage.php';
 
 function saveFiltersToLocalStorage() {
     const filters = {

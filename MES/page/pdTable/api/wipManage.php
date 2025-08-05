@@ -1,9 +1,9 @@
 <?php
 // api/pdTable/wipManage.php
 
-require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../../auth/check_auth.php';
-require_once __DIR__ . '/../logger.php';
+require_once __DIR__ . '/../../../api/db.php';
+require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../../api/logger.php';
 
 // ส่วนของ CSRF Token Check (เหมือนเดิม)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

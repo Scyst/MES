@@ -1,72 +1,4 @@
 /**
- * ฟังก์ชันสำหรับ Export ข้อมูลที่แสดงในตารางเป็นไฟล์ PDF
- */
-/*
-async function exportToPDF() {
-    //-- โหลด Library jsPDF และเตรียม Document --
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    //-- ตรวจสอบว่า Plugin 'autoTable' ถูกโหลดแล้วหรือยัง --
-    if (!doc.autoTable) {
-        showToast("jsPDF AutoTable plugin not loaded.", '#dc3545');
-        return;
-    }
-
-    //-- รวบรวมค่า Filter ปัจจุบันเพื่อดึงข้อมูลทั้งหมด --
-    const params = new URLSearchParams({
-        action: 'get_parts',
-        startDate: document.getElementById("filterStartDate").value,
-        endDate: document.getElementById("filterEndDate").value,
-        line: document.getElementById("filterLine")?.value.trim() || '',
-        model: document.getElementById("filterModel")?.value.trim() || '',
-        part_no: document.getElementById("filterPartNo")?.value.trim() || '',
-        lot_no: document.getElementById("filterLotNo")?.value.trim() || '',
-        count_type: document.getElementById("filterCountType")?.value.trim() || '',
-        page: 1,
-        limit: 100000 //-- ดึงข้อมูลทั้งหมดโดยไม่แบ่งหน้า --
-    });
-    
-    //-- เรียก API เพื่อดึงข้อมูล --
-    const response = await fetch(`../../api/pdTable/pdTableManage.php?${params.toString()}`);
-    const result = await response.json();
-
-    if (!result.success || result.data.length === 0) {
-        showToast("Failed to export data or no data found.", '#ffc107');
-        return;
-    }
-
-    //-- เตรียมข้อมูล Header และ Body สำหรับตารางใน PDF --
-    const headers = [["Date", "Time", "Line", "Model", "Part No.", "Lot No.", "Quantity", "Type"]];
-    const rows = result.data.map(row => [
-        row.log_date,
-        row.log_time,
-        row.line,
-        row.model,
-        row.part_no,
-        row.lot_no,
-        row.count_value,
-        row.count_type,
-    ]);
-
-    //-- สร้างเอกสาร PDF --
-    doc.setFontSize(16);
-    doc.text("Filtered Production History", 14, 16);
-    doc.autoTable({
-        head: headers,
-        body: rows,
-        startY: 20,
-        headStyles: { fillColor: [0, 123, 255], halign: 'center' },
-        bodyStyles: { halign: 'center' },
-        theme: 'striped',
-    });
-
-    //-- สั่งดาวน์โหลดไฟล์ PDF --
-    doc.save("Production_History.pdf");
-}
-*/
-
-/**
  * ฟังก์ชันสำหรับ Export ข้อมูลทั้งหมด (Raw Data, Summary, Grand Total) เป็นไฟล์ Excel แบบหลาย Sheet
  */
 async function exportToExcel() {
@@ -89,7 +21,7 @@ async function exportToExcel() {
 
     try {
         //-- เรียก API ซึ่งจะคืนค่าทั้ง Raw Data, Summary, และ Grand Total --
-        const response = await fetch(`../../api/pdTable/pdTableManage.php?${params.toString()}`);
+        const response = await fetch(`api/pdTableManage.php?${params.toString()}`);
         const result = await response.json();
 
         if (!result.success || result.data.length === 0) {
@@ -213,7 +145,7 @@ async function exportHistoryToExcel() {
 
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?${params.toString()}`);
+        const response = await fetch(`api/wipManage.php?${params.toString()}`);
         const result = await response.json();
 
         // ========== แก้ไขจุดที่ 2 ==========

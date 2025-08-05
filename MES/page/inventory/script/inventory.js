@@ -3,8 +3,7 @@
 // =================================================================
 // SECTION: GLOBAL VARIABLES & CONSTANTS
 // =================================================================
-const PD_API_URL = 'api/productionApi.php';
-const WIP_API_URL = 'api/stockApi.php';
+const INVENTORY_API_URL = 'api/inventoryManage.php';
 const ROWS_PER_PAGE = 50;
 
 // State variables for different sections/tabs
@@ -112,7 +111,7 @@ async function fetchReceiptHistory(page = 1) {
     showSpinner();
     
     try {
-        const result = await sendRequest(WIP_API_URL, 'get_receipt_history', 'GET', null, { page });
+        const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, { page });
         if (result.success) {
             renderReceiptHistoryTable(result.data);
             renderPagination('entryHistoryPagination', result.total, result.page, ROWS_PER_PAGE, fetchReceiptHistory);
@@ -207,7 +206,7 @@ async function fetchProductionHistory(page = 1) {
     };
 
     try {
-        const result = await sendRequest(PD_API_URL, 'get_production_history', 'GET', null, params);
+        const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
         if (result.success) {
             renderProductionHistoryTable(result.data);
             renderPagination('paginationControls', result.total, result.page, ROWS_PER_PAGE, fetchProductionHistory);
@@ -263,7 +262,7 @@ async function fetchStockInventoryReport(page = 1) {
         const searchTerm = document.getElementById('filterPartNo').value; 
         
         // ส่งค่าไปให้ Backend โดยใช้ชื่อ parameter ว่า 'search_term'
-        const result = await sendRequest(WIP_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search_term: searchTerm });
+        const result = await sendRequest(INVENTORY_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search_term: searchTerm });
         
         if (result.success) {
             renderStockInventoryTable(result.data);
@@ -308,7 +307,7 @@ async function fetchWipInventoryReport(page = 1) {
             part_no: document.getElementById('filterPartNo').value,
             location: document.getElementById('filterLine').value 
         };
-        const result = await sendRequest(WIP_API_URL, 'get_wip_inventory_report', 'GET', null, params);
+        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_inventory_report', 'GET', null, params);
         if (result.success) {
             renderWipInventoryTable(result.data);
             renderPagination('wipReportPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipInventoryReport);
@@ -345,7 +344,7 @@ function renderWipInventoryTable(data) {
 // SECTION: MODAL HANDLING
 // =================================================================
 async function populateModalDatalists() {
-    const wipResult = await sendRequest(WIP_API_URL, 'get_initial_data', 'GET');
+    const wipResult = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
      if (wipResult.success) {
         allItems = wipResult.items;
         const inLocationSelect = document.getElementById('entry_location_id');
@@ -405,7 +404,7 @@ async function handleFormSubmit(event) {
     switch(action) {
         case 'addPart':
             apiAction = 'execute_production';
-            endpoint = PD_API_URL;
+            endpoint = INVENTORY_API_URL;
             if (!data.item_id) {
                 showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
                 return;
@@ -414,7 +413,7 @@ async function handleFormSubmit(event) {
             break;
         case 'addEntry':
             apiAction = 'execute_receipt';
-            endpoint = WIP_API_URL;
+            endpoint = INVENTORY_API_URL;
             if (!data.item_id) {
                 showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
                 return;
@@ -423,12 +422,12 @@ async function handleFormSubmit(event) {
             break;
         /*case 'editEntry':
             apiAction = 'update_wip_entry';
-            endpoint = WIP_API_URL;
+            endpoint = INVENTORY_API_URL;
             successCallback = () => fetchOldHistoryData(wipCurrentPage);
             break;
         case 'editPart':
             apiAction = 'update_part';
-            endpoint = PD_API_URL;
+            endpoint = INVENTORY_API_URL;
             successCallback = () => fetchPartsData(currentPage);
             break;*/
         // NOTE: editPart and editEntry logic will be added when those modals are refactored

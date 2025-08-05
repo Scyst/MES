@@ -17,7 +17,7 @@ async function fetchWipReport(page = 1) {
 
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
+        const response = await fetch(`api/wipManage.php?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -96,7 +96,7 @@ async function fetchWipReportByLot(page = 1) {
 
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
+        const response = await fetch(`api/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -176,7 +176,7 @@ async function fetchHistoryData(page = 1) {
 
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
+        const response = await fetch(`api/wipManage.php?action=get_wip_history&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
@@ -250,7 +250,7 @@ async function handleDeleteEntry(entryId, currentPage) {
     
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch('../../api/pdTable/wipManage.php?action=delete_wip_entry', {
+        const response = await fetch('api/wipManage.php?action=delete_wip_entry', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
             body: JSON.stringify({ entry_id: entryId })
@@ -305,7 +305,7 @@ async function fetchStockCountReport(page = 1) {
 
     showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_stock_count&${params.toString()}`);
+        const response = await fetch(`api/wipManage.php?action=get_stock_count&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
