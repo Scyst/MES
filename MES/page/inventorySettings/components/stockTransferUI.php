@@ -1,22 +1,18 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <button class="btn btn-success" id="addTransferBtn"><i class="fas fa-plus"></i> New Transfer</button>
-</div>
-
-<div class="row g-2 mb-3">
-    <div class="col-md">
-        <input type="text" class="form-control" id="filterPartNo" placeholder="Filter by Part No...">
+<div class="row my-3 align-items-center sticky-bar py-3">
+    <div class="col-md-8">
+        <div class="filter-controls-wrapper">
+            <input type="text" class="form-control" id="filterPartNo" placeholder="Filter by Part No...">
+            <input type="text" class="form-control" id="filterFromLocation" placeholder="Filter by From Location...">
+            <input type="text" class="form-control" id="filterToLocation" placeholder="Filter by To Location...">
+            <input type="date" class="form-control" id="filterStartDate">
+            <span>-</span>
+            <input type="date" class="form-control" id="filterEndDate">
+        </div>
     </div>
-    <div class="col-md">
-        <input type="text" class="form-control" id="filterFromLocation" placeholder="Filter by From Location...">
-    </div>
-    <div class="col-md">
-        <input type="text" class="form-control" id="filterToLocation" placeholder="Filter by To Location...">
-    </div>
-    <div class="col-md">
-        <input type="date" class="form-control" id="filterStartDate">
-    </div>
-    <div class="col-md">
-        <input type="date" class="form-control" id="filterEndDate">
+    <div class="col-md-4">
+        <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-success" id="addTransferBtn"><i class="fas fa-plus"></i> New Transfer</button>
+        </div>
     </div>
 </div>
 

@@ -1,5 +1,11 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <button class="btn btn-success" id="addLocationBtn"><i class="fas fa-plus"></i> Add New Location</button>
+<div class="row my-3 align-items-center sticky-bar py-3">
+    <div class="col-md-8">
+    </div>
+    <div class="col-md-4">
+        <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-success" id="addLocationBtn"><i class="fas fa-plus"></i> Add New Location</button>
+        </div>
+    </div>
 </div>
 
 <div class="table-responsive">

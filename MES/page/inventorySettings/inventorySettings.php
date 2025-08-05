@@ -40,7 +40,7 @@
             </li>
         </ul>
 
-        <div class="tab-content pt-3" id="settingsTabContent">
+        <div class="tab-content" id="settingsTabContent">
             <div class="tab-pane fade show active" id="locations-pane" role="tabpanel">
                 <?php include('components/locationsUI.php'); ?>
             </div>
