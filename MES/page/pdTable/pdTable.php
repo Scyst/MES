@@ -273,11 +273,12 @@
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>" defer></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>" defer></script>
     <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
-    <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
-    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
-    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 
+    
     <script src="script/wip_handler.js?v=<?php echo filemtime('script/wip_handler.js'); ?>" defer></script> 
-
+    <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
+    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script> 
+    
     <script defer>
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();

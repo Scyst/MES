@@ -3,6 +3,8 @@
 const PD_API_URL = '../../api/pdTable/pdTableManage.php';
 const WIP_API_URL = '../../api/pdTable/wipManage.php';
 let currentlyEditingData = null;
+let outAllItems = []; // ** NEW: Used for "OUT" modal **
+let outSelectedItem = null; // ** NEW: Tracks selected item for "OUT" modal *
 
 // --- ฟังก์ชันสำหรับดึงข้อมูลเริ่มต้นสำหรับ Modal ทั้งหมดในหน้านี้ ---
 async function populateModalDatalists() {
@@ -18,32 +20,92 @@ async function populateModalDatalists() {
         if(partNoDatalist) partNoDatalist.innerHTML = result.partNos.map(p => `<option value="${p}"></option>`).join('');
     }
     
-    // 2. ดึงข้อมูลสำหรับ Modal ใหม่ (IN)
+    // 2. ดึงข้อมูลสำหรับ Modal ใหม่ (IN & OUT)
     const wipResult = await sendRequest(WIP_API_URL, 'get_initial_data', 'GET');
      if (wipResult.success) {
-        wipAllItems = wipResult.items; // ส่งค่าไปให้ตัวแปร global ใน wip_handler.js
-        const locationSelect = document.getElementById('entry_location_id');
-        if (locationSelect) {
-            locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
-            wipResult.locations.forEach(loc => {
-                locationSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
-            });
+        wipAllItems = wipResult.items;
+        outAllItems = wipResult.items; // Use the same item list for the OUT modal
+        
+        const inLocationSelect = document.getElementById('entry_location_id');
+        const outLocationSelect = document.getElementById('out_location_id');
+        
+        const optionsHtml = wipResult.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+
+        if (inLocationSelect) {
+            inLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+        if (outLocationSelect) {
+            outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
     }
 }
 
+// --- Autocomplete for Production (OUT) Modal ---
+function setupProductionAutocomplete() {
+    const searchInput = document.getElementById('out_item_search');
+    if (!searchInput) return;
+
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    searchInput.addEventListener('input', () => {
+        const value = searchInput.value.toLowerCase();
+        resultsWrapper.innerHTML = '';
+        outSelectedItem = null;
+        document.getElementById('out_item_id').value = '';
+
+        if (value.length < 2) return;
+
+        const filteredItems = outAllItems.filter(item => 
+            item.sap_no.toLowerCase().includes(value) ||
+            item.part_no.toLowerCase().includes(value) ||
+            (item.part_description || '').toLowerCase().includes(value)
+        ).slice(0, 10);
+
+        filteredItems.forEach(item => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'autocomplete-item';
+            resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
+            resultItem.addEventListener('click', () => {
+                searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                outSelectedItem = item;
+                document.getElementById('out_item_id').value = item.item_id;
+                resultsWrapper.innerHTML = '';
+            });
+            resultsWrapper.appendChild(resultItem);
+        });
+        resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+}
+
 // --- ฟังก์ชันสำหรับเปิด Modal ---
 
-// ฟังก์ชันสำหรับ "ขาออก" (OUT) - ยังคงเหมือนเดิม
 function openAddPartModal() {
-    document.getElementById('addPartForm')?.reset();
+    const modalId = 'addPartModal';
+    const form = document.getElementById('addPartForm');
+    if(form) form.reset();
+    
+    // รีเซ็ตค่าที่เลือกไว้จาก Autocomplete
+    outSelectedItem = null; 
+    document.getElementById('out_item_id').value = '';
+    document.getElementById('out_item_search').value = '';
+
+    // ตั้งค่าเวลาเริ่มต้น
     const now = new Date();
     const tzOffset = 7 * 60 * 60 * 1000;
     const localNow = new Date(now.getTime() + tzOffset);
-    document.querySelector('#addPartModal input[name="log_date"]').value = localNow.toISOString().split('T')[0];
     document.querySelector('#addPartModal input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
     document.querySelector('#addPartModal input[name="end_time"]').value = document.querySelector('#addPartModal input[name="start_time"]').value;
-    new bootstrap.Modal(document.getElementById('addPartModal')).show();
+    
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
 }
 
 function openEditPartModal(data) {
@@ -435,6 +497,9 @@ function openHistorySummaryModal() {
 /**
  * ฟังก์ชันกลางสำหรับจัดการการ Submit ฟอร์มทั้งหมดในหน้านี้
  */
+/**
+ * ฟังก์ชันกลางสำหรับจัดการการ Submit ฟอร์มทั้งหมดในหน้านี้
+ */
 async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -447,12 +512,16 @@ async function handleFormSubmit(event) {
     let apiAction = '';
     let successCallback = null;
 
-    // ตรวจสอบ data-action ของฟอร์ม เพื่อเลือกว่าจะให้ทำงานอย่างไร
     switch(action) {
         case 'addPart':
-            apiAction = 'add_part';
+            // ** นี่คือ Logic ใหม่สำหรับระบบสต็อกกลาง **
+            apiAction = 'execute_production';
             endpoint = PD_API_URL;
-            successCallback = fetchPartsData;
+            if (!data.item_id) {
+                showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
+                return;
+            }
+            successCallback = fetchPartsData; // This will be changed to fetchProductionHistory later
             break;
         case 'editPart':
             apiAction = 'update_part';
@@ -460,20 +529,18 @@ async function handleFormSubmit(event) {
             successCallback = () => fetchPartsData(currentPage);
             break;
         case 'addEntry':
-            // ** นี่คือ Logic ใหม่สำหรับระบบสต็อกกลาง **
             apiAction = 'execute_receipt';
             endpoint = WIP_API_URL;
             if (!data.item_id) {
                 showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
                 return;
             }
-            successCallback = fetchReceiptHistory; // เรียกฟังก์ชันแสดงผลตารางใหม่
+            successCallback = fetchReceiptHistory;
             break;
         case 'editEntry':
-            // ** Logic เก่ายังคงอยู่เหมือนเดิม **
             apiAction = 'update_wip_entry';
             endpoint = WIP_API_URL;
-            successCallback = () => fetchOldHistoryData(wipCurrentPage); // เรียกฟังก์ชันแสดงผลตารางเก่า
+            successCallback = () => fetchOldHistoryData(wipCurrentPage);
             break;
     }
 
@@ -501,9 +568,9 @@ async function handleFormSubmit(event) {
 // --- Main Event Listener ---
 document.addEventListener('DOMContentLoaded', () => {
     populateModalDatalists();
-    setupEntryAutocomplete(); // เรียกใช้ฟังก์ชัน Autocomplete จาก wip_handler.js
+    setupEntryAutocomplete(); // This function is in wip_handler.js
+    setupProductionAutocomplete(); 
 
-    // ผูก Event Listener ให้กับทุกฟอร์มในหน้านี้
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });

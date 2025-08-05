@@ -17,19 +17,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // =================================================================
 // DEVELOPMENT SWITCH
-$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
+$is_development = true;
+$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
+$items_table = $is_development ? 'ITEMS_TEST' : 'ITEMS';
+$onhand_table = $is_development ? 'INVENTORY_ONHAND_TEST' : 'INVENTORY_ONHAND';
+$transactions_table = $is_development ? 'STOCK_TRANSACTIONS_TEST' : 'STOCK_TRANSACTIONS';
+$users_table = $is_development ? 'USERS_TEST' : 'USERS';
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-$bom_table = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
-$users_table = $is_development ? 'USERS_TEST' : 'USERS'; // ** NEW **
-// =================================================================
+$bom_table   = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
 
 
-$action = $_REQUEST['action'] ?? 'get_parts';
+$action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 if (empty($input) && !empty($_POST)) {
     $input = $_POST;
 }
+$currentUser = $_SESSION['user'];
 
 function findBomComponents($pdo, $part_no, $line, $model) {
     global $bom_table;
@@ -43,6 +47,76 @@ try {
     $currentUser = $_SESSION['user'];
 
     switch ($action) {
+        case 'execute_production':
+            $item_id = $input['item_id'] ?? 0;
+            $location_id = $input['location_id'] ?? 0;
+            $quantity = $input['quantity'] ?? 0;
+            $count_type = $input['count_type'] ?? '';
+            $lot_no = $input['lot_no'] ?? null;
+            $notes = $input['notes'] ?? null;
+
+            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type)) {
+                throw new Exception("Invalid data provided for production logging.");
+            }
+
+            $pdo->beginTransaction();
+
+            // Step 1: Record the production output (FG, NG, etc.)
+            // เพิ่มสต็อกของที่ผลิตเสร็จ (ไม่ว่าจะเป็น FG, NG, หรืออื่นๆ)
+            $mergeProdSql = "MERGE {$onhand_table} AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+            $mergeProdStmt = $pdo->prepare($mergeProdSql);
+            $mergeProdStmt->execute([$item_id, $location_id, $quantity, $item_id, $location_id, $quantity]);
+
+            // บันทึก Transaction การผลิต
+            $prodTransSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $prodTransStmt = $pdo->prepare($prodTransSql);
+            $prodTransStmt->execute([$item_id, $quantity, 'PRODUCTION_' . $count_type, $location_id, $currentUser['id'], $notes, $lot_no]);
+
+            // Step 2: If it's a Finished Good (FG), consume components based on BOM
+            if ($count_type === 'FG') {
+                // ค้นหา BOM ของ Item ที่ผลิต
+                $bomSql = "SELECT i_comp.item_id as component_item_id, b.quantity_required 
+                           FROM {$bom_table} b
+                           JOIN {$items_table} i_fg ON b.fg_part_no = i_fg.part_no -- This might need adjustment based on your BOM structure
+                           JOIN {$items_table} i_comp ON b.component_part_no = i_comp.part_no -- This might need adjustment
+                           WHERE i_fg.item_id = ?";
+                // This BOM lookup logic may need to be more complex depending on how BOMs are defined (e.g., by line/model)
+                // For now, we assume a simple item_id to components link.
+                $bomStmt = $pdo->prepare($bomSql);
+                $bomStmt->execute([$item_id]);
+                $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($components)) {
+                    $consumeSql = "UPDATE {$onhand_table} SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
+                    $consumeStmt = $pdo->prepare($consumeSql);
+                    
+                    $consumeTransSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?)";
+                    $consumeTransStmt = $pdo->prepare($consumeTransSql);
+
+                    foreach ($components as $comp) {
+                        $qty_to_consume = $quantity * (float)$comp['quantity_required'];
+                        $component_item_id = $comp['component_item_id'];
+
+                        // ลดสต็อกวัตถุดิบ
+                        $consumeStmt->execute([$qty_to_consume, $component_item_id, $location_id, $qty_to_consume]);
+                        
+                        if ($consumeStmt->rowCount() == 0) {
+                            $pdo->rollBack();
+                            throw new Exception("Insufficient stock for a component (Item ID: {$component_item_id}) at the production location.");
+                        }
+
+                        // บันทึก Transaction การเบิกใช้
+                        $consume_note = "Auto-consumed for production of Item ID: {$item_id}, Lot: {$lot_no}";
+                        $consumeTransStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no]);
+                    }
+                }
+            }
+
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
+            echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
+            break;
+
         case 'get_parts':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
@@ -425,8 +499,10 @@ try {
             break;
     }
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    error_log("Error in pdTableManage.php: " . $e->getMessage());
 }
 ?>
