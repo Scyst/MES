@@ -48,7 +48,7 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
 async function loadLocations() {
     showSpinner();
     try {
-        const result = await sendRequest('get_locations', 'GET');
+        const result = await sendRequest(LOCATIONS_API, 'get_locations', 'GET');
         const tbody = document.getElementById('locationsTableBody');
         tbody.innerHTML = '';
 
@@ -114,7 +114,7 @@ async function handleLocationFormSubmit(event) {
 
     showSpinner();
     try {
-        const result = await sendRequest('save_location', 'POST', data);
+        const result = await sendRequest(LOCATIONS_API, 'save_location', 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
         if (result.success) {
             bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
@@ -131,7 +131,7 @@ async function deleteLocation() {
     if (confirm(`Are you sure you want to delete the location "${currentEditingLocation.location_name}"? This action cannot be undone.`)) {
         showSpinner();
         try {
-            const result = await sendRequest('delete_location', 'POST', { location_id: currentEditingLocation.location_id });
+            const result = await sendRequest(LOCATIONS_API, 'delete_location', 'POST', { location_id: currentEditingLocation.location_id });
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
                 bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
@@ -159,7 +159,7 @@ async function fetchTransferHistory(page = 1) {
     };
 
     try {
-        const result = await sendRequest('get_transfer_history', 'GET', null, params);
+        const result = await sendRequest(TRANSFER_API, 'get_transfer_history', 'GET', null, params);
         if (result.success) {
             renderTransferTable(result.data);
             // ** CHANGED: แก้ไขการเรียกใช้ renderPagination **
@@ -180,7 +180,7 @@ function openTransferModal() {
 }
 
 async function populateTransferInitialData() {
-    const result = await sendRequest('get_initial_data', 'GET');
+    const result = await sendRequest(TRANSFER_API, 'get_initial_data', 'GET');
     if (!result.success) return;
 
     const fromSelect = document.getElementById('from_location_id');
@@ -201,7 +201,7 @@ async function updateStockDisplay(locationSelectId, displaySpanId) {
         return;
     }
 
-    const result = await sendRequest('get_stock_onhand', 'GET', null, { item_id: selectedItem.item_id, location_id: locationId });
+    const result = await sendRequest(TRANSFER_API, 'get_stock_onhand', 'GET', null, { item_id: selectedItem.item_id, location_id: locationId });
     if (result.success) {
         displaySpan.textContent = parseFloat(result.quantity).toLocaleString();
     }
@@ -220,7 +220,7 @@ async function handleTransferFormSubmit(event) {
 
     showSpinner();
     try {
-        const result = await sendRequest('execute_transfer', 'POST', data);
+        const result = await sendRequest(TRANSFER_API, 'execute_transfer', 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
         if (result.success) {
             bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
@@ -305,7 +305,7 @@ function renderTransferTable(data) {
 // --- Opening Balance Functions ---
 async function populateOpeningBalanceLocations() {
     const locationSelect = document.getElementById('locationSelect');
-    const result = await sendRequest('get_locations', 'GET');
+    const result = await sendRequest(OPENING_BALANCE_API, 'get_locations', 'GET');
     if (result.success) {
         locationSelect.innerHTML = '<option value="">-- Please select a location --</option>';
         result.data.forEach(loc => {
@@ -333,7 +333,7 @@ async function loadItemsForLocation() {
     showSpinner();
 
     try {
-        const result = await sendRequest('get_items_for_location', 'GET', null, { location_id: locationId });
+        const result = await sendRequest(OPENING_BALANCE_API, 'get_items_for_location', 'GET', null, { location_id: locationId });
         if (result.success) {
             allItems = result.data;
             renderItemsTable(allItems);
@@ -412,7 +412,7 @@ async function saveStockTake() {
 
     showSpinner();
     try {
-        const result = await sendRequest('save_stock_take', 'POST', { location_id: locationId, stock_data: stock_data });
+        const result = await sendRequest(OPENING_BALANCE_API, 'save_stock_take', 'POST', { location_id: locationId, stock_data: stock_data });
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
         if (result.success) {
             await loadItemsForLocation(); // Refresh data
