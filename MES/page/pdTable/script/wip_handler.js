@@ -1,122 +1,6 @@
-"use strict";
-
-const WIP_API_ENDPOINT = '../../api/pdTable/wipManage.php';
-// --- State variables for NEW inventory system ---
-let wipAllItems = []; 
-let wipSelectedItem = null;
-let receiptHistoryCurrentPage = 1;
-
-// --- State variables for OLD WIP system ---
-let wipCurrentPage = 1; 
-const WIP_ROWS_PER_PAGE = 50;
-
-
-// =================================================================
-// SECTION: NEW INVENTORY SYSTEM FUNCTIONS (for Entry History Tab)
-// =================================================================
-
 /**
- * Sets up the autocomplete search box in the "Add Entry" modal.
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
  */
-function setupEntryAutocomplete() {
-    const searchInput = document.getElementById('entry_item_search');
-    if (!searchInput) return;
-
-    const resultsWrapper = document.createElement('div');
-    resultsWrapper.className = 'autocomplete-results';
-    searchInput.parentNode.appendChild(resultsWrapper);
-
-    searchInput.addEventListener('input', () => {
-        const value = searchInput.value.toLowerCase();
-        resultsWrapper.innerHTML = '';
-        wipSelectedItem = null;
-        document.getElementById('entry_item_id').value = '';
-
-        if (value.length < 2) return;
-
-        const filteredItems = wipAllItems.filter(item => 
-            item.sap_no.toLowerCase().includes(value) ||
-            item.part_no.toLowerCase().includes(value) ||
-            (item.part_description || '').toLowerCase().includes(value)
-        ).slice(0, 10);
-
-        filteredItems.forEach(item => {
-            const resultItem = document.createElement('div');
-            resultItem.className = 'autocomplete-item';
-            resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
-            resultItem.addEventListener('click', () => {
-                searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                wipSelectedItem = item;
-                document.getElementById('entry_item_id').value = item.item_id;
-                resultsWrapper.innerHTML = '';
-            });
-            resultsWrapper.appendChild(resultItem);
-        });
-        resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
-    });
-
-    document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) {
-            resultsWrapper.style.display = 'none';
-        }
-    });
-}
-
-
-/**
- * Fetches the receipt history from the new STOCK_TRANSACTIONS table.
- */
-async function fetchReceiptHistory(page = 1) {
-    receiptHistoryCurrentPage = page;
-    showSpinner();
-    
-    const params = { page: receiptHistoryCurrentPage };
-
-    try {
-        const result = await sendRequest(WIP_API_ENDPOINT, 'get_receipt_history', 'GET', null, params);
-        if (result.success) {
-            renderReceiptHistoryTable(result.data);
-            renderPagination('entryHistoryPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchReceiptHistory);
-        } else {
-            document.getElementById('entryHistoryTableBody').innerHTML = `<tr><td colspan="8" class="text-center text-danger">${result.message}</td></tr>`;
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-/**
- * Renders the new receipt history table.
- */
-function renderReceiptHistoryTable(data) {
-    const tbody = document.getElementById('entryHistoryTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No receipt history found in the new system.</td></tr>';
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td>${row.to_location || 'N/A'}</td>
-            <td>${row.lot_no || ''}</td>
-            <td>${row.created_by || 'N/A'}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-
-// =================================================================
-// SECTION: OLD WIP SYSTEM FUNCTIONS (for WIP & Stock Reports)
-// These functions remain unchanged to keep existing tabs working.
-// =================================================================
-
 async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
@@ -131,9 +15,9 @@ async function fetchWipReport(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner();
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report&${params.toString()}`);
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -144,9 +28,22 @@ async function fetchWipReport(page = 1) {
             reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No WIP data found.</td></tr>';
         } else {
             result.data.forEach(item => {
+                const variance = parseInt(item.variance);
+                let textColorClass = '';
+                let varianceText = variance.toLocaleString();
+
+                if (variance > 0) {
+                    textColorClass = 'text-warning';
+                } else if (variance < 0) {
+                    textColorClass = 'text-danger';
+                } else if (variance == 0) {
+                    textColorClass = 'text-success';
+                }
+
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to see details';
+                
                 tr.addEventListener('click', () => {
                     if (typeof openWipDetailModal === 'function') {
                         openWipDetailModal(item);
@@ -160,30 +57,35 @@ async function fetchWipReport(page = 1) {
                     <td>${item.part_description || ''}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold text-center">${(item.total_out - item.total_in).toLocaleString()}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
         
-        renderPagination('wipReportPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReport);
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('wipReportPagination', result.page, totalPages, fetchWipReport);
 
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
         window.cachedWipReport = [];
         reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner();
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP แยกตาม Lot Number
+ */
 async function fetchWipReportByLot(page = 1) {
     const reportBody = document.getElementById('wipReportByLotTableBody');
     if (!reportBody) return;
     reportBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading Report by Lot...</td></tr>';
     
     const params = new URLSearchParams({
-        page: page,
+        page: page, // เพิ่ม page
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         model: document.getElementById('filterModel')?.value || '',
@@ -192,9 +94,9 @@ async function fetchWipReportByLot(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner();
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report_by_lot&${params.toString()}`);
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -205,9 +107,21 @@ async function fetchWipReportByLot(page = 1) {
             reportBody.innerHTML = '<tr><td colspan="8" class="text-center">No active WIP Lot found.</td></tr>';
         } else {
             result.data.forEach(item => {
+                const variance = parseInt(item.variance);
+                let textColorClass = '';
+                let varianceText = variance.toLocaleString();
+                if (variance > 0) {
+                    textColorClass = 'text-warning';
+                } else if (variance < 0) {
+                    textColorClass = 'text-danger';
+                } else if (variance == 0) {
+                    textColorClass = 'text-success';
+                }
+
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to see details for this Lot';
+
                 tr.addEventListener('click', () => {
                     if (typeof openWipDetailModal === 'function') {
                         openWipDetailModal(item);
@@ -222,27 +136,29 @@ async function fetchWipReportByLot(page = 1) {
                     <td>${item.lot_no}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold text-center">${(item.total_out - item.total_in).toLocaleString()}</td>
+                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
         
-        renderPagination('wipReportByLotPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReportByLot);
+        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('wipReportByLotPagination', result.page, totalPages, fetchWipReportByLot);
 
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
         window.cachedWipReportByLot = [];
         reportBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner();
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
  */
-async function fetchOldHistoryData(page = 1) { 
+async function fetchHistoryData(page = 1) {
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
     const colspan = canManage ? 9 : 8;
@@ -251,16 +167,16 @@ async function fetchOldHistoryData(page = 1) {
     const params = new URLSearchParams({
         page: page,
         line: document.getElementById('filterLine')?.value || '',
-        model: document.getElementById('filterModel')?.value || '',
+        model: document.getElementById('filterModel')?.value || '', // <-- เพิ่มบรรทัดนี้
         part_no: document.getElementById('filterPartNo')?.value || '',
         lot_no: document.getElementById('filterLotNo')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner();
+    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
-        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_history&${params.toString()}`);
+        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
@@ -272,6 +188,7 @@ async function fetchOldHistoryData(page = 1) {
             historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No entry history found.</td></tr>`;
         } else {
             result.data.forEach(item => {
+                // ... (ส่วนที่เหลือของโค้ดในการสร้างตารางเหมือนเดิมทั้งหมด)
                 const tr = document.createElement('tr');
                 const entryDate = new Date(item.entry_time);
                 const formattedDate = entryDate.toLocaleDateString('en-GB');
@@ -316,13 +233,14 @@ async function fetchOldHistoryData(page = 1) {
             });
         }
         
-        renderPagination('entryHistoryPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchOldHistoryData);
+        const totalPages = Math.ceil(result.total / result.limit);
+        renderAdvancedPagination('entryHistoryPagination', result.page, totalPages, fetchHistoryData);
 
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
         historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner();
+        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
@@ -446,29 +364,3 @@ async function fetchStockCountReport(page = 1) {
         hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Listener for the NEW Entry History Tab
-    const entryHistoryTab = document.getElementById('entry-history-tab'); 
-    if (entryHistoryTab) {
-        entryHistoryTab.addEventListener('shown.bs.tab', () => {
-            fetchReceiptHistory(1); // Calls the NEW function
-        }, { once: true }); 
-    }
-    
-    // Listeners for OLD Report Tabs
-    const wipTab = document.getElementById('wip-tab');
-    if(wipTab){
-        wipTab.addEventListener('shown.bs.tab', () => fetchWipReport(1), { once: true });
-    }
-
-    const wipLotTab = document.getElementById('wip-lot-tab');
-    if(wipLotTab){
-        wipLotTab.addEventListener('shown.bs.tab', () => fetchWipReportByLot(1), { once: true });
-    }
-
-    const stockTab = document.getElementById('stock-inventory-tab');
-    if (stockTab) {
-        stockTab.addEventListener('shown.bs.tab', () => fetchStockCountReport(1), { once: true });
-    }
-});

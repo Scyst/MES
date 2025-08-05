@@ -22,9 +22,16 @@
     </li>
     
     <li>
-      <a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production & WIP">
-        <img src="../../icons/db.png" alt="Production & WIP">
-        <span>Production & WIP</span>
+      <a class="dropdown-item-icon" href="../inventory/inventory.php" title="Inventory Management">
+        <img src="../../icons/stock.png" alt="Inventory Management">
+        <span>Inventory Management</span>
+      </a>
+    </li>
+
+    <li>
+      <a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production & WIP (Legacy)">
+        <img src="../../icons/db.png" alt="Production & WIP (Legacy)">
+        <span>Production & WIP (Legacy)</span>
       </a>
     </li>
     <li>

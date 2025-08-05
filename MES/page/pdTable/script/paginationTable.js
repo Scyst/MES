@@ -1,77 +1,7 @@
-"use strict";
-
-// --- Global variables for this specific table ---
-let productionHistoryCurrentPage = 1;
-const PRODUCTION_ROWS_PER_PAGE = 50;
-const PD_API_URL = '../../api/pdTable/pdTableManage.php';
-
-/**
- * Fetches production history from the new STOCK_TRANSACTIONS table.
- * @param {number} [page=1] - The page number to fetch.
- */
-async function fetchProductionHistory(page = 1) {
-    productionHistoryCurrentPage = page;
-    showSpinner();
-    
-    // Use the main filters on the page
-    const params = {
-        page: currentPage,
-        part_no: document.getElementById('filterPartNo').value,
-        location: document.getElementById('filterLine').value, // The "Line" filter now acts as a Location filter
-        lot_no: document.getElementById('filterLotNo').value,
-        count_type: document.getElementById('filterCountType').value,
-        startDate: document.getElementById('filterStartDate').value,
-        endDate: document.getElementById('filterEndDate').value,
-    };
-
-    try {
-        const result = await sendRequest(PD_API_URL, 'get_production_history', 'GET', null, params);
-        if (result.success) {
-            renderProductionHistoryTable(result.data);
-            renderPagination('paginationControls', result.total, result.page, PRODUCTION_ROWS_PER_PAGE, fetchProductionHistory);
-        } else {
-             document.getElementById('partTableBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">${result.message}</td></tr>`;
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-/**
- * Renders the new production history table.
- * @param {Array<object>} data - The production history data from the API.
- */
-function renderProductionHistoryTable(data) {
-    const tbody = document.getElementById('partTableBody');
-    tbody.innerHTML = '';
-    
-    if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found in the new system.</td></tr>`;
-        return;
-    }
-
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.dataset.transactionId = row.transaction_id; // Use transaction_id as the unique identifier
-
-        const transactionDate = new Date(row.transaction_timestamp);
-        
-        tr.innerHTML = `
-            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
-            <td>${row.location_name || 'N/A'}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.lot_no || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td class="text-center">${row.count_type}</td>
-            <td>${row.notes || ''}</td>
-            <td>${row.created_by || ''}</td>
-        `;
-        
-        tbody.appendChild(tr);
-    });
-}
+//-- Global Variables & Constants --
+let currentPage = 1;
+let totalPages = 1;
+const API_URL = '../../api/pdTable/pdTableManage.php';
 
 function saveFiltersToLocalStorage() {
     const filters = {
@@ -482,41 +412,7 @@ function handleFilterChange() {
     }
 }
 
-// --- Event Listener to initialize the Production History Tab ---
 document.addEventListener('DOMContentLoaded', () => {
-    const productionHistoryTab = document.getElementById('production-history-tab'); 
-    if (productionHistoryTab) {
-        // Check if it's the initially active tab
-        if (productionHistoryTab.classList.contains('active')) {
-            fetchProductionHistory(1);
-        } else {
-            // Or, add a listener for when it's shown
-            productionHistoryTab.addEventListener('shown.bs.tab', () => {
-                fetchProductionHistory(1);
-            }, { once: true }); 
-        }
-    }
-
-    // Add event listeners for filters to trigger a refresh
-    const filterIds = ['filterPartNo', 'filterLine', 'filterLotNo', 'filterCountType', 'filterStartDate', 'filterEndDate'];
-    filterIds.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', () => {
-                // Use a debounce timer to avoid too many API calls
-                clearTimeout(window.filterDebounceTimer);
-                window.filterDebounceTimer = setTimeout(() => {
-                    // Only refetch if the production history tab is active
-                    if (document.getElementById('production-history-pane')?.classList.contains('active')) {
-                        fetchProductionHistory(1);
-                    }
-                }, 500);
-            });
-        }
-    });
-});
-
-/*document.addEventListener('DOMContentLoaded', () => {
     loadFiltersFromLocalStorage();
     populateAllDatalistsOnLoad(); 
 
@@ -556,4 +452,4 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFilterChange();
         }
     }, 100); 
-});*/
+});

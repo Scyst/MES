@@ -1,8 +1,11 @@
 <?php
+// api/pdTable/wipManage.php
+
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../logger.php';
 
+// ส่วนของ CSRF Token Check (เหมือนเดิม)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -11,17 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
-// =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true;
-$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
-$items_table = $is_development ? 'ITEMS_TEST' : 'ITEMS';
-$onhand_table = $is_development ? 'INVENTORY_ONHAND_TEST' : 'INVENTORY_ONHAND';
-$transactions_table = $is_development ? 'STOCK_TRANSACTIONS_TEST' : 'STOCK_TRANSACTIONS';
-$users_table = $is_development ? 'USERS_TEST' : 'USERS';
-$parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
-$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-$wip_table = $is_development ? 'WIP_ENTRIES_TEST' : 'WIP_ENTRIES';
+// ไม่มีการประกาศ $is_development หรือชื่อตารางที่นี่อีกต่อไป
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -29,120 +22,6 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-
-        // --- NEW ACTIONS FOR INVENTORY SYSTEM ---
-        case 'get_initial_data': // Action ใหม่สำหรับดึงข้อมูลเริ่มต้นสำหรับ Modal
-            $locationsStmt = $pdo->query("SELECT location_id, location_name FROM {$locations_table} WHERE is_active = 1 ORDER BY location_name");
-            $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM {$items_table} ORDER BY sap_no");
-            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
-            break;
-
-        case 'execute_receipt': // Action ใหม่สำหรับบันทึกการรับของ (IN)
-            $item_id = $input['item_id'] ?? 0;
-            $location_id = $input['location_id'] ?? 0;
-            $quantity = $input['quantity'] ?? 0;
-            $lot_no = $input['lot_no'] ?? null;
-            $notes = $input['notes'] ?? null;
-            
-            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0) {
-                throw new Exception("Invalid data provided for receipt.");
-            }
-
-            $pdo->beginTransaction();
-            
-            // 1. เพิ่มสต็อก (ถ้าไม่มีให้สร้างใหม่)
-            $mergeSql = "MERGE {$onhand_table} AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-            $mergeStmt = $pdo->prepare($mergeSql);
-            $mergeStmt->execute([$item_id, $location_id, $quantity, $item_id, $location_id, $quantity]);
-
-            // 2. บันทึก Transaction
-            $transSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
-            $transStmt = $pdo->prepare($transSql);
-            $transStmt->execute([$item_id, $quantity, $location_id, $currentUser['id'], $notes, $lot_no]);
-
-            $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'STOCK RECEIPT', $item_id, "Qty: {$quantity}, To: {$location_id}, Lot: {$lot_no}");
-            echo json_encode(['success' => true, 'message' => 'Stock receipt logged successfully.']);
-            break;
-
-        case 'get_receipt_history': // Action ใหม่สำหรับดึงประวัติการรับของ
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-            
-            $totalSql = "SELECT COUNT(*) FROM {$transactions_table} WHERE transaction_type = 'RECEIPT'";
-            $total = (int)$pdo->query($totalSql)->fetchColumn();
-
-            $dataSql = "
-                SELECT t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity, loc_to.location_name AS to_location, u.username AS created_by, t.reference_id as lot_no
-                FROM {$transactions_table} t
-                JOIN {$items_table} i ON t.parameter_id = i.item_id
-                JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN {$users_table} u ON t.created_by_user_id = u.id
-                WHERE t.transaction_type = 'RECEIPT'
-                ORDER BY t.transaction_timestamp DESC
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-            
-            $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->bindValue(1, (int)$startRow, PDO::PARAM_INT);
-            $dataStmt->bindValue(2, (int)$limit, PDO::PARAM_INT);
-            $dataStmt->execute();
-            $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
-            break;
-
-        case 'get_stock_inventory_report':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-
-            // Simple search for now
-            $search_term = $_GET['search'] ?? '';
-            $conditions = [];
-            $params = [];
-            if (!empty($search_term)) {
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
-                $params = ["%{$search_term}%", "%{$search_term}%", "%{$search_term}%"];
-            }
-            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-
-            $totalSql = "SELECT COUNT(DISTINCT i.item_id) FROM {$items_table} i {$whereClause}";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-
-            $dataSql = "
-                SELECT
-                    i.item_id, i.sap_no, i.part_no, i.part_description,
-                    SUM(h.quantity) as total_onhand
-                FROM {$items_table} i
-                LEFT JOIN {$onhand_table} h ON i.item_id = h.parameter_id
-                {$whereClause}
-                GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description
-                ORDER BY i.sap_no
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-            
-            $dataStmt = $pdo->prepare($dataSql);
-            $paramIndex = 1;
-            foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param);
-            }
-            $dataStmt->bindValue($paramIndex++, (int)$startRow, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
-            $dataStmt->execute();
-            
-            $stock = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
-            break;  
-            
         case 'log_wip_entry':
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
             foreach ($required_fields as $field) {
@@ -157,14 +36,14 @@ try {
             $lot_no = strtoupper(trim($input['lot_no'] ?? null));
             $quantity_in = (int)$input['quantity_in'];
 
-            $checkSql = "SELECT COUNT(*) FROM {$param_table} WHERE part_no = ? AND model = ?";
+            $checkSql = "SELECT COUNT(*) FROM " . PARAM_TABLE . " WHERE part_no = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$part_no, $model]);
             if ($checkStmt->fetchColumn() == 0) {
                 throw new Exception("This Part No. does not exist for the specified Model in the PARAMETER table.");
             }
 
-            $sql = "INSERT INTO {$wip_table} (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO " . WIP_TABLE . " (model, line, lot_no, part_no, quantity_in, operator, remark) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $params = [
                 $model,
                 $line,
@@ -193,10 +72,10 @@ try {
             
             $entry_id = (int)$input['entry_id'];
 
-            enforceRecordPermission($pdo, $wip_table, $entry_id, 'entry_id', 'operator');
+            enforceRecordPermission($pdo, WIP_TABLE, $entry_id, 'entry_id', 'operator');
 
             if (hasRole(['supervisor', 'admin', 'creator'])) {
-                $stmt = $pdo->prepare("SELECT line FROM {$wip_table} WHERE entry_id = ?");
+                $stmt = $pdo->prepare("SELECT line FROM " . WIP_TABLE . " WHERE entry_id = ?");
                 $stmt->execute([$entry_id]);
                 $entry = $stmt->fetch();
                 if ($entry && $input['line'] !== $entry['line']) {
@@ -207,7 +86,7 @@ try {
             $entry_time_obj = new DateTime($input['entry_time']);
             $formatted_entry_time = $entry_time_obj->format('Y-m-d H:i:s');
             
-            $sql = "UPDATE {$wip_table} SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
+            $sql = "UPDATE " . WIP_TABLE . " SET entry_time = ?, model = ?, line = ?, part_no = ?, lot_no = ?, quantity_in = ?, remark = ? WHERE entry_id = ?";
             $params = [
                 $formatted_entry_time,
                 strtoupper(trim($input['model'])),
@@ -232,16 +111,16 @@ try {
             if (empty($input['entry_id'])) { throw new Exception("Entry ID is required."); }
             $id = (int)$input['entry_id'];
 
-            enforceRecordPermission($pdo, $wip_table, $id, 'entry_id', 'operator');
+            enforceRecordPermission($pdo, WIP_TABLE, $id, 'entry_id', 'operator');
 
-            $stmt = $pdo->prepare("SELECT * FROM {$wip_table} WHERE entry_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM " . WIP_TABLE . " WHERE entry_id = ?");
             $stmt->execute([$id]);
             $entryToDelete = $stmt->fetch();
             if (!$entryToDelete) {
                 throw new Exception("WIP Entry not found after permission check.");
             }
 
-            $sql = "DELETE FROM {$wip_table} WHERE entry_id = ?";
+            $sql = "DELETE FROM " . WIP_TABLE . " WHERE entry_id = ?";
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute([$id]) && $stmt->rowCount() > 0) {
                 $detail = "Deleted WIP ID: {$id} | Model: {$entryToDelete['model']}, Part: {$entryToDelete['part_no']}";
@@ -282,9 +161,9 @@ try {
                 SELECT COUNT(*) FROM (
                     SELECT ISNULL(tin.part_no, tout.part_no) AS part_no
                     FROM 
-                        (SELECT DISTINCT part_no, line, model FROM {$wip_table} wip $wipWhereClause) tin 
+                        (SELECT DISTINCT part_no, line, model FROM " . WIP_TABLE . " wip $wipWhereClause) tin 
                     FULL JOIN 
-                        (SELECT DISTINCT part_no, line, model FROM {$parts_table} $partsWhereClause) tout 
+                        (SELECT DISTINCT part_no, line, model FROM " . PARTS_TABLE . " $partsWhereClause) tout 
                         ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
                 ) AS FullData
             ";
@@ -294,9 +173,9 @@ try {
             
             $dataSql = "
                 WITH TotalIn AS (
-                    SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM {$wip_table} wip $wipWhereClause GROUP BY part_no, line, model
+                    SELECT part_no, line, model, SUM(quantity_in) AS total_in FROM " . WIP_TABLE . " wip $wipWhereClause GROUP BY part_no, line, model
                 ), TotalOut AS (
-                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM {$parts_table} $partsWhereClause AND count_type <> 'BOM-ISSUE' GROUP BY part_no, line, model
+                    SELECT part_no, line, model, SUM(count_value) AS total_out FROM " . PARTS_TABLE . " $partsWhereClause AND count_type <> 'BOM-ISSUE' GROUP BY part_no, line, model
                 ), FullData AS (
                     SELECT 
                         ISNULL(tin.part_no, tout.part_no) AS part_no, 
@@ -307,7 +186,7 @@ try {
                         ISNULL(tout.total_out, 0) AS total_out
                     FROM TotalIn tin 
                     FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
-                    LEFT JOIN {$param_table} p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
+                    LEFT JOIN " . PARAM_TABLE . " p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
                 ), NumberedRows AS (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
@@ -364,21 +243,21 @@ try {
             $countSql = "
                 WITH 
                 MasterLots AS (
-                    SELECT DISTINCT line, model, part_no, lot_no FROM {$wip_table}
+                    SELECT DISTINCT line, model, part_no, lot_no FROM " . WIP_TABLE . "
                     UNION
                     SELECT DISTINCT line, model, part_no, 
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
-                    FROM {$parts_table} WHERE lot_no IS NOT NULL AND lot_no != ''
+                    FROM " . PARTS_TABLE . " WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
                 TotalIn AS (
                     SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM {$wip_table} $wipDateWhere GROUP BY line, model, part_no, lot_no
+                    FROM " . WIP_TABLE . " $wipDateWhere GROUP BY line, model, part_no, lot_no
                 ),
                 TotalOut AS (
                     SELECT line, model, part_no,
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM {$parts_table} $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
+                    FROM " . PARTS_TABLE . " $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
                 ),
                 FinalResult AS (
                     SELECT 
@@ -400,21 +279,21 @@ try {
             $dataSql = "
                 WITH 
                 MasterLots AS (
-                    SELECT DISTINCT line, model, part_no, lot_no FROM {$wip_table}
+                    SELECT DISTINCT line, model, part_no, lot_no FROM " . WIP_TABLE . "
                     UNION
                     SELECT DISTINCT line, model, part_no, 
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END 
-                    FROM {$parts_table} WHERE lot_no IS NOT NULL AND lot_no != ''
+                    FROM " . PARTS_TABLE . " WHERE lot_no IS NOT NULL AND lot_no != ''
                 ),
                 TotalIn AS (
                     SELECT line, model, part_no, lot_no, SUM(ISNULL(quantity_in, 0)) as total_in
-                    FROM {$wip_table} $wipDateWhere GROUP BY line, model, part_no, lot_no
+                    FROM " . WIP_TABLE . " $wipDateWhere GROUP BY line, model, part_no, lot_no
                 ),
                 TotalOut AS (
                     SELECT line, model, part_no,
                         CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END AS base_lot_no,
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM {$parts_table} $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
+                    FROM " . PARTS_TABLE . " $partsDateWhere GROUP BY line, model, part_no, CASE WHEN PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) > 0 THEN LEFT(lot_no, PATINDEX('%-[0-9][0-9][0-9][0-9][0-9][0-9]-%', lot_no) - 1) ELSE lot_no END
                 ),
                 FinalResult AS (
                     SELECT 
@@ -426,7 +305,7 @@ try {
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
-                    LEFT JOIN {$param_table} p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
+                    LEFT JOIN " . PARAM_TABLE . " p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
                     $whereClause
                 ),
                 NumberedRows AS (
@@ -448,7 +327,8 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
-            
+            $endRow = $startRow + $limit;
+
             $params = [];
             $wip_conditions = [];
             if ($currentUser['role'] === 'supervisor') {
@@ -465,7 +345,7 @@ try {
             
             $whereClause = $wip_conditions ? "WHERE " . implode(" AND ", $wip_conditions) : "";
             
-            $totalSql = "SELECT COUNT(*) FROM {$wip_table} $whereClause";
+            $totalSql = "SELECT COUNT(*) FROM " . WIP_TABLE . " $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
@@ -473,17 +353,17 @@ try {
             $dataSql = "
                 SELECT * FROM (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY entry_time DESC, entry_id DESC) as RowNum
-                    FROM {$wip_table}
+                    FROM " . WIP_TABLE . "
                     $whereClause
                 ) AS NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?
             ";
-            $paginationParams = array_merge($params, [$startRow, $startRow + $limit]);
+            $paginationParams = array_merge($params, [$startRow, $endRow]);
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
             $history_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM {$wip_table} wip $whereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
+            $summary_sql = "SELECT line, model, part_no, SUM(quantity_in) as total_quantity_in FROM " . WIP_TABLE . " wip $whereClause GROUP BY line, model, part_no ORDER BY line, model, part_no";
             $summary_stmt = $pdo->prepare($summary_sql);
             $summary_stmt->execute($params);
             $summary_data = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -519,7 +399,7 @@ try {
                 $adjustment_type = $variance > 0 ? 'ADJUST-IN' : 'ADJUST-OUT';
                 $adjustment_value = abs($variance);
 
-                $sql = "INSERT INTO {$parts_table} (log_date, log_time, line, model, part_no, count_type, count_value, note, operator_id) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO " . PARTS_TABLE . " (log_date, log_time, line, model, part_no, count_type, count_value, note, operator_id) VALUES (GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 $params = [
                     $line, $model, $part_no,
@@ -543,6 +423,7 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startRow = ($page - 1) * $limit;
+            $endRow = $startRow + $limit;
 
             $param_conditions = [];
             $param_params = [];
@@ -551,7 +432,7 @@ try {
             if (!empty($_GET['model'])) { $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%"; }
             $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
             
-            $countSql = "SELECT COUNT(*) FROM {$param_table} p $paramWhereClause";
+            $countSql = "SELECT COUNT(*) FROM " . PARAM_TABLE . " p $paramWhereClause";
             $totalStmt = $pdo->prepare($countSql);
             $totalStmt->execute($param_params);
             $total = (int)$totalStmt->fetchColumn();
@@ -559,23 +440,23 @@ try {
             $dataSql = "
                 WITH 
                 TotalWipIn AS (
-                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total FROM {$wip_table} GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(quantity_in, 0)) as total FROM " . WIP_TABLE . " GROUP BY line, model, part_no
                 ),
                 TotalAdjustIn AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type = 'ADJUST-IN' GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM " . PARTS_TABLE . " WHERE count_type = 'ADJUST-IN' GROUP BY line, model, part_no
                 ),
                 TotalAdjustOut AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type = 'ADJUST-OUT' GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM " . PARTS_TABLE . " WHERE count_type = 'ADJUST-OUT' GROUP BY line, model, part_no
                 ),
                 TotalProductionOut AS (
-                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM {$parts_table} WHERE count_type NOT LIKE 'ADJUST%' GROUP BY line, model, part_no
+                    SELECT line, model, part_no, SUM(ISNULL(count_value, 0)) as total FROM " . PARTS_TABLE . " WHERE count_type NOT LIKE 'ADJUST%' GROUP BY line, model, part_no
                 ),
                 FinalResult AS (
                     SELECT
                         p.line, p.model, p.part_no, p.part_description,
                         (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
                         (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out
-                    FROM {$param_table} p
+                    FROM " . PARAM_TABLE . " p
                     LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
                     LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
                     LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no
@@ -591,7 +472,7 @@ try {
                 WHERE RowNum > ? AND RowNum <= ?
             ";
             
-            $paginationParams = array_merge($param_params, [$startRow, $startRow + $limit]);
+            $paginationParams = array_merge($param_params, [$startRow, $endRow]);
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
             $stock_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -615,7 +496,7 @@ try {
 
             $in_sql = "
                 SELECT entry_time, lot_no, quantity_in, operator 
-                FROM {$wip_table} 
+                FROM " . WIP_TABLE . " 
                 WHERE line = ? AND model = ? AND part_no = ?
             ";
             $in_params = [$line, $model, $part_no];
@@ -639,7 +520,7 @@ try {
             
             $out_sql = "
                 SELECT log_date, CONVERT(varchar(8), log_time, 108) AS log_time, lot_no, count_value, count_type 
-                FROM {$parts_table} 
+                FROM " . PARTS_TABLE . " 
                 WHERE line = ? AND model = ? AND part_no = ? AND count_type <> 'ADJUST-IN'
             ";
             $out_params = [$line, $model, $part_no];
@@ -694,12 +575,12 @@ try {
                     SELECT 
                         lot_no, 
                         SUM(ISNULL(count_value, 0)) as total_out
-                    FROM {$parts_table}
+                    FROM " . PARTS_TABLE . "
                     WHERE lot_no IS NOT NULL AND lot_no != ''
                     GROUP BY lot_no
                 )
                 SELECT TOP 20 wip.lot_no 
-                FROM {$wip_table} wip
+                FROM " . WIP_TABLE . " wip
                 LEFT JOIN TotalOutByLot o ON wip.lot_no = o.lot_no
                 WHERE 
                     wip.part_no = ? 
@@ -715,67 +596,6 @@ try {
             $lots = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             echo json_encode(['success' => true, 'data' => $lots]);
-            break;
-
-        case 'get_wip_inventory_report':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-            
-            // ** LOGIC ใหม่: เราจะถือว่า Location ที่มีคำว่า 'WAREHOUSE' ไม่ใช่ WIP **
-            // คุณสามารถปรับแก้เงื่อนไขนี้ได้ในอนาคต
-            $wipLocationCondition = "loc.location_name NOT LIKE '%WAREHOUSE%'";
-
-            // Filtering logic
-            $params = [];
-            $conditions = [$wipLocationCondition];
-            if (!empty($_GET['part_no'])) { 
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
-                $params[] = '%' . $_GET['part_no'] . '%';
-                $params[] = '%' . $_GET['part_no'] . '%';
-            }
-             if (!empty($_GET['location'])) { 
-                $conditions[] = "loc.location_name LIKE ?";
-                $params[] = '%' . $_GET['location'] . '%';
-            }
-            $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $totalSql = "SELECT COUNT(*) FROM {$onhand_table} h
-                         JOIN {$items_table} i ON h.parameter_id = i.item_id
-                         JOIN {$locations_table} loc ON h.location_id = loc.location_id
-                         {$whereClause}";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-
-            $dataSql = "
-                SELECT 
-                    h.location_id,
-                    loc.location_name,
-                    h.parameter_id as item_id,
-                    i.sap_no,
-                    i.part_no,
-                    i.part_description,
-                    h.quantity
-                FROM {$onhand_table} h
-                JOIN {$items_table} i ON h.parameter_id = i.item_id
-                JOIN {$locations_table} loc ON h.location_id = loc.location_id
-                {$whereClause}
-                ORDER BY loc.location_name, i.sap_no
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-            
-            $dataStmt = $pdo->prepare($dataSql);
-            $paramIndex = 1;
-            foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param);
-            }
-            $dataStmt->bindValue($paramIndex++, (int)$startRow, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
-            $dataStmt->execute();
-            $wip_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $wip_data, 'total' => $total, 'page' => $page]);
             break;
 
         default:

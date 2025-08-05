@@ -101,18 +101,21 @@
                     <table class="table table-dark table-hover table-striped">
                           <thead>
                             <tr>
-                                <th>Date & Time</th>
-                                <th>SAP No.</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Line</th>
+                                <th>Model</th>
                                 <th>Part No.</th>
-                                <th>Part Description</th>
-                                <th class="text-end">Quantity</th>
-                                <th>To Location</th>
-                                <th>Lot No./Ref.</th>
-                                <th>Created By</th>
+                                <th>Lot No.</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="min-width: 200px; text-align: center;">Note</th>
+                                <?php if ($canManage): ?>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
-                        <tbody id="entryHistoryTableBody"></tbody>
-                        </table>
+                        <tbody id="wipHistoryTableBody"></tbody>
+                    </table>
                 </div>
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
             </div>
@@ -123,15 +126,18 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Time</th>
-                                <th>Location</th>
-                                <th>SAP No.</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Line</th>
+                                <th>Model</th>
                                 <th>Part No.</th>
                                 <th>Lot No.</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-center">Type</th>
-                                <th>Notes</th>
-                                <th>Created By</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="text-align: center;">Type</th>
+                                <th style="min-width: 200px; text-align: center;">Note</th>
+                                <?php if ($canManage): ?>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>
@@ -145,11 +151,13 @@
                     <table class="table table-dark table-striped">
                         <thead>
                             <tr>
-                                <th>Location</th>
-                                <th>SAP No.</th>
+                                <th>Line</th>
+                                <th>Model</th>
                                 <th>Part Number</th>
                                 <th>Part Description</th>
-                                <th class="text-end">On-Hand Quantity (WIP)</th>
+                                <th style="text-align: center;">Total In</th>
+                                <th style="text-align: center;">Total Out</th>
+                                <th style="text-align: center;">WIP/Variance</th>
                             </tr>
                         </thead>
                         <tbody id="wipReportTableBody"></tbody>
@@ -183,12 +191,17 @@
                 <div class="table-responsive mt-3">
                     <table class="table table-dark table-striped table-hover">
                         <thead>
-                            <tr>
-                                <th style="width: 15%;">SAP No.</th>
-                                <th style="width: 15%;">Part No.</th>
+                             <tr>
+                                <th>Line</th>
+                                <th>Model</th>
+                                <th>Part No.</th>
                                 <th>Part Description</th>
-                                <th class="text-end" style="width: 15%;">Total On-Hand</th>
-                                <th class="text-center" style="width: 10%;">Actions</th>
+                                <th class="text-end">Total IN</th>
+                                <th class="text-end">Total OUT</th>
+                                <th class="text-end">On Hand</th>
+                                <?php if ($canManage): ?>
+                                    <th class="text-center">Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="stockCountTableBody"></tbody>
@@ -221,52 +234,18 @@
         const canAdd = <?php echo json_encode($canAdd); ?>;
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
-
-    <script>
-        /**
-         * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API (จำเป็นสำหรับทุกไฟล์ JS ในหน้านี้)
-         */
-        async function sendRequest(endpoint, action, method, body = null, params = null) {
-            try {
-                let url = `${endpoint}?action=${action}`;
-                if (params) {
-                    url += `&${new URLSearchParams(params).toString()}`;
-                }
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                
-                const options = { method, headers: {} };
-                if (method.toUpperCase() !== 'GET' && csrfToken) {
-                    options.headers['X-CSRF-TOKEN'] = csrfToken;
-                }
-                if (body) {
-                    options.headers['Content-Type'] = 'application/json';
-                    options.body = JSON.stringify(body);
-                }
-                
-                const response = await fetch(url, options);
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
-                }
-                return result;
-            } catch (error) {
-                console.error(`Request for action '${action}' failed:`, error);
-                showToast(error.message || 'An unexpected error occurred.', 'var(--bs-danger)');
-                return { success: false, message: "Network or server error." };
-            }
-        }
-    </script>
     
-    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
-    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
-    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
-    <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
-    
-    <script src="script/pdTable.js?v=<?php echo filemtime('script/pdTable.js'); ?>"></script>
-    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script> 
+    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>" defer></script>
+    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>" defer></script>
+    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>" defer></script>
+    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>" defer></script>
+    <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
+    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 
+    <script src="script/wip_handler.js?v=<?php echo filemtime('script/wip_handler.js'); ?>" defer></script> 
 
     <script defer>
+        // โค้ดที่เคยอยู่ใน DOMContentLoaded สามารถวางตรงนี้ได้เลยเมื่อใช้ defer
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
@@ -276,7 +255,8 @@
             const buttonGroup = document.getElementById('dynamic-button-group');
             const summaryContainer = document.getElementById('dynamic-summary-container');
             const mainTabs = document.querySelectorAll('#mainTab .nav-link');
-            
+            const canManage = <?php echo json_encode($canManage); ?>;
+
             function updateControls(activeTabId) {
                 buttonGroup.innerHTML = '';
                 summaryContainer.innerHTML = '';
@@ -325,4 +305,3 @@
         });
     </script>
 </body>
-</html>
