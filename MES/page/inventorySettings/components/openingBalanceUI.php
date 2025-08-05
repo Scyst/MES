@@ -1,5 +1,5 @@
 <?php 
-    require_once __DIR__ . '/../../auth/check_auth.php'; 
+    require_once __DIR__ . '/../../../auth/check_auth.php';
     if (!hasRole(['admin', 'creator'])) {
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
         exit;
@@ -24,7 +24,6 @@
     
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="mb-0">Opening Balance / Stock Take</h2>
         </div>
 
         <div class="row mb-3">
