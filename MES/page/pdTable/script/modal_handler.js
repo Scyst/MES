@@ -1,10 +1,12 @@
 "use strict";
 
+const PD_API_URL = '../../api/pdTable/pdTableManage.php';
+const WIP_API_URL = '../../api/pdTable/wipManage.php';
 let currentlyEditingData = null;
-let wipAllItems = []; // Moved from wip_handler.js to be accessible here
 
-// --- Central function to populate datalists needed by modals ---
+// --- ฟังก์ชันสำหรับดึงข้อมูลเริ่มต้นสำหรับ Modal ทั้งหมดในหน้านี้ ---
 async function populateModalDatalists() {
+    // 1. ดึงข้อมูลสำหรับ Modal เก่า (OUT)
     const result = await sendRequest(PD_API_URL, 'get_datalist_options', 'GET');
     if (result.success) {
         const lineDatalist = document.getElementById('lineDatalist');
@@ -16,9 +18,10 @@ async function populateModalDatalists() {
         if(partNoDatalist) partNoDatalist.innerHTML = result.partNos.map(p => `<option value="${p}"></option>`).join('');
     }
     
+    // 2. ดึงข้อมูลสำหรับ Modal ใหม่ (IN)
     const wipResult = await sendRequest(WIP_API_URL, 'get_initial_data', 'GET');
      if (wipResult.success) {
-        wipAllItems = wipResult.items;
+        wipAllItems = wipResult.items; // ส่งค่าไปให้ตัวแปร global ใน wip_handler.js
         const locationSelect = document.getElementById('entry_location_id');
         if (locationSelect) {
             locationSelect.innerHTML = '<option value="">-- Select Location --</option>';
@@ -27,6 +30,45 @@ async function populateModalDatalists() {
             });
         }
     }
+}
+
+// --- ฟังก์ชันสำหรับเปิด Modal ---
+
+// ฟังก์ชันสำหรับ "ขาออก" (OUT) - ยังคงเหมือนเดิม
+function openAddPartModal() {
+    document.getElementById('addPartForm')?.reset();
+    const now = new Date();
+    const tzOffset = 7 * 60 * 60 * 1000;
+    const localNow = new Date(now.getTime() + tzOffset);
+    document.querySelector('#addPartModal input[name="log_date"]').value = localNow.toISOString().split('T')[0];
+    document.querySelector('#addPartModal input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
+    document.querySelector('#addPartModal input[name="end_time"]').value = document.querySelector('#addPartModal input[name="start_time"]').value;
+    new bootstrap.Modal(document.getElementById('addPartModal')).show();
+}
+
+function openEditPartModal(data) {
+    currentlyEditingData = data;
+    const modal = document.getElementById('editPartModal');
+    for (const key in data) {
+        const input = modal.querySelector(`[name="${key}"]`);
+        if (input) input.value = data[key];
+    }
+    new bootstrap.Modal(modal).show();
+}
+
+// ** ฟังก์ชันสำหรับ "ขาเข้า" (IN) - ถูกยกเครื่องใหม่ **
+function openAddEntryModal() {
+    const modalId = 'addEntryModal';
+    const form = document.getElementById('addEntryForm');
+    if(form) form.reset();
+    
+    // รีเซ็ตค่าที่เลือกไว้จาก Autocomplete
+    wipSelectedItem = null; 
+    document.getElementById('entry_item_id').value = '';
+    document.getElementById('entry_item_search').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
 }
 
 //======================================================================
@@ -138,46 +180,8 @@ function handlePartNoValidation(formType) {
     }, 500);
 }
 
-//======================================================================
-// SECTION: MODAL OPENING FUNCTIONS
-//======================================================================
-
-function openAddPartModal() {
-    document.getElementById('addPartForm')?.reset();
-    const now = new Date();
-    const tzOffset = 7 * 60 * 60 * 1000;
-    const localNow = new Date(now.getTime() + tzOffset);
-    document.querySelector('#addPartModal input[name="log_date"]').value = localNow.toISOString().split('T')[0];
-    document.querySelector('#addPartModal input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
-    document.querySelector('#addPartModal input[name="end_time"]').value = document.querySelector('#addPartModal input[name="start_time"]').value;
-    new bootstrap.Modal(document.getElementById('addPartModal')).show();
-}
-
-function openEditPartModal(data) {
+function openEditEntryModal(data) {
     currentlyEditingData = data;
-    const modal = document.getElementById('editPartModal');
-    for (const key in data) {
-        const input = modal.querySelector(`[name="${key}"]`);
-        if (input) input.value = data[key];
-    }
-    new bootstrap.Modal(modal).show();
-}
-
-function openAddEntryModal() {
-    const modalId = 'addEntryModal';
-    const form = document.getElementById('addEntryForm');
-    if(form) form.reset();
-    
-    wipSelectedItem = null; 
-    document.getElementById('entry_item_id').value = '';
-    document.getElementById('entry_item_search').value = '';
-    
-    const modal = new bootstrap.Modal(document.getElementById(modalId));
-    modal.show();
-}
-
-function openEditEntryModal(rowData, triggerEl) {
-    modalTriggerElement = triggerEl;
     const modal = document.getElementById('editEntryModal');
     if (!modal) return;
     
@@ -209,7 +213,7 @@ function openAdjustStockModal(rowData) {
     modal.querySelector('#adjust_physical_count').value = '';
     modal.querySelector('#adjust_note').value = '';
 
-    showBootstrapModal('adjustStockModal');
+    new bootstrap.Modal(modal).show();
 }
 
 /**
@@ -499,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
     populateModalDatalists();
     setupEntryAutocomplete(); // เรียกใช้ฟังก์ชัน Autocomplete จาก wip_handler.js
 
+    // ผูก Event Listener ให้กับทุกฟอร์มในหน้านี้
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });

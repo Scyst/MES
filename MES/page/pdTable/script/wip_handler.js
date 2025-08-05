@@ -111,9 +111,12 @@ function renderReceiptHistoryTable(data) {
     });
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP (Work-In-Progress)
- */
+
+// =================================================================
+// SECTION: OLD WIP SYSTEM FUNCTIONS (for WIP & Stock Reports)
+// These functions remain unchanged to keep existing tabs working.
+// =================================================================
+
 async function fetchWipReport(page = 1) {
     const reportBody = document.getElementById('wipReportTableBody');
     if (!reportBody) return;
@@ -128,9 +131,9 @@ async function fetchWipReport(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    showSpinner();
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report&${params.toString()}`);
+        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -141,22 +144,9 @@ async function fetchWipReport(page = 1) {
             reportBody.innerHTML = '<tr><td colspan="7" class="text-center">No WIP data found.</td></tr>';
         } else {
             result.data.forEach(item => {
-                const variance = parseInt(item.variance);
-                let textColorClass = '';
-                let varianceText = variance.toLocaleString();
-
-                if (variance > 0) {
-                    textColorClass = 'text-warning';
-                } else if (variance < 0) {
-                    textColorClass = 'text-danger';
-                } else if (variance == 0) {
-                    textColorClass = 'text-success';
-                }
-
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to see details';
-                
                 tr.addEventListener('click', () => {
                     if (typeof openWipDetailModal === 'function') {
                         openWipDetailModal(item);
@@ -170,35 +160,30 @@ async function fetchWipReport(page = 1) {
                     <td>${item.part_description || ''}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
+                    <td class="fw-bold text-center">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
         
-        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
-        const totalPages = Math.ceil(result.total / result.limit);
-        renderAdvancedPagination('wipReportPagination', result.page, totalPages, fetchWipReport);
+        renderPagination('wipReportPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReport);
 
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
         window.cachedWipReport = [];
         reportBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+        hideSpinner();
     }
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลรายงาน WIP แยกตาม Lot Number
- */
 async function fetchWipReportByLot(page = 1) {
     const reportBody = document.getElementById('wipReportByLotTableBody');
     if (!reportBody) return;
     reportBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading Report by Lot...</td></tr>';
     
     const params = new URLSearchParams({
-        page: page, // เพิ่ม page
+        page: page,
         line: document.getElementById('filterLine')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         model: document.getElementById('filterModel')?.value || '',
@@ -207,9 +192,9 @@ async function fetchWipReportByLot(page = 1) {
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    showSpinner();
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_report_by_lot&${params.toString()}`);
+        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report_by_lot&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -220,21 +205,9 @@ async function fetchWipReportByLot(page = 1) {
             reportBody.innerHTML = '<tr><td colspan="8" class="text-center">No active WIP Lot found.</td></tr>';
         } else {
             result.data.forEach(item => {
-                const variance = parseInt(item.variance);
-                let textColorClass = '';
-                let varianceText = variance.toLocaleString();
-                if (variance > 0) {
-                    textColorClass = 'text-warning';
-                } else if (variance < 0) {
-                    textColorClass = 'text-danger';
-                } else if (variance == 0) {
-                    textColorClass = 'text-success';
-                }
-
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to see details for this Lot';
-
                 tr.addEventListener('click', () => {
                     if (typeof openWipDetailModal === 'function') {
                         openWipDetailModal(item);
@@ -249,29 +222,27 @@ async function fetchWipReportByLot(page = 1) {
                     <td>${item.lot_no}</td>
                     <td style="text-align: center;">${parseInt(item.total_in).toLocaleString()}</td>
                     <td style="text-align: center;">${parseInt(item.total_out).toLocaleString()}</td>
-                    <td class="fw-bold ${textColorClass}" style="text-align: center;">${(item.total_out - item.total_in).toLocaleString()}</td>
+                    <td class="fw-bold text-center">${(item.total_out - item.total_in).toLocaleString()}</td>
                 `;
                 reportBody.appendChild(tr);
             });
         }
         
-        // ===== ส่วนที่แก้ไข: เรียกใช้ฟังก์ชัน Pagination ใหม่ =====
-        const totalPages = Math.ceil(result.total / result.limit);
-        renderAdvancedPagination('wipReportByLotPagination', result.page, totalPages, fetchWipReportByLot);
+        renderPagination('wipReportByLotPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReportByLot);
 
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
         window.cachedWipReportByLot = [];
         reportBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+        hideSpinner();
     }
 }
 
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลประวัติการนำเข้า (Entry History)
  */
-async function fetchHistoryData(page = 1) {
+async function fetchOldHistoryData(page = 1) { 
     const historyBody = document.getElementById('wipHistoryTableBody');
     if (!historyBody) return;
     const colspan = canManage ? 9 : 8;
@@ -280,16 +251,16 @@ async function fetchHistoryData(page = 1) {
     const params = new URLSearchParams({
         page: page,
         line: document.getElementById('filterLine')?.value || '',
-        model: document.getElementById('filterModel')?.value || '', // <-- เพิ่มบรรทัดนี้
+        model: document.getElementById('filterModel')?.value || '',
         part_no: document.getElementById('filterPartNo')?.value || '',
         lot_no: document.getElementById('filterLotNo')?.value || '',
         startDate: document.getElementById('filterStartDate')?.value || '',
         endDate: document.getElementById('filterEndDate')?.value || ''
     });
 
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    showSpinner();
     try {
-        const response = await fetch(`../../api/pdTable/wipManage.php?action=get_wip_history&${params.toString()}`);
+        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_history&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
         
@@ -301,7 +272,6 @@ async function fetchHistoryData(page = 1) {
             historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center">No entry history found.</td></tr>`;
         } else {
             result.data.forEach(item => {
-                // ... (ส่วนที่เหลือของโค้ดในการสร้างตารางเหมือนเดิมทั้งหมด)
                 const tr = document.createElement('tr');
                 const entryDate = new Date(item.entry_time);
                 const formattedDate = entryDate.toLocaleDateString('en-GB');
@@ -346,14 +316,13 @@ async function fetchHistoryData(page = 1) {
             });
         }
         
-        const totalPages = Math.ceil(result.total / result.limit);
-        renderAdvancedPagination('entryHistoryPagination', result.page, totalPages, fetchHistoryData);
+        renderPagination('entryHistoryPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchOldHistoryData);
 
     } catch (error) {
         console.error('Failed to fetch entry history:', error);
         historyBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-danger">Error: ${error.message}</td></tr>`;
     } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+        hideSpinner();
     }
 }
 
