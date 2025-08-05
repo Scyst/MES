@@ -252,6 +252,92 @@ function renderProductionHistoryTable(data) {
 }
 
 // =================================================================
+// SECTION: REFACTORED REPORTING FUNCTIONS
+// =================================================================
+
+async function fetchStockInventoryReport(page = 1) {
+    stockCurrentPage = page;
+    showSpinner();
+    try {
+        const search = document.getElementById('filterPartNo').value; // ใช้ Filter หลักในการค้นหา
+        const result = await sendRequest(WIP_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search });
+        if (result.success) {
+            renderStockInventoryTable(result.data);
+            renderPagination('stockCountPagination', result.total, result.page, ROWS_PER_PAGE, fetchStockInventoryReport);
+        } else {
+            document.getElementById('stockCountTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderStockInventoryTable(data) {
+    const tbody = document.getElementById('stockCountTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No stock found for the current filter.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const onHandQty = parseFloat(row.total_onhand) || 0;
+        tr.innerHTML = `
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-info" onclick="alert('Drill-down by location feature coming soon!')">Details</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function fetchWipInventoryReport(page = 1) {
+    wipCurrentPage = page;
+    showSpinner();
+    try {
+        const params = {
+            page: page,
+            part_no: document.getElementById('filterPartNo').value,
+            location: document.getElementById('filterLine').value 
+        };
+        const result = await sendRequest(WIP_API_URL, 'get_wip_inventory_report', 'GET', null, params);
+        if (result.success) {
+            renderWipInventoryTable(result.data);
+            renderPagination('wipReportPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipInventoryReport);
+        } else {
+            document.getElementById('wipReportTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderWipInventoryTable(data) {
+    const tbody = document.getElementById('wipReportTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No Work-in-Progress items found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const onHandQty = parseFloat(row.quantity) || 0;
+        tr.innerHTML = `
+            <td>${row.location_name}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// =================================================================
 // SECTION: OLD SYSTEM FUNCTIONS (For WIP Reports - to be refactored later)
 // =================================================================
 async function fetchWipReport(page = 1) {
@@ -629,46 +715,6 @@ async function handleFormSubmit(event) {
     }
 }
 
-async function fetchStockInventoryReport(page = 1) {
-    stockCurrentPage = page;
-    showSpinner();
-    try {
-        const search = document.getElementById('filterPartNo').value; // ใช้ Filter หลักในการค้นหา
-        const result = await sendRequest(WIP_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search });
-        if (result.success) {
-            renderStockInventoryTable(result.data);
-            renderPagination('stockCountPagination', result.total, result.page, ROWS_PER_PAGE, fetchStockInventoryReport);
-        } else {
-            document.getElementById('stockCountTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderStockInventoryTable(data) {
-    const tbody = document.getElementById('stockCountTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No stock found for the current filter.</td></tr>';
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        const onHandQty = parseFloat(row.total_onhand) || 0;
-        tr.innerHTML = `
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
-            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-info" onclick="alert('Drill-down by location feature coming soon!')">Details</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================
@@ -691,12 +737,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (productionHistoryTab) {
         productionHistoryTab.addEventListener('shown.bs.tab', () => fetchProductionHistory(1));
     }
-
+    
     const stockTab = document.getElementById('stock-count-tab');
     if (stockTab) {
-        stockTab.addEventListener('shown.bs.tab', () => {
-            fetchStockInventoryReport(1)
-        });
+        stockTab.addEventListener('shown.bs.tab', () => fetchStockInventoryReport(1));
+    }
+    
+    // ** NEW: Listener for the refactored WIP/Variance Tab **
+    const wipTab = document.getElementById('wip-report-tab');
+    if(wipTab){
+        wipTab.addEventListener('shown.bs.tab', () => fetchWipInventoryReport(1));
     }
 
     // Initialize the active tab
@@ -708,17 +758,8 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchProductionHistory(1);
         } else if (activeTab.id === 'stock-count-tab') {
             fetchStockInventoryReport(1);
+        } else if (activeTab.id === 'wip-report-tab') {
+            fetchWipInventoryReport(1);
         }
-        // Add other initial loads for OLD WIP tabs
-    }
-    // Attach listeners for OLD tabs
-    const wipTab = document.getElementById('wip-tab');
-    if(wipTab){
-        wipTab.addEventListener('shown.bs.tab', () => fetchWipReport(1));
-    }
-
-    const wipLotTab = document.getElementById('wip-lot-tab');
-    if(wipLotTab){
-        wipLotTab.addEventListener('shown.bs.tab', () => fetchWipReportByLot(1));
     }
 });

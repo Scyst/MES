@@ -717,6 +717,67 @@ try {
             echo json_encode(['success' => true, 'data' => $lots]);
             break;
 
+        case 'get_wip_inventory_report':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+            
+            // ** LOGIC ใหม่: เราจะถือว่า Location ที่มีคำว่า 'WAREHOUSE' ไม่ใช่ WIP **
+            // คุณสามารถปรับแก้เงื่อนไขนี้ได้ในอนาคต
+            $wipLocationCondition = "loc.location_name NOT LIKE '%WAREHOUSE%'";
+
+            // Filtering logic
+            $params = [];
+            $conditions = [$wipLocationCondition];
+            if (!empty($_GET['part_no'])) { 
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $params[] = '%' . $_GET['part_no'] . '%';
+                $params[] = '%' . $_GET['part_no'] . '%';
+            }
+             if (!empty($_GET['location'])) { 
+                $conditions[] = "loc.location_name LIKE ?";
+                $params[] = '%' . $_GET['location'] . '%';
+            }
+            $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+            $totalSql = "SELECT COUNT(*) FROM {$onhand_table} h
+                         JOIN {$items_table} i ON h.parameter_id = i.item_id
+                         JOIN {$locations_table} loc ON h.location_id = loc.location_id
+                         {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                SELECT 
+                    h.location_id,
+                    loc.location_name,
+                    h.parameter_id as item_id,
+                    i.sap_no,
+                    i.part_no,
+                    i.part_description,
+                    h.quantity
+                FROM {$onhand_table} h
+                JOIN {$items_table} i ON h.parameter_id = i.item_id
+                JOIN {$locations_table} loc ON h.location_id = loc.location_id
+                {$whereClause}
+                ORDER BY loc.location_name, i.sap_no
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param);
+            }
+            $dataStmt->bindValue($paramIndex++, (int)$startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $wip_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $wip_data, 'total' => $total, 'page' => $page]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");

@@ -145,13 +145,11 @@
                     <table class="table table-dark table-striped">
                         <thead>
                             <tr>
-                                <th>Line</th>
-                                <th>Model</th>
+                                <th>Location</th>
+                                <th>SAP No.</th>
                                 <th>Part Number</th>
                                 <th>Part Description</th>
-                                <th style="text-align: center;">Total In</th>
-                                <th style="text-align: center;">Total Out</th>
-                                <th style="text-align: center;">WIP/Variance</th>
+                                <th class="text-end">On-Hand Quantity (WIP)</th>
                             </tr>
                         </thead>
                         <tbody id="wipReportTableBody"></tbody>
