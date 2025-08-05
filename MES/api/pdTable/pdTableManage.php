@@ -26,7 +26,7 @@ $users_table = $is_development ? 'USERS_TEST' : 'USERS';
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
 $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 $bom_table   = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
-
+$routes_table = $is_development ? 'MANUFACTURING_ROUTES_TEST' : 'MANUFACTURING_ROUTES';
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -62,6 +62,8 @@ try {
             $pdo->beginTransaction();
 
             // Step 1: Record the production output (FG, NG, etc.)
+            $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
+            
             // เพิ่มสต็อกของที่ผลิตเสร็จ (ไม่ว่าจะเป็น FG, NG, หรืออื่นๆ)
             $mergeProdSql = "MERGE {$onhand_table} AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
             $mergeProdStmt = $pdo->prepare($mergeProdSql);
@@ -70,18 +72,17 @@ try {
             // บันทึก Transaction การผลิต
             $prodTransSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $prodTransStmt = $pdo->prepare($prodTransSql);
-            $prodTransStmt->execute([$item_id, $quantity, 'PRODUCTION_' . $count_type, $location_id, $currentUser['id'], $notes, $lot_no]);
+            $prodTransStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no]);
 
             // Step 2: If it's a Finished Good (FG), consume components based on BOM
-            if ($count_type === 'FG') {
+            if (strtoupper($count_type) === 'FG') {
                 // ค้นหา BOM ของ Item ที่ผลิต
-                $bomSql = "SELECT i_comp.item_id as component_item_id, b.quantity_required 
+                // ** LOGIC BOM LOOKUP ที่ถูกต้อง **
+                 $bomSql = "SELECT i_comp.item_id as component_item_id, b.quantity_required 
                            FROM {$bom_table} b
-                           JOIN {$items_table} i_fg ON b.fg_part_no = i_fg.part_no -- This might need adjustment based on your BOM structure
-                           JOIN {$items_table} i_comp ON b.component_part_no = i_comp.part_no -- This might need adjustment
+                           JOIN {$items_table} i_fg ON b.fg_part_no = i_fg.part_no 
+                           JOIN {$items_table} i_comp ON b.component_part_no = i_comp.part_no
                            WHERE i_fg.item_id = ?";
-                // This BOM lookup logic may need to be more complex depending on how BOMs are defined (e.g., by line/model)
-                // For now, we assume a simple item_id to components link.
                 $bomStmt = $pdo->prepare($bomSql);
                 $bomStmt->execute([$item_id]);
                 $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -115,6 +116,66 @@ try {
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
             echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
+            break;
+        
+        case 'get_production_history':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+            
+            $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"];
+            $params = [];
+            
+            // Filtering logic
+            if (!empty($_GET['part_no'])) { $conditions[] = "i.part_no LIKE ?"; $params[] = '%' . $_GET['part_no'] . '%'; }
+            if (!empty($_GET['location'])) { $conditions[] = "loc.location_name LIKE ?"; $params[] = '%' . $_GET['location'] . '%'; }
+            if (!empty($_GET['lot_no'])) { $conditions[] = "t.reference_id LIKE ?"; $params[] = '%' . $_GET['lot_no'] . '%'; }
+            if (!empty($_GET['count_type'])) { $conditions[] = "t.transaction_type = ?"; $params[] = 'PRODUCTION_' . $_GET['count_type']; }
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+
+            $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+            $totalSql = "SELECT COUNT(*) FROM {$transactions_table} t
+                         JOIN {$items_table} i ON t.parameter_id = i.item_id
+                         LEFT JOIN {$locations_table} loc ON t.to_location_id = loc.location_id
+                         {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                SELECT 
+                    t.transaction_id,
+                    t.transaction_timestamp,
+                    i.sap_no,
+                    i.part_no,
+                    t.quantity,
+                    REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
+                    loc.location_name,
+                    t.reference_id as lot_no,
+                    u.username AS created_by,
+                    t.notes
+                FROM {$transactions_table} t
+                JOIN {$items_table} i ON t.parameter_id = i.item_id
+                LEFT JOIN {$locations_table} loc ON t.to_location_id = loc.location_id
+                LEFT JOIN {$users_table} u ON t.created_by_user_id = u.id
+                {$whereClause}
+                ORDER BY t.transaction_timestamp DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param);
+            }
+            $dataStmt->bindValue($paramIndex++, (int)$startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
             break;
 
         case 'get_parts':

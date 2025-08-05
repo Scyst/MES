@@ -123,18 +123,15 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Start</th>
-                                <th>End</th>
-                                <th>Line</th>
-                                <th>Model</th>
+                                <th>Time</th>
+                                <th>Location</th>
+                                <th>SAP No.</th>
                                 <th>Part No.</th>
                                 <th>Lot No.</th>
-                                <th style="text-align: center;">Qty</th>
-                                <th style="text-align: center;">Type</th>
-                                <th style="min-width: 200px; text-align: center;">Note</th>
-                                <?php if ($canManage): ?>
-                                    <th style="width: 150px; text-align: center;">Actions</th>
-                                <?php endif; ?>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-center">Type</th>
+                                <th>Notes</th>
+                                <th>Created By</th>
                             </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>
@@ -268,17 +265,14 @@
         }
     </script>
     
-    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>" defer></script>
-    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>" defer></script>
-    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>" defer></script>
-    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>" defer></script>
+    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
+    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
+    <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
     <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
     
-    <script src="script/wip_handler.js?v=<?php echo filemtime('script/wip_handler.js'); ?>" defer></script> 
-    <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
-    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 
+    <script src="script/pdTable.js?v=<?php echo filemtime('script/pdTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script> 
-    
+
     <script defer>
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
@@ -289,8 +283,7 @@
             const buttonGroup = document.getElementById('dynamic-button-group');
             const summaryContainer = document.getElementById('dynamic-summary-container');
             const mainTabs = document.querySelectorAll('#mainTab .nav-link');
-            const canManage = <?php echo json_encode($canManage); ?>;
-
+            
             function updateControls(activeTabId) {
                 buttonGroup.innerHTML = '';
                 summaryContainer.innerHTML = '';

@@ -11,6 +11,12 @@
 function renderPagination(containerId, totalItems, currentPage, rowsPerPage, callback) {
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     const pagination = document.getElementById(containerId);
+    
+    if (!pagination) {
+        console.error(`Pagination container with ID "${containerId}" not found.`);
+        return;
+    }
+    
     pagination.innerHTML = '';
     if (totalPages <= 1) return;
 
@@ -25,7 +31,6 @@ function renderPagination(containerId, totalItems, currentPage, rowsPerPage, cal
         if (!isDisabled) {
             a.addEventListener('click', (e) => {
                 e.preventDefault();
-                // ตรวจสอบให้แน่ใจว่า callback เป็นฟังก์ชันก่อนเรียกใช้
                 if (callback && typeof callback === 'function') {
                     callback(page);
                 }
