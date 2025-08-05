@@ -180,15 +180,8 @@
     <?php
         if ($canAdd) { 
             include('components/addPartModal.php'); 
-            include('components/editPartModal.php');
             include('components/addEntryModal.php');
-            include('components/editEntryModal.php');
         }
-        if ($canManage) {
-             include('components/adjustStockModal.php');
-        }
-        include('components/summaryModal.php');
-        include('components/wipDetailModal.php');
         include('../components/autoLogoutUI.php');
     ?>
     
@@ -283,7 +276,7 @@
 
             const activeTab = document.querySelector('#mainTab .nav-link.active');
             if (activeTab) {
-                updateControls(active.id);
+                updateControls(activeTab.id);
                 updateFilterVisibility(activeTab.id);
                 if (activeTab.id === 'wip-report-tab' && typeof fetchWipReport === 'function') {
                     fetchWipReport();

@@ -22,7 +22,7 @@
     </li>
     
     <li>
-      <a class="dropdown-item-icon" href="../inventory/inventory.php" title="Inventory Management">
+      <a class="dropdown-item-icon" href="../inventoryUI/inventoryUI.php" title="Inventory Management">
         <img src="../../icons/stock.png" alt="Inventory Management">
         <span>Inventory Management</span>
       </a>
@@ -71,6 +71,13 @@
       // Links for Admin and Creator roles only
       if ($userRole && in_array($userRole, ['admin', 'creator'])): 
     ?>
+    <li>
+      <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
+        <img src="../../icons/settings.png" alt="Inventory Settings">
+        <span>Inventory Settings</span>
+      </a>
+    </li>
+
     <li>
       <a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager">
         <img src="../../icons/admin.png" alt="User Manager">

@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchResultsContainer.innerHTML = '<a href="#" class="list-group-item list-group-item-action disabled">Searching...</a>';
         showSpinner(); // <-- เพิ่ม: แสดง Spinner
         try {
-            const response = await fetch(`../../api/pdTable/pdTableManage.php?action=search_lots&term=${term}`);
+            const response = await fetch(`../../pdTable/api/pdTableManage.php?action=search_lots&term=${term}`);
             const result = await response.json();
             if (result.success) {
                 renderSearchResults(result.data);
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         showSpinner(); // <-- เพิ่ม: แสดง Spinner
         try {
-            const response = await fetch(`../../api/Traceability/traceability.php?lot_no=${lotNo}`);
+            const response = await fetch(`api/traceability.php?lot_no=${lotNo}`);
             const result = await response.json();
 
             if (!result.success) throw new Error(result.message);
