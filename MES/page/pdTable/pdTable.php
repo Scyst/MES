@@ -185,17 +185,12 @@
                 <div class="table-responsive mt-3">
                     <table class="table table-dark table-striped table-hover">
                         <thead>
-                             <tr>
-                                <th>Line</th>
-                                <th>Model</th>
-                                <th>Part No.</th>
+                            <tr>
+                                <th style="width: 15%;">SAP No.</th>
+                                <th style="width: 15%;">Part No.</th>
                                 <th>Part Description</th>
-                                <th class="text-end">Total IN</th>
-                                <th class="text-end">Total OUT</th>
-                                <th class="text-end">On Hand</th>
-                                <?php if ($canManage): ?>
-                                    <th class="text-center">Actions</th>
-                                <?php endif; ?>
+                                <th class="text-end" style="width: 15%;">Total On-Hand</th>
+                                <th class="text-center" style="width: 10%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="stockCountTableBody"></tbody>

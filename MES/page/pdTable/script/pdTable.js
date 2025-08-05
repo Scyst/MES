@@ -18,7 +18,6 @@ let selectedInItem = null;
 let selectedOutItem = null;
 let currentlyEditingData = null;
 
-
 // =================================================================
 // SECTION: CORE & UTILITY FUNCTIONS
 // =================================================================
@@ -271,7 +270,7 @@ async function fetchWipReport(page = 1) {
 
     showSpinner();
     try {
-        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report&${params.toString()}`);
+        const response = await fetch(`${WIP_API_URL}?action=get_wip_report&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -304,7 +303,7 @@ async function fetchWipReport(page = 1) {
             });
         }
         
-        renderPagination('wipReportPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReport);
+        renderPagination('wipReportPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipReport);
 
     } catch (error) {
         console.error('Failed to fetch WIP report:', error);
@@ -379,7 +378,7 @@ async function fetchWipReportByLot(page = 1) {
 
     showSpinner();
     try {
-        const response = await fetch(`${WIP_API_ENDPOINT}?action=get_wip_report_by_lot&${params.toString()}`);
+        const response = await fetch(`${WIP_API_URL}?action=get_wip_report_by_lot&${params.toString()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message);
 
@@ -413,7 +412,7 @@ async function fetchWipReportByLot(page = 1) {
             });
         }
         
-        renderPagination('wipReportByLotPagination', result.total, result.page, WIP_ROWS_PER_PAGE, fetchWipReportByLot);
+        renderPagination('wipReportByLotPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipReportByLot);
 
     } catch (error) {
         console.error('Failed to fetch WIP report by lot:', error);
@@ -630,6 +629,45 @@ async function handleFormSubmit(event) {
     }
 }
 
+async function fetchStockInventoryReport(page = 1) {
+    stockCurrentPage = page;
+    showSpinner();
+    try {
+        const search = document.getElementById('filterPartNo').value; // ใช้ Filter หลักในการค้นหา
+        const result = await sendRequest(WIP_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search });
+        if (result.success) {
+            renderStockInventoryTable(result.data);
+            renderPagination('stockCountPagination', result.total, result.page, ROWS_PER_PAGE, fetchStockInventoryReport);
+        } else {
+            document.getElementById('stockCountTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderStockInventoryTable(data) {
+    const tbody = document.getElementById('stockCountTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No stock found for the current filter.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const onHandQty = parseFloat(row.total_onhand) || 0;
+        tr.innerHTML = `
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-info" onclick="alert('Drill-down by location feature coming soon!')">Details</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
 // =================================================================
 // SECTION: INITIALIZATION
@@ -654,6 +692,13 @@ document.addEventListener('DOMContentLoaded', () => {
         productionHistoryTab.addEventListener('shown.bs.tab', () => fetchProductionHistory(1));
     }
 
+    const stockTab = document.getElementById('stock-count-tab');
+    if (stockTab) {
+        stockTab.addEventListener('shown.bs.tab', () => {
+            fetchStockInventoryReport(1)
+        });
+    }
+
     // Initialize the active tab
     const activeTab = document.querySelector('#mainTab .nav-link.active');
     if (activeTab) {
@@ -661,9 +706,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchReceiptHistory(1);
         } else if (activeTab.id === 'production-history-tab') {
             fetchProductionHistory(1);
+        } else if (activeTab.id === 'stock-count-tab') {
+            fetchStockInventoryReport(1);
         }
+        // Add other initial loads for OLD WIP tabs
     }
-    
     // Attach listeners for OLD tabs
     const wipTab = document.getElementById('wip-tab');
     if(wipTab){
@@ -674,10 +721,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if(wipLotTab){
         wipLotTab.addEventListener('shown.bs.tab', () => fetchWipReportByLot(1));
     }
-
-    const stockTab = document.getElementById('stock-inventory-tab');
-    if (stockTab) {
-        stockTab.addEventListener('shown.bs.tab', () => fetchStockCountReport(1));
-    }
-
 });

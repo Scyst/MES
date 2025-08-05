@@ -96,6 +96,52 @@ try {
 
             echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
             break;
+
+        case 'get_stock_inventory_report':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+
+            // Simple search for now
+            $search_term = $_GET['search'] ?? '';
+            $conditions = [];
+            $params = [];
+            if (!empty($search_term)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
+                $params = ["%{$search_term}%", "%{$search_term}%", "%{$search_term}%"];
+            }
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            $totalSql = "SELECT COUNT(DISTINCT i.item_id) FROM {$items_table} i {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                SELECT
+                    i.item_id, i.sap_no, i.part_no, i.part_description,
+                    SUM(h.quantity) as total_onhand
+                FROM {$items_table} i
+                LEFT JOIN {$onhand_table} h ON i.item_id = h.parameter_id
+                {$whereClause}
+                GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description
+                ORDER BY i.sap_no
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param);
+            }
+            $dataStmt->bindValue($paramIndex++, (int)$startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            
+            $stock = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
+            break;  
             
         case 'log_wip_entry':
             $required_fields = ['model', 'line', 'part_no', 'quantity_in'];
