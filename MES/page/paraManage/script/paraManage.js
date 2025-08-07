@@ -101,11 +101,11 @@ function setupParameterItemAutocomplete() {
                     resultItem.className = 'autocomplete-item';
                     resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
                     resultItem.addEventListener('click', () => {
-                        // เมื่อผู้ใช้เลือกรายการ
                         searchInput.value = `${item.sap_no} | ${item.part_no}`;
                         document.getElementById('param_item_id').value = item.item_id;
                         document.getElementById('param_sap_no').value = item.sap_no;
                         document.getElementById('param_part_no').value = item.part_no;
+                        document.getElementById('param_part_description').value = item.part_description || '';
                         resultsWrapper.innerHTML = '';
                     });
                     resultsWrapper.appendChild(resultItem);
@@ -1071,10 +1071,17 @@ function openEditModal(modalId, data) {
 
     for (const key in data) {
         const input = modalElement.querySelector(`[name="${key}"]`);
+        const editInput = modalElement.querySelector(`#edit_${key}`);
+
         if (input) {
-            input.value = data[key];
+            input.value = data[key] === null ? '' : data[key];
+        }
+        if (editInput) {
+            editInput.value = data[key] === null ? '' : data[key];
         }
     }
+
+    document.getElementById('edit_part_description_display').value = data.part_description || '';
     
     const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
     modal.show();

@@ -26,7 +26,7 @@ try {
     switch ($action) {
         
         case 'read':
-            $sql = "SELECT id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM {$param_table}";
+            $sql = "SELECT id, item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM {$param_table}";
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
                 $sql .= " WHERE line = ?";
@@ -107,7 +107,6 @@ try {
             $id = $input['id'] ?? null;
             if (!$id) throw new Exception("Missing Parameter ID");
             
-            // ดึงข้อมูล Parameter เดิมเพื่อตรวจสอบสิทธิ์
             $stmt = $pdo->prepare("SELECT line FROM " . PARAM_TABLE . " WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
@@ -120,25 +119,34 @@ try {
                 throw new Exception("Parameter not found.");
             }
             
-            // ดึง item_id จากฟอร์ม (แม้ว่าจะ readonly แต่ก็ควรอ่านค่ามา)
             $item_id = $input['item_id'] ?? 0;
+            $sap_no = strtoupper(trim($input['sap_no'] ?? ''));
+
+            if (empty($item_id)) {
+                if (empty($sap_no)) {
+                    throw new Exception("SAP No. is required to link old parameters.");
+                }
+                $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ? AND is_active = 1");
+                $itemStmt->execute([$sap_no]);
+                $found_item_id = $itemStmt->fetchColumn();
+                
+                if (!$found_item_id) {
+                    throw new Exception("Associated Item ID not found in Item Master for SAP No: {$sap_no}. Please create it first.");
+                }
+                $item_id = $found_item_id;
+            }
+
             $line = strtoupper($input['line']);
             $model = strtoupper($input['model']);
-            // สำหรับ Part No และ SAP No เราจะดึงมาจาก Item Master อีกครั้งเพื่อความถูกต้อง
-            $itemStmt = $pdo->prepare("SELECT sap_no, part_no FROM " . ITEMS_TABLE . " WHERE item_id = ?");
-            $itemStmt->execute([$item_id]);
-            $itemMaster = $itemStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$itemMaster) {
-                throw new Exception("Associated Item ID not found.");
-            }
+            $part_no = strtoupper(trim($input['part_no'] ?? ''));
             
             $updateSql = "UPDATE " . PARAM_TABLE . " SET item_id = ?, line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
             $params = [
                 $item_id,
                 $line, 
                 $model,
-                $itemMaster['part_no'], 
-                $itemMaster['sap_no'], 
+                $part_no, 
+                $sap_no, 
                 (int)$input['planned_output'], 
                 $input['part_description'] ?? null,
                 isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00,
@@ -148,7 +156,7 @@ try {
             $stmt->execute($params);
 
             logAction($pdo, $currentUser['username'], 'UPDATE PARAMETER', $id, "Data updated for ID: $id");
-            echo json_encode(["success" => true, 'message' => 'Parameter updated.']);
+            echo json_encode(["success" => true, 'message' => 'Parameter updated successfully.']);
             break;
 
         case 'delete':

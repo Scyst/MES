@@ -17,12 +17,17 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Selected SAP No.</label>
-                            <input type="text" class="form-control" id="param_sap_no" name="sap_no" readonly>
+                            <input type="text" class="form-control form-control-readonly" id="param_sap_no" name="sap_no" readonly>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Selected Part No.</label>
-                            <input type="text" class="form-control" id="param_part_no" name="part_no" readonly>
+                            <input type="text" class="form-control form-control-readonly" id="param_part_no" name="part_no" readonly>
                         </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Part Description</label>
+                        <textarea class="form-control form-control-readonly" id="param_part_description" rows="2" readonly></textarea>
                     </div>
                     
                     <hr>

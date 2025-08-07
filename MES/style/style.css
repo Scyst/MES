@@ -268,3 +268,10 @@ ul {
 .autocomplete-item small {
     color: #adb5bd;
 }
+
+.form-control-readonly {
+    background-color: #495057;
+    opacity: 1;
+    cursor: not-allowed;
+    color: white;
+}
