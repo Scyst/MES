@@ -4,6 +4,7 @@
 require_once __DIR__ . '/../../../api/db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../api/logger.php';
+require_once __DIR__ . '/../../helpers/inventory_helper.php';
 
 // ส่วนของ CSRF Token Check (เหมือนเดิม)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -58,6 +59,11 @@ try {
             if ($stmt->execute($params)) {
                 $detail = "Model: {$model}, Part: {$part_no}, Lot No: {$lot_no}, Qty: {$quantity_in}";
                 logAction($pdo, $currentUser['username'], 'WIP_IN', $line, $detail);
+
+                $itemId = getItemId($pdo, $part_no, $line, $model);
+                $locationId = getLocationId($pdo, $line);
+                updateOnhandBalance($pdo, $itemId, $locationId, $quantity_in);
+
                 echo json_encode(['success' => true, 'message' => 'WIP entry logged successfully.']);
             } else {
                 throw new Exception("Failed to log WIP entry.");
@@ -65,17 +71,19 @@ try {
             break;
 
         case 'update_wip_entry':
-            $required = ['entry_id', 'entry_time', 'model', 'line', 'part_no', 'quantity_in'];
-            foreach ($required as $field) {
-                if (empty($input[$field])) { throw new Exception("Missing required field: " . $field); }
-            }
-            
             $entry_id = (int)$input['entry_id'];
 
             enforceRecordPermission($pdo, WIP_TABLE, $entry_id, 'entry_id', 'operator');
 
+            $oldEntryStmt = $pdo->prepare("SELECT * FROM " . WIP_TABLE . " WHERE entry_id = ?");
+            $oldEntryStmt->execute([$entry_id]);
+            $oldEntry = $oldEntryStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$oldEntry) {
+                throw new Exception("Original entry not found for update.");
+            }
+
             if (hasRole(['supervisor', 'admin', 'creator'])) {
-                $stmt = $pdo->prepare("SELECT line FROM " . WIP_TABLE . " WHERE entry_id = ?");
+                $stmt = $pdo->prepare("SELECT line FROM " . WIP_TABLE . " WHERE entry_id = ?"); // <-- แก้ไข
                 $stmt->execute([$entry_id]);
                 $entry = $stmt->fetch();
                 if ($entry && $input['line'] !== $entry['line']) {
@@ -101,6 +109,24 @@ try {
             if ($stmt->execute($params)) {
                 $detail = "Updated WIP ID: {$entry_id} by {$currentUser['username']}";
                 logAction($pdo, $currentUser['username'], 'UPDATE_WIP', $input['line'], $detail);
+
+                $quantityChange = (float)$input['quantity_in'] - (float)$oldEntry['quantity_in'];
+
+                if ($input['line'] !== $oldEntry['line'] || $input['part_no'] !== $oldEntry['part_no'] || $input['model'] !== $oldEntry['model']) {
+                    $oldItemId = getItemId($pdo, $oldEntry['part_no'], $oldEntry['line'], $oldEntry['model']);
+                    $oldLocationId = getLocationId($pdo, $oldEntry['line']);
+                    updateOnhandBalance($pdo, $oldItemId, $oldLocationId, -(float)$oldEntry['quantity_in']);
+                    
+                    $newItemId = getItemId($pdo, $input['part_no'], $input['line'], $input['model']);
+                    $newLocationId = getLocationId($pdo, $input['line']);
+                    updateOnhandBalance($pdo, $newItemId, $newLocationId, (float)$input['quantity_in']);
+                } 
+                else if ($quantityChange != 0) {
+                    $itemId = getItemId($pdo, $input['part_no'], $input['line'], $input['model']);
+                    $locationId = getLocationId($pdo, $input['line']);
+                    updateOnhandBalance($pdo, $itemId, $locationId, $quantityChange);
+                }
+
                 echo json_encode(['success' => true, 'message' => 'WIP Entry updated successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'No changes made or entry not found.']);
@@ -125,6 +151,12 @@ try {
             if ($stmt->execute([$id]) && $stmt->rowCount() > 0) {
                 $detail = "Deleted WIP ID: {$id} | Model: {$entryToDelete['model']}, Part: {$entryToDelete['part_no']}";
                 logAction($pdo, $currentUser['username'], 'DELETE_WIP', $entryToDelete['line'], $detail);
+                
+                $itemId = getItemId($pdo, $entryToDelete['part_no'], $entryToDelete['line'], $entryToDelete['model']);
+                $locationId = getLocationId($pdo, $entryToDelete['line']);
+                $quantityChange = - (float)$entryToDelete['quantity_in']; 
+                updateOnhandBalance($pdo, $itemId, $locationId, $quantityChange);
+
                 echo json_encode(['success' => true, 'message' => 'WIP Entry deleted successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Entry not found or already deleted.']);
@@ -408,6 +440,11 @@ try {
                 ];
                 
                 $stmt->execute($params);
+                if ($variance != 0) {
+                    $itemId = getItemId($pdo, $part_no, $line, $model);
+                    $locationId = getLocationId($pdo, $line);
+                    updateOnhandBalance($pdo, $itemId, $locationId, $variance);
+                }
                 $log_detail = "Part: {$part_no}, Model: {$model}, System: {$system_count}, Physical: {$physical_count}, Var: {$variance}";
                 logAction($pdo, $currentUser['username'], 'STOCK_ADJUST', $line, $log_detail);
                 $pdo->commit();

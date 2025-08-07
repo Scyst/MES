@@ -4,6 +4,7 @@
 require_once __DIR__ . '/../../../api/db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../api/logger.php';
+require_once __DIR__ . '/../../helpers/inventory_helper.php';
 
 // ส่วนของ CSRF Token Check (เหมือนเดิม)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -180,6 +181,12 @@ try {
                     $count_type, $fg_qty, $note_input, $transaction_id,
                     $operator_id
                 ]);
+
+                if ($count_type === 'FG' && $fg_qty > 0) {
+                    $itemId = getItemId($pdo, $part_no, $line, $model);
+                    $locationId = getLocationId($pdo, $line);
+                    updateOnhandBalance($pdo, $itemId, $locationId, $fg_qty);
+                }
                 
                 if (!empty($components)) {
                     $consumeSql = "INSERT INTO " . PARTS_TABLE . " (log_date, start_time, log_time, model, line, part_no, lot_no, count_type, count_value, note, source_transaction_id, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'BOM-ISSUE', ?, ?, ?, ?)";
@@ -196,6 +203,10 @@ try {
                             $transaction_id,
                             $operator_id
                         ]);
+                        $componentId = getItemId($pdo, $comp['component_part_no'], $line, $model);
+                        $locationId = getLocationId($pdo, $line);
+                        $quantityChange = - (float)$qty_to_consume;
+                        updateOnhandBalance($pdo, $componentId, $locationId, $quantityChange);
                     }
                 }
 
@@ -221,18 +232,13 @@ try {
                 $findSql = "SELECT * FROM " . PARTS_TABLE . " WHERE id = ?";
                 $findStmt = $pdo->prepare($findSql);
                 $findStmt->execute([$id]);
-                $originalPart = $findStmt->fetch();
+                $originalPart = $findStmt->fetch(PDO::FETCH_ASSOC);
                 if (!$originalPart) throw new Exception("Part not found.");
                 
                 if (strtoupper(trim($input['line'])) !== $originalPart['line']) {
                     enforceLinePermission(strtoupper(trim($input['line'])));
                 }
 
-                $required_fields = ['log_date', 'start_time', 'end_time', 'part_no', 'model', 'line', 'count_type', 'count_value'];
-                foreach ($required_fields as $field) {
-                    if (!isset($input[$field])) throw new Exception("Missing required field: " . $field);
-                }
-                
                 $sql = "UPDATE " . PARTS_TABLE . " SET log_date=?, start_time=?, log_time=?, line=?, model=?, part_no=?, count_value=?, count_type=?, note=? WHERE id = ?";
                 $pdo->prepare($sql)->execute([
                     $input['log_date'], $input['start_time'], $input['end_time'], strtoupper(trim($input['line'])), 
@@ -241,6 +247,20 @@ try {
                     $input['note'], 
                     $id
                 ]);
+
+                if ($originalPart['count_type'] === 'FG' || $originalPart['count_type'] === 'BOM-ISSUE') {
+                    $oldQuantityChange = ($originalPart['count_type'] === 'FG') ? -(float)$originalPart['count_value'] : (float)$originalPart['count_value'];
+                    $oldItemId = getItemId($pdo, $originalPart['part_no'], $originalPart['line'], $originalPart['model']);
+                    $oldLocationId = getLocationId($pdo, $originalPart['line']);
+                    updateOnhandBalance($pdo, $oldItemId, $oldLocationId, $oldQuantityChange);
+
+                    $newQuantityChange = ($input['count_type'] === 'FG') ? (float)$input['count_value'] : -(float)$input['count_value'];
+                    if ($input['count_type'] === 'FG' || $input['count_type'] === 'BOM-ISSUE') {
+                        $newItemId = getItemId($pdo, $input['part_no'], $input['line'], $input['model']);
+                        $newLocationId = getLocationId($pdo, $input['line']);
+                        updateOnhandBalance($pdo, $newItemId, $newLocationId, $newQuantityChange);
+                    }
+                }
 
                 $detail = "Updated Part ID: {$id}, Model: {$input['model']}, Part No: {$input['part_no']}, Qty: {$input['count_value']}";
                 logAction($pdo, $currentUser['username'], 'UPDATE_PART', $input['line'], $detail);
@@ -265,13 +285,21 @@ try {
                 $findSql = "SELECT * FROM " . PARTS_TABLE . " WHERE id = ?";
                 $findStmt = $pdo->prepare($findSql);
                 $findStmt->execute([$id]);
-                $part = $findStmt->fetch();
+                $partToDelete = $findStmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!$part) throw new Exception("Part not found.");
-                
-                $transaction_id = $part['source_transaction_id'];
-                $detail = "Deleted Part ID: {$id} | Model: {$part['model']}, Part No: {$part['part_no']}, Lot No: {$part['lot_no']}, Qty: {$part['count_value']}, Type: {$part['count_type']}";
+                if (!$partToDelete) {
+                    throw new Exception("Part not found.");
+                }
 
+                $recordsToRevert = [$partToDelete];
+                if ($partToDelete['source_transaction_id']) {
+                    $bomStmt = $pdo->prepare("SELECT * FROM " . PARTS_TABLE . " WHERE source_transaction_id = ? AND count_type = 'BOM-ISSUE'");
+                    $bomStmt->execute([$partToDelete['source_transaction_id']]);
+                    $bomRecords = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $recordsToRevert = array_merge($recordsToRevert, $bomRecords);
+                }
+
+                $transaction_id = $partToDelete['source_transaction_id'];
                 if ($transaction_id) {
                     $deleteSql = "DELETE FROM " . PARTS_TABLE . " WHERE source_transaction_id = ?";
                     $pdo->prepare($deleteSql)->execute([$transaction_id]);
@@ -279,8 +307,26 @@ try {
                     $deleteSql = "DELETE FROM " . PARTS_TABLE . " WHERE id = ?";
                     $pdo->prepare($deleteSql)->execute([$id]);
                 }
+
+                foreach ($recordsToRevert as $record) {
+                    $quantityChange = 0;
+                    if ($record['count_type'] === 'FG') {
+                        $quantityChange = - (float)$record['count_value'];
+                    } 
+                    else if ($record['count_type'] === 'BOM-ISSUE') {
+                        $quantityChange = (float)$record['count_value'];
+                    }
+
+                    if ($quantityChange != 0) {
+                        $itemId = getItemId($pdo, $record['part_no'], $record['line'], $record['model']);
+                        $locationId = getLocationId($pdo, $record['line']);
+                        updateOnhandBalance($pdo, $itemId, $locationId, $quantityChange);
+                    }
+                }
+
+                $detail = "Deleted Part ID: {$id} | Model: {$partToDelete['model']}, Part No: {$partToDelete['part_no']}";
+                logAction($pdo, $currentUser['username'], 'DELETE_PART', $partToDelete['line'], $detail);
                 
-                logAction($pdo, $currentUser['username'], 'DELETE_PART', $part['line'], $detail);
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Part and related components deleted successfully.']);
 

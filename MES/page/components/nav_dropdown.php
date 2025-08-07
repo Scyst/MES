@@ -60,7 +60,7 @@
       if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): 
     ?>
     <li>
-      <a class="dropdown-item-icon" href="../paraManageUI/paraManageUI.php" title="Parameter Manager">
+      <a class="dropdown-item-icon" href="../paraManage/paraManageUI.php" title="Parameter Manager">
         <img src="../../icons/slider.png" alt="Parameter Manager">
         <span>Parameter Manager</span>
       </a>

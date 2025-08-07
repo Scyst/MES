@@ -4,6 +4,7 @@
 const LOCATIONS_API = 'api/locationsManage.php';
 const TRANSFER_API = 'api/stockTransferManage.php';
 const OPENING_BALANCE_API = 'api/openingBalanceManage.php';
+const ITEM_MASTER_API = 'api/itemMasterManage.php';
 
 // --- Global Variables ---
 let allItems = []; // ใช้ร่วมกันระหว่าง Transfer และ Opening Balance
@@ -422,6 +423,182 @@ async function saveStockTake() {
     }
 }
 
+// --- Item Master Functions ---
+async function fetchItems(page = 1) {
+    showSpinner();
+    const searchTerm = document.getElementById('itemMasterSearch').value;
+    const showInactive = document.getElementById('toggleInactiveBtn').classList.contains('active');
+    try {
+        const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { page, search: searchTerm, show_inactive: showInactive });
+        if (result.success) {
+            renderItemsMasterTable(result.data);
+            renderPagination('itemMasterPagination', result.total, result.page, 50, fetchItems);
+        } else {
+            document.getElementById('itemsTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${result.message}</td></tr>`;
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderItemsMasterTable(items) {
+    const tbody = document.getElementById('itemsTableBody');
+    tbody.innerHTML = '';
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No items found.</td></tr>';
+        return;
+    }
+
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+
+        if (item.is_active != 1) {
+            tr.classList.add('table-secondary', 'text-muted');
+            tr.style.textDecoration = 'line-through';
+        }
+        
+        tr.addEventListener('click', () => {
+            openItemModal(item);
+        });
+
+        // สร้างคอลัมน์ข้อมูล
+        tr.innerHTML = `
+            <td>${item.sap_no}</td>
+            <td>${item.part_no}</td>
+            <td>${item.part_description || ''}</td>
+            <td class="text-end">${parseFloat(item.part_value || 0).toFixed(2)}</td>
+            <td class="text-end">${new Date(item.created_at).toLocaleDateString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openItemModal(item = null) {
+    const form = document.getElementById('itemForm');
+    const modalLabel = document.getElementById('itemModalLabel');
+    const saveBtn = document.getElementById('saveItemBtn');
+    const deleteBtn = document.getElementById('deleteItemBtn');
+    const bomBtn = document.getElementById('manageBomBtn');
+    
+    form.reset();
+    
+    if (item) { // กรณี Edit หรือดูข้อมูล
+        // เติมข้อมูลลงในฟอร์ม
+        document.getElementById('item_id').value = item.item_id;
+        document.getElementById('sap_no').value = item.sap_no;
+        document.getElementById('part_no').value = item.part_no;
+        document.getElementById('part_description').value = item.part_description;
+        document.getElementById('part_value').value = item.part_value;
+        
+        if (item.is_active == 1) {
+            // --- ถ้า Active ---
+            modalLabel.textContent = 'Edit Item';
+            saveBtn.textContent = 'Save Changes';
+            saveBtn.className = 'btn btn-primary'; // เปลี่ยนปุ่มเป็นสีปกติ
+            deleteBtn.classList.remove('d-none'); // แสดงปุ่ม Delete
+            bomBtn.classList.remove('d-none');    // แสดงปุ่ม Manage BOM
+        } else {
+            // --- ถ้า Inactive ---
+            modalLabel.textContent = 'Restore Item';
+            saveBtn.textContent = 'Restore'; // เปลี่ยนข้อความปุ่มเป็น Restore
+            saveBtn.className = 'btn btn-success'; // เปลี่ยนปุ่มเป็นสีเขียว
+            deleteBtn.classList.add('d-none');    // ซ่อนปุ่ม Delete
+            bomBtn.classList.add('d-none');       // ซ่อนปุ่ม Manage BOM
+        }
+
+    } else { // กรณี Add New
+        modalLabel.textContent = 'Add New Item';
+        document.getElementById('item_id').value = '0';
+        saveBtn.textContent = 'Save Changes';
+        saveBtn.className = 'btn btn-primary';
+        deleteBtn.classList.add('d-none');
+        bomBtn.classList.add('d-none');
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('itemModal'));
+    modal.show();
+}
+
+async function handleItemFormSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData.entries());
+    const itemId = data.item_id;
+
+    const saveBtn = document.getElementById('saveItemBtn');
+    if (saveBtn.textContent === 'Restore') {
+        restoreItem(itemId);
+        return;
+    }
+
+    showSpinner();
+    try {
+        const result = await sendRequest(ITEM_MASTER_API, 'save_item', 'POST', data);
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+            await fetchItems(1);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function deleteItem() {
+    const itemId = document.getElementById('item_id').value;
+    if (!itemId || itemId === '0') return;
+    
+    if (confirm(`Are you sure you want to delete this item? This action cannot be undone.`)) {
+        showSpinner();
+        try {
+            const result = await sendRequest(ITEM_MASTER_API, 'delete_item', 'POST', { item_id: itemId });
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+                await fetchItems(1);
+            }
+        } finally {
+            hideSpinner();
+        }
+    }
+}
+
+function manageBomForItem(item) {
+    if (!item || !item.part_no) {
+        showToast('Cannot manage BOM without a valid item.', 'var(--bs-danger)');
+        return;
+    }
+    
+    // สร้าง URL ที่มี parameter สำหรับการค้นหา และระบุให้เปิด Tab "BOM Manager"
+    const url = `../paraManage/paraManageUI.php?search=${encodeURIComponent(item.part_no)}&tab=bom`;
+    
+    // แสดงข้อความให้ผู้ใช้ทราบเล็กน้อยก่อนเปลี่ยนหน้า
+    showToast(`Loading BOM Manager for ${item.part_no}...`, 'var(--bs-info)');
+    
+    // สั่งให้เบราว์เซอร์เปิดไปที่หน้านั้น
+    setTimeout(() => {
+        window.location.href = url;
+    }, 500); // หน่วงเวลาเล็กน้อยเพื่อให้ผู้ใช้เห็นข้อความ
+}
+
+async function restoreItem(itemId) {
+    if (!itemId) return;
+    
+    if (confirm(`Are you sure you want to restore this item?`)) {
+        showSpinner();
+        try {
+            const result = await sendRequest(ITEM_MASTER_API, 'restore_item', 'POST', { item_id: itemId });
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            if (result.success) {
+                await fetchItems(1);
+            }
+        } finally {
+            hideSpinner();
+        }
+    }
+}
+
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Location Manager Init
@@ -454,4 +631,43 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('locationSelect').addEventListener('change', loadItemsForLocation);
     document.getElementById('itemSearch').addEventListener('input', filterItems);
     document.getElementById('saveStockBtn').addEventListener('click', saveStockTake);
-}); 
+
+    // Item Master Init
+    const itemMasterTab = document.getElementById('item-master-tab');
+    if (itemMasterTab) {
+        itemMasterTab.addEventListener('shown.bs.tab', () => {
+            fetchItems(1);
+        }, { once: true });
+    }
+    document.getElementById('addNewItemBtn').addEventListener('click', () => openItemModal());
+    document.getElementById('itemForm').addEventListener('submit', handleItemFormSubmit);
+    document.getElementById('deleteItemBtn').addEventListener('click', deleteItem);
+    document.getElementById('manageBomBtn').addEventListener('click', () => {
+        const item_id = document.getElementById('item_id').value;
+        const part_no = document.getElementById('part_no').value;
+        const sap_no = document.getElementById('sap_no').value;
+        bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+        manageBomForItem({ item_id, part_no, sap_no });
+    });
+    
+    let itemSearchDebounce;
+    document.getElementById('itemMasterSearch').addEventListener('input', () => {
+        clearTimeout(itemSearchDebounce);
+        itemSearchDebounce = setTimeout(() => fetchItems(1), 500);
+    });
+    const toggleBtn = document.getElementById('toggleInactiveBtn');
+    toggleBtn.addEventListener('click', () => {
+        toggleBtn.classList.toggle('active');
+        
+        const icon = toggleBtn.querySelector('i');
+        if (toggleBtn.classList.contains('active')) {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+        
+        fetchItems(1);
+    });
+});

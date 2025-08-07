@@ -38,6 +38,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master</button>
+            </li>
         </ul>
 
         <div class="tab-content" id="settingsTabContent">
@@ -50,6 +53,9 @@
             <div class="tab-pane fade" id="opening-balance-pane" role="tabpanel">
                 <?php include('components/openingBalanceUI.php'); ?>
             </div>
+            <div class="tab-pane fade" id="item-master-pane" role="tabpanel">
+                <?php include('components/itemMasterUI.php'); ?>
+            </div>
         </div>
     </div>
     
@@ -57,6 +63,7 @@
 
     <?php include('components/locationModal.php'); ?>
     <?php include('components/transferModal.php'); ?>
+    <?php include('components/itemModal.php');?>
     <?php include('../components/autoLogoutUI.php'); ?>
 
     <script>

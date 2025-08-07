@@ -1,5 +1,5 @@
 <div class="row my-3 align-items-center sticky-bar py-3">
-    <div class="col-md-8">
+    <div class="col-md-6">
         <div class="filter-controls-wrapper">
             <div class="input-group">
                 <label for="locationSelect" class="input-group-text">Location:</label>
@@ -8,7 +8,7 @@
             <input type="text" id="itemSearch" class="form-control" placeholder="Search Item to filter list..." disabled>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-6">
         <div class="d-flex justify-content-end gap-2">
             <button class="btn btn-primary" id="saveStockBtn" disabled><i class="fas fa-save"></i> Save All Changes</button>
         </div>
