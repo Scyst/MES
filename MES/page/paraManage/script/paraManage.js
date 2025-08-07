@@ -1028,33 +1028,35 @@ function openEditModal(modalId, data) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    let bomTabLoaded = false;
+
     const urlParams = new URLSearchParams(window.location.search);
     const searchFromUrl = urlParams.get('search');
     const tabFromUrl = urlParams.get('tab');
 
     if (tabFromUrl === 'bom') {
-        // หาปุ่ม Tab ของ BOM Manager
         const bomTabButton = document.getElementById('bom-manager-tab');
         if (bomTabButton) {
-            // สร้าง instance ของ Tab แล้วสั่งให้แสดงผล
             const tab = new bootstrap.Tab(bomTabButton);
             tab.show();
 
-            // ถ้ามีการส่งค่า search มาด้วย
+            if (!bomTabLoaded) {
+                initializeBomManager();
+                bomTabLoaded = true;
+            }
+
             if (searchFromUrl) {
-                // หน่วงเวลาเล็กน้อยเพื่อให้ Tab โหลดเสร็จก่อน
                 setTimeout(() => {
                     const bomSearchInput = document.getElementById('bomSearchInput');
                     if (bomSearchInput) {
-                        bomSearchInput.value = searchFromUrl; // ใส่ค่าในช่องค้นหา
-                        // สั่งให้ฟังก์ชันค้นหาทำงาน
+                        bomSearchInput.value = searchFromUrl;
                         bomSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
-                }, 500);
+                }, 250);
             }
         }
     }
-    
+
     loadStandardParams();
     populateLineDatalist();
 
@@ -1080,7 +1082,6 @@ document.addEventListener('DOMContentLoaded', () => {
         importInput.addEventListener('change', handleImport);
     }
     
-    let bomTabLoaded = false;
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabElm => {
         tabElm.addEventListener('shown.bs.tab', event => {
             const targetTabId = event.target.getAttribute('data-bs-target');
