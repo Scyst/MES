@@ -1,8 +1,9 @@
 "use strict";
 
 //-- ค่าคงที่และตัวแปร Global --
-const PARA_API_ENDPOINT = '../../api/paraManage/paraManage.php';
-const BOM_API_ENDPOINT = '../../api/paraManage/bomManager.php';
+const PARA_API_ENDPOINT = 'api/paraManage.php';
+const BOM_API_ENDPOINT = 'api/bomManager.php';
+const ITEM_MASTER_API = '../inventorySettings/api/itemMasterManage.php';
 const ROWS_PER_PAGE = 100;
 
 //-- ตัวแปรสำหรับเก็บข้อมูลทั้งหมดและหน้าปัจจุบัน --
@@ -69,6 +70,58 @@ function renderPagination(containerId, totalItems, currentPage, callback) {
 }
 
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
+function setupParameterItemAutocomplete() {
+    const searchInput = document.getElementById('param_item_search');
+    if (!searchInput) return;
+
+    // สร้างกล่องแสดงผลลัพธ์การค้นหา
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    let searchDebounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        const value = searchInput.value.toLowerCase();
+        
+        // รีเซ็ตค่าที่เลือกไว้เมื่อมีการพิมพ์ใหม่
+        document.getElementById('param_item_id').value = '';
+        document.getElementById('param_sap_no').value = '';
+        document.getElementById('param_part_no').value = '';
+
+        resultsWrapper.innerHTML = '';
+        if (value.length < 2) return;
+
+        searchDebounce = setTimeout(async () => {
+            const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
+            if (result.success) {
+                const filteredItems = result.data.slice(0, 10);
+                filteredItems.forEach(item => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'autocomplete-item';
+                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
+                    resultItem.addEventListener('click', () => {
+                        // เมื่อผู้ใช้เลือกรายการ
+                        searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                        document.getElementById('param_item_id').value = item.item_id;
+                        document.getElementById('param_sap_no').value = item.sap_no;
+                        document.getElementById('param_part_no').value = item.part_no;
+                        resultsWrapper.innerHTML = '';
+                    });
+                    resultsWrapper.appendChild(resultItem);
+                });
+                resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
+            }
+        }, 300);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+}
+
 async function loadStandardParams() {
     showSpinner();
     try {
@@ -1057,6 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    setupParameterItemAutocomplete();
     loadStandardParams();
     populateLineDatalist();
 

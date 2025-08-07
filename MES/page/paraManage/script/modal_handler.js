@@ -1,7 +1,7 @@
 //-- เปิดใช้งาน Strict Mode --
 "use strict";
 
-const MODAL_PARA_API_ENDPOINT = '../../api/paraManage/paraManage.php';
+const MODAL_PARA_API_ENDPOINT = 'api/paraManage.php';
 
 /**
  * ฟังก์ชันสำหรับเปิด Bootstrap Modal
@@ -31,27 +31,39 @@ function closeModal(modalId) {
 document.addEventListener('DOMContentLoaded', () => {
     if (!canManage) return;
 
-    //-- จัดการการ Submit ฟอร์มสำหรับ "Parameter" --
-    document.getElementById('addParamForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        
-        showSpinner(); // <-- เพิ่ม: แสดง Spinner
-        try {
-            const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'create', 'POST', payload);
+    const addParamForm = document.getElementById('addParamForm');
+    if (addParamForm) {
+        addParamForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
             
-            if (result.success) {
-                showToast('Parameter added successfully!', '#28a745');
-                closeModal('addParamModal');
-                e.target.reset();
-                loadStandardParams();
-            } else {
-                showToast(result.message || 'Failed to add parameter.', '#dc3545');
+            // --- แก้ไข: ตรวจสอบว่าผู้ใช้ได้เลือก Item จาก Autocomplete แล้วหรือยัง ---
+            const itemId = document.getElementById('param_item_id').value;
+            if (!itemId) {
+                showToast('Please search and select an item from the master list first.', '#ffc107');
+                return;
             }
-        } finally {
-            hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
-        }
-    });
+            // --- สิ้นสุดการแก้ไข ---
+
+            const formData = new FormData(addParamForm);
+            const data = Object.fromEntries(formData.entries());
+
+            showSpinner();
+            try {
+                const result = await sendRequest(MODAL_PARA_API_ENDPOINT, 'create', 'POST', data);
+                if (result.success) {
+                    showToast(result.message, '#28a745');
+                    closeModal('addParamModal');
+                    if (typeof loadStandardParams === 'function') {
+                        await loadStandardParams();
+                    }
+                } else {
+                    showToast(result.message || 'Failed to add parameter.', '#dc3545');
+                }
+            } finally {
+                hideSpinner();
+            }
+        });
+    }
 
     document.getElementById('editParamForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();

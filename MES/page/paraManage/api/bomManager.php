@@ -1,7 +1,8 @@
 <?php
-require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../../auth/check_auth.php';
-require_once __DIR__ . '/../logger.php';
+require_once __DIR__ . '/../../../api/db.php';
+require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../../api/logger.php';
+
 
 // session_start() ถูกเรียกแล้วใน check_auth.php
 
