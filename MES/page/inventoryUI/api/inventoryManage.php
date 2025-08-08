@@ -264,7 +264,6 @@ try {
             break;
 
         case 'get_production_history':
-            // ... (โค้ดของ get_production_history ทั้งหมด) ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
             $startRow = ($page - 1) * $limit;
@@ -314,6 +313,83 @@ try {
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
+            break;
+
+        case 'get_transaction_details':
+            $transaction_id = $_GET['transaction_id'] ?? 0;
+            if (!$transaction_id) throw new Exception("Transaction ID is required.");
+
+            $sql = "SELECT t.*, i.sap_no, i.part_no 
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    WHERE t.transaction_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$transaction_id]);
+            $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$transaction) throw new Exception("Transaction not found.");
+            
+            echo json_encode(['success' => true, 'data' => $transaction]);
+            break;
+
+        case 'update_transaction':
+            $pdo->beginTransaction();
+            
+            $transaction_id = $input['transaction_id'] ?? 0;
+            if (!$transaction_id) throw new Exception("Transaction ID is required.");
+
+            // 1. ดึงข้อมูลเก่าเพื่อคำนวณผลต่าง
+            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+            $stmt->execute([$transaction_id]);
+            $old_transaction = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$old_transaction) throw new Exception("Original transaction not found.");
+
+            // 2. Revert สต็อกเก่า
+            $revert_qty = - (float)$old_transaction['quantity'];
+            updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], $revert_qty);
+
+            // 3. เตรียมข้อมูลใหม่
+            $new_quantity = (float)($input['quantity'] ?? 0);
+            $new_location_id = (int)($input['location_id'] ?? 0);
+            $new_lot_no = $input['lot_no'] ?? null;
+            $new_notes = $input['notes'] ?? null;
+            $new_count_type = isset($input['count_type']) ? 'PRODUCTION_' . strtoupper($input['count_type']) : $old_transaction['transaction_type'];
+
+            // 4. อัปเดต Transaction record
+            $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=? WHERE transaction_id=?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_count_type, $transaction_id]);
+
+            // 5. เพิ่มสต็อกใหม่เข้าไป
+            updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
+            
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id);
+            echo json_encode(['success' => true, 'message' => 'Transaction updated successfully.']);
+            break;
+
+        case 'delete_transaction':
+            $pdo->beginTransaction();
+            $transaction_id = $input['transaction_id'] ?? 0;
+            if (!$transaction_id) throw new Exception("Transaction ID is required.");
+
+            // 1. ดึงข้อมูลที่จะลบเพื่อนำไป Revert สต็อก
+            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+            $stmt->execute([$transaction_id]);
+            $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$transaction) throw new Exception("Transaction not found.");
+
+            // 2. ลบ Transaction record
+            $deleteStmt = $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+            $deleteStmt->execute([$transaction_id]);
+
+            // 3. Revert สต็อก
+            $revert_qty = - (float)$transaction['quantity'];
+            updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], $revert_qty);
+
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'DELETE TRANSACTION', $transaction_id);
+            echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
             break;
 
         default:

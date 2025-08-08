@@ -125,9 +125,16 @@ async function fetchReceiptHistory(page = 1) {
 
 function renderReceiptHistoryTable(data) {
     const tbody = document.getElementById('entryHistoryTableBody');
+    const thead = tbody.previousElementSibling.querySelector('tr');
+    
+    // เพิ่ม Header "Actions" ถ้ายังไม่มี
+    if (!thead.querySelector('.actions-header')) {
+        thead.innerHTML += `<th class="text-center actions-header">Actions</th>`;
+    }
+
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No receipt history found in the new system.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No receipt history found.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -141,6 +148,12 @@ function renderReceiptHistoryTable(data) {
             <td>${row.to_location || 'N/A'}</td>
             <td>${row.lot_no || ''}</td>
             <td>${row.created_by || 'N/A'}</td>
+            <td class="text-center">
+                ${canManage ? `
+                    <button class="btn btn-sm btn-warning" onclick="editTransaction('${row.transaction_id}', 'entry')">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTransaction('${row.transaction_id}', 'entry')">Delete</button>
+                ` : ''}
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -220,17 +233,22 @@ async function fetchProductionHistory(page = 1) {
 
 function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
+    const thead = tbody.previousElementSibling.querySelector('tr');
+
+    // เพิ่ม Header "Actions" ถ้ายังไม่มี
+    if (!thead.querySelector('.actions-header')) {
+        thead.innerHTML += `<th class="text-center actions-header">Actions</th>`;
+    }
+
     tbody.innerHTML = '';
-    
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found in the new system.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center">No production history found.</td></tr>`;
         return;
     }
 
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.transactionId = row.transaction_id;
-
         const transactionDate = new Date(row.transaction_timestamp);
         
         tr.innerHTML = `
@@ -244,8 +262,13 @@ function renderProductionHistoryTable(data) {
             <td class="text-center">${row.count_type}</td>
             <td>${row.notes || ''}</td>
             <td>${row.created_by || ''}</td>
+            <td class="text-center">
+                ${canManage ? `
+                    <button class="btn btn-sm btn-warning" onclick="editTransaction('${row.transaction_id}', 'production')">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTransaction('${row.transaction_id}', 'production')">Delete</button>
+                ` : ''}
+            </td>
         `;
-        
         tbody.appendChild(tr);
     });
 }
@@ -388,6 +411,7 @@ function openAddEntryModal() {
     
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
 }
+
 // --- Central Form Submission Handler ---
 async function handleFormSubmit(event) {
     event.preventDefault();
@@ -398,13 +422,14 @@ async function handleFormSubmit(event) {
     const data = Object.fromEntries(formData.entries());
 
     let apiAction = '';
-    let endpoint = '';
     let successCallback = null;
+    // --- CORRECTED CODE STARTS HERE ---
+    // Declare 'endpoint' once with 'let'
+    let endpoint = INVENTORY_API_URL; 
 
     switch(action) {
         case 'addPart':
             apiAction = 'execute_production';
-            endpoint = INVENTORY_API_URL;
             if (!data.item_id) {
                 showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
                 return;
@@ -413,27 +438,23 @@ async function handleFormSubmit(event) {
             break;
         case 'addEntry':
             apiAction = 'execute_receipt';
-            endpoint = INVENTORY_API_URL;
             if (!data.item_id) {
                 showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
                 return;
             }
             successCallback = fetchReceiptHistory;
             break;
-        /*case 'editEntry':
-            apiAction = 'update_wip_entry';
-            endpoint = INVENTORY_API_URL;
-            successCallback = () => fetchOldHistoryData(wipCurrentPage);
+        case 'editEntry':
+            apiAction = 'update_transaction';
+            successCallback = () => fetchReceiptHistory(receiptHistoryCurrentPage);
             break;
-        case 'editPart':
-            apiAction = 'update_part';
-            endpoint = INVENTORY_API_URL;
-            successCallback = () => fetchPartsData(currentPage);
-            break;*/
-        // NOTE: editPart and editEntry logic will be added when those modals are refactored
+        case 'editProduction':
+            apiAction = 'update_transaction';
+            successCallback = () => fetchProductionHistory(productionHistoryCurrentPage);
+            break;
     }
 
-    if (!apiAction || !endpoint) {
+    if (!apiAction) {
         showToast('Form configuration error.', 'var(--bs-danger)');
         return;
     }
@@ -452,6 +473,65 @@ async function handleFormSubmit(event) {
     }
 }
 
+async function deleteTransaction(transactionId, type) {
+    if (!confirm('Are you sure you want to delete this transaction record? This action cannot be undone.')) {
+        return;
+    }
+    showSpinner();
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'delete_transaction', 'POST', { transaction_id: transactionId });
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        if (result.success) {
+            // โหลดข้อมูลของ Tab ที่เกี่ยวข้องใหม่
+            if (type === 'entry') {
+                fetchReceiptHistory(receiptHistoryCurrentPage);
+            } else if (type === 'production') {
+                fetchProductionHistory(productionHistoryCurrentPage);
+            }
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function editTransaction(transactionId, type) {
+    showSpinner();
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'get_transaction_details', 'GET', null, { transaction_id: transactionId });
+        
+        if (result.success) {
+            const data = result.data;
+            let modalId, modal;
+            
+            if (type === 'entry') {
+                modalId = 'editEntryModal';
+                document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
+                document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
+                document.getElementById('edit_entry_location_id').value = data.to_location_id;
+                document.getElementById('edit_entry_quantity').value = data.quantity;
+                document.getElementById('edit_entry_lot_no').value = data.reference_id;
+                document.getElementById('edit_entry_notes').value = data.notes;
+            } else if (type === 'production') {
+                modalId = 'editProductionModal';
+                document.getElementById('edit_production_transaction_id').value = data.transaction_id;
+                document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
+                document.getElementById('edit_production_location_id').value = data.to_location_id; 
+                document.getElementById('edit_production_quantity').value = data.quantity;
+                document.getElementById('edit_production_lot_no').value = data.reference_id;
+                document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
+                document.getElementById('edit_production_notes').value = data.notes;
+            }
+
+            modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal.show();
+        } else {
+            showToast(result.message, 'var(--bs-danger)');
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================
@@ -463,6 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
+
+    // --- เพิ่ม: ผูก Event ให้ฟอร์ม Edit ---
+    document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
 
     // --- Tab Initialization ---
     const entryHistoryTab = document.getElementById('entry-history-tab'); 

@@ -182,6 +182,10 @@
             include('components/addPartModal.php'); 
             include('components/addEntryModal.php');
         }
+        if ($canManage) {
+            include('components/editEntryModal.php');
+            include('components/editProductionModal.php');
+        }
         include('../components/autoLogoutUI.php');
     ?>
     

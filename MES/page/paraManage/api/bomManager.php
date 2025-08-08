@@ -134,17 +134,23 @@ try {
             break;
 
         case 'get_all_fgs_with_bom':
+            // --- แก้ไข: เปลี่ยนจาก JOIN เป็น LEFT JOIN ---
             $sql = "
-                SELECT DISTINCT
-                    b.fg_sap_no,
-                    b.line,
-                    b.model,
-                    i.part_no AS fg_part_no,
-                    -- ใช้ Subquery เพื่อหาข้อมูลล่าสุดได้แม่นยำกว่า
-                    (SELECT MAX(sub.updated_at) FROM " . BOM_TABLE . " sub WHERE sub.fg_sap_no = b.fg_sap_no AND sub.line = b.line AND sub.model = b.model) as updated_at,
-                    (SELECT TOP 1 sub.updated_by FROM " . BOM_TABLE . " sub WHERE sub.fg_sap_no = b.fg_sap_no AND sub.line = b.line AND sub.model = b.model ORDER BY sub.updated_at DESC) as updated_by
+                WITH LatestUpdate AS (
+                    SELECT fg_sap_no, line, model, MAX(updated_at) as last_update
+                    FROM " . BOM_TABLE . "
+                    GROUP BY fg_sap_no, line, model
+                )
+                SELECT DISTINCT 
+                    b.fg_sap_no, 
+                    b.line, 
+                    b.model, 
+                    ISNULL(i.part_no, b.fg_sap_no) as fg_part_no, -- ถ้าไม่เจอ Part No. ให้แสดง SAP No. แทน
+                    lu.last_update as updated_at,
+                    (SELECT TOP 1 updated_by FROM " . BOM_TABLE . " WHERE fg_sap_no = b.fg_sap_no AND line = b.line AND model = b.model ORDER BY updated_at DESC) as updated_by
                 FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " i ON b.fg_sap_no = i.sap_no
+                LEFT JOIN " . ITEMS_TABLE . " i ON b.fg_sap_no = i.sap_no -- เปลี่ยนเป็น LEFT JOIN
+                JOIN LatestUpdate lu ON b.fg_sap_no = lu.fg_sap_no AND b.line = lu.line AND b.model = lu.model
             ";
             
             $params = [];
@@ -152,12 +158,13 @@ try {
                 $sql .= " WHERE b.line = ?";
                 $params[] = $currentUser['line'];
             }
-            $sql .= " ORDER BY b.line, b.model, i.part_no";
+            $sql .= " ORDER BY b.line, b.model, fg_part_no;";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // จัดรูปแบบวันที่ (เหมือนเดิม)
             foreach ($rows as &$row) {
                 if ($row['updated_at']) {
                     $row['updated_at'] = (new DateTime($row['updated_at']))->format('Y-m-d H:i:s');
