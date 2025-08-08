@@ -122,6 +122,101 @@ function setupParameterItemAutocomplete() {
     });
 }
 
+function setupCreateBomAutocomplete() {
+    const searchInput = document.getElementById('fg_item_search');
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    const detailsDiv = document.getElementById('selected_fg_details');
+    const paramSelectArea = document.getElementById('parameter_selection_area');
+    const paramSelect = document.getElementById('parameter_select');
+    const nextBtn = document.getElementById('createBomNextBtn');
+    const selectedItemIdInput = document.getElementById('selected_fg_item_id');
+
+    let debounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const value = searchInput.value.toLowerCase();
+        
+        // Reset state
+        selectedItemIdInput.value = '';
+        detailsDiv.classList.add('d-none');
+        paramSelectArea.classList.add('d-none'); // ซ่อน Dropdown ด้วย
+        nextBtn.disabled = true;
+        resultsWrapper.innerHTML = '';
+        
+        if (value.length < 2) return;
+
+        debounce = setTimeout(async () => {
+            const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
+            if (result.success) {
+                resultsWrapper.innerHTML = '';
+                result.data.slice(0, 10).forEach(item => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'autocomplete-item';
+                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                    resultItem.addEventListener('click', () => {
+                        searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                        selectedItemIdInput.value = item.item_id;
+                        resultsWrapper.innerHTML = '';
+                        resultsWrapper.style.display = 'none';
+                        // เรียกฟังก์ชันเพื่อโหลด Parameters ของ Item นี้
+                        loadParametersForItem(item.item_id);
+                    });
+                    resultsWrapper.appendChild(resultItem);
+                });
+                resultsWrapper.style.display = result.data.length > 0 ? 'block' : 'none';
+            }
+        }, 300);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+
+    paramSelect.addEventListener('change', () => {
+        // เปิดปุ่ม Next Step เมื่อผู้ใช้เลือก Parameter แล้ว
+        if(paramSelect.value) {
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.disabled = true;
+        }
+    });
+}
+
+async function loadParametersForItem(itemId) {
+    const detailsDiv = document.getElementById('selected_fg_details');
+    const paramSelectArea = document.getElementById('parameter_selection_area');
+    const paramSelect = document.getElementById('parameter_select');
+    const nextBtn = document.getElementById('createBomNextBtn');
+
+    detailsDiv.classList.remove('d-none');
+    paramSelectArea.style.display = 'block';
+    paramSelect.innerHTML = '<option value="">Loading parameters...</option>';
+    nextBtn.disabled = true;
+
+    // เราต้องสร้าง Action ใหม่ใน paraManage.php ชื่อ get_parameters_for_item
+    const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameters_for_item', 'GET', null, { item_id: itemId });
+
+    if (result.success && result.data.length > 0) {
+        paramSelect.innerHTML = '<option value="">-- Select a Line/Model combination --</option>';
+        result.data.forEach(param => {
+            // เราจะเก็บข้อมูลทั้งหมดของ parameter ไว้ใน value ของ option
+            const option = document.createElement('option');
+            option.value = param.id;
+            option.textContent = `Line: ${param.line} / Model: ${param.model}`;
+            // เก็บข้อมูลทั้งหมดไว้ใน data attribute เพื่อนำไปใช้ทีหลัง
+            option.dataset.fullParam = JSON.stringify(param);
+            paramSelect.appendChild(option);
+        });
+    } else {
+        paramSelect.innerHTML = '<option value="">-- No production parameters found for this item --</option>';
+    }
+}
+
 async function loadStandardParams() {
     showSpinner();
     try {
@@ -912,29 +1007,29 @@ function initializeBomManager() {
 
     createBomForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const searchCriteria = Object.fromEntries(new FormData(createBomForm).entries());
-        
-        showSpinner();
-        try {
-            const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
-            if (result.success && result.data) {
-                showToast('Finished Good found! Proceeding to manage BOM.', '#28a745');
-                createBomModal.hide();
-                createBomForm.reset();
-                
-                manageBom({
-                    fg_item_id: result.data.item_id,
-                    fg_sap_no: result.data.sap_no,
-                    fg_part_no: result.data.part_no,
-                    line: result.data.line,
-                    model: result.data.model
-                });
-            } else {
-                showToast(result.message || 'Could not find a matching part.', '#dc3545');
-            }
-        } finally {
-            hideSpinner();
+        const paramSelect = document.getElementById('parameter_select');
+        const selectedOption = paramSelect.options[paramSelect.selectedIndex];
+
+        if (!selectedOption || !selectedOption.value) {
+            showToast('Please select a production parameter (Line/Model).', '#ffc107');
+            return;
         }
+        
+        // ดึงข้อมูลทั้งหมดของ Parameter ที่เก็บไว้จาก data attribute
+        const selectedParam = JSON.parse(selectedOption.dataset.fullParam);
+        
+        showToast('Parameter selected! Proceeding to manage BOM.', '#28a745');
+        createBomModal.hide();
+        createBomForm.reset();
+        
+        // ส่งข้อมูลที่สมบูรณ์ (รวม item_id, sap_no, part_no) ไปยังฟังก์ชัน manageBom
+        manageBom({
+            fg_item_id: selectedParam.item_id,
+            fg_sap_no: selectedParam.sap_no,
+            fg_part_no: selectedParam.part_no,
+            line: selectedParam.line,
+            model: selectedParam.model
+        });
     });
     
     modalAddComponentForm.addEventListener('submit', async (e) => {
@@ -1165,6 +1260,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupParameterItemAutocomplete();
+    setupCreateBomAutocomplete();
+
     loadStandardParams();
     populateLineDatalist();
 

@@ -129,7 +129,7 @@ async function fetchAndRenderCharts() {
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         window.history.replaceState({}, '', newUrl);
 
-        const response = await fetch(`../../api/OEE_Dashboard/get_oee_piechart.php?${params.toString()}`);
+        const response = await fetch(`api/get_oee_piechart.php?${params.toString()}`);
         if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         const data = await response.json();
         if (!data.success) throw new Error(data.message || "API returned an error.");

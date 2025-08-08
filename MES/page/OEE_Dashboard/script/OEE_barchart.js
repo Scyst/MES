@@ -157,7 +157,7 @@ async function fetchAndRenderBarCharts() {
         const model = document.getElementById("modelFilter")?.value || '';
 
         const params = new URLSearchParams({ startDate, endDate, line, model });
-        const response = await fetch(`../../api/OEE_Dashboard/get_oee_barchart.php?${params.toString()}`);
+        const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
 
         if (!responseData.success) {

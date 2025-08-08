@@ -65,8 +65,8 @@ async function applyFiltersAndInitCharts() {
 
   //-- ดึงข้อมูลสำหรับ Dropdown ทั้งสองพร้อมกันเพื่อความรวดเร็ว --
   await Promise.all([
-    populateDropdown("lineFilter", "../../api/OEE_Dashboard/get_lines.php", line),
-    populateDropdown("modelFilter", "../../api/OEE_Dashboard/get_models.php", model)
+    populateDropdown("lineFilter", "api/get_lines.php", line),
+    populateDropdown("modelFilter", "api/get_models.php", model)
   ]);
 
   //-- ตั้งค่าใน Input ตามค่าที่ได้จาก URL --

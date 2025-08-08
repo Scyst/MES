@@ -45,6 +45,24 @@ try {
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
+        case 'get_parameters_for_item':
+            $item_id = $_GET['item_id'] ?? 0;
+            if (!$item_id) {
+                throw new Exception("Item ID is required.");
+            }
+
+            $sql = "SELECT id, item_id, line, model, part_no, sap_no 
+                    FROM " . PARAM_TABLE . " 
+                    WHERE item_id = ? 
+                    ORDER BY line, model";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([(int)$item_id]);
+            $parameters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $parameters]);
+            break;
+
         case 'create':
             // รับค่าจากฟอร์มใหม่
             $item_id = $input['item_id'] ?? 0;

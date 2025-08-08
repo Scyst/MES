@@ -32,7 +32,7 @@ async function fetchAndRenderLineCharts() {
             model: document.getElementById("modelFilter")?.value || ''
         });
 
-        const response = await fetch(`../../api/OEE_Dashboard/get_oee_linechart.php?${params.toString()}`);
+        const response = await fetch(`api/get_oee_linechart.php?${params.toString()}`);
         const data = await response.json();
         if (!data.success) throw new Error("Data error");
 
