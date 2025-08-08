@@ -798,10 +798,7 @@ function initializeBomManager() {
         showSpinner();
 
         try {
-            // ดึงค่าจากช่องค้นหาปัจจุบัน
             const searchTerm = document.getElementById('bomSearchInput').value;
-            
-            // ส่งค่า search ไปกับ Request
             const result = await sendRequest(BOM_API_ENDPOINT, 'get_full_bom_export', 'GET', null, { search: searchTerm });
 
             if (!result.success || !result.data || result.data.length === 0) {
@@ -809,6 +806,16 @@ function initializeBomManager() {
                 return;
             }
             
+            const instructions = [
+                { "INSTRUCTION": "IMPORTANT NOTES FOR RE-IMPORTING" },
+                { "INSTRUCTION": "1. Do not change the column headers (FG_SAP_NO, LINE, MODEL, etc.)." },
+                { "INSTRUCTION": "2. FG_SAP_NO, LINE, MODEL, and COMPONENT_SAP_NO are all required." },
+                { "INSTRUCTION": "3. QUANTITY_REQUIRED must be a number greater than 0." },
+                { "INSTRUCTION": "4. All SAP No. (both FG and Component) must exist in the Item Master before importing." },
+                { "INSTRUCTION": "5. To delete a component from a BOM, remove its entire row." },
+                { "INSTRUCTION": "6. The system will UPDATE the quantity for existing components and INSERT new ones." }
+            ];
+
             const worksheetData = result.data.map(row => ({
                 "FG_SAP_NO": row.fg_sap_no,
                 "FG_PART_NO": row.fg_part_no,
@@ -819,11 +826,20 @@ function initializeBomManager() {
                 "QUANTITY_REQUIRED": row.quantity_required
             }));
 
-            const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "BOM_Export");
+            // --- แก้ไข: สร้าง Workbook และเพิ่ม 2 ชีท ---
+            const wb = XLSX.utils.book_new();
+            const ws_instructions = XLSX.utils.json_to_sheet(instructions);
+            const ws_bom_data = XLSX.utils.json_to_sheet(worksheetData);
+
+            // ปรับความกว้างของคอลัมน์ในชีทคำแนะนำ
+            ws_instructions['!cols'] = [{ wch: 100 }]; 
+
+            XLSX.utils.book_append_sheet(wb, ws_instructions, "Instructions");
+            XLSX.utils.book_append_sheet(wb, ws_bom_data, "BOM_Data");
+            // --- สิ้นสุดการแก้ไข ---
+            
             const fileName = `BOM_Export_Filtered_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(workbook, fileName);
+            XLSX.writeFile(wb, fileName);
 
             showToast('BOM data exported successfully!', '#28a745');
         } finally {
