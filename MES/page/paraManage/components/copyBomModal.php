@@ -12,14 +12,14 @@
                     <div class="mb-3">
                         <label class="form-label">Source BOM</label>
                         <input type="text" id="copySourceBomDisplay" class="form-control" readonly />
-                        <input type="hidden" name="source_fg_part_no" id="copy_source_fg_part_no">
+                        <input type="hidden" id="copy_source_fg_sap_no" name="source_fg_sap_no">
                         <input type="hidden" name="source_line" id="copy_source_line">
                         <input type="hidden" name="source_model" id="copy_source_model">
                     </div>
 
                     <div class="mb-3">
-                        <label for="target_fg_part_no" class="form-label">Target Finished Good Part No.</label>
-                        <input list="bomModalPartDatalist" class="form-control" id="target_fg_part_no" name="target_fg_part_no" required>
+                        <label for="target_fg_sap_no" class="form-label">Target Finished Good SAP No.</label>
+                        <input type="text" class="form-control" id="target_fg_sap_no" name="target_fg_sap_no" required>
                         <div class="form-text">Select the Part No. (from the same Line/Model) to copy the components to.</div>
                     </div>
 

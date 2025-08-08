@@ -11,9 +11,10 @@
                     <table class="table table-dark table-striped table-sm">
                         <thead>
                             <tr>
-                                <th>Component Part No.</th>
-                                <th>Quantity Required</th>
-                                <th class="text-center">Actions</th>
+                                <th style="width: 30%;">Component Part No.</th>
+                                <th style="width: 30%;">Part Description</th>
+                                <th class="text-center" style="width: 20%;">Quantity Required</th>
+                                <th class="text-center" style="width: 20%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="modalBomTableBody"></tbody>
@@ -22,21 +23,27 @@
 
                 <hr>
                 <h6>Add New Component</h6>
-                <form id="modalAddComponentForm" class="row g-2 align-items-end">
-                    <input type="hidden" id="modalSelectedFgPartNo" name="fg_part_no">
+                <form id="modalAddComponentForm" class="mt-3 border-top pt-3">
+                    <h6 class="text-info">Add New Component</h6>
+                    <input type="hidden" id="modalSelectedFgSapNo" name="fg_sap_no">
                     <input type="hidden" id="modalSelectedFgLine" name="line">
                     <input type="hidden" id="modalSelectedFgModel" name="model">
-                    <div class="col-md-6">
-                        <label for="modalComponentPartNo" class="form-label">Component Part No.</label>
-                        <input list="bomModalPartDatalist" class="form-control" id="modalComponentPartNo" name="component_part_no" required>
-                        <datalist id="bomModalPartDatalist"></datalist>
+
+                    <div class="row align-items-end">
+                        <div class="col-md-7 mb-3 position-relative">
+                            <label for="modalComponentSearch" class="form-label">Search Component (SAP/Part No.)</label>
+                            <input type="text" id="modalComponentSearch" class="form-control" autocomplete="off" required>
+                            <input type="hidden" id="modalComponentSapNo" name="component_sap_no">
                         </div>
-                    <div class="col-md-4">
-                        <label for="modalQuantityRequired" class="form-label">Quantity</label>
-                        <input type="number" class="form-control" id="modalQuantityRequired" name="quantity_required" required>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-success w-100">Add</button>
+
+                        <div class="col-md-3 mb-3">
+                            <label for="modalQuantityRequired" class="form-label">Quantity</label>
+                            <input type="number" id="modalQuantityRequired" name="quantity_required" class="form-control" min="1" required>
+                        </div>
+                        
+                        <div class="col-md-2 mb-3">
+                            <button type="submit" class="btn btn-success w-100">Add</button>
+                        </div>
                     </div>
                 </form>
             </div>

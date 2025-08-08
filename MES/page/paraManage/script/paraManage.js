@@ -564,7 +564,7 @@ async function populateLineDatalist() {
 }
 
 function initializeBomManager() {
-    // --- Element References ---
+    // --- Element References (เหมือนเดิม) ---
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
     const createNewBomBtn = document.getElementById('createNewBomBtn');
@@ -578,38 +578,50 @@ function initializeBomManager() {
     const copyBomModalEl = document.getElementById('copyBomModal');
     const copyBomModal = new bootstrap.Modal(copyBomModalEl);
     const createBomForm = document.getElementById('createBomForm');
-    const createBomSapInput = document.getElementById('createBomSapNo');
-    const createBomLineInput = document.getElementById('createBomLine');
-    const createBomModelInput = document.getElementById('createBomModel');
-    const createBomPartNoInput = document.getElementById('createBomPartNo');
-    const modalTitle = document.getElementById('bomModalTitle');
-    const modalBomTableBody = document.getElementById('modalBomTableBody');
     const modalAddComponentForm = document.getElementById('modalAddComponentForm');
-    const modalSelectedFgPartNo = document.getElementById('modalSelectedFgPartNo');
-    const modalSelectedFgModel = document.getElementById('modalSelectedFgModel');
-    const modalSelectedFgLine = document.getElementById('modalSelectedFgLine');
-    const modalPartDatalist = document.getElementById('bomModalPartDatalist');
     const copyBomForm = document.getElementById('copyBomForm');
     const selectAllBomCheckbox = document.getElementById('selectAllBomCheckbox');
     const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
     let currentEditingBom = null;
     let bomDebounceTimer;
 
+    // --- Style Injection (เหมือนเดิม) ---
     const style = document.createElement('style');
-    style.innerHTML = `
-        .bom-input-readonly {
-            background-color: #495057;
-            opacity: 1;
-            color: #fff;
-        }
-    `;
+    style.innerHTML = ` .bom-input-readonly { background-color: #495057; opacity: 1; color: #fff; } `;
     document.head.appendChild(style);
 
     manageBomModalEl.addEventListener('hidden.bs.modal', () => {
         loadAndRenderBomFgTable();
     });
     
-    // --- Helper Functions ---
+    // --- Helper Functions (ยกเครื่องใหม่ทั้งหมด) ---
+    
+    async function loadAndRenderBomFgTable() {
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs_with_bom', 'GET');
+            if (result.success) {
+                allBomFgs = result.data;
+                filterAndRenderBomFgTable();
+            } else {
+                fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${result.message}</td></tr>`;
+            }
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    function filterAndRenderBomFgTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredData = allBomFgs.filter(fg => 
+            (fg.fg_sap_no && String(fg.fg_sap_no).toLowerCase().includes(searchTerm)) ||
+            (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(searchTerm)) || 
+            (fg.line && fg.line.toLowerCase().includes(searchTerm)) ||
+            (fg.model && fg.model.toLowerCase().includes(searchTerm))
+        );
+        renderBomFgTable(filteredData);
+    }
+
     function renderBomFgTable(fgData) {
         fgListTableBody.innerHTML = '';
         if (fgData && fgData.length > 0) {
@@ -617,28 +629,26 @@ function initializeBomManager() {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to edit BOM';
-                const fgDataString = JSON.stringify(fg);
+                const fgDataString = JSON.stringify(fg).replace(/'/g, "&apos;");
 
                 tr.addEventListener('click', (event) => {
                     if (event.target.closest('.form-check-input')) return;
-                    initializeBomManager.manageBom(fg);
+                    manageBom(fg);
                 });
 
                 const checkboxTd = document.createElement('td');
                 checkboxTd.className = 'text-center';
-                checkboxTd.innerHTML = `<input class="form-check-input bom-row-checkbox" type="checkbox" value='${fgDataString.replace(/'/g, "&apos;")}'>`;
-                checkboxTd.addEventListener('click', e => e.stopPropagation());
+                checkboxTd.innerHTML = `<input class="form-check-input bom-row-checkbox" type="checkbox" value='${fgDataString}'>`;
                 tr.appendChild(checkboxTd);
 
                 tr.innerHTML += `
-                    <td>${fg.sap_no || 'N/A'}</td>
+                    <td>${fg.fg_sap_no || 'N/A'}</td>
                     <td>${fg.fg_part_no || ''}</td>
                     <td>${fg.line || 'N/A'}</td>
                     <td>${fg.model || 'N/A'}</td>
                     <td>${fg.updated_by || 'N/A'}</td>
                     <td class="text-end">${fg.updated_at || 'N/A'}</td>
                 `;
-                
                 fgListTableBody.appendChild(tr);
             });
         } else {
@@ -646,47 +656,35 @@ function initializeBomManager() {
         }
         updateBomBulkActionsVisibility();
     }
-    
-    async function loadAndRenderBomFgTable() {
-        showSpinner();
-        try {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs', 'GET');
-            if (result.success) {
-                allBomFgs = result.data;
-                renderBomFgTable(allBomFgs);
-            }
-        } finally {
-            hideSpinner();
-        }
-    }
 
     async function loadBomForModal(fg) {
         showSpinner();
         try {
-            const partNo = fg.fg_part_no || fg.part_no; 
+            const modalTitle = document.getElementById('bomModalTitle');
+            const modalBomTableBody = document.getElementById('modalBomTableBody');
+            
+            if (!modalTitle || !modalBomTableBody) { console.error("BOM Modal elements not found!"); return; }
 
-            modalTitle.textContent = `Managing BOM for: ${partNo} (Line: ${fg.line}, Model: ${fg.model})`;
-            modalSelectedFgPartNo.value = partNo;
-            modalSelectedFgLine.value = fg.line;
-            modalSelectedFgModel.value = fg.model;
+            modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
+            document.getElementById('modalSelectedFgSapNo').value = fg.fg_sap_no;
+            document.getElementById('modalSelectedFgLine').value = fg.line;
+            document.getElementById('modalSelectedFgModel').value = fg.model;
 
-            modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
-            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_part_no: partNo, line: fg.line, model: fg.model });
+            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_sap_no: fg.fg_sap_no, line: fg.line, model: fg.model });
             
             modalBomTableBody.innerHTML = '';
             if (bomResult.success && bomResult.data.length > 0) {
                 bomResult.data.forEach(comp => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td style="width: 40%;">${comp.component_part_no}</td>
-                        <td class="text-center" style="width: 40%;">
+                        <td>${comp.component_part_no}</td>
+                        <td>${comp.part_description || ''}</td>
+                        <td class="text-center">
                             <input type="number" class="form-control form-control-sm bom-quantity-input text-center bom-input-readonly w-50" 
-                                   value="${comp.quantity_required}" 
-                                   data-bom-id="${comp.bom_id}" 
-                                   min="1"
-                                   readonly>
+                                   value="${comp.quantity_required}" data-bom-id="${comp.bom_id}" min="1" readonly>
                         </td>
-                        <td class="text-center" style="width: 20%;">
+                        <td class="text-center">
                             <div class="btn-group gap-2 justify-content-center">
                                 <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
                                 <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
@@ -696,19 +694,53 @@ function initializeBomManager() {
                     modalBomTableBody.appendChild(tr);
                 });
             } else {
-                modalBomTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No components. Add one now!</td></tr>';
-            }
-
-            const componentResult = await sendRequest(PARA_API_ENDPOINT, 'get_parts_by_model', 'GET', null, { model: fg.model, line: fg.line });
-            if (componentResult.success) {
-                modalPartDatalist.innerHTML = componentResult.data.map(p => `<option value="${p.part_no}"></option>`).join('');
+                modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No components. Add one now!</td></tr>';
             }
         } finally {
             hideSpinner();
         }
     }
+    
+    function setupBomComponentAutocomplete() {
+        const searchInput = document.getElementById('modalComponentSearch');
+        if (!searchInput) return;
 
-    // ** ADDED BACK: Functions for "Create New BOM" **
+        const resultsWrapper = searchInput.parentNode.querySelector('.autocomplete-results') || document.createElement('div');
+        resultsWrapper.className = 'autocomplete-results';
+        searchInput.parentNode.appendChild(resultsWrapper);
+
+        let componentDebounce;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(componentDebounce);
+            const value = searchInput.value.toLowerCase();
+            
+            document.getElementById('modalComponentSapNo').value = '';
+            resultsWrapper.innerHTML = '';
+            if (value.length < 2) return;
+
+            componentDebounce = setTimeout(async () => {
+                const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
+                if (result.success) {
+                    result.data.slice(0, 10).forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'autocomplete-item';
+                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small class="text-muted">${item.part_description || ''}</small>`;
+                        resultItem.addEventListener('click', () => {
+                            searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                            document.getElementById('modalComponentSapNo').value = item.sap_no;
+                            resultsWrapper.innerHTML = '';
+                        });
+                        resultsWrapper.appendChild(resultItem);
+                    });
+                    resultsWrapper.style.display = result.data.length > 0 ? 'block' : 'none';
+                }
+            }, 300);
+        });
+        document.addEventListener('click', (e) => {
+            if (e.target !== searchInput) resultsWrapper.style.display = 'none';
+        });
+    }
+
     async function populateCreateBomDatalists() {
         const result = await sendRequest(PARA_API_ENDPOINT, 'read', 'GET');
         if (result.success) {
@@ -720,19 +752,7 @@ function initializeBomManager() {
             document.getElementById('partNoDatalist').innerHTML = partNos.map(p => `<option value="${p}"></option>`).join('');
         }
     }
-    
-    async function fetchParameterData(key, value) {
-        if (!value) return;
-        const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameter_by_key', 'GET', null, {[key]: value});
-        if (result.success && result.data) {
-            createBomSapInput.value = result.data.sap_no || '';
-            createBomLineInput.value = result.data.line || '';
-            createBomModelInput.value = result.data.model || '';
-            createBomPartNoInput.value = result.data.part_no || '';
-        }
-    }
 
-    // ** ADDED BACK: Function for BOM Import **
     async function handleBomImport(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -788,7 +808,6 @@ function initializeBomManager() {
         reader.readAsBinaryString(file);
     }
     
-    // ** ADDED BACK: Function for BOM Export **
     async function exportBomToExcel() {
         showToast('Exporting all BOM data... Please wait.', '#0dcaf0');
         showSpinner();
@@ -836,13 +855,20 @@ function initializeBomManager() {
         const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
         const bomsToDelete = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value.replace(/&apos;/g, "'")));
         
-        if (bomsToDelete.length === 0) return;
+        const payload = {
+            boms: bomsToDelete.map(bom => ({
+                fg_sap_no: bom.fg_sap_no,
+                line: bom.line,
+                model: bom.model
+            }))
+        };
 
+        if (bomsToDelete.length === 0) return;
         if (!confirm(`Are you sure you want to delete ${bomsToDelete.length} selected BOM(s)?`)) return;
 
         showSpinner();
         try {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_delete_bom', 'POST', { boms: bomsToDelete });
+            const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_delete_bom', 'POST', payload);
             showToast(result.message, result.success ? '#28a745' : '#dc3545');
             if (result.success) {
                 selectAllBomCheckbox.checked = false;
@@ -852,22 +878,11 @@ function initializeBomManager() {
             hideSpinner();
         }
     }
-
-    // --- Event Listeners ---
     
+    // --- Event Listeners ---
     searchInput.addEventListener('input', () => {
-        let debounceTimer;
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filteredData = allBomFgs.filter(fg => 
-                (fg.sap_no && fg.sap_no.toLowerCase().includes(searchTerm)) ||
-                (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(searchTerm)) || 
-                (fg.line && fg.line.toLowerCase().includes(searchTerm)) ||
-                (fg.model && fg.model.toLowerCase().includes(searchTerm))
-            );
-            renderBomFgTable(filteredData);
-        }, 500);
+        clearTimeout(bomDebounceTimer);
+        bomDebounceTimer = setTimeout(filterAndRenderBomFgTable, 300);
     });
 
     createNewBomBtn?.addEventListener('click', () => createBomModal.show());
@@ -897,10 +912,15 @@ function initializeBomManager() {
         try {
             const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
             if (result.success && result.data) {
-                showToast('Finished Good found! Proceeding to Step 2.', '#28a745');
+                showToast('Finished Good found! Proceeding to manage BOM.', '#28a745');
                 createBomModal.hide();
                 createBomForm.reset();
-                initializeBomManager.manageBom(result.data);
+                manageBom({
+                    fg_sap_no: result.data.sap_no,
+                    fg_part_no: result.data.part_no,
+                    line: result.data.line,
+                    model: result.data.model
+                });
             } else {
                 showToast(result.message || 'Could not find a matching part.', '#dc3545');
             }
@@ -911,18 +931,29 @@ function initializeBomManager() {
     
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        showSpinner();
-        try {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', payload);
-            showToast(result.message, result.success ? '#28a745' : '#dc3545');
-            if (result.success) {
-                await loadBomForModal(payload);
-                e.target.reset();
-                document.getElementById('modalComponentPartNo').focus(); 
-            }
-        } finally {
-            hideSpinner();
+        const data = {
+            fg_sap_no: document.getElementById('modalSelectedFgSapNo').value,
+            line: document.getElementById('modalSelectedFgLine').value,
+            model: document.getElementById('modalSelectedFgModel').value,
+            component_sap_no: document.getElementById('modalComponentSapNo').value,
+            quantity_required: document.getElementById('modalQuantityRequired').value
+        };
+
+        if (!data.component_sap_no) {
+            showToast('Please select a valid component from the search results.', '#ffc107');
+            return;
+        }
+
+        const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', data);
+        showToast(result.message, result.success ? '#28a745' : '#dc3545');
+        if (result.success) {
+            await loadBomForModal({ 
+                fg_sap_no: data.fg_sap_no, 
+                line: data.line, 
+                model: data.model, 
+                fg_part_no: document.getElementById('bomModalTitle').textContent.split('for: ')[1].split(' (SAP:')[0]
+            });
+            e.target.reset();
         }
     });
 
@@ -991,7 +1022,12 @@ function initializeBomManager() {
 
     copyBomForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
+        const payload = {
+            source_fg_sap_no: document.getElementById('copy_source_fg_sap_no').value,
+            source_line: document.getElementById('copy_source_line').value,
+            source_model: document.getElementById('copy_source_model').value,
+            target_fg_sap_no: document.getElementById('target_fg_sap_no').value
+        };
         
         showSpinner();
         try {
@@ -1005,38 +1041,20 @@ function initializeBomManager() {
             hideSpinner();
         }
     });
-    
-    // --- Public methods & Modal Button Listeners ---
-    initializeBomManager.manageBom = (fg) => {
+
+    function manageBom(fg) {
         currentEditingBom = fg;
         manageBomModal.show();
         loadBomForModal(fg);
     };
 
-    initializeBomManager.deleteBom = async (fg) => {
+    function openCopyBomModal(fg) {
         if (!fg) return;
-        if (confirm(`Are you sure you want to delete the BOM for ${fg.fg_part_no} on Line ${fg.line}?`)) {
-            showSpinner();
-            try {
-                const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_part_no: fg.fg_part_no, line: fg.line, model: fg.model });
-                showToast(result.message, result.success ? '#28a745' : '#dc3545');
-                if (result.success) {
-                    manageBomModal.hide();
-                    await loadAndRenderBomFgTable();
-                }
-            } finally {
-                hideSpinner();
-            }
-        }
-    };
-    
-    initializeBomManager.openCopyBomModal = (fg) => {
-        if (!fg) return;
-        document.getElementById('copySourceBomDisplay').value = `${fg.fg_part_no} (Line: ${fg.line})`;
-        document.getElementById('copy_source_fg_part_no').value = fg.fg_part_no;
+        document.getElementById('copySourceBomDisplay').value = `${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
+        document.getElementById('copy_source_fg_sap_no').value = fg.fg_sap_no;
         document.getElementById('copy_source_line').value = fg.line;
         document.getElementById('copy_source_model').value = fg.model;
-        document.getElementById('target_fg_part_no').value = '';
+        document.getElementById('target_fg_sap_no').value = '';
         copyBomModal.show();
     };
 
@@ -1044,19 +1062,39 @@ function initializeBomManager() {
     const copyBomFromModalBtn = document.getElementById('copyBomFromModalBtn');
 
     deleteBomFromModalBtn.addEventListener('click', () => {
-        initializeBomManager.deleteBom(currentEditingBom);
+        if (!currentEditingBom) return;
+        if (confirm(`Are you sure you want to delete the BOM for ${currentEditingBom.fg_part_no}?`)) {
+            (async () => {
+                showSpinner();
+                try {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { 
+                        fg_sap_no: currentEditingBom.fg_sap_no, 
+                        line: currentEditingBom.line, 
+                        model: currentEditingBom.model 
+                    });
+                    showToast(result.message, result.success ? '#28a745' : '#dc3545');
+                    if (result.success) {
+                        manageBomModal.hide();
+                        await loadAndRenderBomFgTable();
+                    }
+                } finally {
+                    hideSpinner();
+                }
+            })();
+        }
     });
 
     copyBomFromModalBtn.addEventListener('click', () => {
         if (currentEditingBom) {
             manageBomModal.hide();
             manageBomModalEl.addEventListener('hidden.bs.modal', () => {
-                initializeBomManager.openCopyBomModal(currentEditingBom);
+                openCopyBomModal(currentEditingBom);
             }, { once: true });
         }
     });
-
+    
     // --- Initial Load ---
+    setupBomComponentAutocomplete();
     loadAndRenderBomFgTable();
     populateCreateBomDatalists();
 }
