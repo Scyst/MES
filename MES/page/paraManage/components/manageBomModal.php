@@ -25,7 +25,7 @@
                 <h6>Add New Component</h6>
                 <form id="modalAddComponentForm" class="mt-3 border-top pt-3">
                     <h6 class="text-info">Add New Component</h6>
-                    <input type="hidden" id="modalSelectedFgSapNo" name="fg_sap_no">
+                    <input type="hidden" id="modalSelectedFgItemId" name="fg_item_id">
                     <input type="hidden" id="modalSelectedFgLine" name="line">
                     <input type="hidden" id="modalSelectedFgModel" name="model">
 
@@ -33,7 +33,7 @@
                         <div class="col-md-7 mb-3 position-relative">
                             <label for="modalComponentSearch" class="form-label">Search Component (SAP/Part No.)</label>
                             <input type="text" id="modalComponentSearch" class="form-control" autocomplete="off" required>
-                            <input type="hidden" id="modalComponentSapNo" name="component_sap_no">
+                            <input type="hidden" id="modalComponentItemId" name="component_item_id">
                         </div>
 
                         <div class="col-md-3 mb-3">

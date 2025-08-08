@@ -1,10 +1,10 @@
 <?php
-// api/inventory/inventoryApi.php
 // นี่คือ API หลักสำหรับจัดการระบบ Inventory ใหม่ทั้งหมด (IN, OUT, Reports)
 
 require_once __DIR__ . '/../../../api/db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../api/logger.php';
+require_once __DIR__ . '/../../helpers/inventory_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
@@ -61,7 +61,6 @@ try {
             break;
 
         case 'get_receipt_history':
-            // ... (โค้ดของ get_receipt_history ทั้งหมด) ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
             $startRow = ($page - 1) * $limit;
@@ -73,6 +72,7 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
+                        t.transaction_id, -- <-- เพิ่ม t.transaction_id เข้ามา
                         t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity, 
                         loc_to.location_name AS to_location, u.username AS created_by, t.reference_id as lot_no,
                         ROW_NUMBER() OVER (ORDER BY t.transaction_timestamp DESC) as RowNum
@@ -82,7 +82,7 @@ try {
                     LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                     WHERE t.transaction_type = 'RECEIPT'
                 )
-                SELECT transaction_timestamp, sap_no, part_no, part_description, quantity, to_location, created_by, lot_no
+                SELECT transaction_id, transaction_timestamp, sap_no, part_no, part_description, quantity, to_location, created_by, lot_no
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -196,11 +196,9 @@ try {
             echo json_encode(['success' => true, 'data' => $wip_data, 'total' => $total, 'page' => $page]);
             break;
 
-
         // ====== Cases from productionApi.php ======
 
         case 'execute_production':
-            // ... (โค้ดของ execute_production ทั้งหมด) ...
             $item_id = $input['item_id'] ?? 0;
             $location_id = $input['location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
@@ -215,7 +213,7 @@ try {
             $pdo->beginTransaction();
 
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
-
+            
             $mergeProdSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
             $mergeProdStmt = $pdo->prepare($mergeProdSql);
             $mergeProdStmt->execute([$item_id, $location_id, $quantity, $item_id, $location_id, $quantity]);
@@ -225,35 +223,42 @@ try {
             $prodTransStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no]);
 
             if (strtoupper($count_type) === 'FG') {
-                 $bomSql = "SELECT i_comp.item_id as component_item_id, b.quantity_required 
-                           FROM " . BOM_TABLE . " b
-                           JOIN " . ITEMS_TABLE . " i_fg ON b.fg_part_no = i_fg.part_no 
-                           JOIN " . ITEMS_TABLE . " i_comp ON b.component_part_no = i_comp.part_no
-                           WHERE i_fg.item_id = ?";
-                $bomStmt = $pdo->prepare($bomSql);
-                $bomStmt->execute([$item_id]);
-                $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+                $fgItemStmt = $pdo->prepare("SELECT sap_no FROM " . ITEMS_TABLE . " WHERE item_id = ?");
+                $fgItemStmt->execute([$item_id]);
+                $fg_sap_no = $fgItemStmt->fetchColumn();
 
-                if (!empty($components)) {
-                    $consumeSql = "UPDATE " . ONHAND_TABLE . " SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
-                    $consumeStmt = $pdo->prepare($consumeSql);
+                if ($fg_sap_no) {
+                    $bomSql = "SELECT 
+                                   i_comp.item_id as component_item_id, 
+                                   b.quantity_required 
+                               FROM " . BOM_TABLE . " b
+                               JOIN " . ITEMS_TABLE . " i_comp ON b.component_sap_no = i_comp.sap_no
+                               WHERE b.fg_sap_no = ?";
+                    $bomStmt = $pdo->prepare($bomSql);
+                    $bomStmt->execute([$fg_sap_no]);
+                    $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    $consumeTransSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?)";
-                    $consumeTransStmt = $pdo->prepare($consumeTransSql);
+                    if (!empty($components)) {
+                        $consumeSql = "UPDATE " . ONHAND_TABLE . " SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
+                        $consumeStmt = $pdo->prepare($consumeSql);
+                        
+                        $consumeTransSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?)";
+                        $consumeTransStmt = $pdo->prepare($consumeTransSql);
 
-                    foreach ($components as $comp) {
-                        $qty_to_consume = $quantity * (float)$comp['quantity_required'];
-                        $component_item_id = $comp['component_item_id'];
+                        foreach ($components as $comp) {
+                            $qty_to_consume = $quantity * (float)$comp['quantity_required'];
+                            $component_item_id = $comp['component_item_id'];
 
-                        $consumeStmt->execute([$qty_to_consume, $component_item_id, $location_id, $qty_to_consume]);
+                            $consumeStmt->execute([$qty_to_consume, $component_item_id, $location_id, $qty_to_consume]);
+                            
+                            if ($consumeStmt->rowCount() == 0) {
+                                $pdo->rollBack();
+                                throw new Exception("Insufficient stock for a component (Item ID: {$component_item_id}) at the production location.");
+                            }
 
-                        if ($consumeStmt->rowCount() == 0) {
-                            $pdo->rollBack();
-                            throw new Exception("Insufficient stock for a component (Item ID: {$component_item_id}) at the production location.");
+                            $consume_note = "Auto-consumed for production of Item ID: {$item_id}, Lot: {$lot_no}";
+                            $consumeTransStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no]);
                         }
-
-                        $consume_note = "Auto-consumed for production of Item ID: {$item_id}, Lot: {$lot_no}";
-                        $consumeTransStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no]);
                     }
                 }
             }

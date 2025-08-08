@@ -594,17 +594,14 @@ function initializeBomManager() {
         loadAndRenderBomFgTable();
     });
     
-    // --- Helper Functions (ยกเครื่องใหม่ทั้งหมด) ---
-    
+    // --- Helper Functions (ยกเครื่องใหม่) ---
     async function loadAndRenderBomFgTable() {
         showSpinner();
         try {
             const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs_with_bom', 'GET');
             if (result.success) {
                 allBomFgs = result.data;
-                filterAndRenderBomFgTable();
-            } else {
-                fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${result.message}</td></tr>`;
+                renderBomFgTable(allBomFgs);
             }
         } finally {
             hideSpinner();
@@ -628,20 +625,18 @@ function initializeBomManager() {
             fgData.forEach(fg => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.title = 'Click to edit BOM';
-                const fgDataString = JSON.stringify(fg).replace(/'/g, "&apos;");
-
                 tr.addEventListener('click', (event) => {
                     if (event.target.closest('.form-check-input')) return;
                     manageBom(fg);
                 });
-
-                const checkboxTd = document.createElement('td');
-                checkboxTd.className = 'text-center';
-                checkboxTd.innerHTML = `<input class="form-check-input bom-row-checkbox" type="checkbox" value='${fgDataString}'>`;
-                tr.appendChild(checkboxTd);
-
-                tr.innerHTML += `
+                // ** แก้ไข: ใช้ data attributes ในการเก็บข้อมูล item_id **
+                tr.innerHTML = `
+                    <td class="text-center">
+                        <input class="form-check-input bom-row-checkbox" type="checkbox" 
+                               data-fg-item-id="${fg.fg_item_id}" 
+                               data-line="${fg.line}" 
+                               data-model="${fg.model}">
+                    </td>
                     <td>${fg.fg_sap_no || 'N/A'}</td>
                     <td>${fg.fg_part_no || ''}</td>
                     <td>${fg.line || 'N/A'}</td>
@@ -663,15 +658,14 @@ function initializeBomManager() {
             const modalTitle = document.getElementById('bomModalTitle');
             const modalBomTableBody = document.getElementById('modalBomTableBody');
             
-            if (!modalTitle || !modalBomTableBody) { console.error("BOM Modal elements not found!"); return; }
-
+            // ** แก้ไข: ใช้ fg_item_id เป็นหลัก **
             modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
-            document.getElementById('modalSelectedFgSapNo').value = fg.fg_sap_no;
+            document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
             document.getElementById('modalSelectedFgLine').value = fg.line;
             document.getElementById('modalSelectedFgModel').value = fg.model;
 
             modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
-            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_sap_no: fg.fg_sap_no, line: fg.line, model: fg.model });
+            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id, line: fg.line, model: fg.model });
             
             modalBomTableBody.innerHTML = '';
             if (bomResult.success && bomResult.data.length > 0) {
@@ -704,20 +698,17 @@ function initializeBomManager() {
     function setupBomComponentAutocomplete() {
         const searchInput = document.getElementById('modalComponentSearch');
         if (!searchInput) return;
-
         const resultsWrapper = searchInput.parentNode.querySelector('.autocomplete-results') || document.createElement('div');
         resultsWrapper.className = 'autocomplete-results';
         searchInput.parentNode.appendChild(resultsWrapper);
-
         let componentDebounce;
         searchInput.addEventListener('input', () => {
             clearTimeout(componentDebounce);
             const value = searchInput.value.toLowerCase();
             
-            document.getElementById('modalComponentSapNo').value = '';
+            document.getElementById('modalComponentItemId').value = '';
             resultsWrapper.innerHTML = '';
             if (value.length < 2) return;
-
             componentDebounce = setTimeout(async () => {
                 const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
                 if (result.success) {
@@ -727,7 +718,7 @@ function initializeBomManager() {
                         resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small class="text-muted">${item.part_description || ''}</small>`;
                         resultItem.addEventListener('click', () => {
                             searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                            document.getElementById('modalComponentSapNo').value = item.sap_no;
+                            document.getElementById('modalComponentItemId').value = item.item_id;
                             resultsWrapper.innerHTML = '';
                         });
                         resultsWrapper.appendChild(resultItem);
@@ -915,7 +906,9 @@ function initializeBomManager() {
                 showToast('Finished Good found! Proceeding to manage BOM.', '#28a745');
                 createBomModal.hide();
                 createBomForm.reset();
+                
                 manageBom({
+                    fg_item_id: result.data.item_id,
                     fg_sap_no: result.data.sap_no,
                     fg_part_no: result.data.part_no,
                     line: result.data.line,
@@ -932,14 +925,14 @@ function initializeBomManager() {
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
-            fg_sap_no: document.getElementById('modalSelectedFgSapNo').value,
+            fg_item_id: document.getElementById('modalSelectedFgItemId').value,
             line: document.getElementById('modalSelectedFgLine').value,
             model: document.getElementById('modalSelectedFgModel').value,
-            component_sap_no: document.getElementById('modalComponentSapNo').value,
+            component_item_id: document.getElementById('modalComponentItemId').value,
             quantity_required: document.getElementById('modalQuantityRequired').value
         };
 
-        if (!data.component_sap_no) {
+        if (!data.component_item_id) {
             showToast('Please select a valid component from the search results.', '#ffc107');
             return;
         }
@@ -948,10 +941,11 @@ function initializeBomManager() {
         showToast(result.message, result.success ? '#28a745' : '#dc3545');
         if (result.success) {
             await loadBomForModal({ 
-                fg_sap_no: data.fg_sap_no, 
+                fg_item_id: data.fg_item_id, 
                 line: data.line, 
                 model: data.model, 
-                fg_part_no: document.getElementById('bomModalTitle').textContent.split('for: ')[1].split(' (SAP:')[0]
+                fg_part_no: document.getElementById('bomModalTitle').textContent.split('for: ')[1].split(' (SAP:')[0],
+                fg_sap_no: document.getElementById('bomModalTitle').textContent.split('(SAP: ')[1].replace(')', '')
             });
             e.target.reset();
         }

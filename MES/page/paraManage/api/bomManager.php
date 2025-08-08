@@ -18,64 +18,56 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'get_bom_components':
-            $fg_sap_no = $_GET['fg_sap_no'] ?? '';
+            $fg_item_id = $_GET['fg_item_id'] ?? 0;
             $line = $_GET['line'] ?? '';
             $model = $_GET['model'] ?? '';
             
             enforceLinePermission($line); 
 
-            if (empty($fg_sap_no) || empty($line) || empty($model)) {
-                throw new Exception("FG SAP No, Line, and Model are required.");
+            if (empty($fg_item_id) || empty($line) || empty($model)) {
+                throw new Exception("FG Item ID, Line, and Model are required.");
             }
 
-            // แก้ไข SQL: JOIN กับ ITEMS_TEST เพื่อดึงข้อมูล Part No และ Description จาก component_sap_no
+            // ** แก้ไข SQL: JOIN กับ ITEMS_TEST โดยใช้ item_id **
             $sql = "
                 SELECT 
                     b.bom_id,
-                    b.component_sap_no,
+                    b.component_item_id,
+                    i.sap_no AS component_sap_no,
                     i.part_no AS component_part_no,
                     i.part_description,
                     b.quantity_required
                 FROM " . BOM_TABLE . " b
-                LEFT JOIN " . ITEMS_TABLE . " i ON b.component_sap_no = i.sap_no
-                WHERE b.fg_sap_no = ? AND b.line = ? AND b.model = ? 
+                LEFT JOIN " . ITEMS_TABLE . " i ON b.component_item_id = i.item_id
+                WHERE b.fg_item_id = ? AND b.line = ? AND b.model = ? 
                 ORDER BY i.part_no
             ";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_sap_no, $line, $model]);
+            $stmt->execute([(int)$fg_item_id, $line, $model]);
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
         case 'add_bom_component':
-            $fg_sap_no = $input['fg_sap_no'] ?? '';
+            $fg_item_id = $input['fg_item_id'] ?? 0;
             $line = $input['line'] ?? '';
             $model = $input['model'] ?? '';
-            $component_sap_no = $input['component_sap_no'] ?? '';
+            $component_item_id = $input['component_item_id'] ?? 0;
             $quantity_required = $input['quantity_required'] ?? 0;
             enforceLinePermission($line);
 
-            if (empty($fg_sap_no) || empty($line) || empty($model) || empty($component_sap_no) || empty($quantity_required)) {
+            if (empty($fg_item_id) || empty($line) || empty($model) || empty($component_item_id) || empty($quantity_required)) {
                 throw new Exception("Missing required fields.");
             }
-            if ($fg_sap_no === $component_sap_no) {
+            if ($fg_item_id == $component_item_id) {
                 throw new Exception("Finished Good and Component cannot be the same item.");
             }
 
-            // แก้ไข SQL: ตรวจสอบ component_sap_no ที่ซ้ำกัน
-            $checkSql = "SELECT COUNT(*) FROM " . BOM_TABLE . " WHERE fg_sap_no = ? AND line = ? AND model = ? AND component_sap_no = ?";
-            $checkStmt = $pdo->prepare($checkSql);
-            $checkStmt->execute([$fg_sap_no, $line, $model, $component_sap_no]);
-            if ($checkStmt->fetchColumn() > 0) {
-                http_response_code(409);
-                throw new Exception("This component (SAP: {$component_sap_no}) already exists in this BOM.");
-            }
-
-            // แก้ไข SQL: INSERT โดยใช้ sap_no
-            $sql = "INSERT INTO " . BOM_TABLE . " (fg_sap_no, line, model, component_sap_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+            // ** แก้ไข SQL: INSERT และตรวจสอบโดยใช้ item_id **
+            $sql = "INSERT INTO " . BOM_TABLE . " (fg_item_id, line, model, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_sap_no, $line, $model, $component_sap_no, (int)$quantity_required, $currentUser['username']]);
+            $stmt->execute([(int)$fg_item_id, $line, $model, (int)$component_item_id, (int)$quantity_required, $currentUser['username']]);
             
-            logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "$fg_sap_no ($line/$model)", "Component SAP: $component_sap_no");
+            logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "FG_ID: $fg_item_id ($line/$model)", "Comp_ID: $component_item_id");
             echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
             break;
 
@@ -121,10 +113,10 @@ try {
             $deleteStmt->execute([$bom_id]);
 
             if ($deleteStmt->rowCount() > 0) {
-                // อัปเดต timestamp ของ BOM ทั้งชุด
-                $updateSql = "UPDATE " . BOM_TABLE . " SET updated_at = GETDATE(), updated_by = ? WHERE fg_sap_no = ? AND line = ? AND model = ?";
+                // ** แก้ไข: อัปเดต timestamp โดยใช้ item_id **
+                $updateSql = "UPDATE " . BOM_TABLE . " SET updated_at = GETDATE(), updated_by = ? WHERE fg_item_id = ? AND line = ? AND model = ?";
                 $updateStmt = $pdo->prepare($updateSql);
-                $updateStmt->execute([$currentUser['username'], $bom_item['fg_sap_no'], $bom_item['line'], $bom_item['model']]);
+                $updateStmt->execute([$currentUser['username'], $bom_item['fg_item_id'], $bom_item['line'], $bom_item['model']]);
                 
                 logAction($pdo, $currentUser['username'], 'DELETE BOM COMPONENT', "BOM_ID: $bom_id");
                 echo json_encode(['success' => true, 'message' => 'Component deleted successfully.']);
@@ -134,37 +126,29 @@ try {
             break;
 
         case 'get_all_fgs_with_bom':
-            // --- แก้ไข: เปลี่ยนจาก JOIN เป็น LEFT JOIN ---
+            // ** แก้ไข SQL: ดึงข้อมูล BOM โดยอ้างอิงจาก item_id **
             $sql = "
-                WITH LatestUpdate AS (
-                    SELECT fg_sap_no, line, model, MAX(updated_at) as last_update
-                    FROM " . BOM_TABLE . "
-                    GROUP BY fg_sap_no, line, model
-                )
-                SELECT DISTINCT 
-                    b.fg_sap_no, 
-                    b.line, 
-                    b.model, 
-                    ISNULL(i.part_no, b.fg_sap_no) as fg_part_no, -- ถ้าไม่เจอ Part No. ให้แสดง SAP No. แทน
-                    lu.last_update as updated_at,
-                    (SELECT TOP 1 updated_by FROM " . BOM_TABLE . " WHERE fg_sap_no = b.fg_sap_no AND line = b.line AND model = b.model ORDER BY updated_at DESC) as updated_by
+                SELECT DISTINCT
+                    b.fg_item_id,
+                    b.line,
+                    b.model,
+                    i.sap_no AS fg_sap_no,
+                    i.part_no AS fg_part_no,
+                    (SELECT MAX(sub.updated_at) FROM " . BOM_TABLE . " sub WHERE sub.fg_item_id = b.fg_item_id AND sub.line = b.line AND sub.model = b.model) as updated_at,
+                    (SELECT TOP 1 sub.updated_by FROM " . BOM_TABLE . " sub WHERE sub.fg_item_id = b.fg_item_id AND sub.line = b.line AND sub.model = b.model ORDER BY sub.updated_at DESC) as updated_by
                 FROM " . BOM_TABLE . " b
-                LEFT JOIN " . ITEMS_TABLE . " i ON b.fg_sap_no = i.sap_no -- เปลี่ยนเป็น LEFT JOIN
-                JOIN LatestUpdate lu ON b.fg_sap_no = lu.fg_sap_no AND b.line = lu.line AND b.model = lu.model
+                JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id
             ";
-            
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
                 $sql .= " WHERE b.line = ?";
                 $params[] = $currentUser['line'];
             }
-            $sql .= " ORDER BY b.line, b.model, fg_part_no;";
+            $sql .= " ORDER BY b.line, b.model, i.part_no";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // จัดรูปแบบวันที่ (เหมือนเดิม)
             foreach ($rows as &$row) {
                 if ($row['updated_at']) {
                     $row['updated_at'] = (new DateTime($row['updated_at']))->format('Y-m-d H:i:s');
@@ -174,21 +158,23 @@ try {
             break;
 
         case 'delete_full_bom':
-            $fg_sap_no = $input['fg_sap_no'] ?? '';
+            $fg_item_id = $input['fg_item_id'] ?? 0;
             $line = $input['line'] ?? '';
             $model = $input['model'] ?? '';
             enforceLinePermission($line);
 
-            if (empty($fg_sap_no) || empty($line) || empty($model)) {
-                throw new Exception("FG SAP No, Line, and Model are required.");
+            if (empty($fg_item_id) || empty($line) || empty($model)) {
+                throw new Exception("FG Item ID, Line, and Model are required.");
             }
             
-            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_sap_no = ? AND line = ? AND model = ?");
-            $stmt->execute([$fg_sap_no, $line, $model]);
+            // ** แก้ไข SQL: ลบโดยใช้ item_id **
+            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND line = ? AND model = ?");
+            $stmt->execute([(int)$fg_item_id, $line, $model]);
             
-            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "$fg_sap_no ($line/$model)");
+            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "FG_ID: $fg_item_id ($line/$model)");
             echo json_encode(['success' => true, 'message' => 'BOM has been deleted.']);
             break;
+
 
         case 'bulk_delete_bom':
             $boms_to_delete = $input['boms'] ?? [];

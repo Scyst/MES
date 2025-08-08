@@ -453,7 +453,8 @@ try {
             $part_no = trim($input['part_no'] ?? '');
             $line = trim($input['line'] ?? '');
 
-            $sql = "SELECT * FROM {$param_table} WHERE ";
+            // --- แก้ไข: เพิ่ม item_id เข้ามาใน SELECT statement ---
+            $sql = "SELECT id, item_id, line, model, part_no, sap_no FROM {$param_table} WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
@@ -473,7 +474,12 @@ try {
             $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($parameter) {
-                echo json_encode(['success' => true, 'data' => $parameter]);
+                // --- แก้ไข: ตรวจสอบว่ามี item_id หรือไม่ ---
+                if (empty($parameter['item_id'])) {
+                    echo json_encode(['success' => false, 'message' => 'This parameter is not linked to an Item Master record yet. Please edit and save it first.']);
+                } else {
+                    echo json_encode(['success' => true, 'data' => $parameter]);
+                }
             } else {
                 echo json_encode(['success' => false, 'message' => 'Parameter not found with the specified criteria.']);
             }

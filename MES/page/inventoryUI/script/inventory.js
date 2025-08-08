@@ -367,19 +367,28 @@ function renderWipInventoryTable(data) {
 // SECTION: MODAL HANDLING
 // =================================================================
 async function populateModalDatalists() {
-    const wipResult = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
-     if (wipResult.success) {
-        allItems = wipResult.items;
+    const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
+     if (result.success) {
+        allItems = result.items;
+
         const inLocationSelect = document.getElementById('entry_location_id');
         const outLocationSelect = document.getElementById('out_location_id');
+        const editInLocationSelect = document.getElementById('edit_entry_location_id');
+        const editOutLocationSelect = document.getElementById('edit_production_location_id');
         
-        const optionsHtml = wipResult.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+        const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
 
         if (inLocationSelect) {
             inLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
         if (outLocationSelect) {
             outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+        if (editInLocationSelect) {
+            editInLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+        if (editOutLocationSelect) {
+            editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
     }
 }
