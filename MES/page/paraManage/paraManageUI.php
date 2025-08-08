@@ -177,8 +177,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex justify-content-end gap-2">
-                                <button class="btn btn-primary" id="exportBomBtn"><i class="fas fa-file-export"></i> Export</button>
                                 <button class="btn btn-info" id="importBomBtn"><i class="fas fa-file-import"></i> Import</button>
+                                <button class="btn btn-primary" id="exportBomBtn"><i class="fas fa-file-export"></i> Export</button>
                                 <input type="file" id="bomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
                                 <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
                             </div>

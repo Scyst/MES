@@ -213,6 +213,9 @@ try {
             break;
 
         case 'get_full_bom_export':
+            // รับค่า search จาก GET parameter
+            $searchTerm = $_GET['search'] ?? '';
+
             $sql = "
                 SELECT
                     fg_item.sap_no      AS fg_sap_no,
@@ -225,14 +228,32 @@ try {
                     b.updated_by,
                     b.updated_at
                 FROM " . BOM_TABLE . " b
-                LEFT JOIN " . ITEMS_TABLE . " fg_item ON b.fg_sap_no = fg_item.sap_no
-                LEFT JOIN " . ITEMS_TABLE . " comp_item ON b.component_sap_no = comp_item.sap_no
+                LEFT JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
+                LEFT JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
             ";
+            
+            $conditions = [];
             $params = [];
+
+            // เพิ่มเงื่อนไขการกรองข้อมูลตาม Role ของ Supervisor
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " WHERE b.line = ?";
+                $conditions[] = "b.line = ?";
                 $params[] = $currentUser['line'];
             }
+
+            // เพิ่มเงื่อนไขการกรองข้อมูลจากช่อง Search
+            if (!empty($searchTerm)) {
+                $conditions[] = "(fg_item.sap_no LIKE ? OR fg_item.part_no LIKE ? OR b.line LIKE ? OR b.model LIKE ?)";
+                $params[] = '%' . $searchTerm . '%';
+                $params[] = '%' . $searchTerm . '%';
+                $params[] = '%' . $searchTerm . '%';
+                $params[] = '%' . $searchTerm . '%';
+            }
+
+            if (!empty($conditions)) {
+                $sql .= " WHERE " . implode(" AND ", $conditions);
+            }
+            
             $sql .= " ORDER BY b.line, b.model, fg_item.part_no, comp_item.part_no";
 
             $stmt = $pdo->prepare($sql);
@@ -245,41 +266,58 @@ try {
             if (!is_array($input) || empty($input)) {
                 throw new Exception("Invalid or empty data received for BOM import.");
             }
+            
             $pdo->beginTransaction();
-            $deleteSql = "DELETE FROM " . BOM_TABLE . " WHERE fg_sap_no = ? AND line = ? AND model = ?";
-            $deleteStmt = $pdo->prepare($deleteSql);
-            $insertSql = "INSERT INTO " . BOM_TABLE . " (fg_sap_no, line, model, component_sap_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
-            $insertStmt = $pdo->prepare($insertSql);
-            
-            $importedFgCount = 0;
-            $importedComponentCount = 0;
-            
-            foreach ($input as $bomGroup) {
-                $fg_sap_no = $bomGroup['fg_sap_no'] ?? null;
-                $line = $bomGroup['line'] ?? null;
-                $model = $bomGroup['model'] ?? null;
-                $components = $bomGroup['components'] ?? [];
+            try {
+                $insertedCount = 0;
+                $updatedCount = 0;
 
-                if (!$fg_sap_no || !$line || !$model || empty($components)) { continue; }
-                enforceLinePermission($line);
-                $deleteStmt->execute([$fg_sap_no, $line, $model]);
-                
-                foreach ($components as $component) {
-                    $insertStmt->execute([
-                        $fg_sap_no,
-                        $line,
-                        $model,
-                        $component['component_sap_no'],
-                        (int)$component['quantity_required'],
-                        $currentUser['username']
-                    ]);
-                    $importedComponentCount++;
+                $checkItemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
+                $checkBomStmt = $pdo->prepare("SELECT bom_id FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND line = ? AND model = ? AND component_item_id = ?");
+                $updateStmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?");
+                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, line, model, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())");
+
+                foreach ($input as $row) {
+                    $fg_sap_no = $row['FG_SAP_NO'] ?? null;
+                    $line = $row['LINE'] ?? null;
+                    $model = $row['MODEL'] ?? null;
+                    $comp_sap_no = $row['COMPONENT_SAP_NO'] ?? null;
+                    $quantity = (int)($row['QUANTITY_REQUIRED'] ?? 0);
+
+                    if (!$fg_sap_no || !$line || !$model || !$comp_sap_no || $quantity <= 0) {
+                        continue; // ข้ามข้อมูลแถวที่ไม่สมบูรณ์
+                    }
+                    
+                    enforceLinePermission($line);
+
+                    $checkItemStmt->execute([$fg_sap_no]);
+                    $fg_item_id = $checkItemStmt->fetchColumn();
+                    $checkItemStmt->execute([$comp_sap_no]);
+                    $comp_item_id = $checkItemStmt->fetchColumn();
+                    
+                    if (!$fg_item_id || !$comp_item_id) {
+                        continue;
+                    }
+                    $checkBomStmt->execute([$fg_item_id, $line, $model, $comp_item_id]);
+                    $existing_bom_id = $checkBomStmt->fetchColumn();
+
+                    if ($existing_bom_id) {
+                        $updateStmt->execute([$quantity, $currentUser['username'], $existing_bom_id]);
+                        $updatedCount++;
+                    } else {
+                        $insertStmt->execute([$fg_item_id, $line, $model, $comp_item_id, $quantity, $currentUser['username']]);
+                        $insertedCount++;
+                    }
                 }
-                $importedFgCount++;
+                
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', null, "Imported/Updated BOM. Inserted: $insertedCount, Updated: $updatedCount");
+                echo json_encode(['success' => true, 'message' => "BOM import completed. Added: $insertedCount, Updated: $updatedCount."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
             }
-            $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', null, "Imported $importedFgCount FGs with a total of $importedComponentCount components.");
-            echo json_encode(["success" => true, "message" => "Successfully imported BOM for $importedFgCount Finished Goods."]);
             break;
 
         case 'copy_bom':
