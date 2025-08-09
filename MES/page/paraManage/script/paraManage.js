@@ -12,6 +12,8 @@ let paramCurrentPage = 1;
 let healthCheckCurrentPage = 1;
 let bomTabLoaded = false;
 let currentEditingParam = null;
+let currentEditingBom = null;
+let manageBomModal;
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
@@ -122,32 +124,38 @@ function setupParameterItemAutocomplete() {
     });
 }
 
-function setupCreateBomAutocomplete() {
+// =================================================================
+// SECTION: REFACTORED "CREATE NEW BOM" WORKFLOW
+// =================================================================
+
+function initializeCreateBomModal() {
+    const modalEl = document.getElementById('createBomModal');
+    if (!modalEl) return;
+
+    // --- ดึง Element ของ Modal และ Form มาเก็บไว้ ---
+    const form = document.getElementById('createBomForm');
     const searchInput = document.getElementById('fg_item_search');
     const resultsWrapper = document.createElement('div');
     resultsWrapper.className = 'autocomplete-results';
     searchInput.parentNode.appendChild(resultsWrapper);
-
     const detailsDiv = document.getElementById('selected_fg_details');
-    const paramSelectArea = document.getElementById('parameter_selection_area');
     const paramSelect = document.getElementById('parameter_select');
     const nextBtn = document.getElementById('createBomNextBtn');
-    const selectedItemIdInput = document.getElementById('selected_fg_item_id');
 
+    // --- ตัวแปรสำหรับจัดการ State ---
     let debounce;
+    let selectedItem = null;
+    let bomDataForNextStep = null; // ตัวแปร "ธง" สำหรับส่งข้อมูล
+
+    // --- Autocomplete Logic (โค้ดส่วนนี้สมบูรณ์ดีแล้ว) ---
     searchInput.addEventListener('input', () => {
         clearTimeout(debounce);
         const value = searchInput.value.toLowerCase();
-        
-        // Reset state
-        selectedItemIdInput.value = '';
+        selectedItem = null;
         detailsDiv.classList.add('d-none');
-        paramSelectArea.classList.add('d-none'); // ซ่อน Dropdown ด้วย
         nextBtn.disabled = true;
         resultsWrapper.innerHTML = '';
-        
         if (value.length < 2) return;
-
         debounce = setTimeout(async () => {
             const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
             if (result.success) {
@@ -158,11 +166,10 @@ function setupCreateBomAutocomplete() {
                     resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
                     resultItem.addEventListener('click', () => {
                         searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                        selectedItemIdInput.value = item.item_id;
+                        selectedItem = item;
                         resultsWrapper.innerHTML = '';
                         resultsWrapper.style.display = 'none';
-                        // เรียกฟังก์ชันเพื่อโหลด Parameters ของ Item นี้
-                        loadParametersForItem(item.item_id);
+                        loadParametersForSelectedItem();
                     });
                     resultsWrapper.appendChild(resultItem);
                 });
@@ -177,44 +184,74 @@ function setupCreateBomAutocomplete() {
         }
     });
 
-    paramSelect.addEventListener('change', () => {
-        // เปิดปุ่ม Next Step เมื่อผู้ใช้เลือก Parameter แล้ว
-        if(paramSelect.value) {
-            nextBtn.disabled = false;
+    // --- Parameter Loading Logic (โค้ดส่วนนี้สมบูรณ์ดีแล้ว) ---
+    async function loadParametersForSelectedItem() {
+        if (!selectedItem) return;
+        detailsDiv.classList.remove('d-none');
+        paramSelect.innerHTML = '<option value="">Loading...</option>';
+        nextBtn.disabled = true;
+        const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameters_for_item', 'GET', null, { item_id: selectedItem.item_id });
+        if (result.success && result.data.length > 0) {
+            paramSelect.innerHTML = '<option value="">-- Select Line/Model --</option>';
+            result.data.forEach(param => {
+                const option = document.createElement('option');
+                option.value = param.id;
+                option.textContent = `Line: ${param.line} / Model: ${param.model}`;
+                option.dataset.line = param.line;
+                option.dataset.model = param.model;
+                paramSelect.appendChild(option);
+            });
         } else {
-            nextBtn.disabled = true;
+            paramSelect.innerHTML = '<option value="">-- No parameters found --</option>';
+        }
+    }
+
+    paramSelect.addEventListener('change', () => {
+        nextBtn.disabled = !paramSelect.value;
+    });
+
+    // ====[ **จุดควบคุมหลัก** ]====
+    // 1. Event Listener เมื่อฟอร์มถูก "Submit"
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const selectedOption = paramSelect.options[paramSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.value) {
+            showToast('Please select a production parameter (Line/Model).', '#ffc107');
+            return; // ถ้าข้อมูลไม่ครบ จะหยุดแค่ตรงนี้ (Modal จะยังเปิดอยู่)
+        }
+
+        // ถ้าข้อมูลครบ ให้เก็บข้อมูลไว้ใน "ธง"
+        bomDataForNextStep = {
+            fg_item_id: selectedItem.item_id,
+            fg_sap_no: selectedItem.sap_no,
+            fg_part_no: selectedItem.part_no,
+            line: selectedOption.dataset.line,
+            model: selectedOption.dataset.model
+        };
+
+        // แล้วสั่งปิด Modal แรก *ด้วย JavaScript*
+        // ใช้ getInstance เพื่อให้แน่ใจว่าเราได้ instance ที่ถูกต้องเสมอ
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) {
+            modalInstance.hide();
         }
     });
-}
 
-async function loadParametersForItem(itemId) {
-    const detailsDiv = document.getElementById('selected_fg_details');
-    const paramSelectArea = document.getElementById('parameter_selection_area');
-    const paramSelect = document.getElementById('parameter_select');
-    const nextBtn = document.getElementById('createBomNextBtn');
-
-    detailsDiv.classList.remove('d-none');
-    paramSelectArea.style.display = 'block';
-    paramSelect.innerHTML = '<option value="">Loading parameters...</option>';
-    nextBtn.disabled = true;
-
-    // เราต้องสร้าง Action ใหม่ใน paraManage.php ชื่อ get_parameters_for_item
-    const result = await sendRequest(PARA_API_ENDPOINT, 'get_parameters_for_item', 'GET', null, { item_id: itemId });
-
-    if (result.success && result.data.length > 0) {
-        paramSelect.innerHTML = '<option value="">-- Select a Line/Model combination --</option>';
-        result.data.forEach(param => {
-            // เราจะเก็บข้อมูลทั้งหมดของ parameter ไว้ใน value ของ option
-            const option = document.createElement('option');
-            option.value = param.id;
-            option.textContent = `Line: ${param.line} / Model: ${param.model}`;
-            // เก็บข้อมูลทั้งหมดไว้ใน data attribute เพื่อนำไปใช้ทีหลัง
-            option.dataset.fullParam = JSON.stringify(param);
-            paramSelect.appendChild(option);
-        });
-    } else {
-        paramSelect.innerHTML = '<option value="">-- No production parameters found for this item --</option>';
-    }
+    // 2. Event Listener ที่จะทำงาน "หลังจาก" Modal แรกปิดสนิทแล้ว
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        // เช็ค "ธง" ของเรา
+        if (bomDataForNextStep) {
+            // ถ้ามีข้อมูลอยู่ แปลว่าต้องเปิด Modal ที่สอง
+            manageBom(bomDataForNextStep);
+        }
+        
+        // ไม่ว่าจะเกิดอะไรขึ้น ให้รีเซ็ตฟอร์มและ "ธง" เสมอ
+        form.reset();
+        detailsDiv.classList.add('d-none');
+        nextBtn.disabled = true;
+        bomDataForNextStep = null; 
+    });
 }
 
 async function loadStandardParams() {
@@ -658,6 +695,54 @@ async function populateLineDatalist() {
     }
 }
 
+async function loadBomForModal(fg) {
+    showSpinner();
+    try {
+        const modalTitle = document.getElementById('bomModalTitle');
+        const modalBomTableBody = document.getElementById('modalBomTableBody');
+        
+        modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
+        document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
+        document.getElementById('modalSelectedFgLine').value = fg.line;
+        document.getElementById('modalSelectedFgModel').value = fg.model;
+
+        modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id, line: fg.line, model: fg.model });
+        
+        modalBomTableBody.innerHTML = '';
+        if (bomResult.success && bomResult.data.length > 0) {
+            bomResult.data.forEach(comp => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${comp.component_part_no}</td>
+                    <td>${comp.part_description || ''}</td>
+                    <td class="text-center">
+                        <input type="number" class="form-control form-control-sm bom-quantity-input text-center bom-input-readonly w-50" 
+                                value="${comp.quantity_required}" data-bom-id="${comp.bom_id}" min="1" readonly>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group gap-2 justify-content-center">
+                            <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
+                            <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
+                        </div>
+                    </td>
+                `;
+                modalBomTableBody.appendChild(tr);
+            });
+        } else {
+            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No components. Add one now!</td></tr>';
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function manageBom(fg) {
+    currentEditingBom = fg;
+    manageBomModal.show();
+    loadBomForModal(fg);
+};
+
 function initializeBomManager() {
     // --- Element References (เหมือนเดิม) ---
     const searchInput = document.getElementById('bomSearchInput');
@@ -669,7 +754,6 @@ function initializeBomManager() {
     const createBomModalEl = document.getElementById('createBomModal');
     const createBomModal = new bootstrap.Modal(createBomModalEl);
     const manageBomModalEl = document.getElementById('manageBomModal');
-    const manageBomModal = new bootstrap.Modal(manageBomModalEl);
     const copyBomModalEl = document.getElementById('copyBomModal');
     const copyBomModal = new bootstrap.Modal(copyBomModalEl);
     const createBomForm = document.getElementById('createBomForm');
@@ -677,8 +761,9 @@ function initializeBomManager() {
     const copyBomForm = document.getElementById('copyBomForm');
     const selectAllBomCheckbox = document.getElementById('selectAllBomCheckbox');
     const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
-    let currentEditingBom = null;
+    manageBomModal = new bootstrap.Modal(manageBomModalEl);
     let bomDebounceTimer;
+    let allBomFgs = [];
 
     // --- Style Injection (เหมือนเดิม) ---
     const style = document.createElement('style');
@@ -720,18 +805,20 @@ function initializeBomManager() {
             fgData.forEach(fg => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
+                tr.title = 'Click to edit BOM';
+                const fgDataString = JSON.stringify(fg).replace(/'/g, "&apos;");
+
                 tr.addEventListener('click', (event) => {
                     if (event.target.closest('.form-check-input')) return;
                     manageBom(fg);
                 });
-                // ** แก้ไข: ใช้ data attributes ในการเก็บข้อมูล item_id **
-                tr.innerHTML = `
-                    <td class="text-center">
-                        <input class="form-check-input bom-row-checkbox" type="checkbox" 
-                               data-fg-item-id="${fg.fg_item_id}" 
-                               data-line="${fg.line}" 
-                               data-model="${fg.model}">
-                    </td>
+
+                const checkboxTd = document.createElement('td');
+                checkboxTd.className = 'text-center';
+                checkboxTd.innerHTML = `<input class="form-check-input bom-row-checkbox" type="checkbox" value='${fgDataString}'>`;
+                tr.appendChild(checkboxTd);
+
+                tr.innerHTML += `
                     <td>${fg.fg_sap_no || 'N/A'}</td>
                     <td>${fg.fg_part_no || ''}</td>
                     <td>${fg.line || 'N/A'}</td>
@@ -747,49 +834,6 @@ function initializeBomManager() {
         updateBomBulkActionsVisibility();
     }
 
-    async function loadBomForModal(fg) {
-        showSpinner();
-        try {
-            const modalTitle = document.getElementById('bomModalTitle');
-            const modalBomTableBody = document.getElementById('modalBomTableBody');
-            
-            // ** แก้ไข: ใช้ fg_item_id เป็นหลัก **
-            modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
-            document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
-            document.getElementById('modalSelectedFgLine').value = fg.line;
-            document.getElementById('modalSelectedFgModel').value = fg.model;
-
-            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
-            const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id, line: fg.line, model: fg.model });
-            
-            modalBomTableBody.innerHTML = '';
-            if (bomResult.success && bomResult.data.length > 0) {
-                bomResult.data.forEach(comp => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${comp.component_part_no}</td>
-                        <td>${comp.part_description || ''}</td>
-                        <td class="text-center">
-                            <input type="number" class="form-control form-control-sm bom-quantity-input text-center bom-input-readonly w-50" 
-                                   value="${comp.quantity_required}" data-bom-id="${comp.bom_id}" min="1" readonly>
-                        </td>
-                        <td class="text-center">
-                            <div class="btn-group gap-2 justify-content-center">
-                                <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
-                                <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
-                            </div>
-                        </td>
-                    `;
-                    modalBomTableBody.appendChild(tr);
-                });
-            } else {
-                modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No components. Add one now!</td></tr>';
-            }
-        } finally {
-            hideSpinner();
-        }
-    }
-    
     function setupBomComponentAutocomplete() {
         const searchInput = document.getElementById('modalComponentSearch');
         if (!searchInput) return;
@@ -954,7 +998,7 @@ function initializeBomManager() {
 
     async function deleteSelectedBoms() {
         const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
-        const bomsToDelete = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value.replace(/&apos;/g, "'")));
+        const bomsToDelete = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
         
         const payload = {
             boms: bomsToDelete.map(bom => ({
@@ -1005,32 +1049,32 @@ function initializeBomManager() {
 
     deleteSelectedBomBtn.addEventListener('click', deleteSelectedBoms);
 
-    createBomForm?.addEventListener('submit', async (e) => {
+    /*createBomForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const paramSelect = document.getElementById('parameter_select');
-        const selectedOption = paramSelect.options[paramSelect.selectedIndex];
-
-        if (!selectedOption || !selectedOption.value) {
-            showToast('Please select a production parameter (Line/Model).', '#ffc107');
-            return;
+        const searchCriteria = Object.fromEntries(new FormData(createBomForm).entries());
+        
+        showSpinner();
+        try {
+            const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
+            if (result.success && result.data) {
+                showToast('Finished Good found! Proceeding to manage BOM.', '#28a745');
+                createBomModal.hide();
+                createBomForm.reset();
+                
+                manageBom({
+                    fg_item_id: result.data.item_id,
+                    fg_sap_no: result.data.sap_no,
+                    fg_part_no: result.data.part_no,
+                    line: result.data.line,
+                    model: result.data.model
+                });
+            } else {
+                showToast(result.message || 'Could not find a matching part.', '#dc3545');
+            }
+        } finally {
+            hideSpinner();
         }
-        
-        // ดึงข้อมูลทั้งหมดของ Parameter ที่เก็บไว้จาก data attribute
-        const selectedParam = JSON.parse(selectedOption.dataset.fullParam);
-        
-        showToast('Parameter selected! Proceeding to manage BOM.', '#28a745');
-        createBomModal.hide();
-        createBomForm.reset();
-        
-        // ส่งข้อมูลที่สมบูรณ์ (รวม item_id, sap_no, part_no) ไปยังฟังก์ชัน manageBom
-        manageBom({
-            fg_item_id: selectedParam.item_id,
-            fg_sap_no: selectedParam.sap_no,
-            fg_part_no: selectedParam.part_no,
-            line: selectedParam.line,
-            model: selectedParam.model
-        });
-    });
+    });*/
     
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1146,12 +1190,6 @@ function initializeBomManager() {
         }
     });
 
-    function manageBom(fg) {
-        currentEditingBom = fg;
-        manageBomModal.show();
-        loadBomForModal(fg);
-    };
-
     function openCopyBomModal(fg) {
         if (!fg) return;
         document.getElementById('copySourceBomDisplay').value = `${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
@@ -1200,7 +1238,7 @@ function initializeBomManager() {
     // --- Initial Load ---
     setupBomComponentAutocomplete();
     loadAndRenderBomFgTable();
-    populateCreateBomDatalists();
+    //populateCreateBomDatalists();
 }
 
 /**
@@ -1259,8 +1297,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    initializeCreateBomModal();
+    initializeBomManager();
     setupParameterItemAutocomplete();
-    setupCreateBomAutocomplete();
 
     loadStandardParams();
     populateLineDatalist();
@@ -1294,10 +1333,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (currentUser.role !== 'supervisor') loadSchedules();
             } else if (targetTabId === '#healthCheckPane') {
                 if (currentUser.role !== 'supervisor') loadHealthCheckData();
-            } else if (targetTabId === '#bomManagerPane' && !bomTabLoaded) {
-                initializeBomManager();
+            } /*else if (targetTabId === '#bomManagerPane' && !bomTabLoaded) {
                 bomTabLoaded = true;
-            }
+            }*/
         });
     });
 
