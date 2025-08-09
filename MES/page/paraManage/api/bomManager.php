@@ -48,27 +48,36 @@ try {
             break;
 
         case 'add_bom_component':
-            $fg_item_id = $input['fg_item_id'] ?? 0;
-            $line = $input['line'] ?? '';
-            $model = $input['model'] ?? '';
-            $component_item_id = $input['component_item_id'] ?? 0;
-            $quantity_required = $input['quantity_required'] ?? 0;
-            enforceLinePermission($line);
+            try {
+                $fg_item_id = $input['fg_item_id'] ?? 0;
+                $line = $input['line'] ?? '';
+                $model = $input['model'] ?? '';
+                $component_item_id = $input['component_item_id'] ?? 0;
+                $quantity_required = $input['quantity_required'] ?? 0;
+                enforceLinePermission($line);
 
-            if (empty($fg_item_id) || empty($line) || empty($model) || empty($component_item_id) || empty($quantity_required)) {
-                throw new Exception("Missing required fields.");
-            }
-            if ($fg_item_id == $component_item_id) {
-                throw new Exception("Finished Good and Component cannot be the same item.");
-            }
+                if (empty($fg_item_id) || empty($line) || empty($model) || empty($component_item_id) || empty($quantity_required)) {
+                    throw new Exception("Missing required fields.");
+                }
+                if ($fg_item_id == $component_item_id) {
+                    throw new Exception("Finished Good and Component cannot be the same item.");
+                }
 
-            // ** แก้ไข SQL: INSERT และตรวจสอบโดยใช้ item_id **
-            $sql = "INSERT INTO " . BOM_TABLE . " (fg_item_id, line, model, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([(int)$fg_item_id, $line, $model, (int)$component_item_id, (int)$quantity_required, $currentUser['username']]);
-            
-            logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "FG_ID: $fg_item_id ($line/$model)", "Comp_ID: $component_item_id");
-            echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
+                $sql = "INSERT INTO " . BOM_TABLE . " (fg_item_id, line, model, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([(int)$fg_item_id, $line, $model, (int)$component_item_id, (int)$quantity_required, $currentUser['username']]);
+                
+                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "FG_ID: $fg_item_id ($line/$model)", "Comp_ID: $component_item_id");
+                echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
+
+            } catch (PDOException $e) {
+                if ($e->getCode() == '23000') {
+                    http_response_code(409); // 409 Conflict
+                    echo json_encode(['success' => false, 'message' => 'This component already exists in the BOM.']);
+                } else {
+                    throw $e; 
+                }
+            }
             break;
 
         case 'update_bom_component':

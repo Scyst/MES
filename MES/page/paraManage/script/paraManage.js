@@ -42,8 +42,7 @@ async function sendRequest(endpoint, action, method, body = null, urlParams = {}
         return result;
     } catch (error) {
         console.error(`Request for action '${action}' failed:`, error);
-        showToast(error.message || 'An unexpected error occurred.', '#dc3545');
-        return { success: false, message: "Network or server error." };
+        return { success: false, message: error.message || "An unexpected client-side error occurred." };
     }
 }
 
@@ -1210,7 +1209,7 @@ function initializeBomManager() {
                 showSpinner();
                 try {
                     const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { 
-                        fg_sap_no: currentEditingBom.fg_sap_no, 
+                        fg_item_id: currentEditingBom.fg_item_id, // << แก้ไขเป็น fg_item_id
                         line: currentEditingBom.line, 
                         model: currentEditingBom.model 
                     });
