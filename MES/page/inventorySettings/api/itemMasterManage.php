@@ -26,32 +26,41 @@ try {
     switch ($action) {
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
+            $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
             $startRow = ($page - 1) * $limit;
             $endRow = $startRow + $limit;
 
             $searchTerm = $_GET['search'] ?? '';
             $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] === 'true';
+            $filter_model = $_GET['filter_model'] ?? '';
 
-            $conditions = [];
             $params = [];
+            $fromClause = "FROM " . ITEMS_TABLE . " i";
+            $conditions = [];
+
+            if (!empty($filter_model)) {
+                // JOIN กับตาราง Parameter โดยใช้ค่าคงที่จาก config.php
+                $fromClause .= " JOIN " . PARAM_TABLE . " p ON i.item_id = p.item_id"; // <-- แก้ไขเป็นบรรทัดนี้
+                $conditions[] = "p.model = ?";
+                $params[] = $filter_model;
+            }
 
             if (!$showInactive) {
-                $conditions[] = "is_active = 1";
+                $conditions[] = "i.is_active = 1";
             }
             if (!empty($searchTerm)) {
-                $conditions[] = "(sap_no LIKE ? OR part_no LIKE ?)";
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
                 $params[] = '%' . $searchTerm . '%';
                 $params[] = '%' . $searchTerm . '%';
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             
-            $orderByClause = "ORDER BY sap_no ASC";
+            $orderByClause = "ORDER BY i.sap_no ASC";
             if ($showInactive) {
-                $orderByClause = "ORDER BY is_active ASC, sap_no ASC";
+                $orderByClause = "ORDER BY i.is_active ASC, i.sap_no ASC";
             }
 
-            $totalSql = "SELECT COUNT(*) FROM " . ITEMS_TABLE . " {$whereClause}";
+            $totalSql = "SELECT COUNT(DISTINCT i.item_id) {$fromClause} {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
@@ -59,9 +68,9 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        item_id, sap_no, part_no, part_description, part_value, created_at, is_active,
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, i.part_value, i.created_at, i.is_active,
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
-                    FROM " . ITEMS_TABLE . "
+                    {$fromClause}
                     {$whereClause}
                 )
                 SELECT * FROM NumberedRows
@@ -136,6 +145,71 @@ try {
                 echo json_encode(['success' => true, 'message' => 'Item restored successfully.']);
             } else {
                 throw new Exception("Item not found or could not be restored.");
+            }
+            break;
+
+        // ใน itemMasterManage.php
+        case 'get_models':
+            $searchTerm = $_GET['search'] ?? '';
+            // ใช้ค่าคงที่จาก config.php โดยตรง
+            $sql = "SELECT DISTINCT model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != ''";
+            $params = [];
+            if (!empty($searchTerm)) {
+                $sql .= " AND model LIKE ?";
+                $params[] = '%' . $searchTerm . '%';
+            }
+            $sql .= " ORDER BY model ASC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $models]);
+            break;
+
+        case 'bulk_import_items':
+            if (empty($input) || !is_array($input)) {
+                throw new Exception("Invalid import data.");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $checkStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
+                $updateStmt = $pdo->prepare("UPDATE " . ITEMS_TABLE . " SET part_no = ?, part_description = ?, part_value = ?, is_active = ? WHERE item_id = ?");
+                $insertStmt = $pdo->prepare("INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, part_value, is_active, created_at) VALUES (?, ?, ?, ?, ?, GETDATE())");
+
+                $insertedCount = 0;
+                $updatedCount = 0;
+
+                foreach ($input as $item) {
+                    $sap_no = trim($item['sap_no'] ?? '');
+                    if (empty($sap_no)) continue; // ข้ามแถวที่ไม่มี SAP No.
+
+                    $part_no = trim($item['part_no'] ?? '');
+                    $desc = trim($item['part_description'] ?? '');
+                    $val = !empty($item['part_value']) ? (float)$item['part_value'] : 0;
+                    $active = isset($item['is_active']) && ($item['is_active'] === '1' || $item['is_active'] === 1) ? 1 : 0;
+
+                    $checkStmt->execute([$sap_no]);
+                    $existing_id = $checkStmt->fetchColumn();
+
+                    if ($existing_id) {
+                        // Update
+                        $updateStmt->execute([$part_no, $desc, $val, $active, $existing_id]);
+                        $updatedCount++;
+                    } else {
+                        // Insert
+                        $insertStmt->execute([$sap_no, $part_no, $desc, $val, $active]);
+                        $insertedCount++;
+                    }
+                }
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'BULK IMPORT ITEMS', null, "Inserted: {$insertedCount}, Updated: {$updatedCount}");
+                echo json_encode(['success' => true, 'message' => "Import successful. Added: {$insertedCount} new items, Updated: {$updatedCount} existing items."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
             }
             break;
             

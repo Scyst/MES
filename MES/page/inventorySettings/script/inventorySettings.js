@@ -428,8 +428,15 @@ async function fetchItems(page = 1) {
     showSpinner();
     const searchTerm = document.getElementById('itemMasterSearch').value;
     const showInactive = document.getElementById('toggleInactiveBtn').classList.contains('active');
+    const selectedModel = document.getElementById('modelFilterValue').value; // <-- แก้ไขบรรทัดนี้
+
     try {
-        const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { page, search: searchTerm, show_inactive: showInactive });
+        const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { 
+            page, 
+            search: searchTerm, 
+            show_inactive: showInactive,
+            filter_model: selectedModel
+        });
         if (result.success) {
             renderItemsMasterTable(result.data);
             renderPagination('itemMasterPagination', result.total, result.page, 50, fetchItems);
@@ -439,6 +446,125 @@ async function fetchItems(page = 1) {
     } finally {
         hideSpinner();
     }
+}
+
+function setupItemMasterAutocomplete() {
+    const searchInput = document.getElementById('itemMasterSearch');
+    if (!searchInput) return;
+
+    // สร้างกล่องสำหรับแสดงผลลัพธ์
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    // แทรกกล่องผลลัพธ์เข้าไปใน div ที่เราครอบไว้
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    let debounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const value = searchInput.value;
+        resultsWrapper.innerHTML = '';
+
+        debounce = setTimeout(async () => {
+            // 1. กรองข้อมูลในตารางหลักทันที (Live Search)
+            fetchItems(1);
+
+            // 2. ดึงข้อมูล Autocomplete มาแสดงเป็นตัวช่วย
+            if (value.length > 1) { // เริ่มแสดงตัวช่วยเมื่อพิมพ์ 2 ตัวอักษรขึ้นไป
+                const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { 
+                    page: 1, 
+                    search: value 
+                });
+                
+                if (result.success && result.data.length > 0) {
+                    resultsWrapper.innerHTML = '';
+                    // แสดงผลลัพธ์สูงสุด 7 รายการ
+                    result.data.slice(0, 7).forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'autocomplete-item';
+                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                        resultItem.addEventListener('click', () => {
+                            searchInput.value = item.sap_no; // เติม SAP No. ลงในช่องค้นหา
+                            resultsWrapper.style.display = 'none';
+                            fetchItems(1); // กรองตารางอีกครั้งด้วยค่าที่เลือกเต็มๆ
+                        });
+                        resultsWrapper.appendChild(resultItem);
+                    });
+                    resultsWrapper.style.display = 'block';
+                } else {
+                    resultsWrapper.style.display = 'none';
+                }
+            } else {
+                resultsWrapper.style.display = 'none';
+            }
+        }, 500);
+    });
+
+    // ซ่อนผลลัพธ์เมื่อคลิกที่อื่น
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+}
+
+// ฟังก์ชันปรับปรุงใหม่สำหรับ Autocomplete และ Live Search ของ Model Filter
+function setupModelFilterAutocomplete() {
+    const searchInput = document.getElementById('modelFilterSearch');
+    const valueInput = document.getElementById('modelFilterValue');
+    if (!searchInput) return;
+
+    // สร้างกล่องสำหรับแสดงผลลัพธ์
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    let debounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const value = searchInput.value;
+        
+        // --- ส่วนที่แก้ไข ---
+        // 1. อัปเดตค่าที่จะใช้กรองทันทีที่ผู้ใช้พิมพ์
+        valueInput.value = value;
+        resultsWrapper.innerHTML = '';
+        
+        // 2. หน่วงเวลาเล็กน้อย (500ms) เพื่อรอให้ผู้ใช้พิมพ์เสร็จ
+        debounce = setTimeout(async () => {
+            // 3. สั่งให้กรองข้อมูลในตารางหลักทันที
+            fetchItems(1);
+
+            // 4. ดึงข้อมูล Autocomplete มาแสดงเพื่อช่วยผู้ใช้ (ถ้ายังพิมพ์ไม่เสร็จ)
+            if (value.length > 0) {
+                const result = await sendRequest(ITEM_MASTER_API, 'get_models', 'GET', null, { search: value });
+                if (result.success) {
+                    resultsWrapper.innerHTML = '';
+                    result.data.slice(0, 10).forEach(model => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'autocomplete-item';
+                        resultItem.textContent = model;
+                        resultItem.addEventListener('click', () => {
+                            // เมื่อคลิกเลือก ให้เติมคำให้เต็ม และซ่อนรายการ
+                            searchInput.value = model;
+                            valueInput.value = model;
+                            resultsWrapper.style.display = 'none';
+                            // ไม่จำเป็นต้อง fetchItems() อีก เพราะมันถูกเรียกไปแล้ว
+                        });
+                        resultsWrapper.appendChild(resultItem);
+                    });
+                    resultsWrapper.style.display = result.data.length > 0 ? 'block' : 'none';
+                }
+            } else {
+                resultsWrapper.style.display = 'none';
+            }
+        }, 500); // Debounce 500ms เหมาะสำหรับ Live Search
+    });
+
+    // ซ่อนผลลัพธ์เมื่อคลิกที่อื่น
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
 }
 
 function renderItemsMasterTable(items) {
@@ -599,6 +725,77 @@ async function restoreItem(itemId) {
     }
 }
 
+async function exportItemsToExcel() {
+    showSpinner();
+    showToast('Preparing data for export...', 'var(--bs-info)');
+    try {
+        // ดึงข้อมูลทั้งหมดโดยไม่แบ่งหน้า
+        const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { 
+            page: 1, 
+            search: '', 
+            show_inactive: true,
+            limit: -1 // ส่ง limit = -1 เพื่อบอก backend ว่าต้องการข้อมูลทั้งหมด
+        });
+
+        if (result.success && result.data.length > 0) {
+            const worksheetData = result.data.map(item => ({
+                'sap_no': item.sap_no,
+                'part_no': item.part_no,
+                'part_description': item.part_description,
+                'part_value': parseFloat(item.part_value || 0).toFixed(2),
+                'is_active': item.is_active ? '1' : '0' // ส่งออกเป็น 1 หรือ 0
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ItemMaster");
+            XLSX.writeFile(workbook, `ItemMaster_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+        } else {
+            showToast('No items to export.', 'var(--bs-warning)');
+        }
+    } catch (error) {
+        showToast('Failed to export data.', 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function handleItemImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        showSpinner();
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const itemsToImport = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+            if (itemsToImport.length === 0) {
+                showToast('No data found in the file to import.', 'var(--bs-warning)');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to import/update ${itemsToImport.length} items?`)) {
+                const result = await sendRequest(ITEM_MASTER_API, 'bulk_import_items', 'POST', itemsToImport);
+                showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+                if (result.success) {
+                    await fetchItems(1); // รีเฟรชตาราง
+                }
+            }
+        } catch (error) {
+            console.error("Import failed:", error);
+            showToast('Failed to process the import file.', 'var(--bs-danger)');
+        } finally {
+            event.target.value = ''; // เคลียร์ค่าใน input file
+            hideSpinner();
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Location Manager Init
@@ -633,6 +830,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveStockBtn').addEventListener('click', saveStockTake);
 
     // Item Master Init
+    document.getElementById('exportItemsBtn').addEventListener('click', exportItemsToExcel);
+    document.getElementById('importItemsBtn').addEventListener('click', () => document.getElementById('itemImportFile').click());
+    document.getElementById('itemImportFile').addEventListener('change', handleItemImport);
+    
+    setupModelFilterAutocomplete();
+    setupItemMasterAutocomplete();
+
     const itemMasterTab = document.getElementById('item-master-tab');
     if (itemMasterTab) {
         itemMasterTab.addEventListener('shown.bs.tab', () => {
@@ -650,11 +854,6 @@ document.addEventListener('DOMContentLoaded', () => {
         manageBomForItem({ item_id, part_no, sap_no });
     });
     
-    let itemSearchDebounce;
-    document.getElementById('itemMasterSearch').addEventListener('input', () => {
-        clearTimeout(itemSearchDebounce);
-        itemSearchDebounce = setTimeout(() => fetchItems(1), 500);
-    });
     const toggleBtn = document.getElementById('toggleInactiveBtn');
     toggleBtn.addEventListener('click', () => {
         toggleBtn.classList.toggle('active');

@@ -560,6 +560,13 @@ try {
             }
             break;
 
+        case 'get_models':
+            $param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+            $stmt = $pdo->query("SELECT DISTINCT model FROM {$param_table} WHERE model IS NOT NULL AND model != '' ORDER BY model ASC");
+            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $models]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified.");

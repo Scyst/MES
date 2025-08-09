@@ -1,14 +1,24 @@
 <div class="row my-3 align-items-center sticky-bar py-3">
-    <div class="col-md-4">
-        <div class="filter-controls-wrapper">
-            <input type="text" class="form-control" id="itemMasterSearch" placeholder="Search SAP No. or Part No....">
+    <div class="col-md-6">
+        <div class="d-flex gap-3 align-items-end">
+            <div class="position-relative flex-grow-1">
+                <input type="text" class="form-control" id="itemMasterSearch" placeholder="Search SAP No. or Part No...." autocomplete="off">
+            </div>
+            <div class="position-relative">
+                <input type="text" id="modelFilterSearch" class="form-control" placeholder="Type to search for a Model..." autocomplete="off">
+                <input type="hidden" id="modelFilterValue">
+            </div>
         </div>
     </div>
-    <div class="col-md-8">
+
+    <div class="col-md-6">
         <div class="d-flex justify-content-end gap-2">
             <button class="btn btn-outline-secondary" id="toggleInactiveBtn" title="Show/Hide Inactive Items">
                 <i class="fas fa-eye"></i>
             </button>
+            <button class="btn btn-info" id="importItemsBtn" title="Import from Excel"><i class="fas fa-file-import"></i> Import</button>
+            <button class="btn btn-primary" id="exportItemsBtn" title="Export to Excel"><i class="fas fa-file-export"></i> Export</button>
+            <input type="file" id="itemImportFile" class="d-none" accept=".xlsx, .xls">
             <button class="btn btn-success" id="addNewItemBtn"><i class="fas fa-plus"></i> Add New Item</button>
         </div>
     </div>
