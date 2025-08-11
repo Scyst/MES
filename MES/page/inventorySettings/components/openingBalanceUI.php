@@ -24,9 +24,9 @@
             <tr>
                 <th style="width: 15%;">SAP No.</th>
                 <th style="width: 15%;">Part No.</th>
-                <th>Part Description</th>
+                <th>Description</th>
                 <th style="width: 15%;" class="text-center">Current On-Hand</th>
-                <th style="width: 15%;" class="text-center">New Physical Count</th>
+                <th style="width: 15%;" class="text-center">New Count</th>
             </tr>
         </thead>
         <tbody id="stockTakeTableBody">

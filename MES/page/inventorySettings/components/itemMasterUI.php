@@ -34,7 +34,7 @@
                 <th>SAP No.</th>
                 <th>Part No.</th>
                 <th>Used in Models</th>
-                <th>Part Description</th>                
+                <th>Description</th>                
                 <th class="text-end">Created At</th>
             </tr>
         </thead>    

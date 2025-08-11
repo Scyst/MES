@@ -163,7 +163,6 @@ async function fetchTransferHistory(page = 1) {
         const result = await sendRequest(TRANSFER_API, 'get_transfer_history', 'GET', null, params);
         if (result.success) {
             renderTransferTable(result.data);
-            // ** CHANGED: แก้ไขการเรียกใช้ renderPagination **
             renderPagination('paginationControls', result.total, result.page, ROWS_PER_PAGE, fetchTransferHistory);
         }
     } finally {
@@ -283,25 +282,51 @@ function renderTransferTable(data) {
     const tbody = document.getElementById('transferTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No transfer history found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No transfer history found.</td></tr>';
         return;
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        tr.dataset.transactionId = row.transaction_id;
+        
         tr.innerHTML = `
             <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
             <td>${row.part_no}</td>
             <td>${row.part_description || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td>${row.from_location || 'N/A'}</td>
-            <td>${row.to_location || 'N/A'}</td>
+            <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center">${row.transfer_path}</td>
             <td>${row.created_by || 'N/A'}</td>
-            <td>${row.notes || ''}</td>
+            <td class="editable-cell" contenteditable="false" data-field="notes">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
+// Function to handle saving an edited cell
+async function handleCellEdit(event) {
+    const cell = event.target;
+    const tr = cell.closest('tr');
+    const transactionId = tr.dataset.transactionId;
+    const fieldName = cell.dataset.field;
+    const newValue = cell.textContent;
+
+    showSpinner();
+    try {
+        const result = await sendRequest(TRANSFER_API, 'update_transfer', 'POST', {
+            transaction_id: transactionId,
+            [fieldName]: newValue // ES6 computed property name
+        });
+
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        
+        if (!result.success) {
+            // If saving fails, refresh the data to revert the change
+            fetchTransferHistory(currentPage); 
+        }
+    } finally {
+        hideSpinner();
+    }
+}
 
 // --- Opening Balance Functions ---
 async function populateOpeningBalanceLocations() {
@@ -587,10 +612,8 @@ function setupItemMasterAutocomplete() {
     const searchInput = document.getElementById('itemMasterSearch');
     if (!searchInput) return;
 
-    // สร้างกล่องสำหรับแสดงผลลัพธ์
     const resultsWrapper = document.createElement('div');
     resultsWrapper.className = 'autocomplete-results';
-    // แทรกกล่องผลลัพธ์เข้าไปใน div ที่เราครอบไว้
     searchInput.parentNode.appendChild(resultsWrapper);
 
     let debounce;
@@ -600,11 +623,9 @@ function setupItemMasterAutocomplete() {
         resultsWrapper.innerHTML = '';
 
         debounce = setTimeout(async () => {
-            // 1. กรองข้อมูลในตารางหลักทันที (Live Search)
             fetchItems(1);
 
-            // 2. ดึงข้อมูล Autocomplete มาแสดงเป็นตัวช่วย
-            if (value.length > 1) { // เริ่มแสดงตัวช่วยเมื่อพิมพ์ 2 ตัวอักษรขึ้นไป
+            if (value.length > 1) { 
                 const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { 
                     page: 1, 
                     search: value 
@@ -617,9 +638,9 @@ function setupItemMasterAutocomplete() {
                         resultItem.className = 'autocomplete-item';
                         resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
                         resultItem.addEventListener('click', () => {
-                            searchInput.value = item.sap_no; // เติม SAP No. ลงในช่องค้นหา
+                            searchInput.value = item.sap_no;
                             resultsWrapper.style.display = 'none';
-                            fetchItems(1); // กรองตารางอีกครั้งด้วยค่าที่เลือกเต็มๆ
+                            fetchItems(1);
                         });
                         resultsWrapper.appendChild(resultItem);
                     });
@@ -633,7 +654,6 @@ function setupItemMasterAutocomplete() {
         }, 500);
     });
 
-    // ซ่อนผลลัพธ์เมื่อคลิกที่อื่น
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput) {
             resultsWrapper.style.display = 'none';
@@ -641,13 +661,11 @@ function setupItemMasterAutocomplete() {
     });
 }
 
-// ฟังก์ชันปรับปรุงใหม่สำหรับ Autocomplete และ Live Search ของ Model Filter
 function setupModelFilterAutocomplete() {
     const searchInput = document.getElementById('modelFilterSearch');
     const valueInput = document.getElementById('modelFilterValue');
     if (!searchInput) return;
 
-    // สร้างกล่องสำหรับแสดงผลลัพธ์
     const resultsWrapper = document.createElement('div');
     resultsWrapper.className = 'autocomplete-results';
     searchInput.parentNode.appendChild(resultsWrapper);
@@ -657,17 +675,12 @@ function setupModelFilterAutocomplete() {
         clearTimeout(debounce);
         const value = searchInput.value;
         
-        // --- ส่วนที่แก้ไข ---
-        // 1. อัปเดตค่าที่จะใช้กรองทันทีที่ผู้ใช้พิมพ์
         valueInput.value = value;
         resultsWrapper.innerHTML = '';
         
-        // 2. หน่วงเวลาเล็กน้อย (500ms) เพื่อรอให้ผู้ใช้พิมพ์เสร็จ
         debounce = setTimeout(async () => {
-            // 3. สั่งให้กรองข้อมูลในตารางหลักทันที
             fetchItems(1);
 
-            // 4. ดึงข้อมูล Autocomplete มาแสดงเพื่อช่วยผู้ใช้ (ถ้ายังพิมพ์ไม่เสร็จ)
             if (value.length > 0) {
                 const result = await sendRequest(ITEM_MASTER_API, 'get_models', 'GET', null, { search: value });
                 if (result.success) {
@@ -689,10 +702,9 @@ function setupModelFilterAutocomplete() {
             } else {
                 resultsWrapper.style.display = 'none';
             }
-        }, 500); // Debounce 500ms เหมาะสำหรับ Live Search
+        }, 500); 
     });
 
-    // ซ่อนผลลัพธ์เมื่อคลิกที่อื่น
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput) {
             resultsWrapper.style.display = 'none';
@@ -721,7 +733,6 @@ function renderItemsMasterTable(items) {
             openItemModal(item);
         });
 
-        // สร้างคอลัมน์ข้อมูล
         tr.innerHTML = `
             <td>${item.sap_no}</td>
             <td>${item.part_no}</td>
@@ -742,30 +753,27 @@ function openItemModal(item = null) {
     
     form.reset();
     
-    if (item) { // กรณี Edit หรือดูข้อมูล
-        // เติมข้อมูลลงในฟอร์ม
+    if (item) { 
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
         document.getElementById('part_description').value = item.part_description;        
         
         if (item.is_active == 1) {
-            // --- ถ้า Active ---
             modalLabel.textContent = 'Edit Item';
             saveBtn.textContent = 'Save Changes';
-            saveBtn.className = 'btn btn-primary'; // เปลี่ยนปุ่มเป็นสีปกติ
-            deleteBtn.classList.remove('d-none'); // แสดงปุ่ม Delete
-            bomBtn.classList.remove('d-none');    // แสดงปุ่ม Manage BOM
+            saveBtn.className = 'btn btn-primary'; 
+            deleteBtn.classList.remove('d-none'); 
+            bomBtn.classList.remove('d-none');    
         } else {
-            // --- ถ้า Inactive ---
             modalLabel.textContent = 'Restore Item';
-            saveBtn.textContent = 'Restore'; // เปลี่ยนข้อความปุ่มเป็น Restore
-            saveBtn.className = 'btn btn-success'; // เปลี่ยนปุ่มเป็นสีเขียว
-            deleteBtn.classList.add('d-none');    // ซ่อนปุ่ม Delete
-            bomBtn.classList.add('d-none');       // ซ่อนปุ่ม Manage BOM
+            saveBtn.textContent = 'Restore'; 
+            saveBtn.className = 'btn btn-success'; 
+            deleteBtn.classList.add('d-none');
+            bomBtn.classList.add('d-none');
         }
 
-    } else { // กรณี Add New
+    } else {
         modalLabel.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
         saveBtn.textContent = 'Save Changes';
@@ -827,17 +835,12 @@ function manageBomForItem(item) {
         showToast('Cannot manage BOM without a valid item.', 'var(--bs-danger)');
         return;
     }
-    
-    // สร้าง URL ที่มี parameter สำหรับการค้นหา และระบุให้เปิด Tab "BOM Manager"
     const url = `../paraManage/paraManageUI.php?search=${encodeURIComponent(item.part_no)}&tab=bom`;
-    
-    // แสดงข้อความให้ผู้ใช้ทราบเล็กน้อยก่อนเปลี่ยนหน้า
     showToast(`Loading BOM Manager for ${item.part_no}...`, 'var(--bs-info)');
     
-    // สั่งให้เบราว์เซอร์เปิดไปที่หน้านั้น
     setTimeout(() => {
         window.location.href = url;
-    }, 500); // หน่วงเวลาเล็กน้อยเพื่อให้ผู้ใช้เห็นข้อความ
+    }, 500);
 }
 
 async function restoreItem(itemId) {
@@ -1000,4 +1003,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         fetchItems(1);
     });
+
+    const transferTableBody = document.getElementById('transferTableBody');
+    transferTableBody.addEventListener('blur', (event) => {
+        if (event.target.classList.contains('editable-cell')) {
+            handleCellEdit(event);
+        }
+    }, true)
 });

@@ -20,14 +20,15 @@
     <table class="table table-dark table-striped table-hover">
         <thead>
             <tr>
-                <th>Date & Time</th>
-                <th>Part No.</th>
-                <th>Part Description</th>
-                <th class="text-end">Quantity</th>
-                <th>From Location</th>
-                <th>To Location</th>
-                <th>Created By</th>
-                <th>Notes</th>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Part No.</th>
+                    <th>Description</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-center">Transfer</th>
+                    <th>User</th>
+                    <th>Notes</th>
+                </tr>
             </tr>
         </thead>
         <tbody id="transferTableBody">

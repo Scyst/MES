@@ -44,24 +44,25 @@ try {
             if (!empty($_GET['part_no'])) { $conditions[] = "i.part_no LIKE ?"; $params[] = '%' . $_GET['part_no'] . '%'; }
             if (!empty($_GET['from_location'])) { $conditions[] = "loc_from.location_name LIKE ?"; $params[] = '%' . $_GET['from_location'] . '%'; }
             if (!empty($_GET['to_location'])) { $conditions[] = "loc_to.location_name LIKE ?"; $params[] = '%' . $_GET['to_location'] . '%'; }
-            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
             $totalSql = "SELECT COUNT(*) FROM {$transactions_table} t
-                         JOIN {$items_table} i ON t.parameter_id = i.item_id
-                         LEFT JOIN {$locations_table} loc_from ON t.from_location_id = loc_from.location_id
-                         LEFT JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
-                         {$whereClause}";
+                        JOIN {$items_table} i ON t.parameter_id = i.item_id
+                        LEFT JOIN {$locations_table} loc_from ON t.from_location_id = loc_from.location_id
+                        LEFT JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
+                        {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
                 SELECT 
-                    t.transaction_timestamp, i.part_no, i.part_description, t.quantity,
-                    loc_from.location_name AS from_location, loc_to.location_name AS to_location,
+                    t.transaction_id, t.transaction_timestamp, i.part_no, i.part_description, t.quantity,
+                    -- Combine the two location names into a single 'transfer_path' field
+                    ISNULL(loc_from.location_name, 'N/A') + ' --> ' + ISNULL(loc_to.location_name, 'N/A') AS transfer_path,
                     u.username AS created_by, t.notes
                 FROM {$transactions_table} t
                 JOIN {$items_table} i ON t.parameter_id = i.item_id
@@ -75,7 +76,6 @@ try {
             
             $dataStmt = $pdo->prepare($dataSql);
             
-            // Bind parameters one by one to specify data types
             $paramIndex = 1;
             foreach ($params as $param) {
                 $dataStmt->bindValue($paramIndex++, $param);
@@ -146,6 +146,26 @@ try {
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'STOCK TRANSFER', $item_id, "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}");
             echo json_encode(['success' => true, 'message' => 'Stock transfer executed successfully.']);
+            break;
+
+        case 'update_transfer':
+            if (!hasRole(['admin', 'creator'])) {
+                throw new Exception("You do not have permission to edit transfer history.");
+            }
+
+            $transaction_id = $input['transaction_id'] ?? 0;
+            $notes = trim($input['notes'] ?? '');
+
+            if (empty($transaction_id)) {
+                throw new Exception("Transaction ID is required for an update.");
+            }
+
+            $sql = "UPDATE {$transactions_table} SET notes = ? WHERE transaction_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$notes, $transaction_id]);
+
+            logAction($pdo, $currentUser['username'], 'UPDATE TRANSFER', $transaction_id, "Notes updated.");
+            echo json_encode(['success' => true, 'message' => 'Transfer record updated successfully.']);
             break;
 
         default:
