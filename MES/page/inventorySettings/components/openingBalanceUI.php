@@ -1,6 +1,5 @@
 <div class="row my-3 align-items-end sticky-bar py-3">
     <div class="col-md-3">
-        <label for="locationSelect" class="form-label">Select Location</label>
         <select class="form-select" id="locationSelect">
             <option value="">-- Please select a location --</option>
         </select>
@@ -8,7 +7,6 @@
 
     <div class="col-md-3">
         <div class="position-relative">
-            <label for="addItemSearch" class="form-label">Add Item to Adjust</label>
             <input type="text" id="addItemSearch" class="form-control" placeholder="Type to search SAP No. or Part No...." autocomplete="off" disabled>
         </div>
     </div>

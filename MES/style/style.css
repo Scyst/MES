@@ -275,3 +275,23 @@ ul {
 .autocomplete-item small {
     color: #adb5bd;
 }
+
+.stock-input[readonly] {
+    background-color: #343a40;
+    border-color: #343a40;
+    cursor: pointer;
+    color: #f8f9fa;
+}
+
+.stock-input[readonly]:focus {
+    box-shadow: none;
+}
+
+.stock-input.is-changed {
+    background-color: #193a52;
+    border-color: #0d6efd;
+}
+
+.autocomplete-item .text-muted {
+    color: #adb5bd !important;
+}

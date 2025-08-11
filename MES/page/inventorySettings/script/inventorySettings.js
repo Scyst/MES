@@ -350,25 +350,63 @@ function renderItemsTable(items) {
     const tableBody = document.getElementById('stockTakeTableBody');
     tableBody.innerHTML = '';
 
+    const noItemsRow = tableBody.querySelector('.no-items-row');
+    if (noItemsRow) {
+        noItemsRow.remove();
+    }
+
     if (items.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No items found to display.</td></tr>';
+        if (tableBody.querySelectorAll('tr').length === 0) {
+            tableBody.innerHTML = '<tr class="no-items-row"><td colspan="5" class="text-center">No items with stock > 0 found. Use the search bar to add items.</td></tr>';
+        }
         return;
     }
 
     items.forEach(item => {
         const tr = document.createElement('tr');
         tr.dataset.itemId = item.item_id;
+        tr.style.cursor = 'pointer';
+
+        const originalQty = parseFloat(item.onhand_qty);
+
         tr.innerHTML = `
             <td>${item.sap_no}</td>
             <td>${item.part_no}</td>
             <td>${item.part_description || ''}</td>
-            <td class="text-end">${parseFloat(item.onhand_qty).toLocaleString()}</td>
+            <td class="text-center">${originalQty.toLocaleString()}</td>
             <td>
-                <input type="number" class="form-control form-control-sm stock-input" 
-                       value="${parseFloat(item.onhand_qty)}"
-                       min="0" step="any">
+                <input type="number" class="form-control form-control-sm stock-input text-center" 
+                       value="${originalQty}"
+                       data-original-value="${originalQty}"
+                       min="0" step="any"
+                       readonly> 
             </td>
         `;
+        
+        const inputField = tr.querySelector('.stock-input');
+
+        tr.addEventListener('click', () => {
+            if (inputField.readOnly === false) {
+                return;
+            }
+            inputField.readOnly = false;
+            inputField.focus();
+            inputField.select();
+        });
+
+        inputField.addEventListener('blur', () => {
+            const currentValue = parseFloat(inputField.value);
+            const originalValue = parseFloat(inputField.dataset.originalValue);
+
+            if (currentValue !== originalValue) {
+                inputField.classList.add('is-changed');
+            } else {
+                inputField.classList.remove('is-changed');
+            }
+            
+            inputField.readOnly = true;
+        });
+        
         tableBody.appendChild(tr);
     });
 }
@@ -401,7 +439,7 @@ function setupStockAdjustmentAutocomplete() {
                 result.data.forEach(item => {
                     const resultItem = document.createElement('div');
                     resultItem.className = 'autocomplete-item';
-                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
                     resultItem.addEventListener('click', () => {
                         addItemToTable(item); // เรียกใช้ฟังก์ชันเพิ่มไอเทม
                         searchInput.value = ''; // เคลียร์ช่องค้นหา
@@ -419,29 +457,64 @@ function setupStockAdjustmentAutocomplete() {
     });
 }
 
-// ฟังก์ชันสำหรับเพิ่มไอเทมลงในตาราง
 function addItemToTable(item) {
     const tableBody = document.getElementById('stockTakeTableBody');
-    // ตรวจสอบว่ามีไอเทมนี้ในตารางแล้วหรือยัง
+    const noItemsRow = tableBody.querySelector('.no-items-row');
+    if (noItemsRow) {
+        tableBody.innerHTML = '';
+    }
+
     if (tableBody.querySelector(`tr[data-item-id="${item.item_id}"]`)) {
         showToast('This item is already in the list.', 'var(--bs-warning)');
+        const existingInput = tableBody.querySelector(`tr[data-item-id="${item.item_id}"] .stock-input`);
+        existingInput.focus();
+        existingInput.select();
         return;
     }
 
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.item_id;
+    tr.style.cursor = 'pointer';
+
+    const originalQty = parseFloat(item.onhand_qty);
+
     tr.innerHTML = `
         <td>${item.sap_no}</td>
         <td>${item.part_no}</td>
         <td>${item.part_description || ''}</td>
-        <td class="text-end">${parseFloat(item.onhand_qty).toLocaleString()}</td>
+        <td class="text-center">${originalQty.toLocaleString()}</td>
         <td>
-            <input type="number" class="form-control form-control-sm stock-input" 
-                   value="${parseFloat(item.onhand_qty)}"
-                   min="0" step="any">
+            <input type="number" class="form-control form-control-sm stock-input text-center" 
+                   value="${originalQty}"
+                   data-original-value="${originalQty}"
+                   min="0" step="any"
+                   readonly>
         </td>
     `;
-    // เพิ่มแถวใหม่เข้าไปบนสุดของตาราง
+
+    const inputField = tr.querySelector('.stock-input');
+
+    tr.addEventListener('click', () => {
+        if (inputField.readOnly === false) {
+            return;
+        }
+        inputField.readOnly = false;
+        inputField.focus();
+        inputField.select();
+    });
+
+    inputField.addEventListener('blur', () => {
+        const currentValue = parseFloat(inputField.value);
+        const originalValue = parseFloat(inputField.dataset.originalValue);
+
+        if (currentValue !== originalValue) {
+            inputField.classList.add('is-changed');
+        } else {
+            inputField.classList.remove('is-changed');
+        }
+        inputField.readOnly = true;
+    });
+
     tableBody.prepend(tr);
 }
 
@@ -539,11 +612,10 @@ function setupItemMasterAutocomplete() {
                 
                 if (result.success && result.data.length > 0) {
                     resultsWrapper.innerHTML = '';
-                    // แสดงผลลัพธ์สูงสุด 7 รายการ
                     result.data.slice(0, 7).forEach(item => {
                         const resultItem = document.createElement('div');
                         resultItem.className = 'autocomplete-item';
-                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
                         resultItem.addEventListener('click', () => {
                             searchInput.value = item.sap_no; // เติม SAP No. ลงในช่องค้นหา
                             resultsWrapper.style.display = 'none';

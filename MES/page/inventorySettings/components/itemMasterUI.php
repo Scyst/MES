@@ -3,12 +3,10 @@
         <div class="d-flex gap-3 align-items-end">
             
             <div class="position-relative flex-fill">
-                <label for="itemMasterSearch" class="form-label">Search Item</label>
                 <input type="text" class="form-control" id="itemMasterSearch" placeholder="Search SAP No. or Part No...." autocomplete="off">
             </div>
 
             <div class="position-relative flex-fill">
-                <label for="modelFilterSearch" class="form-label">Filter by Model</label>
                 <input type="text" id="modelFilterSearch" class="form-control" placeholder="Type to search for a Model..." autocomplete="off">
                 <input type="hidden" id="modelFilterValue">
             </div>
