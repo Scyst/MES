@@ -1,15 +1,20 @@
-<div class="row my-3 align-items-center sticky-bar py-3">
-    <div class="col-md-6">
-        <div class="filter-controls-wrapper">
-            <div class="input-group">
-                <label for="locationSelect" class="input-group-text">Location:</label>
-                <select id="locationSelect" class="form-select"></select>
-            </div>
-            <input type="text" id="itemSearch" class="form-control" placeholder="Search Item to filter list..." disabled>
+<div class="row my-3 align-items-end sticky-bar py-3">
+    <div class="col-md-3">
+        <label for="locationSelect" class="form-label">Select Location</label>
+        <select class="form-select" id="locationSelect">
+            <option value="">-- Please select a location --</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <div class="position-relative">
+            <label for="addItemSearch" class="form-label">Add Item to Adjust</label>
+            <input type="text" id="addItemSearch" class="form-control" placeholder="Type to search SAP No. or Part No...." autocomplete="off" disabled>
         </div>
     </div>
+
     <div class="col-md-6">
-        <div class="d-flex justify-content-end gap-2">
+        <div class="d-flex justify-content-end">
             <button class="btn btn-primary" id="saveStockBtn" disabled><i class="fas fa-save"></i> Save All Changes</button>
         </div>
     </div>

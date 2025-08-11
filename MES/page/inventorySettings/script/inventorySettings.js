@@ -318,7 +318,7 @@ async function populateOpeningBalanceLocations() {
 async function loadItemsForLocation() {
     const locationId = document.getElementById('locationSelect').value;
     const tableBody = document.getElementById('stockTakeTableBody');
-    const searchInput = document.getElementById('itemSearch');
+    const searchInput = document.getElementById('addItemSearch');
     const saveBtn = document.getElementById('saveStockBtn');
     
     if (!locationId) {
@@ -373,14 +373,76 @@ function renderItemsTable(items) {
     });
 }
 
-function filterItems() {
-    const searchTerm = document.getElementById('itemSearch').value.toLowerCase();
-    const filteredItems = allItems.filter(item => 
-        item.sap_no.toLowerCase().includes(searchTerm) ||
-        item.part_no.toLowerCase().includes(searchTerm) ||
-        (item.part_description || '').toLowerCase().includes(searchTerm)
-    );
-    renderItemsTable(filteredItems);
+function setupStockAdjustmentAutocomplete() {
+    const searchInput = document.getElementById('addItemSearch');
+    const tableBody = document.getElementById('stockTakeTableBody');
+    if (!searchInput) return;
+
+    const resultsWrapper = document.createElement('div');
+    resultsWrapper.className = 'autocomplete-results';
+    searchInput.parentNode.appendChild(resultsWrapper);
+
+    let debounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const value = searchInput.value;
+        const locationId = document.getElementById('locationSelect').value;
+        resultsWrapper.innerHTML = '';
+
+        if (value.length < 2 || !locationId) return;
+
+        debounce = setTimeout(async () => {
+            const result = await sendRequest(OPENING_BALANCE_API, 'search_all_items', 'GET', null, { 
+                search: value,
+                location_id: locationId
+            });
+            if (result.success) {
+                resultsWrapper.innerHTML = '';
+                result.data.forEach(item => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'autocomplete-item';
+                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                    resultItem.addEventListener('click', () => {
+                        addItemToTable(item); // เรียกใช้ฟังก์ชันเพิ่มไอเทม
+                        searchInput.value = ''; // เคลียร์ช่องค้นหา
+                        resultsWrapper.style.display = 'none';
+                    });
+                    resultsWrapper.appendChild(resultItem);
+                });
+                resultsWrapper.style.display = result.data.length > 0 ? 'block' : 'none';
+            }
+        }, 300);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) resultsWrapper.style.display = 'none';
+    });
+}
+
+// ฟังก์ชันสำหรับเพิ่มไอเทมลงในตาราง
+function addItemToTable(item) {
+    const tableBody = document.getElementById('stockTakeTableBody');
+    // ตรวจสอบว่ามีไอเทมนี้ในตารางแล้วหรือยัง
+    if (tableBody.querySelector(`tr[data-item-id="${item.item_id}"]`)) {
+        showToast('This item is already in the list.', 'var(--bs-warning)');
+        return;
+    }
+
+    const tr = document.createElement('tr');
+    tr.dataset.itemId = item.item_id;
+    tr.innerHTML = `
+        <td>${item.sap_no}</td>
+        <td>${item.part_no}</td>
+        <td>${item.part_description || ''}</td>
+        <td class="text-end">${parseFloat(item.onhand_qty).toLocaleString()}</td>
+        <td>
+            <input type="number" class="form-control form-control-sm stock-input" 
+                   value="${parseFloat(item.onhand_qty)}"
+                   min="0" step="any">
+        </td>
+    `;
+    // เพิ่มแถวใหม่เข้าไปบนสุดของตาราง
+    tableBody.prepend(tr);
 }
 
 async function saveStockTake() {
@@ -822,8 +884,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Opening Balance Init
     populateOpeningBalanceLocations();
+    setupStockAdjustmentAutocomplete();
     document.getElementById('locationSelect').addEventListener('change', loadItemsForLocation);
-    document.getElementById('itemSearch').addEventListener('input', filterItems);
     document.getElementById('saveStockBtn').addEventListener('click', saveStockTake);
 
     // Item Master Init

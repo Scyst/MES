@@ -1,5 +1,5 @@
 <div class="row my-3 align-items-center sticky-bar py-3">
-    <div class="col-md-5">
+    <div class="col-md-6">
         <div class="d-flex gap-3 align-items-end">
             
             <div class="position-relative flex-fill">
@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <div class="col-md-7">
+    <div class="col-md-6">
         <div class="d-flex justify-content-end gap-2">
             <button class="btn btn-outline-secondary" id="toggleInactiveBtn" title="Show/Hide Inactive Items">
                 <i class="fas fa-eye"></i>

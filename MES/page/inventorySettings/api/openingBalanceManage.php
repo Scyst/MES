@@ -50,9 +50,10 @@ try {
                     i.sap_no,
                     i.part_no,
                     i.part_description,
-                    ISNULL(h.quantity, 0) AS onhand_qty
-                FROM {$items_table} i
-                LEFT JOIN {$onhand_table} h ON i.item_id = h.parameter_id AND h.location_id = ?
+                    h.quantity AS onhand_qty
+                FROM {$onhand_table} h
+                INNER JOIN {$items_table} i ON h.parameter_id = i.item_id
+                WHERE h.location_id = ? AND h.quantity > 0
                 ORDER BY i.part_no ASC
             ";
             
@@ -105,6 +106,39 @@ try {
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'STOCK TAKE', $location_id, "Updated stock for " . count($stock_data) . " items.");
             echo json_encode(['success' => true, 'message' => 'Stock levels updated successfully!']);
+            break;
+
+        case 'search_all_items':
+            $search = $_GET['search'] ?? '';
+            $location_id = $_GET['location_id'] ?? 0;
+            if (!$location_id) {
+                throw new Exception("Location ID is required for search.");
+            }
+            
+            $params = [$location_id];
+            $sql = "
+                SELECT TOP 10
+                    i.item_id,
+                    i.sap_no,
+                    i.part_no,
+                    i.part_description,
+                    ISNULL(h.quantity, 0) as onhand_qty
+                FROM {$items_table} i
+                LEFT JOIN {$onhand_table} h ON i.item_id = h.parameter_id AND h.location_id = ?
+                WHERE i.is_active = 1
+            ";
+
+            if (!empty($search)) {
+                $sql .= " AND (i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $params[] = '%' . $search . '%';
+                $params[] = '%' . $search . '%';
+            }
+            $sql .= " ORDER BY i.sap_no";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $items]);
             break;
             
         default:
