@@ -34,6 +34,6 @@
             </tbody>
     </table>
 </div>
-<nav>
+<nav class="sticky-bottom">
     <ul class="pagination justify-content-center" id="paginationControls"></ul>
 </nav>

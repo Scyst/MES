@@ -26,7 +26,7 @@
 
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity to Transfer</label>
-                        <input type="number" class="form-control" id="quantity" name="quantity" min="0.0001" step="any" required>
+                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" step="1" required>
                     </div>
 
                     <div class="mb-3">

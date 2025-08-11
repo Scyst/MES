@@ -1,17 +1,22 @@
 <div class="row my-3 align-items-center sticky-bar py-3">
-    <div class="col-md-6">
+    <div class="col-md-5">
         <div class="d-flex gap-3 align-items-end">
-            <div class="position-relative flex-grow-1">
+            
+            <div class="position-relative flex-fill">
+                <label for="itemMasterSearch" class="form-label">Search Item</label>
                 <input type="text" class="form-control" id="itemMasterSearch" placeholder="Search SAP No. or Part No...." autocomplete="off">
             </div>
-            <div class="position-relative">
+
+            <div class="position-relative flex-fill">
+                <label for="modelFilterSearch" class="form-label">Filter by Model</label>
                 <input type="text" id="modelFilterSearch" class="form-control" placeholder="Type to search for a Model..." autocomplete="off">
                 <input type="hidden" id="modelFilterValue">
             </div>
+
         </div>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-7">
         <div class="d-flex justify-content-end gap-2">
             <button class="btn btn-outline-secondary" id="toggleInactiveBtn" title="Show/Hide Inactive Items">
                 <i class="fas fa-eye"></i>
@@ -30,15 +35,15 @@
             <tr>
                 <th>SAP No.</th>
                 <th>Part No.</th>
-                <th>Part Description</th>
-                <th class="text-end">Part Value</th>
+                <th>Used in Models</th>
+                <th>Part Description</th>                
                 <th class="text-end">Created At</th>
             </tr>
-        </thead>
+        </thead>    
         <tbody id="itemsTableBody">
             </tbody>
     </table>
 </div>
-<nav>
+<nav class="sticky-bottom">
     <ul class="pagination justify-content-center" id="itemMasterPagination"></ul>
 </nav>

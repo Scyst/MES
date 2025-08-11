@@ -24,21 +24,12 @@
                         <textarea class="form-control" id="part_description" name="part_description" rows="3"></textarea>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="part_value" class="form-label">Part Value (Optional)</label>
-                            <input type="number" class="form-control" id="part_value" name="part_value" min="0" step="any" placeholder="0.00">
-                        </div>
-                        
-                        </div>
-
                 </div>
                 <div class="modal-footer">
                     <div class="me-auto">
                         <button type="button" class="btn btn-danger d-none" id="deleteItemBtn">Delete</button>
                         <button type="button" class="btn btn-info d-none" id="manageBomBtn">Manage BOM</button>
                     </div>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary" id="saveItemBtn">Save Changes</button>
                 </div>
             </form>

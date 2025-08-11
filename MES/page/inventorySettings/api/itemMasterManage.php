@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../../../api/db.php';
+require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../../api/logger.php';
+require_once __DIR__ . '/../../logger.php';
 
 // จำกัดสิทธิ์ให้เฉพาะ Admin และ Creator เท่านั้นที่สามารถจัดการ Item Master ได้
 if (!hasRole(['admin', 'creator'])) {
@@ -39,10 +39,9 @@ try {
             $conditions = [];
 
             if (!empty($filter_model)) {
-                // JOIN กับตาราง Parameter โดยใช้ค่าคงที่จาก config.php
-                $fromClause .= " JOIN " . PARAM_TABLE . " p ON i.item_id = p.item_id"; // <-- แก้ไขเป็นบรรทัดนี้
-                $conditions[] = "p.model = ?";
-                $params[] = $filter_model;
+                $fromClause .= " JOIN " . PARAM_TABLE . " p ON i.item_id = p.item_id"; 
+                $conditions[] = "RTRIM(LTRIM(p.model)) LIKE ?";
+                $params[] = '%' . $filter_model . '%';
             }
 
             if (!$showInactive) {
@@ -68,12 +67,24 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, i.part_value, i.created_at, i.is_active,
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, i.created_at, i.is_active,
+                        
+                        STUFF(
+                            (
+                                SELECT ', ' + p_sub.model
+                                FROM " . PARAM_TABLE . " p_sub
+                                WHERE p_sub.item_id = i.item_id
+                                ORDER BY p_sub.model
+                                FOR XML PATH('')
+                            ), 1, 2, ''
+                        ) AS used_models,
+
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
                     {$fromClause}
                     {$whereClause}
                 )
-                SELECT * FROM NumberedRows
+                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_models
+                FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
             
@@ -90,22 +101,21 @@ try {
             $sap_no = trim($input['sap_no'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
             $description = trim($input['part_description'] ?? '');
-            $part_value = !empty($input['part_value']) ? (float)$input['part_value'] : 0;
 
             if (empty($sap_no) || empty($part_no)) {
                 throw new Exception("SAP No. and Part No. are required.");
             }
 
             if ($id > 0) {
-                $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, part_value = ? WHERE item_id = ?";
+                $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ? WHERE item_id = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description, $part_value, $id]);
+                $stmt->execute([$sap_no, $part_no, $description, $id]);
                 logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $id, "SAP: {$sap_no}");
                 echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
             } else {
-                $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, part_value, created_at) VALUES (?, ?, ?, ?, GETDATE())";
+                $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at) VALUES (?, ?, ?, GETDATE())";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description, $part_value]);
+                $stmt->execute([$sap_no, $part_no, $description]);
                 $newId = $pdo->lastInsertId();
                 logAction($pdo, $currentUser['username'], 'CREATE ITEM', $newId, "SAP: {$sap_no}");
                 echo json_encode(['success' => true, 'message' => 'Item created successfully.']);
@@ -152,7 +162,7 @@ try {
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
             // ใช้ค่าคงที่จาก config.php โดยตรง
-            $sql = "SELECT DISTINCT model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != ''";
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != ''";
             $params = [];
             if (!empty($searchTerm)) {
                 $sql .= " AND model LIKE ?";
@@ -174,8 +184,8 @@ try {
             $pdo->beginTransaction();
             try {
                 $checkStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
-                $updateStmt = $pdo->prepare("UPDATE " . ITEMS_TABLE . " SET part_no = ?, part_description = ?, part_value = ?, is_active = ? WHERE item_id = ?");
-                $insertStmt = $pdo->prepare("INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, part_value, is_active, created_at) VALUES (?, ?, ?, ?, ?, GETDATE())");
+                $updateStmt = $pdo->prepare("UPDATE " . ITEMS_TABLE . " SET part_no = ?, part_description = ?, is_active = ? WHERE item_id = ?");
+                $insertStmt = $pdo->prepare("INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, is_active, created_at) VALUES (?, ?, ?, ?, GETDATE())");
 
                 $insertedCount = 0;
                 $updatedCount = 0;
@@ -186,7 +196,6 @@ try {
 
                     $part_no = trim($item['part_no'] ?? '');
                     $desc = trim($item['part_description'] ?? '');
-                    $val = !empty($item['part_value']) ? (float)$item['part_value'] : 0;
                     $active = isset($item['is_active']) && ($item['is_active'] === '1' || $item['is_active'] === 1) ? 1 : 0;
 
                     $checkStmt->execute([$sap_no]);
@@ -194,11 +203,11 @@ try {
 
                     if ($existing_id) {
                         // Update
-                        $updateStmt->execute([$part_no, $desc, $val, $active, $existing_id]);
+                        $updateStmt->execute([$part_no, $desc, $active, $existing_id]);
                         $updatedCount++;
                     } else {
                         // Insert
-                        $insertStmt->execute([$sap_no, $part_no, $desc, $val, $active]);
+                        $insertStmt->execute([$sap_no, $part_no, $desc, $active]);
                         $insertedCount++;
                     }
                 }

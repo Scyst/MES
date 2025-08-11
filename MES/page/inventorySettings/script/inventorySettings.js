@@ -543,11 +543,10 @@ function setupModelFilterAutocomplete() {
                         resultItem.className = 'autocomplete-item';
                         resultItem.textContent = model;
                         resultItem.addEventListener('click', () => {
-                            // เมื่อคลิกเลือก ให้เติมคำให้เต็ม และซ่อนรายการ
                             searchInput.value = model;
                             valueInput.value = model;
                             resultsWrapper.style.display = 'none';
-                            // ไม่จำเป็นต้อง fetchItems() อีก เพราะมันถูกเรียกไปแล้ว
+                            fetchItems(1);
                         });
                         resultsWrapper.appendChild(resultItem);
                     });
@@ -592,8 +591,8 @@ function renderItemsMasterTable(items) {
         tr.innerHTML = `
             <td>${item.sap_no}</td>
             <td>${item.part_no}</td>
+            <td>${item.used_models || '-'}</td>
             <td>${item.part_description || ''}</td>
-            <td class="text-end">${parseFloat(item.part_value || 0).toFixed(2)}</td>
             <td class="text-end">${new Date(item.created_at).toLocaleDateString()}</td>
         `;
         tbody.appendChild(tr);
@@ -614,8 +613,7 @@ function openItemModal(item = null) {
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
-        document.getElementById('part_description').value = item.part_description;
-        document.getElementById('part_value').value = item.part_value;
+        document.getElementById('part_description').value = item.part_description;        
         
         if (item.is_active == 1) {
             // --- ถ้า Active ---
@@ -742,7 +740,6 @@ async function exportItemsToExcel() {
                 'sap_no': item.sap_no,
                 'part_no': item.part_no,
                 'part_description': item.part_description,
-                'part_value': parseFloat(item.part_value || 0).toFixed(2),
                 'is_active': item.is_active ? '1' : '0' // ส่งออกเป็น 1 หรือ 0
             }));
 
