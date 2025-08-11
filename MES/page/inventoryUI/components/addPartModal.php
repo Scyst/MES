@@ -15,11 +15,15 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="out_log_date" class="form-label">Production Date</label>
+                            <input type="date" class="form-control" id="out_log_date" name="log_date" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label for="out_location_id" class="form-label">Production Location</label>
                             <select class="form-select" id="out_location_id" name="location_id" required></select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="out_lot_no" class="form-label">Lot No. (Optional)</label>
                             <input type="text" class="form-control" id="out_lot_no" name="lot_no">
                         </div>

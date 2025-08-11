@@ -46,6 +46,9 @@
                 <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance</button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">WIP by Lot</button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -93,6 +96,44 @@
         </div>
 
         <div class="tab-content" id="mainTabContent">
+            <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
+                <div class="table-responsive mb-4">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>SAP No.</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th class="text-end">On-Hand Quantity (WIP)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wipReportTableBody"></tbody>
+                    </table>
+                </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
+            </div>
+
+            <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>SAP No.</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th>Lot Number</th>
+                                <th class="text-end">Total IN</th>
+                                <th class="text-end">Total OUT</th>
+                                <th class="text-end">Current WIP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wipByLotTableBody"></tbody>
+                    </table>
+                </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipByLotPagination"></ul></nav>
+            </div>
+
             <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-dark table-hover table-striped">
@@ -135,24 +176,6 @@
                     </table>
                 </div>
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
-            </div>
-
-            <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
-                <div class="table-responsive mb-4">
-                    <table class="table table-dark table-striped">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>SAP No.</th>
-                                <th>Part Number</th>
-                                <th>Part Description</th>
-                                <th class="text-end">On-Hand Quantity (WIP)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wipReportTableBody"></tbody>
-                    </table>
-                </div>
-                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
             </div>
 
             <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">

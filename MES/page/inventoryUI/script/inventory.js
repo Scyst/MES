@@ -21,6 +21,62 @@ let currentlyEditingData = null;
 // SECTION: CORE & UTILITY FUNCTIONS
 // =================================================================
 
+function saveFiltersToLocalStorage() {
+    const filters = {
+        part_no: document.getElementById('filterPartNo').value,
+        lot_no: document.getElementById('filterLotNo').value,
+        line: document.getElementById('filterLine').value,
+        model: document.getElementById('filterModel').value,
+        count_type: document.getElementById('filterCountType').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+    localStorage.setItem('inventoryUIFilters', JSON.stringify(filters));
+}
+
+function loadFiltersFromLocalStorage() {
+    const savedFilters = localStorage.getItem('inventoryUIFilters');
+    if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        document.getElementById('filterPartNo').value = filters.part_no || '';
+        document.getElementById('filterLotNo').value = filters.lot_no || '';
+        document.getElementById('filterLine').value = filters.line || '';
+        document.getElementById('filterModel').value = filters.model || '';
+        document.getElementById('filterCountType').value = filters.count_type || '';
+        
+        if (filters.startDate) {
+            document.getElementById('filterStartDate').value = filters.startDate;
+        }
+        if (filters.endDate) {
+            document.getElementById('filterEndDate').value = filters.endDate;
+        }
+    }
+}
+
+function handleFilterChange() {
+    saveFiltersToLocalStorage();
+    const activeTabId = document.querySelector('#mainTab .nav-link.active')?.id; // แก้ไข Selector ให้ถูกต้อง
+    if (!activeTabId) return;
+
+    switch (activeTabId) {
+        case 'production-history-tab':
+            fetchProductionHistory(1);
+            break;
+        case 'entry-history-tab':
+            fetchReceiptHistory(1);
+            break;
+        case 'wip-report-tab':
+            fetchWipInventoryReport(1);
+            break;
+        case 'wip-by-lot-tab': // << เพิ่ม case นี้เข้าไป
+            fetchWipReportByLot(1);
+            break;
+        case 'stock-count-tab':
+            fetchStockInventoryReport(1);
+            break;
+    }
+}
+
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API (จำเป็นสำหรับทุกไฟล์ JS ในหน้านี้)
  */
@@ -363,6 +419,50 @@ function renderWipInventoryTable(data) {
     });
 }
 
+// Add these two new functions for the WIP by Lot report
+async function fetchWipReportByLot(page = 1) {
+    showSpinner();
+    try {
+        const params = {
+            page: page,
+            part_no: document.getElementById('filterPartNo').value,
+            lot_no: document.getElementById('filterLotNo').value,
+            line: document.getElementById('filterLine').value,
+            startDate: document.getElementById('filterStartDate').value,
+            endDate: document.getElementById('filterEndDate').value,
+        };
+        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_report_by_lot', 'GET', null, params);
+        if (result.success) {
+            renderWipReportByLotTable(result.data);
+            renderPagination('wipByLotPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipReportByLot);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderWipReportByLotTable(data) {
+    const tbody = document.getElementById('wipByLotTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP lots found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td>${row.lot_no}</td>
+            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold text-warning">${parseFloat(row.variance).toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 // =================================================================
 // SECTION: MODAL HANDLING
 // =================================================================
@@ -395,18 +495,29 @@ async function populateModalDatalists() {
 
 function openAddPartModal() {
     const form = document.getElementById('addPartForm');
-    if(form) form.reset();
-    
-    selectedOutItem = null; 
-    document.getElementById('out_item_id').value = '';
-    document.getElementById('out_item_search').value = '';
+    if (form) form.reset();
 
+    selectedOutItem = null;
+    document.getElementById('out_item_id').value = '';
+    const searchInput = document.getElementById('out_item_search');
+    searchInput.value = '';
+
+    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry'));
+    if (lastData) {
+        const locationSelect = document.getElementById('out_location_id');
+        if (locationSelect) locationSelect.value = lastData.location_id || '';
+        searchInput.value = lastData.item_display_text || '';
+        document.getElementById('out_item_id').value = lastData.item_id || '';
+        if (lastData.item_id) {
+            selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+        }
+    }
     const now = new Date();
-    const tzOffset = 7 * 60 * 60 * 1000;
-    const localNow = new Date(now.getTime() + tzOffset);
-    document.querySelector('#addPartModal input[name="start_time"]').value = localNow.toISOString().split('T')[1].substring(0, 8);
-    document.querySelector('#addPartModal input[name="end_time"]').value = document.querySelector('#addPartModal input[name="start_time"]').value;
-    
+    document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().substring(0, 8);
+    document.getElementById('out_start_time').value = currentTime;
+    document.getElementById('out_end_time').value = currentTime;
+
     new bootstrap.Modal(document.getElementById('addPartModal')).show();
 }
 
@@ -416,7 +527,21 @@ function openAddEntryModal() {
     
     selectedInItem = null;
     document.getElementById('entry_item_id').value = '';
-    document.getElementById('entry_item_search').value = '';
+    const searchInput = document.getElementById('entry_item_search');
+    searchInput.value = '';
+
+    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry'));
+    if (lastData) {
+        const locationSelect = document.getElementById('entry_location_id');
+        if(locationSelect) locationSelect.value = lastData.location_id || '';
+        
+        searchInput.value = lastData.item_display_text || '';
+        document.getElementById('entry_item_id').value = lastData.item_id || '';
+        
+        if (lastData.item_id) {
+            selectedInItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+        }
+    }
     
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
 }
@@ -472,7 +597,21 @@ async function handleFormSubmit(event) {
     try {
         const result = await sendRequest(endpoint, apiAction, 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        
         if (result.success) {
+            if (action === 'addPart' || action === 'addEntry') {
+                const searchInputId = action === 'addPart' ? 'out_item_search' : 'entry_item_search';
+                const searchInputValue = document.getElementById(searchInputId).value;
+                const locationInputId = action === 'addPart' ? 'out_location_id' : 'entry_location_id';
+
+                const lastEntryData = {
+                    item_id: data.item_id,
+                    location_id: document.getElementById(locationInputId).value,
+                    item_display_text: searchInputValue
+                };
+                localStorage.setItem('inventoryUILastEntry', JSON.stringify(lastEntryData));
+            }
+
             const modalId = form.closest('.modal').id;
             bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
             if (successCallback) await successCallback();
@@ -544,7 +683,11 @@ async function editTransaction(transactionId, type) {
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================
+
 document.addEventListener('DOMContentLoaded', () => {
+    let debounceTimer;
+
+    loadFiltersFromLocalStorage();
     populateModalDatalists();
     setupEntryAutocomplete();
     setupProductionAutocomplete();
@@ -552,44 +695,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
-
-    // --- เพิ่ม: ผูก Event ให้ฟอร์ม Edit ---
     document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
 
-    // --- Tab Initialization ---
-    const entryHistoryTab = document.getElementById('entry-history-tab'); 
-    if (entryHistoryTab) {
-        entryHistoryTab.addEventListener('shown.bs.tab', () => fetchReceiptHistory(1)); 
-    }
-    
-    const productionHistoryTab = document.getElementById('production-history-tab');
-    if (productionHistoryTab) {
-        productionHistoryTab.addEventListener('shown.bs.tab', () => fetchProductionHistory(1));
-    }
-    
-    const stockTab = document.getElementById('stock-count-tab');
-    if (stockTab) {
-        stockTab.addEventListener('shown.bs.tab', () => fetchStockInventoryReport(1));
-    }
-    
-    // ** NEW: Listener for the refactored WIP/Variance Tab **
-    const wipTab = document.getElementById('wip-report-tab');
-    if(wipTab){
-        wipTab.addEventListener('shown.bs.tab', () => fetchWipInventoryReport(1));
-    }
+    const debouncedFilterChange = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(handleFilterChange, 500);
+    };
 
-    // Initialize the active tab
+    document.getElementById('filterPartNo').addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterLotNo').addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterLine').addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterModel').addEventListener('input', debouncedFilterChange);
+    document.getElementById('filterCountType').addEventListener('change', handleFilterChange);
+    document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
+    document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
+
+    document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', handleFilterChange);
+    });
+
     const activeTab = document.querySelector('#mainTab .nav-link.active');
     if (activeTab) {
-        if (activeTab.id === 'entry-history-tab') {
-            fetchReceiptHistory(1);
-        } else if (activeTab.id === 'production-history-tab') {
-            fetchProductionHistory(1);
-        } else if (activeTab.id === 'stock-count-tab') {
-            fetchStockInventoryReport(1);
-        } else if (activeTab.id === 'wip-report-tab') {
-            fetchWipInventoryReport(1);
-        }
+        handleFilterChange();
     }
 });

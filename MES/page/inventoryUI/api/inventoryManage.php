@@ -381,6 +381,79 @@ try {
             echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
             break;
 
+        case 'get_wip_report_by_lot':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+            $endRow = $startRow + $limit;
+
+            $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
+            $params = [];
+            
+            if (!empty($_GET['part_no'])) { $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; $params[] = '%' . $_GET['part_no'] . '%'; $params[] = '%' . $_GET['part_no'] . '%'; }
+            if (!empty($_GET['lot_no'])) { $conditions[] = "t.reference_id LIKE ?"; $params[] = '%' . $_GET['lot_no'] . '%'; }
+            if (!empty($_GET['line'])) { 
+                $locIdStmt = $pdo->prepare("SELECT location_id FROM ". LOCATIONS_TABLE ." WHERE location_name = ?");
+                $locIdStmt->execute([$_GET['line']]);
+                $locId = $locIdStmt->fetchColumn();
+                if ($locId) {
+                    $conditions[] = "(t.from_location_id = ? OR t.to_location_id = ?)";
+                    $params[] = $locId;
+                    $params[] = $locId;
+                }
+            }
+            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
+
+            $whereClause = "WHERE " . implode(" AND ", $conditions);
+            $baseSql = "
+                FROM (
+                    SELECT
+                        t.parameter_id,
+                        t.reference_id AS lot_no,
+                        SUM(CASE WHEN t.quantity > 0 THEN t.quantity ELSE 0 END) as total_in,
+                        SUM(CASE WHEN t.quantity < 0 THEN ABS(t.quantity) ELSE 0 END) as total_out
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    {$whereClause}
+                    GROUP BY t.parameter_id, t.reference_id
+                ) w
+                JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
+                WHERE (w.total_in - w.total_out) != 0
+            ";
+
+            $totalSql = "SELECT COUNT(*) " . $baseSql;
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                WITH FinalResult AS (
+                    SELECT 
+                        w.parameter_id as item_id,
+                        i.sap_no,
+                        i.part_no,
+                        i.part_description,
+                        w.lot_no,
+                        w.total_in,
+                        w.total_out,
+                        (w.total_in - w.total_out) as variance
+                    {$baseSql}
+                ),
+                NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no, lot_no) AS RowNum
+                    FROM FinalResult
+                )
+                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
+            ";
+
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute(array_merge($params, [$startRow, $endRow]));
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
