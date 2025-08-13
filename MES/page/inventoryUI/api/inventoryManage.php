@@ -178,46 +178,77 @@ try {
             $startRow = ($page - 1) * $limit;
 
             $params = [];
+            $date_params = [];
             $conditions = [];
             
-            if (!empty($_GET['part_no'])) { $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; $params[] = '%' . $_GET['part_no'] . '%'; $params[] = '%' . $_GET['part_no'] . '%'; }
-            if (!empty($_GET['location'])) { $conditions[] = "l.location_name LIKE ?"; $params[] = '%' . $_GET['location'] . '%'; }
-            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
+            // --- Build Filter Conditions ---
+            if (!empty($_GET['part_no'])) { 
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; 
+                $params[] = '%' . $_GET['part_no'] . '%'; 
+                $params[] = '%' . $_GET['part_no'] . '%';
+            }
+            if (!empty($_GET['location'])) { 
+                $conditions[] = "l.location_name LIKE ?"; 
+                $params[] = '%' . $_GET['location'] . '%'; 
+            }
+            // Date conditions need to be applied to both parts of the UNION
+            if (!empty($_GET['startDate'])) { 
+                $date_params[] = $_GET['startDate']; 
+            }
+            if (!empty($_GET['endDate'])) { 
+                $date_params[] = $_GET['endDate']; 
+            }
 
-            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-
-            // --- SQL Query ที่แก้ไขใหม่ทั้งหมด ---
+            // --- CORRECTED SQL QUERY LOGIC ---
+            // This query uses UNION ALL to treat a single TRANSFER record as two separate events (an OUT and an IN)
             $baseQuery = "
-                SELECT
-                    ISNULL(t.to_location_id, t.from_location_id) as location_id,
+                -- 1. Get all OUT transactions (Consumption, Production, and the FROM side of a Transfer)
+                SELECT 
                     t.parameter_id,
-                    SUM(CASE WHEN t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL THEN t.quantity ELSE 0 END) as total_in,
-                    SUM(CASE WHEN t.transaction_type IN ('CONSUMPTION', 'TRANSFER') OR t.transaction_type LIKE 'PRODUCTION_%' THEN ABS(t.quantity) ELSE 0 END) as total_out
+                    ISNULL(t.from_location_id, t.to_location_id) AS location_id, -- For production, 'to_location' is where it's 'used'
+                    0 AS total_in,
+                    ABS(t.quantity) AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
-                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " l ON ISNULL(t.to_location_id, t.from_location_id) = l.location_id
-                {$whereClause}
-                GROUP BY ISNULL(t.to_location_id, t.from_location_id), t.parameter_id
-            ";
+                WHERE (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL)
+                   OR (t.transaction_type LIKE 'PRODUCTION_%')
+                ".(!empty($date_params) ? "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)" : "")."
 
+                UNION ALL
+
+                -- 2. Get all IN transactions (Receipt and the TO side of a Transfer)
+                SELECT 
+                    t.parameter_id,
+                    t.to_location_id AS location_id,
+                    t.quantity AS total_in,
+                    0 AS total_out
+                FROM " . TRANSACTIONS_TABLE . " t
+                WHERE t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL
+                ".(!empty($date_params) ? "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)" : "")."
+            ";
+            
+            // The final query aggregates the results from the UNION
             $finalQuery = "
                 SELECT
-                    w.location_id,
+                    agg.location_id,
                     l.location_name,
                     i.item_id,
                     i.sap_no, i.part_no, i.part_description,
-                    ISNULL(w.total_in, 0) as total_in,
-                    ISNULL(w.total_out, 0) as total_out,
-                    (ISNULL(w.total_out, 0) - ISNULL(w.total_in, 0)) as variance
-                FROM ({$baseQuery}) w
-                JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
-                JOIN " . LOCATIONS_TABLE . " l ON w.location_id = l.location_id
+                    SUM(agg.total_in) as total_in,
+                    SUM(agg.total_out) as total_out,
+                    (SUM(agg.total_out) - SUM(agg.total_in)) as variance
+                FROM ({$baseQuery}) agg
+                JOIN " . ITEMS_TABLE . " i ON agg.parameter_id = i.item_id
+                JOIN " . LOCATIONS_TABLE . " l ON agg.location_id = l.location_id
+                ".(!empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "")."
+                GROUP BY agg.location_id, l.location_name, i.item_id, i.sap_no, i.part_no, i.part_description
             ";
+
+            // Combine date params for both parts of the UNION
+            $full_params = array_merge($date_params, $date_params, $params);
             
             $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
             $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
+            $totalStmt->execute($full_params);
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
@@ -229,7 +260,9 @@ try {
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
+            // Add pagination params to the full parameter list
+            $final_execution_params = array_merge($full_params, [$startRow, $startRow + $limit]);
+            $dataStmt->execute($final_execution_params);
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
