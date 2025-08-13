@@ -233,6 +233,7 @@
             include('components/editProductionModal.php');
         }
         include('components/stockDetailModal.php');
+        include('components/varianceDetailModal.php');
         include('../components/autoLogoutUI.php');
     ?>
     

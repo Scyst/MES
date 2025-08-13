@@ -392,7 +392,7 @@ async function fetchProductionVarianceReport(page = 1) {
 }
 
 function renderProductionVarianceTable(data) {
-    const tbody = document.getElementById('productionVarianceTableBody'); // Correct ID from your new HTML
+    const tbody = document.getElementById('productionVarianceTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">No production variance data found.</td></tr>';
@@ -400,8 +400,18 @@ function renderProductionVarianceTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to see transaction details';
+        // --- ส่วนที่แก้ไข ---
+        // เพิ่มการตรวจสอบว่า row.location_id มีค่าหรือไม่ก่อนเพิ่ม Event
+        if (row.location_id) {
+            tr.addEventListener('click', () => openVarianceDetailModal(row.item_id, row.location_id, row.part_no));
+        }
+        // --- สิ้นสุด ---
+
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
+
         if (variance < 0) {
             textColorClass = 'text-danger'; 
         } else if (variance === 0) {
@@ -409,6 +419,7 @@ function renderProductionVarianceTable(data) {
         } else {
             textColorClass = 'text-warning';
         }
+
         tr.innerHTML = `
             <td>${row.location_name}</td>
             <td>${row.sap_no}</td>
@@ -497,11 +508,10 @@ function renderWipReportByLotTable(data) {
         return;
     }
     data.forEach(row => {
-        const tr = document.createElement('tr');
+        const tr = document.createElement('tr'); // << เพิ่มบรรทัดที่หายไปกลับเข้ามา
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
 
-        // Added conditional coloring logic
         if (variance < 0) {
             textColorClass = 'text-danger'; 
         } else if (variance === 0) {
@@ -657,6 +667,75 @@ function handleDeleteFromModal(type) {
         modalInstance.hide();
     }
     deleteTransaction(transactionId, type);
+}
+
+async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null) {
+    const modalElement = document.getElementById('varianceDetailModal');
+    const modalTitle = document.getElementById('varianceDetailModalLabel');
+    const inTableBody = document.getElementById('detailInTableBody');
+    const outTableBody = document.getElementById('detailOutTableBody');
+    const totalInSpan = document.getElementById('detailTotalIn');
+    const totalOutSpan = document.getElementById('detailTotalOut');
+
+    let title = `Details for: ${partNo}`;
+    if (lotNo) title += ` (Lot: ${lotNo})`;
+    modalTitle.textContent = title;
+
+    inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+    outTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+
+    const params = {
+        item_id: itemId,
+        location_id: locationId,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value
+    };
+    if (lotNo) params.lot_no = lotNo; // (ยังไม่ได้ใช้ใน backend แต่เผื่อไว้)
+
+    const result = await sendRequest(INVENTORY_API_URL, 'get_variance_details', 'GET', null, params);
+
+    // Render IN table
+    inTableBody.innerHTML = '';
+    let totalIn = 0;
+    if (result.success && result.data.in_records.length > 0) {
+        result.data.in_records.forEach(rec => {
+            const qty = parseFloat(rec.quantity);
+            totalIn += qty;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${new Date(rec.transaction_timestamp).toLocaleString()}</td>
+                <td><span class="badge bg-secondary">${rec.transaction_type}</span></td>
+                <td class="text-end">${qty.toLocaleString()}</td>
+            `;
+            inTableBody.appendChild(tr);
+        });
+    } else {
+        inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No IN records found.</td></tr>';
+    }
+    totalInSpan.textContent = totalIn.toLocaleString();
+    
+    // Render OUT table
+    outTableBody.innerHTML = '';
+    let totalOut = 0;
+    if (result.success && result.data.out_records.length > 0) {
+        result.data.out_records.forEach(rec => {
+            const qty = Math.abs(parseFloat(rec.quantity));
+            totalOut += qty;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${new Date(rec.transaction_timestamp).toLocaleString()}</td>
+                <td><span class="badge bg-secondary">${rec.transaction_type.replace('PRODUCTION_', '')}</span></td>
+                <td class="text-end">${qty.toLocaleString()}</td>
+            `;
+            outTableBody.appendChild(tr);
+        });
+    } else {
+        outTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No OUT records found.</td></tr>';
+    }
+    totalOutSpan.textContent = totalOut.toLocaleString();
 }
 
 // --- Central Form Submission Handler ---
