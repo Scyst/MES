@@ -169,13 +169,22 @@ async function fetchReceiptHistory(page = 1) {
     receiptHistoryCurrentPage = page;
     showSpinner();
     
+    const params = {
+        page: page,
+        part_no: document.getElementById('filterPartNo').value,
+        line: document.getElementById('filterLine').value,
+        lot_no: document.getElementById('filterLotNo').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+
     try {
-        const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, { page });
+        const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, params);
         if (result.success) {
             renderReceiptHistoryTable(result.data);
             renderPagination('entryHistoryPagination', result.total, result.page, ROWS_PER_PAGE, fetchReceiptHistory);
         } else {
-            document.getElementById('entryHistoryTableBody').innerHTML = `<tr><td colspan="8" class="text-center text-danger">${result.message}</td></tr>`;
+            document.getElementById('entryHistoryTableBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">${result.message}</td></tr>`;
         }
     } finally {
         hideSpinner();
@@ -184,13 +193,6 @@ async function fetchReceiptHistory(page = 1) {
 
 function renderReceiptHistoryTable(data) {
     const tbody = document.getElementById('entryHistoryTableBody');
-    const thead = tbody.previousElementSibling.querySelector('tr');
-    
-    // เพิ่ม Header "Actions" ถ้ายังไม่มี
-    if (!thead.querySelector('.actions-header')) {
-        thead.innerHTML += `<th class="text-center actions-header">Actions</th>`;
-    }
-
     tbody.innerHTML = '';
     if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center">No receipt history found.</td></tr>`;
@@ -198,21 +200,21 @@ function renderReceiptHistoryTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to edit';
+        tr.addEventListener('click', () => editTransaction(row.transaction_id, 'entry'));
+
+        const transactionDate = new Date(row.transaction_timestamp);
         tr.innerHTML = `
-            <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
+            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
+            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
+            <td>${row.to_location || 'N/A'}</td>
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
             <td>${row.part_description || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td>${row.to_location || 'N/A'}</td>
             <td>${row.lot_no || ''}</td>
-            <td>${row.created_by || 'N/A'}</td>
-            <td class="text-center">
-                ${canManage ? `
-                    <button class="btn btn-sm btn-warning" onclick="editTransaction('${row.transaction_id}', 'entry')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteTransaction('${row.transaction_id}', 'entry')">Delete</button>
-                ` : ''}
-            </td>
+            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td>${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -292,24 +294,20 @@ async function fetchProductionHistory(page = 1) {
 
 function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
-    const thead = tbody.previousElementSibling.querySelector('tr');
-
-    // เพิ่ม Header "Actions" ถ้ายังไม่มี
-    if (!thead.querySelector('.actions-header')) {
-        thead.innerHTML += `<th class="text-center actions-header">Actions</th>`;
-    }
-
     tbody.innerHTML = '';
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center">No production history found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No production history found.</td></tr>`;
         return;
     }
-
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.transactionId = row.transaction_id;
+        tr.style.cursor = 'pointer'; // ทำให้แถวดูเหมือนคลิกได้
+        tr.title = 'Click to edit';
+        // เมื่อคลิกที่แถว ให้เรียกฟังก์ชัน editTransaction
+        tr.addEventListener('click', () => editTransaction(row.transaction_id, 'production'));
+
         const transactionDate = new Date(row.transaction_timestamp);
-        
         tr.innerHTML = `
             <td>${transactionDate.toLocaleDateString('en-GB')}</td>
             <td>${transactionDate.toTimeString().substring(0, 8)}</td>
@@ -320,13 +318,6 @@ function renderProductionHistoryTable(data) {
             <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
             <td class="text-center">${row.count_type}</td>
             <td>${row.notes || ''}</td>
-            <td>${row.created_by || ''}</td>
-            <td class="text-center">
-                ${canManage ? `
-                    <button class="btn btn-sm btn-warning" onclick="editTransaction('${row.transaction_id}', 'production')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteTransaction('${row.transaction_id}', 'production')">Delete</button>
-                ` : ''}
-            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -458,15 +449,20 @@ function renderStockInventoryTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to see details by location';
+        tr.addEventListener('click', () => {
+            openStockDetailModal(row.item_id, row.part_no);
+        });
+        
         const onHandQty = parseFloat(row.total_onhand) || 0;
+
         tr.innerHTML = `
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
+            <td><small>${row.used_models || '-'}</small></td>
             <td>${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-info" onclick="alert('Drill-down by location feature coming soon!')">Details</button>
-            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -502,6 +498,18 @@ function renderWipReportByLotTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        const variance = parseFloat(row.variance) || 0;
+        let textColorClass = '';
+
+        // Added conditional coloring logic
+        if (variance < 0) {
+            textColorClass = 'text-danger'; 
+        } else if (variance === 0) {
+            textColorClass = 'text-success';
+        } else {
+            textColorClass = 'text-warning';
+        }
+
         tr.innerHTML = `
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
@@ -509,7 +517,7 @@ function renderWipReportByLotTable(data) {
             <td>${row.lot_no}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
-            <td class="text-end fw-bold text-warning">${parseFloat(row.variance).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -597,6 +605,58 @@ function openAddEntryModal() {
     }
     
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
+}
+
+async function openStockDetailModal(itemId, partNo) {
+    const modalElement = document.getElementById('stockDetailModal');
+    const modalTitle = document.getElementById('stockDetailModalLabel');
+    const modalBody = document.getElementById('stockDetailTableBody');
+
+    modalTitle.textContent = `Stock Details for: ${partNo}`;
+    modalBody.innerHTML = '<tr><td colspan="2" class="text-center">Loading details...</td></tr>';
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+
+    const result = await sendRequest(INVENTORY_API_URL, 'get_stock_details_by_item', 'GET', null, { item_id: itemId });
+
+    modalBody.innerHTML = '';
+    if (result.success && result.data.length > 0) {
+        result.data.forEach(detail => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${detail.location_name}</td>
+                <td class="text-end">${parseFloat(detail.quantity).toLocaleString()}</td>
+            `;
+            modalBody.appendChild(tr);
+        });
+    } else {
+        modalBody.innerHTML = '<tr><td colspan="2" class="text-center">No stock found in any location.</td></tr>';
+    }
+}
+
+function handleDeleteFromModal(type) {
+    let transactionId;
+    let modalId;
+
+    if (type === 'entry') {
+        transactionId = document.getElementById('edit_entry_transaction_id').value;
+        modalId = 'editEntryModal';
+    } else {
+        transactionId = document.getElementById('edit_production_transaction_id').value;
+        modalId = 'editProductionModal';
+    }
+
+    if (!transactionId) {
+        showToast('Cannot find Transaction ID to delete.', 'var(--bs-danger)');
+        return;
+    }
+
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById(modalId));
+    if (modalInstance) {
+        modalInstance.hide();
+    }
+    deleteTransaction(transactionId, type);
 }
 
 // --- Central Form Submission Handler ---
@@ -750,6 +810,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
+    document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
 
     const debouncedFilterChange = () => {
         clearTimeout(debounceTimer);

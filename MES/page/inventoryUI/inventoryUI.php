@@ -43,22 +43,22 @@
 
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">WIP On-Hand</button>
+                <button class="nav-link active" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">Variance</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">Production Variance</button>
+                <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">Variance by Lot</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">WIP by Lot</button>
+                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Receipt Log (IN)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Entry History (IN)</button>
+                <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production Log (OUT)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production History (OUT)</button>
+                <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">Stock (Line)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock/Inventory</button>
+                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock (All)</button>
             </li>
         </ul>
         
@@ -99,25 +99,7 @@
         </div>
 
         <div class="tab-content" id="mainTabContent">
-            <div class="tab-pane fade show active" id="wip-onhand-pane" role="tabpanel">
-                <div class="table-responsive mb-4">
-                    <table class="table table-dark table-striped">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>SAP No.</th>
-                                <th>Part Number</th>
-                                <th>Part Description</th>
-                                <th class="text-end">On-Hand Quantity (WIP)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wipOnHandTableBody"></tbody>
-                    </table>
-                </div>
-                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipOnHandPagination"></ul></nav>
-            </div>
-
-            <div class="tab-pane fade" id="production-variance-pane" role="tabpanel">
+            <div class="tab-pane fade show active" id="production-variance-pane" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-dark table-striped">
                         <thead>
@@ -148,7 +130,7 @@
                                 <th>Lot Number</th>
                                 <th class="text-end">Total IN</th>
                                 <th class="text-end">Total OUT</th>
-                                <th class="text-end">Current WIP</th>
+                                <th class="text-end">Variance (OUT - IN)</th>
                             </tr>
                         </thead>
                         <tbody id="wipByLotTableBody"></tbody>
@@ -160,20 +142,21 @@
             <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-dark table-hover table-striped">
-                          <thead>
+                        <thead>
                             <tr>
-                                <th>Date & Time</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Location</th>
                                 <th>SAP No.</th>
                                 <th>Part No.</th>
                                 <th>Part Description</th>
-                                <th class="text-end">Quantity</th>
-                                <th>To Location</th>
                                 <th>Lot No./Ref.</th>
-                                <th>Created By</th>
+                                <th class="text-end">Quantity</th>
+                                <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody id="entryHistoryTableBody"></tbody>
-                        </table>
+                    </table>
                 </div>
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
             </div>
@@ -192,13 +175,30 @@
                                 <th class="text-end">Quantity</th>
                                 <th class="text-center">Type</th>
                                 <th>Notes</th>
-                                <th>Created By</th>
                             </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>
                     </table>
                 </div>
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
+            </div>
+
+            <div class="tab-pane fade" id="wip-onhand-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>SAP No.</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th class="text-end">On-Hand Quantity (WIP)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wipOnHandTableBody"></tbody>
+                    </table>
+                </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipOnHandPagination"></ul></nav>
             </div>
 
             <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
@@ -208,9 +208,9 @@
                             <tr>
                                 <th style="width: 15%;">SAP No.</th>
                                 <th style="width: 15%;">Part No.</th>
+                                <th>Used in Models</th>
                                 <th>Part Description</th>
                                 <th class="text-end" style="width: 15%;">Total On-Hand</th>
-                                <th class="text-center" style="width: 10%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="stockCountTableBody"></tbody>
@@ -232,6 +232,7 @@
             include('components/editEntryModal.php');
             include('components/editProductionModal.php');
         }
+        include('components/stockDetailModal.php');
         include('../components/autoLogoutUI.php');
     ?>
     
