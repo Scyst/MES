@@ -21,43 +21,27 @@ function getItemId($pdo, $partNo, $line, $model) {
     return $result ? (int)$result : null;
 }
 
-
-// --- New, more robust functions ---
-
 if (!function_exists('updateOnhandBalance')) {
     /**
-     * Safely updates the on-hand stock for a given item and location.
-     * Prevents stock from going negative.
-     * @return bool - Returns true on success, false if there is insufficient stock.
+     * Updates on-hand stock. This version ALLOWS negative inventory.
+     * @return bool - Always returns true as it no longer checks for sufficient stock.
      */
     function updateOnhandBalance(PDO $pdo, int $item_id, int $location_id, float $quantity_change): bool
     {
-        if ($quantity_change < 0) {
-            // If subtracting, use a safe UPDATE that checks stock levels atomically.
-            $updateSql = "UPDATE " . ONHAND_TABLE . " 
-                          SET quantity = quantity + ?, last_updated = GETDATE() 
-                          WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
-            
-            $stmt = $pdo->prepare($updateSql);
-            // Use abs() to get the positive value for the stock check (quantity >= abs(-50))
-            $stmt->execute([$quantity_change, $item_id, $location_id, abs($quantity_change)]);
-
-            // If no rows were affected, it means there was not enough stock.
-            return $stmt->rowCount() > 0;
-        } else {
-            // If adding, use MERGE to handle both new and existing items.
-            $mergeSql = "MERGE " . ONHAND_TABLE . " AS target 
-                         USING (SELECT ? AS item_id, ? AS location_id) AS source 
-                         ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
-                         WHEN MATCHED THEN 
-                             UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() 
-                         WHEN NOT MATCHED THEN 
-                             INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-            
-            $stmt = $pdo->prepare($mergeSql);
-            $stmt->execute([$item_id, $location_id, $quantity_change, $item_id, $location_id, $quantity_change]);
-            return true; // Adding stock always succeeds.
-        }
+        // MERGE statement handles all cases: positive, negative, new, and existing items.
+        $mergeSql = "MERGE " . ONHAND_TABLE . " AS target 
+                     USING (SELECT ? AS item_id, ? AS location_id) AS source 
+                     ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
+                     WHEN MATCHED THEN 
+                         UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() 
+                     WHEN NOT MATCHED THEN 
+                         INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+        
+        $stmt = $pdo->prepare($mergeSql);
+        // For a new item (NOT MATCHED), the starting quantity will be the change itself.
+        $stmt->execute([$item_id, $location_id, $quantity_change, $item_id, $location_id, $quantity_change]);
+        
+        return true; // This function will now always report success.
     }
 }
 

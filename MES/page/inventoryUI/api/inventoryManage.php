@@ -202,47 +202,37 @@ try {
             $count_type = $input['count_type'] ?? '';
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
+            $log_date = $input['log_date'] ?? null;
+            $start_time = $input['start_time'] ?? null;
 
             if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type)) {
                 throw new Exception("Invalid data provided for production logging.");
             }
 
             $pdo->beginTransaction();
+
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
             updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
-            logStockTransaction($pdo, $item_id, $quantity, $prod_transaction_type, null, $location_id, $currentUser['id'], $notes, $lot_no);
+            logStockTransaction($pdo, $item_id, $quantity, $prod_transaction_type, null, $location_id, $currentUser['id'], $notes, $lot_no, $log_date, $start_time);
 
             if (strtoupper($count_type) === 'FG') {
-                
                 $bomSql = "SELECT component_item_id, quantity_required 
-                        FROM " . BOM_TABLE . "
-                        WHERE fg_item_id = ?";
+                           FROM " . BOM_TABLE . "
+                           WHERE fg_item_id = ?";
                 
                 $bomStmt = $pdo->prepare($bomSql);
-                $bomStmt->execute([$item_id]); 
+                $bomStmt->execute([$item_id]);
                 $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 if (!empty($components)) {
-                    $consumeTransSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?)";
-                    $consumeTransStmt = $pdo->prepare($consumeTransSql);
-
                     foreach ($components as $comp) {
                         $qty_to_consume = $quantity * (float)$comp['quantity_required'];
                         $component_item_id = $comp['component_item_id'];
 
-                        $isStockSufficient = updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
-                        
-                        if (!$isStockSufficient) {
-                            $partNoStmt = $pdo->prepare("SELECT part_no FROM ". ITEMS_TABLE ." WHERE item_id = ?");
-                            $partNoStmt->execute([$component_item_id]);
-                            $partNo = $partNoStmt->fetchColumn();
-
-                            $pdo->rollBack();
-                            throw new Exception("Insufficient stock for component '{$partNo}' at the production location.");
-                        }
+                        updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
 
                         $consume_note = "Auto-consumed for production of FG Item ID: {$item_id}, Lot: {$lot_no}";
-                        $consumeTransStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no]);
+                        logStockTransaction($pdo, $component_item_id, -$qty_to_consume, 'CONSUMPTION', $location_id, null, $currentUser['id'], $consume_note, $lot_no, $log_date, $start_time);
                     }
                 }
             }
