@@ -55,23 +55,26 @@ function loadFiltersFromLocalStorage() {
 
 function handleFilterChange() {
     saveFiltersToLocalStorage();
-    const activeTabId = document.querySelector('#mainTab .nav-link.active')?.id; // แก้ไข Selector ให้ถูกต้อง
+    const activeTabId = document.querySelector('#mainTab .nav-link.active')?.id;
     if (!activeTabId) return;
 
     switch (activeTabId) {
-        case 'production-history-tab':
-            fetchProductionHistory(1);
+        case 'wip-onhand-tab':
+            fetchWipOnHandReport(1);
+            break;
+        case 'production-variance-tab':
+            fetchProductionVarianceReport(1);
+            break;
+        case 'wip-by-lot-tab':
+            fetchWipReportByLot(1);
             break;
         case 'entry-history-tab':
             fetchReceiptHistory(1);
             break;
-        case 'wip-report-tab':
-            fetchWipInventoryReport(1);
+        case 'production-history-tab':
+            fetchProductionHistory(1);
             break;
-        case 'wip-by-lot-tab': // << เพิ่ม case นี้เข้าไป
-            fetchWipReportByLot(1);
-            break;
-        case 'stock-count-tab':
+        case 'stock-count-tab': 
             fetchStockInventoryReport(1);
             break;
     }
@@ -330,17 +333,109 @@ function renderProductionHistoryTable(data) {
 }
 
 // =================================================================
-// SECTION: REFACTORED REPORTING FUNCTIONS
+// SECTION: REPORTING FUNCTIONS
 // =================================================================
+
+// --- For "WIP On-Hand" Tab ---
+async function fetchWipOnHandReport(page = 1) {
+    wipCurrentPage = page;
+    showSpinner();
+    try {
+        const params = {
+            page: page,
+            part_no: document.getElementById('filterPartNo').value,
+            line: document.getElementById('filterLine').value 
+        };
+        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_onhand_report', 'GET', null, params);
+        if (result.success) {
+            renderWipOnHandTable(result.data);
+            renderPagination('wipOnHandPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipOnHandReport);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderWipOnHandTable(data) {
+    const tbody = document.getElementById('wipOnHandTableBody'); // <-- Corrected ID
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No Work-in-Progress items found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const onHandQty = parseFloat(row.quantity) || 0;
+        tr.innerHTML = `
+            <td>${row.location_name}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+
+// --- For "Production Variance" Tab ---
+async function fetchProductionVarianceReport(page = 1) {
+    wipCurrentPage = page;
+    showSpinner();
+    try {
+        const params = {
+            page: page,
+            part_no: document.getElementById('filterPartNo').value,
+            location: document.getElementById('filterLine').value,
+            startDate: document.getElementById('filterStartDate').value,
+            endDate: document.getElementById('filterEndDate').value,
+        };
+        const result = await sendRequest(INVENTORY_API_URL, 'get_production_variance_report', 'GET', null, params);
+        if (result.success) {
+            renderProductionVarianceTable(result.data);
+            renderPagination('productionVariancePagination', result.total, result.page, ROWS_PER_PAGE, fetchProductionVarianceReport);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderProductionVarianceTable(data) {
+    const tbody = document.getElementById('productionVarianceTableBody'); // Correct ID from your new HTML
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No production variance data found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const variance = parseFloat(row.variance) || 0;
+        let textColorClass = '';
+        if (variance < 0) {
+            textColorClass = 'text-danger'; 
+        } else if (variance === 0) {
+            textColorClass = 'text-success';
+        } else {
+            textColorClass = 'text-warning';
+        }
+        tr.innerHTML = `
+            <td>${row.location_name}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
 async function fetchStockInventoryReport(page = 1) {
     stockCurrentPage = page;
     showSpinner();
     try {
-        // เปลี่ยนชื่อตัวแปรให้ชัดเจน และดึงค่าจาก filterPartNo
         const searchTerm = document.getElementById('filterPartNo').value; 
-        
-        // ส่งค่าไปให้ Backend โดยใช้ชื่อ parameter ว่า 'search_term'
         const result = await sendRequest(INVENTORY_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search_term: searchTerm });
         
         if (result.success) {
@@ -377,49 +472,6 @@ function renderStockInventoryTable(data) {
     });
 }
 
-async function fetchWipInventoryReport(page = 1) {
-    wipCurrentPage = page;
-    showSpinner();
-    try {
-        const params = {
-            page: page,
-            part_no: document.getElementById('filterPartNo').value,
-            location: document.getElementById('filterLine').value 
-        };
-        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_inventory_report', 'GET', null, params);
-        if (result.success) {
-            renderWipInventoryTable(result.data);
-            renderPagination('wipReportPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipInventoryReport);
-        } else {
-            document.getElementById('wipReportTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderWipInventoryTable(data) {
-    const tbody = document.getElementById('wipReportTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No Work-in-Progress items found.</td></tr>';
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        const onHandQty = parseFloat(row.quantity) || 0;
-        tr.innerHTML = `
-            <td>${row.location_name}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
-            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Add these two new functions for the WIP by Lot report
 async function fetchWipReportByLot(page = 1) {
     showSpinner();
     try {
@@ -466,6 +518,7 @@ function renderWipReportByLotTable(data) {
 // =================================================================
 // SECTION: MODAL HANDLING
 // =================================================================
+
 async function populateModalDatalists() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
      if (result.success) {

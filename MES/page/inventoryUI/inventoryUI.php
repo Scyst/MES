@@ -43,7 +43,10 @@
 
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="wip-report-tab" data-bs-toggle="tab" data-bs-target="#wip-report-pane" type="button" role="tab">WIP/Variance</button>
+                <button class="nav-link active" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">WIP On-Hand</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">Production Variance</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">WIP by Lot</button>
@@ -96,7 +99,7 @@
         </div>
 
         <div class="tab-content" id="mainTabContent">
-            <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
+            <div class="tab-pane fade show active" id="wip-onhand-pane" role="tabpanel">
                 <div class="table-responsive mb-4">
                     <table class="table table-dark table-striped">
                         <thead>
@@ -108,14 +111,34 @@
                                 <th class="text-end">On-Hand Quantity (WIP)</th>
                             </tr>
                         </thead>
-                        <tbody id="wipReportTableBody"></tbody>
+                        <tbody id="wipOnHandTableBody"></tbody>
                     </table>
                 </div>
-                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipOnHandPagination"></ul></nav>
+            </div>
+
+            <div class="tab-pane fade" id="production-variance-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>SAP No.</th>
+                                <th>Part Number</th>
+                                <th>Part Description</th>
+                                <th class="text-end">Total IN</th>
+                                <th class="text-end">Total OUT</th>
+                                <th class="text-end">Variance (OUT - IN)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productionVarianceTableBody"></tbody>
+                    </table>
+                </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="productionVariancePagination"></ul></nav>
             </div>
 
             <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
-                <div class="table-responsive">
+                 <div class="table-responsive">
                     <table class="table table-dark table-striped">
                         <thead>
                             <tr>

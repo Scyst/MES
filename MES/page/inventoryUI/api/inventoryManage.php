@@ -140,31 +140,107 @@ try {
             echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
             break;
 
-        case 'get_wip_inventory_report':
+        case 'get_production_variance_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
             $startRow = ($page - 1) * $limit;
-            $endRow = $startRow + $limit;
-
-            $wipLocationCondition = "loc.location_name NOT LIKE '%WAREHOUSE%'";
 
             $params = [];
-            $conditions = [$wipLocationCondition];
+            $conditions = [];
+            
             if (!empty($_GET['part_no'])) { 
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
                 $params[] = '%' . $_GET['part_no'] . '%';
                 $params[] = '%' . $_GET['part_no'] . '%';
             }
-             if (!empty($_GET['location'])) { 
-                $conditions[] = "loc.location_name LIKE ?";
+            if (!empty($_GET['location'])) { 
+                $conditions[] = "l.location_name LIKE ?";
                 $params[] = '%' . $_GET['location'] . '%';
             }
+            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
+
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            // --- Corrected SQL Structure ---
+            $baseQuery = "
+                SELECT
+                    ISNULL(t.to_location_id, t.from_location_id) as location_id,
+                    t.parameter_id,
+                    SUM(CASE WHEN t.quantity > 0 THEN t.quantity ELSE 0 END) as total_in,
+                    SUM(CASE WHEN t.quantity < 0 THEN ABS(t.quantity) ELSE 0 END) as total_out
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " l ON ISNULL(t.to_location_id, t.from_location_id) = l.location_id
+                {$whereClause} -- << Moved WHERE clause here
+                GROUP BY ISNULL(t.to_location_id, t.from_location_id), t.parameter_id
+            ";
+
+            $finalQuery = "
+                SELECT
+                    l.location_name, i.sap_no, i.part_no, i.part_description,
+                    ISNULL(w.total_in, 0) as total_in, ISNULL(w.total_out, 0) as total_out,
+                    (ISNULL(w.total_out, 0) - ISNULL(w.total_in, 0)) as variance
+                FROM ({$baseQuery}) w
+                JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
+                JOIN " . LOCATIONS_TABLE . " l ON w.location_id = l.location_id
+            ";
+            
+            // The rest of the code remains the same...
+            $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                WITH NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY location_name, sap_no) AS RowNum
+                    FROM ({$finalQuery}) AS FinalQuery
+                )
+                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
+            ";
+
+            $dataStmt = $pdo->prepare($dataSql);
+            $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
+            break;
+
+        case 'get_wip_onhand_report':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $startRow = ($page - 1) * $limit;
+
+            $params = [];
+            // --- Primary Condition: Only show production locations ---
+            $conditions = ["l.location_name NOT LIKE '%WAREHOUSE%'"];
+
+            if (!empty($_GET['part_no'])) { 
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $params[] = '%' . $_GET['part_no'] . '%';
+                $params[] = '%' . $_GET['part_no'] . '%';
+            }
+            if (!empty($_GET['line'])) { 
+                $conditions[] = "l.location_name LIKE ?";
+                $params[] = '%' . $_GET['line'] . '%';
+            }
+            
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            $totalSql = "SELECT COUNT(*) FROM " . ONHAND_TABLE . " h
-                         JOIN " . ITEMS_TABLE . " i ON h.parameter_id = i.item_id
-                         JOIN " . LOCATIONS_TABLE . " loc ON h.location_id = loc.location_id
-                         {$whereClause}";
+            // This base query now finds all locations that match the criteria first
+            $baseSql = "
+                FROM (
+                    SELECT location_id, location_name 
+                    FROM ". LOCATIONS_TABLE ." l
+                    WHERE l.location_name NOT LIKE '%WAREHOUSE%'
+                ) l
+                CROSS JOIN ". ITEMS_TABLE ." i 
+                LEFT JOIN ". ONHAND_TABLE ." h ON i.item_id = h.parameter_id AND l.location_id = h.location_id
+                {$whereClause}
+            ";
+
+            $totalSql = "SELECT COUNT(*) " . $baseSql;
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
@@ -172,25 +248,19 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        h.location_id, loc.location_name, h.parameter_id as item_id,
-                        i.sap_no, i.part_no, i.part_description, h.quantity,
-                        ROW_NUMBER() OVER (ORDER BY loc.location_name, i.sap_no) as RowNum
-                    FROM " . ONHAND_TABLE . " h
-                    JOIN " . ITEMS_TABLE . " i ON h.parameter_id = i.item_id
-                    JOIN " . LOCATIONS_TABLE . " loc ON h.location_id = loc.location_id
-                    {$whereClause}
+                        l.location_name, i.sap_no, i.part_no, i.part_description, 
+                        ISNULL(h.quantity, 0) as quantity,
+                        ROW_NUMBER() OVER (ORDER BY l.location_name, i.sap_no) as RowNum
+                    {$baseSql}
                 )
-                SELECT location_id, location_name, item_id, sap_no, part_no, part_description, quantity
-                FROM NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
+                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
-
-            $paginationParams = array_merge($params, [$startRow, $endRow]);
+            
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute($paginationParams);
-            $wip_data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+            $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $wip_data, 'total' => $total, 'page' => $page]);
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
         // ====== Cases from productionApi.php ======
