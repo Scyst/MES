@@ -49,13 +49,28 @@ if (!function_exists('logStockTransaction')) {
     /**
      * Inserts a record into the stock transactions table.
      */
-    function logStockTransaction(PDO $pdo, int $item_id, float $quantity, string $type, ?int $from_loc, ?int $to_loc, int $user_id, ?string $notes, ?string $ref)
+    function logStockTransaction(
+        PDO $pdo, 
+        int $item_id, 
+        float $quantity, 
+        string $type, 
+        ?int $from_loc, 
+        ?int $to_loc, 
+        int $user_id, 
+        ?string $notes, 
+        ?string $ref,
+        // --- เพิ่ม 2 พารามิเตอร์นี้เข้ามา ---
+        ?string $start_time = null,
+        ?string $end_time = null
+    )
     {
+        // --- เพิ่ม 2 คอลัมน์นี้เข้าไปใน SQL ---
         $sql = "INSERT INTO " . TRANSACTIONS_TABLE . " 
-                    (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
+                    (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, start_time, end_time) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$item_id, $quantity, $type, $from_loc, $to_loc, $user_id, $notes, $ref]);
+        // --- เพิ่ม 2 ตัวแปรนี้เข้าไปใน execute() ---
+        $stmt->execute([$item_id, $quantity, $type, $from_loc, $to_loc, $user_id, $notes, $ref, $start_time, $end_time]);
     }
 }

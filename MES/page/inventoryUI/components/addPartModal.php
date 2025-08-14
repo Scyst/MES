@@ -32,7 +32,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="out_quantity" class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="out_quantity" name="quantity" min="0.0001" step="any" required>
+                            <input type="number" class="form-control" id="out_quantity" name="quantity" min="1" step="1" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="out_count_type" class="form-label">Count Type</label>

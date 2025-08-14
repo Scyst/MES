@@ -15,29 +15,44 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-5 mb-3">
+                            <label for="edit_production_log_date" class="form-label">Production Date</label>
+                            <input type="date" class="form-control" id="edit_production_log_date" name="log_date" required>
+                        </div>
+                        <div class="col-md-7 mb-3">
                             <label for="edit_production_location_id" class="form-label">Production Location</label>
                             <select class="form-select" id="edit_production_location_id" name="location_id" required></select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_production_lot_no" class="form-label">Lot No.</label>
-                            <input type="text" class="form-control" id="edit_production_lot_no" name="lot_no">
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_production_quantity" class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="edit_production_quantity" name="quantity" min="0.0001" step="any" required>
+                            <label for="edit_production_lot_no" class="form-label">Lot No.</label>
+                            <input type="text" class="form-control" id="edit_production_lot_no" name="lot_no">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_production_count_type" class="form-label">Count Type</label>
+                        <div class="col-md-3 mb-3">
+                            <label for="edit_production_quantity" class="form-label">Quantity</label>
+                            <input type="number" class="form-control" id="edit_production_quantity" name="quantity" min="1" step="1" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="edit_production_count_type" class="form-label">Type</label>
                             <select id="edit_production_count_type" name="count_type" class="form-select" required>
-                                <option value="FG">FG (Finished Good)</option>
+                                <option value="FG">FG</option>
                                 <option value="NG">NG</option>
                                 <option value="SCRAP">SCRAP</option>
                                 <option value="REWORK">REWORK</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_production_start_time" class="form-label">Start Time</label>
+                            <input type="time" id="edit_production_start_time" name="start_time" step="1" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_production_end_time" class="form-label">End Time</label>
+                            <input type="time" id="edit_production_end_time" name="end_time" step="1" class="form-control">
                         </div>
                     </div>
 

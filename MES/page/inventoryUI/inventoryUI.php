@@ -43,22 +43,25 @@
 
         <ul class="nav nav-tabs" id="mainTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">Variance</button>
+                <button class="nav-link active" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">ผลต่าง (Variance)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">Variance by Lot</button>
+                <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">ผลต่าง (ตามล็อต)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">Receipt Log (IN)</button>
+                <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">ประวัติของเข้า (IN)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">Production Log (OUT)</button>
+                <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">ประวัติของออก (OUT)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">Stock (Line)</button>
+                <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">สต็อก (ในไลน์ผลิต)</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">Stock (All)</button>
+                <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">สต็อก (ทั้งหมด)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="transaction-log-tab" data-bs-toggle="tab" data-bs-target="#transaction-log-pane" type="button" role="tab">Transaction Log</button>
             </li>
         </ul>
         
@@ -146,13 +149,13 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Time</th>
-                                <th>Location</th>
+                                <th>จาก (Source)</th>
+                                <th>ไปยัง (Destination)</th>
                                 <th>SAP No.</th>
                                 <th>Part No.</th>
-                                <th>Part Description</th>
-                                <th>Lot No./Ref.</th>
-                                <th class="text-end">Quantity</th>
-                                <th>Notes</th>
+                                <th>ล็อต / อ้างอิง</th>
+                                <th class="text-end">จำนวน</th>
+                                <th>หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody id="entryHistoryTableBody"></tbody>
@@ -166,16 +169,15 @@
                     <table id="partTable" class="table table-dark table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Location</th>
-                                <th>SAP No.</th>
-                                <th>Part No.</th>
-                                <th>Lot No.</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-center">Type</th>
-                                <th>Notes</th>
-                            </tr>
+                                <th style="width: 10%;">Date</th>
+                                <th style="width: 15%;">Time (Start-End)</th>
+                                <th style="width: 8%;" class="text-center">Duration (m)</th>
+                                <th style="width: 10%;">Location</th>
+                                <th style="width: 12%;">Part No.</th>
+                                <th style="width: 10%;">Lot / Ref.</th>
+                                <th style="width: 8%;" class="text-end">Quantity</th>
+                                <th style="width: 8%;" class="text-center">Type</th>
+                                <th>Notes</th> </tr>
                         </thead>
                         <tbody id="partTableBody"></tbody>
                     </table>
@@ -217,6 +219,28 @@
                     </table>
                 </div>
                 <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
+            </div>
+
+            <div class="tab-pane fade" id="transaction-log-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Part No.</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th class="text-end">Change</th>
+                                <th>Lot / Ref.</th>
+                                <th>User</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionLogTableBody"></tbody>
+                    </table>
+                </div>
+                <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="transactionLogPagination"></ul></nav>
             </div>
         </div>
     </div>

@@ -3,35 +3,40 @@
         <div class="modal-content bg-dark text-white">
             <form id="editEntryForm" data-action="editEntry">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editEntryModalLabel">Edit Entry (IN) / Receipt</h5>
+                    <h5 class="modal-title" id="editEntryModalLabel">แก้ไขรายการของเข้า (IN)</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_entry_transaction_id" name="transaction_id">
-                    
+
                     <div class="mb-3">
-                        <label class="form-label">Item</label>
+                        <label class="form-label">ชิ้นส่วน</label>
                         <input type="text" class="form-control form-control-readonly" id="edit_entry_item_display" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_entry_timestamp" class="form-label">วันที่และเวลา</label>
+                        <input type="datetime-local" class="form-control" id="edit_entry_timestamp" name="transaction_timestamp" required>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_entry_location_id" class="form-label">Receive To Location</label>
+                            <label for="edit_entry_location_id" class="form-label">ไปยัง (Destination)</label>
                             <select class="form-select" id="edit_entry_location_id" name="location_id" required></select>
                         </div>
                         <div class="col-md-6 mb-3">
-                             <label for="edit_entry_quantity" class="form-label">Quantity (IN)</label>
-                            <input type="number" class="form-control" id="edit_entry_quantity" name="quantity" min="0.0001" step="any" required>
+                             <label for="edit_entry_quantity" class="form-label">จำนวน</label>
+                            <input type="number" class="form-control" id="edit_entry_quantity" name="quantity" min="1" step="1" required>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="edit_entry_lot_no" class="form-label">Lot No. / Reference ID</label>
+                        <label for="edit_entry_lot_no" class="form-label">ล็อต / เลขอ้างอิง</label>
                         <input type="text" class="form-control" id="edit_entry_lot_no" name="lot_no">
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_entry_notes" class="form-label">Remark / Notes</label>
+                        <label for="edit_entry_notes" class="form-label">หมายเหตุ</label>
                         <textarea class="form-control" id="edit_entry_notes" name="notes" rows="2"></textarea>
                     </div>
 

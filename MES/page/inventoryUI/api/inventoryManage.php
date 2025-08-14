@@ -35,42 +35,81 @@ try {
 
         case 'execute_receipt':
             $item_id = $input['item_id'] ?? 0;
-            $location_id = $input['location_id'] ?? 0;
+            $to_location_id = $input['to_location_id'] ?? 0;
+            $from_location_id = $input['from_location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
 
-            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0) {
-                throw new Exception("Invalid data provided for receipt.");
+            if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
+                throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
             }
 
             $pdo->beginTransaction();
+            try {
+                if (!empty($from_location_id)) {
+                    // ========== นี่คือ LOGIC สำหรับ TRANSFER (เวอร์ชันใหม่) ==========
+                    if ($from_location_id == $to_location_id) {
+                        throw new Exception("Source and Destination locations cannot be the same.");
+                    }
 
-            $mergeSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-            $mergeStmt = $pdo->prepare($mergeSql);
-            $mergeStmt->execute([$item_id, $location_id, $quantity, $item_id, $location_id, $quantity]);
+                    // 1. หักสตอกจากต้นทาง (โดยไม่เช็คสต็อก และจะสร้างแถวใหม่ถ้ายังไม่มี)
+                    $mergeFromSql = "MERGE " . ONHAND_TABLE . " AS target 
+                                    USING (SELECT ? AS item_id, ? AS location_id) AS source 
+                                    ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
+                                    WHEN MATCHED THEN 
+                                        UPDATE SET quantity = target.quantity - ? 
+                                    WHEN NOT MATCHED THEN 
+                                        INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+                    $mergeFromStmt = $pdo->prepare($mergeFromSql);
+                    $mergeFromStmt->execute([$item_id, $from_location_id, $quantity, $item_id, $from_location_id, -$quantity]);
 
-            $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
-            $transStmt = $pdo->prepare($transSql);
-            $transStmt->execute([$item_id, $quantity, $location_id, $currentUser['id'], $notes, $lot_no]);
 
-            $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'STOCK RECEIPT', $item_id, "Qty: {$quantity}, To: {$location_id}, Lot: {$lot_no}");
-            echo json_encode(['success' => true, 'message' => 'Stock receipt logged successfully.']);
+                    // 2. เพิ่มสต็อกที่ปลายทาง (โค้ดส่วนนี้เหมือนเดิม)
+                    $updateToSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ? WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+                    $updateToStmt = $pdo->prepare($updateToSql);
+                    $updateToStmt->execute([$item_id, $to_location_id, $quantity, $item_id, $to_location_id, $quantity]);
+
+                    // 3. บันทึกประวัติเป็น TRANSFER (โค้ดส่วนนี้เหมือนเดิม)
+                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?, ?)";
+                    $transStmt = $pdo->prepare($transSql);
+                    $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no]);
+
+                    $message = 'Stock transferred successfully.';
+
+                } else {
+                    $mergeSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ? WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+                    $mergeStmt = $pdo->prepare($mergeSql);
+                    $mergeStmt->execute([$item_id, $to_location_id, $quantity, $item_id, $to_location_id, $quantity]);
+
+                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
+                    $transStmt = $pdo->prepare($transSql);
+                    $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no]);
+
+                    $message = 'Stock receipt logged successfully.';
+                }
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'STOCK_IN', $item_id, "Qty: {$quantity}, To: {$to_location_id}, From: {$from_location_id}");
+                echo json_encode(['success' => true, 'message' => $message]);
+
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         case 'get_receipt_history':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
-            $startRow = ($page - 1) * $limit;
-            $endRow = $startRow + $limit;
+            $offset = ($page - 1) * $limit;
 
-            // --- ส่วนที่เพิ่มเข้ามา ---
             $params = [];
-            $conditions = ["t.transaction_type = 'RECEIPT'"];
+            $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER')"];
 
             if (!empty($_GET['part_no'])) { $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; $params[] = '%' . $_GET['part_no'] . '%'; $params[] = '%' . $_GET['part_no'] . '%';}
             if (!empty($_GET['lot_no'])) { $conditions[] = "t.reference_id LIKE ?"; $params[] = '%' . $_GET['lot_no'] . '%'; }
+
             if (!empty($_GET['line'])) { 
                 $locIdStmt = $pdo->prepare("SELECT location_id FROM ". LOCATIONS_TABLE ." WHERE location_name = ?");
                 $locIdStmt->execute([$_GET['line']]);
@@ -80,39 +119,48 @@ try {
                     $params[] = $locId;
                 }
             }
-            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
-            // --- สิ้นสุดส่วนที่เพิ่ม ---
 
-            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id LEFT JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id {$whereClause}";
+            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
-                WITH NumberedRows AS (
-                    SELECT 
-                        t.transaction_id,
-                        t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity, 
-                        l.location_name AS to_location, t.reference_id as lot_no,
-                        ROW_NUMBER() OVER (ORDER BY t.transaction_timestamp DESC) as RowNum
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
-                    {$whereClause}
-                )
-                SELECT transaction_id, transaction_timestamp, sap_no, part_no, part_description, quantity, to_location, lot_no
-                FROM NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
+                SELECT 
+                    t.transaction_id, t.transaction_timestamp, t.transaction_type,
+                    i.sap_no, i.part_no, i.part_description, t.quantity, 
+                    loc_to.location_name AS destination_location,
+                    loc_from.location_name AS source_location,
+                    t.reference_id as lot_no,
+                    t.notes
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                {$whereClause}
+                ORDER BY t.transaction_timestamp DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute(array_merge($params, [$startRow, $endRow]));
+
+            // --- ส่วนที่แก้ไข: เปลี่ยนมาใช้ bindValue เพื่อกำหนดชนิดข้อมูล ---
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param); // สำหรับ WHERE clause (เป็น String)
+            }
+            // บังคับให้ offset และ limit เป็น Integer
+            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+
+            $dataStmt->execute();
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
         case 'get_stock_inventory_report':
@@ -328,8 +376,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
-        // ====== Cases from productionApi.php ======
-
         case 'execute_production':
             $item_id = $input['item_id'] ?? 0;
             $location_id = $input['location_id'] ?? 0;
@@ -338,7 +384,9 @@ try {
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
             $log_date = $input['log_date'] ?? null;
+            // --- 1. รับค่า start_time และ end_time จาก input ---
             $start_time = $input['start_time'] ?? null;
+            $end_time = $input['end_time'] ?? null; 
 
             if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type)) {
                 throw new Exception("Invalid data provided for production logging.");
@@ -347,14 +395,16 @@ try {
             $pdo->beginTransaction();
 
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
-            updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
-            logStockTransaction($pdo, $item_id, $quantity, $prod_transaction_type, null, $location_id, $currentUser['id'], $notes, $lot_no, $log_date, $start_time);
 
-            if (strtoupper($count_type) === 'FG') {
-                $bomSql = "SELECT component_item_id, quantity_required 
-                           FROM " . BOM_TABLE . "
-                           WHERE fg_item_id = ?";
-                
+            // --- 2. อัปเดตการเรียกใช้ logStockTransaction ให้ส่งค่าเวลาใหม่ไปด้วย ---
+            logStockTransaction(
+                $pdo, $item_id, $quantity, $prod_transaction_type, 
+                null, $location_id, $currentUser['id'], $notes, $lot_no,
+                $start_time, $end_time // <-- เพิ่ม 2 ค่านี้เข้าไป
+            );
+
+            if (in_array(strtoupper($count_type), ['FG', 'NG', 'SCRAP'])) {
+                $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
                 $bomStmt = $pdo->prepare($bomSql);
                 $bomStmt->execute([$item_id]);
                 $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -366,11 +416,21 @@ try {
 
                         updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
 
-                        $consume_note = "Auto-consumed for production of FG Item ID: {$item_id}, Lot: {$lot_no}";
-                        logStockTransaction($pdo, $component_item_id, -$qty_to_consume, 'CONSUMPTION', $location_id, null, $currentUser['id'], $consume_note, $lot_no, $log_date, $start_time);
+                        $consume_note = "Auto-consumed for production of Item ID: {$item_id}, Lot: {$lot_no}";
+                        // --- 3. อัปเดตการเรียกใช้ logStockTransaction ของ Component ด้วย ---
+                        logStockTransaction(
+                            $pdo, $component_item_id, -$qty_to_consume, 'CONSUMPTION', 
+                            $location_id, null, $currentUser['id'], $consume_note, $lot_no,
+                            $start_time, $end_time // <-- เพิ่ม 2 ค่านี้เข้าไป
+                        );
                     }
                 }
             }
+
+            // *** หมายเหตุ: โค้ดส่วน updateOnhandBalance สำหรับตัว FG ถูกย้ายไปจัดการใน `update_transaction` แล้ว ***
+            // *** เพื่อป้องกันการบวกสต็อกซ้ำซ้อนเมื่อมีการแก้ไขข้อมูล เราจะจัดการสต็อก FG ตอนแก้ไขเท่านั้น ***
+            // *** แต่หากต้องการให้บวกสต็อก FG ทันทีที่ Add ให้เพิ่มบรรทัดนี้กลับเข้ามา: ***
+            // updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
 
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
@@ -380,12 +440,12 @@ try {
         case 'get_production_history':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
-            $startRow = ($page - 1) * $limit;
+            $offset = ($page - 1) * $limit;
 
             $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"];
             $params = [];
 
-            if (!empty($_GET['part_no'])) { $conditions[] = "i.part_no LIKE ?"; $params[] = '%' . $_GET['part_no'] . '%'; }
+            if (!empty($_GET['part_no'])) { $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; $params[] = '%' . $_GET['part_no'] . '%'; $params[] = '%' . $_GET['part_no'] . '%';}
             if (!empty($_GET['location'])) { $conditions[] = "loc.location_name LIKE ?"; $params[] = '%' . $_GET['location'] . '%'; }
             if (!empty($_GET['lot_no'])) { $conditions[] = "t.reference_id LIKE ?"; $params[] = '%' . $_GET['lot_no'] . '%'; }
             if (!empty($_GET['count_type'])) { $conditions[] = "t.transaction_type = ?"; $params[] = 'PRODUCTION_' . $_GET['count_type']; }
@@ -395,38 +455,42 @@ try {
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
             $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
-                         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                         LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                         {$whereClause}";
+                        JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                        LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
+                        {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
-            $endRow = $startRow + $limit;
             $dataSql = "
-                WITH NumberedRows AS (
-                    SELECT 
-                        t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
-                        REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
-                        loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
-                        ROW_NUMBER() OVER (ORDER BY t.transaction_timestamp DESC) AS RowNum
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                    LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                    {$whereClause}
-                )
-                SELECT transaction_id, transaction_timestamp, sap_no, part_no, quantity, count_type, location_name, lot_no, created_by, notes
-                FROM NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
+                SELECT 
+                    t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
+                    REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
+                    loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
+                    FORMAT(t.start_time, N'hh\:mm\:ss') as start_time,
+                    FORMAT(t.end_time, N'hh\:mm\:ss') as end_time
+                FROM " . TRANSACTIONS_TABLE . " t
+                LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                {$whereClause}
+                ORDER BY t.transaction_timestamp DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
 
-            $paginationParams = array_merge($params, [$startRow, $endRow]);
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute($paginationParams);
+
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param);
+            }
+            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+
+            $dataStmt->execute();
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
         case 'get_transaction_details':
@@ -448,35 +512,92 @@ try {
 
         case 'update_transaction':
             $pdo->beginTransaction();
-            
+
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-            // 1. ดึงข้อมูลเก่าเพื่อคำนวณผลต่าง
+            // 1. ดึงข้อมูลเก่าเพื่อตรวจสอบประเภท
             $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
             $stmt->execute([$transaction_id]);
             $old_transaction = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$old_transaction) throw new Exception("Original transaction not found.");
 
-            // 2. Revert สต็อกเก่า
-            $revert_qty = - (float)$old_transaction['quantity'];
-            updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], $revert_qty);
+            // 2. แยก Logic การทำงานตามประเภทของ Transaction เดิม
+            if (strpos($old_transaction['transaction_type'], 'PRODUCTION_') === 0) {
+                // ===================================================
+                // นี่คือ LOGIC สำหรับแก้ไข PRODUCTION (ของออก)
+                // ===================================================
+                $old_item_id = $old_transaction['parameter_id'];
+                $old_location_id = $old_transaction['to_location_id'];
+                $old_count_type = strtoupper(str_replace('PRODUCTION_', '', $old_transaction['transaction_type']));
 
-            // 3. เตรียมข้อมูลใหม่
-            $new_quantity = (float)($input['quantity'] ?? 0);
-            $new_location_id = (int)($input['location_id'] ?? 0);
-            $new_lot_no = $input['lot_no'] ?? null;
-            $new_notes = $input['notes'] ?? null;
-            $new_count_type = isset($input['count_type']) ? 'PRODUCTION_' . strtoupper($input['count_type']) : $old_transaction['transaction_type'];
+                // 2.1 Revert สต็อกเก่าทั้งหมด (Product และ Components)
+                updateOnhandBalance($pdo, $old_item_id, $old_location_id, -(float)$old_transaction['quantity']);
+                if (in_array($old_count_type, ['FG', 'NG', 'SCRAP'])) {
+                    $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
+                    $bomStmt = $pdo->prepare($bomSql); $bomStmt->execute([$old_item_id]);
+                    $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($components as $comp) {
+                        $qty_to_revert = (float)$old_transaction['quantity'] * (float)$comp['quantity_required'];
+                        updateOnhandBalance($pdo, $comp['component_item_id'], $old_location_id, $qty_to_revert);
+                    }
+                }
 
-            // 4. อัปเดต Transaction record
-            $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=? WHERE transaction_id=?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_count_type, $transaction_id]);
+                // 2.2 เตรียมข้อมูลใหม่
+                $new_quantity = (float)($input['quantity'] ?? 0);
+                $new_location_id = (int)($input['location_id'] ?? 0);
+                $new_lot_no = $input['lot_no'] ?? null;
+                $new_notes = $input['notes'] ?? null;
+                $new_log_date = $input['log_date'] ?? date('Y-m-d');
+                $new_start_time = $input['start_time'] ?? null;
+                $new_end_time = $input['end_time'] ?? null;
+                $new_timestamp = $new_end_time ? ($new_log_date . ' ' . $new_end_time) : $old_transaction['transaction_timestamp'];
+                $new_count_type = strtoupper($input['count_type'] ?? '');
+                $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
-            // 5. เพิ่มสต็อกใหม่เข้าไป
-            updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
-            
+                // 2.3 อัปเดต Transaction record
+                $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=? WHERE transaction_id=?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
+
+                // 2.4 เพิ่มสต็อกใหม่ (Product และ Components)
+                updateOnhandBalance($pdo, $old_item_id, $new_location_id, $new_quantity);
+                if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
+                    $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
+                    $bomStmt = $pdo->prepare($bomSql); $bomStmt->execute([$old_item_id]);
+                    $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($components as $comp) {
+                        $qty_to_consume = $new_quantity * (float)$comp['quantity_required'];
+                        updateOnhandBalance($pdo, $comp['component_item_id'], $new_location_id, -$qty_to_consume);
+                    }
+                }
+
+            } else {
+                // ===================================================
+                // นี่คือ LOGIC สำหรับแก้ไข RECEIPT / TRANSFER (ของเข้า)
+                // ===================================================
+                $old_item_id = $old_transaction['parameter_id'];
+                $old_location_id = $old_transaction['to_location_id'];
+
+                // 2.1 Revert สต็อกเก่า
+                updateOnhandBalance($pdo, $old_item_id, $old_location_id, -(float)$old_transaction['quantity']);
+
+                // 2.2 เตรียมข้อมูลใหม่
+                $new_quantity = (float)($input['quantity'] ?? 0);
+                $new_location_id = (int)($input['location_id'] ?? 0);
+                $new_lot_no = $input['lot_no'] ?? null;
+                $new_notes = $input['notes'] ?? null;
+                $new_timestamp = $input['transaction_timestamp'] ?? $old_transaction['transaction_timestamp']; // <-- รับค่า timestamp ใหม่
+
+                // 2.3 อัปเดต Transaction record (เพิ่ม transaction_timestamp)
+                $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_timestamp=? WHERE transaction_id=?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_timestamp, $transaction_id]);
+
+                // 2.4 เพิ่มสต็อกใหม่
+                updateOnhandBalance($pdo, $old_item_id, $new_location_id, $new_quantity);
+            }
+
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id);
             echo json_encode(['success' => true, 'message' => 'Transaction updated successfully.']);
@@ -691,6 +812,93 @@ try {
                 }
                 throw $e;
             }
+            break;
+
+        // --- เพิ่ม case นี้เข้าไปใน switch ของไฟล์ inventoryManage.php ---
+        case 'get_stock_onhand':
+            $item_id = $_GET['item_id'] ?? 0;
+            $location_id = $_GET['location_id'] ?? 0;
+            if (empty($item_id) || empty($location_id)) {
+                echo json_encode(['success' => true, 'quantity' => 0]);
+                exit;
+            }
+            $stockStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
+            $stockStmt->execute([$item_id, $location_id]);
+            $quantity = $stockStmt->fetchColumn();
+            echo json_encode(['success' => true, 'quantity' => $quantity ?: 0]);
+            break;
+
+        case 'get_all_transactions':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $offset = ($page - 1) * $limit;
+
+            $params = [];
+            $conditions = [];
+
+            if (!empty($_GET['part_no'])) { 
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; 
+                $params[] = '%' . $_GET['part_no'] . '%'; 
+                $params[] = '%' . $_GET['part_no'] . '%';
+            }
+            if (!empty($_GET['lot_no'])) { 
+                $conditions[] = "t.reference_id LIKE ?"; 
+                $params[] = '%' . $_GET['lot_no'] . '%'; 
+            }
+            if (!empty($_GET['line'])) { 
+                $conditions[] = "(loc_from.location_name LIKE ? OR loc_to.location_name LIKE ?)";
+                $params[] = '%' . $_GET['line'] . '%';
+                $params[] = '%' . $_GET['line'] . '%';
+            }
+            if (!empty($_GET['startDate'])) { 
+                $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; 
+                $params[] = $_GET['startDate']; 
+            }
+            if (!empty($_GET['endDate'])) { 
+                $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; 
+                $params[] = $_GET['endDate']; 
+            }
+
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            $baseSql = "
+                FROM " . TRANSACTIONS_TABLE . " t
+                LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                {$whereClause}
+            ";
+
+            $totalSql = "SELECT COUNT(*) " . $baseSql;
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                SELECT 
+                    t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no,
+                    loc_from.location_name AS source_location,
+                    loc_to.location_name AS destination_location,
+                    t.quantity, t.reference_id as lot_no, u.username, t.notes
+                " . $baseSql . "
+                ORDER BY t.transaction_timestamp DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+
+            $dataStmt = $pdo->prepare($dataSql);
+
+            $paramIndex = 1;
+            foreach ($params as $param) {
+                $dataStmt->bindValue($paramIndex++, $param);
+            }
+            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+
+            $dataStmt->execute();
+            $transactions = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $transactions, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
             
         default:

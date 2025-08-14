@@ -82,6 +82,9 @@ function handleFilterChange() {
         case 'stock-count-tab': 
             fetchStockInventoryReport(1);
             break;
+        case 'transaction-log-tab':
+            fetchAllTransactions(1);
+            break;
     }
 }
 
@@ -212,6 +215,7 @@ function setupEntryAutocomplete() {
                 searchInput.value = `${item.sap_no} | ${item.part_no}`;
                 selectedInItem = item;
                 document.getElementById('entry_item_id').value = item.item_id;
+                updateAvailableStockDisplay(); // <-- เพิ่มบรรทัดนี้
                 resultsWrapper.innerHTML = '';
             });
             resultsWrapper.appendChild(resultItem);
@@ -256,7 +260,7 @@ function renderReceiptHistoryTable(data) {
     const tbody = document.getElementById('entryHistoryTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No receipt history found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No IN transactions found.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -269,10 +273,10 @@ function renderReceiptHistoryTable(data) {
         tr.innerHTML = `
             <td>${transactionDate.toLocaleDateString('en-GB')}</td>
             <td>${transactionDate.toTimeString().substring(0, 8)}</td>
-            <td>${row.to_location || 'N/A'}</td>
+            <td>${row.source_location || 'External'}</td>
+            <td>${row.destination_location || 'N/A'}</td>
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
             <td>${row.lot_no || ''}</td>
             <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
             <td>${row.notes || ''}</td>
@@ -363,17 +367,38 @@ function renderProductionHistoryTable(data) {
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.transactionId = row.transaction_id;
-        tr.style.cursor = 'pointer'; // ทำให้แถวดูเหมือนคลิกได้
+        tr.style.cursor = 'pointer';
         tr.title = 'Click to edit';
-        // เมื่อคลิกที่แถว ให้เรียกฟังก์ชัน editTransaction
         tr.addEventListener('click', () => editTransaction(row.transaction_id, 'production'));
 
         const transactionDate = new Date(row.transaction_timestamp);
+
+        // --- ส่วน Logic ใหม่ ---
+        const startTimeStr = row.start_time || '00:00:00';
+        const endTimeStr = row.end_time || '00:00:00';
+
+        // 1. จัดรูปแบบช่วงเวลา
+        const timeRange = (row.start_time && row.end_time) ? `${startTimeStr} - ${endTimeStr}` : (transactionDate.toTimeString().substring(0, 8));
+
+        // 2. คำนวณ Duration
+        let durationInMinutes = '-';
+        if (row.start_time && row.end_time) {
+            const startDate = new Date(`1970-01-01T${startTimeStr}Z`);
+            const endDate = new Date(`1970-01-01T${endTimeStr}Z`);
+            // Handle overnight case
+            if (endDate < startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
+            const diffMs = endDate - startDate;
+            durationInMinutes = Math.round(diffMs / 60000);
+        }
+        // --- สิ้นสุด Logic ใหม่ ---
+
         tr.innerHTML = `
             <td>${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
+            <td>${timeRange}</td>
+            <td class="text-center">${durationInMinutes}</td>
             <td>${row.location_name || 'N/A'}</td>
-            <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
             <td>${row.lot_no || ''}</td>
             <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
@@ -597,6 +622,63 @@ function renderWipReportByLotTable(data) {
     });
 }
 
+async function fetchAllTransactions(page = 1) {
+    showSpinner();
+    try {
+        const params = {
+            page: page,
+            part_no: document.getElementById('filterPartNo').value,
+            line: document.getElementById('filterLine').value, // API จะค้นหาทั้ง Source และ Destination
+            lot_no: document.getElementById('filterLotNo').value,
+            startDate: document.getElementById('filterStartDate').value,
+            endDate: document.getElementById('filterEndDate').value,
+        };
+        const result = await sendRequest(INVENTORY_API_URL, 'get_all_transactions', 'GET', null, params);
+        if (result.success) {
+            renderAllTransactionsTable(result.data);
+            renderPagination('transactionLogPagination', result.total, result.page, result.limit, fetchAllTransactions);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderAllTransactionsTable(data) {
+    const tbody = document.getElementById('transactionLogTableBody');
+    tbody.innerHTML = '';
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No transactions found.</td></tr>`;
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const transactionDate = new Date(row.transaction_timestamp);
+        const quantity = parseFloat(row.quantity);
+
+        let quantityClass = '';
+        let quantityPrefix = '';
+        if (quantity > 0) {
+            quantityClass = 'text-success';
+            quantityPrefix = '+';
+        } else if (quantity < 0) {
+            quantityClass = 'text-danger';
+        }
+
+        tr.innerHTML = `
+            <td>${transactionDate.toLocaleString('en-GB')}</td>
+            <td><span class="badge bg-secondary">${row.transaction_type}</span></td>
+            <td>${row.part_no}</td>
+            <td>${row.source_location || 'N/A'}</td>
+            <td>${row.destination_location || 'N/A'}</td>
+            <td class="text-end fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
+            <td>${row.lot_no || ''}</td>
+            <td>${row.username || 'N/A'}</td>
+            <td>${row.notes || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 // =================================================================
 // SECTION: MODAL HANDLING
 // =================================================================
@@ -606,15 +688,16 @@ async function populateModalDatalists() {
      if (result.success) {
         allItems = result.items;
 
-        const inLocationSelect = document.getElementById('entry_location_id');
+        const inToLocationSelect = document.getElementById('entry_to_location_id');
+        const inFromLocationSelect = document.getElementById('entry_from_location_id');
         const outLocationSelect = document.getElementById('out_location_id');
         const editInLocationSelect = document.getElementById('edit_entry_location_id');
         const editOutLocationSelect = document.getElementById('edit_production_location_id');
-        
+
         const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
 
-        if (inLocationSelect) {
-            inLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        if (inToLocationSelect) {
+            inToLocationSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
         }
         if (outLocationSelect) {
             outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
@@ -624,6 +707,11 @@ async function populateModalDatalists() {
         }
         if (editOutLocationSelect) {
             editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+
+        if (inFromLocationSelect) {
+            const fromOptionsHtml = `<option value="">-- From Warehouse / External --</option>` + optionsHtml;
+            inFromLocationSelect.innerHTML = fromOptionsHtml;
         }
     }
 }
@@ -844,6 +932,37 @@ async function handleAdjustStockSubmit(event) {
     }
 }
 
+async function updateAvailableStockDisplay() {
+    const display = document.getElementById('entry_available_stock');
+    const fromLocationId = document.getElementById('entry_from_location_id').value;
+
+    display.textContent = '--';
+    display.classList.remove('text-danger', 'text-white'); 
+
+    if (!selectedInItem || !fromLocationId) {
+        return;
+    }
+
+    display.textContent = 'Loading...';
+    const result = await sendRequest(INVENTORY_API_URL, 'get_stock_onhand', 'GET', null, { 
+        item_id: selectedInItem.item_id, 
+        location_id: fromLocationId 
+    });
+
+    if (result.success) {
+        const quantity = parseFloat(result.quantity);
+        display.textContent = quantity.toLocaleString();
+        if (quantity < 0) {
+            display.classList.add('text-danger');
+        } else {
+            display.classList.add('text-white');
+        }
+    } else {
+        display.textContent = 'Error';
+        display.classList.add('text-danger');
+    }
+}
+
 // --- Central Form Submission Handler ---
 async function handleFormSubmit(event) {
     event.preventDefault();
@@ -898,15 +1017,21 @@ async function handleFormSubmit(event) {
         
         if (result.success) {
             if (action === 'addPart' || action === 'addEntry') {
-                const searchInputId = action === 'addPart' ? 'out_item_search' : 'entry_item_search';
+                const searchInputId = (action === 'addPart') ? 'out_item_search' : 'entry_item_search';
                 const searchInputValue = document.getElementById(searchInputId).value;
-                const locationInputId = action === 'addPart' ? 'out_location_id' : 'entry_location_id';
 
-                const lastEntryData = {
+                let lastEntryData = {
                     item_id: data.item_id,
-                    location_id: document.getElementById(locationInputId).value,
                     item_display_text: searchInputValue
                 };
+
+                if (action === 'addEntry') {
+                    lastEntryData.from_location_id = data.from_location_id;
+                    lastEntryData.to_location_id = data.to_location_id;
+                } else {
+                    lastEntryData.out_location_id = data.location_id;
+                }
+
                 localStorage.setItem('inventoryUILastEntry', JSON.stringify(lastEntryData));
             }
 
@@ -944,11 +1069,11 @@ async function editTransaction(transactionId, type) {
     showSpinner();
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_transaction_details', 'GET', null, { transaction_id: transactionId });
-        
+
         if (result.success) {
             const data = result.data;
             let modalId, modal;
-            
+
             if (type === 'entry') {
                 modalId = 'editEntryModal';
                 document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
@@ -957,6 +1082,15 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_entry_quantity').value = data.quantity;
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
                 document.getElementById('edit_entry_notes').value = data.notes;
+
+                if (data.transaction_timestamp) {
+                    const dateObj = new Date(data.transaction_timestamp);
+                    dateObj.setHours(dateObj.getHours() + 7);
+
+                    const formattedDateTime = dateObj.toISOString().slice(0, 16);
+                    document.getElementById('edit_entry_timestamp').value = formattedDateTime;
+                }
+
             } else if (type === 'production') {
                 modalId = 'editProductionModal';
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
@@ -966,6 +1100,17 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
                 document.getElementById('edit_production_notes').value = data.notes;
+
+                // --- ส่วนที่เพิ่มเข้ามา: จัดการข้อมูลวันที่และเวลา ---
+                if (data.transaction_timestamp) {
+                    // แยกวันที่จาก timestamp หลัก (YYYY-MM-DD)
+                    const datePart = data.transaction_timestamp.split(' ')[0];
+                    document.getElementById('edit_production_log_date').value = datePart;
+                }
+                // ตั้งค่าเวลา (HH:MM:SS)
+                // ใช้ .substring(0, 8) เพื่อให้แน่ใจว่าได้แค่ HH:mm:ss
+                document.getElementById('edit_production_start_time').value = data.start_time ? data.start_time.substring(0, 8) : '';
+                document.getElementById('edit_production_end_time').value = data.end_time ? data.end_time.substring(0, 8) : '';
             }
 
             modal = new bootstrap.Modal(document.getElementById(modalId));
@@ -1011,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterCountType').addEventListener('change', handleFilterChange);
     document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
+    document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
 
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (event) => {
