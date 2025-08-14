@@ -409,7 +409,7 @@ async function fetchWipOnHandReport(page = 1) {
 }
 
 function renderWipOnHandTable(data) {
-    const tbody = document.getElementById('wipOnHandTableBody'); // <-- Corrected ID
+    const tbody = document.getElementById('wipOnHandTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center">No Work-in-Progress items found.</td></tr>';
@@ -417,6 +417,10 @@ function renderWipOnHandTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to adjust stock';
+        tr.addEventListener('click', () => openAdjustStockModal(row));
+
         const onHandQty = parseFloat(row.quantity) || 0;
         tr.innerHTML = `
             <td>${row.location_name}</td>
@@ -521,12 +525,11 @@ function renderStockInventoryTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
+
         tr.style.cursor = 'pointer';
         tr.title = 'Click to see details by location';
-        tr.addEventListener('click', () => {
-            openStockDetailModal(row.item_id, row.part_no);
-        });
-        
+        tr.addEventListener('click', () => openStockDetailModal(row.item_id, row.part_no));
+
         const onHandQty = parseFloat(row.total_onhand) || 0;
 
         tr.innerHTML = `
@@ -799,6 +802,48 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
     totalOutSpan.textContent = totalOut.toLocaleString();
 }
 
+function openAdjustStockModal(itemData) {
+    const modal = document.getElementById('adjustStockModal');
+    if (!modal) return;
+
+    // Populate hidden fields
+    modal.querySelector('#adjust_item_id').value = itemData.item_id;
+    // location_id อาจมาจากคนละ field name ขึ้นอยู่กับตาราง
+    modal.querySelector('#adjust_location_id').value = itemData.location_id || itemData.onhand_location_id; 
+
+    // Populate display fields
+    modal.querySelector('#adjust_item_display').value = `${itemData.sap_no} | ${itemData.part_no}`;
+    modal.querySelector('#adjust_location_display').value = itemData.location_name;
+    modal.querySelector('#adjust_current_onhand').value = parseFloat(itemData.quantity || itemData.total_onhand).toLocaleString();
+
+    // Reset interactive fields
+    modal.querySelector('#adjust_physical_count').value = '';
+    modal.querySelector('#adjust_notes').value = '';
+
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+
+async function handleAdjustStockSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    showSpinner();
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'adjust_single_stock', 'POST', data);
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('adjustStockModal')).hide();
+            // Refresh the currently active tab's data
+            handleFilterChange();
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
 // --- Central Form Submission Handler ---
 async function handleFormSubmit(event) {
     event.preventDefault();
@@ -950,6 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('adjustStockForm')?.addEventListener('submit', handleAdjustStockSubmit);
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
     document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
 

@@ -231,6 +231,7 @@
         if ($canManage) {
             include('components/editEntryModal.php');
             include('components/editProductionModal.php');
+            include('components/adjustStockModal.php');
         }
         include('components/stockDetailModal.php');
         include('components/varianceDetailModal.php');

@@ -305,12 +305,20 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
+                        i.item_id, -- <<< เพิ่มเข้ามา
+                        h.location_id, -- <<< เพิ่มเข้ามา
                         l.location_name, i.sap_no, i.part_no, i.part_description, 
                         ISNULL(h.quantity, 0) as quantity,
                         ROW_NUMBER() OVER (ORDER BY l.location_name, i.sap_no) as RowNum
-                    {$baseSql}
+                    FROM ". ONHAND_TABLE ." h
+                    JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id
+                    JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
+                    {$whereClause}
+                    AND h.quantity > 0 -- <<< เพิ่มเข้ามาเพื่อประสิทธิภาพที่ดีขึ้น
                 )
-                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
+                SELECT item_id, location_id, location_name, sap_no, part_no, part_description, quantity 
+                FROM NumberedRows 
+                WHERE RowNum > ? AND RowNum <= ?
             ";
             
             $dataStmt = $pdo->prepare($dataSql);
@@ -633,6 +641,56 @@ try {
             $out_records = $outStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => ['in_records' => $in_records, 'out_records' => $out_records]]);
+            break;
+
+        case 'adjust_single_stock':
+            $pdo->beginTransaction();
+            try {
+                $item_id = $input['item_id'] ?? 0;
+                $location_id = $input['location_id'] ?? 0;
+                $physical_count = $input['physical_count'] ?? null;
+                $notes = trim($input['notes'] ?? 'Quick Adjustment');
+
+                if (empty($item_id) || empty($location_id) || !is_numeric($physical_count)) {
+                    throw new Exception("Item, Location, and a valid Physical Count are required.");
+                }
+
+                $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
+                $onhandStmt->execute([$item_id, $location_id]);
+                $current_quantity = (float)($onhandStmt->fetchColumn() ?: 0);
+
+                $variance = (float)$physical_count - $current_quantity;
+
+                if ($variance == 0) {
+                    echo json_encode(['success' => true, 'message' => 'No adjustment needed as quantity is already correct.']);
+                    $pdo->commit();
+                    exit;
+                }
+
+                $mergeSql = "MERGE " . ONHAND_TABLE . " AS target 
+                            USING (SELECT ? AS item_id, ? AS location_id) AS source 
+                            ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
+                            WHEN MATCHED THEN 
+                                UPDATE SET quantity = ? 
+                            WHEN NOT MATCHED THEN 
+                                INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+                $mergeStmt = $pdo->prepare($mergeSql);
+                $mergeStmt->execute([$item_id, $location_id, $physical_count, $item_id, $location_id, $physical_count]);
+
+                $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes) VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?)";
+                $transStmt = $pdo->prepare($transSql);
+                $transStmt->execute([$item_id, $variance, $location_id, $currentUser['id'], $notes]);
+
+                $pdo->commit();
+                logAction($pdo, $currentUser['username'], 'QUICK_ADJUST', $item_id, "Location: {$location_id}, New Qty: {$physical_count}, Variance: {$variance}");
+                echo json_encode(['success' => true, 'message' => 'Stock adjusted successfully.']);
+
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
+            }
             break;
             
         default:
