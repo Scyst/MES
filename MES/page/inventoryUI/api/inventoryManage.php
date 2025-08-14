@@ -180,8 +180,8 @@ try {
             $params = [];
             $date_params = [];
             $conditions = [];
+            $date_where_clause = '';
             
-            // --- Build Filter Conditions ---
             if (!empty($_GET['part_no'])) { 
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; 
                 $params[] = '%' . $_GET['part_no'] . '%'; 
@@ -191,27 +191,27 @@ try {
                 $conditions[] = "l.location_name LIKE ?"; 
                 $params[] = '%' . $_GET['location'] . '%'; 
             }
-            // Date conditions need to be applied to both parts of the UNION
-            if (!empty($_GET['startDate'])) { 
-                $date_params[] = $_GET['startDate']; 
-            }
-            if (!empty($_GET['endDate'])) { 
-                $date_params[] = $_GET['endDate']; 
+            
+            if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
+                $date_where_clause = "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)";
+                $date_params[] = $_GET['startDate'];
+                $date_params[] = $_GET['endDate'];
             }
 
-            // --- CORRECTED SQL QUERY LOGIC ---
-            // This query uses UNION ALL to treat a single TRANSFER record as two separate events (an OUT and an IN)
             $baseQuery = "
                 -- 1. Get all OUT transactions (Consumption, Production, and the FROM side of a Transfer)
                 SELECT 
                     t.parameter_id,
-                    ISNULL(t.from_location_id, t.to_location_id) AS location_id, -- For production, 'to_location' is where it's 'used'
+                    ISNULL(t.from_location_id, t.to_location_id) AS location_id,
                     0 AS total_in,
                     ABS(t.quantity) AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
-                WHERE (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL)
-                   OR (t.transaction_type LIKE 'PRODUCTION_%')
-                ".(!empty($date_params) ? "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)" : "")."
+                WHERE ( -- *** FIX: Added parentheses to group OR conditions ***
+                    (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL)
+                    OR 
+                    (t.transaction_type LIKE 'PRODUCTION_%')
+                )
+                {$date_where_clause}
 
                 UNION ALL
 
@@ -223,10 +223,9 @@ try {
                     0 AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
                 WHERE t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL
-                ".(!empty($date_params) ? "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)" : "")."
+                {$date_where_clause}
             ";
             
-            // The final query aggregates the results from the UNION
             $finalQuery = "
                 SELECT
                     agg.location_id,
@@ -243,7 +242,6 @@ try {
                 GROUP BY agg.location_id, l.location_name, i.item_id, i.sap_no, i.part_no, i.part_description
             ";
 
-            // Combine date params for both parts of the UNION
             $full_params = array_merge($date_params, $date_params, $params);
             
             $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
@@ -260,7 +258,6 @@ try {
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
-            // Add pagination params to the full parameter list
             $final_execution_params = array_merge($full_params, [$startRow, $startRow + $limit]);
             $dataStmt->execute($final_execution_params);
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);

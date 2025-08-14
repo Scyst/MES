@@ -34,8 +34,9 @@ function saveFiltersToLocalStorage() {
     localStorage.setItem('inventoryUIFilters', JSON.stringify(filters));
 }
 
-function loadFiltersFromLocalStorage() {
+function initializeFilters() {
     const savedFilters = localStorage.getItem('inventoryUIFilters');
+
     if (savedFilters) {
         const filters = JSON.parse(savedFilters);
         document.getElementById('filterPartNo').value = filters.part_no || '';
@@ -43,13 +44,17 @@ function loadFiltersFromLocalStorage() {
         document.getElementById('filterLine').value = filters.line || '';
         document.getElementById('filterModel').value = filters.model || '';
         document.getElementById('filterCountType').value = filters.count_type || '';
-        
-        if (filters.startDate) {
-            document.getElementById('filterStartDate').value = filters.startDate;
-        }
-        if (filters.endDate) {
-            document.getElementById('filterEndDate').value = filters.endDate;
-        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        document.getElementById('filterStartDate').value = filters.startDate || dateStr;
+        document.getElementById('filterEndDate').value = filters.endDate || dateStr;
+
+    } else {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        document.getElementById("filterStartDate").value = dateStr;
+        document.getElementById("filterEndDate").value = dateStr;
     }
 }
 
@@ -114,6 +119,62 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
     }
 }
 
+function updateFilterVisibility(activeTabId) {
+    // แสดงทุกฟิลเตอร์เป็นค่าเริ่มต้น
+    document.getElementById('filterPartNo').style.display = 'block';
+    document.getElementById('filterLotNo').style.display = 'block';
+    document.getElementById('filterLine').style.display = 'block';
+    document.getElementById('filterModel').style.display = 'block';
+    document.getElementById('filterCountType').style.display = 'block';
+    document.getElementById('filterStartDate').style.display = 'block';
+    document.getElementById('filterEndDate').style.display = 'block';
+    document.querySelector('#main-filters span').style.display = 'inline';
+
+    // ถ้า Tab ที่เลือกคือ Stock/Inventory
+    if (activeTabId === 'stock-count-tab') {
+        document.getElementById('filterPartNo').placeholder = 'Search SAP, Part No, Description';
+        // ซ่อนฟิลเตอร์ที่ไม่เกี่ยวข้อง
+        document.getElementById('filterLotNo').style.display = 'none';
+        document.getElementById('filterLine').style.display = 'none';
+        document.getElementById('filterModel').style.display = 'none';
+        document.getElementById('filterCountType').style.display = 'none';
+        document.getElementById('filterStartDate').style.display = 'none';
+        document.getElementById('filterEndDate').style.display = 'none';
+        document.querySelector('#main-filters span').style.display = 'none'; // ซ่อนขีด "-"
+    } else {
+        document.getElementById('filterPartNo').placeholder = 'Part No.';
+    }
+}
+
+function updateControls(activeTabId) {
+    const buttonGroup = document.getElementById('dynamic-button-group');
+    const summaryContainer = document.getElementById('dynamic-summary-container');
+    if (!buttonGroup || !summaryContainer) return;
+
+    buttonGroup.innerHTML = '';
+    summaryContainer.innerHTML = '';
+
+    switch (activeTabId) {
+        case 'production-history-tab':
+            buttonGroup.innerHTML = `
+                <button class="btn btn-info" onclick="openSummaryModal(this)">Summary</button>
+                <button class="btn btn-primary" onclick="exportToExcel()">Export</button>
+                ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
+            `;
+            summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
+            break;
+        case 'entry-history-tab':
+            buttonGroup.innerHTML = `
+                <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
+                <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
+                ${canAdd ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
+            `;
+            break;
+        case 'wip-report-tab': // Although this tab might not be in use, we keep the logic
+            buttonGroup.innerHTML = `<button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>`;
+            break;
+    }
+}
 
 // =================================================================
 // SECTION: NEW INVENTORY SYSTEM FUNCTIONS
@@ -879,7 +940,7 @@ async function editTransaction(transactionId, type) {
 document.addEventListener('DOMContentLoaded', () => {
     let debounceTimer;
 
-    loadFiltersFromLocalStorage();
+    initializeFilters(); 
     populateModalDatalists();
     setupEntryAutocomplete();
     setupProductionAutocomplete();
@@ -906,11 +967,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
 
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', handleFilterChange);
+        tab.addEventListener('shown.bs.tab', (event) => {
+            const activeTabId = event.target.id;
+            handleFilterChange(); // โหลดข้อมูลใหม่
+            updateControls(activeTabId); // สร้างปุ่มใหม่
+            updateFilterVisibility(activeTabId); // แสดง/ซ่อนฟิลเตอร์
+        });
     });
 
     const activeTab = document.querySelector('#mainTab .nav-link.active');
     if (activeTab) {
-        handleFilterChange();
+        const activeTabId = activeTab.id;
+        handleFilterChange(); // โหลดข้อมูลเริ่มต้น
+        updateControls(activeTabId); // สร้างปุ่มเริ่มต้น
+        updateFilterVisibility(activeTabId); // แสดง/ซ่อนฟิลเตอร์เริ่มต้น
     }
 });
