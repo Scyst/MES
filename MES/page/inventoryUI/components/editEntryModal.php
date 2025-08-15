@@ -21,7 +21,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="edit_entry_log_time" class="form-label">เวลา</label>
-                            <input type="time" class="form-control" id="edit_entry_log_time" name="log_time" step="1" required>
+                            <input type="text" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]" placeholder="HH:MM:SS" class="form-control" id="edit_entry_log_time" name="log_time" required>
                         </div>
                     </div>
 
