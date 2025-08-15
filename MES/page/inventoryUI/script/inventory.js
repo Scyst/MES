@@ -745,27 +745,45 @@ function openAddPartModal() {
 }
 
 function openAddEntryModal() {
+    // 1. รีเซ็ตฟอร์มและค่า state ต่างๆ
     const form = document.getElementById('addEntryForm');
     if(form) form.reset();
     
     selectedInItem = null;
     document.getElementById('entry_item_id').value = '';
-    const searchInput = document.getElementById('entry_item_search');
-    searchInput.value = '';
+    document.getElementById('entry_item_search').value = '';
 
+    const stockDisplay = document.getElementById('entry_available_stock');
+    if(stockDisplay) stockDisplay.textContent = '--';
+
+    // 2. ตั้งค่าวันที่และเวลาปัจจุบันเป็นค่าเริ่มต้นเสมอ
+    const now = new Date();
+    document.getElementById('entry_log_date').value = now.toISOString().split('T')[0];
+    document.getElementById('entry_log_time').value = now.toTimeString().substring(0, 8);
+
+    // 3. โหลดข้อมูลล่าสุดจาก localStorage (ถ้ามี)
     const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry'));
     if (lastData) {
-        const locationSelect = document.getElementById('entry_location_id');
-        if(locationSelect) locationSelect.value = lastData.location_id || '';
-        
-        searchInput.value = lastData.item_display_text || '';
+        // 3.1 ตั้งค่า Item ที่เคยเลือกไว้
+        document.getElementById('entry_item_search').value = lastData.item_display_text || '';
         document.getElementById('entry_item_id').value = lastData.item_id || '';
-        
         if (lastData.item_id) {
             selectedInItem = allItems.find(item => item.item_id == lastData.item_id) || null;
         }
+        
+        // 3.2 ตั้งค่า Dropdown Location ทั้งสองช่อง
+        if (lastData.from_location_id) {
+            document.getElementById('entry_from_location_id').value = lastData.from_location_id;
+        }
+        if (lastData.to_location_id) {
+            document.getElementById('entry_to_location_id').value = lastData.to_location_id;
+        }
     }
     
+    // 4. อัปเดตการแสดงผล Available Stock หลังจากตั้งค่าเริ่มต้นทั้งหมดแล้ว
+    updateAvailableStockDisplay();
+    
+    // 5. แสดง Modal
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
 }
 
@@ -1085,10 +1103,18 @@ async function editTransaction(transactionId, type) {
 
                 if (data.transaction_timestamp) {
                     const dateObj = new Date(data.transaction_timestamp);
-                    dateObj.setHours(dateObj.getHours() + 7);
 
-                    const formattedDateTime = dateObj.toISOString().slice(0, 16);
-                    document.getElementById('edit_entry_timestamp').value = formattedDateTime;
+                    // แยกวันที่เป็น YYYY-MM-DD
+                    const year = dateObj.getFullYear();
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    document.getElementById('edit_entry_log_date').value = `${year}-${month}-${day}`;
+
+                    // แยกเวลาเป็น HH:MM:SS
+                    const hours = String(dateObj.getHours()).padStart(2, '0');
+                    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                    const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+                    document.getElementById('edit_entry_log_time').value = `${hours}:${minutes}:${seconds}`;
                 }
 
             } else if (type === 'production') {

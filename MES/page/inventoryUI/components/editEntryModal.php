@@ -14,9 +14,15 @@
                         <input type="text" class="form-control form-control-readonly" id="edit_entry_item_display" readonly>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="edit_entry_timestamp" class="form-label">วันที่และเวลา</label>
-                        <input type="datetime-local" class="form-control" id="edit_entry_timestamp" name="transaction_timestamp" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_entry_log_date" class="form-label">วันที่</label>
+                            <input type="date" class="form-control" id="edit_entry_log_date" name="log_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_entry_log_time" class="form-label">เวลา</label>
+                            <input type="time" class="form-control" id="edit_entry_log_time" name="log_time" step="1" required>
+                        </div>
                     </div>
 
                     <div class="row">

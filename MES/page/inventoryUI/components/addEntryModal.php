@@ -7,7 +7,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    
+
                     <div class="mb-3 position-relative">
                         <label for="entry_item_search" class="form-label">ค้นหาชิ้นส่วน (SAP No. / Part No.)</label>
                         <input type="text" class="form-control" id="entry_item_search" name="item_search" autocomplete="off" required>
@@ -16,9 +16,19 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label for="entry_log_date" class="form-label">วันที่</label>
+                            <input type="date" class="form-control" id="entry_log_date" name="log_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="entry_log_time" class="form-label">เวลา</label>
+                            <input type="time" class="form-control" id="entry_log_time" name="log_time" step="1" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="entry_from_location_id" class="form-label">จาก (From)</label>
-                            <select class="form-select" id="entry_from_location_id" name="from_location_id">
-                                </select>
+                            <select class="form-select" id="entry_from_location_id" name="from_location_id"></select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="entry_to_location_id" class="form-label">ไปยัง (To)</label>
@@ -27,16 +37,16 @@
                     </div>
 
                     <div class="row align-items-end">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-8 mb-3">
                             <label for="entry_quantity_in" class="form-label">จำนวน</label>
                             <input type="number" class="form-control" id="entry_quantity_in" name="quantity" min="1" step="1" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">สต็อกคงเหลือ (ต้นทาง)</label>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">สต็อกคงเหลือ</label>
                             <div id="entry_available_stock" class="form-control-plaintext ps-2 fw-bold text-white">--</div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="entry_lot_no" class="form-label">ล็อต / เลขอ้างอิง</label>
                         <input type="text" class="form-control" id="entry_lot_no" name="lot_no">
@@ -46,7 +56,6 @@
                         <label for="entry_notes" class="form-label">หมายเหตุ (Optional)</label>
                         <textarea class="form-control" id="entry_notes" name="notes" rows="2"></textarea>
                     </div>
-
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>

@@ -40,6 +40,9 @@ try {
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
+            $log_date = $input['log_date'] ?? date('Y-m-d');
+            $log_time = $input['log_time'] ?? date('H:i:s');
+            $timestamp = $log_date . ' ' . $log_time;
 
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
                 throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
@@ -73,8 +76,7 @@ try {
                     // 3. บันทึกประวัติเป็น TRANSFER (โค้ดส่วนนี้เหมือนเดิม)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no]);
-
+                    $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
                     $message = 'Stock transferred successfully.';
 
                 } else {
@@ -84,7 +86,7 @@ try {
 
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no]);
+                    $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
 
                     $message = 'Stock receipt logged successfully.';
                 }
@@ -587,7 +589,9 @@ try {
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_timestamp = $input['transaction_timestamp'] ?? $old_transaction['transaction_timestamp']; // <-- รับค่า timestamp ใหม่
+                $new_log_date = $input['log_date'] ?? date('Y-m-d');
+                $new_log_time = $input['log_time'] ?? date('H:i:s');
+                $new_timestamp = $new_log_date . ' ' . $new_log_time;
 
                 // 2.3 อัปเดต Transaction record (เพิ่ม transaction_timestamp)
                 $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_timestamp=? WHERE transaction_id=?";
