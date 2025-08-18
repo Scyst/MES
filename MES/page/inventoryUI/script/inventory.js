@@ -179,6 +179,23 @@ function updateControls(activeTabId) {
     }
 }
 
+function applyTimeMask(event) {
+    const input = event.target;
+    // 1. เอาทุกอย่างที่ไม่ใช่ตัวเลขออกไป
+    let value = input.value.replace(/\D/g, ''); 
+
+    // 2. ถ้ามีความยาวเกิน 2 ตัวอักษร ให้ใส่ : หลังตัวที่ 2
+    if (value.length > 2) {
+        value = value.substring(0, 2) + ':' + value.substring(2);
+    }
+    // 3. ถ้ามีความยาวเกิน 5 ตัวอักษร ให้ใส่ : หลังตัวที่ 5 (นับรวม :)
+    if (value.length > 5) {
+        value = value.substring(0, 5) + ':' + value.substring(5);
+    }
+    // 4. จำกัดความยาวสูงสุดไม่ให้เกิน 8 ตัวอักษร (HH:MM:SS)
+    input.value = value.substring(0, 8);
+}
+
 // =================================================================
 // SECTION: NEW INVENTORY SYSTEM FUNCTIONS
 // =================================================================
@@ -1200,4 +1217,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateControls(activeTabId); // สร้างปุ่มเริ่มต้น
         updateFilterVisibility(activeTabId); // แสดง/ซ่อนฟิลเตอร์เริ่มต้น
     }
+
+    const timeInputs = document.querySelectorAll('input[name="start_time"], input[name="end_time"], input[name="log_time"]');
+    timeInputs.forEach(input => {
+        input.addEventListener('input', applyTimeMask);
+    });
 });
