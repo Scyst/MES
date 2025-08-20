@@ -1,6 +1,6 @@
 <div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="transferForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="transferModalLabel">New Stock Transfer</h5>

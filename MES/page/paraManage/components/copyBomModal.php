@@ -1,6 +1,6 @@
 <div class="modal fade" id="copyBomModal" tabindex="-1" aria-labelledby="copyBomModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="copyBomForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="copyBomModalLabel">Copy Bill of Materials</h5>

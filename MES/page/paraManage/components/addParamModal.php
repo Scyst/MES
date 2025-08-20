@@ -1,6 +1,6 @@
 <div class="modal fade" id="addParamModal" tabindex="-1" aria-labelledby="addParamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="addParamForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addParamModalLabel">Add New Production Parameter</h5>

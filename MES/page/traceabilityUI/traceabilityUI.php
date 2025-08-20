@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
 
@@ -56,7 +56,7 @@
             <div class="tab-content pt-3" id="traceTabContent">
                 <div class="tab-pane fade show active" id="prod-history-pane" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover table-sm">
+                        <table class="table  table-striped table-hover table-sm">
                             <thead>
                                 <tr>
                                     <th>Date</th>
@@ -72,7 +72,7 @@
                 </div>
                 <div class="tab-pane fade" id="bom-pane" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover">
+                        <table class="table  table-striped table-hover">
                             <thead>
                                 <tr>
                                     <th>Component Part Number</th>
@@ -85,7 +85,7 @@
                 </div>
                 <div class="tab-pane fade" id="wip-history-pane" role="tabpanel">
                      <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover table-sm">
+                        <table class="table  table-striped table-hover table-sm">
                             <thead>
                                 <tr>
                                     <th>Entry Time</th>
@@ -100,7 +100,7 @@
                 </div>
                 <div class="tab-pane fade" id="downtime-pane" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover">
+                        <table class="table  table-striped table-hover">
                             <thead>
                                 <tr>
                                     <th>Stop Begin</th>
@@ -129,6 +129,7 @@
         include('../components/autoLogoutUI.php');
     ?>
     
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>

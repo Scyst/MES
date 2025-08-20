@@ -1,6 +1,6 @@
 <div class="modal fade" id="editProductionModal" tabindex="-1" aria-labelledby="editProductionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="editProductionForm" data-action="editProduction">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editProductionModalLabel">แก้ไขรายการของออก (OUT)</h5>

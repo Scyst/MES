@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
 
@@ -71,7 +71,7 @@
         
 
         <div class="table-responsive">
-            <table id="stopTable" class="table table-dark table-striped table-hover">
+            <table id="stopTable" class="table  table-striped table-hover">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -117,6 +117,7 @@
         });
     </script>
 
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>

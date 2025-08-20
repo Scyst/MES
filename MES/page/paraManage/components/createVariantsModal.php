@@ -1,6 +1,6 @@
 <div class="modal fade" id="createVariantsModal" tabindex="-1" aria-labelledby="createVariantsModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="createVariantsForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="createVariantsModalLabel">Create Variants</h5>

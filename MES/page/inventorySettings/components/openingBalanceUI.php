@@ -19,7 +19,7 @@
 </div>
 
 <div class="table-responsive" style="max-height: 65vh;">
-    <table class="table table-dark table-striped table-hover table-sm">
+    <table class="table  table-striped table-hover table-sm">
         <thead class="sticky-top">
             <tr>
                 <th style="width: 15%;">SAP No.</th>

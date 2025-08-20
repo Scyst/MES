@@ -1,6 +1,6 @@
 <div class="modal" id="addUserModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <div class="modal-header">
                 <h5 class="modal-title">Add New User</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

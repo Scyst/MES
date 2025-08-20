@@ -1,6 +1,6 @@
 <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="locationForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="locationModalLabel">Add New Location</h5>

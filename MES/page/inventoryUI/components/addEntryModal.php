@@ -1,6 +1,6 @@
 <div class="modal fade" id="addEntryModal" tabindex="-1" aria-labelledby="addEntryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="addEntryForm" data-action="addEntry">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addEntryModalLabel">บันทึกของเข้า (IN)</h5>

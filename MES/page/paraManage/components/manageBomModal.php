@@ -1,6 +1,6 @@
 <div class="modal fade" id="manageBomModal" tabindex="-1" aria-labelledby="manageBomModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <div class="modal-header">
                 <h5 class="modal-title" id="bomModalTitle">Manage Bill of Materials</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -8,7 +8,7 @@
             <div class="modal-body">
                 <h6>Components</h6>
                 <div class="table-responsive mb-3" style="max-height: 300px;">
-                    <table class="table table-dark table-striped table-sm">
+                    <table class="table  table-striped table-sm">
                         <thead>
                             <tr>
                                 <th style="width: 30%;">Component Part No.</th>

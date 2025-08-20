@@ -18,7 +18,7 @@ session_start();
     
 </head>
 
-<body class="bg-dark text-white">
+<body class="">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
 
@@ -102,6 +102,7 @@ session_start();
     </div> 
     <div id="toast"></div>
 
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>

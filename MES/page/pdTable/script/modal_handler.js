@@ -258,7 +258,7 @@ function openSummaryModal(triggerEl) {
     }
 
     const table = document.createElement('table');
-    table.className = 'table table-dark table-striped table-hover';
+    table.className = 'table  table-striped table-hover';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
     
@@ -409,7 +409,7 @@ function openHistorySummaryModal() {
     }
 
     const table = document.createElement('table');
-    table.className = 'table table-dark table-striped table-hover';
+    table.className = 'table  table-striped table-hover';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
     

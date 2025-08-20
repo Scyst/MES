@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
     
@@ -44,7 +44,7 @@
 
         <!-- Report Table -->
         <div class="table-responsive">
-            <table class="table table-dark table-striped table-hover">
+            <table class="table  table-striped table-hover">
                 <thead>
                     <tr>
                         <th scope="col">Operator Name</th>
@@ -67,11 +67,11 @@
     <?php include('../components/autoLogoutUI.php'); ?>
     <?php include('components/performanceDetailModal.php'); ?>
 
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
-    <!-- Link to the new JavaScript file -->
     <script src="script/performance.js?v=<?php echo filemtime('script/performance.js'); ?>"></script>
 </body>
 </html>

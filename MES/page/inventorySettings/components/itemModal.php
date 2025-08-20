@@ -1,6 +1,6 @@
 <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="itemForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="itemModalLabel">Add New Item</h5>

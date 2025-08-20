@@ -17,7 +17,7 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-dark table-striped table-hover">
+    <table class="table  table-striped table-hover">
         <thead>
             <tr>
                 <tr>

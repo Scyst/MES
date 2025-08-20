@@ -167,7 +167,7 @@ function renderLogTable(logs) {
     const table = document.getElementById('log-table');
     if (!table) return;
     table.innerHTML = `
-        <thead class="table-dark">
+        <thead class="">
             <tr>
                 <th>Timestamp</th>
                 <th>User</th>

@@ -1,6 +1,6 @@
 <div class="modal fade" id="inactivityModal" tabindex="-1" aria-labelledby="inactivityModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <div class="modal-header">
                 <h5 class="modal-title" id="inactivityModalLabel">Session Timeout Warning</h5>
             </div>

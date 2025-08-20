@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
     
@@ -95,7 +95,7 @@
                 <input type="file" id="importFile" accept=".csv, .xlsx, .xls" class="d-none">
 
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover">
+                    <table class="table  table-striped table-hover">
                         <thead>
                             <tr>
                                 <th style="width: 50px;" class="text-center">
@@ -132,7 +132,7 @@
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover">
+                        <table class="table  table-striped table-hover">
                             <thead>
                                 <tr>
                                     <th>Line</th><th>Shift Name</th><th>Start Time</th><th>End Time</th>
@@ -151,7 +151,7 @@
                         <p class="mb-0">The following parts have been produced but are missing standard time data (Planned Output). Please add them in the 'Standard Parameters' tab to ensure accurate OEE Performance calculation.</p>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-dark table-striped">
+                        <table class="table  table-striped">
                             <thead>
                                 <tr>
                                     <th>Line</th>
@@ -195,7 +195,7 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover">
+                    <table class="table  table-striped table-hover">
                         <thead>
                             <tr>
                                 <th style="width: 50px;" class="text-center">
@@ -240,6 +240,7 @@
         const currentUser = <?php echo json_encode($currentUser); ?>;
     </script>
     
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>

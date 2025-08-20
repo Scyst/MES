@@ -1,6 +1,6 @@
 <div class="modal fade" id="editParamModal" tabindex="-1" aria-labelledby="editParamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="editParamForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editParamModalLabel">Edit Production Parameter</h5>

@@ -1,6 +1,6 @@
 <div class="modal fade" id="wipDetailModal" tabindex="-1" aria-labelledby="wipDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <div class="modal-header">
                 <h5 class="modal-title" id="wipDetailModalLabel">Drill-Down Detail</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -11,7 +11,7 @@
                     <div class="col-lg-6 d-flex flex-column">
                         <h5 class="text-success text-center">Entry History (IN)</h5>
                         <div class="table-responsive flex-grow-1" style="max-height: 60vh;">
-                            <table class="table table-dark table-striped table-hover table-sm">
+                            <table class="table  table-striped table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th style="width: 20%;">Date & Time</th>
@@ -28,7 +28,7 @@
                     <div class="col-lg-6 d-flex flex-column">
                         <h5 class="text-warning text-center">Production History (OUT)</h5>
                         <div class="table-responsive flex-grow-1" style="max-height: 60vh;">
-                            <table class="table table-dark table-striped table-hover table-sm">
+                            <table class="table  table-striped table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th style="width: 20%;">Date & Time</th>

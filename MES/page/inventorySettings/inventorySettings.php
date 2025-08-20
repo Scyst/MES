@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
     
@@ -71,6 +71,7 @@
         const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
     </script>
     
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>

@@ -32,7 +32,7 @@
     </style>
 </head>
 
-<body class="bg-dark text-white p-4">
+<body class=" p-4">
     <?php include('../components/spinner.php'); ?>
     <?php include('../components/nav_dropdown.php'); ?>
 
@@ -104,7 +104,7 @@
         <div class="tab-content" id="mainTabContent">
             <div class="tab-pane fade show active" id="production-variance-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped">
+                    <table class="table  table-striped">
                         <thead>
                             <tr>
                                 <th>Location</th>
@@ -124,7 +124,7 @@
 
             <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
                  <div class="table-responsive">
-                    <table class="table table-dark table-striped">
+                    <table class="table  table-striped">
                         <thead>
                             <tr>
                                 <th>SAP No.</th>
@@ -144,7 +144,7 @@
 
             <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover table-striped">
+                    <table class="table  table-hover table-striped">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -166,7 +166,7 @@
 
             <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table id="partTable" class="table table-dark table-striped table-hover">
+                    <table id="partTable" class="table  table-striped table-hover">
                         <thead>
                             <tr>
                                 <th style="width: 10%;">Date</th>
@@ -187,7 +187,7 @@
 
             <div class="tab-pane fade" id="wip-onhand-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped">
+                    <table class="table  table-striped">
                         <thead>
                             <tr>
                                 <th>Location</th>
@@ -205,7 +205,7 @@
 
             <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
                 <div class="table-responsive mt-3">
-                    <table class="table table-dark table-striped table-hover">
+                    <table class="table  table-striped table-hover">
                         <thead>
                             <tr>
                                 <th style="width: 15%;">SAP No.</th>
@@ -223,7 +223,7 @@
 
             <div class="tab-pane fade" id="transaction-log-pane" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover">
+                    <table class="table  table-striped table-hover">
                         <thead>
                             <tr>
                                 <th>Date & Time</th>
@@ -268,11 +268,11 @@
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
     
+    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
     <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
     <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
     <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
-    
     <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
 </body>

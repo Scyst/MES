@@ -86,6 +86,14 @@
     </li>
     <?php endif; ?>
 
+    <li><hr class="dropdown-divider" style="padding: 0;"></li>
+    <li>
+        <a class="dropdown-item-icon" href="#" id="theme-switcher-btn" title="Toggle Theme">
+            <img src="../../icons/theme.png" alt="Toggle Theme">
+            <span>Toggle Theme</span>
+        </a>
+    </li>
+
     <?php if (isset($_SESSION['user'])): ?>
         <li>
             <a class="dropdown-item-icon" href="../../auth/logout.php" onclick="manualLogout(event)" title="Logout">
@@ -107,15 +115,16 @@
     // ตรวจสอบก่อนว่าฟังก์ชันนี้ยังไม่มีอยู่ เพื่อป้องกันการประกาศซ้ำ
     if (typeof manualLogout !== 'function') {
         function manualLogout(event) {
-            // 1. ป้องกันไม่ให้ลิงก์ทำงานทันที
-            event.preventDefault(); 
-            
-            // 2. ล้างค่า Filter ออกจาก Local Storage
-            console.log('Clearing pdTableFilters from manual logout...');
-            localStorage.removeItem('pdTableFilters');
+          // 1. ป้องกันไม่ให้ลิงก์ทำงานทันที
+          event.preventDefault(); 
 
-            // 3. ส่งผู้ใช้ไปที่หน้า logout.php
-            window.location.href = event.currentTarget.href;
-        }
+          // 2. ล้างค่า Filter ออกจาก Local Storage
+          console.log('Clearing filters from manual logout...');
+          localStorage.removeItem('pdTableFilters');
+          localStorage.removeItem('inventoryUIFilters'); // <-- เพิ่มบรรทัดนี้
+
+          // 3. ส่งผู้ใช้ไปที่หน้า logout.php
+          window.location.href = event.currentTarget.href;
+      }
     }
 </script>

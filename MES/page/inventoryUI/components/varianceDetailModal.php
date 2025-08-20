@@ -1,6 +1,6 @@
 <div class="modal fade" id="varianceDetailModal" tabindex="-1" aria-labelledby="varianceDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <div class="modal-header">
                 <h5 class="modal-title" id="varianceDetailModalLabel">Variance Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -10,7 +10,7 @@
                     <div class="col-md-6">
                         <h6>IN Records (<span id="detailTotalIn">0</span>)</h6>
                         <div class="table-responsive" style="max-height: 40vh;">
-                            <table class="table table-dark table-sm">
+                            <table class="table  table-sm">
                                 <thead>
                                     <tr>
                                         <th>Timestamp</th>
@@ -25,7 +25,7 @@
                     <div class="col-md-6">
                         <h6>OUT Records (<span id="detailTotalOut">0</span>)</h6>
                         <div class="table-responsive" style="max-height: 40vh;">
-                            <table class="table table-dark table-sm">
+                            <table class="table  table-sm">
                                 <thead>
                                     <tr>
                                         <th>Timestamp</th>

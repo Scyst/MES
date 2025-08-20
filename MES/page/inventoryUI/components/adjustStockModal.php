@@ -1,6 +1,6 @@
 <div class="modal fade" id="adjustStockModal" tabindex="-1" aria-labelledby="adjustStockModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content ">
             <form id="adjustStockForm">
                 <div class="modal-header">
                     <h5 class="modal-title" id="adjustStockModalLabel">Quick Stock Adjustment</h5>

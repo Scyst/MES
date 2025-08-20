@@ -9,6 +9,7 @@ let inactivityModal, countdownElement, stayLoggedInBtn;
 function logoutNow() {
     console.log('Auto-logout initiated. Clearing filters...');
     localStorage.removeItem('pdTableFilters');
+    localStorage.removeItem('inventoryUIFilters');
     window.location.href = "../../auth/logout.php?timeout=1";
 }
 
