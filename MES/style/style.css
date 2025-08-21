@@ -1,10 +1,12 @@
-/* style.css (เวอร์ชันแก้ไขและรวมศูนย์ที่สมบูรณ์) */
+/* style.css (Final Optimized Version) */
 html {
     scroll-behavior: smooth;
 }
 
-/* 1. กำหนดตัวแปรสีสำหรับธีมสว่าง (Light Theme) */
-:root {
+/* =================================================================== */
+/* 1. THEME & COLOR VARIABLES (ระบบธีมสี) */
+/* =================================================================== */
+:root { /* Light Theme */
     --bs-body-bg: #f8f9fa;
     --bs-body-color: #212529;
     --bs-secondary-bg: #ffffff;
@@ -12,9 +14,7 @@ html {
     --bs-border-color: #dee2e6;
     --bs-icon-filter: none;
 }
-
-/* 2. กำหนดตัวแปรสีสำหรับธีมมืด (Dark Theme) */
-[data-bs-theme="dark"] {
+[data-bs-theme="dark"] { /* Dark Theme */
     --bs-body-bg: #1a1a1a;
     --bs-body-color: #dee2e6;
     --bs-secondary-bg: #2c3034;
@@ -23,16 +23,114 @@ html {
     --bs-icon-filter: brightness(0) invert(1);
 }
 
-/* 3. Style ทั่วไปที่ใช้ตัวแปรสี */
+/* =================================================================== */
+/* 2. MAIN LAYOUT & GEMINI-STYLE SIDEBAR (โครงสร้างหลักและ Sidebar) */
+/* =================================================================== */
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
 }
 
-ul {
-  margin-bottom: 0.5rem;
+/* ===== SIDEBAR STYLES (FINAL ANIMATION) ===== */
+.page-container {
+    display: flex;
+}
+#main-content {
+    flex-grow: 1;
+    width: 100%;
+    margin-left: 80px;
+    transition: margin-left 0.3s ease-in-out; 
+}
+.sidebar {
+    position: fixed;
+    top: 0; left: 0; height: 100vh;
+    background-color: var(--bs-secondary-bg);
+    border-right: 1px solid var(--bs-border-color);
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease-in-out;
+    overflow-x: hidden;
 }
 
+/* --- Header & Toggle Button --- */
+.sidebar-header {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 28px;
+    flex-shrink: 0;
+}
+#sidebar-toggle-btn {
+    background-color: transparent; border: none; padding: 0px;
+    border-radius: 50%; display: flex;
+    transition: background-color 0.2s;
+}
+#sidebar-toggle-btn:hover { background-color: var(--bs-tertiary-bg); }
+#sidebar-toggle-btn img { width: 24px; height: 24px; filter: var(--bs-icon-filter); }
+
+/* --- Menu Container --- */
+.sidebar .custom-dropdown {
+    background: transparent; border: none; padding: 0;
+    min-width: 100%; overflow-y: auto; flex-grow: 1;
+}
+.sidebar .custom-dropdown li { list-style: none; padding: 0; margin: 0; }
+.sidebar .dropdown-divider { border-top: 1px solid var(--bs-border-color); margin: 8px 16px; }
+
+/* --- Base Style for ALL Menu Items --- */
+.sidebar .dropdown-username,
+.sidebar .dropdown-item-icon {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--bs-body-color);
+    padding-left: 28px !important;
+}
+.sidebar .dropdown-item-icon:hover { 
+    background-color: var(--bs-tertiary-bg); 
+}
+.sidebar .dropdown-username img, 
+.sidebar .dropdown-item-icon img {
+    width: 24px; height: 24px;
+    flex-shrink: 0;
+    filter: var(--bs-icon-filter);
+    margin-right: 24px; /* ใช้ margin แทน gap */
+}
+.sidebar .dropdown-item-icon span, 
+.sidebar .dropdown-username div {
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 0;
+    max-width: 0;
+    transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+/* --- Collapsed State Styles --- */
+.sidebar[data-state="collapsed"] { width: 80px; }
+
+/* --- Expanded State Styles --- */
+.sidebar[data-state="expanded"] { width: 280px; }
+.sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
+
+/* --- Text Visibility for Expanded/Hover States --- */
+.sidebar[data-state="expanded"] .dropdown-item-icon span,
+.sidebar[data-state="expanded"] .dropdown-username div,
+.sidebar[data-state="collapsed"]:hover .dropdown-item-icon span,
+.sidebar[data-state="collapsed"]:hover .dropdown-username div {
+    opacity: 1;
+    max-width: 200px;
+    transition-delay: 0.1s;
+}
+
+.sidebar[data-state="collapsed"]:hover {
+    width: 280px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+/* =================================================================== */
+/* 3. SHARED COMPONENTS (ส่วนประกอบที่ใช้ร่วมกัน) */
+/* =================================================================== */
 .dashboard-header-sticky, .sticky-bar, .sticky-bottom, .log-pagination {
     position: sticky;
     background-color: var(--bs-secondary-bg);
@@ -41,89 +139,6 @@ ul {
 }
 .dashboard-header-sticky, .sticky-bar { top: 0; padding: 1rem 2rem; }
 .sticky-bottom, .log-pagination { bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem;}
-
-.dashboard-container {
-    height: calc(100vh - 150px);
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-}
-
-.dashboard-section {
-    scroll-snap-align: start;
-    padding: 1rem 2rem 0rem 2rem;
-}
-
-.chart-card {
-    background-color: var(--bs-secondary-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-[data-bs-theme="dark"] .chart-card { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-
-
-.chart-card h4 { margin-bottom: 0rem; }
-.chart-card .chart-wrapper { position: relative; flex-grow: 1; }
-.chart-card .chart-info { font-size: 0.9rem; }
-
-.pie-chart-card {
-    flex-direction: row; justify-content: space-between;
-    gap: 1rem; min-height: 250px;
-}
-.pie-chart-card .pie-chart-details { flex-grow: 1; max-width: 160px; }
-.pie-chart-card .chart-wrapper {
-    flex-shrink: 0; width: 160px; max-width: 200px;
-    height: 100%; margin: 0; display: flex;
-    align-items: center; justify-content: center;
-}
-.pie-chart-card .chart-info { font-size: 1.2rem; font-weight: 300; margin-top: 0.75rem; line-height: 2rem; }
-
-.line-chart-card .chart-wrapper { height: 400px; }
-.bar-chart-card .chart-wrapper { height: 300px; }
-
-.dropdown-menu-wrapper { position: fixed; top: 5px; right: 0px; z-index: 9999; }
-
-.dropdown-toggle-btn {
-    background: transparent;
-    border: 1px solid var(--bs-border-color);
-    padding: 4px; border-radius:8px;
-    background-color: var(--bs-secondary-bg);
-}
-.dropdown-toggle-btn:hover { background-color: var(--bs-tertiary-bg); }
-.dropdown-toggle-btn img { width: 32px; height: 32px; transition: transform 0.2s; }
-
-.custom-dropdown {
-    background-color: var(--bs-secondary-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: 10px; padding: 8px; min-width: 250px;
-}
-
-.dropdown-username {
-    display: flex; align-items: center; gap: 10px;
-    color: var(--bs-body-color);
-    font-size: 14px; border-bottom: 1px solid var(--bs-border-color);
-    margin-bottom: 4px; padding: 8px 12px;
-}
-
-.dropdown-item-icon {
-    display: flex; align-items: center; gap: 10px;
-    color: var(--bs-body-color);
-    text-decoration: none; padding: 8px 12px;
-    border-radius: 8px; transition: background-color 0.2s;
-}
-.dropdown-item-icon:hover { background-color: var(--bs-tertiary-bg); }
-.dropdown-username img, .dropdown-item-icon img {
-    width: 24px; height: 24px;
-    filter: var(--bs-icon-filter);
-}
-.custom-dropdown li { list-style: none; padding: 4px 0; margin: 0; }
-.dropdown-divider { border-top: 1px solid var(--bs-border-color); }
-
-.filter-controls-wrapper { display: flex; gap: 0.5rem; align-items: center; }
 
 #toast {
     position: fixed; top: 20px; right: 20px;
@@ -135,14 +150,10 @@ ul {
     z-index: 9999; transform: translateY(20px);
     border: 1px solid var(--bs-border-color);
 }
-
-.table th, .table td { vertical-align: middle; }
-
 .form-control-readonly {
     background-color: var(--bs-tertiary-bg);
     opacity: 1; cursor: not-allowed;
 }
-
 .autocomplete-results {
     position: absolute; width: 100%; max-height: 200px;
     overflow-y: auto; z-index: 1060;
@@ -155,81 +166,33 @@ ul {
 .autocomplete-item small { color: #6c757d; }
 [data-bs-theme="dark"] .autocomplete-item small { color: #adb5bd; }
 
-.stock-input.is-changed {
-    background-color: #193a52; /* This color is for dark theme, might need adjustment for light */
-    border-color: #0d6efd;
-}
-:root .stock-input.is-changed { /* Light theme version */
-    background-color: #cfe2ff;
-    border-color: #0d6efd;
-}
 
-/* ===== Sidebar Styles ===== */
-/* ===== New Gemini-Style Sidebar ===== */
-.page-container {
-    display: flex;
-    transition: padding-left 0.3s ease-in-out;
-}
+/* =================================================================== */
+/* 4. PAGE-SPECIFIC STYLES (สไตล์เฉพาะหน้า) */
+/* =================================================================== */
 
-#main-content {
-    flex-grow: 1;
-    width: 100%;
-    transition: margin-left 0.3s ease-in-out;
-}
-
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
+/* --- OEE Dashboard --- */
+.dashboard-container { height: calc(100vh - 150px); overflow-y: scroll; scroll-snap-type: y mandatory; }
+.dashboard-section { scroll-snap-align: start; padding: 1rem 2rem 0rem 2rem; }
+.chart-card {
     background-color: var(--bs-secondary-bg);
-    border-right: 1px solid var(--bs-border-color);
-    z-index: 1045;
-    display: flex;
-    flex-direction: column;
-    transition: width 0.3s ease-in-out;
-    overflow-x: hidden; /* ซ่อนข้อความตอนหุบ */
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem; padding: 1.5rem; height: 100%;
+    display: flex; flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
+[data-bs-theme="dark"] .chart-card { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.chart-card h4 { margin-bottom: 0rem; }
+.chart-card .chart-wrapper { position: relative; flex-grow: 1; }
+.pie-chart-card { flex-direction: row; justify-content: space-between; gap: 1rem; min-height: 250px; }
+.pie-chart-card .pie-chart-details { flex-grow: 1; max-width: 160px; }
+.pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; }
+.pie-chart-card .chart-info { font-size: 1.2rem; font-weight: 300; margin-top: 0.75rem; line-height: 2rem; }
+.line-chart-card .chart-wrapper { height: 400px; }
+.bar-chart-card .chart-wrapper { height: 300px; }
 
-/* --- สถานะหุบ (Collapsed State) --- */
-.sidebar[data-state="collapsed"] {
-    width: 80px;
-}
-.sidebar[data-state="collapsed"] .dropdown-item-icon span,
-.sidebar[data-state="collapsed"] .dropdown-username div {
-    opacity: 0;
-    visibility: hidden;
-}
-
-/* --- สถานะขยาย (Expanded State) --- */
-.sidebar[data-state="expanded"] {
-    width: 280px;
-}
-
-/* ขยายชั่วคราวเมื่อ Hover (เฉพาะตอนที่หุบอยู่) */
-.sidebar[data-state="collapsed"]:hover {
-    width: 280px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.2);
-}
-.sidebar[data-state="collapsed"]:hover .dropdown-item-icon span,
-.sidebar[data-state="collapsed"]:hover .dropdown-username div {
-    opacity: 1;
-    visibility: visible;
-    transition-delay: 0.15s; /* หน่วงเวลาให้ข้อความแสดงตอนขยายสุด */
-}
-
-.sidebar-header {
-    padding: 4px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.sidebar .custom-dropdown {
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    min-width: 100%;
-}
-.sidebar .dropdown-item-icon span, .sidebar .dropdown-username div {
-    white-space: nowrap; /* ป้องกันข้อความตกบรรทัด */
-}
+/* --- Inventory UI --- */
+.filter-controls-wrapper { display: flex; gap: 0.5rem; align-items: center; }
+.table th, .table td { vertical-align: middle; }
+.stock-input.is-changed { background-color: #193a52; border-color: #0d6efd; }
+:root .stock-input.is-changed { background-color: #cfe2ff; border-color: #0d6efd; }

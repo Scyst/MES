@@ -1,35 +1,7 @@
-.oee-piechart {
-    display: flex;
-    gap: 5px;
-    padding-top: 5px;
-    height: 20%;
-    min-width: fit-content;
-}
+/* piechart.css (Scoped Version) */
 
-.pie-chart {
-    display: flex;
-    align-items: center;
-    align-content: center;
-    justify-content: space-between;
-    gap: 5px;
-    height: 100%;
-    width: 100%;
-    min-width: 1250px;
-}
-
-.pie-chart fieldset {
-    background-color: #0D0D0D;
-    width: calc(25% - 5px);
-    height: 100%;
-    border: 1px solid #545454;
-    border-radius: 10px;
-    position: relative;
-    display: inline-block;
-    text-align: right;
-    vertical-align: top;
-}
-
-.piechart-wrapper {
+/* เราจะใช้ .pie-chart-card เป็น "ขอบเขต" หลัก */
+.pie-chart-card .piechart-wrapper {
     height: 100%;
     aspect-ratio: 1/1;
     position: absolute;
@@ -38,7 +10,7 @@
     align-content: center;
 }
 
-.error-message {
+.pie-chart-card .error-message {
     position: absolute;
     top: 45%;
     left: 50%;
@@ -50,7 +22,8 @@
     z-index: 10;
 }
 
-.chart-info {
+/* กฎนี้จะทำงานกับ .chart-info ที่อยู่ภายใน .pie-chart-card เท่านั้น */
+.pie-chart-card .chart-info {
     text-align: justify;
     margin-top: 40px;
     position: absolute;
@@ -58,3 +31,6 @@
     font-size: 1.2rem;
     font-weight: 300;
 }
+
+/* ลบกฎเก่าที่ไม่จำเป็นและอาจทำให้สับสนออกไป */
+/* .oee-piechart, .pie-chart, .pie-chart fieldset { ... } */
