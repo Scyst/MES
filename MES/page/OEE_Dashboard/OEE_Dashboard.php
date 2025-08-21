@@ -1,26 +1,20 @@
 <?php 
-//-- เริ่ม Session สำหรับการใช้งานตัวแปร Session ทั้งหมดในหน้านี้ --
 session_start(); 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <title>OEE - DASHBOARD</title>
-    
-    <script src="../../utils/libs/chart.umd.js"></script>
-    <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>
-    <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
-    <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
-    
+    <?php include_once '../components/common_head.php'; ?>
+    <link rel="stylesheet" href="../../style/barchart.css?v=<?php echo filemtime(__DIR__ . '/../../style/barchart.css'); ?>">
+    <link rel="stylesheet" href="../../style/linechart.css?v=<?php echo filemtime(__DIR__ . '/../../style/linechart.css'); ?>">
+    <link rel="stylesheet" href="../../style/piechart.css?v=<?php echo filemtime(__DIR__ . '/../../style/piechart.css'); ?>">
 </head>
 
 <body class="">
-    <?php include('../components/spinner.php'); ?>
-    <?php include('../components/nav_dropdown.php'); ?>
+    <?php include('../components/php/spinner.php'); ?>
+    <?php include('../components/php/nav_dropdown.php'); ?>
 
     <header class="dashboard-header-sticky">
         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -102,10 +96,6 @@ session_start();
     </div> 
     <div id="toast"></div>
 
-    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
-    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
-    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>"></script>
-    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
     <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
     <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
     <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>

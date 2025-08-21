@@ -15,16 +15,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <title>Production & WIP</title>
-
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
-    
-    <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
+    <?php include_once '../components/common_head.php'; ?>
     <style>
         .text-center-col {
             text-align: center;
@@ -33,8 +25,8 @@
 </head>
 
 <body class=" p-4">
-    <?php include('../components/spinner.php'); ?>
-    <?php include('../components/nav_dropdown.php'); ?>
+    <?php include('../components/php/spinner.php'); ?>
+    <?php include('../components/php/nav_dropdown.php'); ?>
 
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -226,7 +218,7 @@
         }
         include('components/summaryModal.php');
         include('components/wipDetailModal.php');
-        include('../components/autoLogoutUI.php');
+        include('../components/php/autoLogoutUI.php');
     ?>
     
     <script>
@@ -235,11 +227,7 @@
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
     
-    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
-    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>" defer></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>" defer></script>
-    <script src="../components/datetime.js?v=<?php echo filemtime('../components/datetime.js'); ?>" defer></script>
-    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>" defer></script>
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>" defer></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>" defer></script> 

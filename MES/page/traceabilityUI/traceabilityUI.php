@@ -9,19 +9,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Lot Traceability Report</title>
-    
-    <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
-    
-    <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
-    <link rel="stylesheet" href="../../style/style.css?v=<?php echo filemtime('../../style/style.css'); ?>">
+    <?php include_once '../components/common_head.php'; ?>
 </head>
 
 <body class=" p-4">
-    <?php include('../components/spinner.php'); ?>
-    <?php include('../components/nav_dropdown.php'); ?>
+    <?php include('../components/php/spinner.php'); ?>
+    <?php include('../components/php/nav_dropdown.php'); ?>
 
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -126,12 +120,9 @@
     <div id="toast"></div>
     
     <?php
-        include('../components/autoLogoutUI.php');
+        include('../components/php/autoLogoutUI.php');
     ?>
     
-    <script src="../components/theme-switcher.js?v=<?php echo filemtime('../components/inventorySettings.js'); ?>" defer></script>
-    <script src="../components/spinner.js?v=<?php echo filemtime('../components/spinner.js'); ?>"></script>
-    <script src="../components/toast.js?v=<?php echo filemtime('../components/toast.js'); ?>"></script>
     <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
     <script src="script/traceability.js?v=<?php echo filemtime('script/traceability.js'); ?>"></script> 
 </body>
