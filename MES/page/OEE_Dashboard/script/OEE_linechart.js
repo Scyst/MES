@@ -84,9 +84,9 @@ function initializeLineChart(labels, data, themeColors) {
     if (!ctx) return;
 
     const datasets = [
-        { label: "OEE (%)", data: data.oee, borderColor: "#00BF63", backgroundColor: "rgba(0, 191, 99, 0.3)", tension: 0.3, fill: true },
+        { label: "OEE (%)", data: data.oee, borderColor: "#2979ff", backgroundColor: "rgba(41, 121, 255, 0.3)", tension: 0.3, fill: true },
         { label: "Quality (%)", data: data.quality, borderColor: "#ab47bc", backgroundColor: "rgba(171, 71, 188, 0.3)", tension: 0.3, fill: true },
-        { label: "Performance (%)", data: data.performance, borderColor: "#ffa726", backgroundColor: "rgba(255, 167, 38, 0.3)", tension: 0.3, fill: true },
+        { label: "Performance (%)", data: data.performance, borderColor: "#7e57c2", backgroundColor: "rgba(126, 87, 194, 0.3)", tension: 0.3, fill: true },
         { label: "Availability (%)", data: data.availability, borderColor: "#42a5f5", backgroundColor: "rgba(66, 165, 245, 0.3)", tension: 0.3, fill: true }
     ];
 

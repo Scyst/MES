@@ -135,7 +135,15 @@ async function fetchAndRenderBarCharts() {
         const stopCauseCtx = document.getElementById("stopCauseBarChart")?.getContext("2d");
         if (stopCauseCtx) {
             const stopCauseLabels = data.stopCause.labels || [];
-            const causeColors = { 'Man': '#42A5F5', 'Machine': '#FFA726', 'Method': '#66BB6A', 'Material': '#EF5350', 'Other': '#BDBDBD' };
+            const causeColors = { 
+                'Man': '#42a5f5',         // ฟ้า
+                'Machine': '#26c6da',     // เขียวอมฟ้า (Teal)
+                'Method': '#64b5f6',      // ฟ้าอ่อน
+                'Material': '#9e9e9e',     // เทา
+                'Measurement': '#78909c', // เทาเข้ม
+                'Environment': '#546e7a', // เทาเข้มมาก
+                'Other': '#bdbdbd'        // เทาอ่อน
+            };
             const stopCauseDatasets = Object.keys(causeColors).map(cause => ({
                 label: cause,
                 data: data.stopCause[cause] || [],
