@@ -15,12 +15,14 @@ function getChartThemeColors() {
     if (theme === 'dark') {
         return {
             centerTextColor: '#dee2e6', lossBgColor: '#495057',
-            successColor: '#66bb6a', warningColor: '#ffa726'
+            successColor: '#66bb6a', warningColor: '#ffa726',
+            secondaryTextColor: '#adb5bd' // << เพิ่มสีสำหรับข้อความรอง
         };
     } else {
         return {
             centerTextColor: '#212529', lossBgColor: '#e9ecef',
-            successColor: '#198754', warningColor: '#dc3545'
+            successColor: '#198754', warningColor: '#dc3545',
+            secondaryTextColor: '#6c757d' // << เพิ่มสีสำหรับข้อความรอง
         };
     }
 }
@@ -50,9 +52,10 @@ function updateInfoBox(elementId, lines, targetValue) {
 }
 
 /**
- * --- ฟังก์ชันที่แก้ไขแล้ว (เวอร์ชันสมบูรณ์) ---
+ * --- แก้ไข: ฟังก์ชันวาดกราฟ ให้รับ "ข้อมูลรอง" มาแสดง ---
+ * @param {string} secondaryText - ข้อความรองที่จะแสดงตรงกลาง
  */
-function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue) {
+function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '') {
     if (!ctx) return;
     const themeColors = getChartThemeColors();
     const value = data[0];
@@ -61,57 +64,60 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue)
     if (charts[chartName]) {
         charts[chartName].data.labels = labels;
         charts[chartName].data.datasets[0].data = data;
-        charts[chartName].data.datasets[0].backgroundColor = colors;
         charts[chartName].options.plugins.centerText.color = centerTextColor;
+        charts[chartName].options.plugins.centerText.secondaryText = secondaryText; // << อัปเดตข้อความรอง
         charts[chartName].update();
         return;
     }
-    
-    // --- โค้ดส่วนสร้าง Chart ที่ถูกต้อง (ไม่ย่อแล้ว) ---
+
     charts[chartName] = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-            labels: labels, // << ใช้ labels (Array)
-            datasets: [{
-                data: data, // << ใช้ data (Array)
-                backgroundColor: colors, // << ใช้ colors (Array)
-                cutout: '80%',
-                borderWidth: 0,
-            }]
-        },
+        data: { labels, datasets: [{ data, backgroundColor: colors, cutout: '80%', borderWidth: 0 }] },
         options: {
             responsive: true, maintainAspectRatio: true, animation: { duration: 800 },
-            layout: { padding: 5 },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: { // << ส่วนนี้ใช้ context.label ซึ่งถูกต้อง
-                        label: (context) => `${context.label}: ${context.parsed.toFixed(1)}%`
-                    }
-                },
-                title: { display: false },
-                centerText: { color: centerTextColor }
+                tooltip: { callbacks: { label: (context) => `${context.label}: ${context.parsed.toFixed(1)}%` } },
+                centerText: { // << ส่งข้อมูลทั้งหมดที่ plugin ต้องการ
+                    color: centerTextColor,
+                    secondaryColor: themeColors.secondaryTextColor,
+                    secondaryText: secondaryText
+                }
             }
         },
         plugins: [{
             id: 'centerText',
             beforeDraw(chart) {
                 const { width, height, ctx } = chart;
-                const color = chart.options.plugins.centerText.color || '#000';
+                const opts = chart.options.plugins.centerText;
                 ctx.restore();
-                const fontSize = (height / 150).toFixed(2);
-                ctx.font = `bold ${fontSize}em sans-serif`;
+
+                // Main Text (Percentage)
+                const mainFontSize = (height / 140).toFixed(2);
+                ctx.font = `bold ${mainFontSize}em sans-serif`;
                 ctx.textBaseline = "middle";
-                const text = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2;
-                ctx.fillStyle = color;
-                ctx.fillText(text, textX, textY);
+                const mainText = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
+                const mainTextX = Math.round((width - ctx.measureText(mainText).width) / 2);
+                const mainTextY = height / 2 - (opts.secondaryText ? 10 : 0); // << ขยับขึ้นถ้ามีข้อความรอง
+                ctx.fillStyle = opts.color || '#000';
+                ctx.fillText(mainText, mainTextX, mainTextY);
+
+                // --- ส่วนที่เพิ่มเข้ามา: วาดข้อความรอง ---
+                if (opts.secondaryText) {
+                    const secondaryFontSize = (height / 300).toFixed(2);
+                    ctx.font = `${secondaryFontSize}em sans-serif`;
+                    const secondaryText = opts.secondaryText;
+                    const secondaryTextX = Math.round((width - ctx.measureText(secondaryText).width) / 2);
+                    const secondaryTextY = mainTextY + (height * 0.15); // << ตำแหน่งใต้ข้อความหลัก
+                    ctx.fillStyle = opts.secondaryColor || '#888';
+                    ctx.fillText(secondaryText, secondaryTextX, secondaryTextY);
+                }
                 ctx.save();
             }
         }]
     });
 }
+
 
 async function fetchAndRenderCharts() {
     try {
@@ -126,37 +132,65 @@ async function fetchAndRenderCharts() {
         if (!data.success) throw new Error(data.message || "API error");
 
         const themeColors = getChartThemeColors();
-        
+
+        // --- 1. OEE Card (ภาพรวม) ---
+        const totalLoss = 100 - (data.oee || 0);
+        const qualityLossRatio = Math.max(0, 1 - ((data.quality || 0) / 100));
+        const performanceLossRatio = Math.max(0, 1 - ((data.performance || 0) / 100));
+        const availabilityLossRatio = Math.max(0, 1 - ((data.availability || 0) / 100));
+        const totalRatio = qualityLossRatio + performanceLossRatio + availabilityLossRatio;
+
         renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"), 
-            ['OEE', 'Loss'], [data.oee || 0, 100 - (data.oee || 0)], 
+            ['OEE', 'Loss'], [data.oee || 0, totalLoss], 
             ['#2979ff', themeColors.lossBgColor], OEE_TARGETS.oee
         );
+        updateInfoBox("oeeInfo", [
+            `OEE Loss: <b>${totalLoss.toFixed(1)} %</b>`,
+            `Q Contrib: <b>${(totalRatio > 0 ? (qualityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
+            `P Contrib: <b>${(totalRatio > 0 ? (performanceLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
+            `A Contrib: <b>${(totalRatio > 0 ? (availabilityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`
+        ], OEE_TARGETS.oee);
 
+
+        // --- 2. Quality Card (เจาะลึก) ---
         const totalDefects = (data.ng || 0) + (data.rework || 0) + (data.hold || 0) + (data.scrap || 0) + (data.etc || 0);
-        const totalProduction = (data.fg || 0) + totalDefects;
-        const qualityPercent = totalProduction > 0 ? ((data.fg || 0) / totalProduction) * 100 : 100;
-        const defectsPercent = 100 - qualityPercent;
+        const qualityPercent = ((data.fg || 0) + totalDefects) > 0 ? ((data.fg || 0) / ((data.fg || 0) + totalDefects)) * 100 : 100;
         renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 
-            ['Good (FG)', 'Defects'], [qualityPercent, defectsPercent], 
-            ['#ab47bc', themeColors.lossBgColor], OEE_TARGETS.quality
+            ['Good (FG)', 'Defects'], [qualityPercent, 100 - qualityPercent], 
+            ['#ab47bc', themeColors.lossBgColor], OEE_TARGETS.quality,
+            `FG: ${(data.fg || 0).toLocaleString()} pcs`
         );
+        updateInfoBox("qualityInfo", [
+            `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
+            `Defects: <b>${totalDefects.toLocaleString()}</b> pcs`
+        ], OEE_TARGETS.quality);
 
+
+        // --- 3. Performance Card (เจาะลึก) ---
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 
             ['Performance', 'Loss'], [data.performance || 0, 100 - (data.performance || 0)], 
-            ['#7e57c2', themeColors.lossBgColor], OEE_TARGETS.performance
+            ['#7e57c2', themeColors.lossBgColor], OEE_TARGETS.performance,
+            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`
         );
+        updateInfoBox("performanceInfo", [
+            `Actual: <b>${(data.actual_output || 0).toLocaleString()}</b> pcs`,
+            `Theo. Time: <b>${formatMinutes(data.debug_info?.total_theoretical_minutes || 0)}</b>`,
+            `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
+        ], OEE_TARGETS.performance);
 
-        const runtimePercent = data.planned_time > 0 ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
-        const downtimePercent = 100 - runtimePercent;
+
+        // --- 4. Availability Card (เจาะลึก) ---
+        const runtimePercent = (data.planned_time || 0) > 0 ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
         renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"), 
-            ['Runtime', 'Downtime'], [runtimePercent, downtimePercent], 
-            ['#42a5f5', themeColors.lossBgColor], OEE_TARGETS.availability
+            ['Runtime', 'Downtime'], [runtimePercent, 100 - runtimePercent], 
+            ['#42a5f5', themeColors.lossBgColor], OEE_TARGETS.availability,
+            `Downtime: ${formatMinutes(data.downtime || 0)}`
         );
-        
-        updateInfoBox("oeeInfo", [`OEE : <b>${(data.oee || 0).toFixed(1)}</b> %`, `Quality : <b>${(data.quality || 0).toFixed(1)}</b> %`, `Performance : <b>${(data.performance || 0).toFixed(1)}</b> %`, `Availability : <b>${(data.availability || 0).toFixed(1)}</b> %`], OEE_TARGETS.oee);
-        updateInfoBox("qualityInfo", [`FG : <b>${(parseFloat(data.fg) || 0).toLocaleString()}</b> pcs`, `Defects : <b>${totalDefects.toLocaleString()}</b> pcs`], OEE_TARGETS.quality);
-        updateInfoBox("performanceInfo", [`Actual : <b>${(parseFloat(data.actual_output) || 0).toLocaleString()}</b> pcs`, `Theo.T : <b>${formatMinutes(data.debug_info?.total_theoretical_minutes || 0)}</b>`, `Runtime : <b>${formatMinutes(data.runtime || 0)}</b>`], OEE_TARGETS.performance);
-        updateInfoBox("availabilityInfo", [`Planned : <b>${formatMinutes(data.planned_time || 0)}</b>`, `Downtime : <b>${formatMinutes(data.downtime || 0)}</b>`, `Runtime : <b>${formatMinutes(data.runtime || 0)}</b>`], OEE_TARGETS.availability);
+        updateInfoBox("availabilityInfo", [
+            `Planned: <b>${formatMinutes(data.planned_time || 0)}</b>`,
+            `Downtime: <b>${formatMinutes(data.downtime || 0)}</b>`,
+            `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
+        ], OEE_TARGETS.availability);
 
     } catch (err) {
         console.error("Pie chart update failed:", err);
