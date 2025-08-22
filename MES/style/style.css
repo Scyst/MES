@@ -178,7 +178,16 @@ body {
 
 /* --- OEE Dashboard --- */
 .dashboard-container { height: calc(100vh - 150px); overflow-y: scroll; scroll-snap-type: y mandatory; }
-.dashboard-section { scroll-snap-align: start; padding: 1rem 2rem 0rem 2rem; }
+.dashboard-section { 
+    scroll-snap-align: start; 
+    padding-top: 1rem; /* <<< คงเหลือไว้แค่ padding ด้านบน */
+}
+
+.dashboard-section .row {
+    margin-right: 0;
+    margin-left: 0;
+}
+
 .chart-card {
     background-color: var(--bs-secondary-bg);
     border: 1px solid var(--bs-border-color);
@@ -203,10 +212,132 @@ body {
 .pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
 .pie-chart-card .pie-chart-details { flex-grow: 1; flex-basis: 0; min-width: 150px; display: flex; flex-direction: column; justify-content: center; }
 .pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 160px; position: relative; }
-.pie-chart-card .chart-info { margin-top: 1rem; }
-.pie-chart-card .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; align-items: center; }
-.pie-chart-card .info-label { text-align: left; font-weight: 300; opacity: 0.8; }
-.pie-chart-card .info-value { text-align: right; font-weight: 600; }
+
+/* --- Styles for Upgraded KPI Card Info Box --- */
+.pie-chart-card .chart-info {
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+.pie-chart-card .info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr; 
+    gap: 0.25rem 1rem;
+    align-items: center;
+}
+.pie-chart-card .info-label {
+    text-align: left; /* <<< จัดชิดซ้าย */
+    font-weight: 300;
+    opacity: 0.8; 
+}
+.pie-chart-card .info-value {
+    text-align: right; /* <<< แก้ไข: จัดชิดขวา */
+    font-weight: 600; 
+}
+
+/* --- Styles for New KPI Info Bar --- */
+.info-summary-card {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch; /* ทำให้แต่ละกลุ่มสูงเท่ากัน */
+    padding: 1rem;
+}
+.info-summary-card .info-group {
+    flex-grow: 1;
+    padding: 0 1.5rem;
+    border-right: 1px solid var(--bs-border-color);
+    transition: border-color 0.3s ease-in-out;
+}
+.info-summary-card .info-group:last-child {
+    border-right: none;
+}
+.info-summary-card .info-grid {
+    gap: 0.1rem 1rem; /* ลดระยะห่างแถวลง */
+}
+
+/* ปรับขนาด Chart Wrapper ใน KPI Section ให้ใหญ่ขึ้น */
+#kpi-section .kpi-chart-card .chart-wrapper {
+    width: 180px;
+    height: 180px;
+}
+
+/* --- Fix for KPI Scorecard Layout --- */
+#kpi-section .row {
+    width: 100%; /* <<< บังคับให้แถวเต็มความกว้างเสมอ */
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: 0;
+    margin-left: 0;
+}
+
+/* --- Styles for New KPI Chart Bar --- */
+.kpi-chart-card {
+    min-height: 250px;
+    align-items: center; /* จัดหัวข้อและกราฟให้อยู่กลาง */
+    text-align: center;
+}
+.kpi-chart-card h4 {
+    margin-bottom: 1rem; /* เพิ่มระยะห่างใต้หัวข้อ */
+}
+.kpi-chart-card .chart-wrapper {
+    width: 160px;
+    height: 160px;
+}
+
+/* --- Styles for KPI Scorecards (Enlarged Pie Chart Version) --- */
+#kpi-section {
+    height: calc(100vh - 80px); /* <<< ความสูงเต็มจอ ลบด้วยความสูงของ Header */
+    min-height: 650px;
+    display: flex;
+    align-items: center; /* <<< เปลี่ยนกลับเป็น center เพื่อความสวยงาม */
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+#kpi-section .col-xl-3, 
+#kpi-section .col-md-6,
+#kpi-section .col-12 {
+    display: flex; /* <<< ทำให้ column เป็น flex container ด้วย */
+    align-items: stretch; /* <<< ทำให้การ์ดสูงเท่ากัน */
+}
+
+.kpi-scorecard {
+    height: 100%;
+    width: 100%;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* <<< เพิ่มบรรทัดนี้: ทำให้การ์ดยืดขยายเต็มพื้นที่ */
+}
+.scorecard-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    transition: border-color 0.3s ease-in-out;
+    flex-shrink: 0; /* <<< เพิ่ม: ป้องกันไม่ให้ส่วนหัวหดตัว */
+}
+.scorecard-header h4 {
+    margin-bottom: 1rem;
+}
+
+/* --- ส่วนที่แก้ไขหลัก --- */
+.pie-chart-wrapper {
+    flex-grow: 1; /* <<< เพิ่ม: ทำให้กราฟยืดขยายเต็มพื้นที่ที่เหลือ */
+    width: 100%; /* <<< แก้ไข: ใช้ความกว้างเต็ม */
+    max-width: 220px; /* <<< เพิ่ม: กำหนดความกว้างสูงสุด */
+    margin: 0 auto; /* <<< จัดให้อยู่กลาง */
+}
+
+.scorecard-body {
+    padding-top: 1rem;
+    flex-shrink: 0; /* <<< เพิ่ม: ป้องกันไม่ให้ส่วนข้อมูลหดตัว */
+}
+.sparkline-wrapper {
+    height: 80px;
+    margin-bottom: 1rem;
+}
 
 /* -- Line & Bar Chart Card Specifics -- */
 .line-chart-card .chart-wrapper { height: 400px; }
@@ -282,5 +413,22 @@ body {
     }
     .pie-chart-card .chart-info {
         font-size: 1rem;
+    }
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 991.98px) {
+    .info-summary-card {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .info-summary-card .info-group {
+        border-right: none;
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 0 0 1rem 0;
+    }
+    .info-summary-card .info-group:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
     }
 }

@@ -38,46 +38,72 @@ session_start();
             </header>
             
             <div class="dashboard-container">
-            
-                <section class="dashboard-section">
-                    <div class="row g-4 mb-4 pt-2">
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
-                            <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4><i class="fas fa-tachometer-alt"></i> OEE</h4><div class="chart-info" id="oeeInfo"></div></div>
-                                <div class="chart-wrapper"><canvas id="oeePieChart"></canvas></div>
+
+                <section class="dashboard-section" id="kpi-section">
+                    <div class="row">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="chart-card kpi-scorecard">
+                                <div class="scorecard-header">
+                                    <h4><i class="fas fa-tachometer-alt"></i> OEE</h4>
+                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="oeePieChart"></canvas></div>
+                                </div>
+                                <div class="scorecard-body">
+                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="oeeSparklineChart"></canvas></div>
+                                    <div class="chart-info" id="oeeInfo"></div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
-                            <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4><i class="fas fa-check-circle"></i> Quality</h4><div class="chart-info" id="qualityInfo"></div></div>
-                                <div class="chart-wrapper"><canvas id="qualityPieChart"></canvas></div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="chart-card kpi-scorecard">
+                                <div class="scorecard-header">
+                                    <h4><i class="fas fa-check-circle"></i> Quality</h4>
+                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="qualityPieChart"></canvas></div>
+                                </div>
+                                <div class="scorecard-body">
+                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="qualitySparklineChart"></canvas></div>
+                                    <div class="chart-info" id="qualityInfo"></div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
-                            <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4><i class="fas fa-running"></i> Performance</h4><div class="chart-info" id="performanceInfo"></div></div>
-                                <div class="chart-wrapper"><canvas id="performancePieChart"></canvas></div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="chart-card kpi-scorecard">
+                                <div class="scorecard-header">
+                                    <h4><i class="fas fa-running"></i> Performance</h4>
+                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="performancePieChart"></canvas></div>
+                                </div>
+                                <div class="scorecard-body">
+                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="performanceSparklineChart"></canvas></div>
+                                    <div class="chart-info" id="performanceInfo"></div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
-                            <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4><i class="fas fa-clock"></i> Availability</h4><div class="chart-info" id="availabilityInfo"></div></div>
-                                <div class="chart-wrapper"><canvas id="availabilityPieChart"></canvas></div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="chart-card kpi-scorecard">
+                                <div class="scorecard-header">
+                                    <h4><i class="fas fa-clock"></i> Availability</h4>
+                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="availabilityPieChart"></canvas></div>
+                                </div>
+                                <div class="scorecard-body">
+                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="availabilitySparklineChart"></canvas></div>
+                                    <div class="chart-info" id="availabilityInfo"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row g-4">
+                </section>
+
+                <section class="dashboard-section">
+                    <div class="row">
                         <div class="col-12">
-                            <div class="chart-card line-chart-card" style="padding-top: 1rem;">
-                                <h4 style="display: none;">OEE Trend</h4>
+                            <div class="chart-card line-chart-card">
                                 <div class="chart-wrapper"><canvas id="oeeLineChart"></canvas></div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section class="dashboard-section mt-2">
-                    <div class="row g-4">
+                <section class="dashboard-section">
+                    <div class="row">
                         <div class="col-lg-6">
                             <div class="chart-card bar-chart-card">
                                 <h4>Stop & Cause</h4>
@@ -92,11 +118,12 @@ session_start();
                         </div>
                     </div>
                 </section>
-                
-            </div> 
+
+            </div>
             <div id="toast"></div>
 
             <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
+            <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>
             <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
             <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
             <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>

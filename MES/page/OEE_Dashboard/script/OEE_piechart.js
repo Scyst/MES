@@ -94,7 +94,7 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
 
                 // Main Text (Percentage)
                 const mainFontSize = (height / 140).toFixed(2);
-                ctx.font = `bold ${mainFontSize}em sans-serif`;
+                ctx.font = `900 ${mainFontSize}em sans-serif`; 
                 ctx.textBaseline = "middle";
                 const mainText = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
                 const mainTextX = Math.round((width - ctx.measureText(mainText).width) / 2);
@@ -104,8 +104,8 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
 
                 // --- ส่วนที่เพิ่มเข้ามา: วาดข้อความรอง ---
                 if (opts.secondaryText) {
-                    const secondaryFontSize = (height / 300).toFixed(2);
-                    ctx.font = `${secondaryFontSize}em sans-serif`;
+                    const secondaryFontSize = (height / 280).toFixed(2);
+                    ctx.font = `400 ${secondaryFontSize}em sans-serif`;
                     const secondaryText = opts.secondaryText;
                     const secondaryTextX = Math.round((width - ctx.measureText(secondaryText).width) / 2);
                     const secondaryTextY = mainTextY + (height * 0.15); // << ตำแหน่งใต้ข้อความหลัก
@@ -192,8 +192,15 @@ async function fetchAndRenderCharts() {
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
         ], OEE_TARGETS.availability);
 
+        const sparklineData = data.sparkline_data || [];
+
+        renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), '#2979ff');
+        renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), '#ab47bc');
+        renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), '#7e57c2');
+        renderSparkline('availabilitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.availability})), '#42a5f5');
+
     } catch (err) {
-        console.error("Pie chart update failed:", err);
+        console.error("Pie/Sparkline chart update failed:", err);
     }
 }
 
