@@ -441,12 +441,14 @@ try {
 
         case 'get_production_history':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
+            // --- ส่วนที่แก้ไข: จัดการกับการ Export ---
+            $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
+            $limit = $isExport ? 99999 : 50; // ถ้าเป็นการ Export ให้ดึงข้อมูลเยอะๆ
             $offset = ($page - 1) * $limit;
 
             $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"];
             $params = [];
-
+            
             if (!empty($_GET['part_no'])) { $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)"; $params[] = '%' . $_GET['part_no'] . '%'; $params[] = '%' . $_GET['part_no'] . '%';}
             if (!empty($_GET['location'])) { $conditions[] = "loc.location_name LIKE ?"; $params[] = '%' . $_GET['location'] . '%'; }
             if (!empty($_GET['lot_no'])) { $conditions[] = "t.reference_id LIKE ?"; $params[] = '%' . $_GET['lot_no'] . '%'; }
@@ -456,21 +458,18 @@ try {
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
-                        JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                        LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                        {$whereClause}";
+            // --- ส่วน Query หลัก (เหมือนเดิม) ---
+            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
-                SELECT 
-                    t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
+                SELECT t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
                     REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
                     loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
-                    FORMAT(t.start_time, N'hh\:mm\:ss') as start_time,
-                    FORMAT(t.end_time, N'hh\:mm\:ss') as end_time
+                    FORMAT(t.start_time, N'hh\\:mm\\:ss') as start_time,
+                    FORMAT(t.end_time, N'hh\\:mm\\:ss') as end_time
                 FROM " . TRANSACTIONS_TABLE . " t
                 LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
                 LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
@@ -479,20 +478,51 @@ try {
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
-
             $dataStmt = $pdo->prepare($dataSql);
-
             $paramIndex = 1;
-            foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param);
-            }
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-
             $dataStmt->execute();
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit]);
+            // --- ส่วนที่เพิ่มเข้ามา: คำนวณ Summary และ Grand Total เฉพาะตอน Export ---
+            $summary = [];
+            $grand_total = [];
+
+            if ($isExport) {
+                // Query for Summary by Part
+                $summarySql = "
+                    SELECT i.sap_no, i.part_no, REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
+                    {$whereClause}
+                    GROUP BY i.sap_no, i.part_no, t.transaction_type
+                    ORDER BY i.sap_no, i.part_no, t.transaction_type
+                ";
+                $summaryStmt = $pdo->prepare($summarySql);
+                $summaryStmt->execute($params);
+                $summary = $summaryStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Query for Grand Total
+                $grandTotalSql = "
+                    SELECT REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
+                    {$whereClause}
+                    GROUP BY t.transaction_type
+                ";
+                $grandTotalStmt = $pdo->prepare($grandTotalSql);
+                $grandTotalStmt->execute($params);
+                $grand_total = $grandTotalStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            echo json_encode([
+                'success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit,
+                'summary' => $summary, 'grand_total' => $grand_total // << ส่งข้อมูลใหม่ไปด้วย
+            ]);
             break;
 
         case 'get_transaction_details':

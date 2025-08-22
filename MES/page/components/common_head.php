@@ -20,4 +20,5 @@
 <script src="../components/js/toast.js?v=<?php echo filemtime(__DIR__ . '/js/toast.js'); ?>"></script>
 
 <script src="../../utils/libs/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>

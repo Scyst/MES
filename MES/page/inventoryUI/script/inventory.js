@@ -161,7 +161,7 @@ function updateControls(activeTabId) {
         case 'production-history-tab':
             buttonGroup.innerHTML = `
                 <button class="btn btn-info" onclick="openSummaryModal(this)">Summary</button>
-                <button class="btn btn-primary" onclick="exportToExcel()">Export</button>
+                <button class="btn btn-primary" onclick="exportProductionHistoryToExcel()">Export</button>
                 ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
             `;
             summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';

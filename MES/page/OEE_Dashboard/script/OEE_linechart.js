@@ -1,30 +1,36 @@
-﻿//-- ตัวแปรสำหรับเก็บ Instance ของ Line Chart --
+﻿// script/OEE_linechart.js (เวอร์ชันอัปเกรด เพิ่มเส้นเป้าหมาย)
+"use strict";
+
+// --- 1. เพิ่ม: กำหนดค่าเป้าหมายหลัก (OEE Target) ---
+const OEE_MAIN_TARGET = 85.0;
 let oeeLineChart;
 
-//-- ฟังก์ชันสำหรับซ่อนข้อความ Error และทำให้กราฟแสดงผลปกติ --
-function hideErrors() {
-    const el = document.getElementById("oeeLineError");
-    if (el) el.style.display = "none";
-    const canvas = document.getElementById("oeeLineChart");
-    if (canvas) canvas.style.opacity = "1";
+function getLineChartThemeColors() {
+    const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+    if (theme === 'dark') {
+        return {
+            ticksColor: '#ccc',
+            gridColor: '#495057', // ปรับให้เข้มขึ้นเล็กน้อย
+            legendColor: '#ccc',
+            targetLineColor: 'rgba(255, 107, 107, 0.7)', // สีแดงสำหรับเป้าหมาย
+            targetLabelBg: 'rgba(255, 107, 107, 0.7)',
+            targetLabelColor: '#fff'
+        };
+    } else {
+        return {
+            ticksColor: '#6c757d',
+            gridColor: '#dee2e6',
+            legendColor: '#212529',
+            targetLineColor: 'rgba(220, 53, 69, 0.7)', // สีแดงสำหรับเป้าหมาย
+            targetLabelBg: 'rgba(220, 53, 69, 0.7)',
+            targetLabelColor: '#fff'
+        };
+    }
 }
 
-//-- ฟังก์ชันสำหรับแสดงข้อความ Error บนพื้นที่ของกราฟ --
-function showError(chartId, messageId) {
-    const canvas = document.getElementById(chartId);
-    const errorMsg = document.getElementById(messageId);
-    if (canvas) canvas.style.opacity = "1";
-    if (errorMsg) errorMsg.style.display = "block";
-}
-
-/**
- * ฟังก์ชันหลักสำหรับดึงข้อมูลและ Render/Update Line Chart
- */
+// --- (ฟังก์ชัน fetchAndRenderLineCharts เหมือนเดิม) ---
 async function fetchAndRenderLineCharts() {
-    //showSpinner();
     try {
-        hideErrors();
-
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
@@ -43,40 +49,45 @@ async function fetchAndRenderLineCharts() {
             performance: data.records.map(r => r.performance),
             availability: data.records.map(r => r.availability)
         };
+        const themeColors = getLineChartThemeColors();
 
-        // ถ้า Chart ยังไม่มี (โหลดครั้งแรก) ให้สร้างใหม่
         if (!oeeLineChart) {
-            initializeLineChart(labels, chartData);
+            initializeLineChart(labels, chartData, themeColors);
         } else {
-            // ถ้ามีอยู่แล้ว ให้อัปเดตข้อมูลแล้วเรียก .update()
             oeeLineChart.data.labels = labels;
-            oeeLineChart.data.datasets[0].data = chartData.oee;
-            oeeLineChart.data.datasets[1].data = chartData.quality;
-            oeeLineChart.data.datasets[2].data = chartData.performance;
-            oeeLineChart.data.datasets[3].data = chartData.availability;
+            oeeLineChart.data.datasets.forEach((dataset, index) => {
+                dataset.data = Object.values(chartData)[index];
+            });
+
+            // อัปเดตสีและเส้นเป้าหมาย
+            oeeLineChart.options.plugins.legend.labels.color = themeColors.legendColor;
+            oeeLineChart.options.scales.x.ticks.color = themeColors.ticksColor;
+            oeeLineChart.options.scales.x.grid.color = themeColors.gridColor;
+            oeeLineChart.options.scales.y.ticks.color = themeColors.ticksColor;
+            oeeLineChart.options.scales.y.grid.color = themeColors.gridColor;
+            oeeLineChart.options.plugins.annotation.annotations.targetLine.borderColor = themeColors.targetLineColor;
+            oeeLineChart.options.plugins.annotation.annotations.targetLine.label.backgroundColor = themeColors.targetLabelBg;
+            oeeLineChart.options.plugins.annotation.annotations.targetLine.label.color = themeColors.targetLabelColor;
+
             oeeLineChart.update();
         }
-
     } catch (err) {
         console.error("Line chart fetch failed:", err);
-        showError("oeeLineChart", "oeeLineError");
-    } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
     }
 }
 
 /**
- * ฟังก์ชันสำหรับสร้าง Line Chart ครั้งแรก
- * @param {string[]} labels - Array ของ Label แกน X (วันที่)
- * @param {object} data - Object ที่มี بياناتของแต่ละเส้น
+ * --- 3. แก้ไข: ฟังก์ชันสร้างกราฟ ให้เพิ่ม "Annotation" (เส้นเป้าหมาย) เข้าไป ---
  */
-function initializeLineChart(labels, data) {
-    const ctx = document.getElementById("oeeLineChart").getContext("2d");
+function initializeLineChart(labels, data, themeColors) {
+    const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
+    if (!ctx) return;
+
     const datasets = [
-        { label: "OEE (%)", data: data.oee, borderColor: "#66bb6a", backgroundColor: "rgba(102, 187, 106, 0.3)", tension: 0.3, fill: true, pointRadius: 3, pointBackgroundColor: "#66bb6a" },
-        { label: "Quality (%)", data: data.quality, borderColor: "#ab47bc", backgroundColor: "rgba(171, 71, 188, 0.3)", tension: 0.3, fill: true, pointRadius: 3, pointBackgroundColor: "#ab47bc" },
-        { label: "Performance (%)", data: data.performance, borderColor: "#ffa726", backgroundColor: "rgba(255, 167, 38, 0.3)", tension: 0.3, fill: true, pointRadius: 3, pointBackgroundColor: "#ffa726" },
-        { label: "Availability (%)", data: data.availability, borderColor: "#42a5f5", backgroundColor: "rgba(66, 165, 245, 0.3)", tension: 0.3, fill: true, pointRadius: 3, pointBackgroundColor: "#42a5f5" }
+        { label: "OEE (%)", data: data.oee, borderColor: "#00BF63", backgroundColor: "rgba(0, 191, 99, 0.3)", tension: 0.3, fill: true },
+        { label: "Quality (%)", data: data.quality, borderColor: "#ab47bc", backgroundColor: "rgba(171, 71, 188, 0.3)", tension: 0.3, fill: true },
+        { label: "Performance (%)", data: data.performance, borderColor: "#ffa726", backgroundColor: "rgba(255, 167, 38, 0.3)", tension: 0.3, fill: true },
+        { label: "Availability (%)", data: data.availability, borderColor: "#42a5f5", backgroundColor: "rgba(66, 165, 245, 0.3)", tension: 0.3, fill: true }
     ];
 
     oeeLineChart = new Chart(ctx, {
@@ -87,15 +98,52 @@ function initializeLineChart(labels, data) {
             maintainAspectRatio: false,
             animation: { duration: 800 },
             plugins: {
-                title: { display: false, text: "OEE Trends (Daily Average)", font: { size: 16, weight: "bold" }, color: "#fff" },
-                legend: { display: true, labels: { color: "#ccc" } },
-                tooltip: { backgroundColor: "#333", titleColor: "#fff", bodyColor: "#fff" }
+                title: { display: false },
+                legend: { 
+                    display: true, 
+                    labels: { color: themeColors.legendColor }
+                },
+                // --- เพิ่ม plugin "annotation" ---
+                annotation: {
+                    annotations: {
+                        targetLine: {
+                            type: 'line',
+                            yMin: OEE_MAIN_TARGET,
+                            yMax: OEE_MAIN_TARGET,
+                            borderColor: themeColors.targetLineColor,
+                            borderWidth: 2,
+                            borderDash: [6, 6], // ทำให้เป็นเส้นประ
+                            label: {
+                                content: `Target: ${OEE_MAIN_TARGET}%`,
+                                enabled: true,
+                                position: 'end',
+                                backgroundColor: themeColors.targetLabelBg,
+                                color: themeColors.targetLabelColor,
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    }
+                }
             },
             scales: {
-                x: { ticks: { color: "#ccc", font: { size: 10 } }, grid: { display: false, color: "#444" } },
-                y: { beginAtZero: true, max: 100, ticks: { color: "#ccc", font: { size: 10 } }, grid: { color: "#444" } }
+                x: { ticks: { color: themeColors.ticksColor, font: { size: 10 } }, grid: { display: false } },
+                y: { beginAtZero: true, max: 100, ticks: { color: themeColors.ticksColor, font: { size: 10 } }, grid: { color: themeColors.gridColor } }
             },
             layout: { padding: 10 }
         }
     });
 }
+
+// --- (ส่วน lắng nghe การเปลี่ยนแปลงธีมเหมือนเดิม) ---
+document.addEventListener('DOMContentLoaded', () => {
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
+                if (oeeLineChart) {
+                    fetchAndRenderLineCharts(); 
+                }
+            }
+        }
+    });
+    observer.observe(document.documentElement, { attributes: true });
+});

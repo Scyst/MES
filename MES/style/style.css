@@ -1,4 +1,4 @@
-/* style.css (Final Optimized Version) */
+/* style.css (Final Merged & Organized Version) */
 html {
     scroll-behavior: smooth;
 }
@@ -8,7 +8,7 @@ html {
 /* =================================================================== */
 :root { /* Light Theme */
     --bs-body-bg: #f8f9fa;
-    --bs-body-color: #212529;
+    --bs-body-color: #001f3f;
     --bs-secondary-bg: #ffffff;
     --bs-tertiary-bg: #e9ecef;
     --bs-border-color: #dee2e6;
@@ -29,9 +29,8 @@ html {
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
-
-/* ===== SIDEBAR STYLES (FINAL ANIMATION) ===== */
 .page-container {
     display: flex;
 }
@@ -49,7 +48,7 @@ body {
     z-index: 1045;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease-in-out;
+    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     overflow-x: hidden;
 }
 
@@ -67,17 +66,21 @@ body {
     transition: background-color 0.2s;
 }
 #sidebar-toggle-btn:hover { background-color: var(--bs-tertiary-bg); }
-#sidebar-toggle-btn img { width: 24px; height: 24px; filter: var(--bs-icon-filter); }
+#sidebar-toggle-btn img { 
+    width: 24px; height: 24px; filter: var(--bs-icon-filter);
+    transition: filter 0.3s ease-in-out;
+}
 
-/* --- Menu Container --- */
+/* --- Menu Container & Items --- */
 .sidebar .custom-dropdown {
     background: transparent; border: none; padding: 0;
     min-width: 100%; overflow-y: auto; flex-grow: 1;
 }
 .sidebar .custom-dropdown li { list-style: none; padding: 0; margin: 0; }
-.sidebar .dropdown-divider { border-top: 1px solid var(--bs-border-color); margin: 8px 16px; }
-
-/* --- Base Style for ALL Menu Items --- */
+.sidebar .dropdown-divider { 
+    border-top: 1px solid var(--bs-border-color); margin: 8px 16px;
+    transition: border-color 0.3s ease-in-out;
+}
 .sidebar .dropdown-username,
 .sidebar .dropdown-item-icon {
     height: 56px;
@@ -86,6 +89,11 @@ body {
     text-decoration: none;
     color: var(--bs-body-color);
     padding-left: 28px !important;
+    transition: background-color 0.2s, color 0.3s ease-in-out;
+}
+.sidebar .dropdown-username {
+    border-bottom: 1px solid var(--bs-border-color);
+    transition: border-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 .sidebar .dropdown-item-icon:hover { 
     background-color: var(--bs-tertiary-bg); 
@@ -95,7 +103,8 @@ body {
     width: 24px; height: 24px;
     flex-shrink: 0;
     filter: var(--bs-icon-filter);
-    margin-right: 24px; /* ใช้ margin แทน gap */
+    margin-right: 24px;
+    transition: filter 0.3s ease-in-out;
 }
 .sidebar .dropdown-item-icon span, 
 .sidebar .dropdown-username div {
@@ -106,14 +115,10 @@ body {
     transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
 }
 
-/* --- Collapsed State Styles --- */
+/* --- Sidebar States --- */
 .sidebar[data-state="collapsed"] { width: 80px; }
-
-/* --- Expanded State Styles --- */
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
-
-/* --- Text Visibility for Expanded/Hover States --- */
 .sidebar[data-state="expanded"] .dropdown-item-icon span,
 .sidebar[data-state="expanded"] .dropdown-username div,
 .sidebar[data-state="collapsed"]:hover .dropdown-item-icon span,
@@ -122,7 +127,6 @@ body {
     max-width: 200px;
     transition-delay: 0.1s;
 }
-
 .sidebar[data-state="collapsed"]:hover {
     width: 280px;
     box-shadow: 0 0 15px rgba(0,0,0,0.2);
@@ -136,9 +140,11 @@ body {
     background-color: var(--bs-secondary-bg);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     z-index: 1030;
+    border-bottom: 1px solid var(--bs-border-color);
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
 .dashboard-header-sticky, .sticky-bar { top: 0; padding: 1rem 2rem; }
-.sticky-bottom, .log-pagination { bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem;}
+.sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
 
 #toast {
     position: fixed; top: 20px; right: 20px;
@@ -166,7 +172,6 @@ body {
 .autocomplete-item small { color: #6c757d; }
 [data-bs-theme="dark"] .autocomplete-item small { color: #adb5bd; }
 
-
 /* =================================================================== */
 /* 4. PAGE-SPECIFIC STYLES (สไตล์เฉพาะหน้า) */
 /* =================================================================== */
@@ -179,20 +184,103 @@ body {
     border: 1px solid var(--bs-border-color);
     border-radius: 0.75rem; padding: 1.5rem; height: 100%;
     display: flex; flex-direction: column;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
-[data-bs-theme="dark"] .chart-card { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-.chart-card h4 { margin-bottom: 0rem; }
-.chart-card .chart-wrapper { position: relative; flex-grow: 1; }
-.pie-chart-card { flex-direction: row; justify-content: space-between; gap: 1rem; min-height: 250px; }
-.pie-chart-card .pie-chart-details { flex-grow: 1; max-width: 160px; }
-.pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; }
-.pie-chart-card .chart-info { font-size: 1.2rem; font-weight: 300; margin-top: 0.75rem; line-height: 2rem; }
+[data-bs-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+.chart-card h4 {
+    display: flex; align-items: center; gap: 0.75rem;
+    font-weight: 600; color: var(--bs-body-color);
+    transition: color 0.3s ease-in-out;
+}
+.chart-card h4 i {
+    color: #6c757d;
+    transition: color 0.3s ease-in-out;
+}
+[data-bs-theme="dark"] .chart-card h4 i { color: #adb5bd; }
+
+/* -- Pie Chart Card Specifics -- */
+.pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
+.pie-chart-card .pie-chart-details { flex-grow: 1; flex-basis: 0; min-width: 150px; display: flex; flex-direction: column; justify-content: center; }
+.pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 160px; position: relative; }
+.pie-chart-card .chart-info { margin-top: 1rem; }
+.pie-chart-card .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; align-items: center; }
+.pie-chart-card .info-label { text-align: left; font-weight: 300; opacity: 0.8; }
+.pie-chart-card .info-value { text-align: right; font-weight: 600; }
+
+/* -- Line & Bar Chart Card Specifics -- */
 .line-chart-card .chart-wrapper { height: 400px; }
 .bar-chart-card .chart-wrapper { height: 300px; }
+/* -- Scoped Styles from old CSS files -- */
+.line-chart-card .chart-error,
+.bar-chart-card .stopCauseBarError,
+.bar-chart-card .scrapBarError {
+    display: none; position: absolute; top: 45%; left: 50%;
+    transform: translate(-50%, -50%); color: red;
+    font-size: 20px; font-weight: bold; z-index: 10;
+}
 
 /* --- Inventory UI --- */
 .filter-controls-wrapper { display: flex; gap: 0.5rem; align-items: center; }
 .table th, .table td { vertical-align: middle; }
 .stock-input.is-changed { background-color: #193a52; border-color: #0d6efd; }
 :root .stock-input.is-changed { background-color: #cfe2ff; border-color: #0d6efd; }
+
+/* =================================================================== */
+/* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */
+/* =================================================================== */
+
+/* เมื่อจอกว้างน้อยกว่า 992px (ขนาด Tablet และเล็กกว่า) */
+@media (max-width: 991.98px) {
+    /* จัดเรียงเนื้อหาในการ์ด Pie Chart เป็นแนวตั้ง */
+    .pie-chart-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pie-chart-card .pie-chart-details {
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .pie-chart-card .chart-info {
+        text-align: center;
+        margin-left: 0; /* ลบ margin-left เดิม */
+    }
+}
+
+/* เมื่อจอกว้างน้อยกว่า 768px */
+@media (max-width: 767.98px) {
+    /* ย้าย Header ของ Dashboard ลงมาข้างล่าง */
+    .dashboard-header-sticky {
+        top: auto;
+        bottom: 0;
+        border-top: 1px solid var(--bs-border-color);
+        border-bottom: none;
+    }
+
+    #main-content {
+        padding-bottom: 150px; /* เพิ่มพื้นที่ด้านล่างสำหรับ Header */
+    }
+}
+
+/* เมื่อจอกว้างน้อยกว่า 576px (ขนาดมือถือ) */
+@media (max-width: 575.98px) {
+    /* ลดขนาดฟอนต์และระยะห่างเพื่อให้พอดีกับจอมือถือ */
+    .dashboard-header-sticky {
+        padding: 0.75rem;
+    }
+    .dashboard-header-sticky h2 {
+        font-size: 1.25rem;
+    }
+    .dashboard-section {
+        padding: 1rem 0.75rem;
+    }
+    .chart-card {
+        padding: 1rem;
+    }
+    .pie-chart-card .chart-info {
+        font-size: 1rem;
+    }
+}

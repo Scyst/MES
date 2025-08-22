@@ -7,9 +7,6 @@ session_start();
 <head>
     <title>OEE - DASHBOARD</title>
     <?php include_once '../components/common_head.php'; ?>
-    <link rel="stylesheet" href="../../style/barchart.css?v=<?php echo filemtime(__DIR__ . '/../../style/barchart.css'); ?>">
-    <link rel="stylesheet" href="../../style/linechart.css?v=<?php echo filemtime(__DIR__ . '/../../style/linechart.css'); ?>">
-    <link rel="stylesheet" href="../../style/piechart.css?v=<?php echo filemtime(__DIR__ . '/../../style/piechart.css'); ?>">
 </head>
 
 <body class="">
@@ -44,27 +41,27 @@ session_start();
             
                 <section class="dashboard-section">
                     <div class="row g-4 mb-4 pt-2">
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 mb-2 mb-xl-0">
+                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
                             <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4>OEE</h4><div class="chart-info" id="oeeInfo"></div></div>
+                                <div class="pie-chart-details"><h4><i class="fas fa-tachometer-alt"></i> OEE</h4><div class="chart-info" id="oeeInfo"></div></div>
                                 <div class="chart-wrapper"><canvas id="oeePieChart"></canvas></div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 mb-2 mb-xl-0">
+                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
                             <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4>Quality</h4><div class="chart-info" id="qualityInfo"></div></div>
+                                <div class="pie-chart-details"><h4><i class="fas fa-check-circle"></i> Quality</h4><div class="chart-info" id="qualityInfo"></div></div>
                                 <div class="chart-wrapper"><canvas id="qualityPieChart"></canvas></div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 mb-2 mb-xl-0">
+                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
                             <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4>Performance</h4><div class="chart-info" id="performanceInfo"></div></div>
+                                <div class="pie-chart-details"><h4><i class="fas fa-running"></i> Performance</h4><div class="chart-info" id="performanceInfo"></div></div>
                                 <div class="chart-wrapper"><canvas id="performancePieChart"></canvas></div>
                             </div>
                         </div>
-                        <div class="col-xxl-3 col-xl-6 col-lg-6 mb-2 mb-xl-0">
+                        <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6 col-12 mb-4">
                             <div class="chart-card pie-chart-card">
-                                <div class="pie-chart-details"><h4>Availability</h4><div class="chart-info" id="availabilityInfo"></div></div>
+                                <div class="pie-chart-details"><h4><i class="fas fa-clock"></i> Availability</h4><div class="chart-info" id="availabilityInfo"></div></div>
                                 <div class="chart-wrapper"><canvas id="availabilityPieChart"></canvas></div>
                             </div>
                         </div>
