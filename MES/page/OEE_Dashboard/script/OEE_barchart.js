@@ -5,6 +5,32 @@
 let partsBarChartInstance, stopCauseBarChartInstance;
 Chart.register(ChartZoom);
 
+/**
+ * Toggles the loading state of a chart card.
+ * @param {string} elementId - The ID of an element inside the card (like the canvas).
+ * @param {boolean} isLoading - True to show loading, false to hide.
+ */
+function toggleLoadingState(elementId, isLoading) {
+    const element = document.getElementById(elementId);
+    const card = element ? element.closest('.chart-card') : null;
+    if (card) {
+        if (isLoading) {
+            card.classList.add('is-loading');
+        } else {
+            card.classList.remove('is-loading');
+        }
+    }
+}
+
+/**
+ * Helper function to get CSS variable values.
+ * @param {string} varName - The name of the CSS variable (e.g., '--mes-color-success').
+ * @returns {string} The color value.
+ */
+function getCssVar(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 // --- 1. ฟังก์ชันใหม่: สำหรับดึงชุดสีตามธีมปัจจุบัน ---
 function getBarChartThemeColors() {
     const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
@@ -99,6 +125,8 @@ function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}
 
 // --- (ฟังก์ชัน fetchAndRenderBarCharts เหมือนเดิมเกือบทั้งหมด) ---
 async function fetchAndRenderBarCharts() {
+    toggleLoadingState("partsBarChart", true);     // <<< แสดง
+    toggleLoadingState("stopCauseBarChart", true);
     try {
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
@@ -118,7 +146,14 @@ async function fetchAndRenderBarCharts() {
         if (partsCtx) {
             const originalPartLabels = data.parts.labels || [];
             const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label, 8));
-            const countTypes = { FG: "#00C853", NG: "#FF5252", HOLD: "#FFD600", REWORK: "#2979FF", SCRAP: "#9E9E9E", ETC: "#AA00FF" };
+            const countTypes = {
+                FG:     getCssVar('--mes-color-success'),
+                NG:     getCssVar('--mes-color-danger'),
+                HOLD:   getCssVar('--mes-color-warning'),
+                REWORK: getCssVar('--mes-chart-color-3'),
+                SCRAP:  getCssVar('--mes-chart-color-4'),
+                ETC:    '#adb5bd'
+            };
             const partDatasets = Object.keys(countTypes).map(type => ({
                 label: type,
                 data: data.parts[type] || [],
@@ -157,6 +192,9 @@ async function fetchAndRenderBarCharts() {
         }
     } catch (err) {
         console.error("Bar chart fetch failed:", err);
+    } finally {
+        toggleLoadingState("partsBarChart", false);     // <<< ซ่อน
+        toggleLoadingState("stopCauseBarChart", false); // <<< ซ่อน
     }
 }
 

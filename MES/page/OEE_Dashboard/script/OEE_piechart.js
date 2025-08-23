@@ -10,6 +10,32 @@ const OEE_TARGETS = {
 
 const charts = { oee: null, quality: null, performance: null, availability: null };
 
+/**
+ * Toggles the loading state of a chart card.
+ * @param {string} elementId - The ID of an element inside the card (like the canvas).
+ * @param {boolean} isLoading - True to show loading, false to hide.
+ */
+function toggleLoadingState(elementId, isLoading) {
+    const element = document.getElementById(elementId);
+    const card = element ? element.closest('.chart-card') : null;
+    if (card) {
+        if (isLoading) {
+            card.classList.add('is-loading');
+        } else {
+            card.classList.remove('is-loading');
+        }
+    }
+}
+
+/**
+ * Helper function to get CSS variable values.
+ * @param {string} varName - The name of the CSS variable.
+ * @returns {string} The color value.
+ */
+function getCssVar(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 function getChartThemeColors() {
     const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
     if (theme === 'dark') {
@@ -34,21 +60,41 @@ function formatMinutes(totalMinutes) {
     return `${h}h ${m}m`;
 }
 
-function updateInfoBox(elementId, lines, targetValue) {
-    const infoBox = document.getElementById(elementId);
+function updateInfoBox(infoId, lines, targetValue) {
+    const infoBox = document.getElementById(infoId);
     if (!infoBox) return;
-    let content = '<div class="info-grid">';
-    lines.forEach(line => {
+    
+    const gridHtml = lines.map(line => {
         const parts = line.split(':');
-        content += `<div class="info-label">${parts[0] ? parts[0].trim() : ''}</div>`;
-        content += `<div class="info-value">${parts[1] ? parts[1].trim() : ''}</div>`;
-    });
-    if (targetValue !== undefined) {
-        content += `<div class="info-label">Target</div>`;
-        content += `<div class="info-value"><b>${targetValue.toFixed(1)} %</b></div>`;
+        const label = parts[0] ? parts[0].trim() : '';
+        const value = parts[1] ? parts[1].trim() : '';
+        
+        return `
+            <div class="info-label">${label}</div>
+            <div class="info-value">${value}</div>
+        `;
+    }).join('');
+
+    infoBox.innerHTML = `<div class="info-grid">${gridHtml}</div>`;
+
+    const targetElement = document.getElementById(`${infoId}-target`);
+    if (targetElement) {
+        const currentValueText = infoBox.querySelector('.info-value b')?.textContent || '0%';
+        const currentValue = parseFloat(currentValueText.replace('%', ''));
+
+        if (!isNaN(currentValue) && targetValue) {
+            const percentage = ((currentValue / targetValue) * 100).toFixed(1);
+            let colorClass = 'text-danger';
+            if (percentage >= 100) {
+                colorClass = 'text-success';
+            } else if (percentage >= 85) {
+                colorClass = 'text-warning';
+            }
+            targetElement.innerHTML = `vs Target: <span class="${colorClass}">${percentage}%</span>`;
+        } else {
+            targetElement.innerHTML = '';
+        }
     }
-    content += '</div>';
-    infoBox.innerHTML = content;
 }
 
 /**
@@ -120,6 +166,9 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
 
 
 async function fetchAndRenderCharts() {
+    const chartIds = ["oeePieChart", "qualityPieChart", "performancePieChart", "availabilityPieChart"];
+
+    chartIds.forEach(id => toggleLoadingState(id, true));
     try {
         const response = await fetch(`api/get_oee_piechart.php?${new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
@@ -132,6 +181,7 @@ async function fetchAndRenderCharts() {
         if (!data.success) throw new Error(data.message || "API error");
 
         const themeColors = getChartThemeColors();
+        const lossColor = themeColors.lossBgColor; // ดึงสีของ Loss มาเก็บไว้
 
         // --- 1. OEE Card (ภาพรวม) ---
         const totalLoss = 100 - (data.oee || 0);
@@ -141,8 +191,8 @@ async function fetchAndRenderCharts() {
         const totalRatio = qualityLossRatio + performanceLossRatio + availabilityLossRatio;
 
         renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"), 
-            ['OEE', 'Loss'], [data.oee || 0, totalLoss], 
-            ['#2979ff', themeColors.lossBgColor], OEE_TARGETS.oee
+            ['OEE', 'Loss'], [data.oee || 0, 100 - (data.oee || 0)], 
+            [getCssVar('--mes-chart-color-1'), lossColor], OEE_TARGETS.oee
         );
         updateInfoBox("oeeInfo", [
             `OEE Loss: <b>${totalLoss.toFixed(1)} %</b>`,
@@ -157,7 +207,7 @@ async function fetchAndRenderCharts() {
         const qualityPercent = ((data.fg || 0) + totalDefects) > 0 ? ((data.fg || 0) / ((data.fg || 0) + totalDefects)) * 100 : 100;
         renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 
             ['Good (FG)', 'Defects'], [qualityPercent, 100 - qualityPercent], 
-            ['#ab47bc', themeColors.lossBgColor], OEE_TARGETS.quality,
+            [getCssVar('--mes-chart-color-2'), lossColor], OEE_TARGETS.quality,
             `FG: ${(data.fg || 0).toLocaleString()} pcs`
         );
         updateInfoBox("qualityInfo", [
@@ -169,7 +219,7 @@ async function fetchAndRenderCharts() {
         // --- 3. Performance Card (เจาะลึก) ---
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 
             ['Performance', 'Loss'], [data.performance || 0, 100 - (data.performance || 0)], 
-            ['#7e57c2', themeColors.lossBgColor], OEE_TARGETS.performance,
+            [getCssVar('--mes-chart-color-3'), lossColor], OEE_TARGETS.performance,
             `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`
         );
         updateInfoBox("performanceInfo", [
@@ -183,7 +233,7 @@ async function fetchAndRenderCharts() {
         const runtimePercent = (data.planned_time || 0) > 0 ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
         renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"), 
             ['Runtime', 'Downtime'], [runtimePercent, 100 - runtimePercent], 
-            ['#42a5f5', themeColors.lossBgColor], OEE_TARGETS.availability,
+            [getCssVar('--mes-chart-color-4'), lossColor], OEE_TARGETS.availability,
             `Downtime: ${formatMinutes(data.downtime || 0)}`
         );
         updateInfoBox("availabilityInfo", [
@@ -194,13 +244,15 @@ async function fetchAndRenderCharts() {
 
         const sparklineData = data.sparkline_data || [];
 
-        renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), '#2979ff');
-        renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), '#ab47bc');
-        renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), '#7e57c2');
-        renderSparkline('availabilitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.availability})), '#42a5f5');
+        renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), getCssVar('--mes-chart-color-1'));
+        renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), getCssVar('--mes-chart-color-2'));
+        renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), getCssVar('--mes-chart-color-3'));
+        renderSparkline('availabilitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.availability})), getCssVar('--mes-chart-color-4'));
 
     } catch (err) {
         console.error("Pie/Sparkline chart update failed:", err);
+    } finally {
+        chartIds.forEach(id => toggleLoadingState(id, false));
     }
 }
 

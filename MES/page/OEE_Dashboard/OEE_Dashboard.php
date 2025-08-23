@@ -45,6 +45,7 @@ session_start();
                     <div class="row">
                         <div class="col-xl-3 col-md-6">
                             <div class="chart-card kpi-scorecard">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-tachometer-alt"></i> OEE</h4>
                                     <div class="chart-wrapper pie-chart-wrapper"><canvas id="oeePieChart"></canvas></div>
@@ -57,6 +58,7 @@ session_start();
                         </div>
                         <div class="col-xl-3 col-md-6">
                             <div class="chart-card kpi-scorecard">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-check-circle"></i> Quality</h4>
                                     <div class="chart-wrapper pie-chart-wrapper"><canvas id="qualityPieChart"></canvas></div>
@@ -69,6 +71,7 @@ session_start();
                         </div>
                         <div class="col-xl-3 col-md-6">
                             <div class="chart-card kpi-scorecard">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-running"></i> Performance</h4>
                                     <div class="chart-wrapper pie-chart-wrapper"><canvas id="performancePieChart"></canvas></div>
@@ -81,6 +84,7 @@ session_start();
                         </div>
                         <div class="col-xl-3 col-md-6">
                             <div class="chart-card kpi-scorecard">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-clock"></i> Availability</h4>
                                     <div class="chart-wrapper pie-chart-wrapper"><canvas id="availabilityPieChart"></canvas></div>
@@ -98,6 +102,7 @@ session_start();
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="chart-card line-chart-card">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="chart-wrapper"><canvas id="oeeLineChart"></canvas></div>
                             </div>
                         </div>
@@ -106,12 +111,14 @@ session_start();
                     <div class="row g-4">
                         <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Stop & Cause</h4>
                                 <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas></div>
                             </div>
                         </div>
                         <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
+                                <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Production Results</h4>
                                 <div class="chart-wrapper"><canvas id="partsBarChart"></canvas></div>
                             </div>

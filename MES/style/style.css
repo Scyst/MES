@@ -13,6 +13,13 @@ html {
     --bs-tertiary-bg: #e9ecef;
     --bs-border-color: #dee2e6;
     --bs-icon-filter: none;
+    --mes-chart-color-1: #0d6efd;
+    --mes-chart-color-2: #6f42c1;
+    --mes-chart-color-3: #fd7e14;
+    --mes-chart-color-4: #17a2b8;
+    --mes-color-success: #198754;
+    --mes-color-warning: #ffc107;
+    --mes-color-danger:  #dc3545;
 }
 [data-bs-theme="dark"] { /* Dark Theme */
     --bs-body-bg: #1a1a1a;
@@ -21,6 +28,13 @@ html {
     --bs-tertiary-bg: #444;
     --bs-border-color: #495057;
     --bs-icon-filter: brightness(0) invert(1);
+    --mes-chart-color-1: #409cff;
+    --mes-chart-color-2: #8a63d2;
+    --mes-chart-color-3: #ff983d;
+    --mes-chart-color-4: #28b8d2;
+    --mes-color-success: #20c997;
+    --mes-color-warning: #ffcd39;
+    --mes-color-danger:  #e57373;
 }
 
 /* =================================================================== */
@@ -223,6 +237,8 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.07);
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     width: 100%;
+    position: relative; /* ★★★ เพิ่มบรรทัดนี้ เพื่อให้ Progress Bar อ้างอิงตำแหน่งได้ ★★★ */
+    overflow: hidden;
 }
 .chart-card h4 {
     display: flex; align-items: center; gap: 0.75rem;
@@ -233,6 +249,48 @@ body {
 .chart-card h4 i {
     color: #6c757d;
     transition: color 0.3s ease-in-out;
+}
+
+.progress-bar-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px; /* ความหนาของแถบโหลด */
+    background-color: transparent; /* ปกติจะโปร่งใส */
+    z-index: 10;
+    opacity: 0; /* ซ่อนไว้เป็นค่าเริ่มต้น */
+    transition: opacity 0.3s ease;
+}
+
+.progress-bar-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: var(--mes-chart-color-1); /* ใช้สีน้ำเงินหลักเป็นสีของแถบ */
+    transform: translateX(-100%); /* เริ่มต้นโดยการซ่อนไว้ทางซ้าย */
+}
+
+.chart-card.is-loading .progress-bar-wrapper {
+    opacity: 1; /* แสดงผลเมื่อการ์ดมี class 'is-loading' */
+}
+
+.chart-card.is-loading .progress-bar-indicator {
+    animation: loading-bar-animation 1.5s infinite ease-in-out;
+}
+
+@keyframes loading-bar-animation {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 /*[data-bs-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
@@ -367,6 +425,30 @@ body {
     height: 200px;  /* คืนค่าความสูงเดิม */
     position: relative;
     margin: 1rem auto; /* จัดกลางและเพิ่มระยะห่าง */
+}
+
+.kpi-scorecard .chart-info {
+    font-size: 1rem;
+    margin-top: 1rem;
+    width: 100%; /* ทำให้เต็มความกว้าง */
+}
+
+.kpi-scorecard .chart-info .info-grid {
+    display: grid !important; /* ★★★ บังคับใช้ display: grid ★★★ */
+    grid-template-columns: auto 1fr; /* คอลัมน์แรกกว้างตามเนื้อหา, คอลัมน์สองเอาที่เหลือ */
+    gap: 0.25rem 1rem; /* ระยะห่าง แถว และ คอลัมน์ */
+    align-items: center;
+}
+
+.kpi-scorecard .chart-info .info-grid .info-label {
+    text-align: left;
+    font-weight: 400; /* ปรับความหนาตัวอักษรเล็กน้อย */
+    opacity: 0.8;
+}
+
+.kpi-scorecard .chart-info .info-grid .info-value {
+    text-align: right;
+    font-weight: 600;
 }
 
 .scorecard-header {

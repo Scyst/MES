@@ -5,6 +5,32 @@
 const OEE_MAIN_TARGET = 85.0;
 let oeeLineChart;
 
+/**
+ * Toggles the loading state of a chart card.
+ * @param {string} elementId - The ID of an element inside the card (like the canvas).
+ * @param {boolean} isLoading - True to show loading, false to hide.
+ */
+function toggleLoadingState(elementId, isLoading) {
+    const element = document.getElementById(elementId);
+    const card = element ? element.closest('.chart-card') : null;
+    if (card) {
+        if (isLoading) {
+            card.classList.add('is-loading');
+        } else {
+            card.classList.remove('is-loading');
+        }
+    }
+}
+
+/**
+ * Helper function to get CSS variable values.
+ * @param {string} varName - The name of the CSS variable.
+ * @returns {string} The color value.
+ */
+function getCssVar(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 function getLineChartThemeColors() {
     const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
     if (theme === 'dark') {
@@ -30,6 +56,7 @@ function getLineChartThemeColors() {
 
 // --- (ฟังก์ชัน fetchAndRenderLineCharts เหมือนเดิม) ---
 async function fetchAndRenderLineCharts() {
+    toggleLoadingState("oeeLineChart", true);
     try {
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
@@ -73,6 +100,8 @@ async function fetchAndRenderLineCharts() {
         }
     } catch (err) {
         console.error("Line chart fetch failed:", err);
+    } finally {
+        toggleLoadingState("oeeLineChart", false); // <<< ซ่อน
     }
 }
 
@@ -83,11 +112,44 @@ function initializeLineChart(labels, data, themeColors) {
     const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
     if (!ctx) return;
 
+    const oeeColor = getCssVar('--mes-chart-color-1');
+    const qualityColor = getCssVar('--mes-chart-color-2');
+    const performanceColor = getCssVar('--mes-chart-color-3');
+    const availabilityColor = getCssVar('--mes-chart-color-4');
+
     const datasets = [
-        { label: "OEE (%)", data: data.oee, borderColor: "#2979ff", backgroundColor: "rgba(41, 121, 255, 0.3)", tension: 0.3, fill: true },
-        { label: "Quality (%)", data: data.quality, borderColor: "#ab47bc", backgroundColor: "rgba(171, 71, 188, 0.3)", tension: 0.3, fill: true },
-        { label: "Performance (%)", data: data.performance, borderColor: "#7e57c2", backgroundColor: "rgba(126, 87, 194, 0.3)", tension: 0.3, fill: true },
-        { label: "Availability (%)", data: data.availability, borderColor: "#42a5f5", backgroundColor: "rgba(66, 165, 245, 0.3)", tension: 0.3, fill: true }
+        { 
+            label: "OEE (%)", 
+            data: data.oee, 
+            borderColor: oeeColor, 
+            backgroundColor: oeeColor + '20',
+            tension: 0.3, 
+            fill: true 
+        },
+        { 
+            label: "Quality (%)", 
+            data: data.quality, 
+            borderColor: qualityColor, 
+            backgroundColor: qualityColor + '20',
+            tension: 0.3, 
+            fill: true 
+        },
+        { 
+            label: "Performance (%)", 
+            data: data.performance, 
+            borderColor: performanceColor, 
+            backgroundColor: performanceColor + '20',
+            tension: 0.3, 
+            fill: true 
+        },
+        { 
+            label: "Availability (%)", 
+            data: data.availability, 
+            borderColor: availabilityColor, 
+            backgroundColor: availabilityColor + '20',
+            tension: 0.3, 
+            fill: true 
+        }
     ];
 
     oeeLineChart = new Chart(ctx, {
@@ -103,7 +165,6 @@ function initializeLineChart(labels, data, themeColors) {
                     display: true, 
                     labels: { color: themeColors.legendColor }
                 },
-                // --- เพิ่ม plugin "annotation" ---
                 annotation: {
                     annotations: {
                         targetLine: {
@@ -112,7 +173,7 @@ function initializeLineChart(labels, data, themeColors) {
                             yMax: OEE_MAIN_TARGET,
                             borderColor: themeColors.targetLineColor,
                             borderWidth: 2,
-                            borderDash: [6, 6], // ทำให้เป็นเส้นประ
+                            borderDash: [6, 6],
                             label: {
                                 content: `Target: ${OEE_MAIN_TARGET}%`,
                                 enabled: true,
@@ -122,6 +183,21 @@ function initializeLineChart(labels, data, themeColors) {
                                 font: { weight: 'bold' }
                             }
                         }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x',
                     }
                 }
             },
