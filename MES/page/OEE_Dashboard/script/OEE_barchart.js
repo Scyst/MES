@@ -2,7 +2,7 @@
 "use strict";
 
 // ตัวแปรสำหรับเก็บ Instance ของ Chart
-let partsBarChartInstance, stopCauseBarChartInstance;
+const barChartInstances = {}; 
 Chart.register(ChartZoom);
 
 /**
@@ -49,83 +49,90 @@ function getBarChartThemeColors() {
     }
 }
 
-// --- (ฟังก์ชัน truncateLabel และ padBarData เหมือนเดิม) ---
 function truncateLabel(label, maxLength = 4) {
     if (typeof label !== 'string') return '';
     return label.length > maxLength ? label.substring(0, maxLength) + '...' : label;
 }
 
-/**
- * --- 2. แก้ไข: ฟังก์ชันสำหรับ Render หรือ Update Bar Chart ---
- */
-function renderBarChart(chartInstance, ctx, labels, datasets, customOptions = {}) {
-    const themeColors = getBarChartThemeColors(); // << ดึงสีธีมปัจจุบัน
-    const isStacked = customOptions.isStacked || false;
-    const originalLabels = customOptions.originalLabels || labels;
-    const unitLabel = customOptions.unitLabel || '';
+// --- Start: ★★★ VERSION FOR DEBUGGING ★★★ ---
+function renderBarChart(canvasId, labels, datasets, options = {}) {
+    const { isStacked, originalLabels, unitLabel } = options;
+    const themeColors = getBarChartThemeColors();
+    const ctx = document.getElementById(canvasId)?.getContext("2d");
+    if (!ctx) return;
 
-    // --- ถ้า Chart มีอยู่แล้ว ให้อัปเดตข้อมูลและสี ---
-    if (chartInstance) {
+    const chartInstance = barChartInstances[canvasId];
+
+    // ======================================================
+    // ★★★ จุดตรวจสอบ ★★★
+    // ======================================================
+    if (!chartInstance) {
+        console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Instance NOT found. Creating NEW chart.`);
+
+        // (โค้ดสำหรับ new Chart(...) ทั้งหมดเหมือนเดิม)
+        barChartInstances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: isStacked },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: (tooltipItems) => {
+                                if (tooltipItems.length > 0 && originalLabels) {
+                                    return originalLabels[tooltipItems[0].dataIndex];
+                                }
+                                return '';
+                            },
+                            label: (context) => {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toLocaleString();
+                                    if (unitLabel) label += ' ' + unitLabel;
+                                }
+                                return label;
+                            },
+                            footer: (tooltipItems) => {
+                                if (!isStacked) return '';
+                                let sum = 0;
+                                tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
+                                let footerText = 'Total: ' + sum.toLocaleString();
+                                if (unitLabel) footerText += ' ' + unitLabel;
+                                return footerText;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: isStacked, ticks: { color: themeColors.ticksColor } },
+                    y: { stacked: isStacked, beginAtZero: true, ticks: { color: themeColors.ticksColor } }
+                }
+            }
+        });
+    } else {
+        console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Instance FOUND. Updating existing chart.`);
+
+        // (โค้ดสำหรับอัปเดตทั้งหมดเหมือนเดิม)
         chartInstance.data.labels = labels;
         chartInstance.data.datasets = datasets;
-
-        // อัปเดตสีใน Options
-        chartInstance.options.plugins.legend.labels.color = themeColors.legendColor;
         chartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
         chartInstance.options.scales.y.ticks.color = themeColors.ticksColor;
-        chartInstance.options.scales.y.grid.color = themeColors.gridColor;
-
-        chartInstance.options.plugins.tooltip.callbacks.title = (tooltipItems) => {
-            if (tooltipItems.length > 0) {
-                const dataIndex = tooltipItems[0].dataIndex;
-                return (customOptions.originalLabels || labels)[dataIndex]; 
-            }
-            return '';
-        };
         chartInstance.update();
-        return chartInstance;
     }
-
-    // --- ถ้า Chart ยังไม่มี ให้สร้างใหม่ ---
-    return new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 800 },
-            plugins: {
-                legend: { display: true, labels: { color: themeColors.legendColor } }, // << ใช้สีธีม
-                title: { display: false },
-                tooltip: {
-                    // ... (callbacks เหมือนเดิม) ...
-                },
-                zoom: {
-                    pan: { enabled: true, mode: 'x' },
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-                }
-            },
-            layout: { padding: 5 },
-            scales: {
-                x: {
-                    stacked: isStacked,
-                    ticks: { color: themeColors.ticksColor, autoSkip: false, maxRotation: customOptions.rotateLabels ? 45 : 0, minRotation: customOptions.rotateLabels ? 45 : 0 },
-                    grid: { display: false }
-                },
-                y: { 
-                    beginAtZero: true, 
-                    stacked: isStacked, 
-                    ticks: { color: themeColors.ticksColor }, 
-                    grid: { drawBorder: false, color: themeColors.gridColor } // << ใช้สีธีม
-                }
-            }
-        }
-    });
 }
+// --- End: ★★★ VERSION FOR DEBUGGING ★★★ ---
 
-// --- (ฟังก์ชัน fetchAndRenderBarCharts เหมือนเดิมเกือบทั้งหมด) ---
 async function fetchAndRenderBarCharts() {
-    toggleLoadingState("partsBarChart", true);     // <<< แสดง
+    toggleLoadingState("partsBarChart", true);
     toggleLoadingState("stopCauseBarChart", true);
     try {
         const params = new URLSearchParams({
@@ -136,65 +143,51 @@ async function fetchAndRenderBarCharts() {
         });
         const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
-
         if (!responseData.success) throw new Error(responseData.message || "Failed to fetch bar chart data.");
-
         const data = responseData.data;
 
-        // --- Render "Parts Bar Chart" ---
-        const partsCtx = document.getElementById("partsBarChart")?.getContext("2d");
-        if (partsCtx) {
-            const originalPartLabels = data.parts.labels || [];
-            const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label, 8));
-            const countTypes = {
-                FG:     getCssVar('--mes-color-success'),
-                NG:     getCssVar('--mes-color-danger'),
-                HOLD:   getCssVar('--mes-color-warning'),
-                REWORK: getCssVar('--mes-chart-color-3'),
-                SCRAP:  getCssVar('--mes-chart-color-4'),
-                ETC:    '#adb5bd'
-            };
-            const partDatasets = Object.keys(countTypes).map(type => ({
-                label: type,
-                data: data.parts[type] || [],
-                backgroundColor: countTypes[type]
-            }));
+        // Render "Parts Bar Chart"
+        const originalPartLabels = data.parts.labels || [];
+        const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label, 8));
+        const countTypes = {
+            FG: getCssVar('--mes-color-success'),
+            NG: getCssVar('--mes-color-danger'),
+            HOLD: getCssVar('--mes-color-warning'),
+            REWORK: getCssVar('--mes-chart-color-3'),
+            SCRAP: getCssVar('--mes-chart-color-4'),
+            ETC: '#adb5bd'
+        };
+        const partDatasets = Object.keys(countTypes).map(type => ({
+            label: type,
+            data: data.parts[type] || [],
+            backgroundColor: countTypes[type]
+        }));
 
-            partsBarChartInstance = renderBarChart(
-                partsBarChartInstance, partsCtx, truncatedPartLabels, partDatasets,
-                { isStacked: true, originalLabels: originalPartLabels, unitLabel: 'pcs' }
-            );
-        }
+        renderBarChart('partsBarChart', truncatedPartLabels, partDatasets,
+            { isStacked: true, originalLabels: originalPartLabels, unitLabel: 'pcs' }
+        );
 
-        // --- Render "Stop Cause Bar Chart" ---
-        const stopCauseCtx = document.getElementById("stopCauseBarChart")?.getContext("2d");
-        if (stopCauseCtx) {
-            const stopCauseLabels = data.stopCause.labels || [];
-            const causeColors = { 
-                'Man': '#42a5f5',         // ฟ้า
-                'Machine': '#26c6da',     // เขียวอมฟ้า (Teal)
-                'Method': '#64b5f6',      // ฟ้าอ่อน
-                'Material': '#9e9e9e',     // เทา
-                'Measurement': '#78909c', // เทาเข้ม
-                'Environment': '#546e7a', // เทาเข้มมาก
-                'Other': '#bdbdbd'        // เทาอ่อน
-            };
-            const stopCauseDatasets = Object.keys(causeColors).map(cause => ({
-                label: cause,
-                data: data.stopCause[cause] || [],
-                backgroundColor: causeColors[cause]
-            }));
+        // Render "Stop Cause Bar Chart"
+        const stopCauseLabels = data.stopCause.labels || [];
+        const causeColors = { 
+            'Man': '#42a5f5', 'Machine': '#26c6da', 'Method': '#64b5f6', 'Material': '#9e9e9e',
+            'Measurement': '#78909c', 'Environment': '#546e7a', 'Other': '#bdbdbd'
+        };
+        const stopCauseDatasets = Object.keys(causeColors).map(cause => ({
+            label: cause,
+            data: data.stopCause[cause] || [],
+            backgroundColor: causeColors[cause]
+        }));
+        
+        renderBarChart('stopCauseBarChart', stopCauseLabels, stopCauseDatasets,
+            { isStacked: true, unitLabel: 'min', originalLabels: stopCauseLabels } // ส่ง originalLabels ไปด้วย
+        );
 
-            stopCauseBarChartInstance = renderBarChart(
-                stopCauseBarChartInstance, stopCauseCtx, stopCauseLabels, stopCauseDatasets,
-                { isStacked: true, unitLabel: 'min' }
-            );
-        }
     } catch (err) {
         console.error("Bar chart fetch failed:", err);
     } finally {
-        toggleLoadingState("partsBarChart", false);     // <<< ซ่อน
-        toggleLoadingState("stopCauseBarChart", false); // <<< ซ่อน
+        toggleLoadingState("partsBarChart", false);
+        toggleLoadingState("stopCauseBarChart", false);
     }
 }
 
@@ -203,10 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                // วาดกราฟใหม่เมื่อธีมเปลี่ยน
-                if (partsBarChartInstance || stopCauseBarChartInstance) {
-                    fetchAndRenderBarCharts(); 
-                }
+                // ต้อง Destroy กราฟทิ้งเมื่อเปลี่ยนธีม เพื่อให้ Tooltip สร้าง Callbacks ใหม่
+                Object.values(barChartInstances).forEach(instance => instance?.destroy());
+                barChartInstances.partsBarChart = null;
+                barChartInstances.stopCauseBarChart = null;
+                fetchAndRenderBarCharts();
             }
         }
     });
