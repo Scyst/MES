@@ -104,13 +104,13 @@ session_start();
                     </div>
 
                     <div class="row g-4">
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
                                 <h4>Stop & Cause</h4>
                                 <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas></div>
                             </div>
                         </div>
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
                                 <h4>Production Results</h4>
                                 <div class="chart-wrapper"><canvas id="partsBarChart"></canvas></div>

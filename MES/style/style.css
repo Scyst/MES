@@ -122,6 +122,17 @@ body {
     transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
 }
 
+/* --- Sidebar Icon Theming --- */
+.sidebar .dropdown-item-icon i {
+    width: 24px;
+    height: 24px;
+    margin-right: 24px;
+    color: inherit;
+    text-align: center;
+    font-size: 18px; /* ★★★ เพิ่มบรรทัดนี้: กำหนดขนาดไอคอนให้ชัดเจน ★★★ */
+    line-height: 24px; /* ★★★ เพิ่มบรรทัดนี้: จัดให้ไอคอนอยู่กลางแนวตั้งพอดี ★★★ */
+}
+
 /* --- Sidebar States --- */
 .sidebar[data-state="collapsed"] { width: 80px; }
 .sidebar[data-state="expanded"] { width: 280px; }
@@ -200,10 +211,6 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
-}
-#kpi-section {
-    justify-content: center; /* จัดกลาง section แรก */
-    gap: 1.5rem; /* เพิ่มระยะห่างระหว่างแถวของการ์ด */
 }
 
 .chart-card {
@@ -316,7 +323,8 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center; /* <<< จัดให้อยู่กลางแนวตั้ง */
-    padding: 1.5rem 2rem;
+    padding: 1.5rem 0.8rem;
+    gap: 1.5rem; /* เพิ่มระยะห่างระหว่างแถวของการ์ด */
 }
 
 /* กฎสำหรับ Section Line Chart */
@@ -355,8 +363,8 @@ body {
 
 .kpi-scorecard .pie-chart-wrapper {
     flex-shrink: 0; /* ป้องกันการหดตัว */
-    width: 160px;   /* คืนค่าความกว้างเดิม */
-    height: 160px;  /* คืนค่าความสูงเดิม */
+    width: 200px;   /* คืนค่าความกว้างเดิม */
+    height: 200px;  /* คืนค่าความสูงเดิม */
     position: relative;
     margin: 1rem auto; /* จัดกลางและเพิ่มระยะห่าง */
 }
