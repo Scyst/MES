@@ -30,16 +30,23 @@ body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    font-family: 'Prompt', sans-serif;
 }
 .page-container {
     display: flex;
+    height: 100vh;
+    overflow: hidden;
 }
 #main-content {
+    display: flex;
+    flex-direction: column;
     flex-grow: 1;
     width: 100%;
     margin-left: 80px;
-    transition: margin-left 0.3s ease-in-out; 
+    transition: margin-left 0.3s ease-in-out;
+    overflow: hidden;
 }
+
 .sidebar {
     position: fixed;
     top: 0; left: 0; height: 100vh;
@@ -137,11 +144,14 @@ body {
 /* =================================================================== */
 .dashboard-header-sticky, .sticky-bar, .sticky-bottom, .log-pagination {
     position: sticky;
+    top: 0;
+    padding: 1rem 1.5rem;
     background-color: var(--bs-secondary-bg);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     z-index: 1030;
     border-bottom: 1px solid var(--bs-border-color);
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    flex-shrink: 0; /* ป้องกันไม่ให้ Header หดตัว */
 }
 .dashboard-header-sticky, .sticky-bar { top: 0; padding: 1rem 2rem; }
 .sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
@@ -177,36 +187,49 @@ body {
 /* =================================================================== */
 
 /* --- OEE Dashboard --- */
-.dashboard-container { height: calc(100vh - 150px); overflow-y: scroll; scroll-snap-type: y mandatory; }
-.dashboard-section { 
-    scroll-snap-align: start; 
-    padding-top: 1rem; /* <<< คงเหลือไว้แค่ padding ด้านบน */
+.dashboard-container {
+    flex-grow: 1;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    position: relative;
 }
-
-.dashboard-section .row {
-    margin-right: 0;
-    margin-left: 0;
+.dashboard-section {
+    height: 100%;
+    width: 100%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+}
+#kpi-section {
+    justify-content: center; /* จัดกลาง section แรก */
+    gap: 1.5rem; /* เพิ่มระยะห่างระหว่างแถวของการ์ด */
 }
 
 .chart-card {
     background-color: var(--bs-secondary-bg);
     border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem; padding: 1.5rem; height: 100%;
-    display: flex; flex-direction: column;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 2px 10px rgba(0,0,0,0.07);
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    width: 100%;
 }
-[data-bs-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
 .chart-card h4 {
     display: flex; align-items: center; gap: 0.75rem;
     font-weight: 600; color: var(--bs-body-color);
     transition: color 0.3s ease-in-out;
 }
+
 .chart-card h4 i {
     color: #6c757d;
     transition: color 0.3s ease-in-out;
 }
-[data-bs-theme="dark"] .chart-card h4 i { color: #adb5bd; }
+
+/*[data-bs-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+[data-bs-theme="dark"] .chart-card h4 i { color: #adb5bd; }*/
 
 /* -- Pie Chart Card Specifics -- */
 .pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
@@ -262,7 +285,8 @@ body {
 
 /* --- Fix for KPI Scorecard Layout --- */
 #kpi-section .row {
-    width: 100%; /* <<< บังคับให้แถวเต็มความกว้างเสมอ */
+    height: 100%;
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
     margin-right: 0;
@@ -283,14 +307,34 @@ body {
     height: 160px;
 }
 
-/* --- Styles for KPI Scorecards (Enlarged Pie Chart Version) --- */
+/* --- Styles for Individual Dashboard Sections --- */
+
+/* กฎสำหรับ Section KPI (Scorecards) */
 #kpi-section {
-    height: calc(100vh - 80px); /* <<< ความสูงเต็มจอ ลบด้วยความสูงของ Header */
+    height: 100%; /* <<< ทำให้ยืดเต็มความสูงของ container */
     min-height: 650px;
     display: flex;
-    align-items: center; /* <<< เปลี่ยนกลับเป็น center เพื่อความสวยงาม */
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
+    flex-direction: column;
+    justify-content: center; /* <<< จัดให้อยู่กลางแนวตั้ง */
+    padding: 1.5rem 2rem;
+}
+
+/* กฎสำหรับ Section Line Chart */
+#linechart-section {
+    height: calc(100vh - 80px);
+    min-height: 650px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* จัดกราฟให้อยู่กลางแนวตั้ง */
+}
+
+/* กฎสำหรับ Section Bar Charts */
+#barchart-section {
+    height: calc(100vh - 80px);
+    min-height: 650px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* จัดกราฟให้อยู่กลางแนวตั้ง */
 }
 
 #kpi-section .col-xl-3, 
@@ -308,6 +352,15 @@ body {
     flex-direction: column;
     flex: 1; /* <<< เพิ่มบรรทัดนี้: ทำให้การ์ดยืดขยายเต็มพื้นที่ */
 }
+
+.kpi-scorecard .pie-chart-wrapper {
+    flex-shrink: 0; /* ป้องกันการหดตัว */
+    width: 160px;   /* คืนค่าความกว้างเดิม */
+    height: 160px;  /* คืนค่าความสูงเดิม */
+    position: relative;
+    margin: 1rem auto; /* จัดกลางและเพิ่มระยะห่าง */
+}
+
 .scorecard-header {
     display: flex;
     flex-direction: column;
@@ -339,9 +392,51 @@ body {
     margin-bottom: 1rem;
 }
 
+/* ================================================== */
+/* ★★★ CSS สำหรับปรับแก้ Chart Section Layout ★★★ */
+/* ================================================== */
+
+/* --- 1. กำหนดให้ #charts-section เป็น Flex Container หลัก --- */
+#charts-section {
+    display: flex;
+    flex-direction: column; /* เรียงแถวบน-ล่าง */
+    gap: 1.5rem; /* ระยะห่างระหว่างแถว Line Chart และ Bar Chart */
+}
+
+/* --- 2. แบ่งสัดส่วนแถวบนและแถวล่างให้เป็น 50/50 --- */
+/* เราจะใช้ Child Combinator (>) เพื่อเลือกเฉพาะ .row ที่เป็นลูกโดยตรง */
+#charts-section > .row {
+    flex: 1 1 50%; /* Key: ให้แต่ละแถวพยายามสูง 50% และยืด/หดเท่าๆ กัน */
+    display: flex;   /* ทำให้ตัวแถวเองเป็น flex container ด้วย */
+    min-height: 0;   /* Fix สำคัญสำหรับ Flexbox ป้องกันเนื้อหาล้น */
+}
+
+/* --- 3. ทำให้คอลัมน์ (col-*) ยืดเต็มความสูงของแถว --- */
+#charts-section > .row > [class*="col-"] {
+    display: flex;          /* ทำให้คอลัมน์เป็น flex container */
+    flex-direction: column; /* เพื่อให้การ์ดข้างในยืดในแนวตั้ง */
+}
+
+/* --- 4. ทำให้การ์ดและ Wrapper ยืดเต็มพื้นที่ (เหมือนเดิมแต่ยืนยันความถูกต้อง) --- */
+#charts-section .chart-card {
+    flex-grow: 1; /* การ์ดขยายเต็มคอลัมน์ */
+}
+
+#charts-section .chart-wrapper {
+    flex-grow: 1; /* Wrapper ขยายเต็มการ์ด */
+}
+
 /* -- Line & Bar Chart Card Specifics -- */
-.line-chart-card .chart-wrapper { height: 400px; }
-.bar-chart-card .chart-wrapper { height: 300px; }
+.line-chart-card,
+.bar-chart-card {
+    height: 100%; /* <<< สั่งให้การ์ดยืดเต็มความสูงของ col ที่ครอบอยู่ */
+}
+.line-chart-card .chart-wrapper { 
+    height: 90%; /* <<< ทำให้กราฟใช้พื้นที่เกือบเต็มการ์ด */
+}
+.bar-chart-card .chart-wrapper { 
+    height: 85%; /* <<< ทำให้กราฟใช้พื้นที่เกือบเต็มการ์ด */
+}
 /* -- Scoped Styles from old CSS files -- */
 .line-chart-card .chart-error,
 .bar-chart-card .stopCauseBarError,

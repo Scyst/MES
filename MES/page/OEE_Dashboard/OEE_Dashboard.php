@@ -26,12 +26,14 @@ session_start();
                 </div>
                 <div class="row">
                     <div class="col-12">
-                        <div class="d-flex justify-content-center align-items-center gap-3">
-                            <select id="lineFilter" class="form-select" style="width: auto;"><option value="">All Lines</option></select>
-                            <select id="modelFilter" class="form-select" style="width: auto;"><option value="">All Models</option></select>
-                            <input type="date" id="startDate" class="form-control" style="width: auto;">
-                            <span>-</span>
-                            <input type="date" id="endDate" class="form-control" style="width: auto;">
+                        <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
+                            <select id="lineFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Lines</option></select>
+                            <select id="modelFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Models</option></select>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="date" id="startDate" class="form-control" style="width: auto;">
+                                <span>-</span>
+                                <input type="date" id="endDate" class="form-control" style="width: auto;">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -92,18 +94,16 @@ session_start();
                     </div>
                 </section>
 
-                <section class="dashboard-section">
-                    <div class="row">
+                <section class="dashboard-section" id="charts-section"> 
+                    <div class="row mb-4">
                         <div class="col-12">
                             <div class="chart-card line-chart-card">
                                 <div class="chart-wrapper"><canvas id="oeeLineChart"></canvas></div>
                             </div>
                         </div>
                     </div>
-                </section>
 
-                <section class="dashboard-section">
-                    <div class="row">
+                    <div class="row g-4">
                         <div class="col-lg-6">
                             <div class="chart-card bar-chart-card">
                                 <h4>Stop & Cause</h4>
