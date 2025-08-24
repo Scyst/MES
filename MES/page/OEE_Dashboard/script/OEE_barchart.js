@@ -180,12 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                // ★★★ แก้ไข Bug ที่นี่ ★★★
-                Object.keys(barChartInstances).forEach(key => {
-                    barChartInstances[key]?.destroy();
-                    barChartInstances[key] = null;
-                });
-                fetchAndRenderBarCharts();
+                if (Object.keys(barChartInstances).length > 0) {
+                    fetchAndRenderBarCharts();
+                }
             }
         }
     });
