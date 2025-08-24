@@ -542,6 +542,72 @@ body {
 .stock-input.is-changed { background-color: #193a52; border-color: #0d6efd; }
 :root .stock-input.is-changed { background-color: #cfe2ff; border-color: #0d6efd; }
 
+/* ========================================================== */
+/* ★★★ UPGRADED Styles for No-Data & Error States ★★★ */
+/* ========================================================== */
+
+.no-data-message,
+.error-message {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* --- No Data Message Style --- */
+.no-data-message {
+    color: var(--bs-secondary-color);
+}
+.no-data-message i {
+    font-size: 2.5rem;
+    opacity: 0.5;
+}
+.no-data-message span {
+    font-size: 1rem;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+/* --- Error Message Style --- */
+.error-message {
+    color: var(--bs-danger);
+    z-index: 6;
+}
+.error-message i {
+    font-size: 2.5rem;
+    opacity: 0.6;
+}
+.error-message span {
+    font-size: 1rem;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* --- Logic for Showing/Hiding --- */
+.chart-wrapper.has-no-data .no-data-message {
+    display: flex;
+}
+.chart-wrapper.has-no-data canvas {
+    opacity: 0.7;
+}
+
+.chart-wrapper.has-error .error-message {
+    display: flex;
+}
+.chart-wrapper.has-error canvas {
+    opacity: 0.7;
+}
+.chart-wrapper.has-error .no-data-message {
+    display: none !important;
+}
+
 /* =================================================================== */
 /* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */
 /* =================================================================== */

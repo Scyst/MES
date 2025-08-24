@@ -27,6 +27,28 @@ function toggleLoadingState(elementId, isLoading) {
     }
 }
 
+function toggleNoDataMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        // เคลียร์สถานะ error ก่อนเสมอ
+        wrapper.classList.remove('has-error');
+        // แล้วค่อยจัดการสถานะ no-data
+        show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
+    }
+}
+
+function toggleErrorMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        // เคลียร์สถานะ no-data ก่อนเสมอ
+        wrapper.classList.remove('has-no-data');
+        // แล้วค่อยจัดการสถานะ error
+        show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
+    }
+}
+
 /**
  * Helper function to get CSS variable values.
  * @param {string} varName - The name of the CSS variable.
@@ -101,22 +123,13 @@ function updateInfoBox(infoId, lines, targetValue) {
  * --- แก้ไข: ฟังก์ชันวาดกราฟ ให้รับ "ข้อมูลรอง" มาแสดง ---
  * @param {string} secondaryText - ข้อความรองที่จะแสดงตรงกลาง
  */
-function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '') {
+function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '', hasData = true) {
     if (!ctx) return;
     const themeColors = getChartThemeColors();
     const value = data[0];
     const centerTextColor = value >= targetValue ? themeColors.successColor : themeColors.warningColor;
 
-    if (charts[chartName]) {
-        charts[chartName].data.labels = labels;
-        charts[chartName].data.datasets[0].data = data;
-        charts[chartName].options.plugins.centerText.color = centerTextColor;
-        charts[chartName].options.plugins.centerText.secondaryText = secondaryText; // << อัปเดตข้อความรอง
-        charts[chartName].update();
-        return;
-    }
-
-    charts[chartName] = new Chart(ctx, {
+    const chartConfig = {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: colors, cutout: '80%', borderWidth: 0 }] },
         options: {
@@ -124,51 +137,68 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
             plugins: {
                 legend: { display: false },
                 tooltip: { callbacks: { label: (context) => `${context.label}: ${context.parsed.toFixed(1)}%` } },
-                centerText: { // << ส่งข้อมูลทั้งหมดที่ plugin ต้องการ
+                centerText: {
                     color: centerTextColor,
                     secondaryColor: themeColors.secondaryTextColor,
-                    secondaryText: secondaryText
+                    secondaryText: secondaryText,
+                    shouldDraw: hasData
                 }
             }
         },
         plugins: [{
             id: 'centerText',
             beforeDraw(chart) {
-                const { width, height, ctx } = chart;
                 const opts = chart.options.plugins.centerText;
+                
+                if (!opts.shouldDraw) {
+                    return;
+                }
+                
+                const { width, height, ctx } = chart;
                 ctx.restore();
 
-                // Main Text (Percentage)
                 const mainFontSize = (height / 140).toFixed(2);
                 ctx.font = `900 ${mainFontSize}em sans-serif`; 
                 ctx.textBaseline = "middle";
                 const mainText = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
                 const mainTextX = Math.round((width - ctx.measureText(mainText).width) / 2);
-                const mainTextY = height / 2 - (opts.secondaryText ? 10 : 0); // << ขยับขึ้นถ้ามีข้อความรอง
+                const mainTextY = height / 2 - (opts.secondaryText ? 10 : 0);
                 ctx.fillStyle = opts.color || '#000';
                 ctx.fillText(mainText, mainTextX, mainTextY);
 
-                // --- ส่วนที่เพิ่มเข้ามา: วาดข้อความรอง ---
                 if (opts.secondaryText) {
                     const secondaryFontSize = (height / 280).toFixed(2);
                     ctx.font = `400 ${secondaryFontSize}em sans-serif`;
                     const secondaryText = opts.secondaryText;
                     const secondaryTextX = Math.round((width - ctx.measureText(secondaryText).width) / 2);
-                    const secondaryTextY = mainTextY + (height * 0.15); // << ตำแหน่งใต้ข้อความหลัก
+                    const secondaryTextY = mainTextY + (height * 0.15);
                     ctx.fillStyle = opts.secondaryColor || '#888';
                     ctx.fillText(secondaryText, secondaryTextX, secondaryTextY);
                 }
                 ctx.save();
             }
         }]
-    });
-}
+    };
 
+    if (charts[chartName]) {
+        charts[chartName].data.labels = labels;
+        charts[chartName].data.datasets[0].data = data;
+        charts[chartName].options.plugins.centerText.color = centerTextColor;
+        charts[chartName].options.plugins.centerText.secondaryText = secondaryText;
+        charts[chartName].options.plugins.centerText.shouldDraw = hasData;
+        charts[chartName].update();
+    } else {
+        charts[chartName] = new Chart(ctx, chartConfig);
+    }
+}
 
 async function fetchAndRenderCharts() {
     const chartIds = ["oeePieChart", "qualityPieChart", "performancePieChart", "availabilityPieChart"];
+    chartIds.forEach(id => {
+        toggleLoadingState(id, true);
+        toggleErrorMessage(id, false); 
+    });
 
-    chartIds.forEach(id => toggleLoadingState(id, true));
     try {
         const response = await fetch(`api/get_oee_piechart.php?${new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
@@ -176,23 +206,26 @@ async function fetchAndRenderCharts() {
             line: document.getElementById("lineFilter")?.value || '',
             model: document.getElementById("modelFilter")?.value || ''
         }).toString()}`);
-        if (!response.ok) throw new Error(`Network response was not ok`);
+        if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
         const data = await response.json();
-        if (!data.success) throw new Error(data.message || "API error");
+        if (!data.success) throw new Error(data.message || "Piechart API: API error");
 
         const themeColors = getChartThemeColors();
-        const lossColor = themeColors.lossBgColor; // ดึงสีของ Loss มาเก็บไว้
+        const lossColor = themeColors.lossBgColor;
 
-        // --- 1. OEE Card (ภาพรวม) ---
         const totalLoss = 100 - (data.oee || 0);
         const qualityLossRatio = Math.max(0, 1 - ((data.quality || 0) / 100));
         const performanceLossRatio = Math.max(0, 1 - ((data.performance || 0) / 100));
         const availabilityLossRatio = Math.max(0, 1 - ((data.availability || 0) / 100));
         const totalRatio = qualityLossRatio + performanceLossRatio + availabilityLossRatio;
-
+        
+        // --- OEE Card ---
+        const oeeHasData = data.oee && data.oee > 0;
+        toggleNoDataMessage("oeePieChart", !oeeHasData);
         renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"), 
-            ['OEE', 'Loss'], [data.oee || 0, 100 - (data.oee || 0)], 
-            [getCssVar('--mes-chart-color-1'), lossColor], OEE_TARGETS.oee
+            ['OEE', 'Loss'], [data.oee || 0, totalLoss], 
+            [getCssVar('--mes-chart-color-1'), lossColor], OEE_TARGETS.oee,
+            '', oeeHasData
         );
         updateInfoBox("oeeInfo", [
             `OEE Loss: <b>${totalLoss.toFixed(1)} %</b>`,
@@ -201,26 +234,29 @@ async function fetchAndRenderCharts() {
             `A Contrib: <b>${(totalRatio > 0 ? (availabilityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`
         ], OEE_TARGETS.oee);
 
-
-        // --- 2. Quality Card (เจาะลึก) ---
+        // --- Quality Card ---
         const totalDefects = (data.ng || 0) + (data.rework || 0) + (data.hold || 0) + (data.scrap || 0) + (data.etc || 0);
-        const qualityPercent = ((data.fg || 0) + totalDefects) > 0 ? ((data.fg || 0) / ((data.fg || 0) + totalDefects)) * 100 : 100;
+        const qualityTotal = (data.fg || 0) + totalDefects;
+        const qualityPercent = qualityTotal > 0 ? ((data.fg || 0) / qualityTotal) * 100 : 100;
+        const qualityHasData = qualityTotal > 0;
+        toggleNoDataMessage("qualityPieChart", !qualityHasData);
         renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 
             ['Good (FG)', 'Defects'], [qualityPercent, 100 - qualityPercent], 
             [getCssVar('--mes-chart-color-2'), lossColor], OEE_TARGETS.quality,
-            `FG: ${(data.fg || 0).toLocaleString()} pcs`
+            `FG: ${(data.fg || 0).toLocaleString()} pcs`, qualityHasData
         );
         updateInfoBox("qualityInfo", [
             `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
             `Defects: <b>${totalDefects.toLocaleString()}</b> pcs`
         ], OEE_TARGETS.quality);
 
-
-        // --- 3. Performance Card (เจาะลึก) ---
+        // --- Performance Card ---
+        const performanceHasData = data.performance && data.performance > 0;
+        toggleNoDataMessage("performancePieChart", !performanceHasData);
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 
             ['Performance', 'Loss'], [data.performance || 0, 100 - (data.performance || 0)], 
             [getCssVar('--mes-chart-color-3'), lossColor], OEE_TARGETS.performance,
-            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`
+            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`, performanceHasData
         );
         updateInfoBox("performanceInfo", [
             `Actual: <b>${(data.actual_output || 0).toLocaleString()}</b> pcs`,
@@ -228,13 +264,14 @@ async function fetchAndRenderCharts() {
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
         ], OEE_TARGETS.performance);
 
-
-        // --- 4. Availability Card (เจาะลึก) ---
-        const runtimePercent = (data.planned_time || 0) > 0 ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
+        // --- Availability Card ---
+        const availabilityHasData = data.planned_time && data.planned_time > 0;
+        const runtimePercent = availabilityHasData ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
+        toggleNoDataMessage("availabilityPieChart", !availabilityHasData);
         renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"), 
             ['Runtime', 'Downtime'], [runtimePercent, 100 - runtimePercent], 
             [getCssVar('--mes-chart-color-4'), lossColor], OEE_TARGETS.availability,
-            `Downtime: ${formatMinutes(data.downtime || 0)}`
+            `Downtime: ${formatMinutes(data.downtime || 0)}`, availabilityHasData
         );
         updateInfoBox("availabilityInfo", [
             `Planned: <b>${formatMinutes(data.planned_time || 0)}</b>`,
@@ -242,8 +279,8 @@ async function fetchAndRenderCharts() {
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
         ], OEE_TARGETS.availability);
 
+        // --- Sparkline ---
         const sparklineData = data.sparkline_data || [];
-
         renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), getCssVar('--mes-chart-color-1'));
         renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), getCssVar('--mes-chart-color-2'));
         renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), getCssVar('--mes-chart-color-3'));
@@ -251,6 +288,7 @@ async function fetchAndRenderCharts() {
 
     } catch (err) {
         console.error("Pie/Sparkline chart update failed:", err);
+        chartIds.forEach(id => toggleErrorMessage(id, true));
     } finally {
         chartIds.forEach(id => toggleLoadingState(id, false));
     }

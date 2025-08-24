@@ -22,6 +22,26 @@ function toggleLoadingState(elementId, isLoading) {
     }
 }
 
+function toggleNoDataMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        // เคลียร์สถานะ error ก่อนเสมอ
+        wrapper.classList.remove('has-error');
+        // แล้วค่อยจัดการสถานะ no-data
+        show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
+    }
+}
+
+function toggleErrorMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        wrapper.classList.remove('has-no-data');
+        show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
+    }
+}
+
 /**
  * Helper function to get CSS variable values.
  * @param {string} varName - The name of the CSS variable.
@@ -36,9 +56,9 @@ function getLineChartThemeColors() {
     if (theme === 'dark') {
         return {
             ticksColor: '#ccc',
-            gridColor: '#495057', // ปรับให้เข้มขึ้นเล็กน้อย
+            gridColor: '#495057',
             legendColor: '#ccc',
-            targetLineColor: 'rgba(255, 107, 107, 0.7)', // สีแดงสำหรับเป้าหมาย
+            targetLineColor: 'rgba(255, 107, 107, 0.7)',
             targetLabelBg: 'rgba(255, 107, 107, 0.7)',
             targetLabelColor: '#fff'
         };
@@ -47,16 +67,17 @@ function getLineChartThemeColors() {
             ticksColor: '#6c757d',
             gridColor: '#dee2e6',
             legendColor: '#212529',
-            targetLineColor: 'rgba(220, 53, 69, 0.7)', // สีแดงสำหรับเป้าหมาย
+            targetLineColor: 'rgba(220, 53, 69, 0.7)',
             targetLabelBg: 'rgba(220, 53, 69, 0.7)',
             targetLabelColor: '#fff'
         };
     }
 }
 
-// --- (ฟังก์ชัน fetchAndRenderLineCharts เหมือนเดิม) ---
 async function fetchAndRenderLineCharts() {
     toggleLoadingState("oeeLineChart", true);
+    toggleErrorMessage("oeeLineChart", false);
+
     try {
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
@@ -67,18 +88,22 @@ async function fetchAndRenderLineCharts() {
 
         const response = await fetch(`api/get_oee_linechart.php?${params.toString()}`);
         const data = await response.json();
-        if (!data.success) throw new Error("Data error");
+        if (!data.success) throw new Error("Linechart API: Data error");
 
-        const labels = data.records.map(r => r.date);
-        const chartData = {
+        const hasData = data.records && data.records.length > 0;
+        toggleNoDataMessage("oeeLineChart", !hasData);
+
+        const labels = hasData ? data.records.map(r => r.date) : [];
+        const chartData = hasData ? {
             oee: data.records.map(r => r.oee),
             quality: data.records.map(r => r.quality),
             performance: data.records.map(r => r.performance),
             availability: data.records.map(r => r.availability)
-        };
-        const themeColors = getLineChartThemeColors();
+        } : { oee: [], quality: [], performance: [], availability: [] };
 
-        if (!oeeLineChart) {
+        const themeColors = getLineChartThemeColors();
+        
+        if (!oeeLineChart || oeeLineChart.destroyed) {
             initializeLineChart(labels, chartData, themeColors);
         } else {
             oeeLineChart.data.labels = labels;
@@ -86,7 +111,6 @@ async function fetchAndRenderLineCharts() {
                 dataset.data = Object.values(chartData)[index];
             });
 
-            // อัปเดตสีและเส้นเป้าหมาย
             oeeLineChart.options.plugins.legend.labels.color = themeColors.legendColor;
             oeeLineChart.options.scales.x.ticks.color = themeColors.ticksColor;
             oeeLineChart.options.scales.x.grid.color = themeColors.gridColor;
@@ -100,14 +124,17 @@ async function fetchAndRenderLineCharts() {
         }
     } catch (err) {
         console.error("Line chart fetch failed:", err);
+        toggleErrorMessage("oeeLineChart", true);
+
+        if (!oeeLineChart || oeeLineChart.destroyed) {
+            const themeColors = getLineChartThemeColors();
+            initializeLineChart([], { oee: [], quality: [], performance: [], availability: [] }, themeColors);
+        }
     } finally {
-        toggleLoadingState("oeeLineChart", false); // <<< ซ่อน
+        toggleLoadingState("oeeLineChart", false);
     }
 }
 
-/**
- * --- 3. แก้ไข: ฟังก์ชันสร้างกราฟ ให้เพิ่ม "Annotation" (เส้นเป้าหมาย) เข้าไป ---
- */
 function initializeLineChart(labels, data, themeColors) {
     const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
     if (!ctx) return;

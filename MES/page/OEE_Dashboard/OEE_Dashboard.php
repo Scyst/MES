@@ -48,10 +48,22 @@ session_start();
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-tachometer-alt"></i> OEE</h4>
-                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="oeePieChart"></canvas></div>
+                                    <div class="chart-wrapper pie-chart-wrapper">
+                                        <canvas id="oeePieChart"></canvas>
+                                        <div class="no-data-message">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>No data available for the selected period.</span>
+                                        </div>
+                                        <div class="error-message">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Failed to load data.</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="scorecard-body">
-                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="oeeSparklineChart"></canvas></div>
+                                    <div class="chart-wrapper sparkline-wrapper">
+                                        <canvas id="oeeSparklineChart"></canvas>
+                                    </div>
                                     <div class="chart-info" id="oeeInfo"></div>
                                 </div>
                             </div>
@@ -61,10 +73,22 @@ session_start();
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-check-circle"></i> Quality</h4>
-                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="qualityPieChart"></canvas></div>
+                                    <div class="chart-wrapper pie-chart-wrapper">
+                                        <canvas id="qualityPieChart"></canvas>
+                                        <div class="no-data-message">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>No data available for the selected period.</span>
+                                        </div>
+                                        <div class="error-message">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Failed to load data.</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="scorecard-body">
-                                    <div class="chart-wrapper sparkline-wrapper"><canvas id="qualitySparklineChart"></canvas></div>
+                                    <div class="chart-wrapper sparkline-wrapper">
+                                        <canvas id="qualitySparklineChart"></canvas>
+                                    </div>
                                     <div class="chart-info" id="qualityInfo"></div>
                                 </div>
                             </div>
@@ -74,7 +98,17 @@ session_start();
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-running"></i> Performance</h4>
-                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="performancePieChart"></canvas></div>
+                                    <div class="chart-wrapper pie-chart-wrapper">
+                                        <canvas id="performancePieChart"></canvas>
+                                        <div class="no-data-message">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>No data available for the selected period.</span>
+                                        </div>
+                                        <div class="error-message">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Failed to load data.</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="scorecard-body">
                                     <div class="chart-wrapper sparkline-wrapper"><canvas id="performanceSparklineChart"></canvas></div>
@@ -87,7 +121,17 @@ session_start();
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
                                     <h4><i class="fas fa-clock"></i> Availability</h4>
-                                    <div class="chart-wrapper pie-chart-wrapper"><canvas id="availabilityPieChart"></canvas></div>
+                                    <div class="chart-wrapper pie-chart-wrapper">
+                                        <canvas id="availabilityPieChart"></canvas>
+                                        <div class="no-data-message">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>No data available for the selected period.</span>
+                                        </div>
+                                        <div class="error-message">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>Failed to load data.</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="scorecard-body">
                                     <div class="chart-wrapper sparkline-wrapper"><canvas id="availabilitySparklineChart"></canvas></div>
@@ -103,7 +147,17 @@ session_start();
                         <div class="col-12">
                             <div class="chart-card line-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
-                                <div class="chart-wrapper"><canvas id="oeeLineChart"></canvas></div>
+                                <div class="chart-wrapper">
+                                    <canvas id="oeeLineChart"></canvas>
+                                    <div class="no-data-message">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>No data available for the selected period.</span>
+                                    </div>
+                                    <div class="error-message">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span>Failed to load data.</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -113,14 +167,32 @@ session_start();
                             <div class="chart-card bar-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Stop & Cause</h4>
-                                <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas></div>
+                                <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas>
+                                <div class="no-data-message" style="margin-top: 1.5rem;">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>No data available for the selected period.</span>
+                                </div>
+                                <div class="error-message" style="margin-top: 1.5rem;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Failed to load data.</span>
+                                </div>
+                            </div>
                             </div>
                         </div>
                         <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Production Results</h4>
-                                <div class="chart-wrapper"><canvas id="partsBarChart"></canvas></div>
+                                <div class="chart-wrapper"><canvas id="partsBarChart"></canvas>
+                                <div class="no-data-message" style="margin-top: 1.5rem;">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>No data available for the selected period.</span>
+                                </div>
+                                <div class="error-message" style="margin-top: 1.5rem;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Failed to load data.</span>
+                                </div>
+                            </div>
                             </div>
                         </div>
                     </div>

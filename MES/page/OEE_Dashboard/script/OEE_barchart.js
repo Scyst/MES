@@ -14,6 +14,28 @@ function toggleLoadingState(elementId, isLoading) {
     }
 }
 
+function toggleNoDataMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        // เคลียร์สถานะ error ก่อนเสมอ
+        wrapper.classList.remove('has-error');
+        // แล้วค่อยจัดการสถานะ no-data
+        show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
+    }
+}
+
+function toggleErrorMessage(canvasId, show) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
+    if (wrapper) {
+        // เคลียร์สถานะ no-data ก่อนเสมอ
+        wrapper.classList.remove('has-no-data');
+        // แล้วค่อยจัดการสถานะ error
+        show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
+    }
+}
+
 /**
  * Helper function to get CSS variable values.
  */
@@ -33,7 +55,6 @@ function truncateLabel(label, maxLength = 4) {
     return label.length > maxLength ? label.substring(0, maxLength) + '...' : label;
 }
 
-// --- ★★★ FINAL CORRECTED VERSION ★★★ ---
 function renderBarChart(canvasId, labels, datasets, options = {}) {
     const { isStacked, originalLabels, unitLabel } = options;
     const themeColors = getBarChartThemeColors();
@@ -42,7 +63,6 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
 
     let chartInstance = barChartInstances[canvasId];
 
-    // ★★★ เพิ่มเกราะป้องกัน: ตรวจสอบว่ากราฟถูก destroy ไปแล้วหรือไม่ ★★★
     if (chartInstance && chartInstance.destroyed) {
         chartInstance = null;
     }
@@ -124,10 +144,10 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
 async function fetchAndRenderBarCharts() {
     toggleLoadingState("partsBarChart", true);
     toggleLoadingState("stopCauseBarChart", true);
+    toggleErrorMessage("partsBarChart", false);
+    toggleErrorMessage("stopCauseBarChart", false);
+
     try {
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ส่วนที่นำกลับเข้ามา ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
@@ -137,13 +157,14 @@ async function fetchAndRenderBarCharts() {
         
         const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
-        if (!responseData.success) throw new Error(responseData.message || "Failed to fetch bar chart data.");
+        if (!responseData.success) throw new Error(responseData.message || "Barchart API: Failed to fetch bar chart data.");
         const data = responseData.data;
 
-        // --- (ส่วนที่เหลือของฟังก์ชันเหมือนเดิมทุกประการ) ---
+        // --- Parts Bar Chart ---
+        const hasPartsData = data.parts && data.parts.labels && data.parts.labels.length > 0;
+        toggleNoDataMessage("partsBarChart", !hasPartsData);
 
-        // Parts Bar Chart
-        const originalPartLabels = data.parts.labels || [];
+        const originalPartLabels = hasPartsData ? data.parts.labels : [];
         const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label, 8));
         const countTypes = {
             FG: getCssVar('--mes-color-success'), NG: getCssVar('--mes-color-danger'),
@@ -151,25 +172,37 @@ async function fetchAndRenderBarCharts() {
             SCRAP: getCssVar('--mes-chart-color-4'), ETC: '#adb5bd'
         };
         const partDatasets = Object.keys(countTypes).map(type => ({
-            label: type, data: data.parts[type] || [], backgroundColor: countTypes[type]
+            label: type, data: hasPartsData ? (data.parts[type] || []) : [], backgroundColor: countTypes[type]
         }));
-        renderBarChart('partsBarChart', truncatedPartLabels, partDatasets,
-            { isStacked: true, originalLabels: originalPartLabels, unitLabel: 'pcs' });
 
-        // Stop Cause Bar Chart
-        const stopCauseLabels = data.stopCause.labels || [];
+        renderBarChart('partsBarChart', truncatedPartLabels, partDatasets, { isStacked: true, originalLabels: originalPartLabels, unitLabel: 'pcs' });
+        
+        // --- Stop Cause Bar Chart ---
+        const hasStopCauseData = data.stopCause && data.stopCause.labels && data.stopCause.labels.length > 0;
+        toggleNoDataMessage("stopCauseBarChart", !hasStopCauseData);
+
+        const stopCauseLabels = hasStopCauseData ? data.stopCause.labels : [];
         const causeColors = { 
             'Man': '#42a5f5', 'Machine': '#26c6da', 'Method': '#64b5f6', 'Material': '#9e9e9e',
             'Measurement': '#78909c', 'Environment': '#546e7a', 'Other': '#bdbdbd'
         };
         const stopCauseDatasets = Object.keys(causeColors).map(cause => ({
-            label: cause, data: data.stopCause[cause] || [], backgroundColor: causeColors[cause]
+            label: cause, data: hasStopCauseData ? (data.stopCause[cause] || []) : [], backgroundColor: causeColors[cause]
         }));
-        renderBarChart('stopCauseBarChart', stopCauseLabels, stopCauseDatasets,
-            { isStacked: true, unitLabel: 'min', originalLabels: stopCauseLabels });
+        
+        renderBarChart('stopCauseBarChart', stopCauseLabels, stopCauseDatasets, { isStacked: true, unitLabel: 'min', originalLabels: stopCauseLabels });
 
     } catch (err) {
         console.error("Bar chart fetch failed:", err);
+        toggleErrorMessage("partsBarChart", true);
+        toggleErrorMessage("stopCauseBarChart", true);
+
+        if (!barChartInstances['partsBarChart'] || barChartInstances['partsBarChart'].destroyed) {
+            renderBarChart('partsBarChart', [], [], { isStacked: true, originalLabels: [], unitLabel: 'pcs' });
+        }
+        if (!barChartInstances['stopCauseBarChart'] || barChartInstances['stopCauseBarChart'].destroyed) {
+            renderBarChart('stopCauseBarChart', [], [], { isStacked: true, unitLabel: 'min', originalLabels: [] });
+        }
     } finally {
         toggleLoadingState("partsBarChart", false);
         toggleLoadingState("stopCauseBarChart", false);
