@@ -24,7 +24,7 @@
     </style>
 </head>
 
-<body class=" p-4">
+<body class=" p-4 page-with-table">
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 

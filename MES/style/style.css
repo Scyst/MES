@@ -58,7 +58,18 @@ body {
     width: 100%;
     margin-left: 80px;
     transition: margin-left 0.3s ease-in-out;
-    overflow: hidden;
+}
+
+/* สำหรับหน้า Dashboard (ที่ต้องการ Snap Scrolling) */
+.dashboard-page #main-content {
+    height: 100vh;
+    overflow: hidden; /* ห้ามมี scrollbar */
+}
+
+/* สำหรับหน้าที่มีตาราง (ที่ต้องการให้เลื่อนได้ปกติ) */
+.page-with-table #main-content {
+    height: 100vh;
+    overflow-y: auto; /* อนุญาตให้มี scrollbar ได้ */
 }
 
 .sidebar {
@@ -635,15 +646,15 @@ body {
 /* เมื่อจอกว้างน้อยกว่า 768px */
 @media (max-width: 767.98px) {
     /* ย้าย Header ของ Dashboard ลงมาข้างล่าง */
+    .page-with-table #main-content {
+        padding-bottom: 150px;
+    }
+
     .dashboard-header-sticky {
         top: auto;
         bottom: 0;
         border-top: 1px solid var(--bs-border-color);
         border-bottom: none;
-    }
-
-    #main-content {
-        padding-bottom: 150px; /* เพิ่มพื้นที่ด้านล่างสำหรับ Header */
     }
 }
 

@@ -9,7 +9,7 @@ session_start();
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
-<body class="">
+<body class="dashboard-page">
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 
