@@ -13,7 +13,7 @@
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
-<body class=" p-4 page-with-table">
+<body class="page-with-table">
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 

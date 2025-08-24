@@ -1,74 +1,119 @@
 "use strict";
 
 /**
- * ฟังก์ชันสำหรับสร้าง Pagination Control ที่สามารถนำไปใช้ได้ทุกที่
- * @param {string} containerId - ID ของ <ul> ที่จะใส่ pagination
- * @param {number} totalItems - จำนวนรายการทั้งหมด
- * @param {number} currentPage - หน้าปัจจุบัน
- * @param {number} rowsPerPage - จำนวนรายการต่อหน้า
- * @param {function} callback - ฟังก์ชันที่จะถูกเรียกเมื่อมีการคลิกเปลี่ยนหน้า (จะส่งหมายเลขหน้ากลับไป)
+ * Creates and manages pagination controls for a table.
+ * @param {string} paginationId - The ID of the <ul> element for pagination.
+ * @param {number} currentPage - The current active page.
+ * @param {number} totalPages - The total number of pages.
+ * @param {function(number): void} onPageClick - Callback function to execute when a page number is clicked.
  */
-function renderPagination(containerId, totalItems, currentPage, rowsPerPage, callback) {
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    const pagination = document.getElementById(containerId);
-    
-    if (!pagination) {
-        console.error(`Pagination container with ID "${containerId}" not found.`);
-        return;
-    }
-    
-    pagination.innerHTML = '';
-    if (totalPages <= 1) return;
+function setupPagination(paginationId, currentPage, totalPages, onPageClick) {
+    const paginationUl = document.getElementById(paginationId);
+    if (!paginationUl) return;
 
-    const createPageItem = (page, text, isDisabled = false, isActive = false) => {
+    paginationUl.innerHTML = ''; // Clear old pagination
+
+    if (totalPages <= 1) return; // Don't show pagination if there's only one page
+
+    const createPageItem = (pageNumber, text, isActive = false, isDisabled = false) => {
         const li = document.createElement('li');
-        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`;
+        li.className = `page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`;
         
         const a = document.createElement('a');
         a.className = 'page-link';
         a.href = '#';
-        a.innerHTML = text;
+        a.textContent = text;
         if (!isDisabled) {
             a.addEventListener('click', (e) => {
                 e.preventDefault();
-                if (callback && typeof callback === 'function') {
-                    callback(page);
-                }
+                onPageClick(pageNumber);
             });
         }
         li.appendChild(a);
         return li;
     };
 
-    pagination.appendChild(createPageItem(currentPage - 1, '«', currentPage <= 1));
+    // "Previous" button
+    paginationUl.appendChild(createPageItem(currentPage - 1, '«', false, currentPage === 1));
 
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
+    // Page numbers
+    const MAX_VISIBLE_PAGES = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(MAX_VISIBLE_PAGES / 2));
+    let endPage = Math.min(totalPages, startPage + MAX_VISIBLE_PAGES - 1);
 
-    if (currentPage <= 3) {
-        endPage = Math.min(5, totalPages);
+    if (endPage - startPage + 1 < MAX_VISIBLE_PAGES) {
+        startPage = Math.max(1, endPage - MAX_VISIBLE_PAGES + 1);
     }
-    if (currentPage > totalPages - 3) {
-        startPage = Math.max(1, totalPages - 4);
-    }
-
+    
     if (startPage > 1) {
-        pagination.appendChild(createPageItem(1, '1'));
+        paginationUl.appendChild(createPageItem(1, '1'));
         if (startPage > 2) {
-            pagination.appendChild(createPageItem(0, '...', true));
+            paginationUl.appendChild(createPageItem(0, '...', false, true));
         }
     }
 
     for (let i = startPage; i <= endPage; i++) {
-        pagination.appendChild(createPageItem(i, i, false, i === currentPage));
+        paginationUl.appendChild(createPageItem(i, i.toString(), i === currentPage));
     }
 
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
-            pagination.appendChild(createPageItem(0, '...', true));
+            paginationUl.appendChild(createPageItem(0, '...', false, true));
         }
-        pagination.appendChild(createPageItem(totalPages, totalPages));
+        paginationUl.appendChild(createPageItem(totalPages, totalPages.toString()));
     }
 
-    pagination.appendChild(createPageItem(currentPage + 1, '»', currentPage >= totalPages));
+    // "Next" button
+    paginationUl.appendChild(createPageItem(currentPage + 1, '»', false, currentPage === totalPages));
 }
+
+
+// --- ★★★ ส่วนที่เพิ่มเข้ามาใหม่ทั้งหมด ★★★ ---
+
+/**
+ * Initializes and manages the visibility of paginations within a tabbed interface.
+ */
+function initializeTabbedPagination() {
+    // 1. ค้นหาองค์ประกอบที่จำเป็น
+    const mainTabContainer = document.getElementById('mainTab');
+    const mainContentContainer = document.getElementById('main-content');
+
+    // 2. ถ้าไม่เจอ Tab Container ให้ออกจากฟังก์ชัน (หมายความว่าหน้านี้ไม่มี Tab)
+    if (!mainTabContainer || !mainContentContainer) {
+        return;
+    }
+
+    // 3. ค้นหาปุ่ม Tab และแถบ Pagination ทั้งหมด
+    const tabButtons = mainTabContainer.querySelectorAll('.nav-link');
+    const paginations = mainContentContainer.querySelectorAll('.sticky-bottom');
+
+    // 4. ฟังก์ชันสำหรับซ่อน/แสดง Pagination ที่ถูกต้อง
+    function showCorrectPagination(activeTabId) {
+        paginations.forEach(pagination => {
+            // ตรวจสอบจาก 'data-tab-target' ที่เราตั้งไว้ใน HTML
+            if (pagination.dataset.tabTarget === activeTabId) {
+                pagination.style.display = 'block';
+            } else {
+                pagination.style.display = 'none';
+            }
+        });
+    }
+
+    // 5. แสดง Pagination ที่ถูกต้องเมื่อหน้าโหลดครั้งแรก
+    const initialActiveTab = mainTabContainer.querySelector('.nav-link.active');
+    if (initialActiveTab) {
+        showCorrectPagination(initialActiveTab.getAttribute('data-bs-target'));
+    }
+
+    // 6. เพิ่ม Event Listener ให้กับทุกปุ่ม Tab
+    tabButtons.forEach(button => {
+        // ใช้ Event 'shown.bs.tab' ของ Bootstrap ซึ่งจะทำงานหลังจาก Tab แสดงผลแล้ว
+        button.addEventListener('shown.bs.tab', function (event) {
+            const activeTabId = event.target.getAttribute('data-bs-target');
+            showCorrectPagination(activeTabId);
+        });
+    });
+}
+
+// --- ★★★ เรียกใช้งานฟังก์ชันใหม่เมื่อหน้าเว็บโหลดเสร็จ ★★★ ---
+document.addEventListener('DOMContentLoaded', initializeTabbedPagination);

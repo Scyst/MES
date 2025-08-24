@@ -46,11 +46,13 @@ body {
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
     font-family: 'Prompt', sans-serif;
 }
+
 .page-container {
     display: flex;
     height: 100vh;
     overflow: hidden;
 }
+
 #main-content {
     display: flex;
     flex-direction: column;
@@ -66,10 +68,34 @@ body {
     overflow: hidden; /* ห้ามมี scrollbar */
 }
 
-/* สำหรับหน้าที่มีตาราง (ที่ต้องการให้เลื่อนได้ปกติ) */
+/* กฎสำหรับหน้าที่มีตาราง (ที่ต้องการให้เลื่อนได้ปกติ) */
 .page-with-table #main-content {
     height: 100vh;
-    overflow-y: auto; /* อนุญาตให้มี scrollbar ได้ */
+    overflow-y: auto;       /* ★ 1. คืนชีพ Scrollbar หลักที่นี่ */
+    display: flex;          /* ★ 2. ทำให้เป็น Flex Container */
+    flex-direction: column; /* ★ 3. สั่งให้เรียงจากบนลงล่าง */
+}
+
+.page-with-table .tab-content {
+    flex-grow: 1;       /* ★★★ ทำให้ขยายเต็มพื้นที่ที่เหลือ ★★★ */
+    overflow-y: auto;   /* ★★★ ให้มี Scrollbar ที่นี่ที่เดียว ★★★ */
+    padding: 1.5rem;    /* ★★★ ย้าย Padding มาไว้ที่นี่ ★★★ */
+}
+
+.page-with-table .table-responsive {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.page-with-table .table {
+    flex-grow: 1; /* ทำให้ตารางยืดเต็มพื้นที่ */
+}
+
+.content-wrapper {
+    padding: 1.5rem;
+    flex-grow: 1;      /* ★★★ หัวใจของการแก้ไข ★★★ */
+    overflow-y: auto;  /* ★★★ ทำให้พื้นที่นี้เลื่อนได้อิสระ (เผื่อเนื้อหาล้น) ★★★ */
 }
 
 .sidebar {

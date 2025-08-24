@@ -19,7 +19,7 @@
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
-<body class=" p-4 page-with-table">
+<body class="page-with-table">
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 
@@ -91,146 +91,148 @@
                     </div>
                 </div>
 
-                <div class="tab-content" id="mainTabContent">
-                    <div class="tab-pane fade show active" id="production-variance-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table class="table  table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Location</th>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Part Description</th>
-                                        <th class="text-end">Total IN</th>
-                                        <th class="text-end">Total OUT</th>
-                                        <th class="text-end">Variance (OUT - IN)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productionVarianceTableBody"></tbody>
-                            </table>
+                <div class="content-wrapper">
+                    <div class="tab-content" id="mainTabContent">
+                        <div class="tab-pane fade show active" id="production-variance-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table  table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Location</th>
+                                            <th>SAP No.</th>
+                                            <th>Part Number</th>
+                                            <th>Part Description</th>
+                                            <th class="text-end">Total IN</th>
+                                            <th class="text-end">Total OUT</th>
+                                            <th class="text-end">Variance (OUT - IN)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productionVarianceTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="productionVariancePagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="productionVariancePagination"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table class="table  table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Part Description</th>
-                                        <th>Lot Number</th>
-                                        <th class="text-end">Total IN</th>
-                                        <th class="text-end">Total OUT</th>
-                                        <th class="text-end">Variance (OUT - IN)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="wipByLotTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table  table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>SAP No.</th>
+                                            <th>Part Number</th>
+                                            <th>Part Description</th>
+                                            <th>Lot Number</th>
+                                            <th class="text-end">Total IN</th>
+                                            <th class="text-end">Total OUT</th>
+                                            <th class="text-end">Variance (OUT - IN)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wipByLotTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipByLotPagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipByLotPagination"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table class="table  table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>จาก (Source)</th>
-                                        <th>ไปยัง (Destination)</th>
-                                        <th>SAP No.</th>
-                                        <th>Part No.</th>
-                                        <th>ล็อต / อ้างอิง</th>
-                                        <th class="text-end">จำนวน</th>
-                                        <th>หมายเหตุ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="entryHistoryTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table  table-hover table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                            <th>จาก (Source)</th>
+                                            <th>ไปยัง (Destination)</th>
+                                            <th>SAP No.</th>
+                                            <th>Part No.</th>
+                                            <th>ล็อต / อ้างอิง</th>
+                                            <th class="text-end">จำนวน</th>
+                                            <th>หมายเหตุ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="entryHistoryTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table id="partTable" class="table  table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 10%;">Date</th>
-                                        <th style="width: 15%;">Time (Start-End)</th>
-                                        <th style="width: 8%;" class="text-center">Duration (m)</th>
-                                        <th style="width: 10%;">Location</th>
-                                        <th style="width: 12%;">Part No.</th>
-                                        <th style="width: 10%;">Lot / Ref.</th>
-                                        <th style="width: 8%;" class="text-end">Quantity</th>
-                                        <th style="width: 8%;" class="text-center">Type</th>
-                                        <th>Notes</th> </tr>
-                                </thead>
-                                <tbody id="partTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table id="partTable" class="table  table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 10%;">Date</th>
+                                            <th style="width: 15%;">Time (Start-End)</th>
+                                            <th style="width: 8%;" class="text-center">Duration (m)</th>
+                                            <th style="width: 10%;">Location</th>
+                                            <th style="width: 12%;">Part No.</th>
+                                            <th style="width: 10%;">Lot / Ref.</th>
+                                            <th style="width: 8%;" class="text-end">Quantity</th>
+                                            <th style="width: 8%;" class="text-center">Type</th>
+                                            <th>Notes</th> </tr>
+                                    </thead>
+                                    <tbody id="partTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="wip-onhand-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table class="table  table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Location</th>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Part Description</th>
-                                        <th class="text-end">On-Hand Quantity (WIP)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="wipOnHandTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="wip-onhand-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table  table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Location</th>
+                                            <th>SAP No.</th>
+                                            <th>Part Number</th>
+                                            <th>Part Description</th>
+                                            <th class="text-end">On-Hand Quantity (WIP)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wipOnHandTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipOnHandPagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipOnHandPagination"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
-                        <div class="table-responsive mt-3">
-                            <table class="table  table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 15%;">SAP No.</th>
-                                        <th style="width: 15%;">Part No.</th>
-                                        <th>Used in Models</th>
-                                        <th>Part Description</th>
-                                        <th class="text-end" style="width: 15%;">Total On-Hand</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="stockCountTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
+                            <div class="table-responsive mt-3">
+                                <table class="table  table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 15%;">SAP No.</th>
+                                            <th style="width: 15%;">Part No.</th>
+                                            <th>Used in Models</th>
+                                            <th>Part Description</th>
+                                            <th class="text-end" style="width: 15%;">Total On-Hand</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stockCountTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
-                    </div>
 
-                    <div class="tab-pane fade" id="transaction-log-pane" role="tabpanel">
-                        <div class="table-responsive">
-                            <table class="table  table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date & Time</th>
-                                        <th>Type</th>
-                                        <th>Part No.</th>
-                                        <th>Source</th>
-                                        <th>Destination</th>
-                                        <th class="text-end">Change</th>
-                                        <th>Lot / Ref.</th>
-                                        <th>User</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactionLogTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="transaction-log-pane" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table  table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Type</th>
+                                            <th>Part No.</th>
+                                            <th>Source</th>
+                                            <th>Destination</th>
+                                            <th class="text-end">Change</th>
+                                            <th>Lot / Ref.</th>
+                                            <th>User</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transactionLogTableBody"></tbody>
+                                </table>
+                            </div>
+                            <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="transactionLogPagination"></ul></nav>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="transactionLogPagination"></ul></nav>
                     </div>
                 </div>
             </div>
