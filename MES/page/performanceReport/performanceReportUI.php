@@ -64,7 +64,7 @@
             <?php include('../components/php/autoLogoutUI.php'); ?>
             <?php include('components/performanceDetailModal.php'); ?>
 
-            <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
+            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="script/performance.js?v=<?php echo filemtime('script/performance.js'); ?>"></script>
         </main>
     </div>

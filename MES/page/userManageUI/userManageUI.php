@@ -109,7 +109,7 @@ $canManage = hasRole(['admin', 'creator']);
                 const currentUserRole = <?php echo json_encode($_SESSION['user']['role'] ?? ''); ?>;
             </script>
 
-            <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
+            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
             <script src="script/userManage.js?v=<?php echo filemtime('script/userManage.js'); ?>"></script>
         </main>

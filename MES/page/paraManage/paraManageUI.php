@@ -23,18 +23,19 @@
         <main id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
     
-            <div class="container-fluid">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">System Parameters</h2>
-                </div>
+            <div class="sticky-bar">
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="mb-0">System Parameters</h2>
+                    </div>
 
-                <ul class="nav nav-tabs" id="paramTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="standard-params-tab" data-bs-toggle="tab" data-bs-target="#standardParamsPane" type="button" role="tab">
-                            <i class="fas fa-cogs"></i> Standard Parameters
-                        </button>
-                    </li>
-                    <?php if ($canManage): ?>
+                    <ul class="nav nav-tabs" id="paramTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="standard-params-tab" data-bs-toggle="tab" data-bs-target="#standardParamsPane" type="button" role="tab">
+                                <i class="fas fa-cogs"></i> Standard Parameters
+                            </button>
+                        </li>
+                        <?php if ($canManage): ?>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#lineSchedulesPane" type="button" role="tab">
                                 <i class="fas fa-calendar-alt"></i> Line Schedules
@@ -45,16 +46,18 @@
                                 <i class="fas fa-heartbeat"></i> Data Health Check
                             </button>
                         </li>
-                    <?php endif; ?>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bomManagerPane" type="button" role="tab">
-                            <i class="fas fa-sitemap"></i> BOM Manager
-                        </button>
-                    </li>
-                </ul>
+                        <?php endif; ?>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bomManagerPane" type="button" role="tab">
+                                <i class="fas fa-sitemap"></i> BOM Manager
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
 
+            <div class="content-wrapper">
                 <div class="tab-content pt-3" id="paramTabContent">
-
                     <div class="tab-pane fade show active" id="standardParamsPane" role="tabpanel">
                         <div class="sticky-bar pb-1">
                             <div class="row mb-2 align-items-center">
@@ -110,9 +113,6 @@
                                 <tbody id="paramTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom">
-                            <ul class="pagination justify-content-center" id="paginationControls"></ul>
-                        </nav>
                     </div>
 
                     <?php if ($canManage): ?>
@@ -159,9 +159,6 @@
                                     <tbody id="missingParamsList"></tbody>
                                 </table>
                             </div>
-                            <nav class="sticky-bottom mt-3">
-                                <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
-                            </nav>
                         </div>
                     <?php endif; ?>
                     
@@ -212,6 +209,14 @@
                 </div>
             </div>
             
+            <nav class="sticky-bottom" data-tab-target="#standardParamsPane">
+                <ul class="pagination justify-content-center" id="paginationControls"></ul>
+            </nav>
+            <?php if ($canManage): ?>
+            <nav class="sticky-bottom" data-tab-target="#healthCheckPane" style="display: none;">
+                <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
+            </nav>
+            <?php endif; ?>
             <div id="toast"></div>
 
             <?php 
@@ -236,8 +241,8 @@
                 const currentUser = <?php echo json_encode($currentUser); ?>;
             </script>
             
-            <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
-            <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
+            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
+            <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
             <script src="script/paraManage.js?v=<?php echo filemtime('script/paraManage.js'); ?>"></script>
             <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
         </main>

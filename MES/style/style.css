@@ -58,7 +58,7 @@ body {
     flex-direction: column;
     flex-grow: 1;
     width: 100%;
-    margin-left: 80px;
+    margin-left: 60px;
     transition: margin-left 0.3s ease-in-out;
 }
 
@@ -79,7 +79,7 @@ body {
 .page-with-table .tab-content {
     flex-grow: 1;       /* ★★★ ทำให้ขยายเต็มพื้นที่ที่เหลือ ★★★ */
     overflow-y: auto;   /* ★★★ ให้มี Scrollbar ที่นี่ที่เดียว ★★★ */
-    padding: 1.5rem;    /* ★★★ ย้าย Padding มาไว้ที่นี่ ★★★ */
+    padding: 0 0.25rem;    /* ★★★ ย้าย Padding มาไว้ที่นี่ ★★★ */
 }
 
 .page-with-table .table-responsive {
@@ -93,7 +93,7 @@ body {
 }
 
 .content-wrapper {
-    padding: 1.5rem;
+    padding: 0 1rem;
     flex-grow: 1;      /* ★★★ หัวใจของการแก้ไข ★★★ */
     overflow-y: auto;  /* ★★★ ทำให้พื้นที่นี้เลื่อนได้อิสระ (เผื่อเนื้อหาล้น) ★★★ */
 }
@@ -115,7 +115,7 @@ body {
     height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 0 0 28px;
+    padding: 0 0 0 18px;
     flex-shrink: 0;
 }
 #sidebar-toggle-btn {
@@ -146,7 +146,7 @@ body {
     align-items: center;
     text-decoration: none;
     color: var(--bs-body-color);
-    padding-left: 28px !important;
+    padding-left: 20px !important;
     transition: background-color 0.2s, color 0.3s ease-in-out;
 }
 .sidebar .dropdown-username {
@@ -185,7 +185,7 @@ body {
 }
 
 /* --- Sidebar States --- */
-.sidebar[data-state="collapsed"] { width: 80px; }
+.sidebar[data-state="collapsed"] { width: 60px; }
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
 .sidebar[data-state="expanded"] .dropdown-item-icon span,
@@ -215,8 +215,9 @@ body {
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     flex-shrink: 0; /* ป้องกันไม่ให้ Header หดตัว */
 }
-.dashboard-header-sticky, .sticky-bar { top: 0; padding: 1rem 2rem; }
-.sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
+.dashboard-header-sticky { top: 0; padding: 1rem 2rem; }
+.sticky-bar { top: 0; padding: 0.5rem; }
+.sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 1rem; padding-bottom: 0; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
 
 #toast {
     position: fixed; top: 20px; right: 20px;

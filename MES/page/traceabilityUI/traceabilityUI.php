@@ -126,7 +126,7 @@
                 include('../components/php/autoLogoutUI.php');
             ?>
             
-            <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
+            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="script/traceability.js?v=<?php echo filemtime('script/traceability.js'); ?>"></script>
          </main>
     </div>

@@ -19,26 +19,30 @@
         <main id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
     
-            <div class="container-fluid">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Inventory Settings</h2>
+            <div class="sticky-bar">
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="mb-0">Inventory Settings</h2>
+                    </div>
+
+                    <ul class="nav nav-tabs" id="settingsTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations-pane" type="button" role="tab">Location Manager</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-pane" type="button" role="tab">Stock Transfer</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master</button>
+                        </li>
+                    </ul>
                 </div>
+            </div>
 
-                <ul class="nav nav-tabs" id="settingsTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations-pane" type="button" role="tab">Location Manager</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-pane" type="button" role="tab">Stock Transfer</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master</button>
-                    </li>
-                </ul>
-
+            <div class="content-wrapper">
                 <div class="tab-content" id="settingsTabContent">
                     <div class="tab-pane fade show active" id="locations-pane" role="tabpanel">
                         <?php include('components/locationsUI.php'); ?>
@@ -66,8 +70,8 @@
                 const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
             </script>
             
-            <script src="../components/auto_logout.js?v=<?php echo filemtime('../components/auto_logout.js'); ?>"></script>
-            <script src="../components/pagination.js?v=<?php echo filemtime('../components/pagination.js'); ?>"></script>
+            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
+            <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
             <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
         </main>
     </div>
