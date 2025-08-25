@@ -24,7 +24,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="mb-0">Traceability Report</h2>
                 </div>
-                <div class="row mb-3 align-items-center sticky-bar py-3">
+                <div class="row mb-3 align-items-center sticky-bar">
                     <div class="col-md-6">
                         <input id="lotNoInput" class="form-control form-control" placeholder="Start typing a Lot Number to search...">
                     </div>

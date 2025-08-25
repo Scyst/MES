@@ -1,19 +1,23 @@
-<div class="row my-3 align-items-end sticky-bar py-3">
-    <div class="col-md-3">
-        <select class="form-select" id="locationSelect">
-            <option value="">-- Please select a location --</option>
-        </select>
-    </div>
+<div class="sticky-bar">
+    <div class="container-fluid">
+        <div class="row my-3 align-items-center">
+            <div class="col-md-3">
+                <select class="form-select" id="locationSelect">
+                    <option value="">-- Please select a location --</option>
+                </select>
+            </div>
 
-    <div class="col-md-3">
-        <div class="position-relative">
-            <input type="text" id="addItemSearch" class="form-control" placeholder="Type to search SAP No. or Part No...." autocomplete="off" disabled>
-        </div>
-    </div>
+            <div class="col-md-3">
+                <div class="position-relative">
+                    <input type="text" id="addItemSearch" class="form-control" placeholder="Type to search SAP No. or Part No...." autocomplete="off" disabled>
+                </div>
+            </div>
 
-    <div class="col-md-6">
-        <div class="d-flex justify-content-end">
-            <button class="btn btn-primary" id="saveStockBtn" disabled><i class="fas fa-save"></i> Save All Changes</button>
+            <div class="col-md-6">
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-primary" id="saveStockBtn" disabled><i class="fas fa-save"></i> Save All Changes</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

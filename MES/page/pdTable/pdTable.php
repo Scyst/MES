@@ -54,39 +54,43 @@
                     </li>
                 </ul>
                 
-                <div class="row my-3 align-items-center sticky-bar py-3">
-                    <div class="col-md-8">
-                        <div class="filter-controls-wrapper" id="main-filters">
-                            <input list="partNoList" id="filterPartNo" class="form-control" placeholder="Part No.">
-                            <datalist id="partNoList"></datalist>
+                <div class="sticky-bar">
+                    <div class="container-fluid">
+                        <div class="row my-3 align-items-center">
+                            <div class="col-md-8">
+                                <div class="filter-controls-wrapper" id="main-filters">
+                                    <input list="partNoList" id="filterPartNo" class="form-control" placeholder="Part No.">
+                                    <datalist id="partNoList"></datalist>
 
-                            <input list="lotList" id="filterLotNo" class="form-control" placeholder="Lot No.">
-                            <datalist id="lotList"></datalist>
+                                    <input list="lotList" id="filterLotNo" class="form-control" placeholder="Lot No.">
+                                    <datalist id="lotList"></datalist>
 
-                            <input list="lineList" id="filterLine" class="form-control" placeholder="Line">
-                            <datalist id="lineList"></datalist>
+                                    <input list="lineList" id="filterLine" class="form-control" placeholder="Line">
+                                    <datalist id="lineList"></datalist>
 
-                            <input list="modelList" id="filterModel" class="form-control" placeholder="Model">
-                            <datalist id="modelList"></datalist>
+                                    <input list="modelList" id="filterModel" class="form-control" placeholder="Model">
+                                    <datalist id="modelList"></datalist>
+                                    
+                                    <select id="filterCountType" class="form-select">
+                                        <option value="">All Types</option>
+                                        <option value="FG">FG</option><option value="NG">NG</option><option value="HOLD">HOLD</option>
+                                        <option value="REWORK">REWORK</option><option value="SCRAP">SCRAP</option><option value="ETC.">ETC.</option>
+                                    </select>
+
+                                    <input type="date" id="filterStartDate" class="form-control">
+                                    <span>-</span>
+                                    <input type="date" id="filterEndDate" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
+                            </div>
                             
-                            <select id="filterCountType" class="form-select">
-                                <option value="">All Types</option>
-                                <option value="FG">FG</option><option value="NG">NG</option><option value="HOLD">HOLD</option>
-                                <option value="REWORK">REWORK</option><option value="SCRAP">SCRAP</option><option value="ETC.">ETC.</option>
-                            </select>
-
-                            <input type="date" id="filterStartDate" class="form-control">
-                            <span>-</span>
-                            <input type="date" id="filterEndDate" class="form-control">
+                            <div class="col-12 mt-3" style="display:none;">
+                                <div id="dynamic-summary-container" class="summary-grand-total"></div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
-                    </div>
-                    
-                    <div class="col-12 mt-3">
-                        <div id="dynamic-summary-container" class="summary-grand-total"></div>
                     </div>
                 </div>
 
@@ -112,7 +116,7 @@
                                 <tbody id="wipHistoryTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
@@ -138,7 +142,7 @@
                                 <tbody id="partTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
@@ -158,7 +162,7 @@
                                 <tbody id="wipReportTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="wip-report-by-lot-pane" role="tabpanel">
@@ -179,7 +183,7 @@
                                 <tbody id="wipReportByLotTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="wipReportByLotPagination"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="wipReportByLotPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
@@ -202,7 +206,7 @@
                                 <tbody id="stockCountTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
                     </div>
                 </div>
             </div>

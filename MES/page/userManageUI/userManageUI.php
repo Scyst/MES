@@ -38,7 +38,7 @@ $canManage = hasRole(['admin', 'creator']);
                     </li>
                 </ul>
 
-                <div class="row my-3 align-items-center sticky-bar py-3">
+                <div class="row my-3 align-items-center sticky-bar">
                     <div class="col-lg-9 col-md-8">
                         <div class="filter-controls-wrapper">
                             <div id="user-filters">
@@ -88,7 +88,7 @@ $canManage = hasRole(['admin', 'creator']);
                             <table class="table  table-striped table-hover" id="log-table">
                                 </table>
                         </div>
-                        <nav class="sticky-bottom"><ul class="pagination justify-content-center" id="log-pagination"></ul></nav>
+                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="log-pagination"></ul></nav>
                     </div>
                 </div>
             </div>

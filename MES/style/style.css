@@ -38,8 +38,9 @@ html {
 }
 
 /* =================================================================== */
-/* 2. MAIN LAYOUT & GEMINI-STYLE SIDEBAR (โครงสร้างหลักและ Sidebar) */
+/* 2. MAIN LAYOUT & SIDEBAR (ฉบับแก้ไขที่สมบูรณ์) */
 /* =================================================================== */
+
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
@@ -50,53 +51,38 @@ body {
 .page-container {
     display: flex;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; /* ★★★ บังคับให้กรอบนอกสุดไม่มี Scrollbar ★★★ */
 }
 
+/* --- กฎพื้นฐานสำหรับ #main-content (ใช้กับทุกหน้า) --- */
 #main-content {
-    display: flex;
-    flex-direction: column;
     flex-grow: 1;
     width: 100%;
-    margin-left: 60px;
+    margin-left: 60px; /* ★★★ แก้ไขตามโค้ดของคุณ ★★★ */
     transition: margin-left 0.3s ease-in-out;
-}
-
-/* สำหรับหน้า Dashboard (ที่ต้องการ Snap Scrolling) */
-.dashboard-page #main-content {
-    height: 100vh;
-    overflow: hidden; /* ห้ามมี scrollbar */
-}
-
-/* กฎสำหรับหน้าที่มีตาราง (ที่ต้องการให้เลื่อนได้ปกติ) */
-.page-with-table #main-content {
-    height: 100vh;
-    overflow-y: auto;       /* ★ 1. คืนชีพ Scrollbar หลักที่นี่ */
-    display: flex;          /* ★ 2. ทำให้เป็น Flex Container */
-    flex-direction: column; /* ★ 3. สั่งให้เรียงจากบนลงล่าง */
-}
-
-.page-with-table .tab-content {
-    flex-grow: 1;       /* ★★★ ทำให้ขยายเต็มพื้นที่ที่เหลือ ★★★ */
-    overflow-y: auto;   /* ★★★ ให้มี Scrollbar ที่นี่ที่เดียว ★★★ */
-    padding: 0 0.25rem;    /* ★★★ ย้าย Padding มาไว้ที่นี่ ★★★ */
-}
-
-.page-with-table .table-responsive {
-    height: 100%;
-    display: flex;
+    display: flex; /* ★★★ ทำให้เป็น Flex Container เสมอ ★★★ */
     flex-direction: column;
 }
 
-.page-with-table .table {
-    flex-grow: 1; /* ทำให้ตารางยืดเต็มพื้นที่ */
+/* --- กฎพิเศษสำหรับหน้า Dashboard เท่านั้น --- */
+.dashboard-page #main-content {
+    overflow: hidden; /* ห้ามมี Scrollbar ที่ตัวแม่ */
+}
+/* (กฎสำหรับ .dashboard-container และ .dashboard-section จะทำงานต่อจากตรงนี้) */
+
+
+/* --- กฎพิเศษสำหรับหน้าตาราง เท่านั้น --- */
+.page-with-table #main-content {
+    height: 100vh;      /* กำหนดความสูงให้เต็มหน้าจอ */
+    overflow-y: auto;   /* ★★★ ทำให้ตัวมันเองเป็นพื้นที่เลื่อนได้หลัก ★★★ */
+    padding: 0 1.5rem;    /* นำ Padding กลับมาไว้ที่นี่ */
 }
 
-.content-wrapper {
-    padding: 0 1rem;
-    flex-grow: 1;      /* ★★★ หัวใจของการแก้ไข ★★★ */
-    overflow-y: auto;  /* ★★★ ทำให้พื้นที่นี้เลื่อนได้อิสระ (เผื่อเนื้อหาล้น) ★★★ */
-}
+/* เราไม่จำเป็นต้องมีกฎสำหรับ .content-wrapper หรือ .tab-content อีกต่อไป
+   เพราะตอนนี้ #main-content คือพื้นที่ที่เลื่อนได้ทั้งหมดแล้ว
+   และกฎ "position: sticky" ที่คุณมีอยู่แล้วสำหรับ .sticky-bar และ .sticky-bottom
+   จะกลับมาทำงานได้อย่างถูกต้องโดยอัตโนมัติ
+*/
 
 .sidebar {
     position: fixed;
@@ -216,7 +202,7 @@ body {
     flex-shrink: 0; /* ป้องกันไม่ให้ Header หดตัว */
 }
 .dashboard-header-sticky { top: 0; padding: 1rem 2rem; }
-.sticky-bar { top: 0; padding: 0.5rem; }
+.sticky-bar { top: 0; padding: 0.1rem 0rem; }
 .sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 1rem; padding-bottom: 0; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
 
 #toast {
