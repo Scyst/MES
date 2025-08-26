@@ -59,7 +59,7 @@
             <div class="sticky-bar">
                 <div class="container-fluid">
                     <div class="row my-3 align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <div class="filter-controls-wrapper" id="main-filters">
                                 
                                 <input type="search" id="filterSearch" class="form-control" placeholder="Search...">
@@ -78,7 +78,7 @@
                                 </div>
                             </div>
                             </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
                         </div>
                         <div class="col-12 mt-3" style="display: none;" id="summaryRow">

@@ -1,7 +1,7 @@
 //-- Global Variables & Constants --
 let currentPage = 1;
 let totalPages = 1;
-const API_URL = '../../api/Stop_Cause/stopCauseManage.php';
+const API_URL = 'api/stopCauseManage.php';
 
 /**
  * ฟังก์ชันสำหรับแปลงรูปแบบวันที่และเวลาเป็น DD/MM/YYYY HH:MM:SS

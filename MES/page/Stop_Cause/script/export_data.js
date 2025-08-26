@@ -1,5 +1,5 @@
 // --- ค่าคงที่และฟังก์ชันกลาง ---
-const STOP_CAUSE_API_URL = '../../api/Stop_Cause/stopCauseManage.php';
+const STOP_CAUSE_API_URL = 'api/stopCauseManage.php';
 
 /**
  * ฟังก์ชันสำหรับรวบรวมค่า Filter ทั้งหมดและสร้าง URLSearchParams

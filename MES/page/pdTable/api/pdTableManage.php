@@ -1,9 +1,9 @@
 <?php
 // api/pdTable/pdTableManage.php
 
-require_once __DIR__ . '/../../../api/db.php';
+require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../../api/logger.php';
+require_once __DIR__ . '/../../logger.php';
 require_once __DIR__ . '/../../helpers/inventory_helper.php';
 
 // ส่วนของ CSRF Token Check (เหมือนเดิม)
@@ -30,7 +30,7 @@ $currentUser = $_SESSION['user'];
 
 // ฟังก์ชัน findBomComponents ที่อัปเดตแล้ว
 function findBomComponents($pdo, $part_no, $line, $model) {
-    $bomSql = "SELECT component_part_no, quantity_required FROM " . BOM_TABLE . " WHERE fg_part_no = ? AND line = ? AND model = ?";
+    $bomSql = "SELECT component_part_no, quantity_required FROM " . LEGACY_BOM_TABLE . " WHERE fg_part_no = ? AND line = ? AND model = ?";
     $bomStmt = $pdo->prepare($bomSql);
     $bomStmt->execute([$part_no, $line, $model]);
     return $bomStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -337,7 +337,7 @@ try {
             break;
         
         case 'get_lines':
-            $stmt = $pdo->query("SELECT DISTINCT line FROM " . PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line");
+            $stmt = $pdo->query("SELECT DISTINCT line FROM " . LEGACY_PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line");
             $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
@@ -349,13 +349,13 @@ try {
             break;
 
         case 'get_models':
-            $stmt = $pdo->query("SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model");
+            $stmt = $pdo->query("SELECT DISTINCT model FROM " . LEGACY_PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         case 'get_part_nos':
-            $stmt = $pdo->query("SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
+            $stmt = $pdo->query("SELECT DISTINCT part_no FROM " . LEGACY_PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -397,9 +397,9 @@ try {
             break;
 
         case 'get_datalist_options':
-            $lineSql = "SELECT DISTINCT line FROM " . PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line";
-            $modelSql = "SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model";
-            $partNoSql = "SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
+            $lineSql = "SELECT DISTINCT line FROM " . LEGACY_PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line";
+            $modelSql = "SELECT DISTINCT model FROM " . LEGACY_PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model";
+            $partNoSql = "SELECT DISTINCT part_no FROM " . LEGACY_PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
 
             $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
             $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
@@ -419,7 +419,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            $sql = "SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE line = ? ORDER BY model";
+            $sql = "SELECT DISTINCT model FROM " . LEGACY_PARAMETER_TABLE . " WHERE line = ? ORDER BY model";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$line]);
             $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -433,7 +433,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            $sql = "SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE model = ?";
+            $sql = "SELECT DISTINCT part_no FROM " . LEGACY_PARAMETER_TABLE . " WHERE model = ?";
             $params = [$model];
             if (!empty($line)) {
                 $sql .= " AND line = ?";
@@ -456,7 +456,7 @@ try {
                 exit;
             }
             
-            $sql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ?";
+            $sql = "SELECT COUNT(*) FROM " . LEGACY_PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$line, $model, $part_no]);
             

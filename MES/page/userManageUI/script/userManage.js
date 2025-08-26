@@ -1,7 +1,7 @@
 // userManage.js (เวอร์ชันปรับปรุง Pagination)
 
 //-- Global Variables & Constants --
-const API_URL = '../../api/userManage/userManage.php';
+const API_URL = 'api/userManage.php';
 
 /**
  * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API

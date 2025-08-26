@@ -4,6 +4,8 @@
 // --- DEVELOPMENT SWITCH ---
 // ตั้งเป็น true เมื่อทำงานบนเครื่องตัวเอง, ตั้งเป็น false เมื่อนำขึ้น Server จริง
 define('IS_DEVELOPMENT', true);
+// ตั้งเป็น true เมื่อจะใช้การคำนวนจากระบบเก่า, ตั้งเป็น false เมื่อจะใช้การคำนวนจากระบบใหม่
+define('USE_NEW_OEE_CALCULATION', true);
 
 // --- DATABASE CREDENTIALS ---
 // พยายามดึงค่าจาก Environment Variables ก่อน, ถ้าไม่มีให้ใช้ค่า Default
@@ -22,7 +24,8 @@ define('ROUTES_TABLE', IS_DEVELOPMENT ? 'MANUFACTURING_ROUTES_TEST' : 'MANUFACTU
 
 // --- Legacy System Tables ---
 define('PARTS_TABLE', IS_DEVELOPMENT ? 'PARTS_TEST' : 'PARTS');
-define('PARAMETER_TABLE', IS_DEVELOPMENT ? 'PARAMETER_TEST' : 'PARAMETER');
+define('PARAMETER_TABLE', IS_DEVELOPMENT ? 'PARAMETER_TEST' : 'PARAMETER_TEST');
+define('LEGACY_PARAMETER_TABLE', IS_DEVELOPMENT ? 'PARAMETER' : 'PARAMETER');
 define('LEGACY_BOM_TABLE', IS_DEVELOPMENT ? 'PRODUCT_BOM' : 'PRODUCT_BOM'); // BOM ของระบบเก่า
 define('STOP_CAUSES_TABLE', IS_DEVELOPMENT ? 'STOP_CAUSES_TEST' : 'STOP_CAUSES');
 define('WIP_ENTRIES_TABLE', IS_DEVELOPMENT ? 'WIP_ENTRIES_TEST' : 'WIP_ENTRIES');

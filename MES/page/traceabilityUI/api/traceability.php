@@ -1,7 +1,7 @@
 <?php
 // --- 1. SETUP & INITIALIZATION ---
-require_once __DIR__ . '/../db.php'; // เรียกไฟล์เชื่อมต่อฐานข้อมูล
-require_once __DIR__ . '/../logger.php'; // เรียกไฟล์สำหรับ Logger
+require_once __DIR__ . '/../../db.php'; // เรียกไฟล์เชื่อมต่อฐานข้อมูล
+require_once __DIR__ . '/../../logger.php'; // เรียกไฟล์สำหรับ Logger
 session_start();
 
 // --- 2. INPUT VALIDATION ---

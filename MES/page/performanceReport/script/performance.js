@@ -1,7 +1,7 @@
 "use strict";
 
 // --- FIX 1: Corrected API path to match your structure ---
-const API_ENDPOINT = '../../api/performanceReport/performanceReport.php';
+const API_ENDPOINT = 'api/performanceReport.php';
 let debounceTimer; // Timer for debouncing
 
 /**
