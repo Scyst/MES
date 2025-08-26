@@ -145,7 +145,7 @@ session_start();
                 <section class="dashboard-section" id="charts-section"> 
                     <div class="row mb-4">
                         <div class="col-12">
-                            <div class="chart-card line-chart-card">
+                            <div class="chart-card line-chart-card px-3 py-0">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="chart-wrapper">
                                     <canvas id="oeeLineChart"></canvas>
