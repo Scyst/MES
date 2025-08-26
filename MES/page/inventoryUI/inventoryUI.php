@@ -61,24 +61,23 @@
                     <div class="row my-3 align-items-center">
                         <div class="col-md-8">
                             <div class="filter-controls-wrapper" id="main-filters">
-                                <input list="partNoList" id="filterPartNo" class="form-control" placeholder="Part No.">
-                                <datalist id="partNoList"></datalist>
-                                <input list="lotList" id="filterLotNo" class="form-control" placeholder="Lot No.">
-                                <datalist id="lotList"></datalist>
-                                <input list="lineList" id="filterLine" class="form-control" placeholder="Line">
-                                <datalist id="lineList"></datalist>
-                                <input list="modelList" id="filterModel" class="form-control" placeholder="Model">
-                                <datalist id="modelList"></datalist>
-                                <select id="filterCountType" class="form-select">
+                                
+                                <input type="search" id="filterSearch" class="form-control" placeholder="Search...">
+
+                                <select id="filterCountType" class="form-select" style="display: none;">
                                     <option value="">All Types</option>
-                                    <option value="FG">FG</option><option value="NG">NG</option><option value="HOLD">HOLD</option>
-                                    <option value="REWORK">REWORK</option><option value="SCRAP">SCRAP</option><option value="ETC.">ETC.</option>
+                                    <option value="FG">FG</option>
+                                    <option value="HOLD">HOLD</option>
+                                    <option value="SCRAP">SCRAP</option>
                                 </select>
-                                <input type="date" id="filterStartDate" class="form-control">
-                                <span>-</span>
-                                <input type="date" id="filterEndDate" class="form-control">
+
+                                <div id="date-range-filter" style="display: none; contents: inherit;">
+                                    <input type="date" id="filterStartDate" class="form-control">
+                                    <span>-</span>
+                                    <input type="date" id="filterEndDate" class="form-control">
+                                </div>
                             </div>
-                        </div>
+                            </div>
                         <div class="col-md-4">
                             <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
                         </div>
@@ -264,6 +263,8 @@
                 }
                 include('components/stockDetailModal.php');
                 include('components/varianceDetailModal.php');
+                include('components/summaryModal.php');
+                include('components/historySummaryModal.php');
                 include('../components/php/autoLogoutUI.php');
             ?>
             
@@ -275,6 +276,7 @@
 
             <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
+            <script src="../../utils/libs/xlsx.full.min.js"></script>
             <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
             <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
         </main>

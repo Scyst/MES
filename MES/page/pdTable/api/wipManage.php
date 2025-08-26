@@ -37,7 +37,7 @@ try {
             $lot_no = strtoupper(trim($input['lot_no'] ?? null));
             $quantity_in = (int)$input['quantity_in'];
 
-            $checkSql = "SELECT COUNT(*) FROM " . PARAM_TABLE . " WHERE part_no = ? AND model = ?";
+            $checkSql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE part_no = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$part_no, $model]);
             if ($checkStmt->fetchColumn() == 0) {
@@ -218,7 +218,7 @@ try {
                         ISNULL(tout.total_out, 0) AS total_out
                     FROM TotalIn tin 
                     FULL JOIN TotalOut tout ON tin.part_no = tout.part_no AND tin.line = tout.line AND tin.model = tout.model
-                    LEFT JOIN " . PARAM_TABLE . " p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
+                    LEFT JOIN " . PARAMETER_TABLE . " p ON ISNULL(tin.line, tout.line) = p.line AND ISNULL(tin.model, tout.model) = p.model AND ISNULL(tin.part_no, tout.part_no) = p.part_no
                 ), NumberedRows AS (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY line, model, part_no) as RowNum
                     FROM FullData
@@ -337,7 +337,7 @@ try {
                     FROM MasterLots
                     LEFT JOIN TotalIn ti ON MasterLots.line = ti.line AND MasterLots.model = ti.model AND MasterLots.part_no = ti.part_no AND MasterLots.lot_no = ti.lot_no
                     LEFT JOIN TotalOut to_out ON MasterLots.line = to_out.line AND MasterLots.model = to_out.model AND MasterLots.part_no = to_out.part_no AND MasterLots.lot_no = to_out.base_lot_no
-                    LEFT JOIN " . PARAM_TABLE . " p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
+                    LEFT JOIN " . PARAMETER_TABLE . " p ON MasterLots.line = p.line AND MasterLots.model = p.model AND MasterLots.part_no = p.part_no
                     $whereClause
                 ),
                 NumberedRows AS (
@@ -469,7 +469,7 @@ try {
             if (!empty($_GET['model'])) { $param_conditions[] = "p.model LIKE ?"; $param_params[] = "%".$_GET['model']."%"; }
             $paramWhereClause = !empty($param_conditions) ? "WHERE " . implode(" AND ", $param_conditions) : "";
             
-            $countSql = "SELECT COUNT(*) FROM " . PARAM_TABLE . " p $paramWhereClause";
+            $countSql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " p $paramWhereClause";
             $totalStmt = $pdo->prepare($countSql);
             $totalStmt->execute($param_params);
             $total = (int)$totalStmt->fetchColumn();
@@ -493,7 +493,7 @@ try {
                         p.line, p.model, p.part_no, p.part_description,
                         (ISNULL(wip_in.total, 0) + ISNULL(adj_in.total, 0)) AS total_in,
                         (ISNULL(prod_out.total, 0) + ISNULL(adj_out.total, 0)) AS total_out
-                    FROM " . PARAM_TABLE . " p
+                    FROM " . PARAMETER_TABLE . " p
                     LEFT JOIN TotalWipIn wip_in ON p.line = wip_in.line AND p.model = wip_in.model AND p.part_no = wip_in.part_no
                     LEFT JOIN TotalAdjustIn adj_in ON p.line = adj_in.line AND p.model = adj_in.model AND p.part_no = adj_in.part_no
                     LEFT JOIN TotalAdjustOut adj_out ON p.line = adj_out.line AND p.model = adj_out.model AND p.part_no = adj_out.part_no

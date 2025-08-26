@@ -9,16 +9,6 @@
                 <div class="modal-body">
                     <input type="hidden" id="edit_production_transaction_id" name="transaction_id">
 
-                    <div class="mb-3">
-                        <label class="form-label">ชิ้นส่วน</label>
-                        <input type="text" class="form-control form-control-readonly" id="edit_production_item_display" readonly>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_production_location_id" class="form-label">สถานที่ผลิต</label>
-                        <select class="form-select" id="edit_production_location_id" name="location_id" required></select>
-                    </div>
-
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="edit_production_log_date" class="form-label">วันที่ผลิต</label>
@@ -33,6 +23,16 @@
                             <input type="text" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]" placeholder="HH:MM:SS" id="edit_production_end_time" name="end_time" class="form-control">
                         </div>
                     </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">ชิ้นส่วน</label>
+                        <input type="text" class="form-control form-control-readonly" id="edit_production_item_display" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_production_location_id" class="form-label">สถานที่ผลิต</label>
+                        <select class="form-select" id="edit_production_location_id" name="location_id" required></select>
+                    </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -43,9 +43,8 @@
                             <label for="edit_production_count_type" class="form-label">ประเภท</label>
                             <select id="edit_production_count_type" name="count_type" class="form-select" required>
                                 <option value="FG">FG</option>
-                                <option value="NG">NG</option>
+                                <option value="HOLD">HOLD</option>
                                 <option value="SCRAP">SCRAP</option>
-                                <option value="REWORK">REWORK</option>
                             </select>
                         </div>
                     </div>

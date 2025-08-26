@@ -6,16 +6,18 @@
 const INVENTORY_API_URL = 'api/inventoryManage.php';
 const ROWS_PER_PAGE = 50;
 
-// State variables for different sections/tabs
+// State variables
 let productionHistoryCurrentPage = 1;
 let receiptHistoryCurrentPage = 1;
-let wipCurrentPage = 1;
-let stockCurrentPage = 1;
+let wipByLotCurrentPage = 1;
+let varianceCurrentPage = 1;
+let wipOnHandCurrentPage = 1;
+let stockCountCurrentPage = 1;
+let transactionLogCurrentPage = 1;
 
-let allItems = []; // Master list of all items for autocomplete modals
-let selectedInItem = null; 
+let allItems = [];
+let selectedInItem = null;
 let selectedOutItem = null;
-let currentlyEditingData = null;
 
 // =================================================================
 // SECTION: CORE & UTILITY FUNCTIONS
@@ -23,10 +25,7 @@ let currentlyEditingData = null;
 
 function saveFiltersToLocalStorage() {
     const filters = {
-        part_no: document.getElementById('filterPartNo').value,
-        lot_no: document.getElementById('filterLotNo').value,
-        line: document.getElementById('filterLine').value,
-        model: document.getElementById('filterModel').value,
+        search_term: document.getElementById('filterSearch').value,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
@@ -36,23 +35,16 @@ function saveFiltersToLocalStorage() {
 
 function initializeFilters() {
     const savedFilters = localStorage.getItem('inventoryUIFilters');
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
 
     if (savedFilters) {
         const filters = JSON.parse(savedFilters);
-        document.getElementById('filterPartNo').value = filters.part_no || '';
-        document.getElementById('filterLotNo').value = filters.lot_no || '';
-        document.getElementById('filterLine').value = filters.line || '';
-        document.getElementById('filterModel').value = filters.model || '';
+        document.getElementById('filterSearch').value = filters.search_term || '';
         document.getElementById('filterCountType').value = filters.count_type || '';
-
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
         document.getElementById('filterStartDate').value = filters.startDate || dateStr;
         document.getElementById('filterEndDate').value = filters.endDate || dateStr;
-
     } else {
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
         document.getElementById("filterStartDate").value = dateStr;
         document.getElementById("filterEndDate").value = dateStr;
     }
@@ -63,10 +55,8 @@ function handleFilterChange() {
     const activeTabId = document.querySelector('#mainTab .nav-link.active')?.id;
     if (!activeTabId) return;
 
+    // Reset page to 1 on any filter change
     switch (activeTabId) {
-        case 'wip-onhand-tab':
-            fetchWipOnHandReport(1);
-            break;
         case 'production-variance-tab':
             fetchProductionVarianceReport(1);
             break;
@@ -79,7 +69,10 @@ function handleFilterChange() {
         case 'production-history-tab':
             fetchProductionHistory(1);
             break;
-        case 'stock-count-tab': 
+        case 'wip-onhand-tab':
+            fetchWipOnHandReport(1);
+            break;
+        case 'stock-count-tab':
             fetchStockInventoryReport(1);
             break;
         case 'transaction-log-tab':
@@ -88,9 +81,6 @@ function handleFilterChange() {
     }
 }
 
-/**
- * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API (จำเป็นสำหรับทุกไฟล์ JS ในหน้านี้)
- */
 async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
@@ -123,29 +113,43 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
 }
 
 function updateFilterVisibility(activeTabId) {
-    // แสดงทุกฟิลเตอร์เป็นค่าเริ่มต้น
-    document.getElementById('filterPartNo').style.display = 'block';
-    document.getElementById('filterLotNo').style.display = 'block';
-    document.getElementById('filterLine').style.display = 'block';
-    document.getElementById('filterModel').style.display = 'block';
-    document.getElementById('filterCountType').style.display = 'block';
-    document.getElementById('filterStartDate').style.display = 'block';
-    document.getElementById('filterEndDate').style.display = 'block';
-    document.querySelector('#main-filters span').style.display = 'inline';
+    const searchEl = document.getElementById('filterSearch');
+    const typeEl = document.getElementById('filterCountType');
+    const dateRangeEl = document.getElementById('date-range-filter');
 
-    // ถ้า Tab ที่เลือกคือ Stock/Inventory
-    if (activeTabId === 'stock-count-tab') {
-        document.getElementById('filterPartNo').placeholder = 'Search SAP, Part No, Description';
-        // ซ่อนฟิลเตอร์ที่ไม่เกี่ยวข้อง
-        document.getElementById('filterLotNo').style.display = 'none';
-        document.getElementById('filterLine').style.display = 'none';
-        document.getElementById('filterModel').style.display = 'none';
-        document.getElementById('filterCountType').style.display = 'none';
-        document.getElementById('filterStartDate').style.display = 'none';
-        document.getElementById('filterEndDate').style.display = 'none';
-        document.querySelector('#main-filters span').style.display = 'none'; // ซ่อนขีด "-"
-    } else {
-        document.getElementById('filterPartNo').placeholder = 'Part No.';
+    // Default state: hide everything then show what's needed
+    searchEl.style.display = 'none';
+    typeEl.style.display = 'none';
+    dateRangeEl.style.display = 'none';
+    
+    searchEl.placeholder = 'Search...'; 
+
+    switch (activeTabId) {
+        case 'production-variance-tab':
+        case 'wip-by-lot-tab':
+        case 'entry-history-tab':
+        case 'transaction-log-tab':
+            searchEl.style.display = 'block';
+            dateRangeEl.style.display = 'flex';
+            searchEl.placeholder = 'Search Part No, SAP, Lot, Location...';
+            break;
+            
+        case 'production-history-tab':
+            searchEl.style.display = 'block';
+            typeEl.style.display = 'block';
+            dateRangeEl.style.display = 'flex';
+            searchEl.placeholder = 'Search Part No, SAP, Lot, Location...';
+            break;
+
+        case 'wip-onhand-tab':
+            searchEl.style.display = 'block';
+            searchEl.placeholder = 'Search Part No, SAP, Location...';
+            break;
+
+        case 'stock-count-tab':
+            searchEl.style.display = 'block';
+            searchEl.placeholder = 'Search Part No, SAP, Description...';
+            break;
     }
 }
 
@@ -173,7 +177,7 @@ function updateControls(activeTabId) {
                 ${canAdd ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
             `;
             break;
-        case 'wip-report-tab': // Although this tab might not be in use, we keep the logic
+        case 'wip-report-tab':
             buttonGroup.innerHTML = `<button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>`;
             break;
     }
@@ -181,18 +185,14 @@ function updateControls(activeTabId) {
 
 function applyTimeMask(event) {
     const input = event.target;
-    // 1. เอาทุกอย่างที่ไม่ใช่ตัวเลขออกไป
     let value = input.value.replace(/\D/g, ''); 
 
-    // 2. ถ้ามีความยาวเกิน 2 ตัวอักษร ให้ใส่ : หลังตัวที่ 2
     if (value.length > 2) {
         value = value.substring(0, 2) + ':' + value.substring(2);
     }
-    // 3. ถ้ามีความยาวเกิน 5 ตัวอักษร ให้ใส่ : หลังตัวที่ 5 (นับรวม :)
     if (value.length > 5) {
         value = value.substring(0, 5) + ':' + value.substring(5);
     }
-    // 4. จำกัดความยาวสูงสุดไม่ให้เกิน 8 ตัวอักษร (HH:MM:SS)
     input.value = value.substring(0, 8);
 }
 
@@ -247,63 +247,7 @@ function setupEntryAutocomplete() {
     });
 }
 
-async function fetchReceiptHistory(page = 1) {
-    receiptHistoryCurrentPage = page;
-    showSpinner();
-    
-    const params = {
-        page: page,
-        part_no: document.getElementById('filterPartNo').value,
-        line: document.getElementById('filterLine').value,
-        lot_no: document.getElementById('filterLotNo').value,
-        startDate: document.getElementById('filterStartDate').value,
-        endDate: document.getElementById('filterEndDate').value,
-    };
-
-    try {
-        const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, params);
-        if (result.success) {
-            renderReceiptHistoryTable(result.data);
-            renderPagination('entryHistoryPagination', result.total, result.page, ROWS_PER_PAGE, fetchReceiptHistory);
-        } else {
-            document.getElementById('entryHistoryTableBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">${result.message}</td></tr>`;
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderReceiptHistoryTable(data) {
-    const tbody = document.getElementById('entryHistoryTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No IN transactions found.</td></tr>`;
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.title = 'Click to edit';
-        tr.addEventListener('click', () => editTransaction(row.transaction_id, 'entry'));
-
-        const transactionDate = new Date(row.transaction_timestamp);
-        tr.innerHTML = `
-            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
-            <td>${row.source_location || 'External'}</td>
-            <td>${row.destination_location || 'N/A'}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.lot_no || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td>${row.notes || ''}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
 // --- Functions for Production History Tab (OUT) ---
-
 function setupProductionAutocomplete() {
     const searchInput = document.getElementById('out_item_search');
     if (!searchInput) return;
@@ -347,27 +291,193 @@ function setupProductionAutocomplete() {
     });
 }
 
+// =================================================================
+// SECTION: REPORTING FUNCTIONS
+// =================================================================
+// --- Functions for Production Variance Tab ---
+async function fetchProductionVarianceReport(page = 1) {
+    varianceCurrentPage = page;
+    showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'get_production_variance_report', 'GET', null, params);
+        if (result.success) {
+            renderProductionVarianceTable(result.data);
+            renderPagination('productionVariancePagination', result.total, result.page, ROWS_PER_PAGE, fetchProductionVarianceReport);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+
+function renderProductionVarianceTable(data) {
+    const tbody = document.getElementById('productionVarianceTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No production variance data found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to see transaction details';
+        // --- ส่วนที่แก้ไข ---
+        // เพิ่มการตรวจสอบว่า row.location_id มีค่าหรือไม่ก่อนเพิ่ม Event
+        if (row.location_id) {
+            tr.addEventListener('click', () => openVarianceDetailModal(row.item_id, row.location_id, row.part_no));
+        }
+        // --- สิ้นสุด ---
+
+        const variance = parseFloat(row.variance) || 0;
+        let textColorClass = '';
+
+        if (variance < 0) {
+            textColorClass = 'text-danger'; 
+        } else if (variance === 0) {
+            textColorClass = 'text-success';
+        } else {
+            textColorClass = 'text-warning';
+        }
+
+        tr.innerHTML = `
+            <td>${row.location_name}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Functions for WIP By Lot Tab ---
+async function fetchWipReportByLot(page = 1) {
+    wipByLotCurrentPage = page;
+    showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_report_by_lot', 'GET', null, params);
+        if (result.success) {
+            renderWipReportByLotTable(result.data);
+            renderPagination('wipByLotPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipReportByLot);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderWipReportByLotTable(data) {
+    const tbody = document.getElementById('wipByLotTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP lots found.</td></tr>';
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr'); // << เพิ่มบรรทัดที่หายไปกลับเข้ามา
+        const variance = parseFloat(row.variance) || 0;
+        let textColorClass = '';
+
+        if (variance < 0) {
+            textColorClass = 'text-danger'; 
+        } else if (variance === 0) {
+            textColorClass = 'text-success';
+        } else {
+            textColorClass = 'text-warning';
+        }
+
+        tr.innerHTML = `
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.part_description || ''}</td>
+            <td>${row.lot_no}</td>
+            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Functions for Entry History Tab (IN) ---
+async function fetchReceiptHistory(page = 1) {
+    receiptHistoryCurrentPage = page;
+    showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, params);
+        if (result.success) {
+            renderReceiptHistoryTable(result.data);
+            renderPagination('entryHistoryPagination', result.total, result.page, ROWS_PER_PAGE, fetchReceiptHistory);
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderReceiptHistoryTable(data) {
+    const tbody = document.getElementById('entryHistoryTableBody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No IN transactions found.</td></tr>`;
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to edit';
+        tr.addEventListener('click', () => editTransaction(row.transaction_id, 'entry'));
+
+        const transactionDate = new Date(row.transaction_timestamp);
+        tr.innerHTML = `
+            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
+            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
+            <td>${row.source_location || 'External'}</td>
+            <td>${row.destination_location || 'N/A'}</td>
+            <td>${row.sap_no}</td>
+            <td>${row.part_no}</td>
+            <td>${row.lot_no || ''}</td>
+            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td>${row.notes || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Functions for Production History Tab (OUT) ---
 async function fetchProductionHistory(page = 1) {
     productionHistoryCurrentPage = page;
     showSpinner();
-    
     const params = {
         page: page,
-        part_no: document.getElementById('filterPartNo').value,
-        location: document.getElementById('filterLine').value, // The "Line" filter now acts as a Location filter
-        lot_no: document.getElementById('filterLotNo').value,
+        search_term: document.getElementById('filterSearch').value,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
-
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
         if (result.success) {
             renderProductionHistoryTable(result.data);
             renderPagination('paginationControls', result.total, result.page, ROWS_PER_PAGE, fetchProductionHistory);
-        } else {
-             document.getElementById('partTableBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">${result.message}</td></tr>`;
         }
     } finally {
         hideSpinner();
@@ -426,20 +536,15 @@ function renderProductionHistoryTable(data) {
     });
 }
 
-// =================================================================
-// SECTION: REPORTING FUNCTIONS
-// =================================================================
-
-// --- For "WIP On-Hand" Tab ---
+// --- Functions for WIP On-Hand Tab ---
 async function fetchWipOnHandReport(page = 1) {
-    wipCurrentPage = page;
+    wipOnHandCurrentPage = page;
     showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value
+    };
     try {
-        const params = {
-            page: page,
-            part_no: document.getElementById('filterPartNo').value,
-            line: document.getElementById('filterLine').value 
-        };
         const result = await sendRequest(INVENTORY_API_URL, 'get_wip_onhand_report', 'GET', null, params);
         if (result.success) {
             renderWipOnHandTable(result.data);
@@ -475,83 +580,19 @@ function renderWipOnHandTable(data) {
     });
 }
 
-
-// --- For "Production Variance" Tab ---
-async function fetchProductionVarianceReport(page = 1) {
-    wipCurrentPage = page;
-    showSpinner();
-    try {
-        const params = {
-            page: page,
-            part_no: document.getElementById('filterPartNo').value,
-            location: document.getElementById('filterLine').value,
-            startDate: document.getElementById('filterStartDate').value,
-            endDate: document.getElementById('filterEndDate').value,
-        };
-        const result = await sendRequest(INVENTORY_API_URL, 'get_production_variance_report', 'GET', null, params);
-        if (result.success) {
-            renderProductionVarianceTable(result.data);
-            renderPagination('productionVariancePagination', result.total, result.page, ROWS_PER_PAGE, fetchProductionVarianceReport);
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderProductionVarianceTable(data) {
-    const tbody = document.getElementById('productionVarianceTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No production variance data found.</td></tr>';
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.title = 'Click to see transaction details';
-        // --- ส่วนที่แก้ไข ---
-        // เพิ่มการตรวจสอบว่า row.location_id มีค่าหรือไม่ก่อนเพิ่ม Event
-        if (row.location_id) {
-            tr.addEventListener('click', () => openVarianceDetailModal(row.item_id, row.location_id, row.part_no));
-        }
-        // --- สิ้นสุด ---
-
-        const variance = parseFloat(row.variance) || 0;
-        let textColorClass = '';
-
-        if (variance < 0) {
-            textColorClass = 'text-danger'; 
-        } else if (variance === 0) {
-            textColorClass = 'text-success';
-        } else {
-            textColorClass = 'text-warning';
-        }
-
-        tr.innerHTML = `
-            <td>${row.location_name}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
-            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
-            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
+// --- Functions for Stock Count Tab ---
 async function fetchStockInventoryReport(page = 1) {
-    stockCurrentPage = page;
+    stockCountCurrentPage = page;
     showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value
+    };
     try {
-        const searchTerm = document.getElementById('filterPartNo').value; 
-        const result = await sendRequest(INVENTORY_API_URL, 'get_stock_inventory_report', 'GET', null, { page, search_term: searchTerm });
-        
+        const result = await sendRequest(INVENTORY_API_URL, 'get_stock_inventory_report', 'GET', null, params);
         if (result.success) {
             renderStockInventoryTable(result.data);
             renderPagination('stockCountPagination', result.total, result.page, ROWS_PER_PAGE, fetchStockInventoryReport);
-        } else {
-            document.getElementById('stockCountTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">${result.message}</td></tr>`;
         }
     } finally {
         hideSpinner();
@@ -585,75 +626,21 @@ function renderStockInventoryTable(data) {
     });
 }
 
-async function fetchWipReportByLot(page = 1) {
-    showSpinner();
-    try {
-        const params = {
-            page: page,
-            part_no: document.getElementById('filterPartNo').value,
-            lot_no: document.getElementById('filterLotNo').value,
-            line: document.getElementById('filterLine').value,
-            startDate: document.getElementById('filterStartDate').value,
-            endDate: document.getElementById('filterEndDate').value,
-        };
-        const result = await sendRequest(INVENTORY_API_URL, 'get_wip_report_by_lot', 'GET', null, params);
-        if (result.success) {
-            renderWipReportByLotTable(result.data);
-            renderPagination('wipByLotPagination', result.total, result.page, ROWS_PER_PAGE, fetchWipReportByLot);
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderWipReportByLotTable(data) {
-    const tbody = document.getElementById('wipByLotTableBody');
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP lots found.</td></tr>';
-        return;
-    }
-    data.forEach(row => {
-        const tr = document.createElement('tr'); // << เพิ่มบรรทัดที่หายไปกลับเข้ามา
-        const variance = parseFloat(row.variance) || 0;
-        let textColorClass = '';
-
-        if (variance < 0) {
-            textColorClass = 'text-danger'; 
-        } else if (variance === 0) {
-            textColorClass = 'text-success';
-        } else {
-            textColorClass = 'text-warning';
-        }
-
-        tr.innerHTML = `
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.part_description || ''}</td>
-            <td>${row.lot_no}</td>
-            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
-            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
+// --- Functions for Transaction Log Tab ---
 async function fetchAllTransactions(page = 1) {
+    transactionLogCurrentPage = page;
     showSpinner();
+    const params = {
+        page: page,
+        search_term: document.getElementById('filterSearch').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
     try {
-        const params = {
-            page: page,
-            part_no: document.getElementById('filterPartNo').value,
-            line: document.getElementById('filterLine').value, // API จะค้นหาทั้ง Source และ Destination
-            lot_no: document.getElementById('filterLotNo').value,
-            startDate: document.getElementById('filterStartDate').value,
-            endDate: document.getElementById('filterEndDate').value,
-        };
         const result = await sendRequest(INVENTORY_API_URL, 'get_all_transactions', 'GET', null, params);
         if (result.success) {
             renderAllTransactionsTable(result.data);
-            renderPagination('transactionLogPagination', result.total, result.page, result.limit, fetchAllTransactions);
+            renderPagination('transactionLogPagination', result.total, result.page, ROWS_PER_PAGE, fetchAllTransactions);
         }
     } finally {
         hideSpinner();
@@ -947,6 +934,106 @@ function openAdjustStockModal(itemData) {
     modalInstance.show();
 }
 
+async function openSummaryModal() {
+    const modalBody = document.getElementById('summaryTableBody');
+    if (!modalBody) {
+        console.error('Summary modal body not found!');
+        return;
+    }
+    modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
+    
+    // แสดง Modal ก่อนแล้วค่อยโหลดข้อมูล
+    const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
+    summaryModal.show();
+
+    const params = {
+        limit: -1, // Request all data for summary
+        search_term: document.getElementById('filterSearch').value,
+        count_type: document.getElementById('filterCountType').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+
+    const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
+
+    if (result.success && result.summary.length > 0) {
+        modalBody.innerHTML = '';
+        result.summary.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.sap_no}</td>
+                <td>${row.part_no}</td>
+                <td>${row.count_type}</td>
+                <td class="text-end">${parseFloat(row.total_quantity).toLocaleString()}</td>
+            `;
+            modalBody.appendChild(tr);
+        });
+
+        // Grand Total
+        const grandTotalRow = document.createElement('tr');
+        grandTotalRow.className = 'table-group-divider fw-bold';
+        let grandTotal = 0;
+        result.grand_total.forEach(row => grandTotal += parseFloat(row.total_quantity));
+        grandTotalRow.innerHTML = `
+            <td colspan="3" class="text-end">Grand Total</td>
+            <td class="text-end">${grandTotal.toLocaleString()}</td>
+        `;
+        modalBody.appendChild(grandTotalRow);
+
+    } else {
+        modalBody.innerHTML = '<tr><td colspan="4" class="text-center">No summary data available.</td></tr>';
+    }
+}
+
+async function openHistorySummaryModal() {
+    const modalBody = document.getElementById('historySummaryTableBody');
+    if (!modalBody) {
+        console.error('History Summary modal body not found!');
+        return;
+    }
+    modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
+    
+    const summaryModal = new bootstrap.Modal(document.getElementById('historySummaryModal'));
+    summaryModal.show();
+
+    const params = {
+        limit: -1, // ขอข้อมูลทั้งหมดเพื่อทำ Summary
+        search_term: document.getElementById('filterSearch').value,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+    };
+
+    // เราจะเรียก API เดิม แต่ต้องไปแก้ API ให้ส่งค่า Summary กลับมาด้วย
+    const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history_summary', 'GET', null, params);
+
+    if (result.success && result.summary.length > 0) {
+        modalBody.innerHTML = '';
+        result.summary.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.sap_no}</td>
+                <td>${row.part_no}</td>
+                <td><span class="badge bg-secondary">${row.transaction_type}</span></td>
+                <td class="text-end">${parseFloat(row.total_quantity).toLocaleString()}</td>
+            `;
+            modalBody.appendChild(tr);
+        });
+
+        const grandTotalRow = document.createElement('tr');
+        grandTotalRow.className = 'table-group-divider fw-bold';
+        let grandTotal = 0;
+        result.grand_total.forEach(row => grandTotal += parseFloat(row.total_quantity));
+        grandTotalRow.innerHTML = `
+            <td colspan="3" class="text-end">Grand Total</td>
+            <td class="text-end">${grandTotal.toLocaleString()}</td>
+        `;
+        modalBody.appendChild(grandTotalRow);
+
+    } else {
+        modalBody.innerHTML = '<tr><td colspan="4" class="text-center">No summary data available.</td></tr>';
+    }
+}
+
 async function handleAdjustStockSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -1004,30 +1091,75 @@ async function handleFormSubmit(event) {
     const form = event.target;
     const action = form.dataset.action;
 
+    if (action === 'addPart') {
+        showSpinner();
+        
+        const baseData = {
+            item_id: form.querySelector('#out_item_id').value,
+            location_id: form.querySelector('#out_location_id').value,
+            lot_no: form.querySelector('#out_lot_no').value,
+            log_date: form.querySelector('#out_log_date').value,
+            start_time: form.querySelector('#out_start_time').value,
+            end_time: form.querySelector('#out_end_time').value,
+            notes: form.querySelector('#out_notes').value
+        };
+
+        if (!baseData.item_id || !baseData.location_id) {
+            showToast('Please select a valid item and location.', 'var(--bs-warning)');
+            hideSpinner();
+            return;
+        }
+
+        const transactions = [];
+        const qtyFg = parseFloat(form.querySelector('#out_qty_fg').value) || 0;
+        const qtyHold = parseFloat(form.querySelector('#out_qty_hold').value) || 0;
+        const qtyScrap = parseFloat(form.querySelector('#out_qty_scrap').value) || 0;
+
+        if (qtyFg > 0) transactions.push({ quantity: qtyFg, count_type: 'FG' });
+        if (qtyHold > 0) transactions.push({ quantity: qtyHold, count_type: 'HOLD' });
+        if (qtyScrap > 0) transactions.push({ quantity: qtyScrap, count_type: 'SCRAP' });
+
+        if (transactions.length === 0) {
+            showToast('Please enter a quantity for at least one type.', 'var(--bs-warning)');
+            hideSpinner();
+            return;
+        }
+        
+        let allSuccess = true;
+        let lastErrorMessage = '';
+
+        for (const trans of transactions) {
+            const dataToSend = { ...baseData, ...trans };
+            const result = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', dataToSend);
+            if (!result.success) {
+                allSuccess = false;
+                lastErrorMessage = result.message;
+                break; 
+            }
+        }
+        
+        hideSpinner();
+
+        if (allSuccess) {
+            showToast('All production records saved successfully.', 'var(--bs-success)');
+            bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+            await fetchProductionHistory();
+        } else {
+            showToast(`An error occurred: ${lastErrorMessage}. Some records may not have been saved.`, 'var(--bs-danger)');
+        }
+        return;
+    }
+
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-
+    let endpoint = INVENTORY_API_URL;
     let apiAction = '';
     let successCallback = null;
-    // --- CORRECTED CODE STARTS HERE ---
-    // Declare 'endpoint' once with 'let'
-    let endpoint = INVENTORY_API_URL; 
 
     switch(action) {
-        case 'addPart':
-            apiAction = 'execute_production';
-            if (!data.item_id) {
-                showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
-                return;
-            }
-            successCallback = fetchProductionHistory;
-            break;
         case 'addEntry':
             apiAction = 'execute_receipt';
-            if (!data.item_id) {
-                showToast('Please select a valid item from the search results.', 'var(--bs-warning)');
-                return;
-            }
+            if (!data.item_id) { /* ... */ return; }
             successCallback = fetchReceiptHistory;
             break;
         case 'editEntry':
@@ -1049,7 +1181,6 @@ async function handleFormSubmit(event) {
     try {
         const result = await sendRequest(endpoint, apiAction, 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        
         if (result.success) {
             if (action === 'addPart' || action === 'addEntry') {
                 const searchInputId = (action === 'addPart') ? 'out_item_search' : 'entry_item_search';
@@ -1173,51 +1304,52 @@ async function editTransaction(transactionId, type) {
 document.addEventListener('DOMContentLoaded', () => {
     let debounceTimer;
 
-    initializeFilters(); 
+    initializeFilters();
     populateModalDatalists();
     setupEntryAutocomplete();
     setupProductionAutocomplete();
 
+    // Event Listeners for Forms
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
-    document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
-    document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('adjustStockForm')?.addEventListener('submit', handleAdjustStockSubmit);
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
     document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
 
+    // Debounce function for search input
     const debouncedFilterChange = () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(handleFilterChange, 500);
     };
 
-    document.getElementById('filterPartNo').addEventListener('input', debouncedFilterChange);
-    document.getElementById('filterLotNo').addEventListener('input', debouncedFilterChange);
-    document.getElementById('filterLine').addEventListener('input', debouncedFilterChange);
-    document.getElementById('filterModel').addEventListener('input', debouncedFilterChange);
+    // Event Listeners for new Filters
+    document.getElementById('filterSearch').addEventListener('input', debouncedFilterChange);
     document.getElementById('filterCountType').addEventListener('change', handleFilterChange);
     document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
 
+    // Event Listener for Tab changes
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (event) => {
             const activeTabId = event.target.id;
-            handleFilterChange(); // โหลดข้อมูลใหม่
-            updateControls(activeTabId); // สร้างปุ่มใหม่
-            updateFilterVisibility(activeTabId); // แสดง/ซ่อนฟิลเตอร์
+            updateFilterVisibility(activeTabId);
+            handleFilterChange();
+            updateControls(activeTabId);
         });
     });
 
+    // Initial data load for the active tab
     const activeTab = document.querySelector('#mainTab .nav-link.active');
     if (activeTab) {
         const activeTabId = activeTab.id;
-        handleFilterChange(); // โหลดข้อมูลเริ่มต้น
-        updateControls(activeTabId); // สร้างปุ่มเริ่มต้น
-        updateFilterVisibility(activeTabId); // แสดง/ซ่อนฟิลเตอร์เริ่มต้น
+        updateFilterVisibility(activeTabId);
+        handleFilterChange();
+        updateControls(activeTabId);
     }
 
+    // Time Mask for time inputs
     const timeInputs = document.querySelectorAll('input[name="start_time"], input[name="end_time"], input[name="log_time"]');
     timeInputs.forEach(input => {
         input.addEventListener('input', applyTimeMask);

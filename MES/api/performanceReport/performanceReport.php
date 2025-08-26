@@ -19,7 +19,7 @@ $is_development = true;
 
 // --- กำหนดชื่อตารางตามโหมด ---
 $parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
-$param_table = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
+$PARAMETER_TABLE = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 
 $action = $_GET['action'] ?? '';
 
@@ -56,7 +56,7 @@ try {
                 JOIN
                     USERS u ON p.operator_id = u.id
                 LEFT JOIN
-                    {$param_table} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
+                    {$PARAMETER_TABLE} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
                 {$where_sql}
                 GROUP BY
                     u.id, u.username
@@ -90,7 +90,7 @@ try {
                     p.count_value,
                     (p.count_value * ISNULL(param.part_value, 0)) as value
                 FROM {$parts_table} p
-                LEFT JOIN {$param_table} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
+                LEFT JOIN {$PARAMETER_TABLE} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
                 WHERE p.operator_id = ? AND p.log_date BETWEEN ? AND ?
                 ORDER BY p.log_date DESC, p.log_time DESC;
             ";

@@ -39,7 +39,7 @@ try {
             $conditions = [];
 
             if (!empty($filter_model)) {
-                $fromClause .= " JOIN " . PARAM_TABLE . " p ON i.item_id = p.item_id"; 
+                $fromClause .= " JOIN " . PARAMETER_TABLE . " p ON i.item_id = p.item_id"; 
                 $conditions[] = "RTRIM(LTRIM(p.model)) LIKE ?";
                 $params[] = '%' . $filter_model . '%';
             }
@@ -72,7 +72,7 @@ try {
                         STUFF(
                             (
                                 SELECT ', ' + p_sub.model
-                                FROM " . PARAM_TABLE . " p_sub
+                                FROM " . PARAMETER_TABLE . " p_sub
                                 WHERE p_sub.item_id = i.item_id
                                 ORDER BY p_sub.model
                                 FOR XML PATH('')
@@ -162,7 +162,7 @@ try {
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
             // ใช้ค่าคงที่จาก config.php โดยตรง
-            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != ''";
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != ''";
             $params = [];
             if (!empty($searchTerm)) {
                 $sql .= " AND model LIKE ?";

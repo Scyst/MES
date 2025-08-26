@@ -7,12 +7,6 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="edit_entry_transaction_id" name="transaction_id">
-
-                    <div class="mb-3">
-                        <label class="form-label">ชิ้นส่วน</label>
-                        <input type="text" class="form-control form-control-readonly" id="edit_entry_item_display" readonly>
-                    </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -23,6 +17,13 @@
                             <label for="edit_entry_log_time" class="form-label">เวลา</label>
                             <input type="text" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]" placeholder="HH:MM:SS" class="form-control" id="edit_entry_log_time" name="log_time" required>
                         </div>
+                    </div>
+                    
+                    <input type="hidden" id="edit_entry_transaction_id" name="transaction_id">
+
+                    <div class="mb-3">
+                        <label class="form-label">ชิ้นส่วน</label>
+                        <input type="text" class="form-control form-control-readonly" id="edit_entry_item_display" readonly>
                     </div>
 
                     <div class="row">

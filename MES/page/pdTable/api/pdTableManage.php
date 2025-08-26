@@ -337,7 +337,7 @@ try {
             break;
         
         case 'get_lines':
-            $stmt = $pdo->query("SELECT DISTINCT line FROM " . PARAM_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line");
+            $stmt = $pdo->query("SELECT DISTINCT line FROM " . PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line");
             $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
@@ -349,13 +349,13 @@ try {
             break;
 
         case 'get_models':
-            $stmt = $pdo->query("SELECT DISTINCT model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model");
+            $stmt = $pdo->query("SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         case 'get_part_nos':
-            $stmt = $pdo->query("SELECT DISTINCT part_no FROM " . PARAM_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
+            $stmt = $pdo->query("SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no");
             $data = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -397,9 +397,9 @@ try {
             break;
 
         case 'get_datalist_options':
-            $lineSql = "SELECT DISTINCT line FROM " . PARAM_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line";
-            $modelSql = "SELECT DISTINCT model FROM " . PARAM_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model";
-            $partNoSql = "SELECT DISTINCT part_no FROM " . PARAM_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
+            $lineSql = "SELECT DISTINCT line FROM " . PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line";
+            $modelSql = "SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model";
+            $partNoSql = "SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE part_no IS NOT NULL AND part_no != '' ORDER BY part_no";
 
             $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
             $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
@@ -419,7 +419,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            $sql = "SELECT DISTINCT model FROM " . PARAM_TABLE . " WHERE line = ? ORDER BY model";
+            $sql = "SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE line = ? ORDER BY model";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$line]);
             $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -433,7 +433,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-            $sql = "SELECT DISTINCT part_no FROM " . PARAM_TABLE . " WHERE model = ?";
+            $sql = "SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE model = ?";
             $params = [$model];
             if (!empty($line)) {
                 $sql .= " AND line = ?";
@@ -456,7 +456,7 @@ try {
                 exit;
             }
             
-            $sql = "SELECT COUNT(*) FROM " . PARAM_TABLE . " WHERE line = ? AND model = ? AND part_no = ?";
+            $sql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$line, $model, $part_no]);
             

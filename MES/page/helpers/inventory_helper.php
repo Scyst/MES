@@ -10,7 +10,7 @@ function getLocationId($pdo, $locationName) {
 }
 
 function getItemId($pdo, $partNo, $line, $model) {
-    $paramStmt = $pdo->prepare("SELECT sap_no FROM " . PARAM_TABLE . " WHERE part_no = ? AND line = ? AND model = ?");
+    $paramStmt = $pdo->prepare("SELECT sap_no FROM " . PARAMETER_TABLE . " WHERE part_no = ? AND line = ? AND model = ?");
     $paramStmt->execute([$partNo, $line, $model]);
     $sap_no = $paramStmt->fetchColumn();
     if (!$sap_no) return null;
