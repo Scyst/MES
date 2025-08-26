@@ -12,35 +12,90 @@ try {
     $startDate = $_GET['startDate'] ?? date('Y-m-d');
     $endDate   = $_GET['endDate'] ?? date('Y-m-d');
     $line      = !empty($_GET['line']) ? $_GET['line'] : null;
-    $model     = !empty($_GET['model']) ? $_GET['model'] : null; // Model ยังคงรับค่ามา แต่ไม่ได้ใช้ในการคำนวณหลักแล้ว
+    $model     = !empty($_GET['model']) ? $_GET['model'] : null;
 
     if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
         
         // =============================================================
-        // START: LOGIC การคำนวณ OEE ชุดใหม่ (สถาปัตยกรรมใหม่)
+        // START: LOGIC การคำนวณ OEE (เวอร์ชัน Final - รองรับ All Lines)
         // =============================================================
         
-        // (ส่วนการคำนวณ Planned Time และ Downtime ยังคงเหมือนเดิม)
-        $totalPlannedMinutes = 0; // Placeholder
-        $totalDowntimeMinutes = 0; // Placeholder
-        $totalRuntimeMinutes = 0; // Placeholder
+        // --- 1. คำนวณ Planned Time และ Downtime ---
+        $lineCondition = $line ? "AND l.production_line = ?" : "";
+        $lineConditionForSchedule = $line ? "AND line = ?" : "";
+
+        // 1.1 ดึงข้อมูลวันและไลน์ที่มีการผลิตทั้งหมด
+        $prodDaysSql = "
+            SELECT DISTINCT 
+                CAST(t.transaction_timestamp AS DATE) as ProductionDate, 
+                l.production_line as ProductionLine
+            FROM " . TRANSACTIONS_TABLE . " t
+            JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+            WHERE t.transaction_timestamp BETWEEN ? AND DATEADD(day, 1, ?)
+              AND t.transaction_type LIKE 'PRODUCTION_%'
+              AND l.production_line IS NOT NULL
+              {$lineCondition}
+        ";
+        $prodDaysStmt = $pdo->prepare($prodDaysSql);
+        $prodDaysParams = [$startDate, $endDate];
+        if ($line) $prodDaysParams[] = $line;
+        $prodDaysStmt->execute($prodDaysParams);
+        $productionDays = $prodDaysStmt->fetchAll(PDO::FETCH_ASSOC);
+        $prodDaysStmt->closeCursor();
+
+        // 1.2 ดึงตารางเวลางานของทุก Line
+        $scheduleSql = "
+            SELECT line, 
+                   ISNULL(SUM(
+                       CASE
+                           WHEN end_time >= start_time THEN DATEDIFF(MINUTE, start_time, end_time)
+                           ELSE DATEDIFF(MINUTE, start_time, end_time) + 1440
+                       END - planned_break_minutes
+                   ), 0) as DailyMinutes
+            FROM " . SCHEDULES_TABLE . "
+            WHERE is_active = 1 {$lineConditionForSchedule}
+            GROUP BY line
+        ";
+        $scheduleStmt = $pdo->prepare($scheduleSql);
+        $scheduleParams = [];
+        if ($line) $scheduleParams[] = $line;
+        $scheduleStmt->execute($scheduleParams);
+        $schedules = $scheduleStmt->fetchAll(PDO::FETCH_KEY_PAIR); // ['PRESS' => 720, 'ASSEMBLY' => 1440]
+        $scheduleStmt->closeCursor();
+
+        // 1.3 คำนวณ Planned Time ทั้งหมด
+        $totalPlannedMinutes = 0;
+        foreach ($productionDays as $day) {
+            if (isset($schedules[$day['ProductionLine']])) {
+                $totalPlannedMinutes += $schedules[$day['ProductionLine']];
+            }
+        }
         
-        // --- ดึงข้อมูลการผลิต (เรียบง่ายและแม่นยำขึ้นมาก) ---
+        // 1.4 ดึง Downtime ทั้งหมด
+        $downtimeSql = "SELECT ISNULL(SUM(DATEDIFF(MINUTE, stop_begin, stop_end)), 0) FROM " . STOP_CAUSES_TABLE . " WHERE log_date BETWEEN ? AND ? {$lineConditionForSchedule}";
+        $downtimeStmt = $pdo->prepare($downtimeSql);
+        $downtimeParams = [$startDate, $endDate];
+        if ($line) $downtimeParams[] = $line;
+        $downtimeStmt->execute($downtimeParams);
+        $totalDowntimeMinutes = (int)$downtimeStmt->fetchColumn();
+        $downtimeStmt->closeCursor();
+        
+        $totalRuntimeMinutes = $totalPlannedMinutes > $totalDowntimeMinutes ? $totalPlannedMinutes - $totalDowntimeMinutes : 0;
+        
+        // --- 2. ดึงข้อมูลการผลิต (ส่วนนี้ถูกต้องอยู่แล้ว) ---
         $mainSql = "
             SELECT
                 SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) AS FG,
                 SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) AS Hold,
                 SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) AS Scrap,
-                -- << ดึง planned_output จากตาราง ITEMS โดยตรง >>
                 SUM(t.quantity * (60.0 / NULLIF(i.planned_output, 0))) as TotalTheoreticalMinutes
             FROM " . TRANSACTIONS_TABLE . " t
-            -- << JOIN แค่ตารางเดียวจบ! >>
             JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
             JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
             WHERE t.transaction_timestamp BETWEEN ? AND DATEADD(day, 1, ?)
               AND t.transaction_type LIKE 'PRODUCTION_%'
-              AND i.planned_output > 0 -- คำนวณเฉพาะรายการที่มีมาตรฐานการผลิต
-              " . ($line ? "AND l.location_name = ?" : "") . "
+              AND i.planned_output > 0
+              {$lineCondition}
         ";
         $mainStmt = $pdo->prepare($mainSql);
         $mainParams = [$startDate, $endDate];
@@ -49,7 +104,7 @@ try {
         $mainResult = $mainStmt->fetch(PDO::FETCH_ASSOC);
         $mainStmt->closeCursor();
 
-        // (ส่วนการคำนวณ OEE และจัดรูปแบบผลลัพธ์เหมือนเดิม)
+        // --- 6. คำนวณและส่งผลลัพธ์ (ส่วนนี้ถูกต้องอยู่แล้ว) ---
         $totalFG = (int)($mainResult['FG'] ?? 0);
         $totalHold = (int)($mainResult['Hold'] ?? 0);
         $totalScrap = (int)($mainResult['Scrap'] ?? 0);
@@ -63,25 +118,17 @@ try {
         $quality = ($totalActualOutput > 0) ? ($totalFG * 100.0 / $totalActualOutput) : 0;
         $oee = ($availability / 100.0) * ($performance / 100.0) * ($quality / 100.0) * 100.0;
         
-        // --- 4. ดึงข้อมูล Sparkline (ยังคงเป็น Placeholder) ---
         $sparklineResult = [];
 
-        // --- 5. รวมผลลัพธ์ทั้งหมดในโครงสร้างที่ถูกต้อง ---
         $output = [
             "success" => true,
             "quality" => round($quality, 1),
             "availability" => round($availability, 1),
             "performance" => round($performance, 1),
             "oee" => round($oee, 1),
-            "fg" => $totalFG,
-            "defects" => $totalDefects,
-            "hold" => $totalHold, // << เพิ่มค่า Hold
-            "scrap" => $totalScrap, // << เพิ่มค่า Scrap
-            "runtime" => $totalRuntimeMinutes,
-            "planned_time" => $totalPlannedMinutes,
-            "downtime" => $totalDowntimeMinutes,
-            "actual_output" => $totalActualOutput,
-            "total_theoretical_minutes" => round($totalTheoreticalMinutes, 2),
+            "fg" => $totalFG, "defects" => $totalDefects, "hold" => $totalHold, "scrap" => $totalScrap,
+            "runtime" => $totalRuntimeMinutes, "planned_time" => $totalPlannedMinutes, "downtime" => $totalDowntimeMinutes,
+            "actual_output" => $totalActualOutput, "total_theoretical_minutes" => round($totalTheoreticalMinutes, 2),
             "sparkline_data" => $sparklineResult
         ];
         echo json_encode($output);

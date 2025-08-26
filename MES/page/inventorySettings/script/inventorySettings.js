@@ -80,49 +80,64 @@ async function loadLocations() {
     }
 }
 
-function openLocationModal(location = null) {
-    currentEditingLocation = location;
+async function openLocationModal(location = null) {
     const form = document.getElementById('locationForm');
-    const modalLabel = document.getElementById('locationModalLabel');
-    const deleteBtn = document.getElementById('deleteLocationBtn');
-    
     form.reset();
+    document.getElementById('location_id').value = '0';
+    const modal = new bootstrap.Modal(document.getElementById('locationModal'));
+    const modalTitle = document.getElementById('locationModalLabel');
     
-    if (location) {
-        modalLabel.textContent = 'Edit Location';
-        document.getElementById('location_id').value = location.location_id;
-        document.getElementById('location_name').value = location.location_name;
-        document.getElementById('location_description').value = location.location_description;
-        document.getElementById('is_active').checked = location.is_active == 1; // ** แก้ไขตรงนี้ด้วย **
-        deleteBtn.classList.remove('d-none');
-    } else {
-        modalLabel.textContent = 'Add New Location';
-        document.getElementById('location_id').value = '0';
-        document.getElementById('is_active').checked = true;
-        deleteBtn.classList.add('d-none');
+    const lineSelect = document.getElementById('location_production_line');
+    lineSelect.innerHTML = '<option value="">-- Loading Lines... --</option>';
+    
+    try {
+        const linesResult = await sendRequest('../paraManage/api/paraManage.php', 'get_lines', 'GET');
+        if (linesResult.success && linesResult.data.length > 0) {
+            lineSelect.innerHTML = '<option value="">-- ไม่ใช่พื้นที่การผลิต --</option>';
+            linesResult.data.forEach(lineName => {
+                const option = document.createElement('option');
+                option.value = lineName;
+                option.textContent = lineName;
+                lineSelect.appendChild(option);
+            });
+        } else {
+             lineSelect.innerHTML = '<option value="">-- ไม่พบข้อมูล Line --</option>';
+        }
+    } catch (error) {
+        lineSelect.innerHTML = '<option value="">-- Error loading lines --</option>';
     }
 
-    const modal = new bootstrap.Modal(document.getElementById('locationModal'));
+    if (location) {
+        modalTitle.textContent = 'แก้ไขสถานที่';
+        document.getElementById('location_id').value = location.location_id;
+        document.getElementById('location_name').value = location.location_name;
+        document.getElementById('location_description').value = location.location_description || '';
+        document.getElementById('location_is_active').checked = location.is_active;
+        if (location.production_line) {
+            lineSelect.value = location.production_line;
+        }
+    } else {
+        modalTitle.textContent = 'เพิ่มสถานที่ใหม่';
+    }
+    
     modal.show();
 }
 
 async function handleLocationFormSubmit(event) {
     event.preventDefault();
-    const formData = new FormData(event.target);
+    const form = event.target;
+    const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    data.is_active = document.getElementById('location_is_active').checked;
     
-    data.is_active = document.getElementById('is_active').checked;
-
-    showSpinner();
-    try {
-        const result = await sendRequest(LOCATIONS_API, 'save_location', 'POST', data);
-        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        if (result.success) {
-            bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
-            await loadLocations();
-        }
-    } finally {
-        hideSpinner();
+    const result = await sendRequest(LOCATIONS_API, 'save_location', 'POST', data);
+    
+    if (result.success) {
+        showToast(result.message, 'var(--bs-success)');
+        bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
+        fetchLocations(currentPage);
+    } else {
+        showToast(result.message, 'var(--bs-danger)');
     }
 }
 
@@ -932,20 +947,23 @@ async function handleItemImport(event) {
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
+    let debounceTimer; // Moved debounceTimer to the top for broader scope
+
     // Location Manager Init
     loadLocations();
-    document.getElementById('addLocationBtn').addEventListener('click', () => openLocationModal());
-    document.getElementById('locationForm').addEventListener('submit', handleLocationFormSubmit);
-    document.getElementById('deleteLocationBtn').addEventListener('click', deleteLocation);
+    document.getElementById('addLocationBtn')?.addEventListener('click', () => openLocationModal());
+    document.getElementById('locationForm')?.addEventListener('submit', handleLocationFormSubmit);
+    document.getElementById('deleteLocationBtn')?.addEventListener('click', deleteLocation);
 
     // Stock Transfer Init
     populateTransferInitialData();
     setupTransferAutocomplete();
     fetchTransferHistory();
-    document.getElementById('addTransferBtn').addEventListener('click', openTransferModal);
-    document.getElementById('transferForm').addEventListener('submit', handleTransferFormSubmit);
-    document.getElementById('from_location_id').addEventListener('change', () => updateStockDisplay('from_location_id', 'fromStock'));
-    document.getElementById('to_location_id').addEventListener('change', () => updateStockDisplay('to_location_id', 'toStock'));
+    document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
+    document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
+    document.getElementById('from_location_id')?.addEventListener('change', () => updateStockDisplay('from_location_id', 'fromStock'));
+    document.getElementById('to_location_id')?.addEventListener('change', () => updateStockDisplay('to_location_id', 'toStock'));
+    
     const filterIds = ['filterPartNo', 'filterFromLocation', 'filterToLocation', 'filterStartDate', 'filterEndDate'];
     filterIds.forEach(id => {
         const element = document.getElementById(id);
@@ -960,13 +978,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Opening Balance Init
     populateOpeningBalanceLocations();
     setupStockAdjustmentAutocomplete();
-    document.getElementById('locationSelect').addEventListener('change', loadItemsForLocation);
-    document.getElementById('saveStockBtn').addEventListener('click', saveStockTake);
+    document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
+    document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
 
     // Item Master Init
-    document.getElementById('exportItemsBtn').addEventListener('click', exportItemsToExcel);
-    document.getElementById('importItemsBtn').addEventListener('click', () => document.getElementById('itemImportFile').click());
-    document.getElementById('itemImportFile').addEventListener('change', handleItemImport);
+    document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
+    document.getElementById('importItemsBtn')?.addEventListener('click', () => document.getElementById('itemImportFile')?.click());
+    document.getElementById('itemImportFile')?.addEventListener('change', handleItemImport);
     
     setupModelFilterAutocomplete();
     setupItemMasterAutocomplete();
@@ -977,37 +995,45 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchItems(1);
         }, { once: true });
     }
-    document.getElementById('addNewItemBtn').addEventListener('click', () => openItemModal());
-    document.getElementById('itemForm').addEventListener('submit', handleItemFormSubmit);
-    document.getElementById('deleteItemBtn').addEventListener('click', deleteItem);
-    document.getElementById('manageBomBtn').addEventListener('click', () => {
+    
+    document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
+    document.getElementById('itemForm')?.addEventListener('submit', handleItemFormSubmit);
+    document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
+    document.getElementById('manageBomBtn')?.addEventListener('click', () => {
         const item_id = document.getElementById('item_id').value;
         const part_no = document.getElementById('part_no').value;
         const sap_no = document.getElementById('sap_no').value;
-        bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+        const itemModalInstance = bootstrap.Modal.getInstance(document.getElementById('itemModal'));
+        if (itemModalInstance) {
+            itemModalInstance.hide();
+        }
         manageBomForItem({ item_id, part_no, sap_no });
     });
     
     const toggleBtn = document.getElementById('toggleInactiveBtn');
-    toggleBtn.addEventListener('click', () => {
-        toggleBtn.classList.toggle('active');
-        
-        const icon = toggleBtn.querySelector('i');
-        if (toggleBtn.classList.contains('active')) {
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-        
-        fetchItems(1);
-    });
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            toggleBtn.classList.toggle('active');
+            
+            const icon = toggleBtn.querySelector('i');
+            if (toggleBtn.classList.contains('active')) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+            
+            fetchItems(1);
+        });
+    }
 
     const transferTableBody = document.getElementById('transferTableBody');
-    transferTableBody.addEventListener('blur', (event) => {
-        if (event.target.classList.contains('editable-cell')) {
-            handleCellEdit(event);
-        }
-    }, true)
+    if (transferTableBody) {
+        transferTableBody.addEventListener('blur', (event) => {
+            if (event.target.classList.contains('editable-cell')) {
+                handleCellEdit(event);
+            }
+        }, true);
+    }
 });

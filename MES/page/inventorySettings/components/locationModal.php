@@ -1,33 +1,44 @@
 <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="locationModalLabel">จัดการสถานที่</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <form id="locationForm">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="locationModalLabel">Add New Location</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
                 <div class="modal-body">
                     <input type="hidden" id="location_id" name="location_id" value="0">
                     
                     <div class="mb-3">
-                        <label for="location_name" class="form-label">Location Name</label>
+                        <label for="location_name" class="form-label">ชื่อสถานที่</label>
                         <input type="text" class="form-control" id="location_name" name="location_name" required>
-                        <div class="form-text">e.g., WAREHOUSE-RAW-MAT, LINE-PRESS, WIP-PAINT</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="location_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="location_description" name="location_description" rows="3"></textarea>
+                        <label for="location_production_line" class="form-label">ไลน์ผลิต (Production Line)</label>
+                        <select class="form-select" id="location_production_line" name="production_line">
+                            <option value="">-- ไม่ใช่พื้นที่การผลิต --</option>
+                            </select>
+                        <div class="form-text">
+                            เลือกไลน์ผลิตที่สถานที่นี้สังกัดอยู่ (หากเป็นพื้นที่การผลิต)
+                        </div>
                     </div>
 
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" checked>
-                        <label class="form-check-label" for="is_active">Is Active</label>
+                    <div class="mb-3">
+                        <label for="location_description" class="form-label">คำอธิบาย</label>
+                        <textarea class="form-control" id="location_description" name="location_description" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="location_is_active" name="is_active" checked>
+                        <label class="form-check-label" for="location_is_active">
+                            เปิดใช้งาน
+                        </label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-danger me-auto d-none" id="deleteLocationBtn">Delete</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
                 </div>
             </form>
         </div>

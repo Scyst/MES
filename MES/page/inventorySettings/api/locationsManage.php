@@ -30,7 +30,7 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'get_locations':
-            $stmt = $pdo->query("SELECT * FROM {$locations_table} ORDER BY location_name ASC");
+            $stmt = $pdo->query("SELECT location_id, location_name, location_description, is_active, production_line FROM " . LOCATIONS_TABLE . " ORDER BY location_name");
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $locations]);
             break;
@@ -38,29 +38,31 @@ try {
         case 'save_location':
             $id = $input['location_id'] ?? 0;
             $name = trim($input['location_name'] ?? '');
-            $description = trim($input['location_description'] ?? '');
-            $is_active = !empty($input['is_active']) ? 1 : 0;
-
+            $desc = trim($input['location_description'] ?? '');
+            $active = filter_var($input['is_active'], FILTER_VALIDATE_BOOLEAN);
+            $prod_line = !empty($input['production_line']) ? trim($input['production_line']) : null;
             if (empty($name)) {
                 throw new Exception("Location name is required.");
             }
 
             if ($id > 0) {
-                // Update existing location
-                $sql = "UPDATE {$locations_table} SET location_name = ?, location_description = ?, is_active = ? WHERE location_id = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$name, $description, $is_active, $id]);
-                logAction($pdo, $currentUser['username'], 'UPDATE LOCATION', $id, "Name: {$name}");
-                echo json_encode(['success' => true, 'message' => 'Location updated successfully.']);
+                $sql = "UPDATE " . LOCATIONS_TABLE . " SET location_name = ?, location_description = ?, is_active = ?, production_line = ? WHERE location_id = ?";
+                $params = [$name, $desc, $active, $prod_line, $id];
+                $message = 'Location updated successfully.';
+                $logType = 'UPDATE LOCATION';
             } else {
-                // Create new location
-                $sql = "INSERT INTO {$locations_table} (location_name, location_description, is_active) VALUES (?, ?, ?)";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$name, $description, $is_active]);
-                $newId = $pdo->lastInsertId();
-                logAction($pdo, $currentUser['username'], 'CREATE LOCATION', $newId, "Name: {$name}");
-                echo json_encode(['success' => true, 'message' => 'Location created successfully.']);
+                $sql = "INSERT INTO " . LOCATIONS_TABLE . " (location_name, location_description, is_active, production_line) VALUES (?, ?, ?, ?)";
+                $params = [$name, $desc, $active, $prod_line];
+                $message = 'Location added successfully.';
+                $logType = 'ADD LOCATION';
             }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            if ($id == 0) $id = $pdo->lastInsertId();
+            logAction($pdo, $currentUser['username'], $logType, $id, "Name: {$name}");
+            echo json_encode(['success' => true, 'message' => $message]);
             break;
 
         case 'delete_location':
@@ -68,10 +70,6 @@ try {
             if (!$id) {
                 throw new Exception("Location ID is required.");
             }
-
-            // Optional: Check if location is in use before deleting
-            // For now, we will just delete it.
-
             $sql = "DELETE FROM {$locations_table} WHERE location_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
