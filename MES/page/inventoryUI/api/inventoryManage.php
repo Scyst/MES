@@ -395,14 +395,12 @@ try {
             }
 
             $pdo->beginTransaction();
-
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
 
-            // --- 2. อัปเดตการเรียกใช้ logStockTransaction ให้ส่งค่าเวลาใหม่ไปด้วย ---
             logStockTransaction(
                 $pdo, $item_id, $quantity, $prod_transaction_type, 
                 null, $location_id, $currentUser['id'], $notes, $lot_no,
-                $start_time, $end_time // <-- เพิ่ม 2 ค่านี้เข้าไป
+                $start_time, $end_time
             );
 
             if (in_array(strtoupper($count_type), ['FG', 'NG', 'SCRAP'])) {
@@ -419,20 +417,15 @@ try {
                         updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
 
                         $consume_note = "Auto-consumed for production of Item ID: {$item_id}, Lot: {$lot_no}";
-                        // --- 3. อัปเดตการเรียกใช้ logStockTransaction ของ Component ด้วย ---
                         logStockTransaction(
                             $pdo, $component_item_id, -$qty_to_consume, 'CONSUMPTION', 
                             $location_id, null, $currentUser['id'], $consume_note, $lot_no,
-                            $start_time, $end_time // <-- เพิ่ม 2 ค่านี้เข้าไป
+                            $start_time, $end_time
                         );
                     }
                 }
             }
-
-            // *** หมายเหตุ: โค้ดส่วน updateOnhandBalance สำหรับตัว FG ถูกย้ายไปจัดการใน `update_transaction` แล้ว ***
-            // *** เพื่อป้องกันการบวกสต็อกซ้ำซ้อนเมื่อมีการแก้ไขข้อมูล เราจะจัดการสต็อก FG ตอนแก้ไขเท่านั้น ***
-            // *** แต่หากต้องการให้บวกสต็อก FG ทันทีที่ Add ให้เพิ่มบรรทัดนี้กลับเข้ามา: ***
-            // updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
+            updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
 
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
@@ -441,9 +434,8 @@ try {
 
         case 'get_production_history':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            // --- ส่วนที่แก้ไข: จัดการกับการ Export ---
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
-            $limit = $isExport ? 99999 : 50; // ถ้าเป็นการ Export ให้ดึงข้อมูลเยอะๆ
+            $limit = $isExport ? 99999 : 50;
             $offset = ($page - 1) * $limit;
 
             $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"];
@@ -648,13 +640,34 @@ try {
             $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$transaction) throw new Exception("Transaction not found.");
 
-            // 2. ลบ Transaction record
+            // 2. Revert สต็อก (ย้ายส่วนนี้ขึ้นมาก่อนลบ)
+            $revert_qty = -(float)$transaction['quantity'];
+            updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], $revert_qty);
+
+            // --- START: ส่วนที่เพิ่มเข้ามา ---
+            // 3. ตรวจสอบถ้าเป็น Production ให้ Revert สต็อก Components ด้วย
+            if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0) {
+                $count_type = strtoupper(str_replace('PRODUCTION_', '', $transaction['transaction_type']));
+
+                if (in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
+                    $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
+                    $bomStmt = $pdo->prepare($bomSql);
+                    $bomStmt->execute([$transaction['parameter_id']]);
+                    $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($components as $comp) {
+                        // คำนวณจำนวนที่ต้องคืน (ค่าบวก)
+                        $qty_to_revert = (float)$transaction['quantity'] * (float)$comp['quantity_required'];
+                        // เรียกใช้ฟังก์ชันเพื่อคืนสต็อก Component กลับไปยัง Location เดิม
+                        updateOnhandBalance($pdo, $comp['component_item_id'], $transaction['to_location_id'], $qty_to_revert);
+                    }
+                }
+            }
+            // --- END: ส่วนที่เพิ่มเข้ามา ---
+
+            // 4. ลบ Transaction record
             $deleteStmt = $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
             $deleteStmt->execute([$transaction_id]);
-
-            // 3. Revert สต็อก
-            $revert_qty = - (float)$transaction['quantity'];
-            updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], $revert_qty);
 
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'DELETE TRANSACTION', $transaction_id);
