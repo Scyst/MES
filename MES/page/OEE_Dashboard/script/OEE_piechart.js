@@ -207,8 +207,10 @@ async function fetchAndRenderCharts() {
             model: document.getElementById("modelFilter")?.value || ''
         }).toString()}`);
         if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message || "Piechart API: API error");
+        
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || "Piechart API: API error");
+        const data = result;
 
         const themeColors = getChartThemeColors();
         const lossColor = themeColors.lossBgColor;
@@ -234,23 +236,24 @@ async function fetchAndRenderCharts() {
             `A Contrib: <b>${(totalRatio > 0 ? (availabilityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`
         ], OEE_TARGETS.oee);
 
-        // --- Quality Card ---
-        const totalDefects = (data.ng || 0) + (data.rework || 0) + (data.hold || 0) + (data.scrap || 0) + (data.etc || 0);
-        const qualityTotal = (data.fg || 0) + totalDefects;
-        const qualityPercent = qualityTotal > 0 ? ((data.fg || 0) / qualityTotal) * 100 : 100;
-        const qualityHasData = qualityTotal > 0;
+        // --- Quality Card (ปรับปรุง) ---
+        const qualityHasData = (data.actual_output || 0) > 0;
         toggleNoDataMessage("qualityPieChart", !qualityHasData);
         renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 
-            ['Good (FG)', 'Defects'], [qualityPercent, 100 - qualityPercent], 
+            ['Good (FG)', 'Defects'], [data.quality || 0, 100 - (data.quality || 0)], 
             [getCssVar('--mes-chart-color-2'), lossColor], OEE_TARGETS.quality,
             `FG: ${(data.fg || 0).toLocaleString()} pcs`, qualityHasData
         );
+        // --- START: เพิ่มการแยกย่อย Defect ---
         updateInfoBox("qualityInfo", [
             `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
-            `Defects: <b>${totalDefects.toLocaleString()}</b> pcs`
+            `Total Defects: <b>${(data.defects || 0).toLocaleString()}</b> pcs`,
+            `&nbsp; └ Hold: <b>${(data.hold || 0).toLocaleString()}</b> pcs`,
+            `&nbsp; └ Scrap: <b>${(data.scrap || 0).toLocaleString()}</b> pcs`
         ], OEE_TARGETS.quality);
 
-        // --- Performance Card ---
+
+        // --- Performance Card (ปรับปรุง) ---
         const performanceHasData = data.performance && data.performance > 0;
         toggleNoDataMessage("performancePieChart", !performanceHasData);
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 
@@ -260,11 +263,12 @@ async function fetchAndRenderCharts() {
         );
         updateInfoBox("performanceInfo", [
             `Actual: <b>${(data.actual_output || 0).toLocaleString()}</b> pcs`,
-            `Theo. Time: <b>${formatMinutes(data.debug_info?.total_theoretical_minutes || 0)}</b>`,
+            `Theo. Time: <b>${formatMinutes(data.total_theoretical_minutes || 0)}</b>`,
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
         ], OEE_TARGETS.performance);
 
-        // --- Availability Card ---
+
+        // --- Availability Card (ปรับปรุง) ---
         const availabilityHasData = data.planned_time && data.planned_time > 0;
         const runtimePercent = availabilityHasData ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
         toggleNoDataMessage("availabilityPieChart", !availabilityHasData);
@@ -273,11 +277,36 @@ async function fetchAndRenderCharts() {
             [getCssVar('--mes-chart-color-4'), lossColor], OEE_TARGETS.availability,
             `Downtime: ${formatMinutes(data.downtime || 0)}`, availabilityHasData
         );
-        updateInfoBox("availabilityInfo", [
+        
+        let availabilityInfoLines = [
             `Planned: <b>${formatMinutes(data.planned_time || 0)}</b>`,
             `Downtime: <b>${formatMinutes(data.downtime || 0)}</b>`,
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
-        ], OEE_TARGETS.availability);
+        ];
+
+        if (data.planned_time_breakdown && data.planned_time_breakdown.length > 0) {
+            availabilityInfoLines.push('<hr class="my-1">');
+            data.planned_time_breakdown.forEach(item => {
+                availabilityInfoLines.push(`&nbsp; └ ${item.line}: <b>${formatMinutes(item.minutes)}</b>`);
+            });
+        }
+        updateInfoBox("availabilityInfo", availabilityInfoLines, OEE_TARGETS.availability);
+
+        const breakdownContainer = document.getElementById('planned-time-breakdown');
+        if (breakdownContainer) {
+            breakdownContainer.innerHTML = '';
+            if (data.planned_time_breakdown && data.planned_time_breakdown.length > 0) {
+                data.planned_time_breakdown.forEach(item => {
+                    const lineDetail = document.createElement('div');
+                    lineDetail.className = 'd-flex justify-content-between';
+                    lineDetail.innerHTML = `
+                        <small class="text-muted">${item.line}:</small>
+                        <small class="text-muted">${formatMinutes(item.minutes)}</small>
+                    `;
+                    breakdownContainer.appendChild(lineDetail);
+                });
+            }
+        }
 
         // --- Sparkline ---
         const sparklineData = data.sparkline_data || [];

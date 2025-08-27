@@ -117,8 +117,28 @@ try {
         $performance = $performanceRaw > 100 ? 100.0 : $performanceRaw;
         $quality = ($totalActualOutput > 0) ? ($totalFG * 100.0 / $totalActualOutput) : 0;
         $oee = ($availability / 100.0) * ($performance / 100.0) * ($quality / 100.0) * 100.0;
-        
+
         $sparklineResult = [];
+
+        $plannedTimeBreakdown = [];
+        if (!$line && !empty($productionDays) && !empty($schedules)) {
+            foreach ($productionDays as $day) {
+                $lineName = $day['ProductionLine'];
+                if (isset($schedules[$lineName])) {
+                    $found = false;
+                    foreach ($plannedTimeBreakdown as &$item) {
+                        if ($item['line'] === $lineName) {
+                            $item['minutes'] += $schedules[$lineName];
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if (!$found) {
+                        $plannedTimeBreakdown[] = ['line' => $lineName, 'minutes' => $schedules[$lineName]];
+                    }
+                }
+            }
+        }
 
         $output = [
             "success" => true,
@@ -126,10 +146,17 @@ try {
             "availability" => round($availability, 1),
             "performance" => round($performance, 1),
             "oee" => round($oee, 1),
-            "fg" => $totalFG, "defects" => $totalDefects, "hold" => $totalHold, "scrap" => $totalScrap,
-            "runtime" => $totalRuntimeMinutes, "planned_time" => $totalPlannedMinutes, "downtime" => $totalDowntimeMinutes,
-            "actual_output" => $totalActualOutput, "total_theoretical_minutes" => round($totalTheoreticalMinutes, 2),
-            "sparkline_data" => $sparklineResult
+            "fg" => $totalFG,
+            "defects" => $totalDefects,
+            "hold" => $totalHold,
+            "scrap" => $totalScrap,
+            "runtime" => $totalRuntimeMinutes,
+            "planned_time" => $totalPlannedMinutes,
+            "downtime" => $totalDowntimeMinutes,
+            "actual_output" => $totalActualOutput,
+            "total_theoretical_minutes" => round($totalTheoreticalMinutes, 2),
+            "sparkline_data" => $sparklineResult,
+            "planned_time_breakdown" => $plannedTimeBreakdown
         ];
         echo json_encode($output);
 
@@ -175,7 +202,6 @@ try {
             "downtime" => (int)$mainResult['Downtime'],
             "actual_output" => (int)$mainResult['ActualOutput'],
             "total_theoretical_minutes" => round((float)$mainResult['TotalTheoreticalMinutes'], 2),
-             // ข้อมูล Sparkline
             "sparkline_data" => $sparklineResult
         ];
 
