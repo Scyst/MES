@@ -5,7 +5,7 @@
 // ตั้งเป็น true เมื่อทำงานบนเครื่องตัวเอง, ตั้งเป็น false เมื่อนำขึ้น Server จริง
 define('IS_DEVELOPMENT', true);
 // ตั้งเป็น true เมื่อจะใช้การคำนวนจากระบบใหม่, ตั้งเป็น false เมื่อจะใช้การคำนวนจากระบบเก่า
-define('USE_NEW_OEE_CALCULATION', true);
+define('USE_NEW_OEE_CALCULATION', false);
 
 // --- DATABASE CREDENTIALS ---
 // พยายามดึงค่าจาก Environment Variables ก่อน, ถ้าไม่มีให้ใช้ค่า Default
