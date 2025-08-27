@@ -163,7 +163,7 @@ async function fetchAndRenderBarCharts() {
         
         // --- Parts Bar Chart (Production Results) ---
         // ตรวจสอบว่ามีข้อมูลจาก API ระบบใหม่ (parts_production) หรือ ระบบเก่า (data.parts)
-        const partsData = responseData.parts_production || responseData.data?.parts;
+        const partsData = responseData.parts || responseData.data?.parts;
         const hasPartsData = partsData && partsData.labels && partsData.labels.length > 0;
         toggleNoDataMessage("partsBarChart", !hasPartsData);
 
