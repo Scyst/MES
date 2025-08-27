@@ -158,51 +158,70 @@ async function fetchAndRenderBarCharts() {
         const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
         if (!responseData.success) throw new Error(responseData.message || "Barchart API: Failed to fetch bar chart data.");
-        const data = responseData.data;
 
-        // --- Parts Bar Chart ---
-        const hasPartsData = data.parts && data.parts.labels && data.parts.labels.length > 0;
+        // --- START: ปรับปรุง Logic การอ่านข้อมูลใหม่ทั้งหมด ---
+        
+        // --- Parts Bar Chart (Production Results) ---
+        // ตรวจสอบว่ามีข้อมูลจาก API ระบบใหม่ (parts_production) หรือ ระบบเก่า (data.parts)
+        const partsData = responseData.parts_production || responseData.data?.parts;
+        const hasPartsData = partsData && partsData.labels && partsData.labels.length > 0;
         toggleNoDataMessage("partsBarChart", !hasPartsData);
 
-        const originalPartLabels = hasPartsData ? data.parts.labels : [];
-        const truncatedPartLabels = originalPartLabels.map(label => truncateLabel(label, 8));
-        const countTypes = {
-            FG: getCssVar('--mes-color-success'), NG: getCssVar('--mes-color-danger'),
-            HOLD: getCssVar('--mes-color-warning'), REWORK: getCssVar('--mes-chart-color-3'),
-            SCRAP: getCssVar('--mes-chart-color-4'), ETC: '#adb5bd'
-        };
-        const partDatasets = Object.keys(countTypes).map(type => ({
-            label: type, data: hasPartsData ? (data.parts[type] || []) : [], backgroundColor: countTypes[type]
-        }));
-
-        renderBarChart('partsBarChart', truncatedPartLabels, partDatasets, { isStacked: true, originalLabels: originalPartLabels, unitLabel: 'pcs' });
+        let partDatasets;
+        if (hasPartsData) {
+            // Logic สำหรับ API ระบบใหม่
+            if (partsData.datasets) {
+                partDatasets = partsData.datasets.map(ds => {
+                    const colorMap = {
+                        'FG': getCssVar('--mes-color-success'),
+                        'HOLD': getCssVar('--mes-color-warning'),
+                        'SCRAP': getCssVar('--mes-color-danger')
+                    };
+                    return { ...ds, backgroundColor: colorMap[ds.label] || '#adb5bd' };
+                });
+            } 
+            // Logic สำหรับ API ระบบเก่า
+            else {
+                const countTypes = { 
+                    FG: '--mes-color-success', NG: '--mes-color-danger',
+                    HOLD: '--mes-color-warning', REWORK: '--mes-chart-color-3',
+                    SCRAP: '--mes-chart-color-4', ETC: '#adb5bd'
+                };
+                partDatasets = Object.keys(countTypes).map(type => ({
+                    label: type,
+                    data: partsData[type] || [],
+                    backgroundColor: getCssVar(countTypes[type])
+                }));
+            }
+        } else {
+            partDatasets = [];
+        }
+        
+        renderBarChart('partsBarChart', hasPartsData ? partsData.labels.map(l => truncateLabel(l, 8)) : [], partDatasets, { 
+            isStacked: true, 
+            originalLabels: hasPartsData ? partsData.labels : [], 
+            unitLabel: 'pcs' 
+        });
+        
         
         // --- Stop Cause Bar Chart ---
-        const hasStopCauseData = data.stopCause && data.stopCause.labels && data.stopCause.labels.length > 0;
+        const stopCauseData = responseData.stop_causes || responseData.data?.stopCause;
+        const hasStopCauseData = stopCauseData && stopCauseData.labels && stopCauseData.labels.length > 0;
         toggleNoDataMessage("stopCauseBarChart", !hasStopCauseData);
 
-        const stopCauseLabels = hasStopCauseData ? data.stopCause.labels : [];
-        const causeColors = { 
-            'Man': '#42a5f5', 'Machine': '#26c6da', 'Method': '#64b5f6', 'Material': '#9e9e9e',
-            'Measurement': '#78909c', 'Environment': '#546e7a', 'Other': '#bdbdbd'
-        };
-        const stopCauseDatasets = Object.keys(causeColors).map(cause => ({
-            label: cause, data: hasStopCauseData ? (data.stopCause[cause] || []) : [], backgroundColor: causeColors[cause]
-        }));
-        
-        renderBarChart('stopCauseBarChart', stopCauseLabels, stopCauseDatasets, { isStacked: true, unitLabel: 'min', originalLabels: stopCauseLabels });
+        const stopCauseDatasets = hasStopCauseData ? stopCauseData.datasets : [];
+
+        renderBarChart('stopCauseBarChart', hasStopCauseData ? stopCauseData.labels : [], stopCauseDatasets, { 
+            isStacked: true, 
+            unitLabel: 'min', 
+            originalLabels: hasStopCauseData ? stopCauseData.labels : [] 
+        });
+        // --- END ---
 
     } catch (err) {
         console.error("Bar chart fetch failed:", err);
         toggleErrorMessage("partsBarChart", true);
         toggleErrorMessage("stopCauseBarChart", true);
-
-        if (!barChartInstances['partsBarChart'] || barChartInstances['partsBarChart'].destroyed) {
-            renderBarChart('partsBarChart', [], [], { isStacked: true, originalLabels: [], unitLabel: 'pcs' });
-        }
-        if (!barChartInstances['stopCauseBarChart'] || barChartInstances['stopCauseBarChart'].destroyed) {
-            renderBarChart('stopCauseBarChart', [], [], { isStacked: true, unitLabel: 'min', originalLabels: [] });
-        }
     } finally {
         toggleLoadingState("partsBarChart", false);
         toggleLoadingState("stopCauseBarChart", false);
