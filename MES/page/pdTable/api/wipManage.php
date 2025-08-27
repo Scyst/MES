@@ -8,14 +8,12 @@ require_once __DIR__ . '/../../helpers/inventory_helper.php';
 
 // ส่วนของ CSRF Token Check (เหมือนเดิม)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
+    if (!isset($_SERVER['HTTP_X_CSR_F_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'CSRF token validation failed.']);
         exit;
     }
 }
-
-// ไม่มีการประกาศ $is_development หรือชื่อตารางที่นี่อีกต่อไป
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
@@ -644,6 +642,6 @@ try {
         $pdo->rollBack();
     }
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
 ?>
