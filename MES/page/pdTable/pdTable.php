@@ -1,5 +1,11 @@
-<?php 
-    include_once("../../auth/check_auth.php"); 
+<?php
+    // --- ส่วนที่เพิ่มเพื่อ Debug ---
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+    // ---------------------------
+
+    include_once("../../auth/check_auth.php");
     
     if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
