@@ -546,22 +546,43 @@ function renderHealthCheckTable() {
     const start = (healthCheckCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = allMissingParams.slice(start, start + ROWS_PER_PAGE);
 
+    // 1. ปรับแก้หัวตารางให้แสดงข้อมูลใหม่
+    const tableHead = document.querySelector('#healthCheckPane thead tr');
+    if (tableHead) {
+        tableHead.innerHTML = `
+            <th>SAP No.</th>
+            <th>Part No.</th>
+            <th>Part Description</th>
+            <th style="width: 180px;" class="text-center">Actions</th>
+        `;
+    }
+
     if (allMissingParams.length === 0) {
         listBody.innerHTML = `<tr><td colspan="4" class="text-center text-success">Excellent! No missing data found.</td></tr>`;
     } else {
          pageData.forEach(item => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${item.line}</td><td>${item.model}</td><td>${item.part_no}</td>`;
+            // 2. แสดงข้อมูล SAP No, Part No, และ Description
+            tr.innerHTML = `
+                <td>${item.sap_no || ''}</td>
+                <td>${item.part_no || ''}</td>
+                <td>${item.part_description || ''}</td>
+            `;
             
             const actionsTd = document.createElement('td');
             actionsTd.className = 'text-center';
             
-            const addButton = document.createElement('button');
-            addButton.className = 'btn btn-sm btn-success';
-            addButton.textContent = 'Add as Parameter';
-            addButton.onclick = () => openAddParamFromHealthCheck(item);
+            const editButton = document.createElement('button');
+            editButton.className = 'btn btn-sm btn-warning';
+            editButton.innerHTML = '<i class="fas fa-edit"></i> Edit Item';
             
-            actionsTd.appendChild(addButton);
+            // 3. เปลี่ยนการทำงานของปุ่ม: ให้เปิดหน้า Item Master พร้อมค้นหา SAP No. ที่มีปัญหา
+            editButton.onclick = () => {
+                const itemMasterUrl = `../inventorySettings/inventorySettings.php?tab=itemMaster&search=${encodeURIComponent(item.sap_no)}`;
+                window.open(itemMasterUrl, '_blank');
+            };
+            
+            actionsTd.appendChild(editButton);
             tr.appendChild(actionsTd);
             
             listBody.appendChild(tr);

@@ -459,10 +459,34 @@ try {
             break;
             
         case 'health_check_parameters':
-            $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
-            $stmt->execute();
-            $missingParams = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $missingParams]);
+            // ตรวจสอบว่ากำลังใช้ระบบ OEE ใหม่หรือไม่
+            if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
+                // Logic สำหรับระบบใหม่
+                $sql = "
+                    SELECT DISTINCT
+                        i.sap_no,
+                        i.part_no,
+                        i.part_description
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    WHERE 
+                        t.transaction_type LIKE 'PRODUCTION_%'
+                        AND (i.planned_output IS NULL OR i.planned_output <= 0)
+                    ORDER BY 
+                        i.sap_no
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute();
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            } else {
+                // Logic สำหรับระบบเก่า (ใช้ Stored Procedure เดิม)
+                $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
+                $stmt->execute();
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            
+            echo json_encode(['success' => true, 'data' => $results]);
             break;
 
         case 'find_parameter_for_bom':

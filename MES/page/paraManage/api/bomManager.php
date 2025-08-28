@@ -381,7 +381,7 @@ try {
                 }
             }
             $itemMap = [];
-            if (!empty($sapNosInFile)) { // <--- เพิ่ม if ครอบ
+            if (!empty($sapNosInFile)) {
                 $uniqueSapNos = array_unique($sapNosInFile);
                 $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
                 $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN ({$placeholders})");

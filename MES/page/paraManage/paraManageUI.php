@@ -54,8 +54,7 @@
             </div>
             
             <div class="content-wrapper">
-                <div class="tab-content pt-3" id="paramTabContent">
-
+                <div class="tab-content" id="paramTabContent">
                     <div class="tab-pane fade show active" id="standardParamsPane" role="tabpanel">
                         <div class="sticky-bar">
                             <div class="container-fluid">
@@ -163,8 +162,8 @@
                     <?php endif; ?>
                     
                     <div class="tab-pane fade" id="bomManagerPane" role="tabpanel">
-                        <div class="sticky-bar pb-1">
-                            <div class="row mb-2 align-items-center">
+                        <div class="sticky-bar">
+                            <div class="row my-3 align-items-center">
                                 <div class="col-md-6">
                                     <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number, Line, Model...">
                                 </div>
