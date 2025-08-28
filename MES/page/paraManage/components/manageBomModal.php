@@ -8,7 +8,7 @@
             <div class="modal-body">
                 <h6>Components</h6>
                 <div class="table-responsive mb-3" style="max-height: 300px;">
-                    <table class="table  table-striped table-sm">
+                    <table class="table table-striped table-sm">
                         <thead>
                             <tr>
                                 <th style="width: 30%;">Component Part No.</th>

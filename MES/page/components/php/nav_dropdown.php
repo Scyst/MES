@@ -1,14 +1,14 @@
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <button class="dropdown-toggle-btn" id="sidebar-toggle-btn">
-            <img src="../../icons/menu.png" alt="Menu" width="32" height="32">
+            <i class="fas fa-bars fa-fw" style="font-size: 1.5rem;"></i>
         </button>
     </div>
 
     <ul class="custom-dropdown">
         <?php if (isset($_SESSION['user']) && is_array($_SESSION['user'])): ?>
           <li class="dropdown-username" title="User">
-            <i class="fas fa-user-alt fa-fw"></i>
+            <i class="fas fa-user-alt fa-fw" style="margin-right: 24px;"></i>
             <div>
                 <?= htmlspecialchars($_SESSION['user']['username']) ?>
                 <small style="display:block; font-size: 0.75rem; color: #aaa;">

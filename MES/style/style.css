@@ -78,12 +78,6 @@ body {
     padding: 0 1.5rem;    /* นำ Padding กลับมาไว้ที่นี่ */
 }
 
-/* เราไม่จำเป็นต้องมีกฎสำหรับ .content-wrapper หรือ .tab-content อีกต่อไป
-   เพราะตอนนี้ #main-content คือพื้นที่ที่เลื่อนได้ทั้งหมดแล้ว
-   และกฎ "position: sticky" ที่คุณมีอยู่แล้วสำหรับ .sticky-bar และ .sticky-bottom
-   จะกลับมาทำงานได้อย่างถูกต้องโดยอัตโนมัติ
-*/
-
 .sidebar {
     position: fixed;
     top: 0; left: 0; height: 100vh;
@@ -631,6 +625,17 @@ body {
 .chart-wrapper.has-error .no-data-message {
     display: none !important;
 }
+
+/*-- BOM Manager --*/
+#modalBomTableBody .bom-quantity-input::-webkit-inner-spin-button,
+#modalBomTableBody .bom-quantity-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#modalBomTableBody .bom-quantity-input {
+    text-align: center;         /* จัดตัวเลขให้อยู่กึ่งกลาง */
+}
+
 
 /* =================================================================== */
 /* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */

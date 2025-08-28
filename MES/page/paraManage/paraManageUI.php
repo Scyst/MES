@@ -169,10 +169,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-primary" id="exportAllBomsBtn"><i class="fas fa-file-export"></i> Export All BOMs</button>
-                                        <button class="btn btn-info" id="importBomsBtn"><i class="fas fa-file-import"></i> Import BOMs File</button>
+                                        <button class="btn btn-primary" id="exportAllBomsBtn"><i class="fas fa-file-export"></i> Export All</button>
+                                        <button class="btn btn-info" id="importBomsBtn"><i class="fas fa-file-import"></i> Import BOMs</button>
                                         <input type="file" id="bulkBomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
-                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
+                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create BOM</button>
                                     </div>
                                 </div>
                             </div>

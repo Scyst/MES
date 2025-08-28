@@ -716,9 +716,16 @@ async function loadBomForModal(fg) {
                 tr.innerHTML = `
                     <td>${comp.component_part_no}</td>
                     <td>${comp.part_description || ''}</td>
-                    <td class="text-center">
-                        <input type="number" class="form-control form-control-sm bom-quantity-input text-center bom-input-readonly w-50" 
-                                value="${comp.quantity_required}" data-bom-id="${comp.bom_id}" min="1" readonly>
+                    <td class="text-center align-middle">
+                        <div class="d-flex justify-content-center">
+                            <input type="number" 
+                                class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
+                                style="width: 80px;" 
+                                value="${comp.quantity_required}" 
+                                data-bom-id="${comp.bom_id}" 
+                                min="1" 
+                                readonly>
+                        </div>
                     </td>
                     <td class="text-center">
                         <div class="btn-group gap-2 justify-content-center">
