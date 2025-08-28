@@ -10,6 +10,9 @@ const ROWS_PER_PAGE = 100;
 let allStandardParams = [], allSchedules = [], allMissingParams = [], allBomFgs = [];
 let paramCurrentPage = 1;
 let healthCheckCurrentPage = 1;
+// ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+let bomCurrentPage = 1; 
+// ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
 let bomTabLoaded = false;
 let currentEditingParam = null;
 let currentEditingBom = null;
@@ -46,29 +49,10 @@ async function sendRequest(endpoint, action, method, body = null, urlParams = {}
     }
 }
 
-/**
- * ฟังก์ชันสำหรับสร้าง Pagination Control
- */
-function renderPagination(containerId, totalItems, currentPage, callback) {
-    const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
-    const pagination = document.getElementById(containerId);
-    pagination.innerHTML = '';
-    if (totalPages <= 1) return;
+// ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+// ลบฟังก์ชัน renderPagination() ที่เคยอยู่ในไฟล์นี้ออกไป
+// ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
 
-    const createPageItem = (page, text, isDisabled) => {
-        const li = document.createElement('li');
-        li.className = `page-item ${isDisabled ? 'disabled' : ''} ${page === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="#">${text}</a>`;
-        if(!isDisabled) li.querySelector('a').onclick = (e) => { e.preventDefault(); callback(page); };
-        return li;
-    };
-
-    pagination.appendChild(createPageItem(currentPage - 1, 'Prev', currentPage <= 1));
-    for (let i = 1; i <= totalPages; i++) {
-        pagination.appendChild(createPageItem(i, i, false, i === currentPage));
-    }
-    pagination.appendChild(createPageItem(currentPage + 1, 'Next', currentPage >= totalPages));
-}
 
 // --- ฟังก์ชันสำหรับ Tab "Standard Parameters" ---
 function setupParameterItemAutocomplete() {
@@ -289,7 +273,9 @@ function renderStandardParamsTable() {
 
     if (pageData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center">No parameters found.</td></tr>`;
-        renderPagination('paginationControls', 0, 1, goToStandardParamPage);
+        // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+        renderPagination('paginationControls', 0, 1, ROWS_PER_PAGE, goToStandardParamPage);
+        // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
         return;
     }
 
@@ -328,7 +314,9 @@ function renderStandardParamsTable() {
         tbody.appendChild(tr);
     });
     
-    renderPagination('paginationControls', filteredData.length, paramCurrentPage, goToStandardParamPage);
+    // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+    renderPagination('paginationControls', filteredData.length, paramCurrentPage, ROWS_PER_PAGE, goToStandardParamPage);
+    // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
     updateBulkActionsVisibility();
 }
 
@@ -588,7 +576,9 @@ function renderHealthCheckTable() {
         });
     }
     
-    renderPagination('healthCheckPaginationControls', allMissingParams.length, healthCheckCurrentPage, goToHealthCheckPage);
+    // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+    renderPagination('healthCheckPaginationControls', allMissingParams.length, healthCheckCurrentPage, ROWS_PER_PAGE, goToHealthCheckPage);
+    // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
 }
 
 function goToHealthCheckPage(page) {
@@ -742,6 +732,29 @@ function manageBom(fg) {
     loadBomForModal(fg);
 };
 
+// ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+function goToBomPage(page) {
+    bomCurrentPage = page;
+    const searchInput = document.getElementById('bomSearchInput');
+    const filteredData = getFilteredBoms(searchInput.value);
+    renderBomFgTable(filteredData);
+}
+
+function getFilteredBoms(searchTerm) {
+    const term = searchTerm.toLowerCase();
+    if (!term) {
+        return allBomFgs;
+    }
+    return allBomFgs.filter(fg => 
+        (fg.fg_sap_no && String(fg.fg_sap_no).toLowerCase().includes(term)) ||
+        (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(term)) || 
+        (fg.line && fg.line.toLowerCase().includes(term)) ||
+        (fg.model && fg.model.toLowerCase().includes(term))
+    );
+}
+// ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+
+
 function initializeBomManager() {
     // --- Element References (เหมือนเดิม) ---
     const searchInput = document.getElementById('bomSearchInput');
@@ -750,6 +763,7 @@ function initializeBomManager() {
     const importBomBtn = document.getElementById('importBomBtn');
     const bomImportFile = document.getElementById('bomImportFile');
     const exportBomBtn = document.getElementById('exportBomBtn');
+    const exportComponentsBtn = document.getElementById('exportComponentsBtn');
     const createBomModalEl = document.getElementById('createBomModal');
     const createBomModal = new bootstrap.Modal(createBomModalEl);
     const manageBomModalEl = document.getElementById('manageBomModal');
@@ -762,7 +776,7 @@ function initializeBomManager() {
     const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
     manageBomModal = new bootstrap.Modal(manageBomModalEl);
     let bomDebounceTimer;
-    let allBomFgs = [];
+    // let allBomFgs = []; // << ย้ายไปเป็น Global แล้ว
 
     // --- Style Injection (เหมือนเดิม) ---
     const style = document.createElement('style');
@@ -780,7 +794,9 @@ function initializeBomManager() {
             const result = await sendRequest(BOM_API_ENDPOINT, 'get_all_fgs_with_bom', 'GET');
             if (result.success) {
                 allBomFgs = result.data;
-                renderBomFgTable(allBomFgs);
+                // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+                filterAndRenderBomFgTable();
+                // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
             }
         } finally {
             hideSpinner();
@@ -788,20 +804,20 @@ function initializeBomManager() {
     }
 
     function filterAndRenderBomFgTable() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredData = allBomFgs.filter(fg => 
-            (fg.fg_sap_no && String(fg.fg_sap_no).toLowerCase().includes(searchTerm)) ||
-            (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(searchTerm)) || 
-            (fg.line && fg.line.toLowerCase().includes(searchTerm)) ||
-            (fg.model && fg.model.toLowerCase().includes(searchTerm))
-        );
+        // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+        bomCurrentPage = 1;
+        const filteredData = getFilteredBoms(searchInput.value);
         renderBomFgTable(filteredData);
+        // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
     }
 
     function renderBomFgTable(fgData) {
         fgListTableBody.innerHTML = '';
-        if (fgData && fgData.length > 0) {
-            fgData.forEach(fg => {
+        const start = (bomCurrentPage - 1) * ROWS_PER_PAGE;
+        const pageData = fgData.slice(start, start + ROWS_PER_PAGE);
+
+        if (pageData.length > 0) {
+            pageData.forEach(fg => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to edit BOM';
@@ -831,6 +847,9 @@ function initializeBomManager() {
             fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
         }
         updateBomBulkActionsVisibility();
+        // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+        renderPagination('bomPaginationControls', fgData.length, bomCurrentPage, ROWS_PER_PAGE, goToBomPage);
+        // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
     }
 
     function setupBomComponentAutocomplete() {
@@ -984,6 +1003,47 @@ function initializeBomManager() {
             hideSpinner();
         }
     }
+
+    // เพิ่มฟังก์ชันใหม่นี้เข้าไปในไฟล์ paraManage.js ได้เลย
+    async function exportComponentsForCurrentBom() {
+        if (!currentEditingBom) {
+            showToast('No active BOM selected.', '#ffc107');
+            return;
+        }
+
+        showToast('Exporting components...', '#0dcaf0');
+        showSpinner();
+
+        try {
+            // ดึงข้อมูล Components ล่าสุด
+            const result = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, {
+                fg_item_id: currentEditingBom.fg_item_id,
+                line: currentEditingBom.line,
+                model: currentEditingBom.model
+            });
+
+            if (!result.success || result.data.length === 0) {
+                showToast('No components to export for this BOM.', '#ffc107');
+                return;
+            }
+
+            // สร้างข้อมูลสำหรับ Export (เฉพาะส่วนที่จำเป็น)
+            const dataToExport = result.data.map(component => ({
+                'COMPONENT_SAP_NO': component.component_sap_no,
+                'QUANTITY_REQUIRED': component.quantity_required
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Components");
+
+            const fileName = `BOM_${currentEditingBom.fg_sap_no}_${currentEditingBom.line}_${currentEditingBom.model}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+
+        } finally {
+            hideSpinner();
+        }
+    }
     
     function updateBomBulkActionsVisibility() {
         const container = document.getElementById('bom-bulk-actions-container');
@@ -1033,6 +1093,7 @@ function initializeBomManager() {
     importBomBtn?.addEventListener('click', () => bomImportFile?.click());
     bomImportFile?.addEventListener('change', handleBomImport);
     exportBomBtn?.addEventListener('click', exportBomToExcel);
+    exportComponentsBtn?.addEventListener('click', exportComponentsForCurrentBom);
     
     selectAllBomCheckbox.addEventListener('change', (e) => {
         document.querySelectorAll('.bom-row-checkbox').forEach(cb => cb.checked = e.target.checked);
@@ -1047,33 +1108,6 @@ function initializeBomManager() {
     });
 
     deleteSelectedBomBtn.addEventListener('click', deleteSelectedBoms);
-
-    /*createBomForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const searchCriteria = Object.fromEntries(new FormData(createBomForm).entries());
-        
-        showSpinner();
-        try {
-            const result = await sendRequest(PARA_API_ENDPOINT, 'find_parameter_for_bom', 'POST', searchCriteria);
-            if (result.success && result.data) {
-                showToast('Finished Good found! Proceeding to manage BOM.', '#28a745');
-                createBomModal.hide();
-                createBomForm.reset();
-                
-                manageBom({
-                    fg_item_id: result.data.item_id,
-                    fg_sap_no: result.data.sap_no,
-                    fg_part_no: result.data.part_no,
-                    line: result.data.line,
-                    model: result.data.model
-                });
-            } else {
-                showToast(result.message || 'Could not find a matching part.', '#dc3545');
-            }
-        } finally {
-            hideSpinner();
-        }
-    });*/
     
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1237,7 +1271,6 @@ function initializeBomManager() {
     // --- Initial Load ---
     setupBomComponentAutocomplete();
     loadAndRenderBomFgTable();
-    //populateCreateBomDatalists();
 }
 
 /**
@@ -1325,18 +1358,37 @@ document.addEventListener('DOMContentLoaded', () => {
         importInput.addEventListener('change', handleImport);
     }
     
+    // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
+    // Logic สำหรับควบคุมการแสดงผล Pagination ของแต่ละ Tab
+    const mainContent = document.getElementById('main-content');
+    const paginations = mainContent.querySelectorAll('.sticky-bottom[data-tab-target]');
+    
+    function showCorrectPagination(activeTabId) {
+        paginations.forEach(pagination => {
+            const isVisible = pagination.dataset.tabTarget === activeTabId;
+            pagination.style.display = isVisible ? 'block' : 'none';
+        });
+    }
+
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabElm => {
         tabElm.addEventListener('shown.bs.tab', event => {
             const targetTabId = event.target.getAttribute('data-bs-target');
+            showCorrectPagination(targetTabId); // แสดง pagination ที่ถูกต้อง
+
             if (targetTabId === '#lineSchedulesPane') {
                 if (currentUser.role !== 'supervisor') loadSchedules();
             } else if (targetTabId === '#healthCheckPane') {
                 if (currentUser.role !== 'supervisor') loadHealthCheckData();
-            } /*else if (targetTabId === '#bomManagerPane' && !bomTabLoaded) {
-                bomTabLoaded = true;
-            }*/
+            }
         });
     });
+
+    // แสดง Pagination ของ Tab แรกที่ Active อยู่ตอนโหลดหน้าเว็บ
+    const initialActiveTab = document.querySelector('.nav-tabs .nav-link.active');
+    if (initialActiveTab) {
+        showCorrectPagination(initialActiveTab.getAttribute('data-bs-target'));
+    }
+    // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
 
     const createVariantsForm = document.getElementById('createVariantsForm');
     if (createVariantsForm) {

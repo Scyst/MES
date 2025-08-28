@@ -218,6 +218,9 @@
             </nav>
             <?php endif; ?>
             
+            <nav class="sticky-bottom" data-tab-target="#bomManagerPane" style="display: none;">
+                <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
+            </nav>
             <div id="toast"></div>
 
             <?php 

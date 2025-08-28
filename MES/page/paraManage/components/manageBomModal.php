@@ -51,10 +51,12 @@
                  <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn">
                     <i class="fas fa-trash-alt"></i> Delete BOM
                 </button>
+                <button type="button" class="btn btn-info me-auto" id="exportComponentsBtn">
+                    <i class="fas fa-file-excel"></i> Export Components
+                </button>
                 <button type="button" class="btn btn-primary" id="copyBomFromModalBtn">
                     <i class="fas fa-copy"></i> Copy BOM
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
