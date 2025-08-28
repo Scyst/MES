@@ -928,7 +928,14 @@ function initializeBomManager() {
 
     // --- Bulk Operation Elements ---
     const exportAllBomsBtn = document.getElementById('exportAllBomsBtn');
+    const exportSelectedBomsBtn = document.getElementById('exportSelectedBomsBtn');
+    const exportAllConsolidatedBtn = document.getElementById('exportAllConsolidatedBtn');
+    const exportSelectedDetailedBtn = document.getElementById('exportSelectedDetailedBtn');
     const importBomsBtn = document.getElementById('importBomsBtn');
+    const importUpdateBomsBtn = document.getElementById('importUpdateBomsBtn');
+    const importCreateBomsBtn = document.getElementById('importCreateBomsBtn');
+    const bulkUpdateImportFile = document.getElementById('bulkUpdateImportFile');  
+    const initialCreateImportFile = document.getElementById('initialCreateImportFile');
     const bulkBomImportFile = document.getElementById('bulkBomImportFile');
     const confirmBulkImportBtn = document.getElementById('confirmBulkImportBtn');
 
@@ -1040,10 +1047,38 @@ function initializeBomManager() {
 
     // --- Bulk Export ---
     async function exportAllBoms() {
-        showToast('Exporting all BOMs...', '#0dcaf0');
+        showToast('Exporting all BOMs (Consolidated)...', '#0dcaf0');
         showSpinner();
         try {
             const result = await sendRequest(BOM_API_ENDPOINT, 'export_all_boms', 'GET');
+            if (result.success && result.data && result.data.length > 0) {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(result.data);
+                XLSX.utils.book_append_sheet(wb, ws, "All_BOMs"); // สร้างชีตเดียว
+                
+                const fileName = `BOM_Export_All_Consolidated_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                showToast('All BOMs exported successfully!', '#28a745');
+            } else {
+                showToast(result.message || 'No BOMs found to export.', '#ffc107');
+            }
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    async function exportSelectedBoms() {
+        const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
+        const bomsToExport = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
+        if (bomsToExport.length === 0) {
+            showToast('Please select at least one BOM to export.', '#ffc107');
+            return;
+        }
+
+        showToast(`Exporting ${bomsToExport.length} selected BOM(s)...`, '#0dcaf0');
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'export_selected_boms', 'POST', { boms: bomsToExport });
             if (result.success && Object.keys(result.data).length > 0) {
                 const wb = XLSX.utils.book_new();
                 for (const fgSapNo in result.data) {
@@ -1056,11 +1091,11 @@ function initializeBomManager() {
                     const ws = XLSX.utils.json_to_sheet(sheetData);
                     XLSX.utils.book_append_sheet(wb, ws, fgSapNo);
                 }
-                const fileName = `BOM_Export_All_${new Date().toISOString().split('T')[0]}.xlsx`;
+                const fileName = `BOM_Export_Selected_${new Date().toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(wb, fileName);
-                showToast('All BOMs exported successfully!', '#28a745');
+                showToast('Selected BOMs exported successfully!', '#28a745');
             } else {
-                showToast(result.message || 'No BOMs found to export.', '#ffc107');
+                showToast(result.message || 'Could not export selected BOMs.', '#ffc107');
             }
         } finally {
             hideSpinner();
@@ -1097,12 +1132,16 @@ function initializeBomManager() {
     }
 
     function updateBomBulkActionsVisibility() {
-        const container = document.getElementById('bom-bulk-actions-container');
+        const deleteBtn = document.getElementById('deleteSelectedBomBtn');
+        const exportSelectedMenuItem = document.getElementById('exportSelectedDetailedBtn');
         const selected = document.querySelectorAll('.bom-row-checkbox:checked');
+
         if (selected.length > 0) {
-            container.classList.remove('d-none');
+            deleteBtn.classList.remove('d-none');
+            exportSelectedMenuItem.classList.remove('disabled');
         } else {
-            container.classList.add('d-none');
+            deleteBtn.classList.add('d-none');
+            exportSelectedMenuItem.classList.add('disabled');
         }
     }
 
@@ -1110,7 +1149,7 @@ function initializeBomManager() {
         const { summary, sheets } = validationData;
         validatedBulkBomImportData = sheets;
 
-        const modal = new bootstrap.Modal(document.getElementById('bomBulkImportPreviewModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bomBulkImportPreviewModal'));
         document.getElementById('bulk-summary-create-count').textContent = summary.create;
         document.getElementById('bulk-summary-overwrite-count').textContent = summary.overwrite;
         document.getElementById('bulk-summary-skipped-count').textContent = summary.skipped;
@@ -1175,6 +1214,44 @@ function initializeBomManager() {
         }
     }
 
+    async function handleInitialBomImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!confirm("This action will only create NEW BOMs and will SKIP any existing BOMs. Are you sure you want to proceed?")) {
+            event.target.value = ''; // Reset file input
+            return;
+        }
+
+        showSpinner();
+        try {
+            const fileData = await file.arrayBuffer();
+            const workbook = XLSX.read(fileData);
+            const sheetName = workbook.SheetNames[0]; // อ่านจากชีตแรกเสมอ
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: null });
+
+            if (rows.length === 0) {
+                showToast('The selected file is empty.', '#ffc107');
+                return;
+            }
+
+            const result = await sendRequest(BOM_API_ENDPOINT, 'create_initial_boms', 'POST', { rows });
+
+            if (result.success) {
+                showToast(result.message, '#28a745');
+                await loadAndRenderBomFgTable(); // โหลดข้อมูลใหม่
+            } else {
+                showToast(result.message || 'Failed to create initial BOMs.', '#dc3545');
+            }
+        } catch (error) {
+            showToast('An error occurred while processing the file.', '#dc3545');
+            console.error(error);
+        } finally {
+            event.target.value = ''; // Reset file input เสมอ
+            hideSpinner();
+        }
+    }
+
     // --- Bulk Delete ---
     async function deleteSelectedBoms() {
         const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
@@ -1202,9 +1279,31 @@ function initializeBomManager() {
     
     // Bulk Operations
     exportAllBomsBtn?.addEventListener('click', exportAllBoms);
-    importBomsBtn?.addEventListener('click', () => bulkBomImportFile?.click());
+    exportSelectedBomsBtn?.addEventListener('click', exportSelectedBoms); // <-- เพิ่มบรรทัดนี้
     bulkBomImportFile?.addEventListener('change', handleBulkBomImport);
     confirmBulkImportBtn?.addEventListener('click', executeBulkBomImport);
+    importUpdateBomsBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        bulkUpdateImportFile.click(); // เรียก input ของตัวเอง
+    });
+
+    importCreateBomsBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        initialCreateImportFile.click(); // เรียก input ของตัวเอง
+    });
+    exportAllConsolidatedBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        exportAllBoms();
+    });
+    exportSelectedDetailedBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if(!e.target.classList.contains('disabled')) {
+            exportSelectedBoms();
+        }
+    });
+
+    bulkUpdateImportFile?.addEventListener('change', handleBulkBomImport);
+    initialCreateImportFile?.addEventListener('change', handleInitialBomImport);
 
     // Single BOM Operations
     createNewBomBtn?.addEventListener('click', () => {

@@ -169,20 +169,28 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-primary" id="exportAllBomsBtn"><i class="fas fa-file-export"></i> Export All</button>
-                                        <button class="btn btn-info" id="importBomsBtn"><i class="fas fa-file-import"></i> Import BOMs</button>
+                                        <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-file-import"></i> Import
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" id="importUpdateBomsBtn">For Update (Multi-Sheet)</a></li>
+                                            <li><a class="dropdown-item" href="#" id="importCreateBomsBtn">For Initial Create (Single-Sheet)</a></li>
+                                        </ul>
+                                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-file-export"></i> Export
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" id="exportAllConsolidatedBtn">All BOMs (Consolidated)</a></li>
+                                            <li><a class="dropdown-item disabled" href="#" id="exportSelectedDetailedBtn">Selected BOMs (Detailed)</a></li>
+                                        </ul>
                                         <input type="file" id="bulkBomImportFile" accept=".csv, .xlsx, .xls" class="d-none">
-                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create BOM</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="bom-bulk-actions-container" class="d-none row align-items-center mb-2">
-                                <div class="col-12">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-danger" id="deleteSelectedBomBtn">
+                                        <input type="file" id="bulkUpdateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
+                                        <input type="file" id="initialCreateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
+                                        <button class="btn btn-danger d-none" id="deleteSelectedBomBtn">
                                             <i class="fas fa-trash-alt"></i> Delete Selected
                                         </button>
-                                    </div>
+                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
+                                        </div>
                                 </div>
                             </div>
                         </div>
