@@ -941,18 +941,77 @@ async function handleItemImport(event) {
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    let debounceTimer; // Moved debounceTimer to the top for broader scope
+    let debounceTimer;
 
-    // Location Manager Init
-    loadLocations();
+    // --- ★★★ START: Corrected Logic for URL parameters & Tab Loading ★★★ ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabToOpen = urlParams.get('tab');
+    const searchTermFromUrl = urlParams.get('search');
+
+    const allTabs = document.querySelectorAll('#settingsTab button[data-bs-toggle="tab"]');
+    
+    const loadTabData = (targetPaneId) => {
+        switch(targetPaneId) {
+            case '#locations-pane':
+                loadLocations();
+                break;
+            case '#transfer-pane':
+                populateTransferInitialData();
+                fetchTransferHistory();
+                break;
+            case '#opening-balance-pane':
+                populateOpeningBalanceLocations();
+                break;
+            case '#item-master-pane':
+                if (searchTermFromUrl && tabToOpen === 'itemMaster') {
+                    const searchInput = document.getElementById('itemMasterSearch');
+                    if (searchInput) {
+                        searchInput.value = searchTermFromUrl;
+                    }
+                }
+                fetchItems(1);
+                break;
+        }
+    };
+
+    // Attach event listeners to all tabs using a named function to allow removal
+    allTabs.forEach(tab => {
+        const loadOnceHandler = (event) => {
+            const targetPaneId = event.target.getAttribute('data-bs-target');
+            loadTabData(targetPaneId);
+            // Correct way to remove the listener in Strict Mode
+            tab.removeEventListener('shown.bs.tab', loadOnceHandler);
+        };
+        tab.addEventListener('shown.bs.tab', loadOnceHandler);
+    });
+
+    // If a tab is specified in the URL, show it
+    if (tabToOpen) {
+        const tabElement = document.querySelector(`#settingsTab button[data-bs-target="#${tabToOpen}-pane"]`);
+        if (tabElement) {
+            const tab = new bootstrap.Tab(tabElement);
+            tab.show();
+            // Manually trigger data load because 'shown.bs.tab' might not fire for the default active tab
+            loadTabData(`#${tabToOpen}-pane`);
+        }
+    } else {
+        // Default behavior: load the active tab's data on page load
+        const activeTab = document.querySelector('#settingsTab button.active');
+        if (activeTab) {
+            const activePaneId = activeTab.getAttribute('data-bs-target');
+            loadTabData(activePaneId);
+        }
+    }
+    // --- ★★★ END: Corrected Logic ★★★ ---
+
+
+    // --- Event Listeners for components (The rest of your code is perfect) ---
+    // (โค้ด Event Listener เดิมของคุณทั้งหมดจะอยู่ที่นี่)
     document.getElementById('addLocationBtn')?.addEventListener('click', () => openLocationModal());
     document.getElementById('locationForm')?.addEventListener('submit', handleLocationFormSubmit);
     document.getElementById('deleteLocationBtn')?.addEventListener('click', deleteLocation);
 
-    // Stock Transfer Init
-    populateTransferInitialData();
     setupTransferAutocomplete();
-    fetchTransferHistory();
     document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
     document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
     document.getElementById('from_location_id')?.addEventListener('change', () => updateStockDisplay('from_location_id', 'fromStock'));
@@ -969,26 +1028,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Opening Balance Init
-    populateOpeningBalanceLocations();
     setupStockAdjustmentAutocomplete();
     document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
     document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
 
-    // Item Master Init
     document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
     document.getElementById('importItemsBtn')?.addEventListener('click', () => document.getElementById('itemImportFile')?.click());
     document.getElementById('itemImportFile')?.addEventListener('change', handleItemImport);
     
     setupModelFilterAutocomplete();
     setupItemMasterAutocomplete();
-
-    const itemMasterTab = document.getElementById('item-master-tab');
-    if (itemMasterTab) {
-        itemMasterTab.addEventListener('shown.bs.tab', () => {
-            fetchItems(1);
-        }, { once: true });
-    }
     
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
     document.getElementById('itemForm')?.addEventListener('submit', handleItemFormSubmit);
@@ -1008,16 +1057,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             toggleBtn.classList.toggle('active');
-            
             const icon = toggleBtn.querySelector('i');
             if (toggleBtn.classList.contains('active')) {
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
-            
             fetchItems(1);
         });
     }

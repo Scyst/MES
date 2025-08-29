@@ -459,9 +459,7 @@ try {
             break;
             
         case 'health_check_parameters':
-            // ตรวจสอบว่ากำลังใช้ระบบ OEE ใหม่หรือไม่
             if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
-                // Logic สำหรับระบบใหม่
                 $sql = "
                     SELECT DISTINCT
                         i.sap_no,
@@ -480,7 +478,6 @@ try {
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             } else {
-                // Logic สำหรับระบบเก่า (ใช้ Stored Procedure เดิม)
                 $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
                 $stmt->execute();
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);

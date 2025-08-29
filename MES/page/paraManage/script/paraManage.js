@@ -545,8 +545,6 @@ function renderHealthCheckTable() {
     
     const start = (healthCheckCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = allMissingParams.slice(start, start + ROWS_PER_PAGE);
-
-    // 1. ปรับแก้หัวตารางให้แสดงข้อมูลใหม่
     const tableHead = document.querySelector('#healthCheckPane thead tr');
     if (tableHead) {
         tableHead.innerHTML = `
@@ -562,7 +560,6 @@ function renderHealthCheckTable() {
     } else {
          pageData.forEach(item => {
             const tr = document.createElement('tr');
-            // 2. แสดงข้อมูล SAP No, Part No, และ Description
             tr.innerHTML = `
                 <td>${item.sap_no || ''}</td>
                 <td>${item.part_no || ''}</td>
@@ -576,7 +573,6 @@ function renderHealthCheckTable() {
             editButton.className = 'btn btn-sm btn-warning';
             editButton.innerHTML = '<i class="fas fa-edit"></i> Edit Item';
             
-            // 3. เปลี่ยนการทำงานของปุ่ม: ให้เปิดหน้า Item Master พร้อมค้นหา SAP No. ที่มีปัญหา
             editButton.onclick = () => {
                 const itemMasterUrl = `../inventorySettings/inventorySettings.php?tab=itemMaster&search=${encodeURIComponent(item.sap_no)}`;
                 window.open(itemMasterUrl, '_blank');
@@ -590,6 +586,7 @@ function renderHealthCheckTable() {
     }
     
     renderPagination('healthCheckPaginationControls', allMissingParams.length, healthCheckCurrentPage, ROWS_PER_PAGE, goToHealthCheckPage);
+    // --- ▲▲▲▲▲ สิ้นสุดโค้ดใหม่ ▲▲▲▲▲
 }
 
 function goToHealthCheckPage(page) {
