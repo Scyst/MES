@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-//-- ป้องกัน CSRF สำหรับ Request ที่ไม่ใช่ GET --
+//-- CSRF Protection for non-GET requests --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (
         !isset($_SERVER['HTTP_X_CSRF_TOKEN']) ||
@@ -16,14 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
-//-- รับค่า Action และข้อมูล Input --
+//-- Get Action and Input data --
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 if (empty($input) && !empty($_POST)) {
     $input = $_POST;
 }
 
-//-- ตรวจสอบสิทธิ์การเข้าถึงระดับไฟล์ (ต้องเป็น admin หรือ creator) --
+//-- File-level access control (must be admin or creator) --
 if (!hasRole(['admin', 'creator'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -31,14 +31,14 @@ if (!hasRole(['admin', 'creator'])) {
 }
 
 try {
-    //-- กำหนดผู้ใช้งานปัจจุบันสำหรับตรวจสอบสิทธิ์และบันทึก Log --
+    //-- Set current user for permission checks and logging --
     $currentUser = $_SESSION['user'];
 
-    //-- แยกการทำงานตาม Action ที่ได้รับ --
+    //-- Branch logic based on the action --
     switch ($action) {
         case 'read':
-            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
-            $stmt = $pdo->query("SELECT id, username, role, created_at, line FROM USERS WHERE role != 'creator' ORDER BY id ASC");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $stmt = $pdo->query("SELECT id, username, role, created_at, line FROM " . USERS_TABLE . " WHERE role != 'creator' ORDER BY id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($users as &$user) {
                 if ($user['created_at']) $user['created_at'] = (new DateTime($user['created_at']))->format('Y-m-d H:i:s');
@@ -47,7 +47,6 @@ try {
             break;
 
         case 'create':
-            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             if (!hasRole(['admin', 'creator'])) { throw new Exception("Permission denied."); }
             $username = trim($input['username'] ?? '');
             $password = trim($input['password'] ?? '');
@@ -58,7 +57,8 @@ try {
             if ($role === 'creator') { throw new Exception("Cannot create a user with the 'creator' role."); }
             if ($role === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can create admin users."); }
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO USERS (username, password, role, line) VALUES (?, ?, ?, ?)";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $sql = "INSERT INTO " . USERS_TABLE . " (username, password, role, line) VALUES (?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$username, $hashedPassword, $role, $line]);
             logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line");
@@ -66,10 +66,10 @@ try {
             break;
 
         case 'update':
-            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             $targetId = (int)($input['id'] ?? 0);
             if (!$targetId) throw new Exception("Target user ID is required.");
-            $stmt = $pdo->prepare("SELECT id, username, role FROM USERS WHERE id = ?");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $stmt = $pdo->prepare("SELECT id, username, role FROM " . USERS_TABLE . " WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("Target user not found.");
@@ -99,7 +99,8 @@ try {
                 $updateFields[] = "password = ?"; $params[] = password_hash(trim($input['password']), PASSWORD_DEFAULT); $logDetails[] = "password changed";
             }
             if (empty($updateFields)) { echo json_encode(['success' => true, 'message' => 'No changes were made.']); break; }
-            $sql = "UPDATE USERS SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $sql = "UPDATE " . USERS_TABLE . " SET " . implode(', ', $updateFields) . " WHERE id = ?";
             $params[] = $targetId;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -108,30 +109,28 @@ try {
             break;
             
         case 'delete':
-            // ... โค้ดส่วนนี้ไม่มีการเปลี่ยนแปลง ...
             $targetId = (int)($_REQUEST['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
             if ($targetId === (int)$currentUser['id']) { throw new Exception("You cannot delete your own account."); }
-            $stmt = $pdo->prepare("SELECT username, role FROM USERS WHERE id = ?");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $stmt = $pdo->prepare("SELECT username, role FROM " . USERS_TABLE . " WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("User not found.");
             if ($targetUser['role'] === 'creator') { throw new Exception("Creator accounts cannot be deleted."); }
             if ($targetUser['role'] === 'admin' && !hasRole('creator')) { throw new Exception("Permission denied. Only creators can delete other admins."); }
-            $deleteStmt = $pdo->prepare("DELETE FROM USERS WHERE id = ?");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            $deleteStmt = $pdo->prepare("DELETE FROM " . USERS_TABLE . " WHERE id = ?");
             $deleteStmt->execute([$targetId]);
             logAction($pdo, $currentUser['username'], 'DELETE USER', $targetUser['username']);
             echo json_encode(['success' => true, 'message' => 'User deleted successfully.']);
             break;
             
-        // ===== จุดที่แก้ไข: case 'logs' =====
         case 'logs':
-            // รับค่าฟิลเตอร์ทั้งหมด
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
             $startDate = $_GET['startDate'] ?? null;
             $endDate = $_GET['endDate'] ?? null;
-            // -- รับค่าฟิลเตอร์ใหม่ --
             $userFilter = $_GET['user'] ?? null;
             $actionFilter = $_GET['action_type'] ?? null;
             $targetFilter = $_GET['target'] ?? null;
@@ -141,41 +140,27 @@ try {
             $conditions = [];
             $params = [];
 
-            // -- สร้างเงื่อนไขจากฟิลเตอร์ทั้งหมด --
-            if ($startDate) {
-                $conditions[] = "CAST(created_at AS DATE) >= ?";
-                $params[] = $startDate;
-            }
-            if ($endDate) {
-                $conditions[] = "CAST(created_at AS DATE) <= ?";
-                $params[] = $endDate;
-            }
-            if ($userFilter) {
-                $conditions[] = "action_by LIKE ?";
-                $params[] = '%' . $userFilter . '%';
-            }
-            if ($actionFilter) {
-                $conditions[] = "action_type LIKE ?";
-                $params[] = '%' . $actionFilter . '%';
-            }
-            if ($targetFilter) {
-                $conditions[] = "target_user LIKE ?";
-                $params[] = '%' . $targetFilter . '%';
-            }
+            if ($startDate) { $conditions[] = "CAST(created_at AS DATE) >= ?"; $params[] = $startDate; }
+            if ($endDate) { $conditions[] = "CAST(created_at AS DATE) <= ?"; $params[] = $endDate; }
+            if ($userFilter) { $conditions[] = "action_by LIKE ?"; $params[] = '%' . $userFilter . '%'; }
+            if ($actionFilter) { $conditions[] = "action_type LIKE ?"; $params[] = '%' . $actionFilter . '%'; }
+            if ($targetFilter) { $conditions[] = "target_user LIKE ?"; $params[] = '%' . $targetFilter . '%'; }
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            $totalSql = "SELECT COUNT(*) AS total FROM USER_LOGS $whereClause";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USER_LOGS_TABLE ***
+            $totalSql = "SELECT COUNT(*) AS total FROM " . USER_LOGS_TABLE . " $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
             
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USER_LOGS_TABLE ***
             $dataSql = "
                 SELECT * FROM (
                     SELECT 
                         id, action_by, action_type, target_user, detail, created_at,
                         ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum
-                    FROM USER_LOGS
+                    FROM " . USER_LOGS_TABLE . "
                     $whereClause
                 ) AS NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?

@@ -11,13 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
-// =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true;
-$PARAMETER_TABLE = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-$bom_table = $is_development ? 'PRODUCT_BOM_TEST' : 'PRODUCT_BOM';
-// =================================================================
-
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
@@ -26,7 +19,7 @@ try {
     switch ($action) {
         
         case 'read':
-            $sql = "SELECT id, item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM {$PARAMETER_TABLE}";
+            $sql = "SELECT id, item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM " . PARAMETER_TABLE;
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
                 $sql .= " WHERE line = ?";
@@ -50,21 +43,17 @@ try {
             if (!$item_id) {
                 throw new Exception("Item ID is required.");
             }
-
             $sql = "SELECT id, item_id, line, model, part_no, sap_no 
                     FROM " . PARAMETER_TABLE . " 
                     WHERE item_id = ? 
                     ORDER BY line, model";
-            
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$item_id]);
             $parameters = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
             echo json_encode(['success' => true, 'data' => $parameters]);
             break;
 
         case 'create':
-            // รับค่าจากฟอร์มใหม่
             $item_id = $input['item_id'] ?? 0;
             $line = strtoupper($input['line'] ?? '');
             $model = strtoupper($input['model'] ?? '');
@@ -75,10 +64,8 @@ try {
             if (empty($item_id) || empty($line) || empty($model)) {
                 throw new Exception("Item, Line, and Model are required.");
             }
-
             enforceLinePermission($line);
 
-            // ดึงข้อมูล SAP No และ Part No จาก Item Master
             $itemStmt = $pdo->prepare("SELECT sap_no, part_no, part_description, part_value FROM " . ITEMS_TABLE . " WHERE item_id = ?");
             $itemStmt->execute([$item_id]);
             $itemMaster = $itemStmt->fetch(PDO::FETCH_ASSOC);
@@ -87,33 +74,21 @@ try {
                 throw new Exception("Selected Item ID not found in Item Master.");
             }
 
-            // ตรวจสอบว่า Parameter นี้มีอยู่แล้วหรือไม่
             $checkSql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE item_id = ? AND line = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$item_id, $line, $model]);
             if ($checkStmt->fetchColumn() > 0) {
-                 http_response_code(409); // 409 Conflict
+                 http_response_code(409);
                  throw new Exception("This parameter (Item, Line, Model combination) already exists.");
             }
 
-            // เตรียมข้อมูลสำหรับบันทึก
             $sap_no = $itemMaster['sap_no'];
             $part_no = $itemMaster['part_no'];
-            // ถ้าผู้ใช้กรอกค่าใหม่ ให้ใช้ค่าใหม่, ถ้าไม่ ให้ใช้ค่าจาก Item Master
             $part_value = $part_value_override ?? $itemMaster['part_value'];
             $part_description = !empty($part_description_override) ? $part_description_override : $itemMaster['part_description'];
 
             $sql = "INSERT INTO " . PARAMETER_TABLE . " (item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
-            $params = [
-                $item_id,
-                $line, 
-                $model, 
-                $part_no,
-                $sap_no,
-                $planned_output,
-                $part_description,
-                $part_value
-            ];
+            $params = [$item_id, $line, $model, $part_no, $sap_no, $planned_output, $part_description, $part_value];
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             
@@ -159,17 +134,7 @@ try {
             $part_no = strtoupper(trim($input['part_no'] ?? ''));
             
             $updateSql = "UPDATE " . PARAMETER_TABLE . " SET item_id = ?, line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
-            $params = [
-                $item_id,
-                $line, 
-                $model,
-                $part_no, 
-                $sap_no, 
-                (int)$input['planned_output'], 
-                $input['part_description'] ?? null,
-                isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00,
-                $id
-            ];
+            $params = [$item_id, $line, $model, $part_no, $sap_no, (int)$input['planned_output'], $input['part_description'] ?? null, isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00, $id];
             $stmt = $pdo->prepare($updateSql);
             $stmt->execute($params);
 
@@ -181,7 +146,7 @@ try {
             $id = $input['id'] ?? 0;
             if (!$id) throw new Exception("Missing ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM {$PARAMETER_TABLE} WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT line FROM " . PARAMETER_TABLE . " WHERE id = ?");
             $stmt->execute([$id]);
             $param = $stmt->fetch();
             if ($param) {
@@ -190,7 +155,7 @@ try {
                 throw new Exception("Parameter not found.");
             }
 
-            $deleteStmt = $pdo->prepare("DELETE FROM {$PARAMETER_TABLE} WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM " . PARAMETER_TABLE . " WHERE id = ?");
             $deleteStmt->execute([(int)$id]);
 
             if ($deleteStmt->rowCount() > 0) {
@@ -205,10 +170,9 @@ try {
                 throw new Exception("No IDs provided for bulk deletion.");
             }
 
-            // ตรวจสอบสิทธิ์ Supervisor - สามารถลบได้เฉพาะ Line ของตัวเอง
             if ($currentUser['role'] === 'supervisor') {
                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $checkSql = "SELECT COUNT(DISTINCT line) as line_count, MAX(line) as line_name FROM {$PARAMETER_TABLE} WHERE id IN ({$placeholders})";
+                $checkSql = "SELECT COUNT(DISTINCT line) as line_count, MAX(line) as line_name FROM " . PARAMETER_TABLE . " WHERE id IN ({$placeholders})";
                 $checkStmt = $pdo->prepare($checkSql);
                 $checkStmt->execute($ids);
                 $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
@@ -217,12 +181,11 @@ try {
                      throw new Exception("Supervisors can only bulk delete parameters from their own line.");
                 }
             }
-            // Admin/Creator สามารถลบได้ทุก Line (enforceLinePermission ไม่จำเป็นสำหรับ role เหล่านี้)
 
             $pdo->beginTransaction();
             try {
                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $sql = "DELETE FROM {$PARAMETER_TABLE} WHERE id IN ({$placeholders})";
+                $sql = "DELETE FROM " . PARAMETER_TABLE . " WHERE id IN ({$placeholders})";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($ids);
                 $deletedCount = $stmt->rowCount();
@@ -242,12 +205,12 @@ try {
             
             $pdo->beginTransaction();
             
-            $checkSql = "SELECT id FROM {$PARAMETER_TABLE} WHERE line = ? AND model = ? AND part_no = ? AND (sap_no = ? OR (sap_no IS NULL AND ? IS NULL))";
+            $checkSql = "SELECT id FROM " . PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ? AND (sap_no = ? OR (sap_no IS NULL AND ? IS NULL))";
             $checkStmt = $pdo->prepare($checkSql);
-
-            $updateSql = "UPDATE {$PARAMETER_TABLE} SET planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
+            
+            $updateSql = "UPDATE " . PARAMETER_TABLE . " SET planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
             $updateStmt = $pdo->prepare($updateSql);
-            $insertSql = "INSERT INTO {$PARAMETER_TABLE} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+            $insertSql = "INSERT INTO " . PARAMETER_TABLE . " (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $insertStmt = $pdo->prepare($insertSql);
 
             $imported = 0;
@@ -302,7 +265,7 @@ try {
             $pdo->beginTransaction();
 
             try {
-                $sourceStmt = $pdo->prepare("SELECT * FROM {$PARAMETER_TABLE} WHERE id = ?");
+                $sourceStmt = $pdo->prepare("SELECT * FROM " . PARAMETER_TABLE . " WHERE id = ?");
                 $sourceStmt->execute([$source_id]);
                 $sourceParam = $sourceStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -312,10 +275,10 @@ try {
                 
                 enforceLinePermission($sourceParam['line']);
 
-                $paramInsertSql = "INSERT INTO {$PARAMETER_TABLE} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                $paramInsertSql = "INSERT INTO " . PARAMETER_TABLE . " (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
                 $paramInsertStmt = $pdo->prepare($paramInsertSql);
 
-                $checkParamSql = "SELECT COUNT(*) FROM {$PARAMETER_TABLE} WHERE line = ? AND model = ? AND part_no = ?";
+                $checkParamSql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ?";
                 $checkParamStmt = $pdo->prepare($checkParamSql);
 
                 $variants = array_map('trim', explode(',', strtoupper($variants_str)));
@@ -323,20 +286,10 @@ try {
 
                 foreach ($variants as $suffix) {
                     if (empty($suffix)) continue;
-
                     $new_part_no = $sourceParam['part_no'] . '-' . $suffix;
-                    
                     $checkParamStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no]);
                     if ($checkParamStmt->fetchColumn() == 0) {
-                         $paramInsertStmt->execute([
-                            $sourceParam['line'],
-                            $sourceParam['model'],
-                            $new_part_no,
-                            null, 
-                            $sourceParam['planned_output'],
-                            $sourceParam['part_description'] . ' (' . $suffix . ')',
-                            $sourceParam['part_value']
-                        ]);
+                         $paramInsertStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no, null, $sourceParam['planned_output'], $sourceParam['part_description'] . ' (' . $suffix . ')', $sourceParam['part_value']]);
                         $createdCount++;
                     }
                 }
@@ -361,38 +314,26 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // เตรียม SQL Statements ไว้ล่วงหน้า
-                $sourceStmt = $pdo->prepare("SELECT * FROM {$PARAMETER_TABLE} WHERE id = ?");
-                $paramInsertStmt = $pdo->prepare("INSERT INTO {$PARAMETER_TABLE} (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())");
-                $checkParamStmt = $pdo->prepare("SELECT COUNT(*) FROM {$PARAMETER_TABLE} WHERE line = ? AND model = ? AND part_no = ?");
+                $sourceStmt = $pdo->prepare("SELECT * FROM " . PARAMETER_TABLE . " WHERE id = ?");
+                $paramInsertStmt = $pdo->prepare("INSERT INTO " . PARAMETER_TABLE . " (line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())");
+                $checkParamStmt = $pdo->prepare("SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE line = ? AND model = ? AND part_no = ?");
                 
                 $variants = array_map('trim', explode(',', strtoupper($variants_str)));
                 $totalCreatedCount = 0;
                 $processedParts = [];
 
-                // วนลูปตาม ID ของ Part ต้นทางที่ส่งมา
                 foreach ($source_ids as $source_id) {
                     $sourceStmt->execute([$source_id]);
                     $sourceParam = $sourceStmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$sourceParam) continue; // ข้ามถ้าหา ID ไม่เจอ
-
+                    if (!$sourceParam) continue;
                     enforceLinePermission($sourceParam['line']);
                     
-                    // วนลูปตาม Suffix (สี) ที่กรอกเข้ามา
                     foreach ($variants as $suffix) {
                         if (empty($suffix)) continue;
-
                         $new_part_no = $sourceParam['part_no'] . '-' . $suffix;
-                        
                         $checkParamStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no]);
                         if ($checkParamStmt->fetchColumn() == 0) {
-                             $paramInsertStmt->execute([
-                                $sourceParam['line'], $sourceParam['model'], $new_part_no,
-                                null, $sourceParam['planned_output'],
-                                $sourceParam['part_description'] . ' (' . $suffix . ')',
-                                $sourceParam['part_value']
-                            ]);
+                             $paramInsertStmt->execute([$sourceParam['line'], $sourceParam['model'], $new_part_no, null, $sourceParam['planned_output'], $sourceParam['part_description'] . ' (' . $suffix . ')', $sourceParam['part_value']]);
                             $totalCreatedCount++;
                         }
                     }
@@ -409,6 +350,7 @@ try {
             }
             break;
 
+        // ===== START: โค้ดที่เพิ่มกลับเข้ามา =====
         case 'read_schedules':
             $stmt = $pdo->prepare("EXEC dbo.sp_GetSchedules");
             $stmt->execute();
@@ -457,22 +399,16 @@ try {
             }
             echo json_encode(['success' => $success, 'message' => 'Schedule deleted.']);
             break;
-            
+        // ===== END: โค้ดที่เพิ่มกลับเข้ามา =====
+
         case 'health_check_parameters':
             if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
                 $sql = "
-                    SELECT DISTINCT
-                        i.sap_no,
-                        i.part_no,
-                        i.part_description
+                    SELECT DISTINCT i.sap_no, i.part_no, i.part_description
                     FROM " . TRANSACTIONS_TABLE . " t
                     JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    WHERE 
-                        t.transaction_type LIKE 'PRODUCTION_%'
-                        AND (i.planned_output IS NULL OR i.planned_output <= 0)
-                    ORDER BY 
-                        i.sap_no
-                ";
+                    WHERE t.transaction_type LIKE 'PRODUCTION_%' AND (i.planned_output IS NULL OR i.planned_output <= 0)
+                    ORDER BY i.sap_no";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute();
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -482,7 +418,6 @@ try {
                 $stmt->execute();
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
-            
             echo json_encode(['success' => true, 'data' => $results]);
             break;
 
@@ -492,8 +427,7 @@ try {
             $part_no = trim($input['part_no'] ?? '');
             $line = trim($input['line'] ?? '');
 
-            // --- แก้ไข: เพิ่ม item_id เข้ามาใน SELECT statement ---
-            $sql = "SELECT id, item_id, line, model, part_no, sap_no FROM {$PARAMETER_TABLE} WHERE ";
+            $sql = "SELECT id, item_id, line, model, part_no, sap_no FROM " . PARAMETER_TABLE . " WHERE ";
             $params = [];
 
             if (!empty($sap_no)) {
@@ -513,7 +447,6 @@ try {
             $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($parameter) {
-                // --- แก้ไข: ตรวจสอบว่ามี item_id หรือไม่ ---
                 if (empty($parameter['item_id'])) {
                     echo json_encode(['success' => false, 'message' => 'This parameter is not linked to an Item Master record yet. Please edit and save it first.']);
                 } else {
@@ -530,8 +463,7 @@ try {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-
-            $sql = "SELECT DISTINCT part_no FROM {$PARAMETER_TABLE} WHERE model = ? ORDER BY part_no";
+            $sql = "SELECT DISTINCT part_no FROM " . PARAMETER_TABLE . " WHERE model = ? ORDER BY part_no";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$model]);
             $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -543,10 +475,8 @@ try {
             $line = trim($_GET['line'] ?? '');
             $model = trim($_GET['model'] ?? '');
             $part_no = trim($_GET['part_no'] ?? '');
-
-            $sql = "SELECT * FROM {$PARAMETER_TABLE} WHERE ";
+            $sql = "SELECT * FROM " . PARAMETER_TABLE . " WHERE ";
             $params = [];
-
             if (!empty($sap_no)) {
                 $sql .= "sap_no = ?";
                 $params[] = $sap_no;
@@ -559,11 +489,9 @@ try {
                 echo json_encode(['success' => false, 'message' => 'Insufficient keys.']);
                 exit;
             }
-
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $parameter = $stmt->fetch(PDO::FETCH_ASSOC);
-
             if ($parameter) {
                 echo json_encode(['success' => true, 'data' => $parameter]);
             } else {
@@ -575,15 +503,14 @@ try {
             if ($currentUser['role'] === 'supervisor') {
                 echo json_encode(['success' => true, 'data' => [$currentUser['line']]]);
             } else {
-                $stmt = $pdo->query("SELECT DISTINCT line FROM {$PARAMETER_TABLE} WHERE line IS NOT NULL AND line != '' ORDER BY line");
+                $stmt = $pdo->query("SELECT DISTINCT line FROM " . PARAMETER_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line");
                 $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 echo json_encode(['success' => true, 'data' => $lines]);
             }
             break;
 
         case 'get_models':
-            $PARAMETER_TABLE = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
-            $stmt = $pdo->query("SELECT DISTINCT model FROM {$PARAMETER_TABLE} WHERE model IS NOT NULL AND model != '' ORDER BY model ASC");
+            $stmt = $pdo->query("SELECT DISTINCT model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != '' ORDER BY model ASC");
             $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'data' => $models]);
             break;

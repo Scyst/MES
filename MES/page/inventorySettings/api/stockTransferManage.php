@@ -18,13 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true; 
-$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
-$items_table = $is_development ? 'ITEMS_TEST' : 'ITEMS';
-$onhand_table = $is_development ? 'INVENTORY_ONHAND_TEST' : 'INVENTORY_ONHAND';
-$transactions_table = $is_development ? 'STOCK_TRANSACTIONS_TEST' : 'STOCK_TRANSACTIONS';
-$users_table = $is_development ? 'USERS_TEST' : 'USERS';
+// DEVELOPMENT SWITCH (ส่วนนี้ถูกลบออก)
 // =================================================================
 
 $action = $_REQUEST['action'] ?? '';
@@ -49,26 +43,27 @@ try {
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            $totalSql = "SELECT COUNT(*) FROM {$transactions_table} t
-                        JOIN {$items_table} i ON t.parameter_id = i.item_id
-                        LEFT JOIN {$locations_table} loc_from ON t.from_location_id = loc_from.location_id
-                        LEFT JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
-                        {$whereClause}";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ทั้งหมด ***
+            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
+                                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                                {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ทั้งหมด ***
             $dataSql = "
                 SELECT 
                     t.transaction_id, t.transaction_timestamp, i.part_no, i.part_description, t.quantity,
-                    -- Combine the two location names into a single 'transfer_path' field
                     ISNULL(loc_from.location_name, 'N/A') + ' --> ' + ISNULL(loc_to.location_name, 'N/A') AS transfer_path,
                     u.username AS created_by, t.notes
-                FROM {$transactions_table} t
-                JOIN {$items_table} i ON t.parameter_id = i.item_id
-                LEFT JOIN {$locations_table} loc_from ON t.from_location_id = loc_from.location_id
-                LEFT JOIN {$locations_table} loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN {$users_table} u ON t.created_by_user_id = u.id
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                 {$whereClause}
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -90,9 +85,10 @@ try {
             break;
 
         case 'get_initial_data':
-            $locationsStmt = $pdo->query("SELECT location_id, location_name FROM {$locations_table} WHERE is_active = 1 ORDER BY location_name");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ทั้งหมด ***
+            $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
-            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM {$items_table} ORDER BY sap_no");
+            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " ORDER BY sap_no");
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
             break;
@@ -104,7 +100,8 @@ try {
                 echo json_encode(['success' => true, 'quantity' => 0]);
                 exit;
             }
-            $stockStmt = $pdo->prepare("SELECT quantity FROM {$onhand_table} WHERE parameter_id = ? AND location_id = ?");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ONHAND_TABLE ***
+            $stockStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
             $stockStmt->execute([$item_id, $location_id]);
             $stock = $stockStmt->fetch();
             echo json_encode(['success' => true, 'quantity' => $stock['quantity'] ?? 0]);
@@ -126,7 +123,8 @@ try {
 
             $pdo->beginTransaction();
             
-            $updateFromSql = "UPDATE {$onhand_table} SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ONHAND_TABLE ***
+            $updateFromSql = "UPDATE " . ONHAND_TABLE . " SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND quantity >= ?";
             $updateFromStmt = $pdo->prepare($updateFromSql);
             $updateFromStmt->execute([$quantity, $item_id, $from_location_id, $quantity]);
 
@@ -135,11 +133,13 @@ try {
                 throw new Exception("Insufficient stock at the source location or location/item not found.");
             }
 
-            $updateToSql = "MERGE {$onhand_table} AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ONHAND_TABLE ***
+            $updateToSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ?, last_updated = GETDATE() WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
             $updateToStmt = $pdo->prepare($updateToSql);
             $updateToStmt->execute([$item_id, $to_location_id, $quantity, $item_id, $to_location_id, $quantity]);
 
-            $transSql = "INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?)";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ TRANSACTIONS_TABLE ***
+            $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?)";
             $transStmt = $pdo->prepare($transSql);
             $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes]);
 
@@ -160,7 +160,8 @@ try {
                 throw new Exception("Transaction ID is required for an update.");
             }
 
-            $sql = "UPDATE {$transactions_table} SET notes = ? WHERE transaction_id = ?";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ TRANSACTIONS_TABLE ***
+            $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET notes = ? WHERE transaction_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$notes, $transaction_id]);
 

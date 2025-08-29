@@ -18,9 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
-$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
+// DEVELOPMENT SWITCH (ส่วนนี้ถูกลบออก)
 // =================================================================
 
 $action = $_REQUEST['action'] ?? '';
@@ -70,7 +68,8 @@ try {
             if (!$id) {
                 throw new Exception("Location ID is required.");
             }
-            $sql = "DELETE FROM {$locations_table} WHERE location_id = ?";
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ LOCATIONS_TABLE ***
+            $sql = "DELETE FROM " . LOCATIONS_TABLE . " WHERE location_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
 

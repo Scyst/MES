@@ -25,13 +25,14 @@ try {
     ];
 
     // -- QUERY 1: ดึงข้อมูลสรุปของ Lot และหาระยะเวลาการผลิต --
+    // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ PARTS_TABLE ***
     $summarySql = "
         SELECT TOP 1
             part_no, line, model,
             MIN(CAST(log_date AS DATETIME) + CAST(log_time AS DATETIME)) as first_event_time,
             MAX(CAST(log_date AS DATETIME) + CAST(log_time AS DATETIME)) as last_event_time,
             SUM(CASE WHEN count_type = 'FG' THEN count_value ELSE 0 END) as total_fg
-        FROM PARTS
+        FROM " . PARTS_TABLE . "
         WHERE lot_no = ?
         GROUP BY part_no, line, model;
     ";
@@ -49,14 +50,14 @@ try {
     // เตรียมตัวแปรสำหรับใช้ใน Query ต่อๆ ไป
     $part_no = $summary['part_no'];
     $line = $summary['line'];
-    // เพิ่มบัฟเฟอร์ 1 ชั่วโมงก่อนและหลังเพื่อความครอบคลุมของ Downtime
     $startTime = (new DateTime($summary['first_event_time']))->modify('-1 hour')->format('Y-m-d H:i:s');
     $endTime = (new DateTime($summary['last_event_time']))->modify('+1 hour')->format('Y-m-d H:i:s');
 
     // -- QUERY 2: ดึงประวัติการผลิตทั้งหมดของ Lot นี้ --
+    // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ PARTS_TABLE ***
     $productionSql = "
         SELECT log_date, log_time, count_type, count_value, note
-        FROM PARTS
+        FROM " . PARTS_TABLE . "
         WHERE lot_no = ?
         ORDER BY log_date, log_time;
     ";
@@ -65,9 +66,10 @@ try {
     $data['production_history'] = $productionStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // -- QUERY 3: ดึงประวัติ Downtime ที่เกิดขึ้นในช่วงเวลาที่ผลิต Lot นี้ --
+    // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
     $downtimeSql = "
         SELECT stop_begin, stop_end, duration, machine, cause, recovered_by, note
-        FROM STOP_CAUSES
+        FROM " . STOP_CAUSES_TABLE . "
         WHERE line = ? AND stop_begin BETWEEN ? AND ?
         ORDER BY stop_begin;
     ";
@@ -76,9 +78,10 @@ try {
     $data['downtime_history'] = $downtimeStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // -- QUERY 4: ดึงประวัติการนำเข้าวัตถุดิบ (WIP) --
+    // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ WIP_TABLE ***
     $wipSql = "
         SELECT entry_time, quantity_in, operator, remark
-        FROM WIP_ENTRIES
+        FROM " . WIP_TABLE . "
         WHERE lot_no = ?
         ORDER BY entry_time;
     ";
@@ -87,9 +90,10 @@ try {
     $data['wip_history'] = $wipStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // -- QUERY 5: ดึงข้อมูลสูตรการผลิต (BOM) --
+    // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ BOM_TABLE ***
     $bomSql = "
         SELECT component_part_no, quantity_required
-        FROM PRODUCT_BOM
+        FROM " . BOM_TABLE . "
         WHERE fg_part_no = ? AND line = ? AND model = ?;
     ";
     $bomStmt = $pdo->prepare($bomSql);
@@ -98,15 +102,12 @@ try {
 
 
     // --- 4. FINAL OUTPUT ---
-    // ส่งข้อมูลทั้งหมดกลับไปในรูปแบบ JSON
     echo json_encode(['success' => true, 'data' => $data]);
 
 } catch (PDOException $e) {
     // --- 5. ERROR HANDLING ---
-    // กรณีเกิดข้อผิดพลาดในการเชื่อมต่อหรือ Query
     http_response_code(500); // Internal Server Error
     echo json_encode(['success' => false, 'message' => 'Database query failed: ' . $e->getMessage()]);
-    // บันทึก Log ข้อผิดพลาดไว้ในฝั่ง Server
     error_log("Traceability API Error for Lot: {$lot_no} - " . $e->getMessage());
 }
 ?>

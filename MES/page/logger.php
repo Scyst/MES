@@ -7,8 +7,9 @@ function logAction(PDO $pdo, string $actor, string $action, ?string $target = nu
         return;
     }
 
-    //-- เตรียมคำสั่ง SQL สำหรับเพิ่มข้อมูล Log --
-    $sql = "INSERT INTO USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, ?, ?, ?, GETDATE())";
+    //-- เตรียมคำสั่ง SQL สำหรับเพิ่มข้อมูล Log โดยใช้ค่าคงที่จาก config.php --
+    // *** แก้ไข: เปลี่ยนจาก 'USER_LOGS' มาเป็น USER_LOGS_TABLE ***
+    $sql = "INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, target_user, detail, created_at) VALUES (?, ?, ?, ?, GETDATE())";
     
     //-- พยายามบันทึก Log และดักจับข้อผิดพลาด (ถ้ามี) โดยไม่หยุดการทำงานหลัก --
     try {

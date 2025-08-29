@@ -18,12 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true; // <-- ตั้งค่าที่นี่: true เพื่อใช้ตาราง Test, false เพื่อใช้ตารางจริง
-$locations_table = $is_development ? 'LOCATIONS_TEST' : 'LOCATIONS';
-$items_table = $is_development ? 'ITEMS_TEST' : 'ITEMS';
-$onhand_table = $is_development ? 'INVENTORY_ONHAND_TEST' : 'INVENTORY_ONHAND';
-$transactions_table = $is_development ? 'STOCK_TRANSACTIONS_TEST' : 'STOCK_TRANSACTIONS';
+// DEVELOPMENT SWITCH (ส่วนนี้ถูกลบออก)
 // =================================================================
 
 $action = $_REQUEST['action'] ?? '';
@@ -33,7 +28,8 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'get_locations':
-            $stmt = $pdo->query("SELECT location_id, location_name FROM {$locations_table} WHERE is_active = 1 ORDER BY location_name");
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ LOCATIONS_TABLE ***
+            $stmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $locations]);
             break;
@@ -44,6 +40,7 @@ try {
                 throw new Exception("Location ID is required.");
             }
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ONHAND_TABLE และ ITEMS_TABLE ***
             $sql = "
                 SELECT 
                     i.item_id,
@@ -51,8 +48,8 @@ try {
                     i.part_no,
                     i.part_description,
                     h.quantity AS onhand_qty
-                FROM {$onhand_table} h
-                INNER JOIN {$items_table} i ON h.parameter_id = i.item_id
+                FROM " . ONHAND_TABLE . " h
+                INNER JOIN " . ITEMS_TABLE . " i ON h.parameter_id = i.item_id
                 WHERE h.location_id = ? AND h.quantity > 0
                 ORDER BY i.part_no ASC
             ";
@@ -74,8 +71,9 @@ try {
 
             $pdo->beginTransaction();
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ONHAND_TABLE ***
             $mergeSql = "
-                MERGE {$onhand_table} AS target
+                MERGE " . ONHAND_TABLE . " AS target
                 USING (SELECT ? AS item_id, ? AS location_id, ? AS quantity) AS source
                 ON (target.parameter_id = source.item_id AND target.location_id = source.location_id)
                 WHEN MATCHED THEN
@@ -85,8 +83,9 @@ try {
             ";
             $mergeStmt = $pdo->prepare($mergeSql);
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ TRANSACTIONS_TABLE ***
             $transSql = "
-                INSERT INTO {$transactions_table} (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes)
+                INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes)
                 VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?)
             ";
             $transStmt = $pdo->prepare($transSql);
@@ -116,6 +115,7 @@ try {
             }
             
             $params = [$location_id];
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ ITEMS_TABLE และ ONHAND_TABLE ***
             $sql = "
                 SELECT TOP 10
                     i.item_id,
@@ -123,8 +123,8 @@ try {
                     i.part_no,
                     i.part_description,
                     ISNULL(h.quantity, 0) as onhand_qty
-                FROM {$items_table} i
-                LEFT JOIN {$onhand_table} h ON i.item_id = h.parameter_id AND h.location_id = ?
+                FROM " . ITEMS_TABLE . " i
+                LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id AND h.location_id = ?
                 WHERE i.is_active = 1
             ";
 

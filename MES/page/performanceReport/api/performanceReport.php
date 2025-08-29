@@ -13,13 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // =================================================================
-// DEVELOPMENT SWITCH
-$is_development = true; 
+// DEVELOPMENT SWITCH (ส่วนนี้ถูกลบออก)
 // =================================================================
-
-// --- กำหนดชื่อตารางตามโหมด ---
-$parts_table = $is_development ? 'PARTS_TEST' : 'PARTS';
-$PARAMETER_TABLE = $is_development ? 'PARAMETER_TEST' : 'PARAMETER';
 
 $action = $_GET['action'] ?? '';
 
@@ -28,7 +23,7 @@ try {
         case 'get_performance_data':
             $startDate = $_GET['startDate'] ?? null;
             $endDate = $_GET['endDate'] ?? null;
-            $operatorName = $_GET['operatorName'] ?? ''; // <-- รับค่า Filter ชื่อพนักงาน
+            $operatorName = $_GET['operatorName'] ?? '';
 
             if (!$startDate || !$endDate) {
                 throw new Exception("Start date and end date are required.");
@@ -44,19 +39,20 @@ try {
 
             $where_sql = "WHERE " . implode(" AND ", $where_clauses);
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ทั้งหมด (PARTS_TABLE, USERS_TABLE, PARAMETER_TABLE) ***
             $sql = "
                 SELECT
-                    u.id AS operator_id, -- เพิ่ม id สำหรับการ query drill-down
+                    u.id AS operator_id,
                     u.username AS operator_name,
                     SUM(CASE WHEN p.count_type = 'FG' THEN p.count_value ELSE 0 END) AS total_fg,
                     SUM(CASE WHEN p.count_type = 'NG' THEN p.count_value ELSE 0 END) AS total_ng,
                     SUM(p.count_value * ISNULL(param.part_value, 0)) AS total_value
                 FROM
-                    {$parts_table} p
+                    " . PARTS_TABLE . " p
                 JOIN
-                    USERS u ON p.operator_id = u.id
+                    " . USERS_TABLE . " u ON p.operator_id = u.id
                 LEFT JOIN
-                    {$PARAMETER_TABLE} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
+                    " . PARAMETER_TABLE . " param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
                 {$where_sql}
                 GROUP BY
                     u.id, u.username
@@ -71,7 +67,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // --- ACTION ใหม่สำหรับ DRILL-DOWN ---
         case 'get_operator_details':
             $startDate = $_GET['startDate'] ?? null;
             $endDate = $_GET['endDate'] ?? null;
@@ -81,6 +76,7 @@ try {
                 throw new Exception("Start date, end date, and operator ID are required.");
             }
 
+            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ทั้งหมด (PARTS_TABLE, PARAMETER_TABLE) ***
             $sql = "
                 SELECT 
                     p.log_date,
@@ -89,8 +85,8 @@ try {
                     p.count_type,
                     p.count_value,
                     (p.count_value * ISNULL(param.part_value, 0)) as value
-                FROM {$parts_table} p
-                LEFT JOIN {$PARAMETER_TABLE} param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
+                FROM " . PARTS_TABLE . " p
+                LEFT JOIN " . PARAMETER_TABLE . " param ON p.line = param.line AND p.model = param.model AND p.part_no = param.part_no
                 WHERE p.operator_id = ? AND p.log_date BETWEEN ? AND ?
                 ORDER BY p.log_date DESC, p.log_time DESC;
             ";
