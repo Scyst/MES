@@ -58,7 +58,7 @@ body {
 #main-content {
     flex-grow: 1;
     width: 100%;
-    margin-left: 60px; /* ★★★ แก้ไขตามโค้ดของคุณ ★★★ */
+    margin-left: 70px; /* ★★★ แก้ไขตามโค้ดของคุณ ★★★ */
     transition: margin-left 0.3s ease-in-out;
     display: flex; /* ★★★ ทำให้เป็น Flex Container เสมอ ★★★ */
     flex-direction: column;
@@ -165,7 +165,7 @@ body {
 }
 
 /* --- Sidebar States --- */
-.sidebar[data-state="collapsed"] { width: 60px; }
+.sidebar[data-state="collapsed"] { width: 70px; }
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
 .sidebar[data-state="expanded"] .dropdown-item-icon span,

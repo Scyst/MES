@@ -19,7 +19,8 @@ if (empty($username) || empty($password)) {
 
 try {
     //-- ค้นหาผู้ใช้จาก Username ในฐานข้อมูล --
-    $sql = "SELECT id, username, password, role, line FROM USERS WHERE username = ?";
+    // *** แก้ไข: เปลี่ยนจาก 'USERS' มาเป็น USERS_TABLE ***
+    $sql = "SELECT id, username, password, role, line FROM " . USERS_TABLE . " WHERE username = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$username]);
     $user = $stmt->fetch();

@@ -882,12 +882,15 @@ async function exportItemsToExcel() {
         });
 
         if (result.success && result.data.length > 0) {
+            // --- ★★★ START: แก้ไขส่วนนี้ ★★★ ---
             const worksheetData = result.data.map(item => ({
                 'sap_no': item.sap_no,
                 'part_no': item.part_no,
                 'part_description': item.part_description,
-                'is_active': item.is_active ? '1' : '0' // ส่งออกเป็น 1 หรือ 0
+                'planned_output': item.planned_output || 0, // เพิ่ม planned_output
+                'is_active': item.is_active ? '1' : '0'
             }));
+            // --- ★★★ END: แก้ไขส่วนนี้ ★★★ ---
 
             const worksheet = XLSX.utils.json_to_sheet(worksheetData);
             const workbook = XLSX.utils.book_new();

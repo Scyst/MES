@@ -3,7 +3,7 @@
 
 // --- DEVELOPMENT SWITCH ---
 // ตั้งเป็น true เมื่อทำงานบนเครื่องตัวเอง, ตั้งเป็น false เมื่อนำขึ้น Server จริง
-define('IS_DEVELOPMENT', true);
+define('IS_DEVELOPMENT', false);
 // ตั้งเป็น true เมื่อจะใช้การคำนวนจากระบบใหม่, ตั้งเป็น false เมื่อจะใช้การคำนวนจากระบบเก่า
 define('USE_NEW_OEE_CALCULATION', true);
 
