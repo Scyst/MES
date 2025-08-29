@@ -67,7 +67,7 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, i.created_at, i.is_active,
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, i.is_active, i.planned_output,
                         
                         STUFF(
                             (
@@ -77,13 +77,13 @@ try {
                                 ORDER BY p_sub.model
                                 FOR XML PATH('')
                             ), 1, 2, ''
-                        ) AS used_models,
+                        ) AS used_in_models,
 
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
                     {$fromClause}
                     {$whereClause}
                 )
-                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_models
+                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -101,21 +101,25 @@ try {
             $sap_no = trim($input['sap_no'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
             $description = trim($input['part_description'] ?? '');
+            
+            $planned_output = (int)($input['planned_output'] ?? 0);
 
             if (empty($sap_no) || empty($part_no)) {
                 throw new Exception("SAP No. and Part No. are required.");
             }
 
             if ($id > 0) {
-                $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ? WHERE item_id = ?";
+                $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ? WHERE item_id = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description, $id]);
+                $stmt->execute([$sap_no, $part_no, $description, $planned_output, $id]);
+                
                 logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $id, "SAP: {$sap_no}");
                 echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
             } else {
-                $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at) VALUES (?, ?, ?, GETDATE())";
+                $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output) VALUES (?, ?, ?, GETDATE(), ?)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description]);
+                $stmt->execute([$sap_no, $part_no, $description, $planned_output]);
+
                 $newId = $pdo->lastInsertId();
                 logAction($pdo, $currentUser['username'], 'CREATE ITEM', $newId, "SAP: {$sap_no}");
                 echo json_encode(['success' => true, 'message' => 'Item created successfully.']);

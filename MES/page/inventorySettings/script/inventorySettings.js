@@ -603,7 +603,7 @@ async function fetchItems(page = 1) {
     showSpinner();
     const searchTerm = document.getElementById('itemMasterSearch').value;
     const showInactive = document.getElementById('toggleInactiveBtn').classList.contains('active');
-    const selectedModel = document.getElementById('modelFilterValue').value; // <-- แก้ไขบรรทัดนี้
+    const selectedModel = document.getElementById('modelFilterValue').value;
 
     try {
         const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { 
@@ -612,9 +612,9 @@ async function fetchItems(page = 1) {
             show_inactive: showInactive,
             filter_model: selectedModel
         });
+
         if (result.success) {
-            renderItemsMasterTable(result.data);
-            renderPagination('itemMasterPagination', result.total, result.page, 50, fetchItems);
+            renderItemsTable(result.data, result.total, page);
         } else {
             document.getElementById('itemsTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${result.message}</td></tr>`;
         }
@@ -727,77 +727,71 @@ function setupModelFilterAutocomplete() {
     });
 }
 
-function renderItemsMasterTable(items) {
+function renderItemsTable(items, totalItems, page) {
     const tbody = document.getElementById('itemsTableBody');
     tbody.innerHTML = '';
+
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No items found.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`; // แก้ colspan เป็น 6
+        renderPagination('itemMasterPagination', 0, 1, ROWS_PER_PAGE, fetchItems);
         return;
     }
 
     items.forEach(item => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
+        tr.innerHTML = `
+            <td>
+                <span class="fw-bold">${item.sap_no}</span>
+                ${!item.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}
+            </td>
+            <td>${item.part_no}</td>
+            <td>${item.used_in_models || ''}</td>
+            <td>${item.part_description || ''}</td>
+            <td class="text-center">${item.planned_output || 0}</td>
+            <td class="text-end">${item.created_at}</td>
+        `;
 
         if (item.is_active != 1) {
             tr.classList.add('table-secondary', 'text-muted');
             tr.style.textDecoration = 'line-through';
         }
-        
         tr.addEventListener('click', () => {
             openItemModal(item);
         });
-
-        tr.innerHTML = `
-            <td>${item.sap_no}</td>
-            <td>${item.part_no}</td>
-            <td>${item.used_models || '-'}</td>
-            <td>${item.part_description || ''}</td>
-            <td class="text-end">${new Date(item.created_at).toLocaleDateString()}</td>
-        `;
         tbody.appendChild(tr);
     });
+
+    renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
 }
 
 function openItemModal(item = null) {
     const form = document.getElementById('itemForm');
-    const modalLabel = document.getElementById('itemModalLabel');
-    const saveBtn = document.getElementById('saveItemBtn');
-    const deleteBtn = document.getElementById('deleteItemBtn');
-    const bomBtn = document.getElementById('manageBomBtn');
-    
     form.reset();
-    
-    if (item) { 
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('itemModal'));
+    const modalLabel = document.getElementById('itemModalLabel');
+    const deleteBtn = document.getElementById('deleteItemBtn');
+    const manageBomBtn = document.getElementById('manageBomBtn');
+
+    if (item) { // Edit mode
+        modalLabel.textContent = `Edit Item: ${item.sap_no}`;
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
-        document.getElementById('part_description').value = item.part_description;        
+        document.getElementById('part_description').value = item.part_description || '';
         
-        if (item.is_active == 1) {
-            modalLabel.textContent = 'Edit Item';
-            saveBtn.textContent = 'Save Changes';
-            saveBtn.className = 'btn btn-primary'; 
-            deleteBtn.classList.remove('d-none'); 
-            bomBtn.classList.remove('d-none');    
-        } else {
-            modalLabel.textContent = 'Restore Item';
-            saveBtn.textContent = 'Restore'; 
-            saveBtn.className = 'btn btn-success'; 
-            deleteBtn.classList.add('d-none');
-            bomBtn.classList.add('d-none');
-        }
-
-    } else {
+        // --- ★★★ นี่คือบรรทัดที่ขาดหายไป ★★★ ---
+        document.getElementById('planned_output').value = item.planned_output || 0;
+        
+        deleteBtn.classList.remove('d-none');
+        manageBomBtn.classList.remove('d-none');
+    } else { // Add mode
         modalLabel.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
-        saveBtn.textContent = 'Save Changes';
-        saveBtn.className = 'btn btn-primary';
         deleteBtn.classList.add('d-none');
-        bomBtn.classList.add('d-none');
+        manageBomBtn.classList.add('d-none');
     }
-
-    const modal = new bootstrap.Modal(document.getElementById('itemModal'));
+    
     modal.show();
 }
 

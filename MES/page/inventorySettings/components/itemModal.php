@@ -9,9 +9,19 @@
                 <div class="modal-body">
                     <input type="hidden" id="item_id" name="item_id" value="0">
                     
-                    <div class="mb-3">
-                        <label for="sap_no" class="form-label">SAP No.</label>
-                        <input type="text" class="form-control" id="sap_no" name="sap_no" required>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="sap_no" class="form-label">SAP No.</label>
+                                <input type="text" class="form-control" id="sap_no" name="sap_no" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="planned_output" class="form-label">Planned Output</label>
+                                <input type="number" class="form-control" id="planned_output" name="planned_output" placeholder="pcs/hr" value="0">
+                            </div>
+                            </div>
                     </div>
 
                     <div class="mb-3">

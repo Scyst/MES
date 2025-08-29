@@ -39,11 +39,11 @@
                 <th>Part No.</th>
                 <th>Used in Models</th>
                 <th>Description</th>                
+                <th class="text-center">Planned Output</th>
                 <th class="text-end">Created At</th>
             </tr>
         </thead>    
-        <tbody id="itemsTableBody">
-            </tbody>
+        <tbody id="itemsTableBody"></tbody>
     </table>
 </div>
 <nav class="sticky-bottom pb-1">
