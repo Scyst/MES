@@ -10,12 +10,12 @@ const ROWS_PER_PAGE = 100;
 let allStandardParams = [], allSchedules = [], allMissingParams = [], allBomFgs = [];
 let paramCurrentPage = 1;
 let healthCheckCurrentPage = 1;
-let bomCurrentPage = 1; 
+let bomCurrentPage = 1;
 let bomTabLoaded = false;
 let currentEditingParam = null;
 let currentEditingBom = null;
 let manageBomModal;
-let validatedBomImportData = []; 
+let validatedBomImportData = [];
 let validatedBulkBomImportData = [];
 
 /**
@@ -27,7 +27,7 @@ async function sendRequest(endpoint, action, method, body = null, urlParams = {}
         const queryString = new URLSearchParams(urlParams).toString();
         const url = `${endpoint}?${queryString}`;
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
+
         const options = { method, headers: {} };
         if (method.toUpperCase() !== 'GET' && csrfToken) {
             options.headers['X-CSRF-TOKEN'] = csrfToken;
@@ -36,7 +36,7 @@ async function sendRequest(endpoint, action, method, body = null, urlParams = {}
             options.headers['Content-Type'] = 'application/json';
             options.body = JSON.stringify(body);
         }
-        
+
         const response = await fetch(url, options);
         const result = await response.json();
         if (!response.ok) {
@@ -64,7 +64,7 @@ function setupParameterItemAutocomplete() {
     searchInput.addEventListener('input', () => {
         clearTimeout(searchDebounce);
         const value = searchInput.value.toLowerCase();
-        
+
         // รีเซ็ตค่าที่เลือกไว้เมื่อมีการพิมพ์ใหม่
         document.getElementById('param_item_id').value = '';
         document.getElementById('param_sap_no').value = '';
@@ -224,12 +224,12 @@ function initializeCreateBomModal() {
             // ถ้ามีข้อมูลอยู่ แปลว่าต้องเปิด Modal ที่สอง
             manageBom(bomDataForNextStep);
         }
-        
+
         // ไม่ว่าจะเกิดอะไรขึ้น ให้รีเซ็ตฟอร์มและ "ธง" เสมอ
         form.reset();
         detailsDiv.classList.add('d-none');
         nextBtn.disabled = true;
-        bomDataForNextStep = null; 
+        bomDataForNextStep = null;
     });
 }
 
@@ -276,13 +276,13 @@ function renderStandardParamsTable() {
     pageData.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.id = row.id;
-        
+
         const canEditThisRow = (currentUser.role !== 'supervisor') || (currentUser.line === row.line);
         if (canEditThisRow) {
-             tr.style.cursor = 'pointer';
-             tr.title = 'Click to edit';
+            tr.style.cursor = 'pointer';
+            tr.title = 'Click to edit';
         }
-       
+
         tr.addEventListener('click', (event) => {
             if (event.target.tagName !== 'INPUT' && canEditThisRow) {
                 openEditModal("editParamModal", row);
@@ -304,10 +304,10 @@ function renderStandardParamsTable() {
             <td>${parseFloat(row.part_value || 0).toFixed(2)}</td>
             <td class="text-end">${row.updated_at || ''}</td>
         `;
-        
+
         tbody.appendChild(tr);
     });
-    
+
     renderPagination('paginationControls', filteredData.length, paramCurrentPage, ROWS_PER_PAGE, goToStandardParamPage);
     updateBulkActionsVisibility();
 }
@@ -343,7 +343,7 @@ async function deleteStandardParam(id) {
 function updateBulkActionsVisibility() {
     const container = document.getElementById('bulk-actions-container');
     const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
-    
+
     if (selectedCheckboxes.length > 0) {
         container.classList.remove('d-none');
         const countSpan = document.getElementById('selectedItemCount');
@@ -419,7 +419,7 @@ async function bulkCreateVariants(event) {
         showToast('Missing selected items or variant suffixes.', '#ffc107');
         return;
     }
-    
+
     showSpinner();
     try {
         const payload = { ids: idsToProcess, variants: variants };
@@ -480,7 +480,7 @@ function renderSchedulesTable() {
             actionsTd.className = 'text-center';
             const buttonWrapper = document.createElement('div');
             buttonWrapper.className = 'd-flex gap-1 justify-content-center';
-            
+
             const editButton = document.createElement('button');
             editButton.className = 'btn btn-sm btn-warning';
             editButton.textContent = 'Edit';
@@ -523,7 +523,7 @@ async function loadHealthCheckData() {
         const result = await sendRequest(PARA_API_ENDPOINT, 'health_check_parameters', 'GET');
         const listBody = document.getElementById('missingParamsList');
         const paginationControls = document.getElementById('healthCheckPaginationControls');
-        
+
         listBody.innerHTML = '';
         paginationControls.innerHTML = '';
 
@@ -542,7 +542,7 @@ async function loadHealthCheckData() {
 function renderHealthCheckTable() {
     const listBody = document.getElementById('missingParamsList');
     listBody.innerHTML = '';
-    
+
     const start = (healthCheckCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = allMissingParams.slice(start, start + ROWS_PER_PAGE);
     const tableHead = document.querySelector('#healthCheckPane thead tr');
@@ -558,33 +558,33 @@ function renderHealthCheckTable() {
     if (allMissingParams.length === 0) {
         listBody.innerHTML = `<tr><td colspan="4" class="text-center text-success">Excellent! No missing data found.</td></tr>`;
     } else {
-         pageData.forEach(item => {
+        pageData.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${item.sap_no || ''}</td>
                 <td>${item.part_no || ''}</td>
                 <td>${item.part_description || ''}</td>
             `;
-            
+
             const actionsTd = document.createElement('td');
             actionsTd.className = 'text-center';
-            
+
             const editButton = document.createElement('button');
             editButton.className = 'btn btn-sm btn-warning';
             editButton.innerHTML = '<i class="fas fa-edit"></i> Edit Item';
-            
+
             editButton.onclick = () => {
                 const itemMasterUrl = `../inventorySettings/inventorySettings.php?tab=itemMaster&search=${encodeURIComponent(item.sap_no)}`;
                 window.open(itemMasterUrl, '_blank');
             };
-            
+
             actionsTd.appendChild(editButton);
             tr.appendChild(actionsTd);
-            
+
             listBody.appendChild(tr);
         });
     }
-    
+
     renderPagination('healthCheckPaginationControls', allMissingParams.length, healthCheckCurrentPage, ROWS_PER_PAGE, goToHealthCheckPage);
     // --- ▲▲▲▲▲ สิ้นสุดโค้ดใหม่ ▲▲▲▲▲
 }
@@ -598,7 +598,7 @@ function goToHealthCheckPage(page) {
 
 function exportToExcel() {
     showToast('Exporting data... Please wait.', '#0dcaf0');
-    
+
     const dataToExport = getFilteredStandardParams();
 
     if (!dataToExport || dataToExport.length === 0) {
@@ -616,7 +616,7 @@ function exportToExcel() {
         "Part Value": parseFloat(row.part_value || 0).toFixed(2),
         "Updated At": row.updated_at
     }));
-    
+
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Parameters");
@@ -635,7 +635,7 @@ function openAddParamFromHealthCheck(item) {
     modalElement.querySelector('#addParamLine').value = item.line || '';
     modalElement.querySelector('#addParamModel').value = item.model || '';
     modalElement.querySelector('#addParamPartNo').value = item.part_no || '';
-    
+
     openModal('addParamModal');
 }
 
@@ -651,7 +651,7 @@ async function handleImport(event) {
             const workbook = XLSX.read(fileData, { type: "binary" });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-            
+
             const rowsToImport = rawRows.map(row => ({
                 line: String(row["Line"] || row["line"] || '').trim().toUpperCase(),
                 model: String(row["Model"] || row["model"] || '').trim().toUpperCase(),
@@ -697,7 +697,7 @@ async function loadBomForModal(fg) {
     try {
         const modalTitle = document.getElementById('bomModalTitle');
         const modalBomTableBody = document.getElementById('modalBomTableBody');
-        
+
         modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
         document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
         document.getElementById('modalSelectedFgLine').value = fg.line;
@@ -705,7 +705,7 @@ async function loadBomForModal(fg) {
 
         modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
         const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id, line: fg.line, model: fg.model });
-        
+
         modalBomTableBody.innerHTML = '';
         if (bomResult.success && bomResult.data.length > 0) {
             bomResult.data.forEach(comp => {
@@ -757,31 +757,93 @@ function manageBom(fg) {
         importBomBtn.title = `Import BOM for ${fg.fg_sap_no}`;
     }
     // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
-    
+
     manageBomModal.show();
     loadBomForModal(fg);
 };
 
-function goToBomPage(page) {
-    bomCurrentPage = page;
-    const searchInput = document.getElementById('bomSearchInput');
-    const filteredData = getFilteredBoms(searchInput.value);
-    renderBomFgTable(filteredData);
-}
+// =================================================================
+// SECTION: BOM MANAGER REFACTORED FUNCTIONS
+// =================================================================
+
+/**
+ * START REFACTOR: ย้ายฟังก์ชันเหล่านี้ออกมาข้างนอก initializeBomManager
+ * เพื่อให้ฟังก์ชัน goToBomPage ที่เป็น Global สามารถเรียกใช้งานได้
+ */
 
 function getFilteredBoms(searchTerm) {
     const term = searchTerm.toLowerCase();
     if (!term) {
         return allBomFgs;
     }
-    return allBomFgs.filter(fg => 
+    return allBomFgs.filter(fg =>
         (fg.fg_sap_no && String(fg.fg_sap_no).toLowerCase().includes(term)) ||
-        (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(term)) || 
+        (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(term)) ||
         (fg.line && fg.line.toLowerCase().includes(term)) ||
         (fg.model && fg.model.toLowerCase().includes(term))
     );
 }
 
+function renderBomFgTable(fgData) {
+    const fgListTableBody = document.getElementById('bomFgListTableBody');
+    fgListTableBody.innerHTML = '';
+    const start = (bomCurrentPage - 1) * ROWS_PER_PAGE;
+    const pageData = fgData.slice(start, start + ROWS_PER_PAGE);
+
+    if (pageData.length > 0) {
+        pageData.forEach(fg => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.title = 'Click to edit BOM';
+            tr.addEventListener('click', (event) => {
+                if (event.target.closest('.form-check-input')) return;
+                manageBom(fg);
+            });
+            tr.innerHTML = `
+                <td class="text-center"><input class="form-check-input bom-row-checkbox" type="checkbox" value='${JSON.stringify(fg).replace(/'/g, "&apos;")}'></td>
+                <td>${fg.fg_sap_no || 'N/A'}</td>
+                <td>${fg.fg_part_no || ''}</td>
+                <td>${fg.line || 'N/A'}</td>
+                <td>${fg.model || 'N/A'}</td>
+                <td>${fg.updated_by || 'N/A'}</td>
+                <td class="text-end">${fg.updated_at || 'N/A'}</td>
+            `;
+            fgListTableBody.appendChild(tr);
+        });
+    } else {
+        fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
+    }
+
+    // ฟังก์ชันนี้จะถูกเรียกจาก initializeBomManager แต่ถูกย้ายออกมา
+    // เราจึงต้องเช็คว่า element มีอยู่จริงหรือไม่ก่อนเรียกใช้
+    const deleteBtn = document.getElementById('deleteSelectedBomBtn');
+    const exportSelectedMenuItem = document.getElementById('exportSelectedDetailedBtn');
+    const selected = document.querySelectorAll('.bom-row-checkbox:checked');
+    if (deleteBtn && exportSelectedMenuItem) {
+        if (selected.length > 0) {
+            deleteBtn.classList.remove('d-none');
+            exportSelectedMenuItem.classList.remove('disabled');
+        } else {
+            deleteBtn.classList.add('d-none');
+            exportSelectedMenuItem.classList.add('disabled');
+        }
+    }
+
+    renderPagination('bomPaginationControls', fgData.length, bomCurrentPage, ROWS_PER_PAGE, goToBomPage);
+}
+
+/**
+ * END REFACTOR
+ */
+
+function goToBomPage(page) {
+    bomCurrentPage = page;
+    const searchInput = document.getElementById('bomSearchInput');
+    const filteredData = getFilteredBoms(searchInput.value);
+    renderBomFgTable(filteredData); // <-- ตอนนี้สามารถเรียกใช้ได้แล้ว
+}
+
+// ... (ส่วนที่เหลือของฟังก์ชันที่เกี่ยวข้องกับ BOM) ...
 async function handleBomImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -814,7 +876,7 @@ async function handleBomImport(event) {
                 console.error("BOM Import process failed:", error);
                 showToast('Failed to process file. Check console for details.', '#dc3545');
             } finally {
-                event.target.value = ''; 
+                event.target.value = '';
             }
         };
         reader.readAsBinaryString(file);
@@ -822,17 +884,17 @@ async function handleBomImport(event) {
         console.error("File reader failed:", error);
         showToast('Could not read the selected file.', '#dc3545');
     } finally {
-         // Spinner will be hidden in displayImportPreview or in catch block
+        // Spinner will be hidden in displayImportPreview or in catch block
     }
 }
 
 
 function displayImportPreview(validationData) {
     const { summary, rows } = validationData;
-    validatedBomImportData = rows.filter(row => row.determined_action !== 'ERROR'); 
+    validatedBomImportData = rows.filter(row => row.determined_action !== 'ERROR');
 
     const modal = new bootstrap.Modal(document.getElementById('bomImportPreviewModal'));
-    
+
     document.getElementById('summary-add-count').textContent = summary.add;
     document.getElementById('summary-update-count').textContent = summary.update;
     document.getElementById('summary-delete-count').textContent = summary.delete;
@@ -874,7 +936,7 @@ function displayImportPreview(validationData) {
             bodies[key].innerHTML = `<tr><td colspan="${colspan}" class="text-center text-muted">No items for this action.</td></tr>`;
         }
     }
-    
+
     const confirmBtn = document.getElementById('confirmImportBtn');
     confirmBtn.disabled = !validationData.isValid || validatedBomImportData.length === 0;
 
@@ -890,19 +952,19 @@ async function executeBomImport() {
 
     showSpinner();
     const modal = bootstrap.Modal.getInstance(document.getElementById('bomImportPreviewModal'));
-    
+
     try {
         const result = await sendRequest(BOM_API_ENDPOINT, 'execute_bom_import', 'POST', { rows: validatedBomImportData });
         if (result.success) {
             showToast(result.message, '#28a745');
             modal.hide();
-            await new Promise(resolve => setTimeout(resolve, 400)); 
+            await new Promise(resolve => setTimeout(resolve, 400));
             const bomManagerTab = document.getElementById('bom-manager-tab');
             if (bomManagerTab.classList.contains('active')) {
-                 const searchInput = document.getElementById('bomSearchInput');
-                 searchInput.value = '';
-                 const bomManagerScope = getBomManagerScope();
-                 if(bomManagerScope) await bomManagerScope.loadAndRenderBomFgTable();
+                const searchInput = document.getElementById('bomSearchInput');
+                searchInput.value = '';
+                const bomManagerScope = getBomManagerScope();
+                if(bomManagerScope) await bomManagerScope.loadAndRenderBomFgTable();
             }
         } else {
             showToast(result.message, '#dc3545');
@@ -931,7 +993,7 @@ function initializeBomManager() {
     const importBomsBtn = document.getElementById('importBomsBtn');
     const importUpdateBomsBtn = document.getElementById('importUpdateBomsBtn');
     const importCreateBomsBtn = document.getElementById('importCreateBomsBtn');
-    const bulkUpdateImportFile = document.getElementById('bulkUpdateImportFile');  
+    const bulkUpdateImportFile = document.getElementById('bulkUpdateImportFile');
     const initialCreateImportFile = document.getElementById('initialCreateImportFile');
     const bulkBomImportFile = document.getElementById('bulkBomImportFile');
     const confirmBulkImportBtn = document.getElementById('confirmBulkImportBtn');
@@ -945,7 +1007,7 @@ function initializeBomManager() {
     const copyBomForm = document.getElementById('copyBomForm');
     const deleteBomFromModalBtn = document.getElementById('deleteBomFromModalBtn');
     const copyBomFromModalBtn = document.getElementById('copyBomFromModalBtn');
-    
+
     manageBomModal = new bootstrap.Modal(manageBomModalEl);
     const copyBomModal = new bootstrap.Modal(copyBomModalEl);
     let bomDebounceTimer;
@@ -954,7 +1016,7 @@ function initializeBomManager() {
     const style = document.createElement('style');
     style.innerHTML = ` .bom-input-readonly { background-color: #495057; opacity: 1; color: #fff; } `;
     document.head.appendChild(style);
-    
+
     // --- 2. Helper Functions ---
     async function loadAndRenderBomFgTable() {
         showSpinner();
@@ -973,37 +1035,6 @@ function initializeBomManager() {
         bomCurrentPage = 1;
         const filteredData = getFilteredBoms(searchInput.value);
         renderBomFgTable(filteredData);
-    }
-
-    function renderBomFgTable(fgData) {
-        fgListTableBody.innerHTML = '';
-        const start = (bomCurrentPage - 1) * ROWS_PER_PAGE;
-        const pageData = fgData.slice(start, start + ROWS_PER_PAGE);
-        if (pageData.length > 0) {
-            pageData.forEach(fg => {
-                const tr = document.createElement('tr');
-                tr.style.cursor = 'pointer';
-                tr.title = 'Click to edit BOM';
-                tr.addEventListener('click', (event) => {
-                    if (event.target.closest('.form-check-input')) return;
-                    manageBom(fg); 
-                });
-                tr.innerHTML = `
-                    <td class="text-center"><input class="form-check-input bom-row-checkbox" type="checkbox" value='${JSON.stringify(fg).replace(/'/g, "&apos;")}'></td>
-                    <td>${fg.fg_sap_no || 'N/A'}</td>
-                    <td>${fg.fg_part_no || ''}</td>
-                    <td>${fg.line || 'N/A'}</td>
-                    <td>${fg.model || 'N/A'}</td>
-                    <td>${fg.updated_by || 'N/A'}</td>
-                    <td class="text-end">${fg.updated_at || 'N/A'}</td>
-                `;
-                fgListTableBody.appendChild(tr);
-            });
-        } else {
-            fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
-        }
-        updateBomBulkActionsVisibility(); // <-- เรียกใช้ฟังก์ชันที่เพิ่มเข้ามา
-        renderPagination('bomPaginationControls', fgData.length, bomCurrentPage, ROWS_PER_PAGE, goToBomPage);
     }
 
     function setupBomComponentAutocomplete() {
@@ -1052,7 +1083,7 @@ function initializeBomManager() {
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.json_to_sheet(result.data);
                 XLSX.utils.book_append_sheet(wb, ws, "All_BOMs"); // สร้างชีตเดียว
-                
+
                 const fileName = `BOM_Export_All_Consolidated_${new Date().toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(wb, fileName);
                 showToast('All BOMs exported successfully!', '#28a745');
@@ -1182,7 +1213,7 @@ function initializeBomManager() {
         if (lists.CREATE.children.length === 0) lists.CREATE.innerHTML = '<li class="list-group-item text-muted">No new BOMs to create.</li>';
         if (lists.OVERWRITE.children.length === 0) lists.OVERWRITE.innerHTML = '<li class="list-group-item text-muted">No existing BOMs to overwrite.</li>';
         if (lists.SKIPPED.children.length === 0) lists.SKIPPED.innerHTML = '<div class="p-3 text-muted">No sheets were skipped.</div>';
-        
+
         confirmBulkImportBtn.disabled = !validationData.isValid;
         modal.show();
     }
@@ -1196,7 +1227,7 @@ function initializeBomManager() {
 
         showSpinner();
         const modal = bootstrap.Modal.getInstance(document.getElementById('bomBulkImportPreviewModal'));
-        
+
         try {
             const result = await sendRequest(BOM_API_ENDPOINT, 'execute_bulk_import', 'POST', { sheets: validSheets });
             if (result.success) {
@@ -1214,7 +1245,7 @@ function initializeBomManager() {
     async function handleInitialBomImport(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         if (!confirm("This action will only create NEW BOMs and will SKIP any existing BOMs. Are you sure you want to proceed?")) {
             event.target.value = ''; // Reset file input
             return;
@@ -1273,7 +1304,7 @@ function initializeBomManager() {
         clearTimeout(bomDebounceTimer);
         bomDebounceTimer = setTimeout(filterAndRenderBomFgTable, 300);
     });
-    
+
     // Bulk Operations
     exportAllBomsBtn?.addEventListener('click', exportAllBoms);
     exportSelectedBomsBtn?.addEventListener('click', exportSelectedBoms); // <-- เพิ่มบรรทัดนี้
@@ -1307,7 +1338,7 @@ function initializeBomManager() {
         const createBomModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createBomModal'));
         createBomModal.show();
     });
-    
+
     selectAllBomCheckbox.addEventListener('change', (e) => {
         document.querySelectorAll('.bom-row-checkbox').forEach(cb => cb.checked = e.target.checked);
         updateBomBulkActionsVisibility();
@@ -1318,7 +1349,7 @@ function initializeBomManager() {
         }
     });
     deleteSelectedBomBtn.addEventListener('click', deleteSelectedBoms);
-    
+
     modalAddComponentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
@@ -1413,7 +1444,7 @@ function initializeBomManager() {
             source_model: document.getElementById('copy_source_model').value,
             target_fg_sap_no: document.getElementById('target_fg_sap_no').value
         };
-        
+
         showSpinner();
         try {
             const result = await sendRequest(BOM_API_ENDPOINT, 'copy_bom', 'POST', payload);
@@ -1435,7 +1466,7 @@ function initializeBomManager() {
         document.getElementById('copy_source_model').value = fg.model;
         document.getElementById('target_fg_sap_no').value = '';
         copyBomModal.show();
-    };  
+    };
 
     deleteBomFromModalBtn.addEventListener('click', () => {
         if (!currentEditingBom) return;
@@ -1443,10 +1474,10 @@ function initializeBomManager() {
             (async () => {
                 showSpinner();
                 try {
-                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { 
-                        fg_item_id: currentEditingBom.fg_item_id, 
-                        line: currentEditingBom.line, 
-                        model: currentEditingBom.model 
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', {
+                        fg_item_id: currentEditingBom.fg_item_id,
+                        line: currentEditingBom.line,
+                        model: currentEditingBom.model
                     });
                     showToast(result.message, result.success ? '#28a745' : '#dc3545');
                     if (result.success) {
@@ -1470,7 +1501,7 @@ function initializeBomManager() {
             }, { once: true });
         }
     });
-    
+
     // --- 4. Initial Load ---
     setupBomComponentAutocomplete();
     loadAndRenderBomFgTable();
@@ -1501,7 +1532,7 @@ function openEditModal(modalId, data) {
     }
 
     document.getElementById('edit_part_description_display').value = data.part_description || '';
-    
+
     const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
     modal.show();
 }
@@ -1548,7 +1579,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lineFilter) {
             lineFilter.value = currentUser.line;
             lineFilter.disabled = true;
-            filterAndRenderStandardParams(); 
+            filterAndRenderStandardParams();
         }
     }
 
@@ -1564,10 +1595,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (importInput) {
         importInput.addEventListener('change', handleImport);
     }
-    
+
     const mainContent = document.getElementById('main-content');
     const paginations = mainContent.querySelectorAll('.sticky-bottom[data-tab-target]');
-    
+
     function showCorrectPagination(activeTabId) {
         paginations.forEach(pagination => {
             const isVisible = pagination.dataset.tabTarget === activeTabId;
@@ -1597,12 +1628,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (createVariantsForm) {
         createVariantsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const payload = {
                 source_param_id: document.getElementById('source_param_id').value,
                 variants: document.getElementById('variants').value
             };
-            
+
             if (!payload.variants) {
                 showToast('Please enter variant suffixes.', '#ffc107');
                 return;
@@ -1622,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const paramTableBody = document.getElementById('paramTableBody');
     const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');

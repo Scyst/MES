@@ -442,29 +442,41 @@ try {
                 if (!$fgItemId) {
                     $processedSheet['errors'][] = "FG SAP No. '{$fgSapNo}' from sheet name not found in Item Master.";
                 }
-
-                foreach ($data['rows'] as $row) {
-                    if (empty($row['COMPONENT_SAP_NO']) || !isset($row['QUANTITY_REQUIRED']) || empty($row['LINE']) || empty($row['MODEL'])) {
-                         $processedSheet['errors'][] = "Row for component '{$row['COMPONENT_SAP_NO']}' is missing required data (COMPONENT_SAP_NO, QUANTITY_REQUIRED, LINE, MODEL).";
-                         continue;
-                    }
-                    if (!isset($itemMap[$row['COMPONENT_SAP_NO']])) {
-                        $processedSheet['errors'][] = "Component SAP No. '{$row['COMPONENT_SAP_NO']}' not found in Item Master.";
-                    }
-                     if (!is_numeric($row['QUANTITY_REQUIRED']) || $row['QUANTITY_REQUIRED'] <= 0) {
-                        $processedSheet['errors'][] = "Quantity for component '{$row['COMPONENT_SAP_NO']}' must be a number greater than 0.";
-                    }
-                }
                 
-                if (empty($processedSheet['errors'])) {
-                    $uniqueBOMIdentifier = $fgItemId . '_' . $data['rows'][0]['LINE'] . '_' . $data['rows'][0]['MODEL'];
-                    if (isset($existingBoms[$uniqueBOMIdentifier])) {
-                        $processedSheet['status'] = 'OVERWRITE';
-                        $validationResult['summary']['overwrite']++;
-                    } else {
-                        $processedSheet['status'] = 'CREATE';
-                        $validationResult['summary']['create']++;
+                // <<< START FIX >>>
+                // ตรวจสอบว่ามีข้อมูลในชีทหรือไม่
+                if (empty($data['rows'])) {
+                    $processedSheet['errors'][] = "Sheet '{$sheetName}' contains no data rows.";
+                } else {
+                // <<< END FIX >>>
+                    foreach ($data['rows'] as $row) {
+                        if (empty($row['COMPONENT_SAP_NO']) || !isset($row['QUANTITY_REQUIRED']) || empty($row['LINE']) || empty($row['MODEL'])) {
+                            $processedSheet['errors'][] = "Row for component '{$row['COMPONENT_SAP_NO']}' is missing required data (COMPONENT_SAP_NO, QUANTITY_REQUIRED, LINE, MODEL).";
+                            continue;
+                        }
+                        if (!isset($itemMap[$row['COMPONENT_SAP_NO']])) {
+                            $processedSheet['errors'][] = "Component SAP No. '{$row['COMPONENT_SAP_NO']}' not found in Item Master.";
+                        }
+                        if (!is_numeric($row['QUANTITY_REQUIRED']) || $row['QUANTITY_REQUIRED'] <= 0) {
+                            $processedSheet['errors'][] = "Quantity for component '{$row['COMPONENT_SAP_NO']}' must be a number greater than 0.";
+                        }
                     }
+                } // <<< Closes the `else` block for the fix
+
+                if (empty($processedSheet['errors'])) {
+                    // <<< START FIX >>>
+                    // ย้ายการตรวจสอบสถานะมาไว้ที่นี่เพื่อให้แน่ใจว่า $data['rows'][0] มีอยู่จริง
+                    if (!empty($data['rows'])) { 
+                        $uniqueBOMIdentifier = $fgItemId . '_' . $data['rows'][0]['LINE'] . '_' . $data['rows'][0]['MODEL'];
+                        if (isset($existingBoms[$uniqueBOMIdentifier])) {
+                            $processedSheet['status'] = 'OVERWRITE';
+                            $validationResult['summary']['overwrite']++;
+                        } else {
+                            $processedSheet['status'] = 'CREATE';
+                            $validationResult['summary']['create']++;
+                        }
+                    }
+                    // <<< END FIX >>>
                 } else {
                     $processedSheet['status'] = 'SKIPPED';
                     $validationResult['summary']['skipped']++;
@@ -743,8 +755,7 @@ try {
                 }
             }
 
-            // --- ★★★ นี่คือตรรกะใหม่ ★★★ ---
-            // 2. จัดกลุ่มข้อมูลตาม BOM ที่ไม่ซ้ำกัน (FG + Line + Model)
+            // 2. จัดกลุ่มข้อมูลตาม BOM ที่ไม่ซ้ำกัน (FG + Line + Model) (เหมือนเดิม)
             $bomGroups = [];
             foreach ($rows as $row) {
                 $fgSap = $row['FG_SAP_NO'] ?? null;
@@ -762,9 +773,14 @@ try {
                 $createdBomCount = 0;
                 $skippedBomCount = 0;
 
-                // 3. วนลูปตามกลุ่ม BOM ที่จัดไว้
+                // 3. วนลูปตามกลุ่ม BOM ที่จัดไว้ (เหมือนเดิม)
                 foreach ($bomGroups as $key => $components) {
                     $firstComponent = $components[0];
+                    // ตรวจสอบให้แน่ใจว่ามีข้อมูลครบถ้วนก่อนดำเนินการต่อ
+                    if (empty($firstComponent['FG_SAP_NO']) || empty($firstComponent['LINE']) || empty($firstComponent['MODEL'])) {
+                        $skippedBomCount++;
+                        continue; 
+                    }
                     $fgSap = $firstComponent['FG_SAP_NO'];
                     $line = $firstComponent['LINE'];
                     $model = $firstComponent['MODEL'];
@@ -775,21 +791,35 @@ try {
                         continue; // ข้ามทั้งกลุ่มถ้าหา FG SAP ไม่เจอ
                     }
 
-                    // 4. ตรวจสอบแค่ครั้งเดียวต่อกลุ่ม
+                    // 4. ตรวจสอบแค่ครั้งเดียวต่อกลุ่มว่า BOM นี้มีในฐานข้อมูลแล้วหรือยัง (เหมือนเดิม)
                     $checkStmt->execute([$fgItemId, $line, $model]);
                     $bomExists = $checkStmt->fetchColumn() > 0;
 
                     if (!$bomExists) {
-                        // 5. ถ้า BOM ยังไม่มี ให้เพิ่มส่วนประกอบทั้งหมดในกลุ่มนี้
+                        // --- ★★★ START: ส่วนที่ปรับปรุง ★★★ ---
+                        // 5. ถ้า BOM ยังไม่มี ให้เพิ่มส่วนประกอบทั้งหมด โดยมีการตรวจสอบความซ้ำซ้อนภายในไฟล์
+                        $processedComponents = []; // สร้าง Array เพื่อเก็บ Component ที่เพิ่มไปแล้วใน BOM นี้
+                        $bomWasCreated = false; // สร้าง "ธง" เพื่อนับ createdBomCount แค่ครั้งเดียว
+
                         foreach ($components as $compRow) {
                             $compSap = $compRow['COMPONENT_SAP_NO'] ?? null;
                             $qty = $compRow['QUANTITY_REQUIRED'] ?? 1;
                             $compItemId = $itemMap[$compSap] ?? null;
-                            if ($compItemId) { // เพิ่มเฉพาะ component ที่หาเจอ
+                            
+                            // สร้าง Key ที่ไม่ซ้ำกันสำหรับแต่ละ Component
+                            $componentKey = $compItemId; 
+
+                            // ตรวจสอบว่า Component นี้ยังไม่ถูกเพิ่ม และมี compItemId
+                            if ($compItemId && !isset($processedComponents[$componentKey])) {
                                 $insertStmt->execute([$fgItemId, $compItemId, $line, $model, $qty, $currentUser['username']]);
+                                $processedComponents[$componentKey] = true; // บันทึกว่า Component นี้ถูกเพิ่มแล้ว
+                                $bomWasCreated = true; // ตั้งธงว่ามีการสร้าง BOM นี้แล้ว
                             }
                         }
-                        $createdBomCount++;
+                        if ($bomWasCreated) {
+                            $createdBomCount++; // นับเป็น 1 BOM ที่สร้างสำเร็จ
+                        }
+                        // --- ★★★ END: ส่วนที่ปรับปรุง ★★★ ---
                     } else {
                         $skippedBomCount++;
                     }
@@ -806,7 +836,7 @@ try {
                 throw $e;
             }
             break;
-
+            
         case 'copy_bom':
             $source_fg_sap_no = $input['source_fg_sap_no'] ?? '';
             $source_line = $input['source_line'] ?? '';
