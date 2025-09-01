@@ -15,7 +15,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Production & WIP</title>
+    <title>Production & inventory</title>
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
@@ -28,7 +28,7 @@
 
             <div class="container-fluid pt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Production & WIP Management</h2>
+                    <h2 class="mb-0">Production & inventory</h2>
                 </div>
 
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
@@ -98,6 +98,7 @@
                                         <th>Location</th>
                                         <th>SAP No.</th>
                                         <th>Part Number</th>
+                                        <th>Model</th>
                                         <th>Part Description</th>
                                         <th class="text-end">Total IN</th>
                                         <th class="text-end">Total OUT</th>
@@ -116,6 +117,7 @@
                                     <tr>
                                         <th>SAP No.</th>
                                         <th>Part Number</th>
+                                        <th>Model</th>
                                         <th>Part Description</th>
                                         <th>Lot Number</th>
                                         <th class="text-end">Total IN</th>
@@ -139,6 +141,7 @@
                                         <th>ไปยัง (Destination)</th>
                                         <th>SAP No.</th>
                                         <th>Part No.</th>
+                                        <th>Model</th>
                                         <th>ล็อต / อ้างอิง</th>
                                         <th class="text-end">จำนวน</th>
                                         <th>หมายเหตุ</th>
@@ -156,12 +159,13 @@
                                     <tr>
                                         <th style="width: 10%;">Date</th>
                                         <th style="width: 15%;">Time (Start-End)</th>
-                                        <th style="width: 8%;" class="text-center">Duration (m)</th>
+                                        <th class="text-center" style="width: 8%;">Duration (m)</th>
                                         <th style="width: 10%;">Location</th>
                                         <th style="width: 12%;">Part No.</th>
+                                        <th style="width: 10%;">Model</th>
                                         <th style="width: 10%;">Lot / Ref.</th>
-                                        <th style="width: 8%;" class="text-end">Quantity</th>
-                                        <th style="width: 8%;" class="text-center">Type</th>
+                                        <th class="text-end" style="width: 8%;">Quantity</th>
+                                        <th class="text-center" style="width: 8%;">Type</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
@@ -178,6 +182,7 @@
                                         <th>Location</th>
                                         <th>SAP No.</th>
                                         <th>Part Number</th>
+                                        <th>Model</th>
                                         <th>Part Description</th>
                                         <th class="text-end">On-Hand Quantity (WIP)</th>
                                     </tr>
@@ -194,7 +199,7 @@
                                     <tr>
                                         <th style="width: 15%;">SAP No.</th>
                                         <th style="width: 15%;">Part No.</th>
-                                        <th>Used in Models</th>
+                                        <th>Models</th>
                                         <th>Part Description</th>
                                         <th class="text-end" style="width: 15%;">Total On-Hand</th>
                                     </tr>
@@ -212,6 +217,7 @@
                                         <th>Date & Time</th>
                                         <th>Type</th>
                                         <th>Part No.</th>
+                                        <th>Model</th>
                                         <th>Source</th>
                                         <th>Destination</th>
                                         <th class="text-end">Change</th>

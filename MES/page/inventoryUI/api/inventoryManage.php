@@ -111,9 +111,8 @@ try {
 
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc_to.location_name LIKE ? OR loc_from.location_name LIKE ?)";
-                // เพิ่ม parameter 5 ครั้งสำหรับ 5 คอลัมน์
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc_to.location_name LIKE ? OR loc_from.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = t.parameter_id AND p.line = loc_to.production_line) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
 
             if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
@@ -129,16 +128,22 @@ try {
                 LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
                 {$whereClause}
             ";
-
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
-            // Data Query (ส่วนนี้ถูกต้องอยู่แล้ว ไม่ต้องแก้ไข)
             $dataSql = "
                 SELECT 
                     t.transaction_id, t.transaction_timestamp, t.transaction_type,
-                    i.sap_no, i.part_no, i.part_description, t.quantity, 
+                    i.sap_no, i.part_no, 
+                        (
+                            SELECT STUFF((
+                                SELECT DISTINCT ', ' + p.model
+                                FROM " . PARAMETER_TABLE . " p
+                                WHERE p.item_id = t.parameter_id AND p.line = loc_to.production_line
+                                FOR XML PATH('')), 1, 2, '')
+                        ) AS model,
+                        i.part_description, t.quantity, 
                     loc_to.location_name AS destination_location,
                     loc_from.location_name AS source_location,
                     t.reference_id as lot_no,
@@ -153,13 +158,10 @@ try {
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
-
-            // --- ส่วนที่แก้ไข: เปลี่ยนมาใช้ bindValue เพื่อกำหนดชนิดข้อมูล ---
             $paramIndex = 1;
             foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param); // สำหรับ WHERE clause (เป็น String)
+                $dataStmt->bindValue($paramIndex++, $param); 
             }
-            // บังคับให้ offset และ limit เป็น Integer
             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
 
@@ -238,8 +240,10 @@ try {
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term);
+                // ★★★ START: เพิ่ม model ในเงื่อนไขการค้นหา ★★★
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id AND p.line = l.production_line) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term);
+                // ★★★ END: ส่วนที่แก้ไข ★★★
             }
             
             if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
@@ -249,14 +253,13 @@ try {
             }
 
             $baseQuery = "
-                -- 1. Get all OUT transactions (Consumption, Production, and the FROM side of a Transfer)
                 SELECT 
                     t.parameter_id,
                     ISNULL(t.from_location_id, t.to_location_id) AS location_id,
                     0 AS total_in,
                     ABS(t.quantity) AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
-                WHERE ( -- *** FIX: Added parentheses to group OR conditions ***
+                WHERE ( 
                     (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL)
                     OR 
                     (t.transaction_type LIKE 'PRODUCTION_%')
@@ -265,7 +268,6 @@ try {
 
                 UNION ALL
 
-                -- 2. Get all IN transactions (Receipt and the TO side of a Transfer)
                 SELECT 
                     t.parameter_id,
                     t.to_location_id AS location_id,
@@ -276,12 +278,20 @@ try {
                 {$date_where_clause}
             ";
             
+            // ★★★ START: ส่วนที่แก้ไข Query หลัก ★★★
             $finalQuery = "
                 SELECT
                     agg.location_id,
                     l.location_name,
                     i.item_id,
                     i.sap_no, i.part_no, i.part_description,
+                    (
+                        SELECT STUFF((
+                            SELECT DISTINCT ', ' + p.model
+                            FROM " . PARAMETER_TABLE . " p
+                            WHERE p.item_id = i.item_id AND p.line = l.production_line
+                            FOR XML PATH('')), 1, 2, '')
+                    ) AS model,
                     SUM(agg.total_in) as total_in,
                     SUM(agg.total_out) as total_out,
                     (SUM(agg.total_out) - SUM(agg.total_in)) as variance
@@ -289,8 +299,9 @@ try {
                 JOIN " . ITEMS_TABLE . " i ON agg.parameter_id = i.item_id
                 JOIN " . LOCATIONS_TABLE . " l ON agg.location_id = l.location_id
                 ".(!empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "")."
-                GROUP BY agg.location_id, l.location_name, i.item_id, i.sap_no, i.part_no, i.part_description
+                GROUP BY agg.location_id, l.location_name, i.item_id, i.sap_no, i.part_no, i.part_description, l.production_line
             ";
+            // ★★★ END: ส่วนที่แก้ไข ★★★
 
             $full_params = array_merge($date_params, $date_params, $params);
             
@@ -325,8 +336,8 @@ try {
 
             if (!empty($_GET['search_term'])) { 
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term);
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id AND p.line = l.production_line) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term);
             }
             
             $whereClause = "WHERE " . implode(" AND ", $conditions);
@@ -338,7 +349,6 @@ try {
                 JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
                 {$whereClause}
             ";
-
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
@@ -349,6 +359,13 @@ try {
                         i.item_id,
                         h.location_id,
                         l.location_name, i.sap_no, i.part_no, i.part_description, 
+                        (
+                            SELECT STUFF((
+                                SELECT DISTINCT ', ' + p.model
+                                FROM " . PARAMETER_TABLE . " p
+                                WHERE p.item_id = i.item_id AND p.line = l.production_line
+                                FOR XML PATH('')), 1, 2, '')
+                        ) AS model,
                         ISNULL(h.quantity, 0) as quantity,
                         ROW_NUMBER() OVER (ORDER BY l.location_name, i.sap_no) as RowNum
                     FROM ". ONHAND_TABLE ." h
@@ -356,7 +373,7 @@ try {
                     JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
                     {$whereClause}
                 )
-                SELECT item_id, location_id, location_name, sap_no, part_no, part_description, quantity 
+                SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity 
                 FROM NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -432,8 +449,8 @@ try {
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term);
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = t.parameter_id AND p.line = loc.production_line) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
             if (!empty($_GET['count_type'])) {
                 $conditions[] = "t.transaction_type = ?"; 
@@ -444,7 +461,6 @@ try {
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            // --- ส่วน Query หลัก (เหมือนเดิม) ---
             $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
@@ -452,6 +468,13 @@ try {
 
             $dataSql = "
                 SELECT t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
+                    (
+                        SELECT STUFF((
+                            SELECT DISTINCT ', ' + p.model
+                            FROM " . PARAMETER_TABLE . " p
+                            WHERE p.item_id = t.parameter_id AND p.line = loc.production_line
+                            FOR XML PATH('')), 1, 2, '')
+                    ) AS model,
                     REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
                     loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
                     FORMAT(t.start_time, N'hh\\:mm\\:ss') as start_time,
@@ -464,6 +487,7 @@ try {
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
+
             $dataStmt = $pdo->prepare($dataSql);
             $paramIndex = 1;
             foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
@@ -472,12 +496,9 @@ try {
             $dataStmt->execute();
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // --- ส่วนที่เพิ่มเข้ามา: คำนวณ Summary และ Grand Total เฉพาะตอน Export ---
             $summary = [];
             $grand_total = [];
-
             if ($isExport) {
-                // Query for Summary by Part
                 $summarySql = "
                     SELECT i.sap_no, i.part_no, REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
                     FROM " . TRANSACTIONS_TABLE . " t
@@ -491,7 +512,6 @@ try {
                 $summaryStmt->execute($params);
                 $summary = $summaryStmt->fetchAll(PDO::FETCH_ASSOC);
 
-                // Query for Grand Total
                 $grandTotalSql = "
                     SELECT REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
                     FROM " . TRANSACTIONS_TABLE . " t
@@ -507,7 +527,7 @@ try {
 
             echo json_encode([
                 'success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit,
-                'summary' => $summary, 'grand_total' => $grand_total // << ส่งข้อมูลใหม่ไปด้วย
+                'summary' => $summary, 'grand_total' => $grand_total
             ]);
             break;
 
@@ -689,8 +709,10 @@ try {
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term);
+                // ★★★ START: เพิ่ม model ในเงื่อนไขการค้นหา ★★★
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ? OR (SELECT STUFF((SELECT DISTINCT ', ' + p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+                // ★★★ END: ส่วนที่แก้ไข ★★★
             }
             if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
@@ -709,10 +731,18 @@ try {
                 {$whereClause}
                 GROUP BY t.parameter_id, t.reference_id
             ";
-
+            
+            // ★★★ START: ส่วนที่แก้ไข Query หลัก ★★★
             $finalQuery = "
                 SELECT
                     i.sap_no, i.part_no, i.part_description,
+                    (
+                        SELECT STUFF((
+                            SELECT DISTINCT ', ' + p.model
+                            FROM " . PARAMETER_TABLE . " p
+                            WHERE p.item_id = i.item_id
+                            FOR XML PATH('')), 1, 2, '')
+                    ) AS model,
                     w.lot_no,
                     ISNULL(w.total_in, 0) as total_in,
                     ISNULL(w.total_out, 0) as total_out,
@@ -721,6 +751,7 @@ try {
                 JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
                 WHERE (w.total_in > 0 OR w.total_out > 0)
             ";
+            // ★★★ END: ส่วนที่แก้ไข ★★★
             
             $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
             $totalStmt = $pdo->prepare($totalSql);
@@ -911,10 +942,17 @@ try {
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
-
+            
             $dataSql = "
                 SELECT 
                     t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no,
+                        (
+                            SELECT STUFF((
+                                SELECT DISTINCT ', ' + p.model
+                                FROM " . PARAMETER_TABLE . " p
+                                WHERE p.item_id = t.parameter_id AND p.line = ISNULL(loc_to.production_line, loc_from.production_line)
+                                FOR XML PATH('')), 1, 2, '')
+                        ) AS model,
                     loc_from.location_name AS source_location,
                     loc_to.location_name AS destination_location,
                     t.quantity, t.reference_id as lot_no, u.username, t.notes
@@ -924,7 +962,6 @@ try {
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
-
             $paramIndex = 1;
             foreach ($params as $param) {
                 $dataStmt->bindValue($paramIndex++, $param);

@@ -315,24 +315,20 @@ async function fetchProductionVarianceReport(page = 1) {
     }
 }
 
-
 function renderProductionVarianceTable(data) {
     const tbody = document.getElementById('productionVarianceTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No production variance data found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No production variance data found.</td></tr>';
         return;
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
         tr.title = 'Click to see transaction details';
-        // --- ส่วนที่แก้ไข ---
-        // เพิ่มการตรวจสอบว่า row.location_id มีค่าหรือไม่ก่อนเพิ่ม Event
         if (row.location_id) {
             tr.addEventListener('click', () => openVarianceDetailModal(row.item_id, row.location_id, row.part_no));
         }
-        // --- สิ้นสุด ---
 
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
@@ -349,6 +345,7 @@ function renderProductionVarianceTable(data) {
             <td>${row.location_name}</td>
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
+            <td>${row.model || ''}</td>
             <td>${row.part_description || ''}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
@@ -383,11 +380,11 @@ function renderWipReportByLotTable(data) {
     const tbody = document.getElementById('wipByLotTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No active WIP lots found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No active WIP lots found.</td></tr>';
         return;
     }
     data.forEach(row => {
-        const tr = document.createElement('tr'); // << เพิ่มบรรทัดที่หายไปกลับเข้ามา
+        const tr = document.createElement('tr');
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
 
@@ -398,10 +395,11 @@ function renderWipReportByLotTable(data) {
         } else {
             textColorClass = 'text-warning';
         }
-
+        
         tr.innerHTML = `
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
+            <td>${row.model || ''}</td>
             <td>${row.part_description || ''}</td>
             <td>${row.lot_no}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
@@ -437,7 +435,7 @@ function renderReceiptHistoryTable(data) {
     const tbody = document.getElementById('entryHistoryTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No IN transactions found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No IN transactions found.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -447,6 +445,7 @@ function renderReceiptHistoryTable(data) {
         tr.addEventListener('click', () => editTransaction(row.transaction_id, 'entry'));
 
         const transactionDate = new Date(row.transaction_timestamp);
+        
         tr.innerHTML = `
             <td>${transactionDate.toLocaleDateString('en-GB')}</td>
             <td>${transactionDate.toTimeString().substring(0, 8)}</td>
@@ -454,6 +453,7 @@ function renderReceiptHistoryTable(data) {
             <td>${row.destination_location || 'N/A'}</td>
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
+            <td>${row.model || ''}</td>
             <td>${row.lot_no || ''}</td>
             <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
             <td>${row.notes || ''}</td>
@@ -488,7 +488,7 @@ function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = '';
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No production history found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -500,32 +500,26 @@ function renderProductionHistoryTable(data) {
 
         const transactionDate = new Date(row.transaction_timestamp);
 
-        // --- ส่วน Logic ใหม่ ---
         const startTimeStr = row.start_time || '00:00:00';
         const endTimeStr = row.end_time || '00:00:00';
-
-        // 1. จัดรูปแบบช่วงเวลา
         const timeRange = (row.start_time && row.end_time) ? `${startTimeStr} - ${endTimeStr}` : (transactionDate.toTimeString().substring(0, 8));
-
-        // 2. คำนวณ Duration
         let durationInMinutes = '-';
         if (row.start_time && row.end_time) {
             const startDate = new Date(`1970-01-01T${startTimeStr}Z`);
             const endDate = new Date(`1970-01-01T${endTimeStr}Z`);
-            // Handle overnight case
             if (endDate < startDate) {
                 endDate.setDate(endDate.getDate() + 1);
             }
             const diffMs = endDate - startDate;
             durationInMinutes = Math.round(diffMs / 60000);
         }
-        // --- สิ้นสุด Logic ใหม่ ---
-
+        
         tr.innerHTML = `
             <td>${transactionDate.toLocaleDateString('en-GB')}</td>
             <td>${timeRange}</td>
             <td class="text-center">${durationInMinutes}</td>
             <td>${row.location_name || 'N/A'}</td>
+            <td>${row.model || ''}</td>
             <td>${row.part_no}</td>
             <td>${row.lot_no || ''}</td>
             <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
@@ -559,7 +553,7 @@ function renderWipOnHandTable(data) {
     const tbody = document.getElementById('wipOnHandTableBody');
     tbody.innerHTML = '';
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No Work-in-Progress items found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No Work-in-Progress items found.</td></tr>';
         return;
     }
     data.forEach(row => {
@@ -573,6 +567,7 @@ function renderWipOnHandTable(data) {
             <td>${row.location_name}</td>
             <td>${row.sap_no}</td>
             <td>${row.part_no}</td>
+            <td>${row.model || ''}</td>
             <td>${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
         `;
@@ -651,7 +646,7 @@ function renderAllTransactionsTable(data) {
     const tbody = document.getElementById('transactionLogTableBody');
     tbody.innerHTML = '';
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center">No transactions found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No transactions found.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -667,11 +662,12 @@ function renderAllTransactionsTable(data) {
         } else if (quantity < 0) {
             quantityClass = 'text-danger';
         }
-
+        
         tr.innerHTML = `
             <td>${transactionDate.toLocaleString('en-GB')}</td>
             <td><span class="badge bg-secondary">${row.transaction_type}</span></td>
             <td>${row.part_no}</td>
+            <td>${row.model || ''}</td>
             <td>${row.source_location || 'N/A'}</td>
             <td>${row.destination_location || 'N/A'}</td>
             <td class="text-end fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
