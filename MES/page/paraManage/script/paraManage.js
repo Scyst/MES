@@ -711,10 +711,11 @@ async function loadBomForModal(fg) {
             bomResult.data.forEach(comp => {
                 const quantity = parseFloat(comp.quantity_required);
                 const displayQuantity = Number.isInteger(quantity) ? quantity : quantity.toFixed(4);
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${comp.component_part_no}</td>
-                    <td>${comp.part_description || ''}</td>
+                                        <td>${comp.component_sap_no}</td> 
+                                        <td>${comp.part_description || ''}</td>
                     <td class="text-center align-middle">
                         <div class="d-flex justify-content-center">
                             <input type="number" 
@@ -800,13 +801,14 @@ function renderBomFgTable(fgData) {
                 <td>${fg.fg_part_no || ''}</td>
                 <td>${fg.line || 'N/A'}</td>
                 <td>${fg.model || 'N/A'}</td>
+                <td>${fg.fg_part_description || ''}</td>
                 <td>${fg.updated_by || 'N/A'}</td>
                 <td class="text-end">${fg.updated_at || 'N/A'}</td>
             `;
             fgListTableBody.appendChild(tr);
         });
     } else {
-        fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
+        fgListTableBody.innerHTML = `<tr><td colspan="8" class="text-center">No BOMs found.</td></tr>`;
     }
 
     const deleteBtn = document.getElementById('deleteSelectedBomBtn');

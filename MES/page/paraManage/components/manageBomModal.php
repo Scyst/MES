@@ -11,7 +11,7 @@
                     <table class="table table-striped table-sm">
                         <thead>
                             <tr>
-                                <th style="width: 30%;">Component Part No.</th>
+                                <th style="width: 30%;">Component SAP No.</th>
                                 <th style="width: 30%;">Part Description</th>
                                 <th class="text-center" style="width: 20%;">Quantity Required</th>
                                 <th class="text-center" style="width: 20%;">Actions</th>
@@ -48,8 +48,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn"><i class="fas fa-trash-alt"></i> Delete BOM</button>
-                 <button type="button" class="btn btn-info" id="importBomFromModalBtn"><i class="fas fa-file-import"></i> Import</button>
+                <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn"><i class="fas fa-trash-alt"></i> Delete BOM</button>
+                <button type="button" class="btn btn-info" id="importBomFromModalBtn"><i class="fas fa-file-import"></i> Import</button>
                 <button type="button" class="btn btn-primary" id="exportBomFromModalBtn"><i class="fas fa-file-export"></i> Export Template</button>
                 <button type="button" class="btn btn-primary" id="copyBomFromModalBtn" style="display:none">
                     <i class="fas fa-copy"></i> Copy BOM

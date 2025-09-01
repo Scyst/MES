@@ -553,26 +553,39 @@ try {
             break;
 
         case 'get_all_fgs_with_bom':
-             $sql = "
-                SELECT DISTINCT
+            $sql = "
+                WITH LatestBOM AS (
+                    SELECT 
+                        fg_item_id, 
+                        line, 
+                        model, 
+                        updated_by, 
+                        updated_at,
+                        ROW_NUMBER() OVER(PARTITION BY fg_item_id, line, model ORDER BY updated_at DESC) as rn
+                    FROM " . BOM_TABLE . "
+                )
+                SELECT 
                     b.fg_item_id,
-                    i.sap_no as fg_sap_no,
-                    i.part_no as fg_part_no,
+                    i.sap_no AS fg_sap_no,
+                    i.part_no AS fg_part_no,
                     b.line,
                     b.model,
-                    (SELECT TOP 1 sub.updated_by FROM " . BOM_TABLE . " sub WHERE sub.fg_item_id = b.fg_item_id AND sub.line = b.line AND sub.model = b.model ORDER BY sub.updated_at DESC) as updated_by,
-                    (SELECT TOP 1 sub.updated_at FROM " . BOM_TABLE . " sub WHERE sub.fg_item_id = b.fg_item_id AND sub.line = b.line AND sub.model = b.model ORDER BY sub.updated_at DESC) as updated_at
-                FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id";
-            
+                    i.part_description AS fg_part_description,
+                    b.updated_by,
+                    b.updated_at
+                FROM LatestBOM b
+                JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id
+                WHERE b.rn = 1
+            ";
+        
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " WHERE b.line = ?";
+                $sql .= " AND b.line = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
                 $stmt = $pdo->query($sql);
             }
-
+        
             $fgs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $fgs]);
             break;

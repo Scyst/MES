@@ -205,6 +205,7 @@
                                         <th>Part No.</th>
                                         <th>Line</th>
                                         <th>Model</th>
+                                        <th>Part Description</th>
                                         <th>Updated By</th>
                                         <th class="text-end">Updated At</th>
                                     </tr>
