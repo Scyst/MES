@@ -19,8 +19,8 @@ let validatedBomImportData = [];
 let validatedBulkBomImportData = [];
 
 /**
- * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
- */
+ * ฟังก์ชันกลางสำหรับส่ง Request ไปยัง API
+ */
 async function sendRequest(endpoint, action, method, body = null, urlParams = {}) {
     try {
         urlParams.action = action;
@@ -338,8 +338,8 @@ async function deleteStandardParam(id) {
 }
 
 /**
- * ฟังก์ชันสำหรับควบคุมการแสดงผลของปุ่ม Bulk Actions
- */
+ * ฟังก์ชันสำหรับควบคุมการแสดงผลของปุ่ม Bulk Actions
+ */
 function updateBulkActionsVisibility() {
     const container = document.getElementById('bulk-actions-container');
     const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -354,8 +354,8 @@ function updateBulkActionsVisibility() {
 }
 
 /**
- * ฟังก์ชันสำหรับลบรายการที่เลือกทั้งหมด
- */
+ * ฟังก์ชันสำหรับลบรายการที่เลือกทั้งหมด
+ */
 async function deleteSelectedParams() {
     const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
     const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.value);
@@ -709,18 +709,21 @@ async function loadBomForModal(fg) {
         modalBomTableBody.innerHTML = '';
         if (bomResult.success && bomResult.data.length > 0) {
             bomResult.data.forEach(comp => {
+                const quantity = parseFloat(comp.quantity_required);
+                const displayQuantity = Number.isInteger(quantity) ? quantity : quantity.toFixed(4);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${comp.component_part_no}</td>
                     <td>${comp.part_description || ''}</td>
                     <td class="text-center align-middle">
                         <div class="d-flex justify-content-center">
-                            <input type="number" 
-                                class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
-                                style="width: 80px;" 
-                                value="${comp.quantity_required}" 
-                                data-bom-id="${comp.bom_id}" 
-                                min="1" 
+                            <input type="number" 
+                                class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
+                                style="width: 80px;" 
+                                    value="${displayQuantity}"
+                                data-bom-id="${comp.bom_id}" 
+                                min="0.0001"
+                                    step="any"
                                 readonly>
                         </div>
                     </td>
@@ -747,7 +750,6 @@ function manageBom(fg) {
 
     currentEditingBom = fg;
 
-    // ========== Start: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
     if (exportBomBtn) {
         exportBomBtn.disabled = false;
         exportBomBtn.title = `Export template for ${fg.fg_sap_no}`;
@@ -756,7 +758,6 @@ function manageBom(fg) {
         importBomBtn.disabled = false;
         importBomBtn.title = `Import BOM for ${fg.fg_sap_no}`;
     }
-    // ========== End: โค้ดที่แก้ไข/เพิ่มใหม่ ==========
 
     manageBomModal.show();
     loadBomForModal(fg);
@@ -765,12 +766,6 @@ function manageBom(fg) {
 // =================================================================
 // SECTION: BOM MANAGER REFACTORED FUNCTIONS
 // =================================================================
-
-/**
- * START REFACTOR: ย้ายฟังก์ชันเหล่านี้ออกมาข้างนอก initializeBomManager
- * เพื่อให้ฟังก์ชัน goToBomPage ที่เป็น Global สามารถเรียกใช้งานได้
- */
-
 function getFilteredBoms(searchTerm) {
     const term = searchTerm.toLowerCase();
     if (!term) {
@@ -814,8 +809,6 @@ function renderBomFgTable(fgData) {
         fgListTableBody.innerHTML = `<tr><td colspan="7" class="text-center">No BOMs found.</td></tr>`;
     }
 
-    // ฟังก์ชันนี้จะถูกเรียกจาก initializeBomManager แต่ถูกย้ายออกมา
-    // เราจึงต้องเช็คว่า element มีอยู่จริงหรือไม่ก่อนเรียกใช้
     const deleteBtn = document.getElementById('deleteSelectedBomBtn');
     const exportSelectedMenuItem = document.getElementById('exportSelectedDetailedBtn');
     const selected = document.querySelectorAll('.bom-row-checkbox:checked');
@@ -832,18 +825,13 @@ function renderBomFgTable(fgData) {
     renderPagination('bomPaginationControls', fgData.length, bomCurrentPage, ROWS_PER_PAGE, goToBomPage);
 }
 
-/**
- * END REFACTOR
- */
-
 function goToBomPage(page) {
     bomCurrentPage = page;
     const searchInput = document.getElementById('bomSearchInput');
     const filteredData = getFilteredBoms(searchInput.value);
-    renderBomFgTable(filteredData); // <-- ตอนนี้สามารถเรียกใช้ได้แล้ว
+    renderBomFgTable(filteredData);
 }
 
-// ... (ส่วนที่เหลือของฟังก์ชันที่เกี่ยวข้องกับ BOM) ...
 async function handleBomImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -919,7 +907,9 @@ function displayImportPreview(validationData) {
         const action = row.determined_action;
         const tr = document.createElement('tr');
         if (action === 'ADD' || action === 'UPDATE') {
-            tr.innerHTML = `<td>${row.LINE}</td><td>${row.MODEL}</td><td>${row.COMPONENT_SAP_NO}</td><td>${row.QUANTITY_REQUIRED}</td>`;
+            const quantity = parseFloat(row.QUANTITY_REQUIRED);
+            const displayQuantity = Number.isInteger(quantity) ? quantity : quantity.toFixed(4);
+            tr.innerHTML = `<td>${row.LINE}</td><td>${row.MODEL}</td><td>${row.COMPONENT_SAP_NO}</td><td>${displayQuantity}</td>`;
             bodies[action].appendChild(tr);
         } else if (action === 'DELETE') {
             tr.innerHTML = `<td>${row.LINE}</td><td>${row.MODEL}</td><td>${row.COMPONENT_SAP_NO}</td>`;
@@ -1512,8 +1502,8 @@ function initializeBomManager() {
 }
 
 /**
- * ฟังก์ชันสำหรับเปิด Modal แก้ไขและเติมข้อมูลลงในฟอร์ม
- */
+ * ฟังก์ชันสำหรับเปิด Modal แก้ไขและเติมข้อมูลลงในฟอร์ม
+ */
 function openEditModal(modalId, data) {
     currentEditingParam = data;
     const modalElement = document.getElementById(modalId);

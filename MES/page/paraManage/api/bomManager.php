@@ -337,7 +337,7 @@ try {
                     b.line AS LINE,
                     b.model AS MODEL,
                     comp_item.sap_no AS COMPONENT_SAP_NO,
-                    b.quantity_required AS QUANTITY_REQUIRED
+                    ROUND(b.quantity_required, 4) AS QUANTITY_REQUIRED
                 FROM " . BOM_TABLE . " b
                 JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
                 JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
@@ -374,7 +374,7 @@ try {
                     b.line AS LINE,
                     b.model AS MODEL,
                     comp_item.sap_no AS COMPONENT_SAP_NO,
-                    b.quantity_required AS QUANTITY_REQUIRED
+                    ROUND(b.quantity_required, 4) AS QUANTITY_REQUIRED
                 FROM " . BOM_TABLE . " b
                 JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id 
                 JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
