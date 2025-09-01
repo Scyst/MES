@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
+// (CSRF Token Validation and variable setup remains the same)
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -10,158 +11,159 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         exit;
     }
 }
-
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
+
+// Helper function for permission check
+function enforceLinePermission($line) {
+    global $currentUser;
+    if ($currentUser['role'] === 'supervisor' && $currentUser['line'] !== $line) {
+        throw new Exception("You do not have permission to manage this production line.");
+    }
+}
 
 try {
     switch ($action) {
         
         case 'read':
-            $sql = "SELECT id, item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at FROM " . PARAMETER_TABLE;
+            // ✅ This part is correct: Joins ROUTES and ITEMS
+            $sql = "
+                SELECT 
+                    r.route_id as id,
+                    r.item_id,
+                    r.line,
+                    r.model,
+                    r.planned_output,
+                    FORMAT(r.updated_at, 'yyyy-MM-dd HH:mm') as updated_at,
+                    i.sap_no,
+                    i.part_no,
+                    i.part_description,
+                    i.part_value
+                FROM " . ROUTES_TABLE . " r
+                JOIN " . ITEMS_TABLE . " i ON r.item_id = i.item_id
+            ";
             $params = [];
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " WHERE line = ?";
+                $sql .= " WHERE r.line = ?";
                 $params[] = $currentUser['line'];
             }
-            $sql .= " ORDER BY updated_at DESC";
-            
+            $sql .= " ORDER BY r.updated_at DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($rows as &$row) {
-                if ($row['updated_at']) {
-                    $row['updated_at'] = (new DateTime($row['updated_at']))->format('Y-m-d H:i:s');
-                }
-            }
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
         case 'get_parameters_for_item':
+            // ✅ Corrected to query ROUTES_TABLE
             $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
-                throw new Exception("Item ID is required.");
+                 echo json_encode(['success' => true, 'data' => []]);
+                 exit;
             }
-            $sql = "SELECT id, item_id, line, model, part_no, sap_no 
-                    FROM " . PARAMETER_TABLE . " 
-                    WHERE item_id = ? 
-                    ORDER BY line, model";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([(int)$item_id]);
-            $parameters = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $parameters]);
+            $stmt = $pdo->prepare("SELECT route_id as id, line, model FROM " . ROUTES_TABLE . " WHERE item_id = ? ORDER BY line, model");
+            $stmt->execute([$item_id]);
+            $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $routes]);
             break;
 
+        // ========== START: [MAJOR CHANGE] Refactoring 'create' case ==========
         case 'create':
             $item_id = $input['item_id'] ?? 0;
             $line = strtoupper($input['line'] ?? '');
             $model = strtoupper($input['model'] ?? '');
             $planned_output = (int)($input['planned_output'] ?? 0);
-            $part_value_override = isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : null;
-            $part_description_override = trim($input['part_description'] ?? '');
 
             if (empty($item_id) || empty($line) || empty($model)) {
                 throw new Exception("Item, Line, and Model are required.");
             }
             enforceLinePermission($line);
 
-            $itemStmt = $pdo->prepare("SELECT sap_no, part_no, part_description, part_value FROM " . ITEMS_TABLE . " WHERE item_id = ?");
-            $itemStmt->execute([$item_id]);
-            $itemMaster = $itemStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$itemMaster) {
-                throw new Exception("Selected Item ID not found in Item Master.");
-            }
-
-            $checkSql = "SELECT COUNT(*) FROM " . PARAMETER_TABLE . " WHERE item_id = ? AND line = ? AND model = ?";
+            // Check if route already exists in MANUFACTURING_ROUTES
+            $checkSql = "SELECT COUNT(*) FROM " . ROUTES_TABLE . " WHERE item_id = ? AND line = ? AND model = ?";
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([$item_id, $line, $model]);
             if ($checkStmt->fetchColumn() > 0) {
-                 http_response_code(409);
-                 throw new Exception("This parameter (Item, Line, Model combination) already exists.");
+                http_response_code(409); // Conflict
+                throw new Exception("This manufacturing route (Item, Line, Model combination) already exists.");
             }
 
-            $sap_no = $itemMaster['sap_no'];
-            $part_no = $itemMaster['part_no'];
-            $part_value = $part_value_override ?? $itemMaster['part_value'];
-            $part_description = !empty($part_description_override) ? $part_description_override : $itemMaster['part_description'];
-
-            $sql = "INSERT INTO " . PARAMETER_TABLE . " (item_id, line, model, part_no, sap_no, planned_output, part_description, part_value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
-            $params = [$item_id, $line, $model, $part_no, $sap_no, $planned_output, $part_description, $part_value];
+            // Insert into MANUFACTURING_ROUTES table
+            $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute([$item_id, $line, $model, $planned_output]);
+            $newRouteId = $pdo->lastInsertId();
             
-            logAction($pdo, $currentUser['username'], 'CREATE PARAMETER', $item_id, "{$line}-{$model}-{$part_no}");
-            echo json_encode(['success' => true, 'message' => 'Parameter created successfully.']);
-            break;
+            // Log the action
+            $itemStmt = $pdo->prepare("SELECT part_no FROM " . ITEMS_TABLE . " WHERE item_id = ?");
+            $itemStmt->execute([$item_id]);
+            $part_no = $itemStmt->fetchColumn();
+            logAction($pdo, $currentUser['username'], 'CREATE ROUTE', $newRouteId, "{$line}-{$model}-{$part_no}");
 
+            echo json_encode(['success' => true, 'message' => 'Manufacturing route created successfully.']);
+            break;
+        // ========== END: [MAJOR CHANGE] Refactoring 'create' case ==========
+
+        // ========== START: [MAJOR CHANGE] Refactoring 'update' case ==========
         case 'update':
-            $id = $input['id'] ?? null;
-            if (!$id) throw new Exception("Missing Parameter ID");
+            $route_id = $input['id'] ?? null; // Use 'id' from JS which is route_id
+            if (!$route_id) throw new Exception("Missing Route ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM " . PARAMETER_TABLE . " WHERE id = ?");
-            $stmt->execute([$id]);
-            $param = $stmt->fetch();
-            if ($param) {
-                enforceLinePermission($param['line']);
-                if ($input['line'] !== $param['line']) {
+            // Get the original route to check permissions
+            $stmt = $pdo->prepare("SELECT line, item_id FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+            $stmt->execute([$route_id]);
+            $route = $stmt->fetch();
+            if ($route) {
+                enforceLinePermission($route['line']);
+                if ($input['line'] !== $route['line']) { // If line is changed, check new line permission
                     enforceLinePermission($input['line']);
                 }
             } else {
-                throw new Exception("Parameter not found.");
+                throw new Exception("Route not found.");
             }
             
-            $item_id = $input['item_id'] ?? 0;
-            $sap_no = strtoupper(trim($input['sap_no'] ?? ''));
-
-            if (empty($item_id)) {
-                if (empty($sap_no)) {
-                    throw new Exception("SAP No. is required to link old parameters.");
-                }
-                $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ? AND is_active = 1");
-                $itemStmt->execute([$sap_no]);
-                $found_item_id = $itemStmt->fetchColumn();
-                
-                if (!$found_item_id) {
-                    throw new Exception("Associated Item ID not found in Item Master for SAP No: {$sap_no}. Please create it first.");
-                }
-                $item_id = $found_item_id;
-            }
-
+            // Prepare update data
             $line = strtoupper($input['line']);
             $model = strtoupper($input['model']);
-            $part_no = strtoupper(trim($input['part_no'] ?? ''));
+            $planned_output = (int)$input['planned_output'];
+
+            // The item_id should not change during an update of a route.
+            // But if we want to support it, the logic would be here. For now, we keep it simple.
             
-            $updateSql = "UPDATE " . PARAMETER_TABLE . " SET item_id = ?, line = ?, model = ?, part_no = ?, sap_no = ?, planned_output = ?, part_description = ?, part_value = ?, updated_at = GETDATE() WHERE id = ?";
-            $params = [$item_id, $line, $model, $part_no, $sap_no, (int)$input['planned_output'], $input['part_description'] ?? null, isset($input['part_value']) && is_numeric($input['part_value']) ? (float)$input['part_value'] : 0.00, $id];
+            // Update MANUFACTURING_ROUTES table
+            $updateSql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
+            $params = [$line, $model, $planned_output, $route_id];
             $stmt = $pdo->prepare($updateSql);
             $stmt->execute($params);
 
-            logAction($pdo, $currentUser['username'], 'UPDATE PARAMETER', $id, "Data updated for ID: $id");
-            echo json_encode(["success" => true, 'message' => 'Parameter updated successfully.']);
+            logAction($pdo, $currentUser['username'], 'UPDATE ROUTE', $route_id, "Data updated for Route ID: $route_id");
+            echo json_encode(["success" => true, 'message' => 'Route updated successfully.']);
             break;
-
+        // ========== END: [MAJOR CHANGE] Refactoring 'update' case ==========
+        
+        // ========== START: [MAJOR CHANGE] Refactoring 'delete' cases ==========
         case 'delete':
-            $id = $input['id'] ?? 0;
-            if (!$id) throw new Exception("Missing ID");
+            $route_id = $input['id'] ?? 0;
+            if (!$route_id) throw new Exception("Missing Route ID");
             
-            $stmt = $pdo->prepare("SELECT line FROM " . PARAMETER_TABLE . " WHERE id = ?");
-            $stmt->execute([$id]);
-            $param = $stmt->fetch();
-            if ($param) {
-                enforceLinePermission($param['line']);
+            // Check permission before deleting
+            $stmt = $pdo->prepare("SELECT line FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+            $stmt->execute([$route_id]);
+            $route = $stmt->fetch();
+            if ($route) {
+                enforceLinePermission($route['line']);
             } else {
-                throw new Exception("Parameter not found.");
+                throw new Exception("Route not found.");
             }
 
-            $deleteStmt = $pdo->prepare("DELETE FROM " . PARAMETER_TABLE . " WHERE id = ?");
-            $deleteStmt->execute([(int)$id]);
+            $deleteStmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+            $deleteStmt->execute([(int)$route_id]);
 
             if ($deleteStmt->rowCount() > 0) {
-                logAction($pdo, $currentUser['username'], 'DELETE PARAMETER', $id);
+                logAction($pdo, $currentUser['username'], 'DELETE ROUTE', $route_id);
             }
-            echo json_encode(["success" => true, 'message' => 'Parameter deleted.']);
+            echo json_encode(["success" => true, 'message' => 'Route deleted.']);
             break;
 
         case 'bulk_delete':
@@ -170,34 +172,26 @@ try {
                 throw new Exception("No IDs provided for bulk deletion.");
             }
 
+            // Supervisor permission check
             if ($currentUser['role'] === 'supervisor') {
-                $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $checkSql = "SELECT COUNT(DISTINCT line) as line_count, MAX(line) as line_name FROM " . PARAMETER_TABLE . " WHERE id IN ({$placeholders})";
-                $checkStmt = $pdo->prepare($checkSql);
-                $checkStmt->execute($ids);
-                $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($result['line_count'] > 1 || $result['line_name'] !== $currentUser['line']) {
-                     throw new Exception("Supervisors can only bulk delete parameters from their own line.");
-                }
+                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                 $checkSql = "SELECT COUNT(DISTINCT line) as line_count, MAX(line) as line_name FROM " . ROUTES_TABLE . " WHERE route_id IN ({$placeholders})";
+                 $checkStmt = $pdo->prepare($checkSql);
+                 $checkStmt->execute($ids);
+                 $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                 if ($result['line_count'] > 1 || $result['line_name'] !== $currentUser['line']) {
+                       throw new Exception("Supervisors can only bulk delete routes from their own line.");
+                 }
             }
-
-            $pdo->beginTransaction();
-            try {
-                $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $sql = "DELETE FROM " . PARAMETER_TABLE . " WHERE id IN ({$placeholders})";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($ids);
-                $deletedCount = $stmt->rowCount();
-                $pdo->commit();
-                
-                logAction($pdo, $currentUser['username'], 'BULK DELETE PARAMETER', null, "Deleted {$deletedCount} records. IDs: " . implode(', ', $ids));
-                echo json_encode(['success' => true, 'message' => "Successfully deleted {$deletedCount} parameters."]);
-
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
+            
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "DELETE FROM " . ROUTES_TABLE . " WHERE route_id IN ({$placeholders})";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($ids);
+            $deletedCount = $stmt->rowCount();
+            
+            logAction($pdo, $currentUser['username'], 'BULK DELETE ROUTES', null, "Deleted {$deletedCount} records. IDs: " . implode(', ', $ids));
+            echo json_encode(['success' => true, 'message' => "Successfully deleted {$deletedCount} routes."]);
             break;
             
         case 'bulk_import':
