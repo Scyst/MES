@@ -1,6 +1,6 @@
 <?php 
     require_once __DIR__ . '/../../auth/check_auth.php';
-    if (!hasRole(['admin', 'creator'])) {
+    if (!hasRole(['admin', 'creator', 'supervisor'])) {
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
         exit;
     }
@@ -10,7 +10,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Inventory Settings</title>
+    <title>System Settings</title>
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
@@ -23,7 +23,7 @@
     
             <div class="container-fluid pt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Inventory Settings</h2>
+                    <h2 class="mb-0">System Settings</h2>
                 </div>
 
                 <ul class="nav nav-tabs" id="settingsTab" role="tablist">
@@ -39,6 +39,28 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master</button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bom-manager-pane" type="button" role="tab">
+                            <i class="fas fa-sitemap"></i> BOM Manager
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="standard-params-tab" data-bs-toggle="tab" data-bs-target="#standard-params-pane" type="button" role="tab">
+                            <i class="fas fa-cogs"></i> Standard Parameters
+                        </button>
+                    </li>
+                    <?php if ($canManage):?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#lineSchedulesPane" type="button" role="tab">
+                            <i class="fas fa-calendar-alt"></i> Line Schedules
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-warning" id="health-check-tab" data-bs-toggle="tab" data-bs-target="#healthCheckPane" type="button" role="tab">
+                            <i class="fas fa-heartbeat"></i> Data Health Check
+                        </button>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </div>
 
@@ -56,25 +78,199 @@
                     <div class="tab-pane fade" id="item-master-pane" role="tabpanel">
                         <?php include('components/itemMasterUI.php'); ?>
                     </div>
+                    <div class="tab-pane fade" id="bom-manager-pane" role="tabpanel">
+                        <div class="sticky-bar">
+                            <div class="row my-3 align-items-center">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number, Line, Model...">
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-file-import"></i> Import
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" id="importUpdateBomsBtn">For Update (Multi-Sheet)</a></li>
+                                            <li><a class="dropdown-item" href="#" id="importCreateBomsBtn">For Initial Create (Single-Sheet)</a></li>
+                                        </ul>
+                                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-file-export"></i> Export
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" id="exportAllConsolidatedBtn">All BOMs (Consolidated)</a></li>
+                                            <li><a class="dropdown-item disabled" href="#" id="exportSelectedDetailedBtn">Selected BOMs (Detailed)</a></li>
+                                        </ul>
+                                        <input type="file" id="bulkUpdateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
+                                        <input type="file" id="initialCreateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
+                                        <button class="btn btn-danger d-none" id="deleteSelectedBomBtn">
+                                            <i class="fas fa-trash-alt"></i> Delete Selected
+                                        </button>
+                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllBomCheckbox"></th>
+                                        <th>SAP No.</th>
+                                        <th>Part No.</th>
+                                        <th>Line</th>
+                                        <th>Model</th>
+                                        <th>Part Description</th>
+                                        <th>Updated By</th>
+                                        <th class="text-end">Updated At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bomFgListTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="standard-params-pane" role="tabpanel">
+                        <div class="sticky-bar">
+                            <div class="container-fluid">
+                                <div class="row my-3 align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="filter-controls-wrapper">
+                                            <input type="text" class="form-control" id="filterLine" placeholder="Filter by Line...">
+                                            <input type="text" class="form-control" id="filterModel" placeholder="Filter by Model...">
+                                            <input type="text" class="form-control" id="searchInput" placeholder="Search Part/SAP No...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-info" onclick="triggerImport()"><i class="fas fa-file-import"></i> Import</button>
+                                            <button class="btn btn-primary" onclick="exportToExcel()"><i class="fas fa-file-export"></i> Export</button>
+                                            <button class="btn btn-success" onclick="openModal('addParamModal')"><i class="fas fa-plus"></i> Add</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="bulk-actions-container" class="d-none row align-items-center mb-2">
+                                    <div class="col-12 d-flex justify-content-end gap-2">
+                                        <button class="btn btn-info" id="bulkCreateVariantsBtn"><i class="fas fa-plus-square"></i> Create Variants</button>
+                                        <button class="btn btn-danger" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Delete Selected</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="importFile" accept=".csv, .xlsx, .xls" class="d-none">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllCheckbox"></th>
+                                        <th>Line</th>
+                                        <th>Model</th>
+                                        <th>Part No.</th>
+                                        <th>SAP No.</th>
+                                        <th>Part Description</th> 
+                                        <th>Planned Output</th>
+                                        <th>Part Value</th>
+                                        <th class="text-end">Updated At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paramTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <?php if ($canManage): ?>
+
+                    <div class="tab-pane fade" id="lineSchedulesPane" role="tabpanel">
+                        <div class="row my-3 align-items-center">
+                            <div class="col-md-9"></div>
+                            <div class="col-md-3">
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-success" onclick="openModal('addScheduleModal')">Add New Schedule</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Line</th><th>Shift Name</th><th>Start Time</th><th>End Time</th>
+                                        <th>Break (min)</th><th>Status</th>
+                                        <th style="width: 150px; text-align: center;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedulesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="healthCheckPane" role="tabpanel">
+                        <div class="alert alert-info mt-3">
+                            <h4><i class="fas fa-info-circle"></i> Parts Requiring Attention</h4>
+                            <p class="mb-0">The following parts have been produced but are missing standard time data (Planned Output). Please add them in the 'Standard Parameters' tab to ensure accurate OEE Performance calculation.</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Line</th>
+                                        <th>Model</th>
+                                        <th>Part No.</th>
+                                        <th style="width: 180px;" class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="missingParamsList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <?php endif; ?>
                 </div>
             </div>
-            
+                    
             <div id="toast"></div>
 
-            <?php include('components/locationModal.php'); ?>
-            <?php include('components/transferModal.php'); ?>
-            <?php include('components/itemModal.php');?>
-            <?php include('../components/php/autoLogoutUI.php'); ?>
+            <?php 
+                include('components/locationModal.php'); 
+                include('components/transferModal.php');
+                include('components/itemModal.php');
+                include('components/addParamModal.php');
+                include('components/editParamModal.php');
+                include('components/addScheduleModal.php');
+                include('components/editScheduleModal.php');
+                include('components/manageBomModal.php'); 
+                include('components/createBomModal.php');
+                include('components/createVariantsModal.php');
+                include('components/bulkCreateVariantsModal.php');
+                include('components/copyBomModal.php');
+                include('components/bomImportPreviewModal.php');
+                include('components/bomBulkImportPreviewModal.php');
+                include('../components/php/autoLogoutUI.php'); 
+            ?>
+            
+            <?php if ($canManage): ?>
+            <nav class="sticky-bottom" data-tab-target="#healthCheckPane" style="display: none;">
+                <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
+            </nav>
+            <?php endif; ?>
+            <nav class="sticky-bottom" data-tab-target="#standard-params-pane" style="display: none;">
+                <ul class="pagination justify-content-center" id="paginationControls"></ul>
+            </nav>
+            <nav class="sticky-bottom" data-tab-target="#bom-manager-pane" style="display: none;">
+                <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
+            </nav>
 
             <script>
+                const canManage = <?php echo json_encode($canManage); ?>;
                 const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
             </script>
             
             <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
             <script src="../../utils/libs/xlsx.full.min.js"></script>
+            
             <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
-        </main>
+            <script src="script/paraManage.js?v=<?php echo filemtime('script/paraManage.js'); ?>"></script>
+            <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
+            </main>
     </div>
 </body>
 </html>

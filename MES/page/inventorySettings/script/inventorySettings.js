@@ -5,6 +5,8 @@ const LOCATIONS_API = 'api/locationsManage.php';
 const TRANSFER_API = 'api/stockTransferManage.php';
 const OPENING_BALANCE_API = 'api/openingBalanceManage.php';
 const ITEM_MASTER_API = 'api/itemMasterManage.php';
+const PARA_API_ENDPOINT = 'api/paraManage.php';
+const BOM_API_ENDPOINT = 'api/bomManager.php';
 
 // --- Global Variables ---
 let allItems = []; // ใช้ร่วมกันระหว่าง Transfer และ Opening Balance
@@ -12,38 +14,7 @@ let currentEditingLocation = null;
 let selectedItem = null;
 let debounceTimer;
 let currentPage = 1;
-const ROWS_PER_PAGE = 50;
-
-
-// --- Shared Utility Function ---
-async function sendRequest(endpoint, action, method, body = null, params = null) {
-    try {
-        let url = `${endpoint}?action=${action}`;
-        if (params) {
-            url += `&${new URLSearchParams(params).toString()}`;
-        }
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const options = { method, headers: {} };
-        if (method.toUpperCase() !== 'GET' && csrfToken) {
-            options.headers['X-CSRF-TOKEN'] = csrfToken;
-        }
-        if (body) {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(body);
-        }
-        const response = await fetch(url, options);
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.message || `HTTP error! status: ${response.status}`);
-        }
-        return result;
-    } catch (error) {
-        console.error(`Request for action '${action}' failed:`, error);
-        showToast(error.message || 'An unexpected error occurred.', 'var(--bs-danger)');
-        return { success: false, message: "Network or server error." };
-    }
-}
-
+const ROWS_PER_PAGE = 100;
 
 // --- Location Manager Functions ---
 async function loadLocations() {

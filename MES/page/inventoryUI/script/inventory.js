@@ -346,7 +346,7 @@ function renderProductionVarianceTable(data) {
             <td class="text-start">${row.sap_no}</td>
             <td class="text-start">${row.part_no}</td>
             <td class="text-start">${row.model || ''}</td>
-            <td class="text-start">${row.part_description || ''}</td>
+            <td class="text-center">${row.part_description || ''}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
