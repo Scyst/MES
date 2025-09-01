@@ -342,11 +342,11 @@ function renderProductionVarianceTable(data) {
         }
 
         tr.innerHTML = `
-            <td>${row.location_name}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.part_description || ''}</td>
+            <td class="text-start">${row.location_name}</td>
+            <td class="text-start">${row.sap_no}</td>
+            <td class="text-start">${row.part_no}</td>
+            <td class="text-start">${row.model || ''}</td>
+            <td class="text-start">${row.part_description || ''}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
@@ -397,11 +397,11 @@ function renderWipReportByLotTable(data) {
         }
         
         tr.innerHTML = `
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.part_description || ''}</td>
-            <td>${row.lot_no}</td>
+            <td class="text-start">${row.sap_no}</td>
+            <td class="text-start">${row.part_no}</td>
+            <td class="text-start">${row.model || ''}</td>
+            <td class="text-start">${row.part_description || ''}</td>
+            <td class="text-center">${row.lot_no}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
@@ -447,16 +447,16 @@ function renderReceiptHistoryTable(data) {
         const transactionDate = new Date(row.transaction_timestamp);
         
         tr.innerHTML = `
-            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td>${transactionDate.toTimeString().substring(0, 8)}</td>
-            <td>${row.source_location || 'External'}</td>
-            <td>${row.destination_location || 'N/A'}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.lot_no || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td>${row.notes || ''}</td>
+            <td class="text-start">${transactionDate.toLocaleDateString('en-GB')}</td>
+            <td class="text-start">${transactionDate.toTimeString().substring(0, 8)}</td>
+            <td class="text-center">${row.source_location || 'External'}</td>
+            <td class="text-center">${row.destination_location || 'N/A'}</td>
+            <td class="text-center">${row.sap_no}</td>
+            <td class="text-center">${row.part_no}</td>
+            <td class="text-center">${row.model || ''}</td>
+            <td class="text-center">${row.lot_no || ''}</td>
+            <td  class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -515,16 +515,16 @@ function renderProductionHistoryTable(data) {
         }
         
         tr.innerHTML = `
-            <td>${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td>${timeRange}</td>
+            <td class="text-start">${transactionDate.toLocaleDateString('en-GB')}</td>
+            <td class="text-start">${timeRange}</td>
             <td class="text-center">${durationInMinutes}</td>
-            <td>${row.location_name || 'N/A'}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.part_no}</td>
-            <td>${row.lot_no || ''}</td>
-            <td class="text-end">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center">${row.location_name || 'N/A'}</td>
+            <td class="text-center">${row.part_no}</td>
+            <td class="text-center">${row.model || ''}</td>
+            <td class="text-center">${row.lot_no || ''}</td>
+            <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
             <td class="text-center">${row.count_type}</td>
-            <td>${row.notes || ''}</td>
+            <td class="text-center">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -564,11 +564,11 @@ function renderWipOnHandTable(data) {
 
         const onHandQty = parseFloat(row.quantity) || 0;
         tr.innerHTML = `
-            <td>${row.location_name}</td>
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.part_description || ''}</td>
+            <td class="text-start">${row.location_name}</td>
+            <td class="text-start">${row.sap_no}</td>
+            <td class="text-start">${row.part_no}</td>
+            <td class="text-start">${row.model || ''}</td>
+            <td class="text-start">${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -611,10 +611,10 @@ function renderStockInventoryTable(data) {
         const onHandQty = parseFloat(row.total_onhand) || 0;
 
         tr.innerHTML = `
-            <td>${row.sap_no}</td>
-            <td>${row.part_no}</td>
-            <td><small>${row.used_models || '-'}</small></td>
-            <td>${row.part_description || ''}</td>
+            <td class="text-start">${row.sap_no}</td>
+            <td class="text-start">${row.part_no}</td>
+            <td class="text-start">${row.used_models || '-'}</td>
+            <td class="text-start">${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -664,16 +664,16 @@ function renderAllTransactionsTable(data) {
         }
         
         tr.innerHTML = `
-            <td>${transactionDate.toLocaleString('en-GB')}</td>
-            <td><span class="badge bg-secondary">${row.transaction_type}</span></td>
-            <td>${row.part_no}</td>
-            <td>${row.model || ''}</td>
-            <td>${row.source_location || 'N/A'}</td>
-            <td>${row.destination_location || 'N/A'}</td>
-            <td class="text-end fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
-            <td>${row.lot_no || ''}</td>
-            <td>${row.username || 'N/A'}</td>
-            <td>${row.notes || ''}</td>
+            <td class="text-start">${transactionDate.toLocaleString('en-GB')}</td>
+            <td class="text-start">${row.source_location || 'N/A'}</td>
+            <td class="text-start">${row.destination_location || 'N/A'}</td>
+            <td class="text-start">${row.part_no}</td>
+            <td class="text-start">${row.model || ''}</td>
+            <td class="text-center">${row.lot_no || ''}</td>
+            <td class="text-center fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
+            <td class="text-center"><span class="badge bg-secondary">${row.transaction_type}</span></td>
+            <td class="text-center">${row.username || 'N/A'}</td>
+            <td class="text-center">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });

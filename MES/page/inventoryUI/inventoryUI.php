@@ -95,14 +95,14 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Location</th>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Model</th>
-                                        <th>Part Description</th>
-                                        <th class="text-end">Total IN</th>
-                                        <th class="text-end">Total OUT</th>
-                                        <th class="text-end">Variance (OUT - IN)</th>
+                                        <th class="text-start" style="width: 10%;">Location</th>
+                                        <th class="text-start" style="width: 10%;">SAP No.</th>
+                                        <th class="text-start" style="width: 10%;">Part Number</th>
+                                        <th class="text-start" style="width: 10%;">Model</th>
+                                        <th class="text-start" style="width: 25%;">Part Description</th>
+                                        <th class="text-end" style="width: 10%;">Total IN</th>
+                                        <th class="text-end" style="width: 10%;">Total OUT</th>
+                                        <th class="text-end" style="width: 15%;">Variance (OUT - IN)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productionVarianceTableBody"></tbody>
@@ -115,14 +115,14 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Model</th>
-                                        <th>Part Description</th>
-                                        <th>Lot Number</th>
-                                        <th class="text-end">Total IN</th>
-                                        <th class="text-end">Total OUT</th>
-                                        <th class="text-end">Variance (OUT - IN)</th>
+                                        <th class="text-start" style="width: 10%;">SAP No.</th>
+                                        <th class="text-start" style="width: 10%;">Part Number</th>
+                                        <th class="text-start" style="width: 10%;">Model</th>
+                                        <th class="text-start" style="width: 25%;">Part Description</th>
+                                        <th class="text-center" style="width: 10%;">Lot Number</th>
+                                        <th class="text-end" style="width: 10%;">Total IN</th>
+                                        <th class="text-end" style="width: 10%;">Total OUT</th>
+                                        <th class="text-end" style="width: 15%;">Variance (OUT - IN)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wipByLotTableBody"></tbody>
@@ -135,16 +135,16 @@
                             <table class="table table-hover table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>จาก (Source)</th>
-                                        <th>ไปยัง (Destination)</th>
-                                        <th>SAP No.</th>
-                                        <th>Part No.</th>
-                                        <th>Model</th>
-                                        <th>ล็อต / อ้างอิง</th>
-                                        <th class="text-end">จำนวน</th>
-                                        <th>หมายเหตุ</th>
+                                        <th class="text-start" style="width: 8%;">Date</th>
+                                        <th class="text-start" style="width: 12%;">Time</th>
+                                        <th class="text-center" style="width: 10%;">From</th>
+                                        <th class="text-center" style="width: 10%;">To</th>
+                                        <th class="text-center" style="width: 10%;">SAP No.</th>
+                                        <th class="text-center" style="width: 10%;">Part No.</th>
+                                        <th class="text-center" style="width: 10%;">Model</th>
+                                        <th class="text-center" style="width: 10%;">Lot. / Ref.</th>
+                                        <th class="text-center" style="width: 10%;">Quantity</th>
+                                        <th class="text-center" style="width: 10%;">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="entryHistoryTableBody"></tbody>
@@ -157,16 +157,16 @@
                             <table id="partTable" class="table table-striped table-hover">
                                 <thead>
                                     <tr>
-                                        <th style="width: 10%;">Date</th>
-                                        <th style="width: 15%;">Time (Start-End)</th>
+                                        <th class="text-start" style="width: 8%;">Date</th>
+                                        <th class="text-start" style="width: 12%;">Time (Start-End)</th>
                                         <th class="text-center" style="width: 8%;">Duration (m)</th>
-                                        <th style="width: 10%;">Location</th>
-                                        <th style="width: 12%;">Part No.</th>
-                                        <th style="width: 10%;">Model</th>
-                                        <th style="width: 10%;">Lot / Ref.</th>
-                                        <th class="text-end" style="width: 8%;">Quantity</th>
+                                        <th class="text-center" style="width: 10%;">Location</th>
+                                        <th class="text-center" style="width: 10%;">Part No.</th>
+                                        <th class="text-center" style="width: 8%;">Model</th>
+                                        <th class="text-center" style="width: 10%;">Lot / Ref.</th>
+                                        <th class="text-center" style="width: 8%;">Quantity</th>
                                         <th class="text-center" style="width: 8%;">Type</th>
-                                        <th>Notes</th>
+                                        <th class="text-center" style="width: 16%;">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="partTableBody"></tbody>
@@ -179,12 +179,12 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Location</th>
-                                        <th>SAP No.</th>
-                                        <th>Part Number</th>
-                                        <th>Model</th>
-                                        <th>Part Description</th>
-                                        <th class="text-end">On-Hand Quantity (WIP)</th>
+                                        <th class="text-start" style="width: 10%;">Location</th>
+                                        <th class="text-start" style="width: 10%;">SAP No.</th>
+                                        <th class="text-start" style="width: 10%;">Part Number</th>
+                                        <th class="text-start" style="width: 10%;">Model</th>
+                                        <th class="text-start" style="width: 45%;">Part Description</th>
+                                        <th class="text-end" style="width: 15%;">On-Hand Quantity (WIP)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wipOnHandTableBody"></tbody>
@@ -197,10 +197,10 @@
                             <table class="table table-striped table-hover">
                                 <thead>
                                     <tr>
-                                        <th style="width: 15%;">SAP No.</th>
-                                        <th style="width: 15%;">Part No.</th>
-                                        <th>Models</th>
-                                        <th>Part Description</th>
+                                        <th class="text-start" style="width: 10%;">SAP No.</th>
+                                        <th class="text-start" style="width: 10%;">Part No.</th>
+                                        <th class="text-start" style="width: 10%;">Models</th>
+                                        <th class="text-start" style="width: 55%;">Part Description</th>
                                         <th class="text-end" style="width: 15%;">Total On-Hand</th>
                                     </tr>
                                 </thead>
@@ -214,16 +214,16 @@
                             <table class="table table-striped table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Date & Time</th>
-                                        <th>Type</th>
-                                        <th>Part No.</th>
-                                        <th>Model</th>
-                                        <th>Source</th>
-                                        <th>Destination</th>
-                                        <th class="text-end">Change</th>
-                                        <th>Lot / Ref.</th>
-                                        <th>User</th>
-                                        <th>Notes</th>
+                                        <th class="text-start" style="width: 12%;">Date & Time</th>
+                                        <th class="text-start" style="width: 10%;">From</th>
+                                        <th class="text-start" style="width: 10%;">To</th>
+                                        <th class="text-start" style="width: 8%;">Part No.</th>
+                                        <th class="text-start" style="width: 8%;">Model</th>
+                                        <th class="text-center" style="width: 12%;">Lot / Ref.</th>
+                                        <th class="text-center" style="width: 8%;">Change</th>
+                                        <th class="text-center" style="width: 10%;">Type</th>
+                                        <th class="text-center" style="width: 10%;">User</th>
+                                        <th class="text-center" style="width: 12%;">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="transactionLogTableBody"></tbody>
