@@ -3,8 +3,7 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-// จำกัดสิทธิ์ให้เฉพาะ Admin และ Creator เท่านั้นที่สามารถจัดการ Item Master ได้
-if (!hasRole(['admin', 'creator'])) {
+if (!hasRole(['admin', 'creator', 'supervisor'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
@@ -38,9 +37,10 @@ try {
             $fromClause = "FROM " . ITEMS_TABLE . " i";
             $conditions = [];
 
+            // [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
             if (!empty($filter_model)) {
-                $fromClause .= " JOIN " . PARAMETER_TABLE . " p ON i.item_id = p.item_id"; 
-                $conditions[] = "RTRIM(LTRIM(p.model)) LIKE ?";
+                $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id"; 
+                $conditions[] = "RTRIM(LTRIM(r.model)) LIKE ?";
                 $params[] = '%' . $filter_model . '%';
             }
 
@@ -71,10 +71,11 @@ try {
                         
                         STUFF(
                             (
-                                SELECT ', ' + p_sub.model
-                                FROM " . PARAMETER_TABLE . " p_sub
-                                WHERE p_sub.item_id = i.item_id
-                                ORDER BY p_sub.model
+                                -- [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
+                                SELECT ', ' + r_sub.model
+                                FROM " . ROUTES_TABLE . " r_sub
+                                WHERE r_sub.item_id = i.item_id
+                                ORDER BY r_sub.model
                                 FOR XML PATH('')
                             ), 1, 2, ''
                         ) AS used_in_models,
@@ -96,57 +97,11 @@ try {
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
             break;
 
-            case 'get_item_routes':
-                $item_id = $_GET['item_id'] ?? 0;
-                if (!$item_id) {
-                    echo json_encode(['success' => true, 'data' => []]);
-                    exit;
-                }
-                $stmt = $pdo->prepare("SELECT * FROM " . ROUTES_TABLE . " WHERE item_id = ? ORDER BY line, model");
-                $stmt->execute([$item_id]);
-                $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                echo json_encode(['success' => true, 'data' => $routes]);
-                break;
-    
-            case 'save_route':
-                $route_id = $input['route_id'] ?? 0;
-                $item_id = $input['route_item_id'] ?? null;
-                $line = trim($input['route_line'] ?? '');
-                $model = trim($input['route_model'] ?? '');
-                $planned_output = (int)($input['route_planned_output'] ?? 0);
-    
-                if (empty($item_id) || empty($line) || empty($model)) {
-                    throw new Exception("Item ID, Line, and Model are required.");
-                }
-    
-                if ($route_id > 0) { // Update
-                    $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
-                    $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$line, $model, $planned_output, $route_id]);
-                    echo json_encode(['success' => true, 'message' => 'Route updated successfully.']);
-                } else { // Insert
-                    $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
-                    $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$item_id, $line, $model, $planned_output]);
-                    echo json_encode(['success' => true, 'message' => 'New route created successfully.']);
-                }
-                break;
-    
-            case 'delete_route':
-                $route_id = $input['route_id'] ?? 0;
-                if (!$route_id) throw new Exception("Route ID is required.");
-                
-                $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
-                $stmt->execute([$route_id]);
-                echo json_encode(['success' => true, 'message' => 'Route deleted successfully.']);
-                break;
-
         case 'save_item':
             $id = $input['item_id'] ?? 0;
             $sap_no = trim($input['sap_no'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
             $description = trim($input['part_description'] ?? '');
-            
             $planned_output = (int)($input['planned_output'] ?? 0);
 
             if (empty($sap_no) || empty($part_no)) {
@@ -207,11 +162,10 @@ try {
             }
             break;
 
-        // ใน itemMasterManage.php
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
-            // ใช้ค่าคงที่จาก config.php โดยตรง
-            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . PARAMETER_TABLE . " WHERE model IS NOT NULL AND model != ''";
+            // [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WHERE model IS NOT NULL AND model != ''";
             $params = [];
             if (!empty($searchTerm)) {
                 $sql .= " AND model LIKE ?";
@@ -232,10 +186,6 @@ try {
             }
             $pdo->beginTransaction();
             try {
-                $insertedCount = 0;
-                $updatedCount = 0;
-
-                // --- ★★★ START: แก้ไข SQL MERGE ★★★ ---
                 $sql = "
                     MERGE INTO " . ITEMS_TABLE . " AS target
                     USING (VALUES (?)) AS source (sap_no)
@@ -250,7 +200,6 @@ try {
                         INSERT (sap_no, part_no, part_description, planned_output, is_active, created_at) 
                         VALUES (?, ?, ?, ?, ?, GETDATE());
                 ";
-                // --- ★★★ END: แก้ไข SQL MERGE ★★★ ---
                 $stmt = $pdo->prepare($sql);
 
                 foreach ($items as $item) {
@@ -262,33 +211,10 @@ try {
                     $planned_output = (int)($item['planned_output'] ?? 0);
                     $is_active = (bool)($item['is_active'] ?? true);
                     
-                    // --- ★★★ START: แก้ไข Parameters ★★★ ---
                     $stmt->execute([
-                        $sap_no,          // for USING source
-                        $part_no,         // for UPDATE SET
-                        $desc,            // for UPDATE SET
-                        $planned_output,  // for UPDATE SET
-                        $is_active,       // for UPDATE SET
-                        $sap_no,          // for INSERT
-                        $part_no,         // for INSERT
-                        $desc,            // for INSERT
-                        $planned_output,  // for INSERT
-                        $is_active        // for INSERT
+                        $sap_no, $part_no, $desc, $planned_output, $is_active,
+                        $sap_no, $part_no, $desc, $planned_output, $is_active
                     ]);
-                    // --- ★★★ END: แก้ไข Parameters ★★★ ---
-
-                    // Check if it was an insert or update for counting
-                    // This is a simplified way; a more robust way might involve OUTPUT clause
-                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
-                    $checkStmt->execute([$sap_no]);
-                    
-                    // A more accurate rowCount might be needed depending on DB driver
-                    if ($stmt->rowCount() > 0) {
-                       // Heuristic: If it was just inserted, created_at would be very recent.
-                       // For simplicity, we can't easily distinguish insert vs update here without more complex SQL.
-                       // We can assume an update if it existed before, but that requires another query.
-                       // For now, we just log the action. A better approach is to split into two separate queries if counts are critical.
-                    }
                 }
 
                 $pdo->commit();
@@ -299,6 +225,93 @@ try {
                 $pdo->rollBack();
                 throw $e;
             }
+            break;
+
+        // ====== ROUTES ACTIONS ======
+        case 'get_item_routes':
+            $item_id = $_GET['item_id'] ?? 0;
+            if (!$item_id) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+            $stmt = $pdo->prepare("SELECT * FROM " . ROUTES_TABLE . " WHERE item_id = ? ORDER BY line, model");
+            $stmt->execute([$item_id]);
+            $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $routes]);
+            break;
+
+        case 'save_route':
+            $route_id = $input['route_id'] ?? 0;
+            $item_id = $input['route_item_id'] ?? null;
+            $line = trim($input['route_line'] ?? '');
+            $model = trim($input['route_model'] ?? '');
+            $planned_output = (int)($input['route_planned_output'] ?? 0);
+
+            if (empty($item_id) || empty($line) || empty($model)) {
+                throw new Exception("Item ID, Line, and Model are required.");
+            }
+
+            if ($route_id > 0) {
+                $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$line, $model, $planned_output, $route_id]);
+                echo json_encode(['success' => true, 'message' => 'Route updated successfully.']);
+            } else {
+                $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$item_id, $line, $model, $planned_output]);
+                echo json_encode(['success' => true, 'message' => 'New route created successfully.']);
+            }
+            break;
+
+        case 'delete_route':
+            $route_id = $input['route_id'] ?? 0;
+            if (!$route_id) throw new Exception("Route ID is required.");
+            
+            $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+            $stmt->execute([$route_id]);
+            echo json_encode(['success' => true, 'message' => 'Route deleted successfully.']);
+            break;
+
+        case 'read_schedules':
+            $stmt = $pdo->prepare("EXEC dbo.sp_GetSchedules");
+            $stmt->execute();
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'save_schedule':
+            $stmt = $pdo->prepare("EXEC dbo.sp_SaveSchedule @id=?, @line=?, @shift_name=?, @start_time=?, @end_time=?, @planned_break_minutes=?, @is_active=?");
+            $stmt->execute([
+                $input['id'] ?? 0, $input['line'], $input['shift_name'],
+                $input['start_time'], $input['end_time'],
+                $input['planned_break_minutes'], $input['is_active']
+            ]);
+            echo json_encode(['success' => true, 'message' => 'Schedule saved successfully.']);
+            break;
+
+        case 'delete_schedule':
+            $id = $input['id'] ?? 0;
+            if (!$id) { throw new Exception("Missing Schedule ID"); }
+            $stmt = $pdo->prepare("EXEC dbo.sp_DeleteSchedule @id=?");
+            $stmt->execute([(int)$id]);
+            echo json_encode(['success' => true, 'message' => 'Schedule deleted.']);
+            break;
+
+        case 'health_check_parameters':
+            if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
+                $sql = "
+                    SELECT DISTINCT i.sap_no, i.part_no, i.part_description
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    WHERE t.transaction_type LIKE 'PRODUCTION_%' AND (i.planned_output IS NULL OR i.planned_output <= 0)
+                    ORDER BY i.sap_no";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
+                $stmt->execute();
+            }
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
             
         default:

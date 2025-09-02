@@ -12,6 +12,11 @@
 <head>
     <title>System Settings</title>
     <?php include_once '../components/common_head.php'; ?>
+    <style>
+        #item-master-pane .master-detail-container { display: flex; gap: 1rem; }
+        #item-master-pane .master-list { flex: 0 0 45%; }
+        #item-master-pane .detail-view { flex: 1 1 auto; }
+    </style>
 </head>
 
 <body class="page-with-table">
@@ -56,8 +61,7 @@
                         </button>
                     </li>
                     <?php endif; ?>
-                    
-                    </ul>
+                </ul>
             </div>
 
             <div class="content-wrapper">
@@ -106,7 +110,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="tab-pane fade" id="bom-manager-pane" role="tabpanel">
                         <div class="sticky-bar">
                             <div class="row my-3 align-items-center">
@@ -159,69 +162,62 @@
                     </div>
 
                     <?php if ($canManage): ?>
-
-                    <div class="tab-pane fade" id="lineSchedulesPane" role="tabpanel">
-                        <div class="row my-3 align-items-center">
-                            <div class="col-md-9"></div>
-                            <div class="col-md-3">
-                                <div class="d-flex justify-content-end">
-                                    <button class="btn btn-success" onclick="openModal('addScheduleModal')">Add New Schedule</button>
+                        <div class="tab-pane fade" id="lineSchedulesPane" role="tabpanel">
+                            <div class="row my-3 align-items-center">
+                                <div class="col-md-9"></div>
+                                <div class="col-md-3">
+                                    <div class="d-flex justify-content-end">
+                                        <button class="btn btn-success" onclick="openModal('addScheduleModal')">Add New Schedule</button>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Line</th><th>Shift Name</th><th>Start Time</th><th>End Time</th>
+                                            <th>Break (min)</th><th>Status</th>
+                                            <th style="width: 150px; text-align: center;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="schedulesTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Line</th><th>Shift Name</th><th>Start Time</th><th>End Time</th>
-                                        <th>Break (min)</th><th>Status</th>
-                                        <th style="width: 150px; text-align: center;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="schedulesTableBody"></tbody>
-                            </table>
+                        <div class="tab-pane fade" id="healthCheckPane" role="tabpanel">
+                            <div class="alert alert-info mt-3">
+                                <h4><i class="fas fa-info-circle"></i> Parts Requiring Attention</h4>
+                                <p class="mb-0">The following parts have been produced but are missing standard time data (Planned Output). Please add them in the 'Standard Parameters' tab to ensure accurate OEE Performance calculation.</p>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Line</th>
+                                            <th>Model</th>
+                                            <th>Part No.</th>
+                                            <th style="width: 180px;" class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="missingParamsList"></tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="healthCheckPane" role="tabpanel">
-                        <div class="alert alert-info mt-3">
-                            <h4><i class="fas fa-info-circle"></i> Parts Requiring Attention</h4>
-                            <p class="mb-0">The following parts have been produced but are missing standard time data (Planned Output). Please add them in the 'Standard Parameters' tab to ensure accurate OEE Performance calculation.</p>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Line</th>
-                                        <th>Model</th>
-                                        <th>Part No.</th>
-                                        <th style="width: 180px;" class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="missingParamsList"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
                     <?php endif; ?>
                 </div>
             </div>
-                    
+            
             <div id="toast"></div>
 
             <?php 
-                include('components/routeModal.php');
                 include('components/locationModal.php'); 
                 include('components/transferModal.php');
                 include('components/itemModal.php');
-                include('components/addParamModal.php');
-                include('components/editParamModal.php');
+                include('components/routeModal.php'); 
                 include('components/addScheduleModal.php');
                 include('components/editScheduleModal.php');
                 include('components/manageBomModal.php'); 
                 include('components/createBomModal.php');
-                include('components/createVariantsModal.php');
-                include('components/bulkCreateVariantsModal.php');
                 include('components/copyBomModal.php');
                 include('components/bomImportPreviewModal.php');
                 include('components/bomBulkImportPreviewModal.php');
@@ -233,9 +229,6 @@
                 <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
             </nav>
             <?php endif; ?>
-            <nav class="sticky-bottom" data-tab-target="#standard-params-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="paginationControls"></ul>
-            </nav>
             <nav class="sticky-bottom" data-tab-target="#bom-manager-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
             </nav>
@@ -250,9 +243,7 @@
             <script src="../../utils/libs/xlsx.full.min.js"></script>
             
             <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
-            <script src="script/paraManage.js?v=<?php echo filemtime('script/paraManage.js'); ?>"></script>
-            <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
-            </main>
+        </main>
     </div>
 </body>
 </html>

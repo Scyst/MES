@@ -20,16 +20,12 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-
         // ====== Cases from stockApi.php ======
-
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
-
             $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " ORDER BY sap_no");
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-
             echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
             break;
 
@@ -51,50 +47,25 @@ try {
             $pdo->beginTransaction();
             try {
                 if (!empty($from_location_id)) {
-                    // ========== นี่คือ LOGIC สำหรับ TRANSFER (เวอร์ชันใหม่) ==========
                     if ($from_location_id == $to_location_id) {
                         throw new Exception("Source and Destination locations cannot be the same.");
                     }
-
-                    // 1. หักสตอกจากต้นทาง (โดยไม่เช็คสต็อก และจะสร้างแถวใหม่ถ้ายังไม่มี)
-                    $mergeFromSql = "MERGE " . ONHAND_TABLE . " AS target 
-                                    USING (SELECT ? AS item_id, ? AS location_id) AS source 
-                                    ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
-                                    WHEN MATCHED THEN 
-                                        UPDATE SET quantity = target.quantity - ? 
-                                    WHEN NOT MATCHED THEN 
-                                        INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-                    $mergeFromStmt = $pdo->prepare($mergeFromSql);
-                    $mergeFromStmt->execute([$item_id, $from_location_id, $quantity, $item_id, $from_location_id, -$quantity]);
-
-
-                    // 2. เพิ่มสต็อกที่ปลายทาง (โค้ดส่วนนี้เหมือนเดิม)
-                    $updateToSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ? WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-                    $updateToStmt = $pdo->prepare($updateToSql);
-                    $updateToStmt->execute([$item_id, $to_location_id, $quantity, $item_id, $to_location_id, $quantity]);
-
-                    // 3. บันทึกประวัติเป็น TRANSFER (โค้ดส่วนนี้เหมือนเดิม)
-                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?, ?)";
+                    updateOnhandBalance($pdo, $item_id, $from_location_id, -$quantity);
+                    updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
+                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
                     $message = 'Stock transferred successfully.';
-
                 } else {
-                    $mergeSql = "MERGE " . ONHAND_TABLE . " AS target USING (SELECT ? AS item_id, ? AS location_id) AS source ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) WHEN MATCHED THEN UPDATE SET quantity = target.quantity + ? WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-                    $mergeStmt = $pdo->prepare($mergeSql);
-                    $mergeStmt->execute([$item_id, $to_location_id, $quantity, $item_id, $to_location_id, $quantity]);
-
-                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?)";
+                    updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
+                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
-
                     $message = 'Stock receipt logged successfully.';
                 }
-
                 $pdo->commit();
                 logAction($pdo, $currentUser['username'], 'STOCK_IN', $item_id, "Qty: {$quantity}, To: {$to_location_id}, From: {$from_location_id}");
                 echo json_encode(['success' => true, 'message' => $message]);
-
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
@@ -102,198 +73,158 @@ try {
             break;
 
         case 'get_receipt_history':
+        case 'get_production_history':
+        case 'get_all_transactions':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
+            $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
+            $limit = $isExport ? 10000 : 50;
             $offset = ($page - 1) * $limit;
-
             $params = [];
-            $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER')"];
+            $conditions = [];
+            if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER')";
+            if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
 
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc_to.location_name LIKE ? OR loc_from.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = t.parameter_id AND p.line = loc_to.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term, $search_term);
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
-
+            if (!empty($_GET['count_type']) && $action === 'get_production_history') {
+                $conditions[] = "t.transaction_type = ?"; 
+                $params[] = 'PRODUCTION_' . $_GET['count_type']; 
+            }
             if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
 
-            $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $totalSql = "
-                SELECT COUNT(*) 
-                FROM " . TRANSACTIONS_TABLE . " t 
-                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+            $baseSql = "
+                FROM " . TRANSACTIONS_TABLE . " t
+                LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc ON ISNULL(t.to_location_id, t.from_location_id) = loc.location_id
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                 {$whereClause}
             ";
+            $totalSql = "SELECT COUNT(*) " . $baseSql;
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
                 SELECT 
-                    t.transaction_id, t.transaction_timestamp, t.transaction_type,
-                    i.sap_no, i.part_no, 
-                        (
-                            SELECT STUFF((
-                                SELECT DISTINCT ', ' + p.model
-                                FROM " . PARAMETER_TABLE . " p
-                                WHERE p.item_id = t.parameter_id AND p.line = loc_to.production_line
-                                FOR XML PATH('')), 1, 2, '')
-                        ) AS model,
-                        i.part_description, t.quantity, 
-                    loc_to.location_name AS destination_location,
-                    loc_from.location_name AS source_location,
-                    t.reference_id as lot_no,
-                    t.notes
-                FROM " . TRANSACTIONS_TABLE . " t
-                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                {$whereClause}
+                    t.transaction_id, t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no, t.quantity,
+                    (
+                        SELECT STUFF((
+                            SELECT DISTINCT ', ' + r.model FROM " . ROUTES_TABLE . " r
+                            WHERE r.item_id = t.parameter_id AND r.line = loc.production_line
+                            FOR XML PATH('')), 1, 2, '')
+                    ) AS model,
+                    REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
+                    loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
+                    FORMAT(t.start_time, N'hh\\:mm\\:ss') as start_time,
+                    FORMAT(t.end_time, N'hh\\:mm\\:ss') as end_time,
+                    (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.from_location_id) as source_location,
+                    (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location
+                " . $baseSql . "
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
 
             $dataStmt = $pdo->prepare($dataSql);
             $paramIndex = 1;
-            foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param); 
-            }
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-
             $dataStmt->execute();
             $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit]);
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
             break;
 
         case 'get_stock_inventory_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-            $endRow = $startRow + $limit;
-
+            $limit = 50; $startRow = ($page - 1) * $limit; $endRow = $startRow + $limit;
             $search_term = $_GET['search_term'] ?? '';
-            $conditions = [];
-            $params = [];
+            $conditions = []; $params = [];
             if (!empty($search_term)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
                 $params = ["%{$search_term}%", "%{$search_term}%", "%{$search_term}%"];
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-
             $totalSql = "SELECT COUNT(DISTINCT i.item_id) FROM " . ITEMS_TABLE . " i {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
-
             $dataSql = "
                 WITH ItemGroup AS (
                     SELECT
                         i.item_id, i.sap_no, i.part_no, i.part_description,
                         SUM(ISNULL(h.quantity, 0)) as total_onhand,
-                        -- This subquery aggregates the model names
-                        STUFF(
-                            (
-                                SELECT ', ' + p.model
-                                FROM " . PARAMETER_TABLE . " p
-                                WHERE p.item_id = i.item_id
-                                ORDER BY p.model
-                                FOR XML PATH('')
-                            ), 1, 2, ''
-                        ) AS used_models
+                        STUFF((
+                            SELECT ', ' + r.model FROM " . ROUTES_TABLE . " r
+                            WHERE r.item_id = i.item_id ORDER BY r.model FOR XML PATH('')
+                        ), 1, 2, '') AS used_models
                     FROM " . ITEMS_TABLE . " i
                     LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
                     {$whereClause}
                     GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description
                 ),
                 NumberedRows AS (
-                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no) as RowNum
-                    FROM ItemGroup
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no) as RowNum FROM ItemGroup
                 )
                 SELECT item_id, sap_no, part_no, part_description, total_onhand, used_models
-                FROM NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
+                FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
-
-            $paginationParams = array_merge($params, [$startRow, $endRow]);
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute($paginationParams);
+            $paramIndex = 1;
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            $dataStmt->bindValue($paramIndex++, $startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $endRow, PDO::PARAM_INT);
+            $dataStmt->execute();
             $stock = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
             echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
             break;
 
         case 'get_production_variance_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-
-            $params = [];
-            $date_params = [];
-            $conditions = [];
-            $date_where_clause = '';
+            $limit = 50; $startRow = ($page - 1) * $limit;
+            $params = []; $date_params = []; $conditions = []; $date_where_clause = '';
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
-                // ★★★ START: เพิ่ม model ในเงื่อนไขการค้นหา ★★★
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id AND p.line = l.production_line) LIKE ?)";
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term);
-                // ★★★ END: ส่วนที่แก้ไข ★★★
             }
-            
             if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
                 $date_where_clause = "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)";
                 $date_params[] = $_GET['startDate'];
                 $date_params[] = $_GET['endDate'];
             }
-
             $baseQuery = "
                 SELECT 
-                    t.parameter_id,
-                    ISNULL(t.from_location_id, t.to_location_id) AS location_id,
-                    0 AS total_in,
-                    ABS(t.quantity) AS total_out
+                    t.parameter_id, ISNULL(t.from_location_id, t.to_location_id) AS location_id,
+                    0 AS total_in, ABS(t.quantity) AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
-                WHERE ( 
-                    (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL)
-                    OR 
-                    (t.transaction_type LIKE 'PRODUCTION_%')
-                )
+                WHERE ( (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL) OR (t.transaction_type LIKE 'PRODUCTION_%') )
                 {$date_where_clause}
-
                 UNION ALL
-
                 SELECT 
-                    t.parameter_id,
-                    t.to_location_id AS location_id,
-                    t.quantity AS total_in,
-                    0 AS total_out
+                    t.parameter_id, t.to_location_id AS location_id,
+                    t.quantity AS total_in, 0 AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
                 WHERE t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL
                 {$date_where_clause}
             ";
-            
-            // ★★★ START: ส่วนที่แก้ไข Query หลัก ★★★
             $finalQuery = "
                 SELECT
-                    agg.location_id,
-                    l.location_name,
-                    i.item_id,
+                    agg.location_id, l.location_name, i.item_id,
                     i.sap_no, i.part_no, i.part_description,
                     (
                         SELECT STUFF((
-                            SELECT DISTINCT ', ' + p.model
-                            FROM " . PARAMETER_TABLE . " p
-                            WHERE p.item_id = i.item_id AND p.line = l.production_line
+                            SELECT DISTINCT ', ' + r.model FROM " . ROUTES_TABLE . " r
+                            WHERE r.item_id = i.item_id AND r.line = l.production_line
                             FOR XML PATH('')), 1, 2, '')
                     ) AS model,
-                    SUM(agg.total_in) as total_in,
-                    SUM(agg.total_out) as total_out,
+                    SUM(agg.total_in) as total_in, SUM(agg.total_out) as total_out,
                     (SUM(agg.total_out) - SUM(agg.total_in)) as variance
                 FROM ({$baseQuery}) agg
                 JOIN " . ITEMS_TABLE . " i ON agg.parameter_id = i.item_id
@@ -301,10 +232,7 @@ try {
                 ".(!empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "")."
                 GROUP BY agg.location_id, l.location_name, i.item_id, i.sap_no, i.part_no, i.part_description, l.production_line
             ";
-            // ★★★ END: ส่วนที่แก้ไข ★★★
-
             $full_params = array_merge($date_params, $date_params, $params);
-            
             $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($full_params);
@@ -317,10 +245,14 @@ try {
                 )
                 SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
-
             $dataStmt = $pdo->prepare($dataSql);
-            $final_execution_params = array_merge($full_params, [$startRow, $startRow + $limit]);
-            $dataStmt->execute($final_execution_params);
+            $paramIndex = 1;
+            $all_final_params = array_merge($full_params, [$startRow, $startRow + $limit]);
+            foreach($all_final_params as $p) {
+                if (is_int($p)) { $dataStmt->bindValue($paramIndex++, $p, PDO::PARAM_INT); } 
+                else { $dataStmt->bindValue($paramIndex++, $p); }
+            }
+            $dataStmt->execute();
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
@@ -328,43 +260,27 @@ try {
 
         case 'get_wip_onhand_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-
+            $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["l.location_name NOT LIKE '%WAREHOUSE%'", "h.quantity <> 0"];
-
             if (!empty($_GET['search_term'])) { 
                 $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id AND p.line = l.production_line) LIKE ?)";
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term);
             }
-            
             $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $totalSql = "
-                SELECT COUNT(*) 
-                FROM ". ONHAND_TABLE ." h
-                JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id
-                JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
-                {$whereClause}
-            ";
+            $totalSql = "SELECT COUNT(*) FROM ". ONHAND_TABLE ." h JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
-
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        i.item_id,
-                        h.location_id,
-                        l.location_name, i.sap_no, i.part_no, i.part_description, 
+                        i.item_id, h.location_id, l.location_name, i.sap_no, i.part_no, i.part_description, 
                         (
                             SELECT STUFF((
-                                SELECT DISTINCT ', ' + p.model
-                                FROM " . PARAMETER_TABLE . " p
-                                WHERE p.item_id = i.item_id AND p.line = l.production_line
-                                FOR XML PATH('')), 1, 2, '')
+                                SELECT DISTINCT ', ' + r.model FROM " . ROUTES_TABLE . " r
+                                WHERE r.item_id = i.item_id AND r.line = l.production_line FOR XML PATH('')), 1, 2, '')
                         ) AS model,
                         ISNULL(h.quantity, 0) as quantity,
                         ROW_NUMBER() OVER (ORDER BY l.location_name, i.sap_no) as RowNum
@@ -374,12 +290,77 @@ try {
                     {$whereClause}
                 )
                 SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity 
-                FROM NumberedRows 
-                WHERE RowNum > ? AND RowNum <= ?
+                FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
-            
             $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
+            $paramIndex = 1;
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            $dataStmt->bindValue($paramIndex++, $startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $startRow + $limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
+            break;
+
+        case 'get_wip_report_by_lot':
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50; $startRow = ($page - 1) * $limit;
+            $params = [];
+            $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
+            
+            if (!empty($_GET['search_term'])) {
+                $search_term = '%' . $_GET['search_term'] . '%';
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ? OR (SELECT STUFF((SELECT DISTINCT ', ' + r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            }
+            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
+
+            $whereClause = "WHERE " . implode(" AND ", $conditions);
+            $baseQuery = "
+                SELECT
+                    t.parameter_id, t.reference_id as lot_no,
+                    SUM(CASE WHEN t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL THEN t.quantity ELSE 0 END) as total_in,
+                    SUM(CASE WHEN t.transaction_type IN ('CONSUMPTION', 'TRANSFER') OR t.transaction_type LIKE 'PRODUCTION_%' THEN ABS(t.quantity) ELSE 0 END) as total_out
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " l ON ISNULL(t.to_location_id, t.from_location_id) = l.location_id
+                {$whereClause}
+                GROUP BY t.parameter_id, t.reference_id
+            ";
+            $finalQuery = "
+                SELECT
+                    i.sap_no, i.part_no, i.part_description,
+                    (
+                        SELECT STUFF((
+                            SELECT DISTINCT ', ' + r.model FROM " . ROUTES_TABLE . " r
+                            WHERE r.item_id = i.item_id FOR XML PATH('')), 1, 2, '')
+                    ) AS model,
+                    w.lot_no, ISNULL(w.total_in, 0) as total_in,
+                    ISNULL(w.total_out, 0) as total_out,
+                    (ISNULL(w.total_in, 0) - ISNULL(w.total_out, 0)) as on_hand_by_lot
+                FROM ({$baseQuery}) w
+                JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
+                WHERE (w.total_in > 0 OR w.total_out > 0)
+            ";
+            $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+            $dataSql = "
+                WITH NumberedRows AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no, lot_no) AS RowNum
+                    FROM ({$finalQuery}) AS FinalQuery
+                )
+                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
+            ";
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            $dataStmt->bindValue($paramIndex++, $startRow, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $startRow + $limit, PDO::PARAM_INT);
+            $dataStmt->execute();
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
@@ -436,99 +417,6 @@ try {
             $pdo->commit();
             logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
             echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
-            break;
-
-        case 'get_production_history':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
-            $limit = $isExport ? 99999 : 50;
-            $offset = ($page - 1) * $limit;
-
-            $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"];
-            $params = [];
-            
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = t.parameter_id AND p.line = loc.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
-            }
-            if (!empty($_GET['count_type'])) {
-                $conditions[] = "t.transaction_type = ?"; 
-                $params[] = 'PRODUCTION_' . $_GET['count_type']; 
-            }
-            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
-
-            $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id {$whereClause}";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-
-            $dataSql = "
-                SELECT t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, t.quantity,
-                    (
-                        SELECT STUFF((
-                            SELECT DISTINCT ', ' + p.model
-                            FROM " . PARAMETER_TABLE . " p
-                            WHERE p.item_id = t.parameter_id AND p.line = loc.production_line
-                            FOR XML PATH('')), 1, 2, '')
-                    ) AS model,
-                    REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
-                    loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
-                    FORMAT(t.start_time, N'hh\\:mm\\:ss') as start_time,
-                    FORMAT(t.end_time, N'hh\\:mm\\:ss') as end_time
-                FROM " . TRANSACTIONS_TABLE . " t
-                LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                {$whereClause}
-                ORDER BY t.transaction_timestamp DESC
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-
-            $dataStmt = $pdo->prepare($dataSql);
-            $paramIndex = 1;
-            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
-            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-            $dataStmt->execute();
-            $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $summary = [];
-            $grand_total = [];
-            if ($isExport) {
-                $summarySql = "
-                    SELECT i.sap_no, i.part_no, REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                    {$whereClause}
-                    GROUP BY i.sap_no, i.part_no, t.transaction_type
-                    ORDER BY i.sap_no, i.part_no, t.transaction_type
-                ";
-                $summaryStmt = $pdo->prepare($summarySql);
-                $summaryStmt->execute($params);
-                $summary = $summaryStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                $grandTotalSql = "
-                    SELECT REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type, SUM(t.quantity) as total_quantity
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    LEFT JOIN " . LOCATIONS_TABLE . " loc ON t.to_location_id = loc.location_id
-                    {$whereClause}
-                    GROUP BY t.transaction_type
-                ";
-                $grandTotalStmt = $pdo->prepare($grandTotalSql);
-                $grandTotalStmt->execute($params);
-                $grand_total = $grandTotalStmt->fetchAll(PDO::FETCH_ASSOC);
-            }
-
-            echo json_encode([
-                'success' => true, 'data' => $history, 'total' => $total, 'page' => $page, 'limit' => $limit,
-                'summary' => $summary, 'grand_total' => $grand_total
-            ]);
             break;
 
         case 'get_transaction_details':
@@ -699,80 +587,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
             break;
 
-        case 'get_wip_report_by_lot':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $startRow = ($page - 1) * $limit;
-
-            $params = [];
-            $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
-            
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                // ★★★ START: เพิ่ม model ในเงื่อนไขการค้นหา ★★★
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ? OR (SELECT STUFF((SELECT DISTINCT ', ' + p.model FROM ". PARAMETER_TABLE ." p WHERE p.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
-                // ★★★ END: ส่วนที่แก้ไข ★★★
-            }
-            if (!empty($_GET['startDate'])) { $conditions[] = "t.transaction_timestamp >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; $params[] = $_GET['endDate']; }
-
-            $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $baseQuery = "
-                SELECT
-                    t.parameter_id,
-                    t.reference_id as lot_no,
-                    SUM(CASE WHEN t.transaction_type IN ('RECEIPT', 'TRANSFER') AND t.to_location_id IS NOT NULL THEN t.quantity ELSE 0 END) as total_in,
-                    SUM(CASE WHEN t.transaction_type IN ('CONSUMPTION', 'TRANSFER') OR t.transaction_type LIKE 'PRODUCTION_%' THEN ABS(t.quantity) ELSE 0 END) as total_out
-                FROM " . TRANSACTIONS_TABLE . " t
-                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " l ON ISNULL(t.to_location_id, t.from_location_id) = l.location_id
-                {$whereClause}
-                GROUP BY t.parameter_id, t.reference_id
-            ";
-            
-            // ★★★ START: ส่วนที่แก้ไข Query หลัก ★★★
-            $finalQuery = "
-                SELECT
-                    i.sap_no, i.part_no, i.part_description,
-                    (
-                        SELECT STUFF((
-                            SELECT DISTINCT ', ' + p.model
-                            FROM " . PARAMETER_TABLE . " p
-                            WHERE p.item_id = i.item_id
-                            FOR XML PATH('')), 1, 2, '')
-                    ) AS model,
-                    w.lot_no,
-                    ISNULL(w.total_in, 0) as total_in,
-                    ISNULL(w.total_out, 0) as total_out,
-                    (ISNULL(w.total_out, 0) - ISNULL(w.total_in, 0)) as variance
-                FROM ({$baseQuery}) w
-                JOIN " . ITEMS_TABLE . " i ON w.parameter_id = i.item_id
-                WHERE (w.total_in > 0 OR w.total_out > 0)
-            ";
-            // ★★★ END: ส่วนที่แก้ไข ★★★
-            
-            $totalSql = "SELECT COUNT(*) FROM ({$finalQuery}) AS SubQuery";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-
-            $dataSql = "
-                WITH NumberedRows AS (
-                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no, lot_no) AS RowNum
-                    FROM ({$finalQuery}) AS FinalQuery
-                )
-                SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
-            ";
-
-            $dataStmt = $pdo->prepare($dataSql);
-            $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
-            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
-            break;
-
         case 'get_stock_details_by_item':
             $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
@@ -903,76 +717,6 @@ try {
             $stockStmt->execute([$item_id, $location_id]);
             $quantity = $stockStmt->fetchColumn();
             echo json_encode(['success' => true, 'quantity' => $quantity ?: 0]);
-            break;
-
-        case 'get_all_transactions':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $offset = ($page - 1) * $limit;
-
-            $params = [];
-            $conditions = [];
-
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term, $search_term);
-            }
-            if (!empty($_GET['startDate'])) { 
-                $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; 
-                $params[] = $_GET['startDate']; 
-            }
-            if (!empty($_GET['endDate'])) { 
-                $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; 
-                $params[] = $_GET['endDate']; 
-            }
-
-            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-
-            $baseSql = "
-                FROM " . TRANSACTIONS_TABLE . " t
-                LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                {$whereClause}
-            ";
-
-            $totalSql = "SELECT COUNT(*) " . $baseSql;
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-            
-            $dataSql = "
-                SELECT 
-                    t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no,
-                        (
-                            SELECT STUFF((
-                                SELECT DISTINCT ', ' + p.model
-                                FROM " . PARAMETER_TABLE . " p
-                                WHERE p.item_id = t.parameter_id AND p.line = ISNULL(loc_to.production_line, loc_from.production_line)
-                                FOR XML PATH('')), 1, 2, '')
-                        ) AS model,
-                    loc_from.location_name AS source_location,
-                    loc_to.location_name AS destination_location,
-                    t.quantity, t.reference_id as lot_no, u.username, t.notes
-                " . $baseSql . "
-                ORDER BY t.transaction_timestamp DESC
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-
-            $dataStmt = $pdo->prepare($dataSql);
-            $paramIndex = 1;
-            foreach ($params as $param) {
-                $dataStmt->bindValue($paramIndex++, $param);
-            }
-            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-
-            $dataStmt->execute();
-            $transactions = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $transactions, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
         case 'get_receipt_history_summary':
