@@ -38,53 +38,48 @@ try {
         $partConditions[] = "l.production_line = ?";
         $partParams[] = $line;
     }
+    if ($model) {
+        $partConditions[] = "r.model = ?";
+        $partParams[] = $model;
+    }
     $partWhereClause = "WHERE " . implode(" AND ", $partConditions);
 
     $partSql = "
         SELECT 
-            l.production_line as group_label,
+            i.part_no,
+            l.production_line,
+            r.model,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as FG,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as HOLD,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) as SCRAP
         FROM " . TRANSACTIONS_TABLE . " t
         JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+        JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+        JOIN " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
         {$partWhereClause} AND l.production_line IS NOT NULL
-        GROUP BY l.production_line
-        ORDER BY l.production_line
+        GROUP BY i.part_no, l.production_line, r.model -- ✅ จัดกลุ่มให้ละเอียดขึ้น
+        HAVING SUM(t.quantity) > 0 -- ✅ แสดงเฉพาะรายการที่มีการผลิต
+        ORDER BY i.part_no, l.production_line, r.model ASC
     ";
+
     $partStmt = $pdo->prepare($partSql);
     $partStmt->execute($partParams);
     $partResults = $partStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 3. จัดรูปแบบข้อมูลสำหรับ Frontend ---
+    // --- 3. จัดรูปแบบข้อมูลสำหรับ Frontend (ส่วนของ Stop Causes) ---
     $stopCauseLabels = array_column($stopResults, 'cause');
     $stopCauseData = array_column($stopResults, 'total_minutes');
-    
-    $partLabels = array_column($partResults, 'group_label');
-    $FG = array_column($partResults, 'FG');
-    $HOLD = array_column($partResults, 'HOLD');
-    $SCRAP = array_column($partResults, 'SCRAP');
 
-    // --- 4. ส่งข้อมูลกลับ ---
+    // --- 4. ส่งข้อมูลกลับ (ส่ง partResults ไปทั้งก้อน) ---
     echo json_encode([
         "success" => true,
         "data" => [
-            "parts" => [
-                "labels"   => $partLabels,
-                "FG"       => $FG,
-                "HOLD"     => $HOLD,
-                "SCRAP"    => $SCRAP,
-                // เพิ่ม Key ที่ขาดไปเพื่อให้โครงสร้างสมบูรณ์
-                "NG"       => [], 
-                "REWORK"   => [],
-                "ETC"      => []
-            ],
+            "partResults" => $partResults,
             "stopCause" => [
                 "labels" => $stopCauseLabels,
                 "datasets" => [
                     ["label" => "Downtime (min)", "data" => $stopCauseData]
-                ],
-                "tooltipInfo" => [] // เพิ่ม Key ที่ขาดไป
+                ]
             ]
         ]
     ]);

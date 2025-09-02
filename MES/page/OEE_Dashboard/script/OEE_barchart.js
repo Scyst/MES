@@ -168,29 +168,47 @@ async function fetchAndRenderBarCharts() {
         if (!responseData.success) throw new Error(responseData.error || "Barchart API: Failed to fetch bar chart data.");
 
         // --- Parts Bar Chart (Production Results) ---
-        const partsData = responseData.data?.parts;
-        const hasPartsData = partsData && partsData.labels && partsData.labels.length > 0;
+        const partResults = responseData.data?.partResults;
+        const hasPartsData = partResults && partResults.length > 0;
         toggleNoDataMessage("partsBarChart", !hasPartsData);
 
+        let partLabels = [];
+        let originalPartLabels = [];
+        let fgData = [];
+        let holdData = [];
+        let scrapData = [];
         let partDatasets = [];
+
         if (hasPartsData) {
-            const countTypes = { 
-                FG: '--mes-color-success',
-                HOLD: '--mes-color-warning',
-                SCRAP: '--mes-color-danger'
-            };
+            partResults.forEach(row => {
+                // ✅ Label สำหรับแกน X: กลับไปใช้แค่ Part Number เพื่อความสะอาด
+                partLabels.push(row.part_no);
+                
+                // ✅ Label สำหรับ Tooltip: ยังคงใช้รูปแบบเต็มเพื่อให้ข้อมูลครบถ้วน
+                originalPartLabels.push(`${row.part_no} (${row.production_line} / ${row.model})`);
+                
+                fgData.push(row.FG);
+                holdData.push(row.HOLD);
+                scrapData.push(row.SCRAP);
+            });
+
+            // สร้าง Datasets (ส่วนนี้เหมือนเดิม)
+            const countTypes = { FG: fgData, HOLD: holdData, SCRAP: scrapData };
+            const colors = { FG: '--mes-color-success', HOLD: '--mes-color-warning', SCRAP: '--mes-color-danger' };
+            
             partDatasets = Object.keys(countTypes)
                 .map(type => ({
                     label: type,
-                    data: partsData[type] || [],
-                    backgroundColor: getCssVar(countTypes[type])
+                    data: countTypes[type],
+                    backgroundColor: getCssVar(colors[type])
                 }))
                 .filter(ds => ds.data.some(val => val > 0)); 
         }
         
-        renderBarChart('partsBarChart', hasPartsData ? partsData.labels.map(l => truncateLabel(l)) : [], partDatasets, { 
+        // ✅ ไม่ต้องใช้ truncateLabel กับ partLabels อีกต่อไป เพราะมันสั้นอยู่แล้ว
+        renderBarChart('partsBarChart', partLabels, partDatasets, { 
             isStacked: true, 
-            originalLabels: hasPartsData ? partsData.labels : [], 
+            originalLabels: originalPartLabels, // Tooltip ยังคงใช้ข้อมูลเต็ม
             unitLabel: 'pcs' 
         });
         
