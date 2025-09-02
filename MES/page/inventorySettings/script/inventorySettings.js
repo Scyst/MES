@@ -513,18 +513,24 @@ function setupModelFilterAutocomplete() {
         window.debounceTimer = setTimeout(() => fetchItems(1), 500);
     });
 }
+
 function renderItemsTable(items, totalItems, page) {
     const tbody = document.getElementById('itemsTableBody');
     tbody.innerHTML = '';
+    
+    // ✅ แก้ไข colspan เป็น 6 ให้ตรงกับจำนวนคอลัมน์ใหม่
     if (items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`;
-        renderPagination('itemMasterPagination', 0, 1, ROWS_PER_PAGE, fetchItems);
+        renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
         return;
     }
+
     items.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
+        tr.style.cursor = 'pointer'; // ทำให้ผู้ใช้รู้ว่าสามารถคลิกได้
         tr.dataset.itemId = item.item_id;
+        
+        // ✅ ปรับแก้ <td> ให้ตรงกับ <th> ใน itemMasterUI.php และลบปุ่ม Edit ออก
         tr.innerHTML = `
             <td><span class="fw-bold">${item.sap_no}</span> ${!item.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}</td>
             <td>${item.part_no}</td>
@@ -533,17 +539,22 @@ function renderItemsTable(items, totalItems, page) {
             <td class="text-center">${item.planned_output || 0}</td>
             <td class="text-end">${item.created_at}</td>
         `;
+
         if (item.is_active != 1) {
             tr.classList.add('table-secondary', 'text-muted');
         }
-        tr.addEventListener('click', (e) => {
-            if (e.target.closest('.item-actions')) return;
-            selectItem(item.item_id, tr);
+
+        // ✅ เปลี่ยนมาใช้ Event Listener ที่แถว (tr) โดยตรงเพื่อเปิด Modal
+        tr.addEventListener('click', () => {
+            openItemModal(item);
         });
+
         tbody.appendChild(tr);
     });
+    
     renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
 }
+
 async function selectItem(itemId, selectedRow) {
     if (selectedItemId === itemId) {
         selectedItemId = null;
@@ -630,47 +641,172 @@ async function deleteRoute(routeId) {
         }
     }
 }
-function openItemModal(item = null) {
-    const form = document.getElementById('itemForm');
+
+async function openItemModal(item = null) {
+    const form = document.getElementById('itemAndRoutesForm');
     form.reset();
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('itemModal'));
+    const modal = new bootstrap.Modal(document.getElementById('itemModal'));
+    const modalTitle = document.getElementById('itemModalLabel');
+    const routesTbody = document.getElementById('modalRoutesTableBody');
+    routesTbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading routes...</td></tr>';
+    
+    // ทำให้ปุ่ม Delete มองไม่เห็นก่อน เผื่อเป็นการสร้าง Item ใหม่
+    document.getElementById('deleteItemBtn').style.display = 'none';
+
     if (item) {
-        document.getElementById('itemModalLabel').textContent = `Edit Item: ${item.sap_no}`;
-        for (const key in item) {
-            const input = form.querySelector(`[name="${key}"]`);
-            if (input) input.value = item[key];
+        // --- 1. เติมข้อมูลหลักของ Item ลงในฟอร์ม ---
+        modalTitle.textContent = `Edit Item: ${item.sap_no}`;
+        document.getElementById('item_id').value = item.item_id;
+        document.getElementById('sap_no').value = item.sap_no;
+        document.getElementById('part_no').value = item.part_no;
+        document.getElementById('planned_output').value = item.planned_output; // ใส่ค่าเดิมไปก่อน
+        document.getElementById('part_description').value = item.part_description;
+        
+        // แสดงปุ่ม Delete เมื่อเป็นการแก้ไข
+        document.getElementById('deleteItemBtn').style.display = 'inline-block';
+
+        // --- 2. ดึงข้อมูล Routes และคำนวณ Planned Output ---
+        const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
+        const routes = result.success ? result.data : [];
+        renderRoutesInModal(routes);
+
+        // ✅ 2. คำนวณ Default Planned Output จากค่าที่ต่ำที่สุดใน Route
+        if (routes.length > 0) {
+            // กรองเอาเฉพาะ route ที่มี planned_output มากกว่า 0
+            const validOutputs = routes.map(r => r.planned_output).filter(p => p > 0);
+            if (validOutputs.length > 0) {
+                // หาค่าที่น้อยที่สุดแล้วใส่ในฟอร์ม
+                const minOutput = Math.min(...validOutputs);
+                document.getElementById('planned_output').value = minOutput;
+            }
         }
+
     } else {
-        document.getElementById('itemModalLabel').textContent = 'Add New Item';
+        // --- กรณีเป็นการสร้าง Item ใหม่ ---
+        modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
+        renderRoutesInModal([]); // แสดงตารางว่าง
     }
+    
     modal.show();
 }
+
+function renderRoutesInModal(routes) {
+    const tbody = document.getElementById('modalRoutesTableBody');
+    tbody.innerHTML = '';
+    
+    if (routes.length === 0) {
+        tbody.innerHTML = `<tr class="no-routes-row"><td colspan="4" class="text-center text-muted">No routes defined. Click 'Add New Route' to begin.</td></tr>`;
+    } else {
+        routes.forEach(route => addRouteRow(route));
+    }
+}
+
+function addRouteRow(route = {}) {
+    const tbody = document.getElementById('modalRoutesTableBody');
+    // ลบแถว 'No routes defined' ถ้ามี
+    const noRoutesRow = tbody.querySelector('.no-routes-row');
+    if (noRoutesRow) noRoutesRow.remove();
+    
+    const tr = document.createElement('tr');
+    // เก็บข้อมูล route_id และสถานะของแถว (ใหม่/เก่า)
+    tr.dataset.routeId = route.route_id || '0'; 
+    tr.dataset.status = 'existing';
+    if (!route.route_id) tr.dataset.status = 'new';
+    
+    tr.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" name="route_line" value="${route.line || ''}" required></td>
+        <td><input type="text" class="form-control form-control-sm" name="route_model" value="${route.model || ''}" required></td>
+        <td><input type="number" class="form-control form-control-sm text-center" name="route_planned_output" value="${route.planned_output || '0'}" min="0" required></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm btn-delete-route"><i class="fas fa-trash-alt"></i></button>
+        </td>
+    `;
+    
+    // เพิ่ม Event Listener ให้ปุ่มลบ
+    tr.querySelector('.btn-delete-route').addEventListener('click', () => {
+        if (confirm('Are you sure you want to remove this route?')) {
+            // ถ้าเป็นแถวที่สร้างใหม่ ให้ลบออกจาก DOM เลย
+            if (tr.dataset.status === 'new') {
+                tr.remove();
+            } else {
+                // ถ้าเป็นแถวเก่า ให้ซ่อนและเปลี่ยนสถานะเป็น 'deleted'
+                tr.style.display = 'none';
+                tr.dataset.status = 'deleted';
+            }
+        }
+    });
+
+    tbody.appendChild(tr);
+}
+
 async function handleItemFormSubmit(event) {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.target).entries());
-    const result = await sendRequest(ITEM_MASTER_API, 'save_item', 'POST', data);
+    const form = document.getElementById('itemAndRoutesForm');
+    
+    // --- 1. รวบรวมข้อมูลหลักของ Item ---
+    const itemDetails = {
+        item_id: form.querySelector('#item_id').value,
+        sap_no: form.querySelector('#sap_no').value,
+        part_no: form.querySelector('#part_no').value,
+        planned_output: form.querySelector('#planned_output').value,
+        part_description: form.querySelector('#part_description').value
+    };
+
+    // --- 2. รวบรวมข้อมูล Routes ทั้งหมด ---
+    const routesData = [];
+    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr');
+    
+    routeRows.forEach(tr => {
+        routesData.push({
+            route_id: tr.dataset.routeId,
+            status: tr.dataset.status,
+            line: tr.querySelector('[name="route_line"]').value,
+            model: tr.querySelector('[name="route_model"]').value,
+            planned_output: tr.querySelector('[name="route_planned_output"]').value
+        });
+    });
+
+    // --- 3. สร้าง Payload เพื่อส่งไป API ---
+    const payload = {
+        item_details: itemDetails,
+        routes_data: routesData
+    };
+    
+    // --- 4. ส่งข้อมูลไปยัง API Endpoint ใหม่ ---
+    const result = await sendRequest(ITEM_MASTER_API, 'save_item_and_routes', 'POST', payload);
+    
     if (result.success) {
         closeModal('itemModal');
-        await fetchItems(1);
+        await fetchItems(currentPage); // รีเฟรชตารางหลัก
         showToast(result.message, 'var(--bs-success)');
     } else {
         showToast(result.message, 'var(--bs-danger)');
     }
 }
+
 async function deleteItem() {
     const itemId = document.getElementById('item_id').value;
-    if (confirm(`Are you sure you want to delete this item?`)) {
+    const sapNo = document.getElementById('sap_no').value;
+    
+    if (!itemId || itemId === '0') {
+        showToast("Cannot delete an unsaved item.", 'var(--bs-warning)');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to deactivate item SAP: ${sapNo}? This action cannot be undone directly.`)) {
         const result = await sendRequest(ITEM_MASTER_API, 'delete_item', 'POST', { item_id: itemId });
+        
         if (result.success) {
             closeModal('itemModal');
-            await fetchItems(1);
+            await fetchItems(currentPage); // รีเฟรชตารางหลัก
             showToast(result.message, 'var(--bs-success)');
         } else {
             showToast(result.message, 'var(--bs-danger)');
         }
     }
 }
+
 async function exportItemsToExcel() {
     showSpinner();
     try {
@@ -1034,9 +1170,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
     document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
-    document.getElementById('itemForm')?.addEventListener('submit', handleItemFormSubmit);
+    document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
+    document.getElementById('itemAndRoutesForm')?.addEventListener('submit', handleItemFormSubmit);
     document.getElementById('addNewRouteBtn')?.addEventListener('click', () => openRouteModal());
     document.getElementById('routeForm')?.addEventListener('submit', handleRouteFormSubmit);
+    document.getElementById('modalAddNewRouteBtn')?.addEventListener('click', () => {
+        addRouteRow();
+    });
     document.getElementById('addScheduleForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = Object.fromEntries(new FormData(e.target).entries());

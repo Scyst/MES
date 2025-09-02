@@ -76,39 +76,7 @@
                         <?php include('components/openingBalanceUI.php'); ?>
                     </div>
                     <div class="tab-pane fade" id="item-master-pane" role="tabpanel">
-                         <div class="master-detail-container p-3">
-                            <div class="master-list">
-                                <?php include('components/itemMasterUI.php'); ?>
-                            </div>
-                            <div class="detail-view card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h5 class="mb-0">Manufacturing Routes</h5>
-                                        <small class="text-muted" id="selectedItemDisplay">Select an item to view its routes</small>
-                                    </div>
-                                    <button class="btn btn-sm btn-success" id="addNewRouteBtn" disabled>
-                                        <i class="fas fa-plus"></i> Add New Route
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Line</th>
-                                                    <th>Model</th>
-                                                    <th>Planned Output</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="routesTableBody">
-                                                <tr><td colspan="4" class="text-center text-muted">No item selected</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <?php include('components/itemMasterUI.php'); ?>
                     </div>
                     <div class="tab-pane fade" id="bom-manager-pane" role="tabpanel">
                         <div class="sticky-bar">

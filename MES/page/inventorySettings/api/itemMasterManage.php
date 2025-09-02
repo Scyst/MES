@@ -264,6 +264,71 @@ try {
             }
             break;
 
+        case 'save_item_and_routes':
+            if (!hasRole(['admin', 'creator'])) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
+
+            $item_details = $input['item_details'] ?? [];
+            $routes_data = $input['routes_data'] ?? [];
+
+            if (empty($item_details['sap_no']) || empty($item_details['part_no'])) {
+                throw new Exception("SAP No. and Part No. are required.");
+            }
+            
+            $pdo->beginTransaction();
+            try {
+                $item_id = (int)$item_details['item_id'];
+                
+                if ($item_id > 0) { // อัปเดต Item ที่มีอยู่
+                    $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ? WHERE item_id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$item_details['sap_no'], $item_details['part_no'], $item_details['part_description'], (int)$item_details['planned_output'], $item_id]);
+                    logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
+                } else { // สร้าง Item ใหม่
+                    $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output) VALUES (?, ?, ?, GETDATE(), ?)";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$item_details['sap_no'], $item_details['part_no'], $item_details['part_description'], (int)$item_details['planned_output']]);
+                    $item_id = $pdo->lastInsertId(); // ดึง ID ของ Item ที่สร้างใหม่
+                    logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
+                }
+
+                // ---- 2. จัดการข้อมูล Routes ----
+                foreach ($routes_data as $route) {
+                    $route_id = (int)$route['route_id'];
+                    $status = $route['status'];
+
+                    if ($status === 'deleted' && $route_id > 0) {
+                        // ลบ Route ที่ถูกลบ
+                        $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+                        $stmt->execute([$route_id]);
+
+                    } else if ($status === 'new') {
+                        // เพิ่ม Route ใหม่
+                        $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute([$item_id, $route['line'], $route['model'], (int)$route['planned_output']]);
+
+                    } else if ($status === 'existing') {
+                        // อัปเดต Route เดิม
+                        $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute([$route['line'], $route['model'], (int)$route['planned_output'], $route_id]);
+                    }
+                }
+                
+                // ถ้าทุกอย่างเรียบร้อย ให้ commit transaction
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Item and routes saved successfully.']);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e; // ส่ง error กลับไปให้ client
+            }
+            break;
+
         case 'delete_route':
             $route_id = $input['route_id'] ?? 0;
             if (!$route_id) throw new Exception("Route ID is required.");
