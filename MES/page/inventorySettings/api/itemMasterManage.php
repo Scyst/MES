@@ -96,6 +96,51 @@ try {
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
             break;
 
+            case 'get_item_routes':
+                $item_id = $_GET['item_id'] ?? 0;
+                if (!$item_id) {
+                    echo json_encode(['success' => true, 'data' => []]);
+                    exit;
+                }
+                $stmt = $pdo->prepare("SELECT * FROM " . ROUTES_TABLE . " WHERE item_id = ? ORDER BY line, model");
+                $stmt->execute([$item_id]);
+                $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                echo json_encode(['success' => true, 'data' => $routes]);
+                break;
+    
+            case 'save_route':
+                $route_id = $input['route_id'] ?? 0;
+                $item_id = $input['route_item_id'] ?? null;
+                $line = trim($input['route_line'] ?? '');
+                $model = trim($input['route_model'] ?? '');
+                $planned_output = (int)($input['route_planned_output'] ?? 0);
+    
+                if (empty($item_id) || empty($line) || empty($model)) {
+                    throw new Exception("Item ID, Line, and Model are required.");
+                }
+    
+                if ($route_id > 0) { // Update
+                    $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$line, $model, $planned_output, $route_id]);
+                    echo json_encode(['success' => true, 'message' => 'Route updated successfully.']);
+                } else { // Insert
+                    $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$item_id, $line, $model, $planned_output]);
+                    echo json_encode(['success' => true, 'message' => 'New route created successfully.']);
+                }
+                break;
+    
+            case 'delete_route':
+                $route_id = $input['route_id'] ?? 0;
+                if (!$route_id) throw new Exception("Route ID is required.");
+                
+                $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
+                $stmt->execute([$route_id]);
+                echo json_encode(['success' => true, 'message' => 'Route deleted successfully.']);
+                break;
+
         case 'save_item':
             $id = $input['item_id'] ?? 0;
             $sap_no = trim($input['sap_no'] ?? '');

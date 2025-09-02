@@ -1532,7 +1532,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // -----------------------------------------------------------------
     // ติดตามว่าแต่ละแท็บเคยถูกโหลดข้อมูลแล้วหรือยัง (เพื่อประสิทธิภาพ)
     const tabLoadedState = {
-        '#standard-params-pane': false,
         '#bom-manager-pane': false,
         '#lineSchedulesPane': false,
         '#healthCheckPane': false
@@ -1556,22 +1555,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // เลือกทำงานตาม ID ของแท็บ
         switch (targetTabId) {
-            case '#standard-params-pane':
-                loadStandardParams();
-                populateLineDatalist();
-                setupParameterEventListeners(); // ตั้งค่า event listener สำหรับหน้านี้
-                
-                // สำหรับ Supervisor: กรองข้อมูลตาม Line ของตัวเอง
-                if (currentUser.role === 'supervisor') {
-                    const lineFilter = document.getElementById('filterLine');
-                    if (lineFilter) {
-                        lineFilter.value = currentUser.line;
-                        lineFilter.disabled = true;
-                        filterAndRenderStandardParams();
-                    }
-                }
-                break;
-
             case '#bom-manager-pane':
                 initializeBomManager();
                 initializeCreateBomModal();

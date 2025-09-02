@@ -15,6 +15,7 @@ let selectedItem = null;
 let debounceTimer;
 let currentPage = 1;
 const ROWS_PER_PAGE = 100;
+let selectedItemId = null;
 
 // --- Location Manager Functions ---
 async function loadLocations() {
@@ -357,69 +358,127 @@ async function loadItemsForLocation() {
     }
 }
 
-function renderItemsTable(items) {
-    const tableBody = document.getElementById('stockTakeTableBody');
-    tableBody.innerHTML = '';
-
-    const noItemsRow = tableBody.querySelector('.no-items-row');
-    if (noItemsRow) {
-        noItemsRow.remove();
-    }
-
-    if (items.length === 0) {
-        if (tableBody.querySelectorAll('tr').length === 0) {
-            tableBody.innerHTML = '<tr class="no-items-row"><td colspan="5" class="text-center">No items with stock > 0 found. Use the search bar to add items.</td></tr>';
-        }
+async function selectItem(itemId, selectedRow) {
+    if (selectedItemId === itemId) {
+        selectedItemId = null;
+        document.getElementById('selectedItemDisplay').textContent = 'Select an item to view its routes';
+        document.getElementById('addNewRouteBtn').disabled = true;
+        document.querySelectorAll('#itemsTableBody tr.table-info').forEach(row => row.classList.remove('table-info'));
+        renderRoutesTable([]);
         return;
     }
+    selectedItemId = itemId;
+    document.querySelectorAll('#itemsTableBody tr.table-info').forEach(row => row.classList.remove('table-info'));
+    selectedRow.classList.add('table-info');
+    const sapNo = selectedRow.cells[0].textContent.trim();
+    document.getElementById('selectedItemDisplay').textContent = `Routes for: ${sapNo}`;
+    document.getElementById('addNewRouteBtn').disabled = false;
+    showSpinner();
+    try {
+        const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: itemId });
+        renderRoutesTable(result.success ? result.data : []);
+    } finally {
+        hideSpinner();
+    }
+}
 
-    items.forEach(item => {
+function renderRoutesTable(routes) {
+    const tbody = document.getElementById('routesTableBody');
+    tbody.innerHTML = '';
+    if (routes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No manufacturing routes found. Click "Add" to start.</td></tr>`;
+        return;
+    }
+    routes.forEach(route => {
         const tr = document.createElement('tr');
-        tr.dataset.itemId = item.item_id;
-        tr.style.cursor = 'pointer';
-
-        const originalQty = parseFloat(item.onhand_qty);
-
         tr.innerHTML = `
-            <td>${item.sap_no}</td>
-            <td>${item.part_no}</td>
-            <td>${item.part_description || ''}</td>
-            <td class="text-center">${originalQty.toLocaleString()}</td>
+            <td>${route.line}</td>
+            <td>${route.model}</td>
+            <td>${route.planned_output}</td>
             <td>
-                <input type="number" class="form-control form-control-sm stock-input text-center" 
-                       value="${originalQty}"
-                       data-original-value="${originalQty}"
-                       min="0" step="any"
-                       readonly> 
+                <button class="btn btn-sm btn-warning" onclick='openRouteModal(${JSON.stringify(route).replace(/"/g, "&quot;")})'>Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteRoute(${route.route_id})">Delete</button>
             </td>
         `;
-        
-        const inputField = tr.querySelector('.stock-input');
-
-        tr.addEventListener('click', () => {
-            if (inputField.readOnly === false) {
-                return;
-            }
-            inputField.readOnly = false;
-            inputField.focus();
-            inputField.select();
-        });
-
-        inputField.addEventListener('blur', () => {
-            const currentValue = parseFloat(inputField.value);
-            const originalValue = parseFloat(inputField.dataset.originalValue);
-
-            if (currentValue !== originalValue) {
-                inputField.classList.add('is-changed');
-            } else {
-                inputField.classList.remove('is-changed');
-            }
-            
-            inputField.readOnly = true;
-        });
-        
-        tableBody.appendChild(tr);
+        tbody.appendChild(tr);
     });
+}
+
+function openRouteModal(route = null) {
+    const form = document.getElementById('routeForm');
+    form.reset();
+    const modal = new bootstrap.Modal(document.getElementById('routeModal'));
+    document.getElementById('route_item_id').value = selectedItemId;
+    if (route) {
+        document.getElementById('routeModalLabel').textContent = 'Edit Manufacturing Route';
+        document.getElementById('route_id').value = route.route_id;
+        document.getElementById('route_line').value = route.line;
+        document.getElementById('route_model').value = route.model;
+        document.getElementById('route_planned_output').value = route.planned_output;
+    } else {
+        document.getElementById('routeModalLabel').textContent = 'Add New Manufacturing Route';
+        document.getElementById('route_id').value = '0';
+    }
+    modal.show();
+}
+
+async function handleRouteFormSubmit(event) {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.target).entries());
+    const result = await sendRequest(ITEM_MASTER_API, 'save_route', 'POST', data);
+    if (result.success) {
+        bootstrap.Modal.getInstance(document.getElementById('routeModal')).hide();
+        const selectedRow = document.querySelector(`#itemsTableBody tr[data-item-id="${selectedItemId}"]`);
+        if (selectedRow) selectItem(selectedItemId, selectedRow);
+        showToast(result.message, 'var(--bs-success)');
+    } else {
+        showToast(result.message, 'var(--bs-danger)');
+    }
+}
+
+async function deleteRoute(routeId) {
+    if (confirm('Are you sure you want to delete this route?')) {
+        const result = await sendRequest(ITEM_MASTER_API, 'delete_route', 'POST', { route_id: routeId });
+        if (result.success) {
+            const selectedRow = document.querySelector(`#itemsTableBody tr[data-item-id="${selectedItemId}"]`);
+            if (selectedRow) selectItem(selectedItemId, selectedRow);
+            showToast(result.message, 'var(--bs-success)');
+        } else {
+            showToast(result.message, 'var(--bs-danger)');
+        }
+    }
+}
+
+function renderItemsTable(items, totalItems, page) {
+    const tbody = document.getElementById('itemsTableBody');
+    tbody.innerHTML = '';
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`;
+        renderPagination('itemMasterPagination', 0, 1, ROWS_PER_PAGE, fetchItems);
+        return;
+    }
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.dataset.itemId = item.item_id;
+        tr.innerHTML = `
+            <td><span class="fw-bold">${item.sap_no}</span> ${!item.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}</td>
+            <td>${item.part_no}</td>
+            <td>${item.used_in_models || ''}</td>
+            <td>${item.part_description || ''}</td>
+            <td class="text-center">${item.planned_output || 0}</td>
+            <td class="text-end">${item.created_at}</td>
+        `;
+        if (item.is_active != 1) {
+            tr.classList.add('table-secondary', 'text-muted');
+            tr.style.textDecoration = 'line-through';
+        }
+        tr.addEventListener('click', () => {
+            selectItem(item.item_id, tr);
+        });
+        tbody.appendChild(tr);
+    });
+    renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
 }
 
 function setupStockAdjustmentAutocomplete() {
@@ -703,7 +762,7 @@ function renderItemsTable(items, totalItems, page) {
     tbody.innerHTML = '';
 
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`; // แก้ colspan เป็น 6
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`;
         renderPagination('itemMasterPagination', 0, 1, ROWS_PER_PAGE, fetchItems);
         return;
     }
@@ -711,6 +770,8 @@ function renderItemsTable(items, totalItems, page) {
     items.forEach(item => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
+        tr.dataset.itemId = item.item_id;
+        
         tr.innerHTML = `
             <td>
                 <span class="fw-bold">${item.sap_no}</span>
@@ -727,9 +788,11 @@ function renderItemsTable(items, totalItems, page) {
             tr.classList.add('table-secondary', 'text-muted');
             tr.style.textDecoration = 'line-through';
         }
+
         tr.addEventListener('click', () => {
-            openItemModal(item);
+            selectItem(item.item_id, tr); 
         });
+
         tbody.appendChild(tr);
     });
 
@@ -790,6 +853,8 @@ async function handleItemFormSubmit(event) {
         hideSpinner();
     }
 }
+
+
 
 async function deleteItem() {
     const itemId = document.getElementById('item_id').value;
@@ -915,138 +980,213 @@ async function handleItemImport(event) {
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    let debounceTimer;
-
-    // --- ★★★ START: Corrected Logic for URL parameters & Tab Loading ★★★ ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabToOpen = urlParams.get('tab');
-    const searchTermFromUrl = urlParams.get('search');
-
-    const allTabs = document.querySelectorAll('#settingsTab button[data-bs-toggle="tab"]');
     
-    const loadTabData = (targetPaneId) => {
-        switch(targetPaneId) {
+    // =================================================================
+    // 1. STATE MANAGEMENT & CORE FUNCTIONS (ส่วนจัดการสถานะและฟังก์ชันหลัก)
+    // =================================================================
+
+    // ตัวแปรสำหรับเช็คว่าแท็บไหนเคยโหลดข้อมูลไปแล้วบ้าง
+    const tabLoadedState = {
+        '#locations-pane': false,
+        '#transfer-pane': false,
+        '#opening-balance-pane': false,
+        '#item-master-pane': false,
+        '#bom-manager-pane': false,
+        '#lineSchedulesPane': false,
+        '#healthCheckPane': false,
+        '#standard-params-pane': false
+    };
+
+    /**
+     * ฟังก์ชันกลางสำหรับโหลดข้อมูลตามแท็บที่ถูกเปิด
+     * @param {string} targetTabId - ID ของ tab-pane (e.g., '#item-master-pane')
+     */
+    function loadTabData(targetTabId) {
+        if (!targetTabId || tabLoadedState[targetTabId]) {
+            return; // ถ้าไม่มี ID หรือเคยโหลดแล้ว ให้หยุด
+        }
+
+        console.log(`Initializing Tab: ${targetTabId}`);
+
+        // เลือกทำงานตาม ID ของแท็บ
+        switch (targetTabId) {
             case '#locations-pane':
                 loadLocations();
                 break;
             case '#transfer-pane':
                 populateTransferInitialData();
-                fetchTransferHistory();
+                fetchTransferHistory(1);
                 break;
             case '#opening-balance-pane':
                 populateOpeningBalanceLocations();
                 break;
             case '#item-master-pane':
-                if (searchTermFromUrl && tabToOpen === 'itemMaster') {
-                    const searchInput = document.getElementById('itemMasterSearch');
-                    if (searchInput) {
-                        searchInput.value = searchTermFromUrl;
-                    }
-                }
                 fetchItems(1);
                 break;
+            case '#bom-manager-pane':
+                if (typeof initializeBomManager === 'function') {
+                    initializeBomManager();
+                    initializeCreateBomModal();
+                }
+                break;
+            case '#lineSchedulesPane':
+                if (canManage && typeof loadSchedules === 'function') {
+                    loadSchedules();
+                }
+                break;
+            case '#healthCheckPane':
+                if (canManage && typeof loadHealthCheckData === 'function') {
+                    loadHealthCheckData();
+                }
+                break;
+            case '#standard-params-pane':
+                if (typeof loadStandardParams === 'function') {
+                    loadStandardParams();
+                    populateLineDatalist();
+                }
+                break;
         }
-    };
 
-    // Attach event listeners to all tabs using a named function to allow removal
-    allTabs.forEach(tab => {
-        const loadOnceHandler = (event) => {
+        // อัปเดตสถานะว่าแท็บนี้ถูกโหลดแล้ว
+        tabLoadedState[targetTabId] = true;
+    }
+
+    // =================================================================
+    // 2. SETUP EVENT LISTENERS (ติดตั้ง Event Listener ทั้งหมด)
+    // =================================================================
+
+    function showCorrectPagination(activeTabId) {
+        const paginations = document.querySelectorAll('.sticky-bottom[data-tab-target]');
+        paginations.forEach(pagination => {
+            const isVisible = pagination.dataset.tabTarget === activeTabId;
+            pagination.style.display = isVisible ? 'block' : 'none';
+        });
+    }
+
+    // --- Tab Listener (จัดการการคลิกเปลี่ยนแท็บ) ---
+    document.querySelectorAll('#settingsTab button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', event => {
             const targetPaneId = event.target.getAttribute('data-bs-target');
             loadTabData(targetPaneId);
-            // Correct way to remove the listener in Strict Mode
-            tab.removeEventListener('shown.bs.tab', loadOnceHandler);
-        };
-        tab.addEventListener('shown.bs.tab', loadOnceHandler);
+            showCorrectPagination(targetPaneId);
+        });
     });
 
-    // If a tab is specified in the URL, show it
-    if (tabToOpen) {
-        const tabElement = document.querySelector(`#settingsTab button[data-bs-target="#${tabToOpen}-pane"]`);
-        if (tabElement) {
-            const tab = new bootstrap.Tab(tabElement);
-            tab.show();
-            // Manually trigger data load because 'shown.bs.tab' might not fire for the default active tab
-            loadTabData(`#${tabToOpen}-pane`);
-        }
-    } else {
-        // Default behavior: load the active tab's data on page load
-        const activeTab = document.querySelector('#settingsTab button.active');
-        if (activeTab) {
-            const activePaneId = activeTab.getAttribute('data-bs-target');
-            loadTabData(activePaneId);
-        }
-    }
-    // --- ★★★ END: Corrected Logic ★★★ ---
-
-
-    // --- Event Listeners for components (The rest of your code is perfect) ---
-    // (โค้ด Event Listener เดิมของคุณทั้งหมดจะอยู่ที่นี่)
+    // --- Listeners for Locations Tab ---
     document.getElementById('addLocationBtn')?.addEventListener('click', () => openLocationModal());
     document.getElementById('locationForm')?.addEventListener('submit', handleLocationFormSubmit);
-    document.getElementById('deleteLocationBtn')?.addEventListener('click', deleteLocation);
 
+    // --- Listeners for Stock Transfer Tab ---
     setupTransferAutocomplete();
     document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
     document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
-    document.getElementById('from_location_id')?.addEventListener('change', () => updateStockDisplay('from_location_id', 'fromStock'));
-    document.getElementById('to_location_id')?.addEventListener('change', () => updateStockDisplay('to_location_id', 'toStock'));
-    
-    const filterIds = ['filterPartNo', 'filterFromLocation', 'filterToLocation', 'filterStartDate', 'filterEndDate'];
-    filterIds.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => fetchTransferHistory(1), 500);
-            });
-        }
+    document.getElementById('from_location_id')?.addEventListener('change', updateBothStockDisplays);
+    document.getElementById('to_location_id')?.addEventListener('change', updateBothStockDisplays);
+    ['filterPartNo', 'filterFromLocation', 'filterToLocation', 'filterStartDate', 'filterEndDate'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            clearTimeout(window.debounceTimer);
+            window.debounceTimer = setTimeout(() => fetchTransferHistory(1), 500);
+        });
     });
+    document.getElementById('transferTableBody')?.addEventListener('blur', (event) => {
+        if (event.target.classList.contains('editable-cell')) {
+            handleCellEdit(event);
+        }
+    }, true);
 
+
+    // --- Listeners for Opening Balance Tab ---
     setupStockAdjustmentAutocomplete();
     document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
     document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
 
+    // --- Listeners for Item Master & Routes Tab ---
+    setupItemMasterAutocomplete();
+    setupModelFilterAutocomplete(); // **เพิ่ม: เรียกใช้ Autocomplete ของ Model**
+
+    // Buttons for Item Master
+    document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
     document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
     document.getElementById('importItemsBtn')?.addEventListener('click', () => document.getElementById('itemImportFile')?.click());
     document.getElementById('itemImportFile')?.addEventListener('change', handleItemImport);
-    
-    setupModelFilterAutocomplete();
-    setupItemMasterAutocomplete();
-    
-    document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
+    document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {
+        const toggleBtn = event.currentTarget;
+        toggleBtn.classList.toggle('active');
+        fetchItems(1); // Re-fetch items with new filter
+    });
+
+    // Forms & Modals for Item Master
     document.getElementById('itemForm')?.addEventListener('submit', handleItemFormSubmit);
     document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
+
+    // **[REFACTORED]** Logic for "Manage BOM" button
     document.getElementById('manageBomBtn')?.addEventListener('click', () => {
-        const item_id = document.getElementById('item_id').value;
-        const part_no = document.getElementById('part_no').value;
         const sap_no = document.getElementById('sap_no').value;
         const itemModalInstance = bootstrap.Modal.getInstance(document.getElementById('itemModal'));
         if (itemModalInstance) {
             itemModalInstance.hide();
         }
-        manageBomForItem({ item_id, part_no, sap_no });
+        
+        // Switch to BOM Manager Tab and search for the item
+        const bomTab = document.getElementById('bom-manager-tab');
+        if (bomTab) {
+            new bootstrap.Tab(bomTab).show();
+            // Use a short timeout to ensure the tab is shown before manipulating its content
+            setTimeout(() => {
+                const searchInput = document.getElementById('bomSearchInput');
+                if (searchInput) {
+                    searchInput.value = sap_no;
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }, 150);
+        }
     });
-    
-    const toggleBtn = document.getElementById('toggleInactiveBtn');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            toggleBtn.classList.toggle('active');
-            const icon = toggleBtn.querySelector('i');
-            if (toggleBtn.classList.contains('active')) {
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
-            fetchItems(1);
-        });
+
+    // Forms & Modals for Routes
+    document.getElementById('addNewRouteBtn')?.addEventListener('click', () => openRouteModal());
+    document.getElementById('routeForm')?.addEventListener('submit', handleRouteFormSubmit);
+
+    // --- Listeners for Schedule Modals (จาก modal_handler.js เดิม) ---
+    document.getElementById('addScheduleForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
+        const result = await sendRequest(PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
+        if (result.success) {
+            closeModal('addScheduleModal');
+            if (typeof loadSchedules === 'function') loadSchedules();
+        }
+    });
+    document.getElementById('editScheduleForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
+        const result = await sendRequest(PARA_API_ENDPOINT, 'save_schedule', 'POST', payload);
+        if (result.success) {
+            closeModal('editScheduleModal');
+            if (typeof loadSchedules === 'function') loadSchedules();
+        }
+    });
+
+    // =================================================================
+    // 3. INITIAL PAGE LOAD (การทำงานเมื่อเปิดหน้าเว็บครั้งแรก)
+    // =================================================================
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabToOpen = urlParams.get('tab');
+
+    // ถ้ามี 'tab' ใน URL ให้เปิดแท็บนั้นก่อน
+    if (tabToOpen) {
+        const tabElement = document.querySelector(`#settingsTab button[data-bs-target="#${tabToOpen}-pane"]`);
+        if (tabElement) {
+            new bootstrap.Tab(tabElement).show();
+        }
     }
 
-    const transferTableBody = document.getElementById('transferTableBody');
-    if (transferTableBody) {
-        transferTableBody.addEventListener('blur', (event) => {
-            if (event.target.classList.contains('editable-cell')) {
-                handleCellEdit(event);
-            }
-        }, true);
+    // โหลดข้อมูลสำหรับแท็บที่ Active อยู่ (ไม่ว่าจะเป็น default หรือที่เปิดจาก URL)
+    const activeTab = document.querySelector('#settingsTab button.active');
+    if (activeTab) {
+        const activePaneId = activeTab.getAttribute('data-bs-target');
+        loadTabData(activePaneId);
     }
 });

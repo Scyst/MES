@@ -37,16 +37,11 @@
                         <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master</button>
+                        <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master & Routes</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bom-manager-pane" type="button" role="tab">
                             <i class="fas fa-sitemap"></i> BOM Manager
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="standard-params-tab" data-bs-toggle="tab" data-bs-target="#standard-params-pane" type="button" role="tab">
-                            <i class="fas fa-cogs"></i> Standard Parameters
                         </button>
                     </li>
                     <?php if ($canManage):?>
@@ -61,7 +56,8 @@
                         </button>
                     </li>
                     <?php endif; ?>
-                </ul>
+                    
+                    </ul>
             </div>
 
             <div class="content-wrapper">
@@ -76,8 +72,41 @@
                         <?php include('components/openingBalanceUI.php'); ?>
                     </div>
                     <div class="tab-pane fade" id="item-master-pane" role="tabpanel">
-                        <?php include('components/itemMasterUI.php'); ?>
+                         <div class="master-detail-container p-3">
+                            <div class="master-list">
+                                <?php include('components/itemMasterUI.php'); ?>
+                            </div>
+                            <div class="detail-view card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">Manufacturing Routes</h5>
+                                        <small class="text-muted" id="selectedItemDisplay">Select an item to view its routes</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-success" id="addNewRouteBtn" disabled>
+                                        <i class="fas fa-plus"></i> Add New Route
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Line</th>
+                                                    <th>Model</th>
+                                                    <th>Planned Output</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="routesTableBody">
+                                                <tr><td colspan="4" class="text-center text-muted">No item selected</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="tab-pane fade" id="bom-manager-pane" role="tabpanel">
                         <div class="sticky-bar">
                             <div class="row my-3 align-items-center">
@@ -125,54 +154,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="bomFgListTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="standard-params-pane" role="tabpanel">
-                        <div class="sticky-bar">
-                            <div class="container-fluid">
-                                <div class="row my-3 align-items-center">
-                                    <div class="col-md-6">
-                                        <div class="filter-controls-wrapper">
-                                            <input type="text" class="form-control" id="filterLine" placeholder="Filter by Line...">
-                                            <input type="text" class="form-control" id="filterModel" placeholder="Filter by Model...">
-                                            <input type="text" class="form-control" id="searchInput" placeholder="Search Part/SAP No...">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="d-flex justify-content-end gap-2">
-                                            <button class="btn btn-info" onclick="triggerImport()"><i class="fas fa-file-import"></i> Import</button>
-                                            <button class="btn btn-primary" onclick="exportToExcel()"><i class="fas fa-file-export"></i> Export</button>
-                                            <button class="btn btn-success" onclick="openModal('addParamModal')"><i class="fas fa-plus"></i> Add</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="bulk-actions-container" class="d-none row align-items-center mb-2">
-                                    <div class="col-12 d-flex justify-content-end gap-2">
-                                        <button class="btn btn-info" id="bulkCreateVariantsBtn"><i class="fas fa-plus-square"></i> Create Variants</button>
-                                        <button class="btn btn-danger" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Delete Selected</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <input type="file" id="importFile" accept=".csv, .xlsx, .xls" class="d-none">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 50px;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllCheckbox"></th>
-                                        <th>Line</th>
-                                        <th>Model</th>
-                                        <th>Part No.</th>
-                                        <th>SAP No.</th>
-                                        <th>Part Description</th> 
-                                        <th>Planned Output</th>
-                                        <th>Part Value</th>
-                                        <th class="text-end">Updated At</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="paramTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -229,6 +210,7 @@
             <div id="toast"></div>
 
             <?php 
+                include('components/routeModal.php');
                 include('components/locationModal.php'); 
                 include('components/transferModal.php');
                 include('components/itemModal.php');
