@@ -14,12 +14,15 @@ let allItems = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 50;
 let selectedItemId = null; 
+let selectedItem = null;
 
 // Variables from paraManage.js
 let allSchedules = [], allMissingParams = [], allBomFgs = [];
 let bomCurrentPage = 1;
 let currentEditingBom = null;
 let manageBomModal;
+let validatedBomImportData = [];
+let validatedBulkBomImportData = [];
 
 
 // =================================================================
@@ -755,8 +758,7 @@ async function handleItemFormSubmit(event) {
 
     // --- 2. รวบรวมข้อมูล Routes ทั้งหมด ---
     const routesData = [];
-    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr');
-    
+    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');    
     routeRows.forEach(tr => {
         routesData.push({
             route_id: tr.dataset.routeId,
@@ -924,7 +926,7 @@ function initializeCreateBomModal() {
         paramSelect.innerHTML = '<option>Loading...</option>';
         nextBtn.disabled = true;
         
-        const result = await sendRequest(ITEM_MASTER_API, 'get_parameters_for_item', 'GET', null, { item_id: selectedItem.item_id });
+        const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: selectedItem.item_id });
         
         if (result.success && result.data.length > 0) {
             paramSelect.innerHTML = '<option value="">-- Select Line/Model --</option>';
@@ -999,11 +1001,13 @@ function renderBomFgTable(fgData) {
         renderBomFgTable(getFilteredBoms(document.getElementById('bomSearchInput').value));
     });
 }
+
 function manageBom(fg) {
     currentEditingBom = fg;
     manageBomModal.show();
     loadBomForModal(fg);
 };
+
 async function loadBomForModal(fg) {
     showSpinner();
     try {
@@ -1031,6 +1035,196 @@ async function loadBomForModal(fg) {
             modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No components. Add one now!</td></tr>';
         }
     } finally { hideSpinner(); }
+}
+
+// --- A. ฟังก์ชันสำหรับ Export ---
+async function exportAllBoms() {
+    showToast('Exporting all BOMs (Consolidated)...', 'var(--bs-info)');
+    showSpinner();
+    try {
+        const result = await sendRequest(BOM_API_ENDPOINT, 'export_all_boms', 'GET');
+        if (result.success && result.data && result.data.length > 0) {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(result.data);
+            XLSX.utils.book_append_sheet(wb, ws, "All_BOMs");
+            const fileName = `BOM_Export_All_Consolidated_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('All BOMs exported successfully!', 'var(--bs-success)');
+        } else {
+            showToast(result.message || 'No BOMs found to export.', 'var(--bs-warning)');
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function exportSelectedBoms() {
+    const selectedCheckboxes = document.querySelectorAll('.bom-row-checkbox:checked');
+    const bomsToExport = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
+    if (bomsToExport.length === 0) {
+        showToast('Please select at least one BOM to export.', 'var(--bs-warning)');
+        return;
+    }
+
+    showToast(`Exporting ${bomsToExport.length} selected BOM(s)...`, 'var(--bs-info)');
+    showSpinner();
+    try {
+        const result = await sendRequest(BOM_API_ENDPOINT, 'export_selected_boms', 'POST', { boms: bomsToExport });
+        if (result.success && Object.keys(result.data).length > 0) {
+            const wb = XLSX.utils.book_new();
+            for (const fgSapNo in result.data) {
+                const sheetData = result.data[fgSapNo].map(row => ({
+                    LINE: row.LINE,
+                    MODEL: row.MODEL,
+                    COMPONENT_SAP_NO: row.COMPONENT_SAP_NO,
+                    QUANTITY_REQUIRED: row.QUANTITY_REQUIRED
+                }));
+                const ws = XLSX.utils.json_to_sheet(sheetData);
+                // Sheet name ไม่ควรยาวเกิน 31 ตัวอักษรและไม่มีอักขระพิเศษ
+                const safeSheetName = fgSapNo.replace(/[\*:\/\\?\[\]]/g, "_").substring(0, 31);
+                XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+            }
+            const fileName = `BOM_Export_Selected_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('Selected BOMs exported successfully!', 'var(--bs-success)');
+        } else {
+            showToast(result.message || 'Could not export selected BOMs.', 'var(--bs-warning)');
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+// --- B. ฟังก์ชันสำหรับ Import ---
+
+// B1. สำหรับ Multi-Sheet (Update)
+async function handleBulkBomImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    showSpinner();
+    try {
+        const fileData = await file.arrayBuffer();
+        const workbook = XLSX.read(fileData);
+        const sheets = {};
+        workbook.SheetNames.forEach(sheetName => {
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: null });
+            sheets[sheetName] = { rows };
+        });
+        const result = await sendRequest(BOM_API_ENDPOINT, 'validate_bulk_import', 'POST', { sheets });
+        if (result.success) {
+            displayBulkImportPreview(result.data);
+        } else {
+            showToast(result.message || 'Validation failed.', 'var(--bs-danger)');
+        }
+    } catch (error) {
+        showToast('Failed to process file.', 'var(--bs-danger)');
+        console.error(error);
+    } finally {
+        event.target.value = '';
+        hideSpinner();
+    }
+}
+
+function displayBulkImportPreview(validationData) {
+    const { summary, sheets } = validationData;
+    validatedBulkBomImportData = sheets; // เก็บข้อมูลไว้สำหรับส่งไป execute
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bomBulkImportPreviewModal'));
+    
+    // Update summary counts
+    document.getElementById('bulk-summary-create-count').textContent = summary.create;
+    document.getElementById('bulk-summary-overwrite-count').textContent = summary.overwrite;
+    document.getElementById('bulk-summary-skipped-count').textContent = summary.skipped;
+    document.getElementById('create-tab-count').textContent = summary.create;
+    document.getElementById('overwrite-tab-count').textContent = summary.overwrite;
+    document.getElementById('skipped-tab-count').textContent = summary.skipped;
+
+    const lists = {
+        CREATE: document.getElementById('create-preview-list'),
+        OVERWRITE: document.getElementById('overwrite-preview-list'),
+        SKIPPED: document.getElementById('skipped-preview-accordion')
+    };
+    for (const key in lists) { lists[key].innerHTML = ''; }
+
+    sheets.forEach((sheet, index) => {
+        if (sheet.status === 'CREATE' || sheet.status === 'OVERWRITE') {
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.textContent = `FG SAP: ${sheet.sheet_name}`;
+            lists[sheet.status].appendChild(li);
+        } else if (sheet.status === 'SKIPPED') {
+            const accordionItem = `
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-${index}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${index}">${sheet.sheet_name}</button></h2>
+                    <div id="collapse-${index}" class="accordion-collapse collapse" data-bs-parent="#skipped-preview-accordion">
+                        <div class="accordion-body"><ul>${sheet.errors.map(err => `<li>${err}</li>`).join('')}</ul></div>
+                    </div>
+                </div>`;
+            lists.SKIPPED.innerHTML += accordionItem;
+        }
+    });
+
+    // Handle empty states
+    if (lists.CREATE.children.length === 0) lists.CREATE.innerHTML = '<li class="list-group-item text-muted">No new BOMs to create.</li>';
+    if (lists.OVERWRITE.children.length === 0) lists.OVERWRITE.innerHTML = '<li class="list-group-item text-muted">No existing BOMs to overwrite.</li>';
+    if (lists.SKIPPED.children.length === 0) lists.SKIPPED.innerHTML = '<div class="p-3 text-muted">No sheets were skipped.</div>';
+
+    document.getElementById('confirmBulkImportBtn').disabled = !validationData.isValid;
+    modal.show();
+}
+
+async function executeBulkBomImport() {
+    const validSheets = validatedBulkBomImportData.filter(s => s.status !== 'SKIPPED');
+    if (validSheets.length === 0) {
+        showToast('No valid data to import.', 'var(--bs-warning)');
+        return;
+    }
+    showSpinner();
+    const modal = bootstrap.Modal.getInstance(document.getElementById('bomBulkImportPreviewModal'));
+    try {
+        const result = await sendRequest(BOM_API_ENDPOINT, 'execute_bulk_import', 'POST', { sheets: validSheets });
+        if (result.success) {
+            showToast(result.message, 'var(--bs-success)');
+            modal.hide();
+            await initializeBomManager(); // Reload data
+        } else {
+            showToast(result.message, 'var(--bs-danger)');
+        }
+    } finally {
+        hideSpinner();
+    }
+}
+
+// B2. สำหรับ Single-Sheet (Initial Create)
+async function handleInitialBomImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!confirm("This action will only create NEW BOMs and will SKIP any existing BOMs. Are you sure?")) {
+        event.target.value = '';
+        return;
+    }
+    showSpinner();
+    try {
+        const fileData = await file.arrayBuffer();
+        const workbook = XLSX.read(fileData);
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: null });
+        if (rows.length === 0) {
+            showToast('The selected file is empty.', 'var(--bs-warning)');
+            return;
+        }
+        const result = await sendRequest(BOM_API_ENDPOINT, 'create_initial_boms', 'POST', { rows });
+        if (result.success) {
+            showToast(result.message, 'var(--bs-success)');
+            await initializeBomManager(); // Reload data
+        } else {
+            showToast(result.message || 'Failed to create initial BOMs.', 'var(--bs-danger)');
+        }
+    } catch (error) {
+        showToast('An error occurred while processing the file.', 'var(--bs-danger)');
+        console.error(error);
+    } finally {
+        event.target.value = '';
+        hideSpinner();
+    }
 }
 
 // --- LINE SCHEDULES TAB FUNCTIONS (from paraManage.js) ---
@@ -1199,6 +1393,111 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadSchedules();
         }
     });
+
+    setupItemMasterAutocomplete();
+    setupModelFilterAutocomplete();
+
+    document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {
+        event.currentTarget.classList.toggle('active'); // สลับสถานะ active
+        fetchItems(1); // โหลดข้อมูลใหม่ทันที
+    });
+
+    document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
+
+    const importBtn = document.getElementById('importItemsBtn');
+    const importFileInput = document.getElementById('itemImportFile');
+
+    importBtn?.addEventListener('click', () => {
+        importFileInput.click(); // ...ให้ไปกระตุ้นการทำงานของ input file ที่ซ่อนอยู่
+    });
+
+    // และเมื่อเลือกไฟล์ใน input file ที่ซ่อนอยู่แล้ว...
+    importFileInput?.addEventListener('change', handleItemImport); // ...ให้เรียกใช้ฟังก์ชันนำเข้าข้อมูล
+
+    // --- BOM Manager Tab ---
+    // 1. ปุ่ม Create New BOM
+    document.getElementById('createNewBomBtn')?.addEventListener('click', () => {
+        openModal('createBomModal');
+    });
+
+    // 2. ปุ่ม Export
+    document.getElementById('exportAllConsolidatedBtn')?.addEventListener('click', exportAllBoms);
+    document.getElementById('exportSelectedDetailedBtn')?.addEventListener('click', (e) => {
+        if(!e.currentTarget.classList.contains('disabled')) {
+            exportSelectedBoms();
+        }
+    });
+
+    // 3. ปุ่ม Import (Update - Multi-Sheet)
+    document.getElementById('importUpdateBomsBtn')?.addEventListener('click', () => {
+        document.getElementById('bulkUpdateImportFile').click();
+    });
+    document.getElementById('bulkUpdateImportFile')?.addEventListener('change', handleBulkBomImport);
+
+    // 4. ปุ่ม Import (Initial Create - Single-Sheet)
+    document.getElementById('importCreateBomsBtn')?.addEventListener('click', () => {
+        document.getElementById('initialCreateImportFile').click();
+    });
+    document.getElementById('initialCreateImportFile')?.addEventListener('change', handleInitialBomImport);
+
+    // 5. ปุ่มยืนยันในหน้า Preview ของ Bulk Import
+    document.getElementById('confirmBulkImportBtn')?.addEventListener('click', executeBulkBomImport);
+
+    // 6. จัดการ Checkbox และปุ่ม Delete Selected / Export Selected
+    const selectAllBomCheckbox = document.getElementById('selectAllBomCheckbox');
+    const bomFgListTableBody = document.getElementById('bomFgListTableBody');
+    const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
+    const exportSelectedBtn = document.getElementById('exportSelectedDetailedBtn');
+
+    function updateBomBulkActionButtons() {
+        const selectedCount = document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox:checked').length;
+        if (selectedCount > 0) {
+            deleteSelectedBomBtn.classList.remove('d-none');
+            exportSelectedBtn.classList.remove('disabled');
+        } else {
+            deleteSelectedBomBtn.classList.add('d-none');
+            exportSelectedBtn.classList.add('disabled');
+        }
+    }
+
+    selectAllBomCheckbox?.addEventListener('change', (e) => {
+        document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox').forEach(cb => cb.checked = e.target.checked);
+        updateBomBulkActionButtons();
+    });
+
+    bomFgListTableBody?.addEventListener('change', (e) => {
+        if (e.target.classList.contains('bom-row-checkbox')) {
+            updateBomBulkActionButtons();
+        }
+    });
+
+    deleteSelectedBomBtn?.addEventListener('click', async () => {
+        const selectedCheckboxes = document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox:checked');
+        const bomsToDelete = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
+        if (bomsToDelete.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${bomsToDelete.length} selected BOM(s)?`)) return;
+
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'bulk_delete_bom', 'POST', { boms: bomsToDelete });
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            if (result.success) {
+                await initializeBomManager();
+            }
+        } finally {
+            hideSpinner();
+        }
+    });
+
+    // --- Opening Balance Tab ---
+    // 1. เมื่อมีการเลือก Location จาก Dropdown ให้โหลดข้อมูล Item
+    document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
+
+    // 2. เมื่อกดปุ่ม Save ให้บันทึกข้อมูล
+    document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
+
+    // 3. เปิดใช้งาน Autocomplete สำหรับช่องค้นหาเพื่อเพิ่ม Item
+    setupStockAdjustmentAutocomplete();
 
     // --- Initial Page Load ---
     const urlParams = new URLSearchParams(window.location.search);

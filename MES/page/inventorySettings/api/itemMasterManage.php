@@ -162,6 +162,15 @@ try {
             }
             break;
 
+        case 'get_lines':
+            // ✅ เพิ่ม case นี้เข้าไป
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(line)) as line FROM " . ROUTES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $lines]);
+            break;
+
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
             // [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
