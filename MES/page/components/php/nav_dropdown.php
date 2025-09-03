@@ -41,7 +41,18 @@
         <?php endif; ?>
 
         <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
-        <li><a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager"><i class="fas fa-users-cog fa-fw"></i><span>User Manager</span></a></li>
+            <li>
+            <a class="dropdown-item-icon" href="../maintenanceStock/maintenanceStockUI.php" title="Maintenance Stock">
+                <i class="fas fa-tools fa-fw"></i>
+                <span>Maintenance Stock</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager">
+                <i class="fas fa-users-cog fa-fw"></i>
+                <span>User Manager</span>
+            </a>
+        </li>
         <?php endif; ?>
 
         <li><hr class="dropdown-divider"></li>

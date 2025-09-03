@@ -36,16 +36,17 @@ function updateMtOnhandBalance(PDO $pdo, int $item_id, int $location_id, float $
 try {
     switch ($action) {
 
-        // ... (case 'get_onhand', 'get_transactions', etc. เหมือนเดิม) ...
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . MT_LOCATIONS_TABLE . " ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
+            // ✅ แก้ไข: ดึงเฉพาะ Item ที่ Active ไปใช้ใน Dropdown เริ่มต้น
             $itemsStmt = $pdo->query("SELECT item_id, item_code, item_name, description FROM " . MT_ITEMS_TABLE . " WHERE is_active = 1 ORDER BY item_code");
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
             break;
 
         case 'get_onhand':
+            // ✅ START: แก้ไขจุดที่ 1 - กรอง On-Hand เฉพาะ Item ที่ Active
             $sql = "
                 SELECT 
                     i.item_code, i.item_name, l.location_name, 
@@ -53,14 +54,37 @@ try {
                 FROM " . MT_ONHAND_TABLE . " h
                 JOIN " . MT_ITEMS_TABLE . " i ON h.item_id = i.item_id
                 JOIN " . MT_LOCATIONS_TABLE . " l ON h.location_id = l.location_id
+                WHERE i.is_active = 1
                 ORDER BY i.item_code, l.location_name
             ";
+            // ✅ END: แก้ไขจุดที่ 1
             $stmt = $pdo->query($sql);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         case 'get_transactions':
+            // (ส่วนนี้ไม่มีการแก้ไข)
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $offset = ($page - 1) * $limit;
+            
+            $searchTerm = $_GET['search'] ?? '';
+            $params = [];
+            $conditions = [];
+
+            if (!empty($searchTerm)) {
+                $conditions[] = "(i.item_code LIKE ? OR i.item_name LIKE ? OR u.username LIKE ? OR t.notes LIKE ?)";
+                $searchTerm = '%' . $searchTerm . '%';
+                array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+            }
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            $totalSql = "SELECT COUNT(*) FROM " . MT_TRANSACTIONS_TABLE . " t JOIN " . MT_ITEMS_TABLE . " i ON t.item_id = i.item_id LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
             $sql = "
                 SELECT 
                     t.created_at, i.item_code, i.item_name, t.transaction_type, 
@@ -68,26 +92,68 @@ try {
                 FROM " . MT_TRANSACTIONS_TABLE . " t
                 JOIN " . MT_ITEMS_TABLE . " i ON t.item_id = i.item_id
                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                {$whereClause}
                 ORDER BY t.created_at DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
-            $stmt = $pdo->query($sql);
+            $stmt = $pdo->prepare($sql);
+            $params[] = $offset;
+            $params[] = $limit;
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $data]);
+
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
         case 'get_items':
+            // ✅ START: แก้ไขจุดที่ 2 - ทำให้ Soft Delete Toggle ทำงาน
             $searchTerm = $_GET['search'] ?? '';
+            // รับค่า show_inactive จาก frontend, แปลง 'true' เป็น boolean
+            $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] === 'true';
+
             $params = [];
-            $whereClause = '';
+            $conditions = [];
+
+            // 1. สร้างเงื่อนไขตามสถานะ `is_active`
+            if (!$showInactive) {
+                $conditions[] = "is_active = 1";
+            }
+            
+            // 2. สร้างเงื่อนไขสำหรับการค้นหา
             if (!empty($searchTerm)) {
-                $whereClause = "WHERE item_code LIKE ? OR item_name LIKE ? OR description LIKE ?";
+                $conditions[] = "(item_code LIKE ? OR item_name LIKE ? OR description LIKE ?)";
                 $params = ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%'];
             }
-            $sql = "SELECT * FROM " . MT_ITEMS_TABLE . " {$whereClause} ORDER BY item_code";
+            
+            // 3. รวมเงื่อนไขทั้งหมด
+            $whereClause = !empty($conditions) ? "WHERE " . implode(' AND ', $conditions) : '';
+            
+            $sql = "SELECT * FROM " . MT_ITEMS_TABLE . " {$whereClause} ORDER BY is_active DESC, item_code";
+            
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
+            // ✅ END: แก้ไขจุดที่ 2
+            break;
+
+        case 'search_mt_items':
+            // (ส่วนนี้ถูกต้องอยู่แล้ว ไม่มีการแก้ไข)
+            $searchTerm = $_GET['search'] ?? '';
+            if (strlen($searchTerm) < 2) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+            $sql = "
+                SELECT TOP (10) item_id, item_code, item_name, description
+                FROM " . MT_ITEMS_TABLE . "
+                WHERE is_active = 1 AND (item_code LIKE ? OR item_name LIKE ? OR description LIKE ?)
+                ORDER BY item_code
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $items]);
             break;
 
         case 'get_locations':
@@ -99,8 +165,8 @@ try {
         case 'save_item':
             if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
             $id = $input['item_id'] ?? 0;
-            // ✅ 2. แก้ไข Logic การรับค่า is_active ให้ถูกต้อง
-            $is_active = isset($input['is_active']) && $input['is_active'] ? 1 : 0;
+            // แก้ไขการรับค่า is_active จาก form, checkbox ที่ไม่ได้ติ๊กจะไม่มีค่าส่งมา
+            $is_active = isset($input['is_active']) ? 1 : 0;
 
             if ($id > 0) {
                 $sql = "UPDATE " . MT_ITEMS_TABLE . " SET item_code=?, item_name=?, description=?, supplier=?, min_stock=?, max_stock=?, is_active=? WHERE item_id=?";
@@ -108,9 +174,10 @@ try {
                 $stmt->execute([$input['item_code'], $input['item_name'], $input['description'], $input['supplier'], $input['min_stock'], $input['max_stock'], $is_active, $id]);
                 $message = 'Item updated successfully.';
             } else {
-                $sql = "INSERT INTO " . MT_ITEMS_TABLE . " (item_code, item_name, description, supplier, min_stock, max_stock, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                // สำหรับการสร้างใหม่, is_active จะเป็น 1 เสมอ (Active)
+                $sql = "INSERT INTO " . MT_ITEMS_TABLE . " (item_code, item_name, description, supplier, min_stock, max_stock, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$input['item_code'], $input['item_name'], $input['description'], $input['supplier'], $input['min_stock'], $input['max_stock'], $is_active]);
+                $stmt->execute([$input['item_code'], $input['item_name'], $input['description'], $input['supplier'], $input['min_stock'], $input['max_stock']]);
                 $message = 'Item created successfully.';
             }
             logAction($pdo, $currentUser['username'], $id > 0 ? 'UPDATE_MT_ITEM' : 'CREATE_MT_ITEM', $id ?: $pdo->lastInsertId());
@@ -128,7 +195,19 @@ try {
             echo json_encode(['success' => true, 'message' => 'Item has been deactivated.']);
             break;
 
+        case 'restore_item':
+            if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+            $id = $input['item_id'] ?? 0;
+            if (!$id) throw new Exception("Item ID is required for restoration.");
+            $sql = "UPDATE " . MT_ITEMS_TABLE . " SET is_active = 1 WHERE item_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$id]);
+            logAction($pdo, $currentUser['username'], 'RESTORE_MT_ITEM', $id);
+            echo json_encode(['success' => true, 'message' => 'Item has been restored.']);
+            break;
+   
         case 'save_location':
+             // (ส่วนนี้ไม่มีการแก้ไข)
             if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
             $id = $input['location_id'] ?? 0;
             if ($id > 0) {
@@ -147,6 +226,7 @@ try {
             break;
 
         case 'execute_transaction':
+            // (ส่วนนี้ไม่มีการแก้ไข)
             $pdo->beginTransaction();
             try {
                 $item_id = (int)($input['item_id'] ?? 0);

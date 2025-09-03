@@ -35,10 +35,6 @@
                             <input type="number" class="form-control" id="mt_max_stock" name="max_stock" value="0" min="0" step="any">
                         </div>
                     </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" id="mt_is_active" name="is_active" checked>
-                        <label class="form-check-label" for="mt_is_active">Active</label>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger me-auto" id="mt_deleteItemBtn" style="display: none;">Delete Item</button>
