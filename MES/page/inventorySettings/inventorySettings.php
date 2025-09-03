@@ -117,8 +117,6 @@
                                         <th style="width: 50px;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllBomCheckbox"></th>
                                         <th>SAP No.</th>
                                         <th>Part No.</th>
-                                        <th>Line</th>
-                                        <th>Model</th>
                                         <th>Part Description</th>
                                         <th>Updated By</th>
                                         <th class="text-end">Updated At</th>

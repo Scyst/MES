@@ -37,7 +37,6 @@ try {
             $fromClause = "FROM " . ITEMS_TABLE . " i";
             $conditions = [];
 
-            // [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
             if (!empty($filter_model)) {
                 $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id"; 
                 $conditions[] = "RTRIM(LTRIM(r.model)) LIKE ?";
@@ -48,7 +47,8 @@ try {
                 $conditions[] = "i.is_active = 1";
             }
             if (!empty($searchTerm)) {
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
+                $params[] = '%' . $searchTerm . '%';
                 $params[] = '%' . $searchTerm . '%';
                 $params[] = '%' . $searchTerm . '%';
             }
@@ -163,7 +163,6 @@ try {
             break;
 
         case 'get_lines':
-            // ✅ เพิ่ม case นี้เข้าไป
             $sql = "SELECT DISTINCT RTRIM(LTRIM(line)) as line FROM " . ROUTES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
@@ -173,7 +172,6 @@ try {
 
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
-            // [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
             $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WHERE model IS NOT NULL AND model != ''";
             $params = [];
             if (!empty($searchTerm)) {

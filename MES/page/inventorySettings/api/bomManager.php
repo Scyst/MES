@@ -19,13 +19,8 @@ try {
     switch ($action) {
         case 'get_bom_components':
             $fg_item_id = $_GET['fg_item_id'] ?? 0;
-            $line = $_GET['line'] ?? '';
-            $model = $_GET['model'] ?? '';
-            
-            enforceLinePermission($line); 
-
-            if (empty($fg_item_id) || empty($line) || empty($model)) {
-                throw new Exception("FG Item ID, Line, and Model are required.");
+            if (empty($fg_item_id)) {
+                throw new Exception("FG Item ID is required.");
             }
             
             $sql = "
@@ -37,11 +32,11 @@ try {
                     i.part_description
                 FROM " . BOM_TABLE . " b
                 JOIN " . ITEMS_TABLE . " i ON b.component_item_id = i.item_id
-                WHERE b.fg_item_id = ? AND b.line = ? AND b.model = ?
+                WHERE b.fg_item_id = ?
                 ORDER BY i.sap_no ASC";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_item_id, $line, $model]);
+            $stmt->execute([$fg_item_id]);
             $components = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $components]);
             break;
@@ -330,28 +325,26 @@ try {
             }
             break;
 
-        case 'export_all_boms': // Action นี้จะเปลี่ยนไป Export แบบ Consolidated (ชีตเดียว)
+        case 'export_all_boms':
             $sql = "
                 SELECT 
                     fg_item.sap_no AS FG_SAP_NO,
-                    b.line AS LINE,
-                    b.model AS MODEL,
                     comp_item.sap_no AS COMPONENT_SAP_NO,
-                    ROUND(b.quantity_required, 4) AS QUANTITY_REQUIRED
+                    b.quantity_required AS QUANTITY_REQUIRED
                 FROM " . BOM_TABLE . " b
                 JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
                 JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
             ";
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " WHERE b.line = ?";
+                $sql .= " WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
                 $stmt = $pdo->query($sql);
             }
             $all_boms_flat = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $all_boms_flat]); // ส่งข้อมูลแบบ flat array กลับไป
+        
+            echo json_encode(['success' => true, 'data' => $all_boms_flat]);
             break;
 
         case 'export_selected_boms':
@@ -557,19 +550,17 @@ try {
                 WITH LatestBOM AS (
                     SELECT 
                         fg_item_id, 
-                        line, 
-                        model, 
                         updated_by, 
                         updated_at,
-                        ROW_NUMBER() OVER(PARTITION BY fg_item_id, line, model ORDER BY updated_at DESC) as rn
+                        -- จัดกลุ่มตาม fg_item_id เพียงอย่างเดียว
+                        ROW_NUMBER() OVER(PARTITION BY fg_item_id ORDER BY updated_at DESC) as rn
                     FROM " . BOM_TABLE . "
+                    WHERE fg_item_id IS NOT NULL
                 )
                 SELECT 
                     b.fg_item_id,
                     i.sap_no AS fg_sap_no,
                     i.part_no AS fg_part_no,
-                    b.line,
-                    b.model,
                     i.part_description AS fg_part_description,
                     b.updated_by,
                     b.updated_at
@@ -579,15 +570,38 @@ try {
             ";
         
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " AND b.line = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$currentUser['line']]);
+                $stmt = $pdo->query($sql);
             } else {
                 $stmt = $pdo->query($sql);
             }
         
             $fgs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $fgs]);
+            break;
+
+        case 'get_fgs_without_bom':
+            $searchTerm = $_GET['search'] ?? '';
+            if (strlen($searchTerm) < 2) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+
+            $sql = "
+                SELECT TOP (10)
+                    i.item_id, i.sap_no, i.part_no, i.part_description
+                FROM " . ITEMS_TABLE . " i
+                WHERE 
+                    i.is_active = 1
+                    AND (i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM " . BOM_TABLE . " b WHERE b.fg_item_id = i.item_id
+                    )
+                ORDER BY i.sap_no
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $items]);
             break;
 
         case 'delete_full_bom':
@@ -600,7 +614,6 @@ try {
                 throw new Exception("FG Item ID, Line, and Model are required.");
             }
             
-            // ** แก้ไข SQL: ลบโดยใช้ item_id **
             $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND line = ? AND model = ?");
             $stmt->execute([(int)$fg_item_id, $line, $model]);
             

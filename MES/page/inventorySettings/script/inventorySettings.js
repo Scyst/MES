@@ -881,82 +881,167 @@ function initializeBomManager() {
 
     loadAndRenderBomFgTable();
 }
+
 function initializeCreateBomModal() {
     const modalEl = document.getElementById('createBomModal');
     if (!modalEl) return;
-    const form = document.getElementById('createBomForm');
+
     const searchInput = document.getElementById('fg_item_search');
     const resultsWrapper = document.createElement('div');
     resultsWrapper.className = 'autocomplete-results';
     searchInput.parentNode.appendChild(resultsWrapper);
-    const detailsDiv = document.getElementById('selected_fg_details');
-    const paramSelect = document.getElementById('parameter_select');
-    const nextBtn = document.getElementById('createBomNextBtn');
-    let selectedItem = null;
-    let bomDataForNextStep = null;
+
+    let debounce;
 
     searchInput.addEventListener('input', () => {
-        clearTimeout(window.debounceTimer);
+        clearTimeout(debounce);
         const value = searchInput.value.toLowerCase();
+        resultsWrapper.innerHTML = '';
         if (value.length < 2) return;
-        window.debounceTimer = setTimeout(async () => {
-            const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
+
+        debounce = setTimeout(async () => {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'get_fgs_without_bom', 'GET', null, { search: value });
+            
             if (result.success) {
                 resultsWrapper.innerHTML = '';
-                result.data.slice(0, 10).forEach(item => {
-                    const resultItem = document.createElement('div');
-                    resultItem.className = 'autocomplete-item';
-                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
-                    resultItem.addEventListener('click', () => {
-                        searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                        selectedItem = item;
-                        resultsWrapper.style.display = 'none';
-                        loadParametersForSelectedItem();
+                if (result.data.length > 0) {
+                    result.data.slice(0, 10).forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'autocomplete-item';
+                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
+                        
+                        
+                        resultItem.addEventListener('click', () => {
+                            const createModalInstance = bootstrap.Modal.getInstance(modalEl);
+                            createModalInstance.hide();
+                            
+                            const fgDataForModal = {
+                                fg_item_id: item.item_id,
+                                fg_sap_no: item.sap_no,
+                                fg_part_no: item.part_no,
+                                fg_part_description: item.part_description,
+                                line: null, 
+                                model: null,
+                                updated_by: null,
+                                updated_at: null
+                            };
+                            manageBom(fgDataForModal);
+                        });
+                        resultsWrapper.appendChild(resultItem);
                     });
-                    resultsWrapper.appendChild(resultItem);
-                });
+                } else {
+                    resultsWrapper.innerHTML = `<div class="autocomplete-item text-muted">No items found or they already have a BOM.</div>`;
+                }
                 resultsWrapper.style.display = 'block';
             }
         }, 300);
     });
 
-    async function loadParametersForSelectedItem() {
-        if (!selectedItem) return;
-        detailsDiv.classList.remove('d-none');
-        paramSelect.innerHTML = '<option>Loading...</option>';
-        nextBtn.disabled = true;
-        
-        const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: selectedItem.item_id });
-        
-        if (result.success && result.data.length > 0) {
-            paramSelect.innerHTML = '<option value="">-- Select Line/Model --</option>';
-            result.data.forEach(param => {
-                paramSelect.innerHTML += `<option value="${param.id}" data-line="${param.line}" data-model="${param.model}">Line: ${param.line} / Model: ${param.model}</option>`;
-            });
-        } else {
-            paramSelect.innerHTML = '<option>-- No parameters found --</option>';
-        }
-    }
-    paramSelect.addEventListener('change', () => { nextBtn.disabled = !paramSelect.value; });
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const selectedOption = paramSelect.options[paramSelect.selectedIndex];
-        if (!selectedOption || !selectedOption.value) return;
-        bomDataForNextStep = {
-            fg_item_id: selectedItem.item_id, fg_sap_no: selectedItem.sap_no,
-            fg_part_no: selectedItem.part_no, line: selectedOption.dataset.line,
-            model: selectedOption.dataset.model
-        };
-        closeModal('createBomModal');
-    });
     modalEl.addEventListener('hidden.bs.modal', () => {
-        if (bomDataForNextStep) manageBom(bomDataForNextStep);
-        form.reset();
-        detailsDiv.classList.add('d-none');
-        nextBtn.disabled = true;
-        bomDataForNextStep = null;
+        searchInput.value = '';
+        resultsWrapper.innerHTML = '';
+        resultsWrapper.style.display = 'none';
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
     });
 }
+
+// ✅ เพิ่มฟังก์ชันนี้ หรือแทนที่ของเดิมใน inventorySettings.js
+function setupBomComponentAutocomplete() {
+    const searchInput = document.getElementById('modalComponentSearch');
+    if (!searchInput) return;
+
+    // สร้างกล่องแสดงผลลัพธ์ถ้ายังไม่มี
+    let resultsWrapper = searchInput.parentNode.querySelector('.autocomplete-results');
+    if (!resultsWrapper) {
+        resultsWrapper = document.createElement('div');
+        resultsWrapper.className = 'autocomplete-results';
+        searchInput.parentNode.appendChild(resultsWrapper);
+    }
+
+    let componentDebounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(componentDebounce);
+        const value = searchInput.value.toLowerCase();
+        document.getElementById('modalComponentItemId').value = '';
+        resultsWrapper.innerHTML = '';
+        if (value.length < 2) return;
+
+        componentDebounce = setTimeout(async () => {
+            // เราจะใช้ API จาก itemMasterManage เพราะมีฟังก์ชันค้นหา Item ที่สมบูรณ์อยู่แล้ว
+            const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
+            
+            if (result.success) {
+                resultsWrapper.innerHTML = '';
+                if(result.data.length > 0) {
+                    result.data.slice(0, 10).forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'autocomplete-item';
+                        // ✅ แสดง Part Description ในผลการค้นหา
+                        resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
+                        
+                        resultItem.addEventListener('click', () => {
+                            searchInput.value = `${item.sap_no} | ${item.part_no}`;
+                            document.getElementById('modalComponentItemId').value = item.item_id;
+                            resultsWrapper.innerHTML = '';
+                            resultsWrapper.style.display = 'none';
+                        });
+                        resultsWrapper.appendChild(resultItem);
+                    });
+                } else {
+                     resultsWrapper.innerHTML = `<div class="autocomplete-item text-muted">No items found.</div>`;
+                }
+                resultsWrapper.style.display = 'block';
+            }
+        }, 300);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            resultsWrapper.style.display = 'none';
+        }
+    });
+
+    const modalAddComponentForm = document.getElementById('modalAddComponentForm');
+    if (modalAddComponentForm) {
+        modalAddComponentForm.addEventListener('submit', async (e) => {
+            // 1. หยุดการรีเฟรชหน้าเว็บ
+            e.preventDefault(); 
+
+            // 2. รวบรวมข้อมูลจากฟอร์ม
+            const data = {
+                fg_item_id: document.getElementById('modalSelectedFgItemId').value,
+                component_item_id: document.getElementById('modalComponentItemId').value,
+                quantity_required: document.getElementById('modalQuantityRequired').value
+            };
+
+            // 3. ตรวจสอบข้อมูลเบื้องต้น
+            if (!data.component_item_id) {
+                showToast('Please select a valid component from the search results.', 'var(--bs-warning)');
+                return;
+            }
+
+            // 4. ส่ง Request ไปยัง API
+            const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', data);
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            
+            // 5. ถ้าสำเร็จ ให้โหลดข้อมูล Component ใหม่และรีเซ็ตฟอร์ม
+            if (result.success) {
+                // currentEditingBom คือตัวแปรที่เก็บข้อมูล BOM ที่กำลังดูอยู่
+                if (currentEditingBom) {
+                    await loadBomForModal(currentEditingBom); 
+                }
+                e.target.reset();
+                document.getElementById('modalComponentSearch').focus();
+            }
+        });
+    }
+}
+
 function getFilteredBoms(searchTerm) {
     const term = searchTerm.toLowerCase();
     if (!term) return allBomFgs;
@@ -967,6 +1052,7 @@ function getFilteredBoms(searchTerm) {
         (fg.model && fg.model.toLowerCase().includes(term))
     );
 }
+
 function renderBomFgTable(fgData) {
     const fgListTableBody = document.getElementById('bomFgListTableBody');
     fgListTableBody.innerHTML = '';
@@ -985,8 +1071,6 @@ function renderBomFgTable(fgData) {
                 <td class="text-center"><input class="form-check-input bom-row-checkbox" type="checkbox" value='${JSON.stringify(fg)}'></td>
                 <td>${fg.fg_sap_no || 'N/A'}</td>
                 <td>${fg.fg_part_no || ''}</td>
-                <td>${fg.line || 'N/A'}</td>
-                <td>${fg.model || 'N/A'}</td>
                 <td>${fg.fg_part_description || ''}</td>
                 <td>${fg.updated_by || 'N/A'}</td>
                 <td class="text-end">${fg.updated_at || 'N/A'}</td>
@@ -994,7 +1078,7 @@ function renderBomFgTable(fgData) {
             fgListTableBody.appendChild(tr);
         });
     } else {
-        fgListTableBody.innerHTML = `<tr><td colspan="8" class="text-center">No BOMs found.</td></tr>`;
+        fgListTableBody.innerHTML = `<tr><td colspan="6" class="text-center">No BOMs found.</td></tr>`;
     }
     renderPagination('bomPaginationControls', fgData.length, bomCurrentPage, ROWS_PER_PAGE, (page) => {
         bomCurrentPage = page;
@@ -1396,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupItemMasterAutocomplete();
     setupModelFilterAutocomplete();
+    setupBomComponentAutocomplete();
 
     document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {
         event.currentTarget.classList.toggle('active'); // สลับสถานะ active
