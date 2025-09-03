@@ -82,7 +82,7 @@
                         <div class="sticky-bar">
                             <div class="row my-3 align-items-center">
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" id="bomSearchInput" placeholder="Search by FG Part Number, Line, Model...">
+                                    <input type="text" class="form-control" id="bomSearchInput" placeholder="SAP No. / Part No. / Part Description">
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex justify-content-end gap-2">

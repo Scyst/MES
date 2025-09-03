@@ -714,17 +714,17 @@ async function loadBomForModal(fg) {
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                                        <td>${comp.component_sap_no}</td> 
-                                        <td>${comp.part_description || ''}</td>
+                    <td>${comp.component_sap_no}</td> 
+                    <td>${comp.part_description || ''}</td>
                     <td class="text-center align-middle">
                         <div class="d-flex justify-content-center">
                             <input type="number" 
                                 class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
                                 style="width: 80px;" 
-                                    value="${displayQuantity}"
+                                value="${displayQuantity}"
                                 data-bom-id="${comp.bom_id}" 
                                 min="0.0001"
-                                    step="any"
+                                step="any"
                                 readonly>
                         </div>
                     </td>

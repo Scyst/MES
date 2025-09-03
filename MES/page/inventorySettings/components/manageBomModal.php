@@ -48,12 +48,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn"><i class="fas fa-trash-alt"></i> Delete BOM</button>
-                <button type="button" class="btn btn-info" id="importBomFromModalBtn"><i class="fas fa-file-import"></i> Import</button>
-                <button type="button" class="btn btn-primary" id="exportBomFromModalBtn"><i class="fas fa-file-export"></i> Export Template</button>
-                <button type="button" class="btn btn-primary" id="copyBomFromModalBtn" style="display:none">
-                    <i class="fas fa-copy"></i> Copy BOM
-                </button>
+                <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn"><i class="fas fa-trash-alt"></i> Delete Full BOM</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

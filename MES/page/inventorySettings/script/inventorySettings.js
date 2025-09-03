@@ -1009,29 +1009,23 @@ function setupBomComponentAutocomplete() {
     const modalAddComponentForm = document.getElementById('modalAddComponentForm');
     if (modalAddComponentForm) {
         modalAddComponentForm.addEventListener('submit', async (e) => {
-            // 1. หยุดการรีเฟรชหน้าเว็บ
             e.preventDefault(); 
 
-            // 2. รวบรวมข้อมูลจากฟอร์ม
             const data = {
                 fg_item_id: document.getElementById('modalSelectedFgItemId').value,
                 component_item_id: document.getElementById('modalComponentItemId').value,
                 quantity_required: document.getElementById('modalQuantityRequired').value
             };
 
-            // 3. ตรวจสอบข้อมูลเบื้องต้น
             if (!data.component_item_id) {
                 showToast('Please select a valid component from the search results.', 'var(--bs-warning)');
                 return;
             }
 
-            // 4. ส่ง Request ไปยัง API
             const result = await sendRequest(BOM_API_ENDPOINT, 'add_bom_component', 'POST', data);
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             
-            // 5. ถ้าสำเร็จ ให้โหลดข้อมูล Component ใหม่และรีเซ็ตฟอร์ม
             if (result.success) {
-                // currentEditingBom คือตัวแปรที่เก็บข้อมูล BOM ที่กำลังดูอยู่
                 if (currentEditingBom) {
                     await loadBomForModal(currentEditingBom); 
                 }
@@ -1048,8 +1042,7 @@ function getFilteredBoms(searchTerm) {
     return allBomFgs.filter(fg =>
         (fg.fg_sap_no && String(fg.fg_sap_no).toLowerCase().includes(term)) ||
         (fg.fg_part_no && fg.fg_part_no.toLowerCase().includes(term)) ||
-        (fg.line && fg.line.toLowerCase().includes(term)) ||
-        (fg.model && fg.model.toLowerCase().includes(term))
+        (fg.fg_part_description && fg.fg_part_description.toLowerCase().includes(term))
     );
 }
 
@@ -1092,17 +1085,114 @@ function manageBom(fg) {
     loadBomForModal(fg);
 };
 
+function initializeManageBomModalListeners() {
+    const modalBomTableBody = document.getElementById('modalBomTableBody');
+    const deleteBomFromModalBtn = document.getElementById('deleteBomFromModalBtn');
+    let bomDebounceTimer;
+
+    if (!modalBomTableBody) return;
+
+    modalBomTableBody.addEventListener('click', async (e) => {
+        const button = e.target.closest('button[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        const bomId = button.dataset.compId;
+
+        if (action === 'delete-comp') {
+            if (confirm('Are you sure you want to delete this component?')) {
+                showSpinner();
+                try {
+                    const result = await sendRequest(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
+                    showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+                    if (result.success && currentEditingBom) {
+                        await loadBomForModal(currentEditingBom);
+                    }
+                } finally {
+                    hideSpinner();
+                }
+            }
+        } else if (action === 'edit-comp') {
+            const input = button.closest('tr').querySelector('.bom-quantity-input');
+            input.readOnly = !input.readOnly;
+            input.classList.toggle('bom-input-readonly');
+            if (!input.readOnly) {
+                button.textContent = 'Done';
+                button.classList.replace('btn-warning', 'btn-success');
+                input.focus();
+                input.select();
+            } else {
+                button.textContent = 'Edit';
+                button.classList.replace('btn-success', 'btn-warning');
+            }
+        }
+    });
+
+    modalBomTableBody.addEventListener('input', (e) => {
+        const input = e.target;
+        if (!input.classList.contains('bom-quantity-input') || input.readOnly) {
+            return;
+        }
+        
+        clearTimeout(bomDebounceTimer);
+        const bomId = input.dataset.bomId;
+        const newQuantity = input.value;
+
+        if (!bomId || newQuantity === '' || newQuantity <= 0) {
+            return;
+        }
+
+        bomDebounceTimer = setTimeout(async () => {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'update_bom_component', 'POST', {
+                bom_id: bomId,
+                quantity_required: newQuantity
+            });
+
+            if (!result.success) {
+                showToast(result.message, 'var(--bs-danger)');
+                if (currentEditingBom) {
+                    await loadBomForModal(currentEditingBom);
+                }
+            } else {
+                showToast('Quantity saved!', 'var(--bs-success)', 1500);
+            }
+        }, 800);
+    });
+
+    if(deleteBomFromModalBtn) {
+        deleteBomFromModalBtn.addEventListener('click', async () => {
+             if (!currentEditingBom || !currentEditingBom.fg_item_id) return;
+             if (confirm(`Are you sure you want to DELETE the entire BOM for ${currentEditingBom.fg_part_no}?`)) {
+                 showSpinner();
+                 try {
+                     const result = await sendRequest(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', {
+                         fg_item_id: currentEditingBom.fg_item_id
+                     });
+                     showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+                     if (result.success) {
+                         manageBomModal.hide();
+                         await initializeBomManager();
+                     }
+                 } finally {
+                     hideSpinner();
+                 }
+             }
+        });
+    }
+}
+
 async function loadBomForModal(fg) {
     showSpinner();
     try {
         const modalTitle = document.getElementById('bomModalTitle');
         const modalBomTableBody = document.getElementById('modalBomTableBody');
-        modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no} (SAP: ${fg.fg_sap_no})`;
+        
+        modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no || fg.fg_sap_no}`;
         document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
-        document.getElementById('modalSelectedFgLine').value = fg.line;
-        document.getElementById('modalSelectedFgModel').value = fg.model;
-        modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
-        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id, line: fg.line, model: fg.model });
+        
+        modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading components...</td></tr>';
+        
+        const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id });
+
         modalBomTableBody.innerHTML = '';
         if (bomResult.success && bomResult.data.length > 0) {
             bomResult.data.forEach(comp => {
@@ -1110,18 +1200,31 @@ async function loadBomForModal(fg) {
                 tr.innerHTML = `
                     <td>${comp.component_sap_no}</td> 
                     <td>${comp.part_description || ''}</td>
-                    <td class="text-center"><input type="number" class="form-control form-control-sm text-center" value="${parseFloat(comp.quantity_required)}" data-bom-id="${comp.bom_id}" min="0.0001" step="any"></td>
-                    <td class="text-center"><button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button></td>
+                    <td class="text-center">
+                        <input 
+                            type="number" 
+                            class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
+                            value="${parseFloat(comp.quantity_required)}" 
+                            data-bom-id="${comp.bom_id}" 
+                            min="0.0001" 
+                            step="any" 
+                            readonly>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
+                    </td>
                 `;
                 modalBomTableBody.appendChild(tr);
             });
         } else {
-            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No components. Add one now!</td></tr>';
+            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No components found. Use the form below to add one.</td></tr>';
         }
-    } finally { hideSpinner(); }
+    } finally {
+        hideSpinner();
+    }
 }
 
-// --- A. ฟังก์ชันสำหรับ Export ---
 async function exportAllBoms() {
     showToast('Exporting all BOMs (Consolidated)...', 'var(--bs-info)');
     showSpinner();
@@ -1478,10 +1581,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    setupItemMasterAutocomplete();
-    setupModelFilterAutocomplete();
-    setupBomComponentAutocomplete();
-
     document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {
         event.currentTarget.classList.toggle('active'); // สลับสถานะ active
         fetchItems(1); // โหลดข้อมูลใหม่ทันที
@@ -1574,15 +1673,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Opening Balance Tab ---
-    // 1. เมื่อมีการเลือก Location จาก Dropdown ให้โหลดข้อมูล Item
     document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
-
-    // 2. เมื่อกดปุ่ม Save ให้บันทึกข้อมูล
     document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
+    document.getElementById('exportAllConsolidatedBtn')?.addEventListener('click', async () => {
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'export_all_boms', 'GET');
+            if (result.success && result.data.length > 0) {
+                const worksheet = XLSX.utils.json_to_sheet(result.data);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "All_BOMs");
+                XLSX.writeFile(workbook, `BOM_Export_All_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } else {
+                showToast(result.message || 'No BOMs found to export.', 'var(--bs-warning)');
+            }
+        } finally {
+            hideSpinner();
+        }
+    });
 
-    // 3. เปิดใช้งาน Autocomplete สำหรับช่องค้นหาเพื่อเพิ่ม Item
+    document.getElementById('exportSelectedDetailedBtn')?.addEventListener('click', async (e) => {
+        if (e.currentTarget.classList.contains('disabled')) return;
+
+        const selectedCheckboxes = document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox:checked');
+        const bomsToExport = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
+
+        if (bomsToExport.length === 0) {
+            showToast('Please select at least one BOM to export.', 'var(--bs-warning)');
+            return;
+        }
+
+        showSpinner();
+        try {
+            const result = await sendRequest(BOM_API_ENDPOINT, 'export_selected_boms', 'POST', { boms: bomsToExport });
+            if (result.success && Object.keys(result.data).length > 0) {
+                const wb = XLSX.utils.book_new();
+                for (const fgSapNo in result.data) {
+                    const sheetData = result.data[fgSapNo].map(row => ({
+                        COMPONENT_SAP_NO: row.COMPONENT_SAP_NO,
+                        QUANTITY_REQUIRED: row.QUANTITY_REQUIRED
+                    }));
+                    const ws = XLSX.utils.json_to_sheet(sheetData);
+                    const safeSheetName = fgSapNo.replace(/[\*:\/\\?\[\]]/g, "_").substring(0, 31);
+                    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+                }
+                const fileName = `BOM_Export_Selected_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+            } else {
+                showToast(result.message || 'Could not export selected BOMs.', 'var(--bs-warning)');
+            }
+        } finally {
+            hideSpinner();
+        }
+    });
+    
+    setupItemMasterAutocomplete();
+    setupModelFilterAutocomplete();
+    setupBomComponentAutocomplete();
     setupStockAdjustmentAutocomplete();
+    initializeManageBomModalListeners(); 
 
     // --- Initial Page Load ---
     const urlParams = new URLSearchParams(window.location.search);
