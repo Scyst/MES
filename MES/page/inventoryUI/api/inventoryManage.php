@@ -81,6 +81,12 @@ try {
             $offset = ($page - 1) * $limit;
             $params = [];
             $conditions = [];
+
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $currentUser['line'];
+            }
+
             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
 
@@ -145,6 +151,22 @@ try {
             $limit = 50; $startRow = ($page - 1) * $limit; $endRow = $startRow + $limit;
             $search_term = $_GET['search_term'] ?? '';
             $conditions = []; $params = [];
+            
+            if ($currentUser['role'] === 'supervisor') {
+                $supervisor_line = $currentUser['line'];
+                $conditions[] = "
+                    i.item_id IN (
+                        SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?
+                        UNION
+                        SELECT DISTINCT b.component_item_id
+                        FROM " . BOM_TABLE . " b
+                        WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
+                    )
+                ";
+                $params[] = $supervisor_line;
+                $params[] = $supervisor_line;
+            }
+            
             if (!empty($search_term)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
                 $params = ["%{$search_term}%", "%{$search_term}%", "%{$search_term}%"];
@@ -188,6 +210,11 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = []; $date_params = []; $conditions = []; $date_where_clause = '';
+            
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "l.production_line = ?";
+                $params[] = $currentUser['line'];
+            }
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
@@ -263,6 +290,12 @@ try {
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["l.location_name NOT LIKE '%WAREHOUSE%'", "h.quantity <> 0"];
+
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "l.production_line = ?";
+                $params[] = $currentUser['line'];
+            }
+            
             if (!empty($_GET['search_term'])) { 
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
@@ -308,6 +341,11 @@ try {
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
+            
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "l.production_line = ?";
+                $params[] = $currentUser['line'];
+            }
             
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';

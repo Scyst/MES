@@ -37,6 +37,27 @@ try {
             $fromClause = "FROM " . ITEMS_TABLE . " i";
             $conditions = [];
 
+            if ($currentUser['role'] === 'supervisor') {
+                $supervisor_line = $currentUser['line'];
+                
+                $conditions[] = "
+                    i.item_id IN (
+                        -- 1. เลือก FG Items ที่ผลิตในไลน์ของ Supervisor
+                        SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?
+                        
+                        UNION
+                        
+                        -- 2. เลือก Component Items ที่ถูกใช้ใน FG ที่ผลิตในไลน์ของ Supervisor
+                        SELECT DISTINCT b.component_item_id
+                        FROM " . BOM_TABLE . " b
+                        WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
+                    )
+                ";
+                $params[] = $supervisor_line;
+                $params[] = $supervisor_line;
+            }
+
+
             if (!empty($filter_model)) {
                 $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id"; 
                 $conditions[] = "RTRIM(LTRIM(r.model)) LIKE ?";
@@ -54,9 +75,9 @@ try {
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             
-            $orderByClause = "ORDER BY i.sap_no ASC";
+            $orderByClause = "ORDER BY i.sap_no DESC";
             if ($showInactive) {
-                $orderByClause = "ORDER BY i.is_active ASC, i.sap_no ASC";
+                $orderByClause = "ORDER BY i.is_active ASC, i.sap_no DESC";
             }
 
             $totalSql = "SELECT COUNT(DISTINCT i.item_id) {$fromClause} {$whereClause}";
@@ -71,7 +92,6 @@ try {
                         
                         STUFF(
                             (
-                                -- [FIXED] เปลี่ยนจากการ JOIN PARAMETER_TABLE เป็น ROUTES_TABLE
                                 SELECT ', ' + r_sub.model
                                 FROM " . ROUTES_TABLE . " r_sub
                                 WHERE r_sub.item_id = i.item_id

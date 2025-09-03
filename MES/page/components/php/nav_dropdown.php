@@ -33,11 +33,14 @@
         <?php endif; ?>
 
         <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
-        <li><a class="dropdown-item-icon" href="../paraManage/paraManageUI.php" title="Parameter Manager"><i class="fas fa-sliders-h fa-fw"></i><span>Parameter Manager</span></a></li>
+        <li style="display:none"><a class="dropdown-item-icon" href="../paraManage/paraManageUI.php" title="Parameter Manager"><i class="fas fa-sliders-h fa-fw"></i><span>Parameter Manager</span></a></li>
+        <?php endif; ?>
+
+        <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
+        <li><a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings"><i class="fas fa-dolly fa-fw"></i><span>Inventory Settings</span></a></li>
         <?php endif; ?>
 
         <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
-        <li><a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings"><i class="fas fa-dolly fa-fw"></i><span>Inventory Settings</span></a></li>
         <li><a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager"><i class="fas fa-users-cog fa-fw"></i><span>User Manager</span></a></li>
         <?php endif; ?>
 

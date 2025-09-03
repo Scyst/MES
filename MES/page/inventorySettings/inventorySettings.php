@@ -4,7 +4,7 @@
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
         exit;
     }
-    $canManage = hasRole(['admin', 'creator']);
+    $canManage = hasRole(['admin', 'creator', 'supervisor']);
     $currentUser = $_SESSION['user'];
 ?>
 <!DOCTYPE html>
@@ -33,28 +33,31 @@
 
                 <ul class="nav nav-tabs" id="settingsTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations-pane" type="button" role="tab">Location Manager</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-pane" type="button" role="tab">Stock Transfer</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master & Routes</button>
+                        <button class="nav-link active" id="item-master-tab" data-bs-toggle="tab" data-bs-target="#item-master-pane" type="button" role="tab">Item Master & Routes</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="bom-manager-tab" data-bs-toggle="tab" data-bs-target="#bom-manager-pane" type="button" role="tab">
                             <i class="fas fa-sitemap"></i> BOM Manager
                         </button>
                     </li>
-                    <?php if ($canManage):?>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#lineSchedulesPane" type="button" role="tab">
                             <i class="fas fa-calendar-alt"></i> Line Schedules
                         </button>
                     </li>
+
+                    <?php if (hasRole(['admin', 'creator'])): ?>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations-pane" type="button" role="tab">Location Manager</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-pane" type="button" role="tab">Stock Transfer</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
+                        </li>
+                    <?php endif; ?>
+                    <?php if ($canManage):?>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link text-warning" id="health-check-tab" data-bs-toggle="tab" data-bs-target="#healthCheckPane" type="button" role="tab">
                             <i class="fas fa-heartbeat"></i> Data Health Check
@@ -66,7 +69,7 @@
 
             <div class="content-wrapper">
                 <div class="tab-content" id="settingsTabContent">
-                    <div class="tab-pane fade show active" id="locations-pane" role="tabpanel">
+                    <div class="tab-pane fade" id="locations-pane" role="tabpanel">
                         <?php include('components/locationsUI.php'); ?>
                     </div>
                     <div class="tab-pane fade" id="transfer-pane" role="tabpanel">
@@ -75,7 +78,7 @@
                     <div class="tab-pane fade" id="opening-balance-pane" role="tabpanel">
                         <?php include('components/openingBalanceUI.php'); ?>
                     </div>
-                    <div class="tab-pane fade" id="item-master-pane" role="tabpanel">
+                    <div class="tab-pane fade show active" id="item-master-pane" role="tabpanel">
                         <?php include('components/itemMasterUI.php'); ?>
                     </div>
                     <div class="tab-pane fade" id="bom-manager-pane" role="tabpanel">

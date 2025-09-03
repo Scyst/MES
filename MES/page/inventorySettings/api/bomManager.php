@@ -228,7 +228,7 @@ try {
                             $processedRow['determined_action'] = 'DELETE';
                             $validationResult['summary']['delete']++;
                         }
-                    } else { // ADD or UPDATE
+                    } else {
                         if ($exists) {
                             $processedRow['determined_action'] = 'UPDATE';
                             $validationResult['summary']['update']++;
@@ -257,7 +257,6 @@ try {
                 throw new Exception("No validated data received for execution.");
             }
 
-            // Map SAP numbers to Item IDs again for security
             $sapNosInFile = [];
             foreach ($validatedRows as $row) {
                 $sapNosInFile[] = $row['FG_SAP_NO'];
@@ -287,7 +286,7 @@ try {
                     $fgItemId = $itemMap[$row['FG_SAP_NO']] ?? null;
                     $componentItemId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
                     
-                    if (!$fgItemId || !$componentItemId) continue; // Should not happen if validation is correct
+                    if (!$fgItemId || !$componentItemId) continue;
 
                     enforceLinePermission($row['LINE']);
 
@@ -312,7 +311,6 @@ try {
 
                 $pdo->commit();
                 
-                // Logging
                 $targetFG = $validatedRows[0]['FG_SAP_NO'] ?? 'Multiple';
                 $logSummary = "Import for {$targetFG}: Added: {$counts['added']}, Updated: {$counts['updated']}, Deleted: {$counts['deleted']}.";
                 logAction($pdo, $currentUser['username'], 'BOM Import', $targetFG, $logSummary);
@@ -540,13 +538,20 @@ try {
                 FROM LatestBOM b
                 JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id
                 WHERE b.rn = 1
-                ORDER BY i.sap_no DESC
             ";
         
             if ($currentUser['role'] === 'supervisor') {
-                $stmt = $pdo->query($sql);
+                $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)";
+            }
+        
+            $sql .= " ORDER BY i.sap_no DESC";
+        
+            $stmt = $pdo->prepare($sql);
+        
+            if ($currentUser['role'] === 'supervisor') {
+                $stmt->execute([$currentUser['line']]);
             } else {
-                $stmt = $pdo->query($sql);
+                $stmt->execute();
             }
         
             $fgs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -734,7 +739,7 @@ try {
                 throw new Exception("No data rows received for initial creation.");
             }
 
-            // 1. ดึง SAP No ทั้งหมดเพื่อค้นหา item_id ในครั้งเดียว (เหมือนเดิม)
+            // --- 1. ดึงข้อมูล ID ที่จำเป็นทั้งหมดในครั้งเดียว ---
             $sapNosInFile = [];
             foreach ($rows as $row) {
                 if (!empty($row['FG_SAP_NO'])) $sapNosInFile[] = $row['FG_SAP_NO'];
@@ -745,84 +750,52 @@ try {
                 $uniqueSapNos = array_unique($sapNosInFile);
                 $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN (" . implode(',', array_fill(0, count($uniqueSapNos), '?')) . ")");
                 $stmt->execute(array_values($uniqueSapNos));
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $itemMap[$item['sap_no']] = $item['item_id'];
-                }
+                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) { $itemMap[$item['sap_no']] = $item['item_id']; }
             }
-
-            // 2. จัดกลุ่มข้อมูลตาม BOM ที่ไม่ซ้ำกัน (FG + Line + Model) (เหมือนเดิม)
+            
+            // --- 2. จัดกลุ่มข้อมูลตาม FG และกรอง FG ที่มี BOM อยู่แล้วออก ---
             $bomGroups = [];
+            $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE);
+            $existingFgIds = $existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0);
+            $existingFgIds = array_flip($existingFgIds);
+
             foreach ($rows as $row) {
                 $fgSap = $row['FG_SAP_NO'] ?? null;
-                $line = $row['LINE'] ?? 'DEFAULT';
-                $model = $row['MODEL'] ?? 'DEFAULT';
-                $key = "{$fgSap}_{$line}_{$model}";
-                $bomGroups[$key][] = $row;
+                $fgItemId = $itemMap[$fgSap] ?? null;
+
+                // ข้ามแถวนี้ถ้าหา FG ไม่เจอ หรือ FG นี้มี BOM อยู่แล้ว
+                if (!$fgItemId || isset($existingFgIds[$fgItemId])) {
+                    continue;
+                }
+                $bomGroups[$fgItemId][] = $row;
             }
 
+            // --- 3. บันทึกข้อมูล BOM ใหม่ ---
             $pdo->beginTransaction();
             try {
-                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND line = ? AND model = ?");
-                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, line, model, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())");
-                
+                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, GETDATE())");
                 $createdBomCount = 0;
-                $skippedBomCount = 0;
 
-                // 3. วนลูปตามกลุ่ม BOM ที่จัดไว้ (เหมือนเดิม)
-                foreach ($bomGroups as $key => $components) {
-                    $firstComponent = $components[0];
-                    // ตรวจสอบให้แน่ใจว่ามีข้อมูลครบถ้วนก่อนดำเนินการต่อ
-                    if (empty($firstComponent['FG_SAP_NO']) || empty($firstComponent['LINE']) || empty($firstComponent['MODEL'])) {
-                        $skippedBomCount++;
-                        continue; 
-                    }
-                    $fgSap = $firstComponent['FG_SAP_NO'];
-                    $line = $firstComponent['LINE'];
-                    $model = $firstComponent['MODEL'];
-                    $fgItemId = $itemMap[$fgSap] ?? null;
+                foreach ($bomGroups as $fgItemId => $components) {
+                    $processedComponents = [];
+                    foreach ($components as $compRow) {
+                        $compSap = $compRow['COMPONENT_SAP_NO'] ?? null;
+                        $qty = $compRow['QUANTITY_REQUIRED'] ?? null;
+                        $compItemId = $itemMap[$compSap] ?? null;
 
-                    if (!$fgItemId) {
-                        $skippedBomCount++;
-                        continue; // ข้ามทั้งกลุ่มถ้าหา FG SAP ไม่เจอ
-                    }
-
-                    // 4. ตรวจสอบแค่ครั้งเดียวต่อกลุ่มว่า BOM นี้มีในฐานข้อมูลแล้วหรือยัง (เหมือนเดิม)
-                    $checkStmt->execute([$fgItemId, $line, $model]);
-                    $bomExists = $checkStmt->fetchColumn() > 0;
-
-                    if (!$bomExists) {
-                        // --- ★★★ START: ส่วนที่ปรับปรุง ★★★ ---
-                        // 5. ถ้า BOM ยังไม่มี ให้เพิ่มส่วนประกอบทั้งหมด โดยมีการตรวจสอบความซ้ำซ้อนภายในไฟล์
-                        $processedComponents = []; // สร้าง Array เพื่อเก็บ Component ที่เพิ่มไปแล้วใน BOM นี้
-                        $bomWasCreated = false; // สร้าง "ธง" เพื่อนับ createdBomCount แค่ครั้งเดียว
-
-                        foreach ($components as $compRow) {
-                            $compSap = $compRow['COMPONENT_SAP_NO'] ?? null;
-                            $qty = $compRow['QUANTITY_REQUIRED'] ?? 1;
-                            $compItemId = $itemMap[$compSap] ?? null;
-                            
-                            // สร้าง Key ที่ไม่ซ้ำกันสำหรับแต่ละ Component
-                            $componentKey = $compItemId; 
-
-                            // ตรวจสอบว่า Component นี้ยังไม่ถูกเพิ่ม และมี compItemId
-                            if ($compItemId && !isset($processedComponents[$componentKey])) {
-                                $insertStmt->execute([$fgItemId, $compItemId, $line, $model, $qty, $currentUser['username']]);
-                                $processedComponents[$componentKey] = true; // บันทึกว่า Component นี้ถูกเพิ่มแล้ว
-                                $bomWasCreated = true; // ตั้งธงว่ามีการสร้าง BOM นี้แล้ว
-                            }
+                        // เพิ่ม Component ถ้าข้อมูลครบและยังไม่ถูกเพิ่มใน Loop นี้
+                        if ($compItemId && $qty && !isset($processedComponents[$compItemId])) {
+                            $insertStmt->execute([$fgItemId, $compItemId, $qty, $currentUser['username']]);
+                            $processedComponents[$compItemId] = true;
                         }
-                        if ($bomWasCreated) {
-                            $createdBomCount++; // นับเป็น 1 BOM ที่สร้างสำเร็จ
-                        }
-                        // --- ★★★ END: ส่วนที่ปรับปรุง ★★★ ---
-                    } else {
-                        $skippedBomCount++;
+                    }
+                    if (!empty($processedComponents)) {
+                        $createdBomCount++;
                     }
                 }
 
                 $pdo->commit();
-                
-                $message = "Initial BOM creation complete. Created: {$createdBomCount} new BOMs, Skipped: {$skippedBomCount} BOMs (already exist or invalid data).";
+                $message = "Initial BOM creation complete. Created: {$createdBomCount} new BOMs.";
                 logAction($pdo, $currentUser['username'], 'BOM Initial Create', $createdBomCount . ' BOMs', $message);
                 echo json_encode(['success' => true, 'message' => $message]);
 
