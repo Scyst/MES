@@ -166,7 +166,13 @@ session_start();
                         <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
-                                <h4>Stop & Cause</h4>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h4>Stop & Cause</h4>
+                                    <div class="btn-group btn-group-sm" role="group" id="stopCauseToggle">
+                                        <button type="button" class="btn btn-outline-secondary active" data-group="cause">By Cause</button>
+                                        <button type="button" class="btn btn-outline-secondary" data-group="line">By Line</button>
+                                    </div>
+                                </div>
                                 <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas>
                                 <div class="no-data-message" style="margin-top: 1.5rem;">
                                     <i class="fas fa-info-circle"></i>

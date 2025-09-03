@@ -19,6 +19,8 @@ try {
     // =============================================================
 
     // --- 1. ดึงข้อมูล Stop Causes ---
+    $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; // รับค่า, ถ้าไม่มีให้ใช้ 'cause' เป็น default
+
     $stopConditions = ["log_date BETWEEN ? AND ?"];
     $stopParams = [$startDate, $endDate];
     if ($line) {
@@ -26,7 +28,18 @@ try {
         $stopParams[] = $line;
     }
     $stopWhereClause = "WHERE " . implode(" AND ", $stopConditions);
-    $stopSql = "SELECT cause, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} GROUP BY cause ORDER BY total_minutes DESC";
+
+    // ✅ ใช้ if-else เพื่อสร้าง Query ตาม GroupBy ที่เลือก
+    if ($stopCauseGroupBy === 'line') {
+        $stopSql = "SELECT line as label, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes 
+                    FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} 
+                    GROUP BY line ORDER BY total_minutes DESC";
+    } else { // Default to 'cause'
+        $stopSql = "SELECT cause as label, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes 
+                    FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} 
+                    GROUP BY cause ORDER BY total_minutes DESC";
+    }
+
     $stopStmt = $pdo->prepare($stopSql);
     $stopStmt->execute($stopParams);
     $stopResults = $stopStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -67,7 +80,7 @@ try {
     $partResults = $partStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // --- 3. จัดรูปแบบข้อมูลสำหรับ Frontend (ส่วนของ Stop Causes) ---
-    $stopCauseLabels = array_column($stopResults, 'cause');
+    $stopCauseLabels = array_column($stopResults, 'label');
     $stopCauseData = array_column($stopResults, 'total_minutes');
 
     // --- 4. ส่งข้อมูลกลับ (ส่ง partResults ไปทั้งก้อน) ---

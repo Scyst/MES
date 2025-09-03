@@ -156,11 +156,16 @@ async function fetchAndRenderBarCharts() {
     toggleErrorMessage("stopCauseBarChart", false);
 
     try {
+        // ✅ เพิ่มการอ่านค่าจากปุ่ม Toggle
+        const activeToggle = document.querySelector('#stopCauseToggle .btn.active');
+        const stopCauseGroupBy = activeToggle ? activeToggle.dataset.group : 'cause';
+
         const params = new URLSearchParams({
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
             line: document.getElementById("lineFilter")?.value || '',
-            model: document.getElementById("modelFilter")?.value || ''
+            model: document.getElementById("modelFilter")?.value || '',
+            stopCauseGroupBy: stopCauseGroupBy // ✅ ส่งค่า GroupBy ไปกับ Request
         });
         
         const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
@@ -250,4 +255,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     observer.observe(document.documentElement, { attributes: true });
+
+    const stopCauseToggle = document.getElementById('stopCauseToggle');
+    if (stopCauseToggle) {
+        stopCauseToggle.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (!button || button.classList.contains('active')) {
+                return; // ถ้ากดปุ่มเดิมที่ Active อยู่แล้ว ไม่ต้องทำอะไร
+            }
+
+            // สลับสถานะ Active
+            stopCauseToggle.querySelector('.active')?.classList.remove('active');
+            button.classList.add('active');
+
+            // โหลดข้อมูลกราฟใหม่
+            fetchAndRenderBarCharts();
+        });
+    }
 });
