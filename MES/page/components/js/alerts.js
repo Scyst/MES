@@ -1,65 +1,61 @@
 "use strict";
 
 /**
- * ฟังก์ชันสำหรับอัปเดต UI ของ Dropdown การแจ้งเตือน
+ * ฟังก์ชันสำหรับอัปเดต UI ของ Sidebar การแจ้งเตือน
  * @param {Array} alerts - Array ของ object การแจ้งเตือนที่ได้จาก API
  */
-function updateAlertsUI(alerts) {
-    const alertsContainer = document.getElementById('alerts-container');
+ function updateAlertsUI(alerts) {
+    // 1. กำหนดเป้าหมายไปที่ Element ของ Sidebar ใหม่
+    const alertsContainer = document.getElementById('alerts-container-sidebar');
     const alertBadge = document.getElementById('alert-badge');
-    const alertCount = document.getElementById('alert-count');
-    const alertFooterEmpty = document.getElementById('alert-footer-empty');
+    const alertCountSidebar = document.getElementById('alert-count-sidebar');
+    const alertEmptySidebar = document.getElementById('alert-empty-sidebar');
 
-    if (!alertsContainer) return; // ออกถ้าไม่เจอ element
+    // 2. ป้องกัน Error ถ้าหา Element ไม่เจอ
+    if (!alertsContainer) return;
 
-    // ล้างรายการแจ้งเตือนเก่าและลิงก์ "View All" ออกก่อน
-    const existingItems = alertsContainer.querySelectorAll('.notification-item, .view-all-link');
-    existingItems.forEach(item => item.remove());
+    // 3. ล้างเนื้อหาเก่าออกทั้งหมด
+    alertsContainer.innerHTML = '';
 
     const count = alerts.length;
-    if (alertCount) alertCount.textContent = count;
 
+    // 4. อัปเดต Badge ตัวเลขที่กระดิ่ง และข้อความ Header ใน Sidebar
+    if (alertCountSidebar) {
+        alertCountSidebar.textContent = count;
+    }
+    if (alertBadge) {
+        alertBadge.textContent = count;
+        alertBadge.style.display = count > 0 ? 'block' : 'none';
+    }
+
+    // 5. สร้างรายการแจ้งเตือนใหม่
     if (count > 0) {
-        if (alertBadge) {
-            alertBadge.textContent = count;
-            alertBadge.style.display = 'block';
-        }
-        if (alertFooterEmpty) alertFooterEmpty.style.display = 'none';
+        if (alertEmptySidebar) alertEmptySidebar.style.display = 'none';
 
-        // แสดงแค่ 4 รายการล่าสุด
-        alerts.slice(0, 4).forEach(alert => {
-            const li = document.createElement('li');
-            li.className = 'notification-item';
-            li.innerHTML = `
-                <a href="../inventorySettings/inventorySettings.php?tab=item-master-pane&search=${encodeURIComponent(alert.sap_no)}" class="dropdown-item d-flex align-items-start text-wrap">
-                    <i class="bi bi-exclamation-circle text-warning me-2 mt-1"></i>
-                    <div>
-                        <h4 class="mb-0 fs-6">${alert.part_no}</h4>
-                        <p class="mb-1 text-muted small">${alert.sap_no}</p>
-                        <p class="mb-0 small">ปัจจุบัน: ${parseFloat(alert.total_onhand).toFixed(2)} / ต่ำสุด: ${parseFloat(alert.min_stock).toFixed(2)}</p>
+        alerts.forEach(alert => {
+            const alertItem = document.createElement('a'); // สร้างเป็น <a> tag เพื่อให้คลิกได้
+            alertItem.href = `../inventorySettings/inventorySettings.php?tab=item-master-pane&search=${encodeURIComponent(alert.sap_no)}`;
+            alertItem.className = 'alert-item'; // ใช้ class ใหม่สำหรับ styling
+            
+            // สร้าง HTML ภายในที่สวยงามและเหมาะสมกับ Sidebar
+            alertItem.innerHTML = `
+                <div class="alert-icon">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                </div>
+                <div class="alert-content">
+                    <div class="alert-title">${alert.part_no}</div>
+                    <div class="alert-subtitle">${alert.sap_no}</div>
+                    <div class="alert-details">
+                        ปัจจุบัน: ${parseFloat(alert.total_onhand).toFixed(2)} / ต่ำสุด: ${parseFloat(alert.min_stock).toFixed(2)}
                     </div>
-                </a>
+                </div>
             `;
-            // เพิ่มรายการใหม่ต่อจาก divider
-            const divider = alertsContainer.querySelector('.dropdown-divider');
-            if (divider) {
-                divider.insertAdjacentElement('afterend', li);
-            }
+            alertsContainer.appendChild(alertItem);
         });
 
-        // เพิ่มลิงก์ "View All"
-        const viewAllLi = document.createElement('li');
-        viewAllLi.className = 'view-all-link';
-        viewAllLi.innerHTML = `
-            <li><hr class="dropdown-divider"></li>
-            <li class="dropdown-footer">
-                <a href="../inventorySettings/inventorySettings.php?tab=item-master-pane">ดูรายการทั้งหมด</a>
-            </li>`;
-        alertsContainer.appendChild(viewAllLi);
-
     } else {
-        if (alertBadge) alertBadge.style.display = 'none';
-        if (alertFooterEmpty) alertFooterEmpty.style.display = 'block';
+        // ถ้าไม่มีการแจ้งเตือน ให้แสดงข้อความ
+        if (alertEmptySidebar) alertEmptySidebar.style.display = 'block';
     }
 }
 

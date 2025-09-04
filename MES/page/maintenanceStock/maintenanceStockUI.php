@@ -170,6 +170,7 @@
             <script src="script/maintenance.js?v=<?php echo time(); // ใช้ time() เพื่อให้โหลดใหม่เสมอตอนพัฒนา ?>"></script>
 
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>

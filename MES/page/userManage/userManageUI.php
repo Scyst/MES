@@ -113,6 +113,7 @@ $canManage = hasRole(['admin', 'creator']);
             <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
             <script src="script/userManage.js?v=<?php echo filemtime('script/userManage.js'); ?>"></script>
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>

@@ -12,32 +12,13 @@
             <div>
                 <?= htmlspecialchars($_SESSION['user']['username']) ?>
                 <small style="display:block; font-size: 0.75rem; color: #aaa;">
-                  <?= htmlspecialchars($_SESSION['user']['role'] ?? 'operator') ?>
+                    <?= htmlspecialchars($_SESSION['user']['role'] ?? 'operator') ?>
                 </small>
             </div>
           </li>
         <?php endif; ?>
         
-        <div class="d-flex align-items-center">
-
-            <div class="nav-item dropdown me-3">
-                <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" id="alertsDropdown">
-                    <i class="bi bi-bell"></i>
-                    <span class="badge bg-danger badge-number" id="alert-badge" style="display: none;"></span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications" id="alerts-container">
-                    <li class="dropdown-header">
-                        คุณมีการแจ้งเตือน <span id="alert-count">0</span> รายการ
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    
-                    <li class="dropdown-footer" id="alert-footer-empty" style="display: none;">
-                        <a>ไม่มีรายการแจ้งเตือน</a>
-                    </li>
-                </ul>
-            </div>
-            <div class="nav-item dropdown pe-3"></div>
-        </div>
+        <li><hr class="dropdown-divider"></li>
 
         <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
         <li><a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
@@ -63,13 +44,13 @@
                 <i class="fas fa-tools fa-fw"></i>
                 <span>Maintenance Stock</span>
             </a>
-        </li>
-        <li>
+            </li>
+            <li>
             <a class="dropdown-item-icon" href="../userManage/userManageUI.php" title="User Manager">
                 <i class="fas fa-users-cog fa-fw"></i>
                 <span>User Manager</span>
             </a>
-        </li>
+            </li>
         <?php endif; ?>
 
         <li><hr class="dropdown-divider"></li>

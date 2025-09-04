@@ -286,6 +286,7 @@
             <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
             <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>

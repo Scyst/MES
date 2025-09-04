@@ -210,9 +210,9 @@
             <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
             <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
             <script src="../../utils/libs/xlsx.full.min.js"></script>
-            
             <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>

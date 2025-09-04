@@ -181,6 +181,95 @@ body {
     box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
 
+/* Right Sidebar Styles */
+.right-sidebar {
+    position: fixed;
+    top: 0;
+    right: -320px; /* ซ่อนไว้ทางขวาตอนเริ่มต้น */
+    width: 320px;
+    height: 100vh;
+    background-color: var(--sidebar-bg);
+    border-left: 1px solid var(--sidebar-border);
+    z-index: 1040; /* ให้อยู่เหนือเนื้อหาหลัก */
+    transition: right 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.right-sidebar.open {
+    right: 0; /* แสดง Sidebar */
+}
+
+/* ทำให้เนื้อหาหลักขยับเมื่อ Sidebar เปิด */
+body.right-sidebar-open main,
+body.right-sidebar-open footer {
+    margin-right: 320px;
+    transition: margin-right 0.3s ease-in-out;
+}
+
+/* Styles for Tab Content in Sidebar */
+.right-sidebar .tab-content {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.sidebar-pane-header {
+    padding: 1rem;
+    font-weight: bold;
+    border-bottom: 1px solid var(--sidebar-border);
+    background-color: var(--sidebar-header-bg);
+}
+.sidebar-pane-body {
+    padding: 1rem;
+}
+
+/* Overlay for clicking off the sidebar */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1039;
+    display: none;
+}
+
+/* Styling for Alert Items in Right Sidebar */
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--sidebar-border);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.2s ease;
+}
+
+.alert-item:hover {
+    background-color: var(--sidebar-hover-bg);
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    margin-right: 15px;
+    margin-top: 5px;
+}
+
+.alert-content .alert-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.alert-content .alert-subtitle {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.alert-content .alert-details {
+    font-size: 0.85rem;
+}
+
 /* =================================================================== */
 /* 3. SHARED COMPONENTS (ส่วนประกอบที่ใช้ร่วมกัน) */
 /* =================================================================== */

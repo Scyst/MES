@@ -117,6 +117,7 @@
             <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
             <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>

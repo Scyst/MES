@@ -213,6 +213,7 @@ session_start();
             <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
             <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
         </main>
+        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
 </body>
 </html>
