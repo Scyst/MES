@@ -360,10 +360,19 @@ function openMtItemModal(item = null) {
     
     const modalTitle = document.getElementById('mt_itemModalLabel');
     const deleteBtn = document.getElementById('mt_deleteItemBtn');
+    const restoreBtn = document.getElementById('mt_restoreItemBtn');
     
+    deleteBtn.style.display = 'none';
+    restoreBtn.style.display = 'none';
+
     if (item) {
         modalTitle.textContent = `Edit Spare Part: ${item.item_code}`;
-        deleteBtn.style.display = 'block';
+        
+        if (item.is_active == 1) {
+            deleteBtn.style.display = 'block';
+        } else {
+            restoreBtn.style.display = 'block';
+        }
 
         document.getElementById('mt_item_id').value = item.item_id;
         document.getElementById('mt_item_code').value = item.item_code;
@@ -374,7 +383,6 @@ function openMtItemModal(item = null) {
         document.getElementById('mt_max_stock').value = item.max_stock;
     } else {
         modalTitle.textContent = 'Add New Spare Part';
-        deleteBtn.style.display = 'none';
     }
     
     new bootstrap.Modal(document.getElementById('mt_itemModal')).show();
@@ -404,7 +412,24 @@ async function deleteMtItem() {
             bootstrap.Modal.getInstance(document.getElementById('mt_itemModal')).hide();
             showToast(result.message, 'var(--bs-success)');
             await fetchItems();
+            state.tabLoaded['#onhand-pane'] = false;
             await populateModalDropdowns();
+        }
+    }
+}
+
+async function restoreMtItem() {
+    const itemId = document.getElementById('mt_item_id').value;
+    if (!itemId || itemId === '0') return;
+
+    if (confirm('Are you sure you want to restore this item to active status?')) {
+        const result = await sendRequest(MT_API_URL, 'restore_item', 'POST', { item_id: itemId });
+        
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('mt_itemModal')).hide();
+            showToast(result.message, 'var(--bs-success)');
+            await fetchItems();
+            state.tabLoaded['#onhand-pane'] = false;
         }
     }
 }
@@ -542,6 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Form Event Listeners
     document.getElementById('mt_itemForm')?.addEventListener('submit', handleMtItemFormSubmit);
     document.getElementById('mt_deleteItemBtn')?.addEventListener('click', deleteMtItem);
+    document.getElementById('mt_restoreItemBtn')?.addEventListener('click', restoreMtItem);
     document.getElementById('mt_locationForm')?.addEventListener('submit', handleMtLocationFormSubmit);
     document.getElementById('mt_receiveForm')?.addEventListener('submit', handleTransactionFormSubmit);
     document.getElementById('mt_issueForm')?.addEventListener('submit', handleTransactionFormSubmit);

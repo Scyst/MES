@@ -54,10 +54,11 @@
                             <input type="search" id="mtSearchInput" class="form-control" placeholder="Search by Item Code, Name, or Location...">
                         </div>
                         <div class="col-md-6">
-                            <div id="mt-button-group" class="d-flex justify-content-end gap-2">
+                            <div class="d-flex justify-content-end gap-2">
                                 <button class="btn btn-outline-secondary" id="mt_toggleInactiveBtn" title="Show/Hide Inactive Items" style="display: none;">
                                     <i class="fas fa-eye"></i>
                                 </button>
+                                <div id="mt-button-group"></div>
                             </div>
                         </div>
                     </div>

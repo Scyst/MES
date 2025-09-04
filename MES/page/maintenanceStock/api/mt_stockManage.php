@@ -64,27 +64,28 @@ try {
             break;
 
         case 'get_transactions':
-            // (ส่วนนี้ไม่มีการแก้ไข)
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
             $offset = ($page - 1) * $limit;
             
             $searchTerm = $_GET['search'] ?? '';
-            $params = [];
+            $searchParams = [];
             $conditions = [];
 
             if (!empty($searchTerm)) {
                 $conditions[] = "(i.item_code LIKE ? OR i.item_name LIKE ? OR u.username LIKE ? OR t.notes LIKE ?)";
-                $searchTerm = '%' . $searchTerm . '%';
-                array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+                $searchWildcard = '%' . $searchTerm . '%';
+                array_push($searchParams, $searchWildcard, $searchWildcard, $searchWildcard, $searchWildcard);
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
+            // Query สำหรับนับจำนวน (ส่วนนี้ยังใช้ execute($searchParams) ได้ เพราะไม่มี OFFSET/FETCH)
             $totalSql = "SELECT COUNT(*) FROM " . MT_TRANSACTIONS_TABLE . " t JOIN " . MT_ITEMS_TABLE . " i ON t.item_id = i.item_id LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
+            $totalStmt->execute($searchParams);
             $total = (int)$totalStmt->fetchColumn();
 
+            // Query หลักสำหรับดึงข้อมูล
             $sql = "
                 SELECT 
                     t.created_at, i.item_code, i.item_name, t.transaction_type, 
@@ -96,10 +97,24 @@ try {
                 ORDER BY t.created_at DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
+            
             $stmt = $pdo->prepare($sql);
-            $params[] = $offset;
-            $params[] = $limit;
-            $stmt->execute($params);
+
+            // --- START: ส่วนที่แก้ไข ---
+            // 1. Bind ค่าของ Search parameters ทีละตัว
+            $paramIndex = 1;
+            foreach ($searchParams as $param) {
+                $stmt->bindValue($paramIndex++, $param, PDO::PARAM_STR);
+            }
+
+            // 2. Bind ค่าของ OFFSET และ LIMIT โดยระบุประเภทเป็น INT อย่างชัดเจน
+            $stmt->bindValue($paramIndex++, (int)$offset, PDO::PARAM_INT);
+            $stmt->bindValue($paramIndex++, (int)$limit, PDO::PARAM_INT);
+            
+            // 3. Execute โดยไม่ต้องส่ง Array เข้าไปอีก
+            $stmt->execute();
+            // --- END: ส่วนที่แก้ไข ---
+            
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
