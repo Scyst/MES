@@ -436,7 +436,7 @@ try {
                     $consumeStmt = $pdo->prepare($consumeSql);
 
                     foreach ($components as $comp) {
-                        $qty_to_consume = $quantity * (float)$comp['quantity_required'];
+                        $qty_to_consume = bcmul($quantity, $comp['quantity_required'], 6); 
                         $component_item_id = $comp['component_item_id'];
 
                         $consume_note = "Auto-consumed for production ID: {$parent_transaction_id}";
@@ -483,7 +483,7 @@ try {
             if (!$old_transaction) throw new Exception("Original transaction not found.");
 
             if (strpos($old_transaction['transaction_type'], 'PRODUCTION_') === 0) {
-                updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], -(float)$old_transaction['quantity']);
+                updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], -$old_transaction['quantity']);
 
                 $note_to_find = "Auto-consumed for production ID: " . $transaction_id;
                 $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
@@ -493,14 +493,14 @@ try {
 
                 foreach ($consumed_items as $item) {
                     $location_to_revert = $item['from_location_id'] ?: $old_transaction['to_location_id'];
-                    updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, -(float)$item['quantity']);
+                    updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, -$item['quantity']);
                 }
                 
                 $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                 $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
                 $deleteConsumeStmt->execute([$note_to_find]);
 
-                $new_quantity = (float)($input['quantity'] ?? 0);
+                $new_quantity = ($input['quantity'] ?? '0');
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
@@ -529,7 +529,7 @@ try {
                         $consume_note = "Auto-consumed for production ID: {$transaction_id}";
 
                         foreach ($components as $comp) {
-                            $qty_to_consume = $new_quantity * (float)$comp['quantity_required'];
+                            $qty_to_consume = bcmul($new_quantity, $comp['quantity_required'], 6);
                             $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
                             updateOnhandBalance($pdo, $comp['component_item_id'], $new_location_id, -$qty_to_consume);
                         }
@@ -538,7 +538,7 @@ try {
 
             } else {
                 $old_item_id = $old_transaction['parameter_id'];
-                $old_quantity = (float)$old_transaction['quantity'];
+                $old_quantity = $old_transaction['quantity'];
                 
                 if ($old_transaction['transaction_type'] === 'RECEIPT') {
                     updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
@@ -547,7 +547,7 @@ try {
                     updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
                 }
 
-                $new_quantity = (float)($input['quantity'] ?? 0);
+                $new_quantity = ($input['quantity'] ?? '0');
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
                 $new_log_date = $input['log_date'] ?? date('Y-m-d');
@@ -599,10 +599,10 @@ try {
             if (!$transaction) throw new Exception("Transaction not found.");
 
             if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
-                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -(float)$transaction['quantity']);
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']);
             } elseif ($transaction['transaction_type'] === 'TRANSFER') {
-                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['from_location_id'], (float)$transaction['quantity']);
-                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -(float)$transaction['quantity']);
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['from_location_id'], $transaction['quantity']);
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']);
             }
 
             if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0) {
@@ -613,7 +613,7 @@ try {
                 $consumed_items = $getConsumeStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($consumed_items as $item) {
-                    $qty_to_revert = -(float)$item['quantity'];
+                    $qty_to_revert = -$item['quantity'];
                     $location_to_revert = $item['from_location_id'] ?: $transaction['to_location_id'];
                     updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, $qty_to_revert);
                 }
@@ -713,9 +713,9 @@ try {
 
                 $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
                 $onhandStmt->execute([$item_id, $location_id]);
-                $current_quantity = (float)($onhandStmt->fetchColumn() ?: 0);
+                $current_quantity = ($onhandStmt->fetchColumn() ?: '0');
 
-                $variance = (float)$physical_count - $current_quantity;
+                $variance = $physical_count - $current_quantity;
 
                 if ($variance == 0) {
                     echo json_encode(['success' => true, 'message' => 'No adjustment needed as quantity is already correct.']);

@@ -246,7 +246,7 @@ try {
             try {
                 $item_id = (int)($input['item_id'] ?? 0);
                 $location_id = (int)($input['location_id'] ?? 0);
-                $quantity = (float)($input['quantity'] ?? 0);
+                $quantity = ($input['quantity'] ?? '0');
                 $type = $input['transaction_type'] ?? '';
                 $notes = $input['notes'] ?? null;
                 
