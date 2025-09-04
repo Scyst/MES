@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/php/inventory_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
@@ -476,41 +477,29 @@ try {
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-            // 1. ดึงข้อมูล Transaction เก่า
-            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
             $stmt->execute([$transaction_id]);
             $old_transaction = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$old_transaction) throw new Exception("Original transaction not found.");
 
-            // 2. ตรวจสอบว่าเป็น PRODUCTION หรือไม่
             if (strpos($old_transaction['transaction_type'], 'PRODUCTION_') === 0) {
-                
-                // ===================================================
-                // START: LOGIC การแก้ไข PRODUCTION (ยกเครื่องใหม่ทั้งหมด)
-                // ===================================================
-
-                // STEP 1: REVERT ของเก่าทั้งหมด
-                // 1.1 คืนสต็อก FG ของเก่า
                 updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], -(float)$old_transaction['quantity']);
 
-                // 1.2 ค้นหาและคืนสต็อก CONSUMPTION ของเก่าทั้งหมด (เหมือนตอนลบ)
-                $note_to_find = "Auto-consumed for production ID: " . $old_transaction['transaction_id'];
-                $getConsumeSql = "SELECT parameter_id, quantity FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
+                $note_to_find = "Auto-consumed for production ID: " . $transaction_id;
+                $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                 $getConsumeStmt = $pdo->prepare($getConsumeSql);
                 $getConsumeStmt->execute([$note_to_find]);
                 $consumed_items = $getConsumeStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($consumed_items as $item) {
-                    updateOnhandBalance($pdo, $item['parameter_id'], $old_transaction['to_location_id'], -(float)$item['quantity']);
+                    $location_to_revert = $item['from_location_id'] ?: $old_transaction['to_location_id'];
+                    updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, -(float)$item['quantity']);
                 }
                 
-                // 1.3 "ลบ" บันทึก CONSUMPTION ของเก่าทิ้งทั้งหมด
                 $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                 $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
                 $deleteConsumeStmt->execute([$note_to_find]);
 
-
-                // STEP 2: PREPARE ข้อมูลใหม่
                 $new_quantity = (float)($input['quantity'] ?? 0);
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
@@ -522,18 +511,12 @@ try {
                 $new_count_type = strtoupper($input['count_type'] ?? '');
                 $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
-
-                // STEP 3: UPDATE บันทึก PRODUCTION หลัก
                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=? WHERE transaction_id=?";
                 $updateStmt = $pdo->prepare($updateSql);
                 $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
 
-
-                // STEP 4: APPLY ของใหม่ทั้งหมด
-                // 4.1 เพิ่มสต็อก FG ใหม่
                 updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
                 
-                // 4.2 "สร้าง" บันทึก CONSUMPTION ใหม่ทั้งหมด (เหมือนตอน Add)
                 if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
                     $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
                     $bomStmt = $pdo->prepare($bomSql);
@@ -541,13 +524,13 @@ try {
                     $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
                     if (!empty($components)) {
-                        $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?, ?)";
+                        $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?)";
                         $consumeStmt = $pdo->prepare($consumeSql);
                         $consume_note = "Auto-consumed for production ID: {$transaction_id}";
 
                         foreach ($components as $comp) {
                             $qty_to_consume = $new_quantity * (float)$comp['quantity_required'];
-                            $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
+                            $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
                             updateOnhandBalance($pdo, $comp['component_item_id'], $new_location_id, -$qty_to_consume);
                         }
                     }
@@ -555,31 +538,53 @@ try {
 
             } else {
                 $old_item_id = $old_transaction['parameter_id'];
-                $old_location_id = $old_transaction['to_location_id'];
+                $old_quantity = (float)$old_transaction['quantity'];
+                
+                if ($old_transaction['transaction_type'] === 'RECEIPT') {
+                    updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
+                } elseif ($old_transaction['transaction_type'] === 'TRANSFER') {
+                    updateOnhandBalance($pdo, $old_item_id, $old_transaction['from_location_id'], $old_quantity);
+                    updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
+                }
 
-                // 2.1 Revert สต็อกเก่า
-                updateOnhandBalance($pdo, $old_item_id, $old_location_id, -(float)$old_transaction['quantity']);
-
-                // 2.2 เตรียมข้อมูลใหม่
                 $new_quantity = (float)($input['quantity'] ?? 0);
-                $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
                 $new_log_date = $input['log_date'] ?? date('Y-m-d');
                 $new_log_time = $input['log_time'] ?? date('H:i:s');
                 $new_timestamp = $new_log_date . ' ' . $new_log_time;
 
-                // 2.3 อัปเดต Transaction record (เพิ่ม transaction_timestamp)
-                $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_timestamp=? WHERE transaction_id=?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_timestamp, $transaction_id]);
+                $new_to_location_id = null;
+                $new_from_location_id = null;
 
-                // 2.4 เพิ่มสต็อกใหม่
-                updateOnhandBalance($pdo, $old_item_id, $new_location_id, $new_quantity);
+                if ($old_transaction['transaction_type'] === 'TRANSFER') {
+                    $new_to_location_id = (int)($input['to_location_id'] ?? 0);
+                    $new_from_location_id = (int)($input['from_location_id'] ?? 0);
+                } else {
+                    $new_to_location_id = (int)($input['location_id'] ?? 0);
+                }
+                
+                if (empty($new_to_location_id)) {
+                    throw new Exception("Destination location is required.");
+                }
+                if ($old_transaction['transaction_type'] === 'TRANSFER' && empty($new_from_location_id)) {
+                    throw new Exception("Source location is required for a transfer.");
+                }
+
+                $sql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, from_location_id=?, to_location_id=?, reference_id=?, notes=?, transaction_timestamp=? WHERE transaction_id=?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$new_quantity, $new_from_location_id ?: null, $new_to_location_id, $new_lot_no, $new_notes, $new_timestamp, $transaction_id]);
+
+                if ($old_transaction['transaction_type'] === 'RECEIPT') {
+                    updateOnhandBalance($pdo, $old_item_id, $new_to_location_id, $new_quantity);
+                } elseif ($old_transaction['transaction_type'] === 'TRANSFER') {
+                    updateOnhandBalance($pdo, $old_item_id, $new_from_location_id, -$new_quantity);
+                    updateOnhandBalance($pdo, $old_item_id, $new_to_location_id, $new_quantity);
+                }
             }
 
             $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id);
+            logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id, "Updated transaction.");
             echo json_encode(['success' => true, 'message' => 'Transaction updated successfully.']);
             break;
 
@@ -588,24 +593,29 @@ try {
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
             $stmt->execute([$transaction_id]);
             $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$transaction) throw new Exception("Transaction not found.");
 
-            $revert_fg_qty = -(float)$transaction['quantity'];
-            updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], $revert_fg_qty);
+            if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -(float)$transaction['quantity']);
+            } elseif ($transaction['transaction_type'] === 'TRANSFER') {
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['from_location_id'], (float)$transaction['quantity']);
+                updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -(float)$transaction['quantity']);
+            }
 
             if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0) {
                 $note_to_find = "Auto-consumed for production ID: " . $transaction['transaction_id'];
-                $getConsumeSql = "SELECT parameter_id, quantity FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
+                $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                 $getConsumeStmt = $pdo->prepare($getConsumeSql);
                 $getConsumeStmt->execute([$note_to_find]);
                 $consumed_items = $getConsumeStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($consumed_items as $item) {
                     $qty_to_revert = -(float)$item['quantity'];
-                    updateOnhandBalance($pdo, $item['parameter_id'], $transaction['to_location_id'], $qty_to_revert);
+                    $location_to_revert = $item['from_location_id'] ?: $transaction['to_location_id'];
+                    updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, $qty_to_revert);
                 }
 
                 $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
