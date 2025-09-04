@@ -521,25 +521,28 @@ function renderItemsTable(items, totalItems, page) {
     const tbody = document.getElementById('itemsTableBody');
     tbody.innerHTML = '';
     
-    // ✅ แก้ไข colspan เป็น 6 ให้ตรงกับจำนวนคอลัมน์ใหม่
+    // ✅ แก้ไข colspan เป็น 8 ให้ตรงกับจำนวนคอลัมน์ใหม่
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No items found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">No items found.</td></tr>`;
         renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
         return;
     }
 
     items.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer'; // ทำให้ผู้ใช้รู้ว่าสามารถคลิกได้
+        tr.style.cursor = 'pointer';
         tr.dataset.itemId = item.item_id;
         
-        // ✅ ปรับแก้ <td> ให้ตรงกับ <th> ใน itemMasterUI.php และลบปุ่ม Edit ออก
+        // ✅ นำโครงสร้างเดิมของคุณมาเพิ่มแค่ Min/Max Stock
         tr.innerHTML = `
             <td><span class="fw-bold">${item.sap_no}</span> ${!item.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}</td>
             <td>${item.part_no}</td>
             <td>${item.used_in_models || ''}</td>
             <td>${item.part_description || ''}</td>
             <td class="text-center">${item.planned_output || 0}</td>
+            
+            <td class="text-center">${parseFloat(item.min_stock || 0).toFixed(3)}</td>
+            <td class="text-center">${parseFloat(item.max_stock || 0).toFixed(3)}</td>
             <td class="text-end">${item.created_at}</td>
         `;
 
@@ -547,7 +550,6 @@ function renderItemsTable(items, totalItems, page) {
             tr.classList.add('table-secondary', 'text-muted');
         }
 
-        // ✅ เปลี่ยนมาใช้ Event Listener ที่แถว (tr) โดยตรงเพื่อเปิด Modal
         tr.addEventListener('click', () => {
             openItemModal(item);
         });
@@ -653,42 +655,36 @@ async function openItemModal(item = null) {
     const routesTbody = document.getElementById('modalRoutesTableBody');
     routesTbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading routes...</td></tr>';
     
-    // ทำให้ปุ่ม Delete มองไม่เห็นก่อน เผื่อเป็นการสร้าง Item ใหม่
     document.getElementById('deleteItemBtn').style.display = 'none';
 
     if (item) {
-        // --- 1. เติมข้อมูลหลักของ Item ลงในฟอร์ม ---
         modalTitle.textContent = `Edit Item: ${item.sap_no}`;
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
-        document.getElementById('planned_output').value = item.planned_output; // ใส่ค่าเดิมไปก่อน
+        document.getElementById('planned_output').value = item.planned_output;
         document.getElementById('part_description').value = item.part_description;
+        document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
+        document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
         
-        // แสดงปุ่ม Delete เมื่อเป็นการแก้ไข
         document.getElementById('deleteItemBtn').style.display = 'inline-block';
 
-        // --- 2. ดึงข้อมูล Routes และคำนวณ Planned Output ---
         const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
         const routes = result.success ? result.data : [];
         renderRoutesInModal(routes);
 
-        // ✅ 2. คำนวณ Default Planned Output จากค่าที่ต่ำที่สุดใน Route
         if (routes.length > 0) {
-            // กรองเอาเฉพาะ route ที่มี planned_output มากกว่า 0
             const validOutputs = routes.map(r => r.planned_output).filter(p => p > 0);
             if (validOutputs.length > 0) {
-                // หาค่าที่น้อยที่สุดแล้วใส่ในฟอร์ม
                 const minOutput = Math.min(...validOutputs);
                 document.getElementById('planned_output').value = minOutput;
             }
         }
 
     } else {
-        // --- กรณีเป็นการสร้าง Item ใหม่ ---
         modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
-        renderRoutesInModal([]); // แสดงตารางว่าง
+        renderRoutesInModal([]);
     }
     
     modal.show();
@@ -747,16 +743,16 @@ async function handleItemFormSubmit(event) {
     event.preventDefault();
     const form = document.getElementById('itemAndRoutesForm');
     
-    // --- 1. รวบรวมข้อมูลหลักของ Item ---
     const itemDetails = {
         item_id: form.querySelector('#item_id').value,
         sap_no: form.querySelector('#sap_no').value,
         part_no: form.querySelector('#part_no').value,
         planned_output: form.querySelector('#planned_output').value,
-        part_description: form.querySelector('#part_description').value
+        part_description: form.querySelector('#part_description').value,
+        min_stock: form.querySelector('#min_stock').value,
+        max_stock: form.querySelector('#max_stock').value
     };
 
-    // --- 2. รวบรวมข้อมูล Routes ทั้งหมด ---
     const routesData = [];
     const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');    
     routeRows.forEach(tr => {
@@ -769,18 +765,16 @@ async function handleItemFormSubmit(event) {
         });
     });
 
-    // --- 3. สร้าง Payload เพื่อส่งไป API ---
     const payload = {
         item_details: itemDetails,
         routes_data: routesData
     };
     
-    // --- 4. ส่งข้อมูลไปยัง API Endpoint ใหม่ ---
     const result = await sendRequest(ITEM_MASTER_API, 'save_item_and_routes', 'POST', payload);
     
     if (result.success) {
         closeModal('itemModal');
-        await fetchItems(currentPage); // รีเฟรชตารางหลัก
+        await fetchItems(currentPage);
         showToast(result.message, 'var(--bs-success)');
     } else {
         showToast(result.message, 'var(--bs-danger)');
@@ -801,7 +795,7 @@ async function deleteItem() {
         
         if (result.success) {
             closeModal('itemModal');
-            await fetchItems(currentPage); // รีเฟรชตารางหลัก
+            await fetchItems(currentPage);
             showToast(result.message, 'var(--bs-success)');
         } else {
             showToast(result.message, 'var(--bs-danger)');

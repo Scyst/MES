@@ -37,9 +37,11 @@
             <tr>
                 <th>SAP No.</th>
                 <th>Part No.</th>
-                <th>Used in Models</th>
+                <th>Models</th>
                 <th>Description</th>                
                 <th class="text-center">Planned Output</th>
+                <th>Min Stock</th>
+                <th>Max Stock</th>
                 <th class="text-end">Created At</th>
             </tr>
         </thead>    

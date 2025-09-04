@@ -12,21 +12,30 @@
                     <h6><i class="fas fa-cube"></i> Item Details</h6>
                     <hr class="mt-1">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="sap_no" class="form-label">SAP No.</label>
                             <input type="text" class="form-control" id="sap_no" name="sap_no" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="part_no" class="form-label">Part No.</label>
                             <input type="text" class="form-control" id="part_no" name="part_no" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="part_description" class="form-label">Part Description</label>
+                            <textarea class="form-control" id="part_description" name="part_description" rows="2"></textarea>
                         </div>
                         <div class="col-md-4">
                             <label for="planned_output" class="form-label">Default Planned Output</label>
                             <input type="number" class="form-control" id="planned_output" name="planned_output" required min="0">
                         </div>
-                        <div class="col-12">
-                            <label for="part_description" class="form-label">Part Description</label>
-                            <textarea class="form-control" id="part_description" name="part_description" rows="2"></textarea>
+
+                        <div class="col-md-4">
+                            <label for="min_stock" class="form-label">Min Stock</label>
+                            <input type="number" step="any" class="form-control" id="min_stock" name="min_stock" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="max_stock" class="form-label">Max Stock</label>
+                            <input type="number" step="any" class="form-control" id="max_stock" name="max_stock" placeholder="0.00">
                         </div>
                     </div>
 
@@ -51,7 +60,7 @@
                                 </tbody>
                         </table>
                     </div>
-                    </form>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger me-auto" id="deleteItemBtn"><i class="fas fa-trash-alt"></i> Delete Item</button>

@@ -39,15 +39,10 @@ try {
 
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
-                
                 $conditions[] = "
                     i.item_id IN (
-                        -- 1. เลือก FG Items ที่ผลิตในไลน์ของ Supervisor
                         SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?
-                        
                         UNION
-                        
-                        -- 2. เลือก Component Items ที่ถูกใช้ใน FG ที่ผลิตในไลน์ของ Supervisor
                         SELECT DISTINCT b.component_item_id
                         FROM " . BOM_TABLE . " b
                         WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
@@ -57,9 +52,8 @@ try {
                 $params[] = $supervisor_line;
             }
 
-
             if (!empty($filter_model)) {
-                $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id"; 
+                $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id";
                 $conditions[] = "RTRIM(LTRIM(r.model)) LIKE ?";
                 $params[] = '%' . $filter_model . '%';
             }
@@ -69,12 +63,10 @@ try {
             }
             if (!empty($searchTerm)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
-                $params[] = '%' . $searchTerm . '%';
-                $params[] = '%' . $searchTerm . '%';
-                $params[] = '%' . $searchTerm . '%';
+                $params = array_merge($params, ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-            
+
             $orderByClause = "ORDER BY i.sap_no DESC";
             if ($showInactive) {
                 $orderByClause = "ORDER BY i.is_active ASC, i.sap_no DESC";
@@ -88,27 +80,21 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, i.is_active, i.planned_output,
-                        
-                        STUFF(
-                            (
-                                SELECT ', ' + r_sub.model
-                                FROM " . ROUTES_TABLE . " r_sub
-                                WHERE r_sub.item_id = i.item_id
-                                ORDER BY r_sub.model
-                                FOR XML PATH('')
-                            ), 1, 2, ''
-                        ) AS used_in_models,
-
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
+                        i.is_active, i.planned_output, i.min_stock, i.max_stock,
+                        STUFF((
+                            SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub
+                            WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
+                        ), 1, 2, '') AS used_in_models,
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
                     {$fromClause}
                     {$whereClause}
                 )
-                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output
+                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output, min_stock, max_stock
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
-            
+
             $paginationParams = array_merge($params, [$startRow, $endRow]);
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
@@ -117,7 +103,7 @@ try {
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
             break;
 
-        case 'save_item':
+        /*case 'save_item':
             $id = $input['item_id'] ?? 0;
             $sap_no = trim($input['sap_no'] ?? '');
             $part_no = trim($input['part_no'] ?? '');
@@ -144,7 +130,7 @@ try {
                 logAction($pdo, $currentUser['username'], 'CREATE ITEM', $newId, "SAP: {$sap_no}");
                 echo json_encode(['success' => true, 'message' => 'Item created successfully.']);
             }
-            break;
+            break;*/
 
         case 'delete_item':
             $id = $input['item_id'] ?? 0;
@@ -309,50 +295,61 @@ try {
             try {
                 $item_id = (int)$item_details['item_id'];
                 
-                if ($item_id > 0) { // อัปเดต Item ที่มีอยู่
-                    $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ? WHERE item_id = ?";
+                $min_stock = !empty($item_details['min_stock']) ? $item_details['min_stock'] : 0;
+                $max_stock = !empty($item_details['max_stock']) ? $item_details['max_stock'] : 0;
+
+                if ($item_id > 0) {
+                    $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ?, min_stock = ?, max_stock = ? WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$item_details['sap_no'], $item_details['part_no'], $item_details['part_description'], (int)$item_details['planned_output'], $item_id]);
+                    $stmt->execute([
+                        $item_details['sap_no'], 
+                        $item_details['part_no'], 
+                        $item_details['part_description'], 
+                        (int)$item_details['planned_output'],
+                        $min_stock,
+                        $max_stock,
+                        $item_id
+                    ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
-                } else { // สร้าง Item ใหม่
-                    $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output) VALUES (?, ?, ?, GETDATE(), ?)";
+                } else {
+                    $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output, min_stock, max_stock) VALUES (?, ?, ?, GETDATE(), ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$item_details['sap_no'], $item_details['part_no'], $item_details['part_description'], (int)$item_details['planned_output']]);
-                    $item_id = $pdo->lastInsertId(); // ดึง ID ของ Item ที่สร้างใหม่
+                    $stmt->execute([
+                        $item_details['sap_no'], 
+                        $item_details['part_no'], 
+                        $item_details['part_description'], 
+                        (int)$item_details['planned_output'],
+                        $min_stock,
+                        $max_stock
+                    ]);
+                    $item_id = $pdo->lastInsertId();
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 }
 
-                // ---- 2. จัดการข้อมูล Routes ----
                 foreach ($routes_data as $route) {
                     $route_id = (int)$route['route_id'];
                     $status = $route['status'];
 
                     if ($status === 'deleted' && $route_id > 0) {
-                        // ลบ Route ที่ถูกลบ
                         $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
                         $stmt->execute([$route_id]);
-
                     } else if ($status === 'new') {
-                        // เพิ่ม Route ใหม่
                         $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute([$item_id, $route['line'], $route['model'], (int)$route['planned_output']]);
-
                     } else if ($status === 'existing') {
-                        // อัปเดต Route เดิม
                         $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute([$route['line'], $route['model'], (int)$route['planned_output'], $route_id]);
                     }
                 }
                 
-                // ถ้าทุกอย่างเรียบร้อย ให้ commit transaction
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Item and routes saved successfully.']);
 
             } catch (Exception $e) {
                 $pdo->rollBack();
-                throw $e; // ส่ง error กลับไปให้ client
+                throw $e;
             }
             break;
 
