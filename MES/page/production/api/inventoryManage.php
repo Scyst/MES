@@ -1,6 +1,4 @@
 <?php
-// นี่คือ API หลักสำหรับจัดการระบบ Inventory ใหม่ทั้งหมด (IN, OUT, Reports)
-
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
@@ -19,7 +17,6 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        // ====== Cases from stockApi.php ======
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
