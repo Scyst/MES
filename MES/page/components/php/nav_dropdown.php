@@ -19,25 +19,21 @@
         <?php endif; ?>
 
         <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
-        <li><a class="dropdown-item-icon" href="../inventoryUI/inventoryUI.php" title="Inventory Management"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
-        <li style="display:none"><a class="dropdown-item-icon" href="../pdTable/pdTable.php" title="Production & WIP (Legacy)"><i class="fas fa-table fa-fw"></i><span>Production & WIP (Old)</span></a></li>
+        <li><a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
         <li><a class="dropdown-item-icon" href="../Stop_Cause/Stop_Cause.php" title="Stop Causes"><i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span></a></li>
 
         <li><hr class="dropdown-divider"></li>
 
         <?php 
           $userRole = $_SESSION['user']['role'] ?? null;
-          if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): 
+          if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])):
         ?>
-        <li style="display:none"><a class="dropdown-item-icon" href="../performanceReport/performanceReportUI.php" title="Operator Performance"><i class="fas fa-user-check fa-fw"></i><span>Operator Performance</span></a></li>
-        <?php endif; ?>
-
-        <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
-        <li style="display:none"><a class="dropdown-item-icon" href="../paraManage/paraManageUI.php" title="Parameter Manager"><i class="fas fa-sliders-h fa-fw"></i><span>Parameter Manager</span></a></li>
-        <?php endif; ?>
-
-        <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
-        <li><a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings"><i class="fas fa-dolly fa-fw"></i><span>Inventory Settings</span></a></li>
+        <li>
+            <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
+                <i class="fas fa-dolly fa-fw"></i>
+                <span>Inventory Settings</span>
+            </a>
+        </li>
         <?php endif; ?>
 
         <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
@@ -48,7 +44,7 @@
             </a>
         </li>
         <li>
-            <a class="dropdown-item-icon" href="../userManageUI/userManageUI.php" title="User Manager">
+            <a class="dropdown-item-icon" href="../userManage/userManageUI.php" title="User Manager">
                 <i class="fas fa-users-cog fa-fw"></i>
                 <span>User Manager</span>
             </a>
