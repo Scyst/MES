@@ -776,6 +776,9 @@ async function handleItemFormSubmit(event) {
         closeModal('itemModal');
         await fetchItems(currentPage);
         showToast(result.message, 'var(--bs-success)');
+        if (typeof fetchAlerts === 'function') {
+            fetchAlerts();
+        }
     } else {
         showToast(result.message, 'var(--bs-danger)');
     }
