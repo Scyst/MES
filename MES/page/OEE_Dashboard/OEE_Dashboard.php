@@ -206,14 +206,16 @@ session_start();
 
             </div>
             <div id="toast"></div>
-
-            <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
-            <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>
-            <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
-            <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
-            <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
         </main>
-        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
+    
+    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+
+    <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
+    <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>
+    <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
+    <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
+    <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
 </body>
 </html>

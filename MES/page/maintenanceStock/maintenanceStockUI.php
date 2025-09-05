@@ -156,21 +156,21 @@
                 include('components/mt_locationModal.php');
                 include('components/mt_receiveModal.php');
                 include('components/mt_issueModal.php');
-                // include('components/mt_adjustModal.php');
             ?>
-            
-            <script>
-                const canManage = <?php echo json_encode($canManage); ?>;
-                const canTransact = <?php echo json_encode($canTransact); ?>;
-                const currentUser = <?php echo json_encode($currentUser); ?>;
-            </script>
-            
-            <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
-            <script src="../../utils/libs/xlsx.full.min.js"></script>
-            <script src="script/maintenance.js?v=<?php echo time(); // ใช้ time() เพื่อให้โหลดใหม่เสมอตอนพัฒนา ?>"></script>
-
         </main>
-        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
+    
+    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+
+    <script>
+        const canManage = <?php echo json_encode($canManage); ?>;
+        const canTransact = <?php echo json_encode($canTransact); ?>;
+        const currentUser = <?php echo json_encode($currentUser); ?>;
+    </script>
+    
+    <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="script/maintenance.js?v=<?php echo time();?>"></script>
 </body>
 </html>

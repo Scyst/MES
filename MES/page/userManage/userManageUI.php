@@ -102,18 +102,20 @@ $canManage = hasRole(['admin', 'creator']);
             }
             include('../components/php/autoLogoutUI.php');
             ?>
-
-            <script>
-                const canManage = <?php echo json_encode($canManage); ?>;
-                const currentUserId = <?php echo json_encode($_SESSION['user']['id'] ?? 0); ?>;
-                const currentUserRole = <?php echo json_encode($_SESSION['user']['role'] ?? ''); ?>;
-            </script>
-
-            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
-            <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
-            <script src="script/userManage.js?v=<?php echo filemtime('script/userManage.js'); ?>"></script>
         </main>
-        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
+    
+    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+    
+    <script>
+        const canManage = <?php echo json_encode($canManage); ?>;
+        const currentUserId = <?php echo json_encode($_SESSION['user']['id'] ?? 0); ?>;
+        const currentUserRole = <?php echo json_encode($_SESSION['user']['role'] ?? ''); ?>;
+    </script>
+
+    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
+    <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
+    <script src="script/userManage.js?v=<?php echo filemtime('script/userManage.js'); ?>"></script>
 </body>
 </html>

@@ -28,7 +28,7 @@
 <script src="../components/js/datetime.js?v=<?php echo filemtime(__DIR__ . '/js/datetime.js'); ?>"></script>
 <script src="../components/js/toast.js?v=<?php echo filemtime(__DIR__ . '/js/toast.js'); ?>"></script>
 <script src="../components/js/alerts.js?v=<?php echo filemtime(__DIR__ . '/js/alerts.js'); ?>"></script>
-<script src="../components/js/right_sidebar.js?v=<?php echo filemtime(__DIR__ . '/js/right_sidebar.js'); ?>"></script>
+<script src="../components/js/docking_sidebar_manager.js?v=<?php echo filemtime(__DIR__ . '/js/docking_sidebar_manager.js'); ?>"></script>
 
 <script src="../../utils/libs/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>

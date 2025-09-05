@@ -273,20 +273,21 @@
                 include('components/historySummaryModal.php');
                 include('../components/php/autoLogoutUI.php');
             ?>
-            
-            <script>
-                const canManage = <?php echo json_encode($canManage); ?>;
-                const canAdd = <?php echo json_encode($canAdd); ?>;
-                const currentUser = <?php echo json_encode($currentUserForJS); ?>;
-            </script>
-
-            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
-            <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
-            <script src="../../utils/libs/xlsx.full.min.js"></script>
-            <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
-            <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
-        </main>
-        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
+        </main>    
     </div>
+
+    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+
+    <script>
+        const canManage = <?php echo json_encode($canManage); ?>;
+        const canAdd = <?php echo json_encode($canAdd); ?>;
+        const currentUser = <?php echo json_encode($currentUserForJS); ?>;
+    </script>
+    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
+    <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
 </body>
 </html>

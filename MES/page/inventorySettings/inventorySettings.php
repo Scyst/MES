@@ -201,18 +201,20 @@
             <nav class="sticky-bottom" data-tab-target="#bom-manager-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
             </nav>
-
-            <script>
-                const canManage = <?php echo json_encode($canManage); ?>;
-                const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
-            </script>
-            
-            <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
-            <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
-            <script src="../../utils/libs/xlsx.full.min.js"></script>
-            <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
         </main>
-        <?php include __DIR__ . '/../components/php/right_sidebar.php'; ?>
     </div>
+    
+    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+
+    <script>
+        const canManage = <?php echo json_encode($canManage); ?>;
+        const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
+    </script>
+    
+    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
+    <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>
 </body>
 </html>

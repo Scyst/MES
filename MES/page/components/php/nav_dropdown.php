@@ -17,8 +17,6 @@
             </div>
           </li>
         <?php endif; ?>
-        
-        <li><hr class="dropdown-divider"></li>
 
         <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
         <li><a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
