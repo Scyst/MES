@@ -15,8 +15,9 @@ try {
         LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
         LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
         WHERE i.is_active = 1 
-          AND i.min_stock > 0
-          AND (l.location_name NOT LIKE '%WAREHOUSE%' OR l.location_name IS NULL)
+           AND i.min_stock > 0
+           AND i.is_tracking = 1
+           AND (l.location_name NOT LIKE '%WAREHOUSE%' OR l.location_name IS NULL)
         GROUP BY i.item_id, i.sap_no, i.part_no, i.min_stock
     ";
 

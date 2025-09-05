@@ -81,7 +81,7 @@ try {
                 WITH NumberedRows AS (
                     SELECT 
                         DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
-                        i.is_active, i.planned_output, i.min_stock, i.max_stock,
+                        i.is_active, i.planned_output, i.min_stock, i.max_stock, i.is_tracking, -- ★★★ ตรวจสอบให้แน่ใจว่ามี i.is_tracking อยู่ตรงนี้ ★★★
                         STUFF((
                             SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub
                             WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
@@ -90,7 +90,7 @@ try {
                     {$fromClause}
                     {$whereClause}
                 )
-                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output, min_stock, max_stock
+                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output, min_stock, max_stock, is_tracking -- ★★★ และต้องมี is_tracking ตรงนี้ด้วย ★★★
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -299,7 +299,7 @@ try {
                 $max_stock = !empty($item_details['max_stock']) ? $item_details['max_stock'] : 0;
 
                 if ($item_id > 0) {
-                    $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ?, min_stock = ?, max_stock = ? WHERE item_id = ?";
+                    $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ?, min_stock = ?, max_stock = ?, is_tracking = ? WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
                         $item_details['sap_no'], 
@@ -308,11 +308,12 @@ try {
                         (int)$item_details['planned_output'],
                         $min_stock,
                         $max_stock,
+                        (bool)($item_details['is_tracking'] ?? false),
                         $item_id
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 } else {
-                    $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output, min_stock, max_stock) VALUES (?, ?, ?, GETDATE(), ?, ?, ?)";
+                    $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output, min_stock, max_stock, is_tracking) VALUES (?, ?, ?, GETDATE(), ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
                         $item_details['sap_no'], 
@@ -320,7 +321,8 @@ try {
                         $item_details['part_description'], 
                         (int)$item_details['planned_output'],
                         $min_stock,
-                        $max_stock
+                        $max_stock,
+                        (bool)($item_details['is_tracking'] ?? false)
                     ]);
                     $item_id = $pdo->lastInsertId();
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");

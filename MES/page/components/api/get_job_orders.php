@@ -8,10 +8,9 @@ if (!defined('JOB_ORDERS_TABLE')) {
 }
 
 try {
-    // ดึงรายการใบสั่งงานที่ยังไม่เสร็จ (PENDING หรือ IN_PROGRESS)
-    // และ JOIN กับตาราง ITEMS เพื่อเอา part_no มาแสดง
     $sql = "
         SELECT 
+            jo.job_order_id,
             jo.job_order_number,
             jo.quantity_required,
             jo.due_date,

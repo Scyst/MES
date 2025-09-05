@@ -204,7 +204,7 @@
         </main>
     </div>
     
-    <?php include_once('../components/php/command_center.php'); ?>
+    <?php include_once('../components/php/'); ?>
     <?php include_once('../components/php/docking_sidebar.php'); ?>
 
     <script>
