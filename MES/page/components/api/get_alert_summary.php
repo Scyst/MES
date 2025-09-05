@@ -2,8 +2,13 @@
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
+// ★★★ เพิ่มการกำหนดชื่อตาราง job_orders (ถ้ายังไม่มีใน db.php) ★★★
+if (!defined('JOB_ORDERS_TABLE')) {
+    define('JOB_ORDERS_TABLE', 'job_orders');
+}
+
 try {
-    // --- 1. นับสต็อกที่ต่ำกว่า Min Stock ---
+    // --- 1. นับสต็อกที่ต่ำกว่า Min Stock --- (เหมือนเดิม)
     $onhandSql = "
         SELECT 
             i.item_id, i.min_stock, SUM(ISNULL(h.quantity, 0)) as total_onhand
@@ -16,11 +21,13 @@ try {
     $stmt = $pdo->query($alertSql);
     $lowStockCount = (int)$stmt->fetchColumn();
 
-    // --- 2. นับใบสั่งงาน (สำหรับอนาคต) ---
-    // (ตอนนี้จะใส่เป็น 0 ไปก่อน)
-    $jobOrderCount = 0;
+    // --- 2. นับใบสั่งงาน (★★★★★★ ส่วนที่แก้ไข ★★★★★★) ---
+    // เปลี่ยนจากการกำหนดค่าเป็น 0 มาเป็นการ query จากฐานข้อมูลจริง
+    $jobOrderSql = "SELECT COUNT(*) FROM " . JOB_ORDERS_TABLE . " WHERE status IN ('PENDING', 'IN_PROGRESS')";
+    $stmt = $pdo->query($jobOrderSql);
+    $jobOrderCount = (int)$stmt->fetchColumn();
 
-    // --- 3. รวบรวมข้อมูลทั้งหมด ---
+    // --- 3. รวบรวมข้อมูลทั้งหมด --- (เหมือนเดิม)
     $totalAlerts = $lowStockCount + $jobOrderCount;
 
     $summary = [

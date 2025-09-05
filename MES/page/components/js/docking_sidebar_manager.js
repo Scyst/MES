@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} panelId - ID ของ Panel
      * @param {HTMLElement} panelBody - Element ของส่วนเนื้อหาใน Panel
      */
-    const loadPanelContent = async (panelId, panelBody) => {
+     const loadPanelContent = async (panelId, panelBody) => {
         // แยก Logic การโหลดตามประเภทของ Panel
         if (panelId === 'low_stock') {
             try {
@@ -194,10 +194,44 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(error) {
                 panelBody.innerHTML = '<div class="text-center text-danger p-3">ไม่สามารถโหลดข้อมูลได้</div>';
             }
-
+            
         } else if (panelId === 'job_orders') {
-            // โค้ดสำหรับโหลดใบสั่งงานในอนาคตจะอยู่ที่นี่
-            panelBody.innerHTML = '<div class="text-center text-muted p-3">ฟีเจอร์ใบสั่งงานยังไม่เปิดใช้งาน</div>';
+            try {
+                const response = await fetch(`../components/api/get_job_orders.php`);
+                const result = await response.json();
+
+                panelBody.innerHTML = ''; // ลบ Spinner ออก
+
+                if (result.success && result.orders && result.orders.length > 0) {
+                    result.orders.forEach(order => {
+                        const orderLink = document.createElement('a');
+                        // TODO: แก้ไขลิงก์ไปยังหน้ารายละเอียดใบสั่งงานในอนาคต
+                        orderLink.href = '#'; 
+                        orderLink.className = 'alert-item';
+                        
+                        // แปลงวันที่ (ถ้ามี)
+                        const dueDate = order.due_date ? new Date(order.due_date).toLocaleDateString('th-TH') : 'N/A';
+
+                        orderLink.innerHTML = `
+                            <div class="alert-icon"><i class="bi bi-list-check text-info"></i></div>
+                            <div class="alert-content">
+                                <div class="alert-title">${order.job_order_number}</div>
+                                <div class="alert-subtitle">${order.part_no || 'N/A'}</div>
+                                <div class="alert-details">
+                                    จำนวน: ${parseFloat(order.quantity_required).toFixed(2)} | กำหนดส่ง: ${dueDate}
+                                </div>
+                            </div>
+                        `;
+                        panelBody.appendChild(orderLink);
+                    });
+                } else {
+                    panelBody.innerHTML = '<div class="text-center text-muted p-3">ไม่มีใบสั่งงานที่ยังค้างอยู่</div>';
+                }
+
+            } catch(error) {
+                console.error("Error loading job orders:", error);
+                panelBody.innerHTML = '<div class="text-center text-danger p-3">ไม่สามารถโหลดข้อมูลใบสั่งงานได้</div>';
+            }
         }
     };
 

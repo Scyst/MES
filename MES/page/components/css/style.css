@@ -379,7 +379,7 @@ body {
 .sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 1rem; padding-bottom: 0; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
 
 #toast {
-    position: fixed; top: 40px; right: 20px;
+    position: fixed; top: 0; right: 60px;
     background-color: var(--bs-secondary-bg);
     color: var(--bs-body-color);
     padding: 15px; border-radius: 8px;

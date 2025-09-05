@@ -27,7 +27,6 @@
 <script src="../components/js/spinner.js?v=<?php echo filemtime(__DIR__ . '/js/spinner.js'); ?>"></script>
 <script src="../components/js/datetime.js?v=<?php echo filemtime(__DIR__ . '/js/datetime.js'); ?>"></script>
 <script src="../components/js/toast.js?v=<?php echo filemtime(__DIR__ . '/js/toast.js'); ?>"></script>
-<script src="../components/js/alerts.js?v=<?php echo filemtime(__DIR__ . '/js/alerts.js'); ?>"></script>
 <script src="../components/js/docking_sidebar_manager.js?v=<?php echo filemtime(__DIR__ . '/js/docking_sidebar_manager.js'); ?>"></script>
 
 <script src="../../utils/libs/chart.umd.js"></script>
