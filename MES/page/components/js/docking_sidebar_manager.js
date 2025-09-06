@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="stock-panel p-0">
                     <ul class="nav nav-tabs nav-fill p-2">
                         <li class="nav-item">
-                            <a class="nav-link active" href="#" data-tab="low_stock">สต็อกใกล้หมด</a>
+                            <a class="nav-link active" href="#" data-tab="tracked_items">รายการที่ติดตาม</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-success" href="#" data-tab="search">+ ติดตาม</a>
@@ -253,28 +253,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch(`../components/api/get_alerts.php`);
                     const result = await response.json();
                     if (!result.success) throw new Error(result.message);
-
+            
                     tabContent.innerHTML = '';
                     if (result.alerts.length > 0) {
-                        result.alerts.forEach(alert => {
-                            const alertDiv = document.createElement('div');
-                            alertDiv.className = 'alert-item';
-                            alertDiv.style.cursor = 'pointer';
-                            alertDiv.innerHTML = `
-                                <div class="alert-icon"><i class="fas fa-box text-warning"></i></div>
+                        result.alerts.forEach(item => {
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'alert-item';
+                            itemDiv.style.cursor = 'pointer';
+            
+                            let statusIcon = '<i class="fas fa-box text-secondary"></i>';
+                            let statusBadge = `<span class="badge rounded-pill bg-success">${item.stock_status}</span>`;
+            
+                            if (item.stock_status === 'LOW') {
+                                statusIcon = '<i class="fas fa-box text-warning"></i>';
+                                statusBadge = `<span class="badge rounded-pill bg-warning text-dark">${item.stock_status}</span>`;
+                            } else if (item.stock_status === 'EMPTY') {
+                                statusIcon = '<i class="fas fa-exclamation-circle text-danger"></i>';
+                                statusBadge = `<span class="badge rounded-pill bg-danger">${item.stock_status}</span>`;
+                            }
+            
+                            itemDiv.innerHTML = `
+                                <div class="alert-icon">${statusIcon}</div>
                                 <div class="alert-content">
-                                    <div class="alert-title">${alert.part_no}</div>
-                                    <div class="alert-subtitle">${alert.sap_no}</div>
+                                    <div class="alert-title">${item.part_no}</div>
+                                    <div class="alert-subtitle">${item.sap_no}</div>
+                                    <div class="alert-details">
+                                        ${statusBadge}
+                                        คงเหลือ: ${parseFloat(item.total_onhand).toFixed(2)}
+                                    </div>
                                 </div>
                             `;
-                            alertDiv.addEventListener('click', () => renderManageItem({
-                                itemId: alert.item_id, 
-                                sapNo: alert.sap_no
+                            itemDiv.addEventListener('click', () => renderManageItem({
+                                itemId: item.item_id, 
+                                sapNo: item.sap_no
                             }));
-                            tabContent.appendChild(alertDiv);
+                            tabContent.appendChild(itemDiv);
                         });
                     } else {
-                        tabContent.innerHTML = '<div class="text-center text-muted p-3">ไม่มีรายการสต็อกต่ำ</div>';
+                        tabContent.innerHTML = '<div class="text-center text-muted p-3">ไม่มีรายการที่ถูกติดตาม</div>';
                     }
                 } catch (error) {
                     tabContent.innerHTML = `<div class="text-center text-danger p-3">${error.message}</div>`;
@@ -309,7 +325,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             result.data.forEach(item => {
                                 const itemDiv = document.createElement('div');
                                 itemDiv.className = 'autocomplete-item';
-                                itemDiv.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                                itemDiv.innerHTML = `
+                                    <div><strong>${item.sap_no}</strong> - ${item.part_no}</div>
+                                    <small class="d-block text-muted">${item.part_description || ''}</small>
+                                `;
                                 itemDiv.addEventListener('click', () => renderManageItem({
                                     itemId: item.item_id, 
                                     sapNo: item.sap_no
@@ -323,20 +342,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             };
             
-            // --- ระบบสลับ Tab ---
             tabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
                     e.preventDefault();
+                    // 1. สลับคลาส active ของ Tab ที่มองเห็น
                     tabs.forEach(t => t.classList.remove('active'));
                     tab.classList.add('active');
                     
                     const view = tab.dataset.tab;
-                    if (view === 'low_stock') renderLowStockList();
-                    else if (view === 'search') renderSearchTab();
+                    if (view === 'low_stock' || view === 'tracked_items') {
+                        renderLowStockList();
+                    } else if (view === 'search') {
+                        renderSearchTab();
+                    }
                 });
             });
 
-            // โหลด Tab เริ่มต้น
             renderLowStockList();
         } else if (panelId === 'job_order_management') {
             panelBody.innerHTML = `
@@ -599,7 +620,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         result.data.forEach(item => {
                             const itemDiv = document.createElement('div');
                             itemDiv.className = 'autocomplete-item';
-                            itemDiv.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}`;
+                            itemDiv.innerHTML = `
+                                <div><strong>${item.sap_no}</strong> - ${item.part_no}</div>
+                                <small class="d-block text-muted">${item.part_description || ''}</small>
+                            `;
                             itemDiv.addEventListener('click', () => {
                                 itemSearchInput.value = `${item.sap_no} - ${item.part_no}`;
                                 itemIdInput.value = item.item_id;
