@@ -31,7 +31,7 @@
         <li>
             <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
                 <i class="fas fa-dolly fa-fw"></i>
-                <span>Inventory Settings</span>
+                <span>System Settings</span>
             </a>
         </li>
         <?php endif; ?>
