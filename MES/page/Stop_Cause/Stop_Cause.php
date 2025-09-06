@@ -117,7 +117,6 @@
     <?php include_once('../components/php/command_center.php'); ?>
     <?php include_once('../components/php/docking_sidebar.php'); ?>
 
-    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>

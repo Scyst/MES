@@ -103,8 +103,21 @@ try {
 
         case 'get_history':
             $status_filter = $_GET['status'] ?? '';
+            $search_term = $_GET['search'] ?? '';
+            $start_date = $_GET['startDate'] ?? '';
+            $end_date = $_GET['endDate'] ?? '';
         
-            $sql = "SELECT jo.job_order_number, jo.status, jo.completed_at, i.part_no 
+            $sql = "SELECT 
+                        jo.job_order_id, 
+                        jo.job_order_number, 
+                        jo.status, 
+                        jo.completed_at, 
+                        jo.created_at,
+                        jo.due_date,
+                        jo.quantity_required,
+                        i.sap_no,
+                        i.part_no,
+                        i.part_description
                     FROM " . JOB_ORDERS_TABLE . " jo
                     LEFT JOIN " . ITEMS_TABLE . " i ON jo.item_id = i.item_id
                     WHERE jo.status IN ('COMPLETED', 'CANCELLED')";
@@ -112,17 +125,41 @@ try {
             $params = [];
             if (!empty($status_filter)) {
                 $sql .= " AND jo.status = ?";
-                $params[] = $status_firter; // แก้ไขตัวแปรตรงนี้
+                $params[] = $status_filter;
+            }
+            if (!empty($search_term)) {
+                $sql .= " AND (i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $params[] = "%{$search_term}%";
+                $params[] = "%{$search_term}%";
+            }
+            if (!empty($start_date)) {
+                $sql .= " AND CAST(jo.created_at AS DATE) >= ?";
+                $params[] = $start_date;
+            }
+            if (!empty($end_date)) {
+                $sql .= " AND CAST(jo.created_at AS DATE) <= ?";
+                $params[] = $end_date;
             }
         
-            // แก้ไข ORDER BY ให้มีประสิทธิภาพมากขึ้น
-            $sql .= " ORDER BY jo.created_at DESC";
+            $sql .= " ORDER BY jo.completed_at DESC, jo.created_at DESC";
         
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
             echo json_encode(['success' => true, 'data' => $history]);
+            break;
+
+        case 'get_pending':
+            $sql = "SELECT jo.job_order_id, jo.job_order_number, jo.quantity_required, jo.due_date, jo.status, i.part_no
+                    FROM " . JOB_ORDERS_TABLE . " jo
+                    LEFT JOIN " . ITEMS_TABLE . " i ON jo.item_id = i.item_id
+                    WHERE jo.status IN ('PENDING', 'IN_PROGRESS')
+                    ORDER BY jo.due_date ASC, jo.created_at ASC";
+            
+            $stmt = $pdo->query($sql);
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $orders]);
             break;
             
         default:

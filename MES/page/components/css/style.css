@@ -343,23 +343,27 @@ body {
 .alert-item:hover {
     background-color: var(--bs-tertiary-bg); /* เปลี่ยนจาก --sidebar-hover-bg */
 }
+
 .alert-icon {
     font-size: 1.5rem;
-    margin-right: 15px;
-    margin-top: 5px;
+    margin: auto 10px auto 5px;
 }
+
 .alert-content .alert-title {
     font-weight: 600;
     margin-bottom: 2px;
 }
+
 .alert-content .alert-subtitle {
     font-size: 0.8rem;
     color: #888;
     margin-bottom: 4px;
 }
+
 .alert-content .alert-details {
     font-size: 0.85rem;
 }
+
 /* =================================================================== */
 /* 3. SHARED COMPONENTS (ส่วนประกอบที่ใช้ร่วมกัน) */
 /* =================================================================== */

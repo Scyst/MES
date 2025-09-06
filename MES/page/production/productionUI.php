@@ -284,7 +284,6 @@
         const canAdd = <?php echo json_encode($canAdd); ?>;
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
-    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>

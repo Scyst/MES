@@ -28,48 +28,29 @@ try {
     // --- 3. รวบรวมข้อมูลทั้งหมด ---
     $totalAlerts = $lowStockCount + $jobOrderCount;
 
-    // 3.1 สร้างข้อมูลสำหรับ "ปุ่มคำสั่ง"
-    $actions = [
-        [
-            'id' => 'create_job_order_form',
-            'name' => 'สร้างใบสั่งงานใหม่',
-            'icon' => 'bi-plus-circle-fill',
-            'type' => 'action'
-        ],
-        [
-            'id' => 'search_stock_item',
-            'name' => 'ค้นหาและจัดการสต็อก',
-            'icon' => 'bi-search',
-            'type' => 'action'
-        ],
-        [
-            'id' => 'job_order_history',
-            'name' => 'ประวัติใบสั่งงาน',
-            'icon' => 'bi-clock-history',
-            'type' => 'action'
-        ]
-    ];
-    
-    // 3.2 สร้างข้อมูลสำหรับ "รายการแจ้งเตือน"
+    // 3.1 สร้างข้อมูลสำหรับ "รายการแจ้งเตือน" (ที่มี Badge)
     $notification_categories = [
         [
-            'id' => 'low_stock',
-            'name' => 'สต็อกใกล้หมด',
+            'id' => 'stock_management', 
+            'name' => 'จัดการสต็อก',
             'count' => $lowStockCount,
-            'icon' => 'bi-box-seam-fill',
+            'icon' => 'fas fa-box',
             'type' => 'notification'
         ],
         [
-            'id' => 'job_orders',
-            'name' => 'ใบสั่งงานที่ค้างอยู่',
+            'id' => 'job_order_management', 
+            'name' => 'จัดการใบสั่งงาน',
             'count' => $jobOrderCount,
-            'icon' => 'bi-list-check',
+            'icon' => 'fas fa-tasks',
             'type' => 'notification'
         ]
     ];
 
-    // 3.3 รวมข้อมูลทั้งสองส่วนเข้าด้วยกัน
-    $all_categories = array_merge($actions, $notification_categories);
+    // 3.2 ตอนนี้เราไม่มี Action แยกแล้ว
+    $actions = [];
+
+    // 3.3 รวมข้อมูล (ตอนนี้มีแค่ notifications)
+    $all_categories = array_merge($notification_categories, $actions);
 
     $summary = [
         'total_alerts' => $totalAlerts,
