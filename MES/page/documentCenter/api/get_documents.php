@@ -1,5 +1,5 @@
 <?php
-// MES/page/documentCenter/api/get_documents.php (Role-based file visibility)
+// MES/page/documentCenter/api/get_documents.php (Role-based file visibility & Category Filter)
 
 header('Content-Type: application/json');
 error_reporting(0);
@@ -20,29 +20,41 @@ try {
     $limit = 15;
     $offset = ($page - 1) * $limit;
     $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+    // <<< เพิ่มรับค่า categoryFilter เข้ามาตรงนี้ >>>
+    $categoryFilter = isset($_GET['category']) ? trim($_GET['category']) : '';
 
-    // ### ส่วนที่แก้ไข: สร้างเงื่อนไข WHERE clause เพิ่มเติมตาม Role ###
+
+    // ### ส่วนที่แก้ไข: สร้างเงื่อนไข WHERE clause เพิ่มเติมตาม Role, Search และ Category ###
     $whereClauses = [];
     $params = [];
 
-    // 1. เงื่อนไขการมองเห็นไฟล์
+    // 1. เงื่อนไขการมองเห็นไฟล์ (จากโค้ดเดิมของคุณ)
     if (!hasRole(['admin', 'creator'])) {
         $whereClauses[] = "d.file_name LIKE '%.pdf'";
     }
 
-    // 2. เงื่อนไขการค้นหา
+    // 2. เงื่อนไขการค้นหา (จากโค้ดเดิมของคุณ)
     if (!empty($searchTerm)) {
-        $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR d.category LIKE ?)";
+        $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR d.category LIKE ? OR u.username LIKE ?)"; // เพิ่ม u.username ด้วย
         $searchValue = "%{$searchTerm}%";
-        $params = [$searchValue, $searchValue, $searchValue];
+        $params[] = $searchValue;
+        $params[] = $searchValue;
+        $params[] = $searchValue;
+        $params[] = $searchValue; // สำหรับ u.username
     }
+
+    // <<< 3. เงื่อนไขการกรองตาม category (ส่วนที่เพิ่มเข้ามา) >>>
+    if (!empty($categoryFilter)) {
+        $whereClauses[] = "d.category LIKE ?"; // ใช้ 'd.category' เพื่ออ้างอิงถึงตาราง DOCUMENTS
+        $params[] = $categoryFilter . '%'; 
+    }
+    // ###############################################################
 
     $finalWhereClause = '';
     if (!empty($whereClauses)) {
         $finalWhereClause = 'WHERE ' . implode(' AND ', $whereClauses);
     }
-    // ###############################################################
-
+    
     $usersTable = USERS_TABLE;
     $sql = "
         SELECT 
@@ -70,18 +82,24 @@ try {
     $documents = $stmt->fetchAll();
 
     // Query นับจำนวน (ต้องใช้ WHERE clause เดียวกัน)
-    $countSql = "SELECT COUNT(*) FROM dbo.DOCUMENTS d {$finalWhereClause}";
+    $countSql = "SELECT COUNT(*) FROM dbo.DOCUMENTS d LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id {$finalWhereClause}";
     $countStmt = $pdo->prepare($countSql);
-    $countStmt->execute($params); // ใช้ params เดิม (ไม่มี offset/limit)
+    // Bind parameters สำหรับ count query
+    $paramIndexCount = 1;
+    foreach ($params as $param) {
+        $countStmt->bindValue($paramIndexCount++, $param);
+    }
+    $countStmt->execute(); 
     $totalRecords = $countStmt->fetchColumn();
 
     echo json_encode([
+        'success' => true, // เพิ่ม success field เพื่อให้ frontend ตรวจสอบได้ง่ายขึ้น
         'data' => $documents,
         'pagination' => [ 'currentPage' => $page, 'totalPages' => ceil($totalRecords / $limit), 'totalRecords' => $totalRecords ]
     ]);
 
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'An internal server error occurred.', 'debug_message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'An internal server error occurred.', 'debug_message' => $e->getMessage()]);
 }
 ?>

@@ -1,5 +1,5 @@
 <?php
-// MES/page/documentCenter/api/view_document.php (Stable Version - No Transparency)
+// MES/page/documentCenter/api/view_document.php (IP Address Watermark)
 
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
+// ### ใช้ File Path เดิมของคุณสำหรับ Library ###
 $fpdfPath = __DIR__ . '/../../../utils/libs/fpdf/fpdf.php';
 $fpdiPath = __DIR__ . '/../../../utils/libs/fpdi/src/autoload.php';
 
@@ -17,6 +18,7 @@ if (!file_exists($fpdfPath) || !file_exists($fpdiPath)) {
 }
 require_once $fpdfPath;
 require_once $fpdiPath;
+// #########################################
 
 class PDF_Rotate extends \setasign\Fpdi\Fpdi {
     protected $angle = 0;
@@ -27,10 +29,8 @@ class PDF_Rotate extends \setasign\Fpdi\Fpdi {
         $this->angle = $angle;
         if ($angle != 0) {
             $angle *= M_PI/180;
-            $c = cos($angle);
-            $s = sin($angle);
-            $cx = $x*$this->k;
-            $cy = ($this->h - $y)*$this->k;
+            $c = cos($angle); $s = sin($angle);
+            $cx = $x*$this->k; $cy = ($this->h - $y)*$this->k;
             $this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm', $c, $s, -$s, $c, $cx, $cy, -$cx, -$cy));
         }
     }
@@ -54,7 +54,7 @@ try {
     }
 
     $currentUser = $_SESSION['user'];
-    $ipAddress = $_SERVER['REMOTE_ADDR'];
+    $ipAddress = $_SERVER['REMOTE_ADDR']; // IP Address ของผู้ใช้ถูกเก็บไว้ในตัวแปรนี้แล้ว
 
     $stmt = $pdo->prepare("SELECT file_name, file_path, file_type FROM dbo.DOCUMENTS WHERE id = ?");
     $stmt->execute([$docId]);
@@ -75,8 +75,15 @@ try {
     if ($document['file_type'] === 'application/pdf') {
         $pdf = new PDF_Rotate();
         $pageCount = $pdf->setSourceFile($filePath);
+
+        $watermarkImagePath = __DIR__ . '/../../components/images/watermark.png';
+        if (!file_exists($watermarkImagePath)) {
+             error_log("Watermark image not found at: " . $watermarkImagePath);
+        }
+
         $watermarkUser = "Viewed by: {$currentUser['username']} on " . date('Y-m-d H:i');
-        $watermarkConfidential = 'SNC CONFIDENTIAL';
+        
+        $watermarkIp = "IP: " . $ipAddress;
 
         for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
             $templateId = $pdf->importPage($pageNo);
@@ -84,26 +91,23 @@ try {
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($templateId);
 
-            // --- ลายน้ำตรงกลาง (สีเทาอ่อน ไม่โปร่งใส) ---
-            $pdf->SetFont('Helvetica', 'B', 40);
-            $pdf->SetTextColor(230, 230, 230); // สีเทาอ่อน
-            $centerX = ($size['width'] / 2);
-            $centerY = ($size['height'] / 2);
-            $pdf->Rotate(45, $centerX, $centerY);
-            $textWidth = $pdf->GetStringWidth($watermarkConfidential);
-            $pdf->Text($centerX - ($textWidth / 2), $centerY, $watermarkConfidential);
-            $pdf->Rotate(0);
+            if (file_exists($watermarkImagePath)) {
+                $imageWidth = 150; 
+                $imageHeight = 150;
+                $x = ($size['width'] - $imageWidth) / 2;
+                $y = ($size['height'] - $imageHeight) / 2;
+                $pdf->Image($watermarkImagePath, $x, $y, $imageWidth, $imageHeight, 'PNG');
+            }
 
-            // --- ลายน้ำ 4 มุม (ใช้ Text() เพื่อความเสถียร) ---
             $pdf->SetFont('Helvetica', 'I', 8);
             $pdf->SetTextColor(150, 150, 150);
-            $margin = 10;
+            $margin = 3;
             
             $pdf->Text($margin, $margin, $watermarkUser);
-            $textWidthConf = $pdf->GetStringWidth('CONFIDENTIAL');
-            $pdf->Text($size['width'] - $textWidthConf - $margin, $margin, 'CONFIDENTIAL');
+            $textWidthIp = $pdf->GetStringWidth($watermarkIp);
+            $pdf->Text($size['width'] - $textWidthIp - $margin, $margin, $watermarkIp);
             $pdf->Text($margin, $size['height'] - $margin, $watermarkUser);
-            $pdf->Text($size['width'] - $textWidthConf - $margin, $size['height'] - $margin, 'CONFIDENTIAL');
+            $pdf->Text($size['width'] - $textWidthIp - $margin, $size['height'] - $margin, $watermarkIp);
         }
 
         header('Content-Type: application/pdf');

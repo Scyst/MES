@@ -68,8 +68,6 @@ body {
 .dashboard-page #main-content {
     overflow: hidden; /* ห้ามมี Scrollbar ที่ตัวแม่ */
 }
-/* (กฎสำหรับ .dashboard-container และ .dashboard-section จะทำงานต่อจากตรงนี้) */
-
 
 /* --- กฎพิเศษสำหรับหน้าตาราง เท่านั้น --- */
 .page-with-table #main-content {
@@ -824,9 +822,71 @@ body {
     margin: 0;
 }
 #modalBomTableBody .bom-quantity-input {
-    text-align: center;         /* จัดตัวเลขให้อยู่กึ่งกลาง */
+    text-align: center;
 }
 
+/* --- Styles for Drag & Drop Upload --- */
+.drop-zone-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.drop-zone-area:hover {
+    border-color: #0d6efd;
+    background-color: #f8f9fa;
+}
+
+.drop-zone-area.drag-over {
+    border-color: #0d6efd;
+    background-color: #e9ecef;
+    transform: scale(1.02);
+}
+
+.drop-zone-text i {
+    color: #adb5bd;
+}
+
+.drop-zone-text p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.drop-zone-or {
+    font-size: 0.8rem;
+    color: #adb5bd;
+    margin: 10px 0 !important;
+}
+
+/* --- Styles for File Preview List --- */
+.file-preview-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #e9ecef;
+}
+.file-preview-item:last-child {
+    border-bottom: none;
+}
+
+.file-preview-item i {
+    margin-right: 8px;
+}
 
 /* =================================================================== */
 /* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */
