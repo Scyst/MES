@@ -49,7 +49,6 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger me-auto" id="deleteBomFromModalBtn"><i class="fas fa-trash-alt"></i> Delete Full BOM</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

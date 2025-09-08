@@ -13,10 +13,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                
                 <?php if ($canManage): ?>
-                <button type="button" class="btn btn-danger" id="deleteDocBtn">
+                <button type="button" class="btn btn-danger me-auto" id="deleteDocBtn">
                     <i class="fas fa-trash-alt"></i> Delete Document
                 </button>
                 <?php endif; ?>

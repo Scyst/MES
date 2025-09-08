@@ -1,5 +1,5 @@
 <?php
-// MES/page/documentCenter/api/get_documents.php (เวอร์ชันสมบูรณ์ แก้ไขแล้ว)
+// MES/page/documentCenter/api/get_documents.php (Role-based file visibility)
 
 header('Content-Type: application/json');
 error_reporting(0);
@@ -21,69 +21,67 @@ try {
     $offset = ($page - 1) * $limit;
     $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
 
-    $searchWhereClause = '';
-    $searchParams = [];
-    if (!empty($searchTerm)) {
-        $searchWhereClause = "WHERE d.file_name LIKE ? OR d.file_description LIKE ? OR d.category LIKE ?";
-        $searchValue = "%{$searchTerm}%";
-        $searchParams = [$searchValue, $searchValue, $searchValue];
+    // ### ส่วนที่แก้ไข: สร้างเงื่อนไข WHERE clause เพิ่มเติมตาม Role ###
+    $whereClauses = [];
+    $params = [];
+
+    // 1. เงื่อนไขการมองเห็นไฟล์
+    if (!hasRole(['admin', 'creator'])) {
+        $whereClauses[] = "d.file_name LIKE '%.pdf'";
     }
 
-    $usersTable = USERS_TABLE;
+    // 2. เงื่อนไขการค้นหา
+    if (!empty($searchTerm)) {
+        $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR d.category LIKE ?)";
+        $searchValue = "%{$searchTerm}%";
+        $params = [$searchValue, $searchValue, $searchValue];
+    }
 
+    $finalWhereClause = '';
+    if (!empty($whereClauses)) {
+        $finalWhereClause = 'WHERE ' . implode(' AND ', $whereClauses);
+    }
+    // ###############################################################
+
+    $usersTable = USERS_TABLE;
     $sql = "
         SELECT 
-            d.id,
-            d.file_name,
-            d.file_description,
-            d.category,
-            d.created_at,
+            d.id, d.file_name, d.file_description, d.category,
+            CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
             u.username AS uploaded_by
-        FROM 
-            dbo.DOCUMENTS d
-        LEFT JOIN 
-            dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id
-        {$searchWhereClause}
-        ORDER BY 
-            d.created_at DESC
+        FROM dbo.DOCUMENTS d
+        LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id
+        {$finalWhereClause}
+        ORDER BY d.created_at DESC
         OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
     ";
     
     $stmt = $pdo->prepare($sql);
     
-    // --- ส่วนที่แก้ไข: เปลี่ยนมาใช้ bindValue() เพื่อความแม่นยำ ---
+    // Bind parameters
     $paramIndex = 1;
-    // 1. Bind search parameters (ถ้ามี)
-    foreach ($searchParams as $param) {
-        $stmt->bindValue($paramIndex++, $param); // ไม่ต้องระบุชนิดข้อมูล, PDO จะจัดการเป็น string
+    foreach ($params as $param) {
+        $stmt->bindValue($paramIndex++, $param);
     }
-    // 2. Bind pagination parameters โดยระบุชนิดข้อมูลเป็น Integer
     $stmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
     $stmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
     
     $stmt->execute();
     $documents = $stmt->fetchAll();
 
-    // Query นับจำนวนทั้งหมด (ส่วนนี้ยังใช้ execute แบบเดิมได้เพราะไม่มี OFFSET/FETCH)
-    $countSql = "SELECT COUNT(*) FROM dbo.DOCUMENTS d {$searchWhereClause}";
+    // Query นับจำนวน (ต้องใช้ WHERE clause เดียวกัน)
+    $countSql = "SELECT COUNT(*) FROM dbo.DOCUMENTS d {$finalWhereClause}";
     $countStmt = $pdo->prepare($countSql);
-    $countStmt->execute($searchParams);
+    $countStmt->execute($params); // ใช้ params เดิม (ไม่มี offset/limit)
     $totalRecords = $countStmt->fetchColumn();
 
     echo json_encode([
         'data' => $documents,
-        'pagination' => [
-            'currentPage' => $page,
-            'totalPages' => ceil($totalRecords / $limit),
-            'totalRecords' => $totalRecords
-        ]
+        'pagination' => [ 'currentPage' => $page, 'totalPages' => ceil($totalRecords / $limit), 'totalRecords' => $totalRecords ]
     ]);
 
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode([
-        'error' => 'An internal server error occurred.',
-        'debug_message' => $e->getMessage()
-    ]);
+    echo json_encode(['error' => 'An internal server error occurred.', 'debug_message' => $e->getMessage()]);
 }
 ?>

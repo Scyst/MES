@@ -1,11 +1,8 @@
 "use strict";
 
-// --- ★★★ Start: ส่วนที่แก้ไข ★★★ ---
-// เปลี่ยนชื่อฟังก์ชันกลับเป็น renderPagination และปรับแก้ Parameter ให้เข้ากันได้
 function renderPagination(containerId, totalItems, currentPage, rowsPerPage, onPageClick) {
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     const paginationUl = document.getElementById(containerId);
-    // --- ★★★ End: ส่วนที่แก้ไข ★★★ ---
 
     if (!paginationUl) return;
     paginationUl.innerHTML = '';
@@ -54,7 +51,6 @@ function renderPagination(containerId, totalItems, currentPage, rowsPerPage, onP
 }
 
 function initializeTabbedPagination() {
-    // ... (โค้ดส่วนนี้ถูกต้องแล้ว ไม่ต้องแก้ไข) ...
     const mainTabContainer = document.getElementById('mainTab');
     const mainContentContainer = document.getElementById('main-content');
     if (!mainTabContainer || !mainContentContainer) {

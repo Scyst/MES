@@ -97,7 +97,6 @@
 
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="confirmImportBtn" disabled>
                     <i class="fas fa-check-circle"></i> Confirm Import
                 </button>
