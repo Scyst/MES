@@ -18,9 +18,27 @@
           </li>
         <?php endif; ?>
 
-        <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
-        <li><a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
-        <li><a class="dropdown-item-icon" href="../Stop_Cause/Stop_Cause.php" title="Stop Causes"><i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span></a></li>
+        <li>
+            <a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard">
+                <i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory">
+                <i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item-icon" href="../Stop_Cause/Stop_Cause.php" title="Stop Causes">
+                <i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item-icon" href="../documentCenter/documentCenterUI.php" title="Document Center">
+                <i class="fas fa-folder-open fa-fw"></i>
+                <span>Document Center</span>
+            </a>
+        </li>
 
         <li><hr class="dropdown-divider"></li>
 
@@ -30,7 +48,7 @@
         ?>
         <li>
             <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
-                <i class="fas fa-dolly fa-fw"></i>
+                <i class="fas fa-cogs fa-fw"></i>
                 <span>System Settings</span>
             </a>
         </li>
