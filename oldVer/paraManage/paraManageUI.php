@@ -217,16 +217,16 @@
                 </div>
             </div>
             
-            <nav class="sticky-bottom" data-tab-target="#standardParamsPane">
+            <nav class="pagination-footer" data-tab-target="#standardParamsPane">
                 <ul class="pagination justify-content-center" id="paginationControls"></ul>
             </nav>
             <?php if ($canManage): ?>
-            <nav class="sticky-bottom" data-tab-target="#healthCheckPane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#healthCheckPane" style="display: none;">
                 <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
             </nav>
             <?php endif; ?>
             
-            <nav class="sticky-bottom" data-tab-target="#bomManagerPane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#bomManagerPane" style="display: none;">
                 <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
             </nav>
             <div id="toast"></div>

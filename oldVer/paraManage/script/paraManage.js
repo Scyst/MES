@@ -1589,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const mainContent = document.getElementById('main-content');
-    const paginations = mainContent.querySelectorAll('.sticky-bottom[data-tab-target]');
+    const paginations = mainContent.querySelectorAll('.pagination-footer[data-tab-target]');
 
     function showCorrectPagination(activeTabId) {
         paginations.forEach(pagination => {

@@ -1528,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabLoadedState[targetTabId] = true;
     }
     function showCorrectPagination(activeTabId) {
-        document.querySelectorAll('.sticky-bottom[data-tab-target]').forEach(p => {
+        document.querySelectorAll('.pagination-footer[data-tab-target]').forEach(p => {
             p.style.display = p.dataset.tabTarget === activeTabId ? 'block' : 'none';
         });
     }

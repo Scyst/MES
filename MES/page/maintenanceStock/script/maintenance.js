@@ -544,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeTabId = event.target.getAttribute('id');
             const activePaneId = event.target.getAttribute('data-bs-target');
             updateControls(activeTabId);
-            document.querySelectorAll('.sticky-bottom[data-tab-target]').forEach(p => {
+            document.querySelectorAll('.pagination-footer[data-tab-target]').forEach(p => {
                 p.style.display = p.dataset.tabTarget === activePaneId ? 'block' : 'none';
             });
             loadTabData(activePaneId);

@@ -233,25 +233,25 @@
                 </div>
             </div>
 
-            <nav class="sticky-bottom" data-tab-target="#production-variance-pane">
+            <nav class="pagination-footer" data-tab-target="#production-variance-pane">
                 <ul class="pagination justify-content-center" id="productionVariancePagination"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#wip-by-lot-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#wip-by-lot-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="wipByLotPagination"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#entry-history-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#entry-history-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="entryHistoryPagination"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#production-history-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#production-history-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="paginationControls"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#wip-onhand-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#wip-onhand-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="wipOnHandPagination"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#stock-count-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#stock-count-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="stockCountPagination"></ul>
             </nav>
-            <nav class="sticky-bottom" data-tab-target="#transaction-log-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#transaction-log-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="transactionLogPagination"></ul>
             </nav>
             

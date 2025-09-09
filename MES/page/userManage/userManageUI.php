@@ -88,7 +88,7 @@ $canManage = hasRole(['admin', 'creator']);
                             <table class="table  table-striped table-hover" id="log-table">
                                 </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="log-pagination"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="pagination-footer"></ul></nav>
                     </div>
                 </div>
             </div>

@@ -57,7 +57,7 @@ function initializeTabbedPagination() {
         return;
     }
     const tabButtons = mainTabContainer.querySelectorAll('.nav-link');
-    const paginations = mainContentContainer.querySelectorAll('.sticky-bottom');
+    const paginations = mainContentContainer.querySelectorAll('.pagination-footer');
     function showCorrectPagination(activeTabId) {
         paginations.forEach(pagination => {
             if (pagination.dataset.tabTarget === activeTabId) {

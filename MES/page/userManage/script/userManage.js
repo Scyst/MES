@@ -200,7 +200,7 @@ function renderLogTable(logs) {
  * ===== ฟังก์ชัน Pagination ที่ปรับปรุงใหม่ =====
  */
 function renderLogPagination(currentPage, totalPages) {
-    const container = document.getElementById('log-pagination');
+    const container = document.getElementById('pagination-footer');
     if (!container) return;
     container.innerHTML = '';
     if (totalPages <= 1) return;
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    const logPagination = document.getElementById('log-pagination');
+    const logPagination = document.getElementById('pagination-footer');
     if (logPagination) {
         logPagination.addEventListener('click', (e) => {
             if (e.target.tagName === 'A') {

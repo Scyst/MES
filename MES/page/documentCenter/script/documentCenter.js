@@ -21,7 +21,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const uploadDocForm = document.getElementById('uploadDocForm');
     const viewDocModalEl = document.getElementById('viewDocModal');
     const viewDocModal = viewDocModalEl ? new bootstrap.Modal(viewDocModalEl) : null;
-    const categoryTreeContainer = document.getElementById('category-tree-container');
+    
+    // --- New elements for Category Picker ---
+    const categoryPickerMenu = document.getElementById('categoryPickerMenu');
+    const categoryPickerList = document.getElementById('categoryPickerList');
+    const categoryPickerDropdownBtn = document.getElementById('categoryDropdown');
+    const currentCategoryText = document.getElementById('currentCategoryText');
+    const categoryPickerBreadcrumbs = document.getElementById('categoryPickerBreadcrumbs');
+    const categoryPickerBackBtn = categoryPickerBreadcrumbs ? categoryPickerBreadcrumbs.querySelector('.btn-back-category') : null;
+    const breadcrumbTextSpan = categoryPickerBreadcrumbs ? categoryPickerBreadcrumbs.querySelector('.breadcrumb-text') : null;
+
+    let allCategoriesTree = { name: 'Root', children: {}, path: '' }; // Store the full category tree
+    let currentDrilldownPath = ''; // Track current path in the dropdown picker
 
     // =================================================================
     // SECTION 2: CORE FUNCTIONS
@@ -47,24 +58,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     // =================================================================
-    // SECTION 3: CATEGORY TREE & DOCUMENT FETCHING
+    // SECTION 3: CATEGORY TREE & DOCUMENT FETCHING (ปรับปรุงใหม่สำหรับ Drilldown)
     // =================================================================
     async function fetchCategoriesAndBuildTree() {
         try {
-            if (categoryTreeContainer) {
-                categoryTreeContainer.innerHTML = `<div class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div><span class="ms-2">Loading Categories...</span></div>`;
+            if (categoryPickerList) {
+                categoryPickerList.innerHTML = `<li class="p-3 text-center text-muted">
+                                                    <div class="spinner-border spinner-border-sm" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                    <span class="ms-2">Loading Categories...</span>
+                                                </li>`;
             }
             const result = await sendRequest(`${API_ENDPOINT}get_categories.php`);
             if (result.success && result.data) {
-                const categoryTree = buildCategoryTree(result.data);
-                renderCategoryTree(categoryTree, categoryTreeContainer);
+                allCategoriesTree = buildCategoryTree(result.data); // Store the full tree
+                renderDrilldownCategories(currentDrilldownPath); // Render initial level
             } else {
-                if (categoryTreeContainer) categoryTreeContainer.innerHTML = '<div class="text-center text-muted p-3">No categories found.</div>';
+                if (categoryPickerList) categoryPickerList.innerHTML = '<li class="p-3 text-center text-muted">No categories found.</li>';
             }
         } catch (error) {
-            if (categoryTreeContainer) categoryTreeContainer.innerHTML = '<div class="text-center text-danger p-3">Failed to load categories.</div>';
+            if (categoryPickerList) categoryPickerList.innerHTML = '<li class="p-3 text-center text-danger">Failed to load categories.</li>';
         }
     }
+
     function buildCategoryTree(paths) {
         const tree = { name: 'Root', children: {}, path: '' };
         paths.forEach(path => {
@@ -79,109 +96,73 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         return tree;
     }
-    
-    // ### ส่วนที่แก้ไขทั้งหมด: renderCategoryTree ใช้ Bootstrap Collapse ###
-    function renderCategoryTree(node, element) {
-        element.innerHTML = ''; 
-        
-        const ul = document.createElement('ul');
-        ul.className = 'nav flex-column category-tree'; // เพิ่ม class category-tree
-        ul.setAttribute('id', 'categoryTreeRoot'); // เพิ่ม ID เพื่อใช้ในการอ้างอิง
 
-        // Add "All Documents" link
-        const allLi = document.createElement('li');
-        allLi.className = 'nav-item';
-        allLi.innerHTML = `<a href="#" class="nav-link ${currentCategory === '' ? 'active' : ''}" data-category="">
-                                <i class="fas fa-inbox fa-fw me-2"></i> All Documents
-                           </a>`;
-        ul.appendChild(allLi);
+    // ### New Function: Render Categories for Drilldown Picker ###
+    function renderDrilldownCategories(parentPath = '') {
+        if (!categoryPickerList) return;
 
-        const createNodes = (parentNode, parentElement, level) => {
-            Object.values(parentNode.children).sort((a, b) => a.name.localeCompare(b.name)).forEach((childNode, index) => {
-                const li = document.createElement('li');
-                li.className = 'nav-item';
-                const hasChildren = Object.keys(childNode.children).length > 0;
-                const isActive = (currentCategory === childNode.path || (currentCategory.startsWith(childNode.path + '/') && currentCategory.length > childNode.path.length + 1));
-                const collapseId = `categoryCollapse-${childNode.path.replace(/[^a-zA-Z0-9]/g, '-')}-${level}-${index}`; // สร้าง ID ที่ไม่ซ้ำกัน
-
-                let linkContent = `<a href="#" class="nav-link ${isActive ? 'active' : ''}" data-category="${escapeHTML(childNode.path)}" style="padding-left: ${0.8 + level * 0.8}rem;">`;
-                
-                if (hasChildren) {
-                    // ถ้ามีลูก ให้เป็นปุ่มสำหรับ Toggle Collapse
-                    linkContent += `<i class="far fa-folder fa-fw me-2"></i> ${escapeHTML(childNode.name)}`;
-                    linkContent += `<i class="fas fa-chevron-right folder-toggle-icon ms-auto"></i>`; // ไอคอนสำหรับ toggle
-                    linkContent += `</a>`;
-                    
-                    // สร้าง Collapse container สำหรับรายการย่อย
-                    const subUl = document.createElement('ul');
-                    subUl.className = `nav flex-column collapse ${isActive ? 'show' : ''}`; // ถ้า active ให้แสดงผล
-                    subUl.setAttribute('id', collapseId);
-                    
-                    // สร้าง Header สำหรับ Toggle
-                    const headerLink = document.createElement('a');
-                    headerLink.href = `#${collapseId}`;
-                    headerLink.classList.add('nav-link', 'd-flex', 'align-items-center');
-                    headerLink.setAttribute('data-bs-toggle', 'collapse');
-                    headerLink.setAttribute('aria-expanded', isActive ? 'true' : 'false');
-                    headerLink.setAttribute('aria-controls', collapseId);
-                    headerLink.style.paddingLeft = `${0.8 + level * 0.8}rem`;
-                    headerLink.innerHTML = `<i class="far fa-folder fa-fw me-2"></i> ${escapeHTML(childNode.name)}<i class="fas fa-chevron-right folder-toggle-icon ms-auto ${isActive ? 'rotated' : ''}"></i>`;
-
-                    li.appendChild(headerLink);
-                    li.appendChild(subUl);
-
-                    // สร้าง Child Nodes
-                    createNodes(childNode, subUl, level + 1);
-
+        let currentNode = allCategoriesTree;
+        if (parentPath) {
+            const pathParts = parentPath.split('/');
+            for (const part of pathParts) {
+                if (currentNode && currentNode.children[part]) {
+                    currentNode = currentNode.children[part];
                 } else {
-                    // ถ้าไม่มีลูก ให้เป็นลิงก์ธรรมดา
-                    linkContent += `<i class="far fa-file-alt fa-fw me-2"></i> ${escapeHTML(childNode.name)}`;
-                    linkContent += `</a>`;
-                    li.innerHTML = linkContent;
+                    currentNode = null; // Path not found
+                    break;
                 }
-                
-                parentElement.appendChild(li);
-            });
-        };
+            }
+        }
 
-        createNodes(node, ul, 1);
-        element.appendChild(ul);
+        categoryPickerList.innerHTML = ''; // Clear previous list
 
-        // ### เพิ่ม Event Listeners สำหรับ Toggle Icon และ Collapse Events ###
-        ul.querySelectorAll('.folder-toggle-icon').forEach(icon => {
-            icon.closest('a.nav-link').addEventListener('click', function(e) {
-                // ป้องกันไม่ให้ลิงก์ Category ทำงาน หากเป็น Folder Toggle
-                if (e.target.classList.contains('folder-toggle-icon')) {
-                    e.preventDefault(); 
-                    e.stopPropagation(); // หยุดการส่ง event ไปที่ลิงก์ parent
-                }
-                icon.classList.toggle('rotated');
-            });
-        });
-
-        // ทำให้ Accordion/Collapse ทำงานได้
-        const collapseElements = element.querySelectorAll('.collapse');
-        collapseElements.forEach(collapseEl => {
-            new bootstrap.Collapse(collapseEl, { toggle: false }); // สร้าง instance ของ Collapse
-        });
-
-        // Trigger collapse toggling when folder links are clicked
-        element.querySelectorAll('a[data-bs-toggle="collapse"]').forEach(toggleLink => {
-            toggleLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation(); // Prevent propagation to category link handler
-                const targetId = this.getAttribute('href');
-                const targetEl = document.querySelector(targetId);
-                if (targetEl) {
-                    const bsCollapse = bootstrap.Collapse.getInstance(targetEl);
-                    if (bsCollapse) {
-                        bsCollapse.toggle();
-                    }
-                }
-            });
-        });
+        if (!currentNode || Object.keys(currentNode.children).length === 0) {
+            categoryPickerList.innerHTML = '<li class="p-3 text-center text-muted">No sub-categories.</li>';
+        } else {
+            // Render sub-categories
+            Object.values(currentNode.children)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .forEach(childNode => {
+                      const hasChildren = Object.keys(childNode.children).length > 0;
+                      const li = document.createElement('li');
+                      li.innerHTML = `
+                          <a class="dropdown-item category-item ${currentCategory === childNode.path ? 'active' : ''}" href="#" 
+                             data-category="${escapeHTML(childNode.path)}" 
+                             data-has-children="${hasChildren ? 'true' : 'false'}">
+                              <i class="fas ${hasChildren ? 'fa-folder' : 'fa-file-alt'}"></i> 
+                              ${escapeHTML(childNode.name)}
+                              ${hasChildren ? '<i class="fas fa-chevron-right folder-arrow ms-auto"></i>' : ''}
+                          </a>
+                      `;
+                      categoryPickerList.appendChild(li);
+                  });
+        }
+        
+        updateCategoryPickerDisplay(); // Update dropdown button text and breadcrumbs
     }
 
+    // New Function: Update dropdown button text and breadcrumbs
+    function updateCategoryPickerDisplay() {
+        if (currentCategoryText) {
+            // Find the active node to display in the button
+            let displayPath = 'All Documents';
+            if (currentCategory) {
+                let parts = currentCategory.split('/');
+                displayPath = parts[parts.length - 1]; // Last part of the path
+            }
+            currentCategoryText.textContent = displayPath;
+        }
+
+        if (categoryPickerBreadcrumbs && breadcrumbTextSpan) {
+            if (currentDrilldownPath) {
+                categoryPickerBreadcrumbs.classList.remove('d-none');
+                const pathParts = currentDrilldownPath.split('/');
+                breadcrumbTextSpan.textContent = pathParts[pathParts.length - 1]; // Show last part of current drilldown path
+            } else {
+                categoryPickerBreadcrumbs.classList.add('d-none');
+            }
+        }
+    }
 
     async function fetchDocuments(page = 1, searchTerm = '', category = '') {
         showSpinner();
@@ -227,8 +208,52 @@ document.addEventListener('DOMContentLoaded', function () {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
             tr.dataset.docId = doc.id;
-            tr.innerHTML = `<td><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</td><td>${escapeHTML(doc.file_description) || '<i class="text-muted">No description</i>'}</td><td>${escapeHTML(doc.category) || ''}</td><td>${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</td>`;
+
+            // --- สร้าง Category Path แบบ Breadcrumbs ในตาราง ---
+            const categoryPathTd = document.createElement('td');
+            if (doc.category) {
+                const pathParts = doc.category.split('/');
+                pathParts.forEach((part, index) => {
+                    if (index > 0) {
+                        const slash = document.createElement('span');
+                        slash.textContent = ' / ';
+                        categoryPathTd.appendChild(slash);
+                    }
+                    const categoryLink = document.createElement('a');
+                    const fullPath = pathParts.slice(0, index + 1).join('/');
+                    categoryLink.href = "#";
+                    categoryLink.textContent = escapeHTML(part);
+                    categoryLink.dataset.category = fullPath;
+                    categoryLink.classList.add('table-category-link', 'text-primary'); // เพิ่ม class สำหรับ style
+                    categoryPathTd.appendChild(categoryLink);
+                });
+            } else {
+                categoryPathTd.innerHTML = '<i class="text-muted">N/A</i>';
+            }
+            // ---------------------------------------------------
+
+            tr.innerHTML = `<td><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</td><td>${escapeHTML(doc.file_description) || '<i class="text-muted">No description</i>'}</td><td id="category-path-${doc.id}"></td><td>${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</td>`;
+            tr.querySelector(`#category-path-${doc.id}`).appendChild(categoryPathTd); // ใส่ Breadcrumbs ที่สร้างเข้าไป
             documentTableBody.appendChild(tr);
+        });
+
+        // Add event listener for category links in the table
+        documentTableBody.querySelectorAll('.table-category-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Stop propagation to row click (open detail modal)
+                const categoryToFilter = this.dataset.category;
+                
+                // Set the current category and fetch documents
+                currentCategory = categoryToFilter;
+                currentPage = 1;
+                fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+                
+                // Also update the dropdown picker's display to reflect this category
+                currentDrilldownPath = categoryToFilter; // Sync drilldown path
+                updateCategoryPickerDisplay(); // Update button text and breadcrumbs
+                renderDrilldownCategories(currentDrilldownPath); // Re-render dropdown list
+            });
         });
     }
     function setupPagination(paginationData) {
@@ -358,20 +383,57 @@ document.addEventListener('DOMContentLoaded', function () {
                 fetchDocuments(currentPage, currentSearchTerm, currentCategory);
             }, 500);
         });
-        categoryTreeContainer.addEventListener('click', (e) => {
-            e.preventDefault();
-            const link = e.target.closest('a.nav-link');
-            if (!link || link.getAttribute('data-bs-toggle') === 'collapse') return; // ไม่ทำงานถ้าเป็นปุ่ม toggle
-            
-            // Remove 'active' from all links including those in collapsed sections
-            categoryTreeContainer.querySelectorAll('a.nav-link').forEach(l => l.classList.remove('active'));
-            // Add 'active' to the clicked link
-            link.classList.add('active');
-            
-            currentCategory = link.dataset.category;
-            currentPage = 1; 
-            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-        });
+
+        // Event Listener for Category Picker (Drilldown Logic)
+        if (categoryPickerMenu) {
+            categoryPickerMenu.addEventListener('click', (e) => {
+                e.stopPropagation(); // <<< เพิ่มตรงนี้: หยุดการ propagation ของ click event
+                const item = e.target.closest('.category-item');
+                const backBtn = e.target.closest('.btn-back-category');
+
+                if (item) {
+                    const category = item.dataset.category;
+                    const hasChildren = item.dataset.hasChildren === 'true';
+
+                    if (hasChildren) {
+                        e.preventDefault(); // <<< เพิ่มตรงนี้: ป้องกันลิงก์ทำงาน (ซึ่งจะทำให้ dropdown ปิด)
+                        currentDrilldownPath = category; // Move deeper
+                        renderDrilldownCategories(currentDrilldownPath);
+                        // ไม่ปิด dropdown แต่เปลี่ยนเนื้อหา
+                    } else {
+                        // เลือก Category (ไม่มีลูก) หรือ All Documents
+                        e.preventDefault(); // <<< ยังคงป้องกันลิงก์ทำงาน
+                        currentCategory = category;
+                        currentPage = 1;
+                        fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+                        // Update the button text right away for immediate feedback
+                        updateCategoryPickerDisplay(); 
+                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide(); // ปิด dropdown
+                    }
+                } else if (backBtn) {
+                    e.preventDefault(); // <<< ป้องกันลิงก์ทำงาน
+                    // Go back up one level
+                    if (currentDrilldownPath) {
+                        const pathParts = currentDrilldownPath.split('/');
+                        pathParts.pop(); // Remove last part
+                        currentDrilldownPath = pathParts.join('/'); // New parent path
+                        renderDrilldownCategories(currentDrilldownPath);
+                    } else {
+                        // ถ้าอยู่ root แล้ว กด Back (ไม่ควรเกิดขึ้นถ้า Breadcrumbs ถูกซ่อน) ให้เลือก All Documents
+                        currentCategory = ''; 
+                        currentPage = 1;
+                        fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+                        updateCategoryPickerDisplay();
+                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide();
+                    }
+                }
+            });
+            // Handle when the dropdown is shown to re-render to the current drilldown path
+            categoryPickerDropdownBtn.addEventListener('show.bs.dropdown', () => {
+                renderDrilldownCategories(currentDrilldownPath);
+            });
+        }
+
         documentTableBody.addEventListener('click', (event) => {
             const row = event.target.closest('tr');
             if (row && row.dataset.docId) { openDetailModal(row.dataset.docId); }

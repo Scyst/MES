@@ -144,11 +144,11 @@
             
             <div id="toast"></div>
             
-            <nav class="sticky-bottom" data-tab-target="#onhand-pane"><ul class="pagination justify-content-center" id="mtOnHandPagination"></ul></nav>
-            <nav class="sticky-bottom" data-tab-target="#transactions-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtTransactionPagination"></ul></nav>
+            <nav class="pagination-footer" data-tab-target="#onhand-pane"><ul class="pagination justify-content-center" id="mtOnHandPagination"></ul></nav>
+            <nav class="pagination-footer" data-tab-target="#transactions-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtTransactionPagination"></ul></nav>
             <?php if ($canManage): ?>
-            <nav class="sticky-bottom" data-tab-target="#items-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtItemMasterPagination"></ul></nav>
-            <nav class="sticky-bottom" data-tab-target="#locations-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtLocationMasterPagination"></ul></nav>
+            <nav class="pagination-footer" data-tab-target="#items-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtItemMasterPagination"></ul></nav>
+            <nav class="pagination-footer" data-tab-target="#locations-pane" style="display: none;"><ul class="pagination justify-content-center" id="mtLocationMasterPagination"></ul></nav>
             <?php endif; ?>
 
             <?php

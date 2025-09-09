@@ -64,6 +64,13 @@ body {
     flex-direction: column;
 }
 
+.content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
 /* --- กฎพิเศษสำหรับหน้า Dashboard เท่านั้น --- */
 .dashboard-page #main-content {
     overflow: hidden; /* ห้ามมี Scrollbar ที่ตัวแม่ */
@@ -71,9 +78,12 @@ body {
 
 /* --- กฎพิเศษสำหรับหน้าตาราง เท่านั้น --- */
 .page-with-table #main-content {
-    height: 100vh;      /* กำหนดความสูงให้เต็มหน้าจอ */
-    overflow-y: auto;   /* ★★★ ทำให้ตัวมันเองเป็นพื้นที่เลื่อนได้หลัก ★★★ */
-    padding: 0 1.5rem;    /* นำ Padding กลับมาไว้ที่นี่ */
+    height: 100vh;
+    overflow-y: auto;
+    padding: 0 1.5rem; /* <<< คง padding ไว้สำหรับด้านข้างและบน */
+    padding-bottom: 70px;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar {
@@ -166,6 +176,10 @@ body {
 .sidebar[data-state="collapsed"] { width: 70px; }
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
+.sidebar[data-state="expanded"] + #main-content .pagination-footer {
+    left: 280px; /* ขยับไปทางขวาตาม sidebar expanded width */
+    width: calc(100% - 280px); /* ลดความกว้างลง */
+}
 .sidebar[data-state="expanded"] .dropdown-item-icon span,
 .sidebar[data-state="expanded"] .dropdown-username div,
 .sidebar[data-state="collapsed"]:hover .dropdown-item-icon span,
@@ -365,7 +379,7 @@ body {
 /* =================================================================== */
 /* 3. SHARED COMPONENTS (ส่วนประกอบที่ใช้ร่วมกัน) */
 /* =================================================================== */
-.dashboard-header-sticky, .sticky-bar, .sticky-bottom, .log-pagination {
+.dashboard-header-sticky, .sticky-bar {
     position: sticky;
     top: 0;
     padding: 1rem 1.5rem;
@@ -376,9 +390,33 @@ body {
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     flex-shrink: 0; /* ป้องกันไม่ให้ Header หดตัว */
 }
-.dashboard-header-sticky { top: 0; padding: 1rem 2rem; }
-.sticky-bar { top: 0; padding: 0.1rem 0rem; }
-.sticky-bottom, .log-pagination {bottom: 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); padding-top: 1rem; padding-bottom: 0; border-top: 1px solid var(--bs-border-color); border-bottom: none;}
+.dashboard-header-sticky {
+    top: 0;
+    padding: 1rem 2rem;
+}
+
+.sticky-bar {
+    top: 0;
+    padding: 0.1rem 0rem;
+    flex-shrink: 0;
+    position: sticky; /* <<< ยังคง sticky */
+    top: 0;
+    z-index: 1030;
+}
+
+.pagination-footer {
+    position: fixed; /* <<< เปลี่ยนเป็น fixed */
+    bottom: 0; /* <<< ติดขอบล่างของ viewport */
+    left: 70px; /* <<< ปรับให้สอดคล้องกับ sidebar collapsed width */
+    width: calc(100% - 70px); /* <<< คำนวณความกว้างที่เหลือ */
+    background-color: var(--bs-secondary-bg);
+    box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+    padding-top: 1rem;
+    padding-bottom: 0.5rem; /* ลด padding bottom ลงเล็กน้อย */
+    border-top: 1px solid var(--bs-border-color);
+    z-index: 1020; /* ให้ต่ำกว่า sticky-bar เล็กน้อย */
+    transition: left 0.3s ease-in-out, width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+}
 
 #toast {
     position: fixed; top: 0; right: 60px;
@@ -888,6 +926,68 @@ body {
     margin-right: 8px;
 }
 
+.main-content-flex {
+    display: block; /* ไม่ใช้ flex แล้ว เพราะไม่มี sidebar แล้ว */
+}
+
+.documents-table-container {
+    flex-grow: 1;
+    overflow-y: auto; /* ทำให้ตารางมี scrollbar ของตัวเองถ้ามีเนื้อหามากเกินไป */
+    min-height: 0;
+}
+
+/* --- Styles สำหรับ Dropdown/Drilldown Picker --- */
+.category-picker-dropdown .dropdown-menu {
+    min-width: 300px; /* กำหนดความกว้างขั้นต่ำ */
+    max-height: calc(100vh - 200px); /* <<< ปรับตรงนี้: ให้คำนวณจากความสูงของ viewport (100vh) แล้วหักส่วนหัวและส่วนท้ายออก */
+    overflow-y: auto; /* มี scrollbar ถ้าเนื้อหาเกิน */
+    padding: 0;
+    z-index: 1050; /* เพิ่ม z-index ให้สูงกว่า modal (z-index: 1050) หรือ sticky footer */
+}
+.category-picker-dropdown .dropdown-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bs-dropdown-divider-bg);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.category-picker-dropdown .dropdown-header button {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 1rem;
+    color: var(--bs-secondary);
+}
+.category-picker-dropdown .dropdown-header button:hover {
+    color: var(--bs-primary);
+}
+.category-picker-dropdown .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    white-space: nowrap; /* ป้องกันไม่ให้ข้อความขึ้นบรรทัดใหม่ */
+    overflow: hidden;
+    text-overflow: ellipsis; /* แสดง ... ถ้าข้อความยาวเกิน */
+    border-bottom: 1px solid var(--bs-dropdown-divider-bg); /* เพิ่มเส้นแบ่งระหว่างรายการ */
+}
+.category-picker-dropdown .dropdown-item:last-child {
+    border-bottom: none;
+}
+.category-picker-dropdown .dropdown-item.active,
+.category-picker-dropdown .dropdown-item:hover {
+    background-color: var(--bs-primary);
+    color: white;
+}
+.category-picker-dropdown .dropdown-item i {
+    margin-right: 0.75rem;
+    width: 1.25rem; /* กำหนดความกว้างไอคอน */
+    text-align: center;
+}
+.category-picker-dropdown .dropdown-item .folder-arrow {
+    margin-left: auto; /* จัดให้อยู่ขวา */
+}
+
 /* =================================================================== */
 /* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */
 /* =================================================================== */
@@ -914,7 +1014,13 @@ body {
 
 /* เมื่อจอกว้างน้อยกว่า 768px */
 @media (max-width: 767.98px) {
-    /* ย้าย Header ของ Dashboard ลงมาข้างล่าง */
+
+    .pagination-footer {
+        left: 0;
+        width: 100%;
+        padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+    }
+
     .page-with-table #main-content {
         padding-bottom: 150px;
     }

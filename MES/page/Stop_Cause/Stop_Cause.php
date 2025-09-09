@@ -87,7 +87,7 @@
                     </table>
                 </div>
 
-                <nav class="sticky-bottom">
+                <nav class="pagination-footer">
                     <ul class="pagination justify-content-center" id="paginationControls"></ul>
                 </nav>
             </div>

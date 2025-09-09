@@ -194,11 +194,11 @@
             ?>
             
             <?php if ($canManage): ?>
-            <nav class="sticky-bottom" data-tab-target="#healthCheckPane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#healthCheckPane" style="display: none;">
                 <ul class="pagination justify-content-center" id="healthCheckPaginationControls"></ul>
             </nav>
             <?php endif; ?>
-            <nav class="sticky-bottom" data-tab-target="#bom-manager-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#bom-manager-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="bomPaginationControls"></ul>
             </nav>
         </main>

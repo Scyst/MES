@@ -122,7 +122,7 @@
                                 <tbody id="wipHistoryTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="entryHistoryPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
@@ -148,7 +148,7 @@
                                 <tbody id="partTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="paginationControls"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade show active" id="wip-report-pane" role="tabpanel">
@@ -168,7 +168,7 @@
                                 <tbody id="wipReportTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="wipReportPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="wip-report-by-lot-pane" role="tabpanel">
@@ -189,7 +189,7 @@
                                 <tbody id="wipReportByLotTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="wipReportByLotPagination"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="wipReportByLotPagination"></ul></nav>
                     </div>
 
                     <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
@@ -212,7 +212,7 @@
                                 <tbody id="stockCountTableBody"></tbody>
                             </table>
                         </div>
-                        <nav class="sticky-bottom pb-1"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
+                        <nav class="pagination-footer pb-1"><ul class="pagination justify-content-center" id="stockCountPagination"></ul></nav>
                     </div>
                 </div>
             </div>
