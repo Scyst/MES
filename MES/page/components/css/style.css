@@ -412,7 +412,6 @@ body {
     background-color: var(--bs-secondary-bg);
     box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
     padding-top: 1rem;
-    padding-bottom: 0.5rem; /* ลด padding bottom ลงเล็กน้อย */
     border-top: 1px solid var(--bs-border-color);
     z-index: 1020; /* ให้ต่ำกว่า sticky-bar เล็กน้อย */
     transition: left 0.3s ease-in-out, width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
@@ -1018,7 +1017,6 @@ body {
     .pagination-footer {
         left: 0;
         width: 100%;
-        padding-bottom: env(safe-area-inset-bottom, 0.5rem);
     }
 
     .page-with-table #main-content {

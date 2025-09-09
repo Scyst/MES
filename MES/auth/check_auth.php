@@ -12,6 +12,12 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+// --- NEW: Generate CSRF Token if it doesn't exist in the session ---
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
+}
+// ------------------------------------------------------------------
+
 //-- ฟังก์ชันสำหรับตรวจสอบ Role ของผู้ใช้ที่ล็อกอินอยู่ --
 function hasRole($roles): bool {
     if (empty($_SESSION['user']['role'])) {

@@ -32,7 +32,7 @@
             <div class="sticky-bar">
                 <div class="container-fluid">
                     <div class="row my-3 align-items-center">
-                        <div class="col-md-9">
+                        <div class="col-md-7">
                             <div class="filter-controls-wrapper d-flex gap-2">
                                 <div class="dropdown category-picker-dropdown">
                                     <button class="btn btn-secondary dropdown-toggle" type="button" id="categoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -50,14 +50,20 @@
                                         </div>
                                     </ul>
                                 </div>
-                                <input type="search" id="docSearchInput" class="form-control" placeholder="Search documents by name, description, category...">
+                                <input type="search" id="docSearchInput" class="form-control" placeholder="Search documents by name, description, category..." autocomplete="off">
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <div class="d-flex justify-content-end gap-2">
                                 <?php if ($canManage): ?>
-                                    <button class="btn btn-success" id="uploadDocBtn">
-                                        <i class="fas fa-upload"></i> Upload Documents
+                                    <button id="btnDeleteSelected" class="btn btn-danger" style="display: none;">
+                                        <i class="fas fa-trash-alt me-2"></i>Delete Selected (<span id="selectedCount">0</span>)
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if ($canManage): ?>
+                                    <button id="uploadDocBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocModal">
+                                    <i class="fas fa-upload me-2"></i>Upload Documents
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -68,16 +74,19 @@
 
             <div class="content-wrapper">
                 <div class="main-content-flex">
-                    <div class="documents-table-container">
+                    <div class="documents-table-container pt-2">
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover">
+                            <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
-                                        <th style="width: 30%;">File Name</th>
-                                        <th style="width: 35%;">Description</th>
-                                        <th style="width: 20%;">Category</th>
-                                        <th style="width: 15%;">Uploaded By</th>
-                                    </tr>
+                                        <?php if ($canManage): ?>
+                                        <th style="width: 50px;">
+                                            <input type="checkbox" id="selectAllCheckbox"> </th>
+                                        <?php endif; ?>
+                                        <th class="sortable" data-sort="file_name">File Name <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="file_description">Description <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="category">Category <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="uploaded_by">Uploaded By <!--i class="fas fa-sort float-end"></i--></th>
                                 </thead>
                                 <tbody id="documentTableBody">
                                     </tbody>
@@ -96,6 +105,7 @@
             <?php
                 if ($canManage) {
                     include('components/uploadDocModal.php');
+                    include('components/deleteConfirmationModal.php');
                 }
                 include('components/viewDocModal.php'); 
                 include('../components/php/autoLogoutUI.php');

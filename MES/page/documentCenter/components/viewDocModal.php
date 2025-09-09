@@ -5,40 +5,52 @@
                 <h5 class="modal-title" id="viewDocModalLabel">Document Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="document-details-content">
+            <form id="editDocForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">File Name</label>
+                        <p class="form-control-plaintext" id="viewDocFileName"></p>
                     </div>
 
-                <form id="editDocForm" style="display:none;">
                     <input type="hidden" id="editDocId">
+
                     <div class="mb-3">
                         <label for="editDocDescription" class="form-label">Description</label>
-                        <input type="text" class="form-control" id="editDocDescription" required>
+                        <input type="text" class="form-control" id="editDocDescription">
                     </div>
+
                     <div class="mb-3">
                         <label for="editDocCategory" class="form-label">Category</label>
                         <input type="text" class="form-control" id="editDocCategory" placeholder="e.g., Drawing/MachineA">
                     </div>
-                    <button type="submit" class="btn btn-primary" id="saveEditDocBtn">Save Changes</button>
-                    <button type="button" class="btn btn-secondary" id="cancelEditDocBtn">Cancel</button>
-                </form>
 
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <div>
-                    <?php if ($canManage) : // $canManage มาจาก documentCenterUI.php ?>
-                        <button type="button" class="btn btn-warning me-2" id="editDocBtn">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button type="button" class="btn btn-danger" id="deleteDocBtn">
-                            <i class="fas fa-trash-alt"></i> Delete
-                        </button>
-                    <?php endif; ?>
+                     <dl class="row mt-4 fs-sm text-muted">
+                        <dt class="col-sm-3">Uploaded By</dt>
+                        <dd class="col-sm-9" id="viewDocUploadedBy"></dd>
+                        <dt class="col-sm-3">Uploaded At</dt>
+                        <dd class="col-sm-9" id="viewDocUploadedAt"></dd>
+                    </dl>
                 </div>
-                <button type="button" class="btn btn-primary" id="viewDocBtn">
-                    <i class="fas fa-external-link-alt"></i> View Document
-                </button>
-            </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <div>
+                        <?php if ($canManage) : ?>
+                            <button type="button" class="btn btn-danger" id="deleteDocBtn"> 
+                                <i class="fas fa-trash-alt me-2"></i>Delete
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" id="viewDocBtn">
+                            <i class="fas fa-external-link-alt"></i> View Document
+                        </button>
+                        <?php if ($canManage) : ?>
+                            <button type="submit" class="btn btn-success" id="saveEditDocBtn">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -4,14 +4,32 @@ document.addEventListener('DOMContentLoaded', function () {
     // =================================================================
     // SECTION 1: API & GLOBAL VARIABLES
     // =================================================================
-    const API_ENDPOINT = 'api/';
+    const API_ENDPOINT = 'api/documentCenterAPI.php';
     let currentPage = 1;
     let currentSearchTerm = '';
     let currentCategory = ''; 
     let debounceTimer;
     let currentDocumentCache = [];
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    if (!csrfToken) {
+        console.error('CSRF token not found!');
+    }
+
+    let selectedDocumentIds = new Set();
+    const deleteConfirmationModalElement = document.getElementById('deleteConfirmationModal');
+    const deleteConfirmationModal = deleteConfirmationModalElement ? new bootstrap.Modal(deleteConfirmationModalElement) : null;
+    let deleteType = null; 
+    let currentDeletingDocId = null;
     
     // --- Element & Modal References ---
+    const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const deletePasswordInput = document.getElementById('deletePassword');
+    const deleteMessageParagraph = document.getElementById('deleteMessage');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const viewDocModalElement = document.getElementById('viewDocModal');
     const documentTableBody = document.getElementById('documentTableBody');
     const searchInput = document.getElementById('docSearchInput');
     const paginationControls = document.getElementById('paginationControls');
@@ -19,64 +37,70 @@ document.addEventListener('DOMContentLoaded', function () {
     const uploadDocModalEl = document.getElementById('uploadDocModal');
     const uploadDocModal = uploadDocModalEl ? new bootstrap.Modal(uploadDocModalEl) : null;
     const uploadDocForm = document.getElementById('uploadDocForm');
-    const viewDocModalEl = document.getElementById('viewDocModal');
-    const viewDocModal = viewDocModalEl ? new bootstrap.Modal(viewDocModalEl) : null;
+    const viewDocModal = viewDocModalElement ? new bootstrap.Modal(viewDocModalElement) : null;
     
-    // --- New elements for Category Picker ---
+    // --- Category Picker Elements ---
     const categoryPickerMenu = document.getElementById('categoryPickerMenu');
     const categoryPickerList = document.getElementById('categoryPickerList');
     const categoryPickerDropdownBtn = document.getElementById('categoryDropdown');
     const currentCategoryText = document.getElementById('currentCategoryText');
     const categoryPickerBreadcrumbs = document.getElementById('categoryPickerBreadcrumbs');
-    const categoryPickerBackBtn = categoryPickerBreadcrumbs ? categoryPickerBreadcrumbs.querySelector('.btn-back-category') : null;
     const breadcrumbTextSpan = categoryPickerBreadcrumbs ? categoryPickerBreadcrumbs.querySelector('.breadcrumb-text') : null;
 
-    let allCategoriesTree = { name: 'Root', children: {}, path: '' }; // Store the full category tree
-    let currentDrilldownPath = ''; // Track current path in the dropdown picker
+    let allCategoriesTree = { name: 'Root', children: {}, path: '' };
+    let currentDrilldownPath = '';
 
     // =================================================================
-    // SECTION 2: CORE FUNCTIONS
+    // SECTION 2: CORE HELPER FUNCTION
     // =================================================================
-    async function sendRequest(url, method = 'GET', body = null) {
-        try {
-            const options = { method, headers: {} };
-            if (body) {
-                options.headers['Content-Type'] = 'application/json';
+    async function apiRequest(action, body = {}, method = 'GET') {
+        let url = API_ENDPOINT;
+        const options = {
+            method,
+            headers: { 'X-CSRF-Token': csrfToken }
+        };
+
+        if (method.toUpperCase() === 'GET') {
+            const params = new URLSearchParams(body);
+            params.append('action', action);
+            url += `?${params.toString()}`;
+        } else { // POST
+            if (body instanceof FormData) {
+                body.append('action', action);
+                options.body = body;
+            } else {
+                body.action = action;
                 options.body = JSON.stringify(body);
+                options.headers['Content-Type'] = 'application/json';
             }
+        }
+        
+        try {
             const response = await fetch(url, options);
-            if (!response.ok) {
-                const errorResult = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
-                throw new Error(errorResult.error || 'An unknown error occurred.');
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || `HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            return result;
         } catch (error) {
-            console.error(`Request failed: ${method} ${url}`, error);
-            showToast(error.message, 'var(--bs-danger)');
-            return { success: false, error: error.message };
+            console.error(`API request failed for action "${action}":`, error);
+            if (error instanceof SyntaxError) {
+                 showToast('Received an invalid response from the server. (Not JSON)', 'var(--bs-danger)');
+            } else {
+                 showToast(error.message, 'var(--bs-danger)');
+            }
+            throw error;
         }
     }
     
     // =================================================================
-    // SECTION 3: CATEGORY TREE & DOCUMENT FETCHING (ปรับปรุงใหม่สำหรับ Drilldown)
+    // SECTION 3: DATA FETCHING & UI RENDERING
     // =================================================================
     async function fetchCategoriesAndBuildTree() {
         try {
-            if (categoryPickerList) {
-                categoryPickerList.innerHTML = `<li class="p-3 text-center text-muted">
-                                                    <div class="spinner-border spinner-border-sm" role="status">
-                                                        <span class="visually-hidden">Loading...</span>
-                                                    </div>
-                                                    <span class="ms-2">Loading Categories...</span>
-                                                </li>`;
-            }
-            const result = await sendRequest(`${API_ENDPOINT}get_categories.php`);
-            if (result.success && result.data) {
-                allCategoriesTree = buildCategoryTree(result.data); // Store the full tree
-                renderDrilldownCategories(currentDrilldownPath); // Render initial level
-            } else {
-                if (categoryPickerList) categoryPickerList.innerHTML = '<li class="p-3 text-center text-muted">No categories found.</li>';
-            }
+            const result = await apiRequest('get_categories', {}, 'GET');
+            allCategoriesTree = buildCategoryTree(result.data || []);
+            renderDrilldownCategories(currentDrilldownPath);
         } catch (error) {
             if (categoryPickerList) categoryPickerList.innerHTML = '<li class="p-3 text-center text-danger">Failed to load categories.</li>';
         }
@@ -97,10 +121,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return tree;
     }
 
-    // ### New Function: Render Categories for Drilldown Picker ###
     function renderDrilldownCategories(parentPath = '') {
         if (!categoryPickerList) return;
-
         let currentNode = allCategoriesTree;
         if (parentPath) {
             const pathParts = parentPath.split('/');
@@ -108,83 +130,85 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (currentNode && currentNode.children[part]) {
                     currentNode = currentNode.children[part];
                 } else {
-                    currentNode = null; // Path not found
+                    currentNode = null;
                     break;
                 }
             }
         }
-
-        categoryPickerList.innerHTML = ''; // Clear previous list
+        
+        // Clear only the dynamic part
+        const dynamicListContainer = document.getElementById('categoryPickerList');
+        if(dynamicListContainer) dynamicListContainer.innerHTML = '';
 
         if (!currentNode || Object.keys(currentNode.children).length === 0) {
-            categoryPickerList.innerHTML = '<li class="p-3 text-center text-muted">No sub-categories.</li>';
+            if (parentPath) { // Only show 'no sub-categories' if we are not at the root
+                const li = document.createElement('li');
+                li.className = 'p-3 text-center text-muted';
+                li.textContent = 'No sub-categories.';
+                if(dynamicListContainer) dynamicListContainer.appendChild(li);
+            }
         } else {
-            // Render sub-categories
-            Object.values(currentNode.children)
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .forEach(childNode => {
-                      const hasChildren = Object.keys(childNode.children).length > 0;
-                      const li = document.createElement('li');
-                      li.innerHTML = `
-                          <a class="dropdown-item category-item ${currentCategory === childNode.path ? 'active' : ''}" href="#" 
-                             data-category="${escapeHTML(childNode.path)}" 
-                             data-has-children="${hasChildren ? 'true' : 'false'}">
-                              <i class="fas ${hasChildren ? 'fa-folder' : 'fa-file-alt'}"></i> 
-                              ${escapeHTML(childNode.name)}
-                              ${hasChildren ? '<i class="fas fa-chevron-right folder-arrow ms-auto"></i>' : ''}
-                          </a>
-                      `;
-                      categoryPickerList.appendChild(li);
-                  });
+            Object.values(currentNode.children).sort((a, b) => a.name.localeCompare(b.name)).forEach(childNode => {
+                const hasChildren = Object.keys(childNode.children).length > 0;
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <a class="dropdown-item category-item" href="#" 
+                       data-category="${escapeHTML(childNode.path)}" 
+                       data-has-children="${hasChildren ? 'true' : 'false'}">
+                        <i class="fas ${hasChildren ? 'fa-folder' : 'fa-file-alt'} me-2"></i> 
+                        ${escapeHTML(childNode.name)}
+                        ${hasChildren ? '<i class="fas fa-chevron-right folder-arrow ms-auto"></i>' : ''}
+                    </a>`;
+                if(dynamicListContainer) dynamicListContainer.appendChild(li);
+            });
         }
-        
-        updateCategoryPickerDisplay(); // Update dropdown button text and breadcrumbs
+        updateCategoryPickerDisplay();
     }
 
-    // New Function: Update dropdown button text and breadcrumbs
     function updateCategoryPickerDisplay() {
         if (currentCategoryText) {
-            // Find the active node to display in the button
             let displayPath = 'All Documents';
             if (currentCategory) {
                 let parts = currentCategory.split('/');
-                displayPath = parts[parts.length - 1]; // Last part of the path
+                displayPath = parts[parts.length - 1]; // Show the last part of the path
             }
             currentCategoryText.textContent = displayPath;
         }
-
+        
+        // Update active state in dropdown
+        document.querySelectorAll('#categoryPickerMenu .category-item').forEach(item => {
+            if (item.dataset.category === currentCategory) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+        
         if (categoryPickerBreadcrumbs && breadcrumbTextSpan) {
             if (currentDrilldownPath) {
                 categoryPickerBreadcrumbs.classList.remove('d-none');
                 const pathParts = currentDrilldownPath.split('/');
-                breadcrumbTextSpan.textContent = pathParts[pathParts.length - 1]; // Show last part of current drilldown path
+                breadcrumbTextSpan.textContent = pathParts[pathParts.length - 1];
             } else {
                 categoryPickerBreadcrumbs.classList.add('d-none');
             }
         }
     }
 
-    async function fetchDocuments(page = 1, searchTerm = '', category = '') {
+    async function fetchDocuments(page = 1, search = '', category = '') {
         showSpinner();
         try {
-            const params = new URLSearchParams({ page, search: searchTerm, category });
-            const url = `${API_ENDPOINT}get_documents.php?${params.toString()}`;
-            const result = await sendRequest(url);
-            if (result.error) { throw new Error(result.error); }
+            const result = await apiRequest('get_documents', { page, search, category }, 'GET');
             currentDocumentCache = result.data || [];
             renderTable(currentDocumentCache);
             setupPagination(result.pagination);
         } catch (error) {
-            console.error(error);
-            documentTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load documents.</td></tr>`;
+            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Failed to load documents.</td></tr>`;
         } finally {
             hideSpinner();
         }
     }
     
-    // =================================================================
-    // SECTION 4: MODAL & ACTIONS
-    // =================================================================
     function getFileIconClass(fileName) {
         if (!fileName) return 'fa-file-alt text-secondary';
         const extension = fileName.split('.').pop().toLowerCase();
@@ -198,176 +222,206 @@ document.addEventListener('DOMContentLoaded', function () {
             default: return 'fa-file-alt text-secondary';
         }
     }
+
     function renderTable(documents) {
         documentTableBody.innerHTML = '';
         if (!documents || documents.length === 0) {
-            documentTableBody.innerHTML = `<tr><td colspan="4" class="text-center">No documents found.</td></tr>`;
+            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center">No documents found.</td></tr>`;
             return;
         }
         documents.forEach(doc => {
             const tr = document.createElement('tr');
-            tr.style.cursor = 'pointer';
             tr.dataset.docId = doc.id;
-
-            // --- สร้าง Category Path แบบ Breadcrumbs ในตาราง ---
-            const categoryPathTd = document.createElement('td');
+    
+            tr.innerHTML = `
+                <td class="checkbox-cell">
+                    <input class="form-check-input row-checkbox" type="checkbox" data-doc-id="${doc.id}">
+                </td>
+                <td><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</td>
+                <td>${escapeHTML(doc.file_description) || '<i class="text-muted">No description</i>'}</td>
+                <td class="category-path-cell"></td>
+                <td>${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</td>`;
+            
+            const categoryPathTd = tr.querySelector('.category-path-cell');
             if (doc.category) {
                 const pathParts = doc.category.split('/');
                 pathParts.forEach((part, index) => {
                     if (index > 0) {
-                        const slash = document.createElement('span');
-                        slash.textContent = ' / ';
-                        categoryPathTd.appendChild(slash);
+                        categoryPathTd.append(' / ');
                     }
                     const categoryLink = document.createElement('a');
                     const fullPath = pathParts.slice(0, index + 1).join('/');
                     categoryLink.href = "#";
                     categoryLink.textContent = escapeHTML(part);
                     categoryLink.dataset.category = fullPath;
-                    categoryLink.classList.add('table-category-link', 'text-primary'); // เพิ่ม class สำหรับ style
+                    categoryLink.classList.add('table-category-link', 'text-primary');
                     categoryPathTd.appendChild(categoryLink);
                 });
             } else {
                 categoryPathTd.innerHTML = '<i class="text-muted">N/A</i>';
             }
-            // ---------------------------------------------------
-
-            tr.innerHTML = `<td><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</td><td>${escapeHTML(doc.file_description) || '<i class="text-muted">No description</i>'}</td><td id="category-path-${doc.id}"></td><td>${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</td>`;
-            tr.querySelector(`#category-path-${doc.id}`).appendChild(categoryPathTd); // ใส่ Breadcrumbs ที่สร้างเข้าไป
+    
             documentTableBody.appendChild(tr);
         });
-
-        // Add event listener for category links in the table
+    
         documentTableBody.querySelectorAll('.table-category-link').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                e.stopPropagation(); // Stop propagation to row click (open detail modal)
+                e.stopPropagation();
                 const categoryToFilter = this.dataset.category;
-                
-                // Set the current category and fetch documents
                 currentCategory = categoryToFilter;
                 currentPage = 1;
                 fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-                
-                // Also update the dropdown picker's display to reflect this category
-                currentDrilldownPath = categoryToFilter; // Sync drilldown path
-                updateCategoryPickerDisplay(); // Update button text and breadcrumbs
-                renderDrilldownCategories(currentDrilldownPath); // Re-render dropdown list
+                currentDrilldownPath = categoryToFilter;
+                updateCategoryPickerDisplay();
             });
         });
+        
+        updateSelectionUI();
     }
+
     function setupPagination(paginationData) {
         const paginationUl = document.getElementById('paginationControls');
-        if (!paginationData || paginationData.totalPages <= 1) {
-            if (paginationUl) paginationUl.innerHTML = '';
-            return;
+        if (!paginationData || !paginationData.totalPages) {
+             if (paginationUl) paginationUl.innerHTML = '';
+             return;
         }
-        renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 15, (page) => fetchDocuments(page, currentSearchTerm, currentCategory));
+        renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 15, (page) => {
+            currentPage = page;
+            fetchDocuments(page, currentSearchTerm, currentCategory);
+        });
     }
+
+    // =================================================================
+    // SECTION 4: ACTIONS (UPLOAD, UPDATE, DELETE)
+    // =================================================================
     async function handleUploadSubmit(event) {
         event.preventDefault();
+        
         const fileInput = document.getElementById('docFile');
         const filesToUpload = Array.from(fileInput.files); 
+
         if (filesToUpload.length === 0) {
-            alert('Please select one or more files to upload.');
+            showToast('Please select at least one file to upload.', 'var(--bs-warning)');
             return;
         }
+        
         uploadDocModal.hide();
         showSpinner(); 
+
         const description = document.getElementById('docDescription').value;
         const category = document.getElementById('docCategory').value;
-        let filesUploaded = 0, uploadErrors = 0;
+        
+        let filesUploaded = 0;
+        let uploadErrors = 0;
+
         for (const file of filesToUpload) {
             const formData = new FormData();
             formData.append('doc_file', file);
             formData.append('file_description', description);
             formData.append('category', category);
+
             try {
-                await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.addEventListener('load', () => xhr.status === 200 ? resolve(xhr.response) : reject(new Error(JSON.parse(xhr.responseText).error)));
-                    xhr.addEventListener('error', () => reject(new Error('Network error')));
-                    xhr.open('POST', `${API_ENDPOINT}upload_document.php`, true);
-                    xhr.send(formData);
-                });
+                await apiRequest('upload', formData, 'POST');
                 filesUploaded++;
             } catch (error) {
                 uploadErrors++;
                 console.error(`Failed to upload ${file.name}:`, error);
             }
         }
+
         hideSpinner();
+
         if (uploadErrors > 0) {
-            showToast(`${filesUploaded} of ${filesToUpload.length} files uploaded. ${uploadErrors} failed.`, 'var(--bs-warning)');
+            showToast(`${filesUploaded} of ${filesToUpload.length} files uploaded successfully. ${uploadErrors} failed.`, 'var(--bs-warning)');
         } else {
             showToast(`${filesToUpload.length} file(s) uploaded successfully!`, 'var(--bs-success)');
         }
+        
         fetchDocuments(1, '', currentCategory);
         fetchCategoriesAndBuildTree(); 
     }
 
     function openDetailModal(docId) {
         const doc = currentDocumentCache.find(d => d.id == docId);
-        if (!doc || !viewDocModalEl) return;
-        
-        const documentDetailsContent = viewDocModalEl.querySelector('#document-details-content');
-        const editDocForm = viewDocModalEl.querySelector('#editDocForm');
-        const viewBtn = viewDocModalEl.querySelector('#viewDocBtn');
-        const deleteBtn = viewDocModalEl.querySelector('#deleteDocBtn');
-        const editDocBtn = viewDocModalEl.querySelector('#editDocBtn');
+        if (!doc || !viewDocModalElement) return;
 
-        documentDetailsContent.innerHTML = `<h5 class="mb-3"><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</h5><dl class="row"><dt class="col-sm-3">Description</dt><dd class="col-sm-9">${escapeHTML(doc.file_description) || '<i class="text-muted">N/A</i>'}</dd><dt class="col-sm-3">Category</dt><dd class="col-sm-9">${escapeHTML(doc.category) || '<i class="text-muted">N/A</i>'}</dd><dt class="col-sm-3">Uploaded By</dt><dd class="col-sm-9">${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</dd><dt class="col-sm-3">Uploaded At</dt><dd class="col-sm-9">${new Date(doc.created_at).toLocaleString()}</dd></dl>`;
+        const viewDocFileName = viewDocModalElement.querySelector('#viewDocFileName');
+        const editDocId = viewDocModalElement.querySelector('#editDocId');
+        const editDocDescription = viewDocModalElement.querySelector('#editDocDescription');
+        const editDocCategory = viewDocModalElement.querySelector('#editDocCategory');
+        const viewDocUploadedBy = viewDocModalElement.querySelector('#viewDocUploadedBy');
+        const viewDocUploadedAt = viewDocModalElement.querySelector('#viewDocUploadedAt');
         
+        const viewBtn = viewDocModalElement.querySelector('#viewDocBtn');
+        const deleteBtn = viewDocModalElement.querySelector('#deleteDocBtn');
+
+        if (viewDocFileName) {
+            viewDocFileName.innerHTML = `<i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}`;
+        }
+        if (editDocId) editDocId.value = doc.id;
+        if (editDocDescription) editDocDescription.value = doc.file_description || '';
+        if (editDocCategory) editDocCategory.value = doc.category || '';
+        if (viewDocUploadedBy) viewDocUploadedBy.textContent = doc.uploaded_by || 'N/A';
+        if (viewDocUploadedAt) viewDocUploadedAt.textContent = new Date(doc.created_at).toLocaleString();
+
+        if (editDocDescription) editDocDescription.readOnly = !canManage;
+        if (editDocCategory) editDocCategory.readOnly = !canManage;
+
         const newViewBtn = viewBtn.cloneNode(true); 
         viewBtn.parentNode.replaceChild(newViewBtn, viewBtn);
-        newViewBtn.addEventListener('click', () => window.open(`${API_ENDPOINT}view_document.php?id=${doc.id}`, '_blank'));
+        newViewBtn.addEventListener('click', () => window.open(`api/view_document.php?id=${doc.id}`, '_blank'));
 
         if (deleteBtn) {
             const newDeleteBtn = deleteBtn.cloneNode(true);
             deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-            newDeleteBtn.addEventListener('click', () => handleDelete(doc.id, doc.file_name));
-        }
-        if (editDocBtn) {
-            const newEditDocBtn = editDocBtn.cloneNode(true);
-            editDocBtn.parentNode.replaceChild(newEditDocBtn, editDocBtn);
-            newEditDocBtn.addEventListener('click', () => {
-                documentDetailsContent.style.display = 'none';
-                editDocForm.style.display = 'block';
-                editDocForm.querySelector('#editDocId').value = doc.id;
-                editDocForm.querySelector('#editDocDescription').value = doc.file_description || '';
-                editDocForm.querySelector('#editDocCategory').value = doc.category || '';
+            newDeleteBtn.addEventListener('click', () => {
+                currentDeletingDocId = doc.id;
+                deleteMessageParagraph.textContent = `Are you sure you want to delete this document (${doc.file_name})? This action cannot be undone.`;
+                deleteType = 'single';
+                if (viewDocModal) viewDocModal.hide();
+                deleteConfirmationModal.show();
             });
         }
         
         viewDocModal.show();
     }
-    async function handleDelete(docId, docName) {
-        if (!confirm(`Are you sure you want to delete the file "${docName}"?`)) return;
-        showSpinner();
-        const result = await sendRequest(`${API_ENDPOINT}delete_document.php`, 'POST', { document_id: docId });
-        hideSpinner();
-        if (result.success) {
-            viewDocModal.hide();
-            showToast('Document deleted successfully.', 'var(--bs-success)');
-            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-            fetchCategoriesAndBuildTree();
-        }
-    }
+
     async function handleEditSubmit(event) {
         event.preventDefault();
-        showSpinner();
         const form = event.target;
-        const result = await sendRequest(`${API_ENDPOINT}update_document.php`, 'POST', {
+        const body = {
             document_id: form.querySelector('#editDocId').value,
             description: form.querySelector('#editDocDescription').value,
             category: form.querySelector('#editDocCategory').value
-        });
-        hideSpinner();
-        if (result.success) {
-            showToast('Document updated successfully!', 'var(--bs-success)');
-            viewDocModal.hide();
+        };
+
+        viewDocModal.hide();
+        showSpinner();
+
+        try {
+            const result = await apiRequest('update', body, 'POST');
+            showToast(result.message, 'var(--bs-success)');
             fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-            fetchCategoriesAndBuildTree();
+        } catch (error) {
+            // Toast is shown inside apiRequest
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    function updateSelectionUI() {
+        if (!btnDeleteSelected) return;
+        if (selectedDocumentIds.size > 0) {
+            btnDeleteSelected.style.display = 'inline-flex';
+            selectedCountSpan.textContent = selectedDocumentIds.size;
+        } else {
+            btnDeleteSelected.style.display = 'none';
+        }
+        if (selectAllCheckbox) {
+            const rowCheckboxes = documentTableBody.querySelectorAll('.row-checkbox');
+            const allOnPageSelected = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(cb => cb.checked);
+            selectAllCheckbox.checked = allOnPageSelected;
         }
     }
 
@@ -375,72 +429,176 @@ document.addEventListener('DOMContentLoaded', function () {
     // SECTION 5: INITIALIZATION & EVENT LISTENERS
     // =================================================================
     function initialize() {
+        // ### START: ส่วนที่แก้ไข ###
+        
+        // 1. Search Box Event Listener
         searchInput.addEventListener('input', () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 currentSearchTerm = searchInput.value;
                 currentPage = 1;
                 fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-            }, 500);
+            }, 300); // Debounce time of 300ms
         });
 
-        // Event Listener for Category Picker (Drilldown Logic)
+        // 2. Category Filter & Drilldown Event Listener
         if (categoryPickerMenu) {
             categoryPickerMenu.addEventListener('click', (e) => {
-                e.stopPropagation(); // <<< เพิ่มตรงนี้: หยุดการ propagation ของ click event
                 const item = e.target.closest('.category-item');
                 const backBtn = e.target.closest('.btn-back-category');
 
+                // Stop dropdown from closing automatically on item click
+                e.stopPropagation();
+
                 if (item) {
+                    e.preventDefault();
                     const category = item.dataset.category;
                     const hasChildren = item.dataset.hasChildren === 'true';
 
                     if (hasChildren) {
-                        e.preventDefault(); // <<< เพิ่มตรงนี้: ป้องกันลิงก์ทำงาน (ซึ่งจะทำให้ dropdown ปิด)
-                        currentDrilldownPath = category; // Move deeper
+                        currentDrilldownPath = category; // Go deeper
                         renderDrilldownCategories(currentDrilldownPath);
-                        // ไม่ปิด dropdown แต่เปลี่ยนเนื้อหา
                     } else {
-                        // เลือก Category (ไม่มีลูก) หรือ All Documents
-                        e.preventDefault(); // <<< ยังคงป้องกันลิงก์ทำงาน
+                        // This is a final selection (leaf node or "All Documents")
                         currentCategory = category;
                         currentPage = 1;
                         fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-                        // Update the button text right away for immediate feedback
-                        updateCategoryPickerDisplay(); 
-                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide(); // ปิด dropdown
+                        updateCategoryPickerDisplay();
+                        // Manually hide the dropdown on final selection
+                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide();
                     }
                 } else if (backBtn) {
-                    e.preventDefault(); // <<< ป้องกันลิงก์ทำงาน
-                    // Go back up one level
+                    e.preventDefault();
                     if (currentDrilldownPath) {
                         const pathParts = currentDrilldownPath.split('/');
-                        pathParts.pop(); // Remove last part
-                        currentDrilldownPath = pathParts.join('/'); // New parent path
+                        pathParts.pop();
+                        currentDrilldownPath = pathParts.join('/');
                         renderDrilldownCategories(currentDrilldownPath);
-                    } else {
-                        // ถ้าอยู่ root แล้ว กด Back (ไม่ควรเกิดขึ้นถ้า Breadcrumbs ถูกซ่อน) ให้เลือก All Documents
-                        currentCategory = ''; 
-                        currentPage = 1;
-                        fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-                        updateCategoryPickerDisplay();
-                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide();
                     }
                 }
             });
-            // Handle when the dropdown is shown to re-render to the current drilldown path
-            categoryPickerDropdownBtn.addEventListener('show.bs.dropdown', () => {
-                renderDrilldownCategories(currentDrilldownPath);
+
+            // Reset drilldown path when dropdown is hidden
+            categoryPickerDropdownBtn.addEventListener('hide.bs.dropdown', () => {
+                // If a category is selected, the drilldown should match it
+                if (currentCategory) {
+                    const pathParts = currentCategory.split('/');
+                    pathParts.pop();
+                    currentDrilldownPath = pathParts.join('/');
+                } else {
+                    currentDrilldownPath = '';
+                }
+            });
+        }
+
+        // ### END: ส่วนที่แก้ไข ###
+
+        documentTableBody.addEventListener('change', (event) => {
+            if (event.target.classList.contains('row-checkbox')) {
+                const docId = event.target.dataset.docId;
+                if (event.target.checked) {
+                    selectedDocumentIds.add(docId);
+                } else {
+                    selectedDocumentIds.delete(docId);
+                }
+                updateSelectionUI();
+            }
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', (event) => {
+                const isChecked = event.target.checked;
+                documentTableBody.querySelectorAll('.row-checkbox').forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                    const docId = checkbox.dataset.docId;
+                    if (isChecked) {
+                        selectedDocumentIds.add(docId);
+                    } else {
+                        selectedDocumentIds.delete(docId);
+                    }
+                });
+                updateSelectionUI();
+            });
+        }
+
+        if (btnDeleteSelected) {
+            btnDeleteSelected.addEventListener('click', () => {
+                if (selectedDocumentIds.size === 0) {
+                    showToast('Please select at least one document to delete.', 'var(--bs-warning)');
+                    return;
+                }
+                deletePasswordInput.value = '';
+                deleteMessageParagraph.textContent = `Are you sure you want to delete ${selectedDocumentIds.size} selected documents? This action cannot be undone.`;
+                deleteType = 'multiple';
+                deleteConfirmationModal.show();
+            });
+        }
+        
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', async () => {
+                const password = deletePasswordInput.value;
+                if (!password) {
+                    deletePasswordInput.classList.add('is-invalid');
+                    return;
+                }
+                deletePasswordInput.classList.remove('is-invalid');
+            
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
+            
+                const idsToDelete = deleteType === 'multiple' ? Array.from(selectedDocumentIds) : [currentDeletingDocId];
+                
+                try {
+                    const result = await apiRequest('delete', { docIds: idsToDelete, password }, 'POST');
+                    showToast(result.message, 'var(--bs-success)');
+                    
+                    selectedDocumentIds.clear();
+                    updateSelectionUI();
+
+                    const docCountOnPage = Array.from(documentTableBody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('d-none')).length;
+                    if(docCountOnPage === idsToDelete.length && currentPage > 1){
+                        currentPage--;
+                    }
+                    fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+                } catch(error) {
+                    // Error toast is already shown by apiRequest
+                } finally {
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Delete';
+                    deleteConfirmationModal.hide();
+                }
+            });
+        }
+
+        if (deleteConfirmationModalElement) {
+            deleteConfirmationModalElement.addEventListener('hidden.bs.modal', () => {
+                deletePasswordInput.value = '';
+                deletePasswordInput.classList.remove('is-invalid');
+                currentDeletingDocId = null;
+                deleteType = null;
+            });
+            deleteConfirmationModalElement.addEventListener('shown.bs.modal', () => {
+                deletePasswordInput.focus();
             });
         }
 
         documentTableBody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.closest('.checkbox-cell') || target.closest('.table-category-link')) {
+                return; 
+            }
             const row = event.target.closest('tr');
-            if (row && row.dataset.docId) { openDetailModal(row.dataset.docId); }
+            if (row && row.dataset.docId) {
+                openDetailModal(row.dataset.docId);
+            }
         });
+
         if (uploadDocBtn) {
-            uploadDocBtn.addEventListener('click', () => { if (uploadDocModal) uploadDocModal.show(); });
+            uploadDocBtn.addEventListener('click', () => {
+                if (uploadDocModal) uploadDocModal.show();
+            });
         }
+
         if (uploadDocModalEl) {
             uploadDocModalEl.addEventListener('show.bs.modal', () => {
                 if (uploadDocForm) uploadDocForm.reset();
@@ -450,6 +608,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(previewList) previewList.innerHTML = '';
             });
         }
+
         if (uploadDocForm) {
             uploadDocForm.addEventListener('submit', handleUploadSubmit);
         }
@@ -457,18 +616,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const localEditDocForm = document.getElementById('editDocForm');
         if (localEditDocForm) {
             localEditDocForm.addEventListener('submit', handleEditSubmit);
-            localEditDocForm.querySelector('#cancelEditDocBtn')?.addEventListener('click', () => {
-                localEditDocForm.style.display = 'none';
-                viewDocModalEl.querySelector('#document-details-content').style.display = 'block';
-            });
-        }
-        if (viewDocModalEl) {
-             viewDocModalEl.addEventListener('hide.bs.modal', () => {
-                const detailsContent = viewDocModalEl.querySelector('#document-details-content');
-                const editForm = viewDocModalEl.querySelector('#editDocForm');
-                if (detailsContent) detailsContent.style.display = 'block';
-                if (editForm) editForm.style.display = 'none';
-            });
         }
         
         const dropZone = document.getElementById('drop-zone');
@@ -487,6 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
             selectFilesBtn?.addEventListener('click', () => fileInput.click());
             selectFolderBtn?.addEventListener('click', () => folderInput.click());
         }
+
         function handleFileSelection(inputElement) {
             const files = inputElement.files;
             const previewContainer = document.getElementById('file-preview-container');
