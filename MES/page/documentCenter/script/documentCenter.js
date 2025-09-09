@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
              if (paginationUl) paginationUl.innerHTML = '';
              return;
         }
-        renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 15, (page) => {
+        renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 30, (page) => {
             currentPage = page;
             fetchDocuments(page, currentSearchTerm, currentCategory);
         });

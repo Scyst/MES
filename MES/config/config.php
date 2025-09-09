@@ -3,7 +3,7 @@
 
 // --- DEVELOPMENT SWITCH ---
 // ตั้งเป็น true เมื่อทำงานบนเครื่องตัวเอง, ตั้งเป็น false เมื่อนำขึ้น Server จริง
-define('IS_DEVELOPMENT', false);
+define('IS_DEVELOPMENT', true);
 // ตั้งเป็น true เมื่อจะใช้การคำนวนจากระบบใหม่, ตั้งเป็น false เมื่อจะใช้การคำนวนจากระบบเก่า
 define('USE_NEW_OEE_CALCULATION', true);
 
@@ -35,5 +35,7 @@ define('MT_TRANSACTIONS_TABLE', IS_DEVELOPMENT ? 'MT_TRANSACTIONS_TEST' : 'MT_TR
 // --- System Tables ---
 define('USERS_TABLE', IS_DEVELOPMENT ? 'USERS_TEST' : 'USERS');
 define('USER_LOGS_TABLE', IS_DEVELOPMENT ? 'USER_LOGS_TEST' : 'USER_LOGS');
+define('DOCUMENTS_TABLE', IS_DEVELOPMENT ? 'DOCUMENTS_TEST' : 'DOCUMENTS');
+define('DOCUMENT_LOGS_TABLE', IS_DEVELOPMENT ? 'DOCUMENT_ACCESS_LOGS_TEST' : 'DOCUMENT_ACCESS_LOGS');
 
 ?>

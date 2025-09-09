@@ -44,6 +44,10 @@ class PDF_Rotate extends \setasign\Fpdi\Fpdi {
 }
 
 try {
+    // --- [ปรับปรุง] ดึงชื่อตารางจาก config มาใส่ในตัวแปร ---
+    $documentsTable = DOCUMENTS_TABLE;
+    $documentLogsTable = DOCUMENT_LOGS_TABLE;
+
     if (!isset($_SESSION['user'])) {
         http_response_code(403); die("Access Denied.");
     }
@@ -54,9 +58,10 @@ try {
     }
 
     $currentUser = $_SESSION['user'];
-    $ipAddress = $_SERVER['REMOTE_ADDR']; // IP Address ของผู้ใช้ถูกเก็บไว้ในตัวแปรนี้แล้ว
+    $ipAddress = $_SERVER['REMOTE_ADDR'];
 
-    $stmt = $pdo->prepare("SELECT file_name, file_path, file_type FROM dbo.DOCUMENTS WHERE id = ?");
+    // --- [ปรับปรุง] ใช้ตัวแปร $documentsTable ---
+    $stmt = $pdo->prepare("SELECT file_name, file_path, file_type FROM dbo.{$documentsTable} WHERE id = ?");
     $stmt->execute([$docId]);
     $document = $stmt->fetch();
 
@@ -64,7 +69,8 @@ try {
         http_response_code(404); die("Document not found.");
     }
 
-    $logStmt = $pdo->prepare("INSERT INTO dbo.DOCUMENT_ACCESS_LOGS (document_id, user_id, ip_address) VALUES (?, ?, ?)");
+    // --- [ปรับปรุง] ใช้ตัวแปร $documentLogsTable ---
+    $logStmt = $pdo->prepare("INSERT INTO dbo.{$documentLogsTable} (document_id, user_id, ip_address) VALUES (?, ?, ?)");
     $logStmt->execute([$docId, $currentUser['id'], $ipAddress]);
 
     $filePath = __DIR__ . '/../../../documents/' . $document['file_path'];
@@ -78,11 +84,10 @@ try {
 
         $watermarkImagePath = __DIR__ . '/../../components/images/watermark.png';
         if (!file_exists($watermarkImagePath)) {
-             error_log("Watermark image not found at: " . $watermarkImagePath);
+             error_log("Watermark image not found at: " . $watermarkImagePath);
         }
 
         $watermarkUser = "Viewed by: {$currentUser['username']} on " . date('Y-m-d H:i');
-        
         $watermarkIp = "IP: " . $ipAddress;
 
         for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {

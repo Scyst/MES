@@ -1,9 +1,9 @@
 <?php
 /**
- * Central API Endpoint for Document Center
- * Handles all actions except file viewing.
- * Last Updated: Corrected PDO parameter binding for SQL Server FETCH clause.
- */
+  * Central API Endpoint for Document Center
+  * Handles all actions except file viewing.
+  * Last Updated: Replaced hardcoded table names with config variables.
+  */
 
 header('Content-Type: application/json');
 error_reporting(0);
@@ -32,12 +32,13 @@ if (in_array($action, $writeActions)) {
 }
 
 try {
-    // กำหนดชื่อตาราง users ให้เหมือนโค้ดเก่าของคุณ
-    $usersTable = defined('USERS_TABLE') ? USERS_TABLE : 'users';
+    // ดึงชื่อตารางจาก config มาใส่ในตัวแปรเพื่อง่ายต่อการใช้งาน
+    $documentsTable = DOCUMENTS_TABLE;
+    $usersTable = USERS_TABLE;
 
     switch ($action) {
         //==================================
-        //  GET DOCUMENTS
+        //  GET DOCUMENTS
         //==================================
         case 'get_documents':
             if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
@@ -47,7 +48,7 @@ try {
             }
 
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $limit = 15;
+            $limit = 30;
             $offset = ($page - 1) * $limit;
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
             $categoryFilter = isset($_GET['category']) ? trim($_GET['category']) : '';
@@ -77,9 +78,9 @@ try {
             
             $sql = "
                 SELECT d.id, d.file_name, d.file_description, d.category,
-                       CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
-                       u.username AS uploaded_by
-                FROM dbo.DOCUMENTS d
+                       CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
+                       u.username AS uploaded_by
+                FROM dbo.{$documentsTable} d
                 LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id
                 {$finalWhereClause}
                 ORDER BY d.created_at DESC
@@ -98,7 +99,7 @@ try {
             $stmt->execute();
             $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $countSql = "SELECT COUNT(*) FROM dbo.DOCUMENTS d LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id {$finalWhereClause}";
+            $countSql = "SELECT COUNT(*) FROM dbo.{$documentsTable} d LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id {$finalWhereClause}";
             $countStmt = $pdo->prepare($countSql);
             $countStmt->execute($params);
             $totalRecords = $countStmt->fetchColumn();
@@ -111,42 +112,36 @@ try {
             break;
 
         //==================================
-        //  GET CATEGORIES
+        //  GET CATEGORIES
         //==================================
         case 'get_categories':
-            $sql = "SELECT DISTINCT category FROM dbo.DOCUMENTS WHERE category IS NOT NULL AND category != '' ORDER BY category ASC";
+            $sql = "SELECT DISTINCT category FROM dbo.{$documentsTable} WHERE category IS NOT NULL AND category != '' ORDER BY category ASC";
             $stmt = $pdo->query($sql);
             $categories = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
             echo json_encode(['success' => true, 'data' => $categories]);
             break;
 
         //==================================
-        //  UPLOAD DOCUMENT
+        //  UPLOAD DOCUMENT
         //==================================
         case 'upload':
-            // --- 1. ตรวจสอบสิทธิ์: เฉพาะ admin และ creator เท่านั้นที่อัปโหลดได้ ---
             if (!hasRole(['admin', 'creator'])) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Permission Denied. You do not have rights to upload documents.']);
                 exit;
             }
-
-            // --- 2. ตรวจสอบว่าเป็น Method POST และมีไฟล์ส่งมาหรือไม่ ---
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 http_response_code(405);
                 echo json_encode(['error' => 'Method Not Allowed']);
                 exit;
             }
-
             if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'No file uploaded or an upload error occurred.']);
                 exit;
             }
-
-            // --- 3. การตั้งค่าและตรวจสอบไฟล์ ---
             $file = $_FILES['doc_file'];
-            $maxFileSize = 20 * 1024 * 1024; // 20 MB
+            $maxFileSize = 20 * 1024 * 1024;
             $allowedMimeTypes = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
 
             if ($file['size'] > $maxFileSize) {
@@ -154,14 +149,11 @@ try {
                 echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
                 exit;
             }
-
             if (!in_array($file['type'], $allowedMimeTypes)) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'Invalid file type. Supported formats: PDF, Word, Excel, JPG, PNG.']);
                 exit;
             }
-
-            // --- 4. จัดการไฟล์และเตรียมบันทึกลงฐานข้อมูล ---
             try {
                 $uploadDir = __DIR__ . '/../../../documents/';
                 $originalFileName = basename($file['name']);
@@ -171,7 +163,7 @@ try {
                 $destination = $uploadDir . $newFileName;
 
                 if (move_uploaded_file($file['tmp_name'], $destination)) {
-                    $sql = "INSERT INTO dbo.DOCUMENTS (file_name, file_description, file_path, file_type, file_size, category, uploaded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    $sql = "INSERT INTO dbo.{$documentsTable} (file_name, file_description, file_path, file_type, file_size, category, uploaded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([ $originalFileName, $_POST['file_description'] ?? null, $newFileName, $file['type'], $file['size'], $_POST['category'] ?? null, $_SESSION['user']['id'] ]);
                     echo json_encode(['success' => true, 'message' => 'File uploaded successfully.']);
@@ -183,11 +175,10 @@ try {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
             }
-            // ใช้ exit เพื่อจบการทำงานทันทีเหมือนโค้ดต้นฉบับ
             exit;
 
         //==================================
-        //  UPDATE DOCUMENT
+        //  UPDATE DOCUMENT
         //==================================
         case 'update':
             if (!hasRole(['admin', 'creator'])) {
@@ -199,14 +190,14 @@ try {
                 throw new Exception('Document ID is required.', 400);
             }
 
-            $sql = "UPDATE dbo.DOCUMENTS SET file_description = ?, category = ? WHERE id = ?";
+            $sql = "UPDATE dbo.{$documentsTable} SET file_description = ?, category = ? WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$inputData['description'] ?? null, $inputData['category'] ?? null, $documentId]);
             echo json_encode(['success' => true, 'message' => 'Document updated successfully.']);
             break;
             
         //==================================
-        //  DELETE DOCUMENTS
+        //  DELETE DOCUMENTS
         //==================================
         case 'delete':
             if (!hasRole(['admin', 'creator'])) {
@@ -232,20 +223,22 @@ try {
 
             $placeholders = implode(',', array_fill(0, count($docIds), '?'));
             
-            $sqlSelect = "SELECT file_path FROM dbo.DOCUMENTS WHERE id IN ($placeholders)";
+            $sqlSelect = "SELECT file_path FROM dbo.{$documentsTable} WHERE id IN ($placeholders)";
             $stmtSelect = $pdo->prepare($sqlSelect);
             $stmtSelect->execute($docIds);
             $filesToDelete = $stmtSelect->fetchAll(PDO::FETCH_COLUMN, 0);
 
-            $sqlDelete = "DELETE FROM dbo.DOCUMENTS WHERE id IN ($placeholders)";
+            $sqlDelete = "DELETE FROM dbo.{$documentsTable} WHERE id IN ($placeholders)";
             $stmtDelete = $pdo->prepare($sqlDelete);
             $stmtDelete->execute($docIds);
             $deletedCount = $stmtDelete->rowCount();
 
             foreach ($filesToDelete as $filePath) {
-                // เพิ่มการตรวจสอบให้แน่ใจว่า $filePath ไม่ใช่ค่าว่าง
-                if ($filePath && file_exists(__DIR__ . '/../../../documents/' . $filePath)) {
-                    unlink(__DIR__ . '/../../../documents/' . $filePath);
+                if ($filePath) {
+                    $fullPath = __DIR__ . '/../../../documents/' . $filePath;
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
                 }
             }
             
@@ -254,7 +247,7 @@ try {
             break;
 
         //==================================
-        //  DEFAULT
+        //  DEFAULT
         //==================================
         default:
             throw new Exception('Invalid action specified.', 400);
