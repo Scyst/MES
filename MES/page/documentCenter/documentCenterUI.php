@@ -83,10 +83,10 @@
                                         <th style="width: 50px;">
                                             <input type="checkbox" id="selectAllCheckbox"> </th>
                                         <?php endif; ?>
-                                        <th class="sortable" data-sort="file_name">File Name <!--i class="fas fa-sort float-end"></i--></th>
-                                        <th class="sortable" data-sort="file_description">Description <!--i class="fas fa-sort float-end"></i--></th>
-                                        <th class="sortable" data-sort="category">Category <!--i class="fas fa-sort float-end"></i--></th>
-                                        <th class="sortable" data-sort="uploaded_by">Uploaded By <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="file_name" style="width: 50%;">File Name <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="file_description" >Description <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="category" style="width: 15%;">Category <!--i class="fas fa-sort float-end"></i--></th>
+                                        <th class="sortable" data-sort="uploaded_by" style="width: 10%;">Uploaded By <!--i class="fas fa-sort float-end"></i--></th>
                                 </thead>
                                 <tbody id="documentTableBody">
                                     </tbody>
