@@ -523,7 +523,7 @@ function renderItemsTable(items, totalItems, page) {
     
     // ✅ แก้ไข colspan เป็น 8 ให้ตรงกับจำนวนคอลัมน์ใหม่
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center">No items found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No items found.</td></tr>`; // <-- แก้ไข colspan
         renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
         return;
     }
@@ -532,6 +532,11 @@ function renderItemsTable(items, totalItems, page) {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
         tr.dataset.itemId = item.item_id;
+
+        const formatCurrency = (value) => {
+            const num = parseFloat(value || 0);
+            return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+        };
         
         // ✅ นำโครงสร้างเดิมของคุณมาเพิ่มแค่ Min/Max Stock
         tr.innerHTML = `
@@ -543,6 +548,8 @@ function renderItemsTable(items, totalItems, page) {
             
             <td class="text-center">${parseFloat(item.min_stock || 0).toFixed(3)}</td>
             <td class="text-center">${parseFloat(item.max_stock || 0).toFixed(3)}</td>
+            <td class="text-end">${formatCurrency(item.Cost_Total)}</td>
+            <td class="text-end">${formatCurrency(item.StandardPrice)}</td>
             <td class="text-end">${item.created_at}</td>
         `;
 
@@ -657,6 +664,16 @@ async function openItemModal(item = null) {
     
     document.getElementById('deleteItemBtn').style.display = 'none';
 
+    const setInputValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const numValue = parseFloat(value || 0); 
+            element.value = numValue.toFixed(6); 
+        } else {
+            console.warn(`Element with ID ${id} not found in modal.`);
+        }
+    };
+
     if (item) {
         modalTitle.textContent = `Edit Item: ${item.sap_no}`;
         document.getElementById('item_id').value = item.item_id;
@@ -666,8 +683,22 @@ async function openItemModal(item = null) {
         document.getElementById('part_description').value = item.part_description;
         document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
         document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
-        
         document.getElementById('deleteItemBtn').style.display = 'inline-block';
+
+        setInputValue('Cost_RM', item.Cost_RM);
+        setInputValue('Cost_PKG', item.Cost_PKG);
+        setInputValue('Cost_SUB', item.Cost_SUB);
+        setInputValue('Cost_DL', item.Cost_DL);
+        setInputValue('Cost_OH_Machine', item.Cost_OH_Machine);
+        setInputValue('Cost_OH_Utilities', item.Cost_OH_Utilities);
+        setInputValue('Cost_OH_Indirect', item.Cost_OH_Indirect);
+        setInputValue('Cost_OH_Staff', item.Cost_OH_Staff);
+        setInputValue('Cost_OH_Accessory', item.Cost_OH_Accessory);
+        setInputValue('Cost_OH_Others', item.Cost_OH_Others);
+        setInputValue('Cost_Total', item.Cost_Total);
+        setInputValue('StandardPrice', item.StandardPrice);
+        setInputValue('StandardGP', item.StandardGP);
+        setInputValue('Price_USD', item.Price_USD);
 
         const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
         const routes = result.success ? result.data : [];
@@ -684,6 +715,20 @@ async function openItemModal(item = null) {
     } else {
         modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
+        setInputValue('Cost_RM', 0);
+        setInputValue('Cost_PKG', 0);
+        setInputValue('Cost_SUB', 0);
+        setInputValue('Cost_DL', 0);
+        setInputValue('Cost_OH_Machine', 0);
+        setInputValue('Cost_OH_Utilities', 0);
+        setInputValue('Cost_OH_Indirect', 0);
+        setInputValue('Cost_OH_Staff', 0);
+        setInputValue('Cost_OH_Accessory', 0);
+        setInputValue('Cost_OH_Others', 0);
+        setInputValue('Cost_Total', 0);
+        setInputValue('StandardPrice', 0);
+        setInputValue('StandardGP', 0);
+        setInputValue('Price_USD', 0);
         renderRoutesInModal([]);
     }
     
@@ -1442,6 +1487,7 @@ async function loadSchedules() {
         }
     } finally { hideSpinner(); }
 }
+
 function openScheduleModal(schedule = null) {
     if (schedule) {
         openModal('editScheduleModal');
@@ -1458,6 +1504,7 @@ function openScheduleModal(schedule = null) {
         openModal('addScheduleModal');
     }
 }
+
 async function deleteSchedule(id) {
     if (confirm('Are you sure you want to delete this schedule?')) {
         const result = await sendRequest(ITEM_MASTER_API, 'delete_schedule', 'POST', { id });
@@ -1493,6 +1540,7 @@ async function loadHealthCheckData() {
         }
     } finally { hideSpinner(); }
 }
+
 function jumpToItemMaster(sapNo) {
     const tab = new bootstrap.Tab(document.getElementById('item-master-tab'));
     tab.show();
@@ -1505,6 +1553,128 @@ function jumpToItemMaster(sapNo) {
     }, 150);
 }
 
+async function handleCostingImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    function parseCostValue(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+            const cleanedValue = value.replace(/,/g, '').trim();
+            if (cleanedValue === '') return 0;
+            const num = parseFloat(cleanedValue);
+            return Number.isNaN(num) ? 0 : num;
+        }
+        return 0;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        showSpinner();
+        try {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+
+            // --- MES: Read header, trim, AND convert to lowercase ---
+            const headerRowRaw = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
+            // Convert to lowercase AFTER trimming
+            const headerRow = headerRowRaw.map(h => (typeof h === 'string' ? h.trim().toLowerCase() : h)); 
+            // --- END MES ---
+
+            // --- MES: Use the normalized (trimmed, lowercase) header row ---
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: null, header: headerRow, range: 1 }); // range: 1 skips header row
+            // --- END MES ---
+
+
+            if (rawData.length === 0) {
+                showToast('CSV file has no data rows.', 'var(--bs-warning)');
+                return;
+            }
+
+            const costingPayload = [];
+            let skippedRows = 0;
+
+            for (const row of rawData) {
+                // ----- MES: USE LOWERCASE KEYS FOR ACCESSING DATA -----
+                // Convert expected keys to lowercase here for consistency
+                const materialKey = 'material';
+                const lotSizeKey = 'lot size'; // Assuming header is 'Lot Size' -> 'lot size'
+                const rawMaterialKey = 'raw material';
+                const packagingKey = 'packaging material';
+                const subContractKey = 'sub contract';
+                const directLaborKey = 'direct labor';
+                const machineDepreKey = 'machine/tool depre';
+                const utilitiesKey = 'utilities';
+                const indirectLaborKey = 'indirect labor';
+                const staffExpenseKey = 'staff expense oh';
+                const accessoryKey = 'accessory';
+                const othersOverheadKey = 'others overhead';
+                const costKey = 'cost';
+                const priceKey = 'price';
+                const gpKey = 'gp';
+                const usdKey = 'usd';
+
+                const material = row[materialKey] ? String(row[materialKey]).trim() : null; 
+                const lotSizeRaw = row[lotSizeKey]; 
+                const lotSize = parseCostValue(lotSizeRaw);
+
+                if (!material || lotSize <= 0) {
+                    console.warn('Skipping row due to missing Material or invalid Lot Size:', row);
+                    skippedRows++;
+                    continue;
+                }
+
+                // Access row data using lowercase keys
+                const costRM = parseCostValue(row[rawMaterialKey]) / lotSize;
+                const costPKG = parseCostValue(row[packagingKey]) / lotSize;
+                const costSUB = parseCostValue(row[subContractKey]) / lotSize;
+                const costDL = parseCostValue(row[directLaborKey]) / lotSize; 
+                const costOHMachine = parseCostValue(row[machineDepreKey]) / lotSize;
+                const costOHUtilities = parseCostValue(row[utilitiesKey]) / lotSize;
+                const costOHIndirect = parseCostValue(row[indirectLaborKey]) / lotSize;
+                const costOHStaff = parseCostValue(row[staffExpenseKey]) / lotSize;
+                const costOHAccessory = parseCostValue(row[accessoryKey]) / lotSize;
+                const costOHOthers = parseCostValue(row[othersOverheadKey]) / lotSize;
+
+                const costTotal = parseCostValue(row[costKey]);
+                const standardPrice = parseCostValue(row[priceKey]);
+                const standardGP = parseCostValue(row[gpKey]);
+                const priceUSD = parseCostValue(row[usdKey]);
+                // ----- END MES -----
+
+                const costItem = {
+                    sap_no: material, // Keep original case for sap_no if needed, or convert too
+                    Cost_RM: costRM, Cost_PKG: costPKG, Cost_SUB: costSUB, Cost_DL: costDL,
+                    Cost_OH_Machine: costOHMachine, Cost_OH_Utilities: costOHUtilities, Cost_OH_Indirect: costOHIndirect,
+                    Cost_OH_Staff: costOHStaff, Cost_OH_Accessory: costOHAccessory, Cost_OH_Others: costOHOthers,
+                    Cost_Total: costTotal, StandardPrice: standardPrice, StandardGP: standardGP, Price_USD: priceUSD
+                };
+                costingPayload.push(costItem);
+            }
+
+            if (costingPayload.length > 0) {
+                if (confirm(`Import costing data for ${costingPayload.length} items? (Skipped ${skippedRows} rows)`)) {
+                    const result = await sendRequest(ITEM_MASTER_API, 'import_costing_json', 'POST', costingPayload);
+                    showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+                    if (result.success) {
+                        await fetchItems(1);
+                    }
+                }
+            } else {
+                 showToast(`No valid costing data found to import. Skipped ${skippedRows} rows.`, 'var(--bs-warning)');
+            }
+
+        } catch (error) {
+            console.error("Error processing costing CSV:", error);
+            showToast(`Error processing file: ${error.message}`, 'var(--bs-danger)');
+        } finally {
+            event.target.value = '';
+            hideSpinner();
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 // =================================================================
 // SECTION 4: DOMCONTENTLOADED (ตัวควบคุมหลัก)
@@ -1594,6 +1764,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // และเมื่อเลือกไฟล์ใน input file ที่ซ่อนอยู่แล้ว...
     importFileInput?.addEventListener('change', handleItemImport); // ...ให้เรียกใช้ฟังก์ชันนำเข้าข้อมูล
+
+    const importCostingBtn = document.getElementById('importCostingBtn');
+    const costImportFileInput = document.getElementById('costImportFile');
+
+    importCostingBtn?.addEventListener('click', () => {
+        costImportFileInput.click(); // Trigger the hidden file input
+    });
+
+    costImportFileInput?.addEventListener('change', handleCostingImport); // Call the new handler
+    // END MES Additions
 
     // --- BOM Manager Tab ---
     // 1. ปุ่ม Create New BOM

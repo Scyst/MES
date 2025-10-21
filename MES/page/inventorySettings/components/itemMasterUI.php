@@ -24,6 +24,9 @@
                     <button class="btn btn-info" id="importItemsBtn" title="Import from Excel"><i class="fas fa-file-import"></i> Import</button>
                     <button class="btn btn-primary" id="exportItemsBtn" title="Export to Excel"><i class="fas fa-file-export"></i> Export</button>
                     <input type="file" id="itemImportFile" class="d-none" accept=".xlsx, .xls">
+
+                    <button class="btn btn-warning" id="importCostingBtn" title="Import Costing CSV"><i class="fas fa-dollar-sign"></i> Import Cost</button>
+                    <input type="file" id="costImportFile" class="d-none" accept=".csv">
                     <button class="btn btn-success" id="addNewItemBtn"><i class="fas fa-plus"></i> Add New Item</button>
                 </div>
             </div>
@@ -42,6 +45,9 @@
                 <th class="text-center">Planned Output</th>
                 <th>Min Stock</th>
                 <th>Max Stock</th>
+
+                <th class="text-end">Total Cost</th>
+                <th class="text-end">Standard Price</th>
                 <th class="text-end">Created At</th>
             </tr>
         </thead>    

@@ -39,6 +39,76 @@
                         </div>
                     </div>
 
+                    <h6 class="mt-4"><i class="fas fa-dollar-sign"></i> Standard Costing Details (Per Unit)</h6>
+                    <hr class="mt-1">
+                    
+                    <label class="form-label text-primary fw-bold mb-1">Component Costs</label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label for="Cost_RM" class="form-label">Raw Material</label>
+                            <input type="number" step="any" class="form-control" id="Cost_RM" name="Cost_RM" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="Cost_PKG" class="form-label">Packaging</label>
+                            <input type="number" step="any" class="form-control" id="Cost_PKG" name="Cost_PKG" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="Cost_SUB" class="form-label">Sub Contract</label>
+                            <input type="number" step="any" class="form-control" id="Cost_SUB" name="Cost_SUB" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="Cost_DL" class="form-label">Direct Labor</label>
+                            <input type="number" step="any" class="form-control" id="Cost_DL" name="Cost_DL" placeholder="0.000000">
+                        </div>
+                    </div>
+
+                    <label class="form-label text-primary fw-bold mb-1">Overhead Costs</label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Machine" class="form-label">Machine</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Machine" name="Cost_OH_Machine" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Utilities" class="form-label">Utilities</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Utilities" name="Cost_OH_Utilities" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Indirect" class="form-label">Indirect</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Indirect" name="Cost_OH_Indirect" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Staff" class="form-label">Staff</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Staff" name="Cost_OH_Staff" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Accessory" class="form-label">Accessory</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Accessory" name="Cost_OH_Accessory" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="Cost_OH_Others" class="form-label">Others</label>
+                            <input type="number" step="any" class="form-control" id="Cost_OH_Others" name="Cost_OH_Others" placeholder="0.000000">
+                        </div>
+                    </div>
+
+                    <label class="form-label text-primary fw-bold mb-1">Summary & Price</label>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="Cost_Total" class="form-label">Total Cost</label>
+                            <input type="number" step="any" class="form-control" id="Cost_Total" name="Cost_Total" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="StandardPrice" class="form-label">Standard Price</label>
+                            <input type="number" step="any" class="form-control" id="StandardPrice" name="StandardPrice" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="StandardGP" class="form-label">Standard GP</label>
+                            <input type="number" step="any" class="form-control" id="StandardGP" name="StandardGP" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="Price_USD" class="form-label">Price (USD)</label>
+                            <input type="number" step="any" class="form-control" id="Price_USD" name="Price_USD" placeholder="0.000000">
+                        </div>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <h6 class="mb-0"><i class="fas fa-route"></i> Manufacturing Routes</h6>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="modalAddNewRouteBtn">
