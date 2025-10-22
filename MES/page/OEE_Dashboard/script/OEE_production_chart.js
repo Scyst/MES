@@ -1,13 +1,10 @@
 "use strict";
 
-// ===== MES: Use a local variable for this chart's instance =====
 let dailyProductionChartInstance = null;
-// ===== END MES =====
 const DAILY_PROD_CHART_ID = 'dailyProductionChart';
 
 // ===== Helper Functions (Copied/Adapted for this file) =====
-
-function toggleLoadingState_ProdChart(elementOrId, isLoading) { // Renamed slightly to avoid conflicts if helpers are not truly shared
+function toggleLoadingState_ProdChart(elementOrId, isLoading) {
     let card = null;
     const chartCanvas = document.getElementById(DAILY_PROD_CHART_ID); // Target specifically
     if (chartCanvas) {
@@ -108,9 +105,35 @@ async function fetchAndRenderDailyProductionChart() {
             chartData = processProductionDataForChart(result.data);
         }
 
-        const themeColors = getDailyProdChartThemeColors(); // Use specific theme function
+        const themeColors = getDailyProdChartThemeColors();
         const ctx = document.getElementById(canvasId)?.getContext("2d");
         if (!ctx) return;
+
+        const datalabelsConfig = {
+            display: true,
+            anchor: 'end', // Position label at the top of the bar segment
+            align: 'end',   // Align label text to the top edge
+            color: themeColors.labelColor, // Use theme color for labels
+            font: {
+                weight: 'bold'
+            },
+            formatter: (value, context) => {
+                const datasetIndex = context.datasetIndex; const dataIndex = context.dataIndex;
+                 const datasets = context.chart.data.datasets; let isTop = true;
+                 for (let i = datasetIndex + 1; i < datasets.length; i++) {
+                     const nextMeta = context.chart.getDatasetMeta(i);
+                     if (!nextMeta.hidden && datasets[i].data[dataIndex] > 0) { isTop = false; break; }
+                 }
+                 if (isTop) {
+                     let total = 0;
+                     for (let i = 0; i < datasets.length; i++) {
+                         const loopMeta = context.chart.getDatasetMeta(i);
+                         if (!loopMeta.hidden) { total += datasets[i].data[dataIndex] || 0; }
+                     }
+                     return total > 0 ? total.toLocaleString() : '';
+                 } return '';
+              }, offset: -5
+          };
 
         // ===== MES: Use the local instance variable =====
         if (dailyProductionChartInstance && typeof dailyProductionChartInstance.destroy === 'function' && dailyProductionChartInstance.ctx === null) {
@@ -119,18 +142,16 @@ async function fetchAndRenderDailyProductionChart() {
         }
 
         if (!dailyProductionChartInstance) {
-        // ===== END MES =====
             console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Creating NEW chart.`);
-            // ===== MES: Assign to local instance variable =====
             dailyProductionChartInstance = new Chart(ctx, {
-            // ===== END MES =====
                 type: 'bar',
                 data: chartData,
-                options: { // Update options to use themeColors correctly
+                plugins: [ChartDataLabels],
+                options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: { duration: 500 },
-                    plugins: { /* ... options ... */
+                    plugins: {
                          legend: {
                             display: chartData.datasets.length > 1 && chartData.datasets.length < 15,
                             position: 'bottom',
@@ -153,9 +174,10 @@ async function fetchAndRenderDailyProductionChart() {
                                 }
                             }
                         },
-                         title: { display: false }
+                         title: { display: false },
+                         datalabels: datalabelsConfig
                     },
-                    scales: { /* ... options ... */
+                    scales: {
                         x: {
                             stacked: true,
                             ticks: { color: themeColors.ticksColor },
@@ -173,27 +195,24 @@ async function fetchAndRenderDailyProductionChart() {
             });
         } else {
             console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Updating existing chart.`);
-             // ===== MES: Use the local instance variable =====
             dailyProductionChartInstance.data.labels = chartData.labels;
 
-            // Use robust dataset update logic
-             dailyProductionChartInstance.data.datasets.forEach((oldDataset, index) => {
-             // ===== END MES =====
-                 const newDataset = chartData.datasets[index];
-                 if (newDataset) {
-                     oldDataset.label = newDataset.label;
-                     oldDataset.data = newDataset.data;
-                     oldDataset.backgroundColor = newDataset.backgroundColor;
-                 }
-             });
-             // ===== MES: Use the local instance variable =====
-             if (chartData.datasets.length > dailyProductionChartInstance.data.datasets.length) {
-                 for (let i = dailyProductionChartInstance.data.datasets.length; i < chartData.datasets.length; i++) {
-                     dailyProductionChartInstance.data.datasets.push(chartData.datasets[i]);
-                 }
-             } else if (chartData.datasets.length < dailyProductionChartInstance.data.datasets.length) {
-                  dailyProductionChartInstance.data.datasets.length = chartData.datasets.length;
-             }
+            dailyProductionChartInstance.data.datasets.forEach((oldDataset, index) => {
+                const newDataset = chartData.datasets[index];
+                if (newDataset) {
+                    oldDataset.label = newDataset.label;
+                    oldDataset.data = newDataset.data;
+                    oldDataset.backgroundColor = newDataset.backgroundColor;
+                }
+            });
+            // ===== MES: Use the local instance variable =====
+            if (chartData.datasets.length > dailyProductionChartInstance.data.datasets.length) {
+                for (let i = dailyProductionChartInstance.data.datasets.length; i < chartData.datasets.length; i++) {
+                    dailyProductionChartInstance.data.datasets.push(chartData.datasets[i]);
+                }
+            } else if (chartData.datasets.length < dailyProductionChartInstance.data.datasets.length) {
+                dailyProductionChartInstance.data.datasets.length = chartData.datasets.length;
+            }
 
             // Update theme colors
             dailyProductionChartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
@@ -202,23 +221,21 @@ async function fetchAndRenderDailyProductionChart() {
             dailyProductionChartInstance.options.scales.y.grid.color = themeColors.gridColor;
             dailyProductionChartInstance.options.plugins.legend.labels.color = themeColors.legendColor;
             dailyProductionChartInstance.options.plugins.legend.display = chartData.datasets.length > 1 && chartData.datasets.length < 15;
+            dailyProductionChartInstance.options.plugins.datalabels.color = themeColors.labelColor;
 
             dailyProductionChartInstance.update();
-            // ===== END MES =====
         }
 
     } catch (error) {
         console.error(`Failed fetch/render ${canvasId}:`, error);
-        toggleErrorMessage_ProdChart(canvasId, true); // Use renamed helper
-        // ===== MES: Use the local instance variable =====
+        toggleErrorMessage_ProdChart(canvasId, true);
         if (dailyProductionChartInstance && typeof dailyProductionChartInstance.destroy === 'function' && dailyProductionChartInstance.ctx !== null) {
             dailyProductionChartInstance.data.labels = [];
             dailyProductionChartInstance.data.datasets = [];
             dailyProductionChartInstance.update();
         }
-        // ===== END MES =====
     } finally {
-        toggleLoadingState_ProdChart(canvasId, false); // Use renamed helper
+        toggleLoadingState_ProdChart(canvasId, false);
     }
 }
 
@@ -227,16 +244,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                // ===== MES: Use the local instance variable =====
                 if (dailyProductionChartInstance && typeof dailyProductionChartInstance.destroy === 'function' && dailyProductionChartInstance.ctx !== null) {
-                // ===== END MES =====
-                    console.log('Theme changed, updating daily production chart colors...');
-                    const themeColors = getDailyProdChartThemeColors(); // Use specific theme function
+                    console.log('Theme changed, updating daily production chart colors (including datalabels)...');
+                    const themeColors = getDailyProdChartThemeColors();
                     dailyProductionChartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
                     dailyProductionChartInstance.options.scales.y.ticks.color = themeColors.ticksColor;
                     dailyProductionChartInstance.options.scales.y.title.color = themeColors.labelColor;
                     dailyProductionChartInstance.options.scales.y.grid.color = themeColors.gridColor;
                     dailyProductionChartInstance.options.plugins.legend.labels.color = themeColors.legendColor;
+                    dailyProductionChartInstance.options.plugins.datalabels.color = themeColors.labelColor;
                     dailyProductionChartInstance.update('none');
                 }
             }

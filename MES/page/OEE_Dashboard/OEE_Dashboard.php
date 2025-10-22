@@ -5,7 +5,7 @@ session_start();
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>OEE - DASHBOARD</title>
+    <title>TOOLBOX - DASHBOARD</title>
     <?php include_once '../components/common_head.php'; ?>
 </head>
 
@@ -18,7 +18,7 @@ session_start();
 
             <header class="dashboard-header-sticky">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <h2 class="mb-0">OEE DASHBOARD</h2>
+                    <h2 class="mb-0">TOOLBOX DASHBOARD</h2>
                     <div class="text-end">
                         <p id="date" class="mb-0"></p>
                         <p id="time" class="mb-0"></p>
