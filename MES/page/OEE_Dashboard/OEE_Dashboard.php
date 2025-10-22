@@ -143,7 +143,7 @@ session_start();
                 </section>
 
                 </section> <section class="dashboard-section mb-4" id="cost-summary-section">
-                    <div class="chart-card cost-summary-card">
+                    <div class="chart-card cost-summary-card" style="height: 100%;">
                          <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                          <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary (Standard)</h4>
                          <div class="row text-center">
@@ -182,7 +182,7 @@ session_start();
 
                          <hr>
                          <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
-                         <div class="chart-wrapper" style="height: 250px;">
+                         <div class="chart-wrapper" style="height: 100%;">
                               <canvas id="dailyProductionChart"></canvas>
                                <div class="no-data-message" style="margin-top: 1rem;">
                                     <i class="fas fa-info-circle"></i>
@@ -270,6 +270,7 @@ session_start();
     <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>
     <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
     <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
+    <script src="script/OEE_production_chart.js?v=<?php echo filemtime('script/OEE_production_chart.js'); ?>"></script>
     <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
 </body>
 </html>
