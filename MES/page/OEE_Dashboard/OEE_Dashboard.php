@@ -164,7 +164,7 @@ session_start();
                               </div>
                          </div>
                          <hr>
-                         <div class="row text-center mt-3">
+                         <div class="row text-center mt-3 mb-4">
                               <div class="col-md-4">
                                    <h6><i class="fas fa-dollar-sign"></i> Total Standard Cost</h6>
                                    <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
@@ -178,6 +178,20 @@ session_start();
                                    <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
                                    <span class="percentage" id="prodPercentGPStd">-- %</span>
                               </div>
+                         </div>
+
+                         <hr>
+                         <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
+                         <div class="chart-wrapper" style="height: 250px;">
+                              <canvas id="dailyProductionChart"></canvas>
+                               <div class="no-data-message" style="margin-top: 1rem;">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>No production data available for this period.</span>
+                               </div>
+                               <div class="error-message" style="margin-top: 1rem;">
+                                   <i class="fas fa-exclamation-triangle"></i>
+                                   <span>Failed to load production data.</span>
+                               </div>
                          </div>
                     </div>
                 </section>
