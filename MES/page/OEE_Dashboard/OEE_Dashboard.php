@@ -142,6 +142,46 @@ session_start();
                     </div>
                 </section>
 
+                </section> <section class="dashboard-section mb-4" id="cost-summary-section">
+                    <div class="chart-card cost-summary-card">
+                         <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
+                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary (Standard)</h4>
+                         <div class="row text-center">
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-boxes"></i> Material Cost</h6>
+                                   <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
+                                   <span class="percentage" id="prodCostPercentRM">-- %</span>
+                              </div>
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-hard-hat"></i> Direct Labor Cost</h6>
+                                   <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
+                                   <span class="percentage" id="prodCostPercentDL">-- %</span>
+                              </div>
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-industry"></i> Overhead Cost</h6>
+                                   <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
+                                   <span class="percentage" id="prodCostPercentOH">-- %</span>
+                              </div>
+                         </div>
+                         <hr>
+                         <div class="row text-center mt-3">
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-dollar-sign"></i> Total Standard Cost</h6>
+                                   <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
+                              </div>
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-cash-register"></i> Total Standard Revenue</h6>
+                                   <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
+                              </div>
+                              <div class="col-md-4">
+                                   <h6><i class="fas fa-percentage"></i> Standard Gross Profit</h6>
+                                   <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
+                                   <span class="percentage" id="prodPercentGPStd">-- %</span>
+                              </div>
+                         </div>
+                    </div>
+                </section>
+
                 <section class="dashboard-section" id="charts-section"> 
                     <div class="row mb-4">
                         <div class="col-12">

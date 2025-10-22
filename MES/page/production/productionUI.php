@@ -15,7 +15,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Production & inventory</title>
+    <title>Production & Inventory</title>
     <?php include_once '../components/common_head.php'; ?>
 </head>
 

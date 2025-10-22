@@ -621,6 +621,37 @@ body {
     gap: 1.5rem; /* เพิ่มระยะห่างระหว่างแถวของการ์ด */
 }
 
+/* MES: Add some basic styling for the cost summary */
+.cost-summary-card .value {
+    font-size: 1.25rem; /* Make numbers slightly larger */
+    font-weight: 500;
+    color: var(--bs-primary); /* Use theme color */
+    display: block; /* Ensure value takes its own line */
+    margin-top: 0.25rem;
+}
+.cost-summary-card .percentage {
+    font-size: 0.9rem;
+    color: var(--bs-secondary);
+    display: block;
+    margin-top: -0.1rem;
+}
+.cost-summary-card h6 {
+        margin-bottom: 0.5rem;
+        color: var(--bs-body-color);
+        font-weight: bold;
+}
+.cost-summary-card .col-md-4 {
+        border-right: 1px solid var(--bs-border-color);
+}
+.cost-summary-card .col-md-4:last-child {
+        border-right: none;
+}
+    /* Add loading indicator */
+.cost-summary-card .loading-indicator {
+    color: var(--bs-secondary);
+    font-style: italic;
+}
+
 /* กฎสำหรับ Section Line Chart */
 #linechart-section {
     height: calc(100vh - 80px);
