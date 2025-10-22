@@ -45,7 +45,7 @@ body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
-    font-family: 'Prompt', ui-sans-serif, system-ui, sans-serif;
+    font-family: ui-sans-serif, system-ui, sans-serif, 'Prompt';
 }
 
 .page-container {
