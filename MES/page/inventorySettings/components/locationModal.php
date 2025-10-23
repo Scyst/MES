@@ -25,6 +25,18 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="location_type" class="form-label">ประเภทสถานที่ (Location Type)</label>
+                        <select class="form-select" id="location_type" name="location_type" required>
+                            <option value="WIP">WIP (Work-in-Progress / ไลน์ผลิต)</option>
+                            <option value="STORE">STORE (คลังวัตถุดิบ)</option>
+                            <option value="WAREHOUSE">WAREHOUSE (คลังสินค้าสำเร็จรูป)</option>
+                            <option value="SHIPPING">SHIPPING (พื้นที่เตรียมจัดส่ง)</option>
+                        </select>
+                        <div class="form-text">
+                            เลือกประเภทของสถานที่เพื่อการจัดกลุ่มสต็อก
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label for="location_description" class="form-label">คำอธิบาย</label>
                         <textarea class="form-control" id="location_description" name="location_description" rows="2"></textarea>
                     </div>

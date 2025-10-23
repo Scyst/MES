@@ -18,6 +18,8 @@
             <tr>
                 <th>Location Name</th>
                 <th>Description</th>
+                <th>Production Line</th>
+                <th>Location Type</th>
                 <th class="text-center">Status</th>
             </tr>
         </thead>

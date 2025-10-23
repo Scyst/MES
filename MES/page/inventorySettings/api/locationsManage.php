@@ -28,7 +28,8 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'get_locations':
-            $stmt = $pdo->query("SELECT location_id, location_name, location_description, is_active, production_line FROM " . LOCATIONS_TABLE . " ORDER BY location_name");
+            // ⭐️ 1. แก้ไข: เพิ่ม location_type
+            $stmt = $pdo->query("SELECT location_id, location_name, location_description, is_active, production_line, location_type FROM " . LOCATIONS_TABLE . " ORDER BY location_name");
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $locations]);
             break;
@@ -39,18 +40,30 @@ try {
             $desc = trim($input['location_description'] ?? '');
             $active = filter_var($input['is_active'], FILTER_VALIDATE_BOOLEAN);
             $prod_line = !empty($input['production_line']) ? trim($input['production_line']) : null;
+            
+            // ⭐️ 2. แก้ไข: รับค่า location_type และตั้งค่า Default
+            $location_type = !empty($input['location_type']) ? trim($input['location_type']) : 'WIP'; // ตั้งค่า Default เป็น 'WIP'
+
             if (empty($name)) {
                 throw new Exception("Location name is required.");
             }
+            
+            // ⭐️ 3. แก้ไข: ตรวจสอบค่า location_type ที่อนุญาต (ทางเลือก แต่แนะนำ)
+            $allowed_types = ['WIP', 'STORE', 'WAREHOUSE', 'SHIPPING'];
+            if (!in_array($location_type, $allowed_types)) {
+                throw new Exception("Invalid Location Type specified. Allowed types are: " . implode(', ', $allowed_types));
+            }
 
             if ($id > 0) {
-                $sql = "UPDATE " . LOCATIONS_TABLE . " SET location_name = ?, location_description = ?, is_active = ?, production_line = ? WHERE location_id = ?";
-                $params = [$name, $desc, $active, $prod_line, $id];
+                // ⭐️ 4. แก้ไข: เพิ่ม location_type ใน SQL UPDATE
+                $sql = "UPDATE " . LOCATIONS_TABLE . " SET location_name = ?, location_description = ?, is_active = ?, production_line = ?, location_type = ? WHERE location_id = ?";
+                $params = [$name, $desc, $active, $prod_line, $location_type, $id];
                 $message = 'Location updated successfully.';
                 $logType = 'UPDATE LOCATION';
             } else {
-                $sql = "INSERT INTO " . LOCATIONS_TABLE . " (location_name, location_description, is_active, production_line) VALUES (?, ?, ?, ?)";
-                $params = [$name, $desc, $active, $prod_line];
+                // ⭐️ 5. แก้ไข: เพิ่ม location_type ใน SQL INSERT
+                $sql = "INSERT INTO " . LOCATIONS_TABLE . " (location_name, location_description, is_active, production_line, location_type) VALUES (?, ?, ?, ?, ?)";
+                $params = [$name, $desc, $active, $prod_line, $location_type];
                 $message = 'Location added successfully.';
                 $logType = 'ADD LOCATION';
             }
@@ -59,7 +72,7 @@ try {
             $stmt->execute($params);
             
             if ($id == 0) $id = $pdo->lastInsertId();
-            logAction($pdo, $currentUser['username'], $logType, $id, "Name: {$name}");
+            logAction($pdo, $currentUser['username'], $logType, $id, "Name: {$name}, Type: {$location_type}");
             echo json_encode(['success' => true, 'message' => $message]);
             break;
 

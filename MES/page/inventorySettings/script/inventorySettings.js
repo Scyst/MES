@@ -13,7 +13,7 @@ const BOM_API_ENDPOINT = 'api/bomManager.php';
 let allItems = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 50;
-let selectedItemId = null; 
+let selectedItemId = null;
 let selectedItem = null;
 
 // Variables from paraManage.js
@@ -90,9 +90,12 @@ async function loadLocations() {
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to edit';
                 
+                // ⭐️ 1. แก้ไข: เพิ่ม production_line และ location_type
                 tr.innerHTML = `
                     <td>${location.location_name}</td>
                     <td>${location.location_description || ''}</td>
+                    <td>${location.production_line || '<span class="text-muted">N/A</span>'}</td>
+                    <td>${location.location_type || 'WIP'}</td> 
                     <td class="text-center">
                         <span class="badge ${location.is_active == 1 ? 'bg-success' : 'bg-secondary'}">
                             ${location.is_active == 1 ? 'Active' : 'Inactive'}
@@ -104,7 +107,8 @@ async function loadLocations() {
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center">No locations found. Click "Add New Location" to start.</td></tr>';
+            // ⭐️ 2. แก้ไข: ปรับ colspan เป็น 5
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No locations found. Click "Add New Location" to start.</td></tr>';
         }
     } finally {
         hideSpinner();
@@ -147,8 +151,12 @@ async function openLocationModal(location = null) {
         if (location.production_line) {
             lineSelect.value = location.production_line;
         }
+        // ⭐️ 3. แก้ไข: ตั้งค่า location_type เมื่อแก้ไข
+        document.getElementById('location_type').value = location.location_type || 'WIP'; // ถ้าไม่มีค่า ให้เป็น WIP
     } else {
         modalTitle.textContent = 'Add New Location';
+        // ⭐️ 4. แก้ไข: ตั้งค่า Default location_type เมื่อเพิ่มใหม่
+        document.getElementById('location_type').value = 'WIP'; // ตั้งค่า Default
     }
     
     modal.show();
@@ -161,6 +169,9 @@ async function handleLocationFormSubmit(event) {
     const data = Object.fromEntries(formData.entries());
     data.is_active = document.getElementById('location_is_active').checked;
     
+    // ⭐️ 5. แก้ไข: ตรวจสอบว่า location_type ถูกส่งไป (ซึ่งควรจะทำได้อัตโนมัติ)
+    // console.log("Data to send:", data); // ใช้สำหรับ Debug ถ้าจำเป็น
+
     const result = await sendRequest(LOCATIONS_API, 'save_location', 'POST', data);
     
     if (result.success) {

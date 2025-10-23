@@ -99,18 +99,18 @@ try {
                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
             if (!empty($_GET['count_type']) && $action === 'get_production_history') {
-                $conditions[] = "t.transaction_type = ?"; 
-                $params[] = 'PRODUCTION_' . $_GET['count_type']; 
+                $conditions[] = "t.transaction_type = ?";
+                $params[] = 'PRODUCTION_' . $_GET['count_type'];
             }
             
             // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
-            if (!empty($_GET['startDate'])) { 
-                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?"; 
-                $params[] = $_GET['startDate']; 
+            if (!empty($_GET['startDate'])) {
+                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
+                $params[] = $_GET['startDate'];
             }
-            if (!empty($_GET['endDate'])) { 
-                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?"; 
-                $params[] = $_GET['endDate']; 
+            if (!empty($_GET['endDate'])) {
+                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
+                $params[] = $_GET['endDate'];
             }
             // <== สิ้นสุดการแก้ไข
 
@@ -128,7 +128,7 @@ try {
             $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
-                SELECT 
+                SELECT
                     t.transaction_id, t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no, t.quantity,
                     (
                         SELECT STUFF((
@@ -159,12 +159,13 @@ try {
             break;
 
         case 'get_stock_inventory_report':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit; $endRow = $startRow + $limit;
             $search_term = $_GET['search_term'] ?? '';
-            $conditions = []; $params = [];
-            
+            $conditions = []; $base_params = [];
+
+            $conditions[] = "(l.location_type IS NULL OR l.location_type != 'SHIPPING')";
+
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
                 $conditions[] = "
@@ -176,19 +177,29 @@ try {
                         WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
                     )
                 ";
-                $params[] = $supervisor_line;
-                $params[] = $supervisor_line;
+                $base_params[] = $supervisor_line;
+                $base_params[] = $supervisor_line;
             }
-            
+
             if (!empty($search_term)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
-                $params = ["%{$search_term}%", "%{$search_term}%", "%{$search_term}%"];
+                $base_params[] = "%{$search_term}%";
+                $base_params[] = "%{$search_term}%";
+                $base_params[] = "%{$search_term}%";
             }
+
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-            $totalSql = "SELECT COUNT(DISTINCT i.item_id) FROM " . ITEMS_TABLE . " i {$whereClause}";
+            $totalSql = "
+                SELECT COUNT(DISTINCT i.item_id)
+                FROM " . ITEMS_TABLE . " i
+                LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
+                LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
+                {$whereClause}
+            ";
             $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
+            $totalStmt->execute($base_params);
             $total = (int)$totalStmt->fetchColumn();
+
             $dataSql = "
                 WITH ItemGroup AS (
                     SELECT
@@ -200,7 +211,8 @@ try {
                         ), 1, 2, '') AS used_models
                     FROM " . ITEMS_TABLE . " i
                     LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
-                    {$whereClause}
+                    LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
+                    {$whereClause} -- ใช้ WHERE clause ที่มีเงื่อนไข location_type
                     GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description
                 ),
                 NumberedRows AS (
@@ -210,10 +222,17 @@ try {
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
             $dataStmt = $pdo->prepare($dataSql);
+
+            $all_params = array_merge($base_params, [$startRow, $endRow]);
             $paramIndex = 1;
-            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
-            $dataStmt->bindValue($paramIndex++, $startRow, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, $endRow, PDO::PARAM_INT);
+            foreach ($all_params as $param) {
+                if (is_int($param) || ctype_digit($param)) {
+                     $dataStmt->bindValue($paramIndex++, (int)$param, PDO::PARAM_INT);
+                } else {
+                     $dataStmt->bindValue($paramIndex++, $param);
+                }
+            }
+
             $dataStmt->execute();
             $stock = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
@@ -235,24 +254,21 @@ try {
                 array_push($params, $search_term, $search_term, $search_term, $search_term);
             }
 
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
             if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
-                // $date_where_clause = "AND t.transaction_timestamp >= ? AND t.transaction_timestamp < DATEADD(day, 1, ?)";
                 $date_where_clause = "AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ? AND DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
                 $date_params[] = $_GET['startDate'];
                 $date_params[] = $_GET['endDate'];
             }
-            // <== สิ้นสุดการแก้ไข
 
             $baseQuery = "
-                SELECT 
+                SELECT
                     t.parameter_id, ISNULL(t.from_location_id, t.to_location_id) AS location_id,
                     0 AS total_in, ABS(t.quantity) AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
                 WHERE ( (t.transaction_type IN ('CONSUMPTION', 'TRANSFER') AND t.from_location_id IS NOT NULL) OR (t.transaction_type LIKE 'PRODUCTION_%') )
                 {$date_where_clause}
                 UNION ALL
-                SELECT 
+                SELECT
                     t.parameter_id, t.to_location_id AS location_id,
                     t.quantity AS total_in, 0 AS total_out
                 FROM " . TRANSACTIONS_TABLE . " t
@@ -294,7 +310,7 @@ try {
             $paramIndex = 1;
             $all_final_params = array_merge($full_params, [$startRow, $startRow + $limit]);
             foreach($all_final_params as $p) {
-                if (is_int($p)) { $dataStmt->bindValue($paramIndex++, $p, PDO::PARAM_INT); } 
+                if (is_int($p)) { $dataStmt->bindValue($paramIndex++, $p, PDO::PARAM_INT); }
                 else { $dataStmt->bindValue($paramIndex++, $p); }
             }
             $dataStmt->execute();
@@ -304,18 +320,17 @@ try {
             break;
 
         case 'get_wip_onhand_report':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
-            $conditions = ["l.location_name NOT LIKE '%WAREHOUSE%'", "h.quantity <> 0"];
+            $conditions = ["l.location_type = 'WIP'", "h.quantity <> 0"];
 
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "l.production_line = ?";
                 $params[] = $currentUser['line'];
             }
             
-            if (!empty($_GET['search_term'])) { 
+            if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term);
@@ -327,8 +342,8 @@ try {
             $total = (int)$totalStmt->fetchColumn();
             $dataSql = "
                 WITH NumberedRows AS (
-                    SELECT 
-                        i.item_id, h.location_id, l.location_name, i.sap_no, i.part_no, i.part_description, 
+                    SELECT
+                        i.item_id, h.location_id, l.location_name, i.sap_no, i.part_no, i.part_description,
                         (
                             SELECT STUFF((
                                 SELECT DISTINCT ', ' + r.model FROM " . ROUTES_TABLE . " r
@@ -341,7 +356,7 @@ try {
                     JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
                     {$whereClause}
                 )
-                SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity 
+                SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
             $dataStmt = $pdo->prepare($dataSql);
@@ -372,18 +387,14 @@ try {
                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
             
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
-            if (!empty($_GET['startDate'])) { 
-                // $conditions[] = "t.transaction_timestamp >= ?"; 
-                $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) >= ?"; 
-                $params[] = $_GET['startDate']; 
+            if (!empty($_GET['startDate'])) {
+                $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) >= ?";
+                $params[] = $_GET['startDate'];
             }
-            if (!empty($_GET['endDate'])) { 
-                // $conditions[] = "t.transaction_timestamp < DATEADD(day, 1, ?)"; 
+            if (!empty($_GET['endDate'])) {
                 $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
-                $params[] = $_GET['endDate']; 
+                $params[] = $_GET['endDate'];
             }
-            // <== สิ้นสุดการแก้ไข
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
             $baseQuery = "
@@ -546,11 +557,11 @@ try {
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? null; // <== เอา default ออก
+                $new_log_date = $input['log_date'] ?? null;
                 $new_start_time = $input['start_time'] ?? null;
                 $new_end_time = $input['end_time'] ?? null;
 
-                if (empty($new_log_date)) { // <== เช็คค่าว่าง
+                if (empty($new_log_date)) {
                     throw new Exception("Log Date is required for update.");
                 }
                 
@@ -600,10 +611,10 @@ try {
                 $new_quantity = ($input['quantity'] ?? '0');
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? null; // <== เอา default ออก
-                $new_log_time = $input['log_time'] ?? date('H:i:s'); // อาจจะใช้เวลาเดิม ถ้าไม่มีอันใหม่?
+                $new_log_date = $input['log_date'] ?? null;
+                $new_log_time = $input['log_time'] ?? date('H:i:s');
 
-                if (empty($new_log_date)) { // <== เช็คค่าว่าง
+                if (empty($new_log_date)) {
                     throw new Exception("Log Date is required for update.");
                 }
 
