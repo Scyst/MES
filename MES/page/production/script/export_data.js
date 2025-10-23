@@ -1,30 +1,26 @@
-// in file: export_data.js (New Version)
-
 async function exportProductionHistoryToExcel() {
     showToast('Exporting data... This may take a moment.', 'var(--bs-info)');
     showSpinner();
 
     try {
-        // --- START: ส่วนที่แก้ไข ---
-        // รวบรวม Filter จากช่องค้นหาใหม่
         const params = {
             page: 1,
-            limit: -1, // Signal for export to get all data
+            limit: -1, // Get all data
             search_term: document.getElementById('filterSearch').value,
             count_type: document.getElementById('filterCountType').value,
             startDate: document.getElementById('filterStartDate').value,
             endDate: document.getElementById('filterEndDate').value,
         };
-        // --- END: ส่วนที่แก้ไข ---
 
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
 
-        if (!result.success || result.data.length === 0) {
+        // <== [แก้ไข] ตรวจสอบ result.data ด้วย
+        if (!result.success || !result.data || result.data.length === 0) {
             showToast("No data to export for the current filter.", 'var(--bs-warning)');
             return;
         }
 
-        // ส่วนที่เหลือของฟังก์ชันเหมือนเดิม...
+        // --- สร้าง Raw Data Sheet ---
         const rawDataSheet = result.data.map(row => ({
             'Date': new Date(row.transaction_timestamp).toLocaleDateString('en-GB'),
             'Start Time': row.start_time || '',
@@ -32,28 +28,65 @@ async function exportProductionHistoryToExcel() {
             'Location': row.location_name,
             'Part No': row.part_no,
             'SAP No': row.sap_no,
-            'Lot/Ref': row.lot_no,
-            'Quantity': row.quantity,
+            'Lot/Ref': row.lot_no || '',
+            'Quantity': parseFloat(row.quantity), // <== [แนะนำ] ใช้ parseFloat
             'Type': row.count_type,
             'User': row.created_by,
-            'Notes': row.notes
+            'Notes': row.notes || '' // <== [แนะนำ] เพิ่ม || ''
         }));
 
-        const summarySheet = result.summary.map(row => ({
-            'SAP No': row.sap_no,
-            'Part No': row.part_no,
-            'Type': row.count_type,
-            'Total Quantity': row.total_quantity
-        }));
-        
-        const grandTotalSheet = result.grand_total.map(row => ({
-            'Type': row.count_type,
-            'Grand Total': row.total_quantity
-        }));
+        // <== [แก้ไข] คำนวณ Summary และ Grand Total จาก result.data ---
+        const summary = {};
+        let grandTotalByType = {}; // แยก Grand Total ตาม Type
+        let overallGrandTotal = 0;
 
+        result.data.forEach(row => {
+            const key = `${row.sap_no}|${row.part_no}|${row.count_type}`;
+            if (!summary[key]) {
+                summary[key] = {
+                    'SAP No': row.sap_no,
+                    'Part No': row.part_no,
+                    'Type': row.count_type,
+                    'Total Quantity': 0
+                };
+            }
+            const quantity = parseFloat(row.quantity) || 0;
+            summary[key]['Total Quantity'] += quantity;
+
+            // คำนวณ Grand Total แยกตาม Type
+            if (!grandTotalByType[row.count_type]) {
+                grandTotalByType[row.count_type] = 0;
+            }
+            grandTotalByType[row.count_type] += quantity;
+            overallGrandTotal += quantity; // รวมยอดทั้งหมด
+        });
+
+        // แปลง Summary Object เป็น Array สำหรับ Sheet
+        const summarySheetData = Object.values(summary).sort((a, b) => {
+            if (a['SAP No'] !== b['SAP No']) return a['SAP No'].localeCompare(b['SAP No']);
+            if (a['Part No'] !== b['Part No']) return a['Part No'].localeCompare(b['Part No']);
+            return a['Type'].localeCompare(b['Type']);
+        });
+
+        // แปลง Grand Total Object เป็น Array สำหรับ Sheet
+        const grandTotalSheetData = Object.keys(grandTotalByType).map(type => ({
+            'Type': type,
+            'Grand Total': grandTotalByType[type]
+        })).sort((a, b) => a['Type'].localeCompare(b['Type']));
+
+        // เพิ่มแถว Overall Grand Total
+        grandTotalSheetData.push({
+            'Type': 'OVERALL TOTAL',
+            'Grand Total': overallGrandTotal
+        });
+        // --- สิ้นสุดการคำนวณ ---
+
+        // --- สร้าง Workbook ---
         const wsRaw = XLSX.utils.json_to_sheet(rawDataSheet);
-        const wsSummary = XLSX.utils.json_to_sheet(summarySheet);
-        const wsGrandTotal = XLSX.utils.json_to_sheet(grandTotalSheet);
+        // <== [แก้ไข] ใช้ข้อมูลที่คำนวณใหม่
+        const wsSummary = XLSX.utils.json_to_sheet(summarySheetData);
+        // <== [แก้ไข] ใช้ข้อมูลที่คำนวณใหม่
+        const wsGrandTotal = XLSX.utils.json_to_sheet(grandTotalSheetData);
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, wsRaw, "Raw Data");
@@ -71,10 +104,7 @@ async function exportProductionHistoryToExcel() {
     }
 }
 
-// in file: export_data.js
-
-// (ข้างล่างฟังก์ชัน exportProductionHistoryToExcel ที่มีอยู่เดิม)
-
+// (ฟังก์ชัน exportHistoryToExcel ดูถูกต้องแล้ว ไม่ต้องแก้ไข)
 async function exportHistoryToExcel() {
     showToast('Exporting data... This may take a moment.', 'var(--bs-info)');
     showSpinner();
@@ -88,9 +118,10 @@ async function exportHistoryToExcel() {
             endDate: document.getElementById('filterEndDate').value,
         };
 
+        // API นี้ส่ง 'data' กลับมา ซึ่งถูกต้องแล้ว
         const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, params);
 
-        if (!result.success || result.data.length === 0) {
+        if (!result.success || !result.data || result.data.length === 0) { // <== [แนะนำ] เช็ค result.data ด้วย
             showToast("No data to export for the current filter.", 'var(--bs-warning)');
             return;
         }

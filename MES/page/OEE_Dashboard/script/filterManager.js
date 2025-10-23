@@ -19,15 +19,16 @@ function formatNumber(value, isPercent = false, decimals = 2) {
 
 /**
  * Fetches and renders the production cost summary data.
+ * NOTE: This function uses the date range directly from the filters.
+ * It does NOT apply minimum date range logic.
  */
 async function fetchAndRenderCostSummary() {
-    // ใช้ Helper Function toggleLoadingState จาก OEE_production_chart.js หรือ OEE_barchart.js (ต้อง include ก่อน)
     const costCardElement = document.getElementById('cost-summary-section')?.querySelector('.chart-card');
     if (!costCardElement) return;
 
-    // สมมติว่า toggleLoadingState มีอยู่แล้ว
     toggleLoadingState?.(costCardElement, true);
 
+    // Read dates directly from filters for this specific component
     const startDate = document.getElementById("startDate")?.value || '';
     const endDate = document.getElementById("endDate")?.value || '';
     const line = document.getElementById("lineFilter")?.value || '';
@@ -93,7 +94,6 @@ async function fetchAndRenderCostSummary() {
         const errorHtml = '<span class="text-danger">Error</span>';
         Object.values(elements).forEach(el => { if(el && !el.classList.contains('percentage')) el.innerHTML = errorHtml; });
     } finally {
-        // สมมติว่า toggleLoadingState มีอยู่แล้ว
         toggleLoadingState?.(costCardElement, false);
     }
 }
@@ -103,7 +103,6 @@ function startAutoUpdate() {
     clearInterval(dashboardAutoUpdateInterval);
     dashboardAutoUpdateInterval = setInterval(() => {
         console.log('Auto-updating dashboard data...');
-        // ไม่ต้องเช็ค isDocumentVisible เพราะ handleFilterChange จะเช็ค visibility เอง (ถ้าฟังก์ชันกราฟทำไว้)
         handleFilterChange();
     }, 60000); // Update every 60 seconds
 }
@@ -144,9 +143,13 @@ async function applyFiltersAndInitCharts() {
         console.error("Error fetching filters:", err);
     }
 
-    // Set dates from URL or default
-    document.getElementById("startDate").value = startDate || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Default to 7 days ago
-    document.getElementById("endDate").value = endDate || new Date().toISOString().split('T')[0]; // Default to today
+    // --- [แก้ไข] Set dates from URL or default to TODAY ---
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0]; // Get today's date YYYY-MM-DD
+
+    document.getElementById("startDate").value = startDate || todayStr; // Use URL value or default to today
+    document.getElementById("endDate").value = endDate || todayStr;    // Use URL value or default to today
+    // --- [สิ้นสุดการแก้ไข] ---
 
     // Trigger initial data load for all components
     handleFilterChange();
@@ -154,15 +157,11 @@ async function applyFiltersAndInitCharts() {
 
 /**
  * Main function to trigger data fetching for all dashboard components based on current filters.
+ * NOTE: This function ONLY reads filter values and calls other fetch functions.
+ * The logic to adjust date ranges (min 7 days for sparkline, min 30 days for line chart)
+ * MUST BE IMPLEMENTED INSIDE the respective fetch functions (e.g., fetchAndRenderSparkline, fetchAndRenderLineCharts).
  */
 function handleFilterChange() {
-    // Check if the document is visible; if not, skip the update
-    // This prevents unnecessary background updates when the tab is inactive
-    // if (document.hidden) {
-    //     console.log('Document hidden, skipping update.');
-    //     return;
-    // }
-
     const startDate = document.getElementById("startDate")?.value || '';
     const endDate = document.getElementById("endDate")?.value || '';
     const line = document.getElementById("lineFilter")?.value || '';
@@ -173,14 +172,28 @@ function handleFilterChange() {
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
 
-    // Call fetch/render functions from other included script files
-    // Use optional chaining (?.) in case a script hasn't loaded or defined the function yet
     console.log(`[${new Date().toLocaleTimeString()}] Fetching dashboard data...`);
+
+    // --- Call fetch/render functions from other script files ---
+    // IMPORTANT: The functions below need to handle their own minimum date range logic internally.
+
+    // Example: Assumed function for Pie Charts (likely uses dates directly)
     fetchAndRenderCharts?.();           // From OEE_piechart.js
+
+    // Example: Assumed function for Line Charts (NEEDS internal logic for min 30 days)
     fetchAndRenderLineCharts?.();       // From OEE_linechart.js
+
+    // Example: Assumed function for Bar Charts (likely uses dates directly)
     fetchAndRenderBarCharts?.();        // From OEE_barchart.js
-    fetchAndRenderCostSummary();        // Cost summary function (in this file)
+
+    // Cost summary function (uses dates directly)
+    fetchAndRenderCostSummary();        // From this file
+
+    // Example: Assumed function for Production Chart (likely uses dates directly)
     fetchAndRenderDailyProductionChart?.(); // From OEE_production_chart.js
+
+    // Example: Assumed function for Sparkline (NEEDS internal logic for min 7 days)
+    // fetchAndRenderSparkline?.(); // <--- ต้องเรียกฟังก์ชัน Sparkline ของคุณที่นี่
 }
 
 // ===== Event Listeners Setup =====
@@ -204,16 +217,4 @@ window.addEventListener("load", async () => {
     // Start the initial auto-update cycle
     startAutoUpdate();
 
-    // Optional: Add visibility change listener to pause/resume auto-update
-    // document.addEventListener('visibilitychange', () => {
-    //     if (document.hidden) {
-    //         console.log('Tab hidden, pausing auto-update.');
-    //         clearInterval(dashboardAutoUpdateInterval);
-    //     } else {
-    //         console.log('Tab visible, resuming auto-update.');
-    //         // Optionally fetch immediately on becoming visible
-    //         // handleFilterChange();
-    //         startAutoUpdate(); // Restart the timer
-    //     }
-    // });
 });

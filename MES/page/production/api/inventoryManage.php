@@ -33,22 +33,24 @@ try {
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
-            $log_date = $input['log_date'] ?? date('Y-m-d');
             
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (INSERT)
+            $log_date = $input['log_date'] ?? null; 
             $log_time = $input['log_time'] ?? date('H:i:s');
+            
+            if (empty($log_date)) {
+                throw new Exception("Log Date is required.");
+            }
+
             $actual_date_str = $log_date;
-            // ถ้าเวลาอยู่ระหว่าง 00:00 - 07:59 ให้บวกวันที่จริงไป 1 วัน
             if ($log_time >= '00:00:00' && $log_time <= '07:59:59') {
                 $date_obj = new DateTime($log_date);
-                $date_obj->add(new DateInterval('P1D')); // P1D = Period 1 Day
+                $date_obj->add(new DateInterval('P1D'));
                 $actual_date_str = $date_obj->format('Y-m-d');
             }
             $timestamp = $actual_date_str . ' ' . $log_time;
-            // <== สิ้นสุดการแก้ไข
 
-            if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
-                throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
+            if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($log_date)) {
+                throw new Exception("Invalid data provided. Item, Quantity, Destination, and Log Date are required.");
             }
 
             $pdo->beginTransaction();
@@ -554,12 +556,15 @@ try {
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? date('Y-m-d');
+                $new_log_date = $input['log_date'] ?? null;
+                
                 $new_start_time = $input['start_time'] ?? null;
                 $new_end_time = $input['end_time'] ?? null;
+
+                if (empty($new_log_date)) {
+                    throw new Exception("Log Date is required for update.");
+                }
                 
-                // <== [แก้ไข] ตรรกะ 8-Hour Shift (UPDATE Production)
-                // พยายามใช้ $new_end_time ถ้าไม่มี ให้ใช้เวลาเดิมจาก timestamp เก่า
                 $time_to_use = $new_end_time ?: substr($old_transaction['transaction_timestamp'], 11, 8); 
                 $actual_date_str = $new_log_date;
                 if ($time_to_use >= '00:00:00' && $time_to_use <= '07:59:59') {
@@ -568,8 +573,6 @@ try {
                     $actual_date_str = $date_obj->format('Y-m-d');
                 }
                 $new_timestamp = $actual_date_str . ' ' . $time_to_use;
-                // <== สิ้นสุดการแก้ไข
-
                 $new_count_type = strtoupper($input['count_type'] ?? '');
                 $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
@@ -600,7 +603,6 @@ try {
                 }
 
             } else {
-                // (โค้ดส่วนนี้สำหรับ RECEIPT / TRANSFER)
                 $old_item_id = $old_transaction['parameter_id'];
                 $old_quantity = $old_transaction['quantity'];
                 
@@ -614,10 +616,13 @@ try {
                 $new_quantity = ($input['quantity'] ?? '0');
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? date('Y-m-d');
+                $new_log_date = $input['log_date'] ?? null;
                 $new_log_time = $input['log_time'] ?? date('H:i:s');
                 
-                // <== [แก้ไข] ตรรกะ 8-Hour Shift (UPDATE Receipt/Transfer)
+                if (empty($new_log_date)) {
+                    throw new Exception("Log Date is required for update.");
+                }
+
                 $time_to_use = $new_log_time;
                 $actual_date_str = $new_log_date;
                 if ($time_to_use >= '00:00:00' && $time_to_use <= '07:59:59') {
@@ -626,7 +631,6 @@ try {
                     $actual_date_str = $date_obj->format('Y-m-d');
                 }
                 $new_timestamp = $actual_date_str . ' ' . $time_to_use;
-                // <== สิ้นสุดการแก้ไข
 
                 $new_to_location_id = null;
                 $new_from_location_id = null;
@@ -663,7 +667,6 @@ try {
             break;
 
         case 'delete_transaction':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $pdo->beginTransaction();
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
@@ -707,7 +710,6 @@ try {
             break;
 
         case 'get_stock_details_by_item':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
                 throw new Exception("Item ID is required.");
@@ -743,21 +745,14 @@ try {
             $params = [$item_id, $location_id];
             $dateCondition = "";
             
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
-            if (!empty($startDate)) { 
-                // $dateCondition .= " AND t.transaction_timestamp >= ?"; 
+            if (!empty($startDate)) {
                 $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ?"; 
                 $params[] = $startDate; 
             }
-            if (!empty($endDate)) { 
-                // $dateCondition .= " AND t.transaction_timestamp < DATEADD(day, 1, ?)"; 
+            if (!empty($endDate)) {
                 $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
                 $params[] = $endDate; 
             }
-            // <== สิ้นสุดการแก้ไข
-
-            // --- SQL ที่แก้ไขตรรกะใหม่ ---
-            // ดึงรายการ IN (เฉพาะ RECEIPT และ TRANSFER ที่เข้ามายัง Location นี้)
             $inSql = "SELECT transaction_timestamp, transaction_type, quantity 
                         FROM " . TRANSACTIONS_TABLE . " t
                         WHERE parameter_id = ? AND to_location_id = ? AND transaction_type IN ('RECEIPT', 'TRANSFER') {$dateCondition}
@@ -766,7 +761,6 @@ try {
             $inStmt->execute($params);
             $in_records = $inStmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // ดึงรายการ OUT (PRODUCTION, CONSUMPTION, และ TRANSFER ที่ออกจาก Location นี้)
             $outSql = "SELECT transaction_timestamp, transaction_type, quantity 
                         FROM " . TRANSACTIONS_TABLE . " t
                         WHERE parameter_id = ? 
@@ -787,7 +781,6 @@ try {
             break;
 
         case 'adjust_single_stock':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $pdo->beginTransaction();
             try {
                 $item_id = $input['item_id'] ?? 0;
@@ -838,7 +831,6 @@ try {
             break;
 
         case 'get_stock_onhand':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
             $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 0;
             if (empty($item_id) || empty($location_id)) {
@@ -861,18 +853,14 @@ try {
                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
             
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
             if (!empty($_GET['startDate'])) { 
-                // $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; 
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
                 $params[] = $_GET['startDate']; 
             }
             if (!empty($_GET['endDate'])) { 
-                // $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; 
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate']; 
             }
-            // <== สิ้นสุดการแก้ไข
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 

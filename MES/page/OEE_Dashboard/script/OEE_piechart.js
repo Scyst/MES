@@ -1,4 +1,4 @@
-// script/OEE_piechart.js (เวอร์ชันแก้ไข Bug และทำให้ Loss มีความหมาย)
+// script/OEE_piechart.js
 "use strict";
 
 const OEE_TARGETS = {
@@ -31,9 +31,7 @@ function toggleNoDataMessage(canvasId, show) {
     const canvas = document.getElementById(canvasId);
     const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
     if (wrapper) {
-        // เคลียร์สถานะ error ก่อนเสมอ
         wrapper.classList.remove('has-error');
-        // แล้วค่อยจัดการสถานะ no-data
         show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
     }
 }
@@ -42,9 +40,7 @@ function toggleErrorMessage(canvasId, show) {
     const canvas = document.getElementById(canvasId);
     const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
     if (wrapper) {
-        // เคลียร์สถานะ no-data ก่อนเสมอ
         wrapper.classList.remove('has-no-data');
-        // แล้วค่อยจัดการสถานะ error
         show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
     }
 }
@@ -64,13 +60,13 @@ function getChartThemeColors() {
         return {
             centerTextColor: '#dee2e6', lossBgColor: '#495057',
             successColor: '#66bb6a', warningColor: '#ffa726',
-            secondaryTextColor: '#adb5bd' // << เพิ่มสีสำหรับข้อความรอง
+            secondaryTextColor: '#adb5bd'
         };
     } else {
         return {
             centerTextColor: '#212529', lossBgColor: '#e9ecef',
             successColor: '#198754', warningColor: '#dc3545',
-            secondaryTextColor: '#6c757d' // << เพิ่มสีสำหรับข้อความรอง
+            secondaryTextColor: '#6c757d'
         };
     }
 }
@@ -85,12 +81,12 @@ function formatMinutes(totalMinutes) {
 function updateInfoBox(infoId, lines, targetValue) {
     const infoBox = document.getElementById(infoId);
     if (!infoBox) return;
-    
+
     const gridHtml = lines.map(line => {
         const parts = line.split(':');
         const label = parts[0] ? parts[0].trim() : '';
         const value = parts[1] ? parts[1].trim() : '';
-        
+
         return `
             <div class="info-label">${label}</div>
             <div class="info-value">${value}</div>
@@ -119,10 +115,7 @@ function updateInfoBox(infoId, lines, targetValue) {
     }
 }
 
-/**
- * --- แก้ไข: ฟังก์ชันวาดกราฟ ให้รับ "ข้อมูลรอง" มาแสดง ---
- * @param {string} secondaryText - ข้อความรองที่จะแสดงตรงกลาง
- */
+
 function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '', hasData = true) {
     if (!ctx) return;
     const themeColors = getChartThemeColors();
@@ -149,16 +142,16 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
             id: 'centerText',
             beforeDraw(chart) {
                 const opts = chart.options.plugins.centerText;
-                
+
                 if (!opts.shouldDraw) {
                     return;
                 }
-                
+
                 const { width, height, ctx } = chart;
                 ctx.restore();
 
                 const mainFontSize = (height / 140).toFixed(2);
-                ctx.font = `900 ${mainFontSize}em sans-serif`; 
+                ctx.font = `900 ${mainFontSize}em sans-serif`;
                 ctx.textBaseline = "middle";
                 const mainText = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
                 const mainTextX = Math.round((width - ctx.measureText(mainText).width) / 2);
@@ -192,143 +185,197 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
     }
 }
 
+// --- [แก้ไข] แยก Function สำหรับ Fetch Sparkline โดยเฉพาะ ---
+async function fetchAndRenderSparklines(startDate, endDate, line, model) {
+    const minSparklineDays = 7;
+    let apiStartDateStr = startDate; // Start with the provided start date
+
+    try {
+        const endDt = new Date(endDate);
+        const startDt = new Date(startDate);
+
+        const diffTime = Math.abs(endDt - startDt);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        if (diffDays < minSparklineDays && !isNaN(endDt.getTime())) {
+            console.log(`Sparkline: Date range (${diffDays} days) < ${minSparklineDays}. Adjusting start date for API.`);
+            const adjustedStartDate = new Date(endDt);
+            adjustedStartDate.setDate(endDt.getDate() - (minSparklineDays - 1));
+            apiStartDateStr = adjustedStartDate.toISOString().split('T')[0];
+        }
+    } catch(e) {
+        console.error("Sparkline: Error parsing dates for min range check:", e);
+        // Use original dates if parsing fails
+        apiStartDateStr = startDate;
+    }
+
+    const params = new URLSearchParams({
+        startDate: apiStartDateStr, // Use potentially adjusted start date
+        endDate: endDate,
+        line: line,
+        model: model,
+        onlySparkline: 'true' // <== [สำคัญ] เพิ่ม Flag บอก API ให้ส่งแค่ Sparkline
+    });
+
+    let sparklineData = []; // Default to empty array
+
+    try {
+        console.log(`Sparkline: Fetching data from ${apiStartDateStr} to ${endDate}`);
+        const response = await fetch(`api/get_oee_piechart.php?${params.toString()}`); // Call the same API
+        if (!response.ok) {
+            console.error(`Sparkline API: Network response error ${response.status}`);
+        } else {
+            const result = await response.json();
+            if (result.success && result.sparkline_data) {
+                sparklineData = result.sparkline_data;
+            } else {
+                console.error("Sparkline API: Failed -", result.error || "No sparkline_data returned");
+            }
+        }
+    } catch (err) {
+        console.error("Sparkline API fetch failed:", err);
+    }
+
+    // Render Sparklines (even if data is empty, it will clear/show empty state)
+    if (sparklineData.length > 0) {
+        renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), getCssVar('--mes-chart-color-1'));
+        renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), getCssVar('--mes-chart-color-2'));
+        renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), getCssVar('--mes-chart-color-3'));
+        renderSparkline('availabilitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.availability})), getCssVar('--mes-chart-color-4'));
+    } else {
+         console.log("No sparkline data to render.");
+         // Render empty/clear sparklines
+         ['oeeSparklineChart', 'qualitySparklineChart', 'performanceSparklineChart', 'availabilitySparklineChart'].forEach(id => {
+             renderSparkline(id, [], '#ccc'); // Use a neutral color for empty state
+         });
+    }
+}
+// --- [สิ้นสุด Function ใหม่] ---
+
+
 async function fetchAndRenderCharts() {
     const chartIds = ["oeePieChart", "qualityPieChart", "performancePieChart", "availabilityPieChart"];
     chartIds.forEach(id => {
         toggleLoadingState(id, true);
-        toggleErrorMessage(id, false); 
+        toggleErrorMessage(id, false);
     });
 
+    // --- [แก้ไข] ดึงค่า Filter มาเก็บไว้ก่อน ---
+    const filterStartDateStr = document.getElementById("startDate")?.value || '';
+    const filterEndDateStr = document.getElementById("endDate")?.value || '';
+    const filterLine = document.getElementById("lineFilter")?.value || '';
+    const filterModel = document.getElementById("modelFilter")?.value || '';
+    // --- [สิ้นสุดการแก้ไข] ---
+
     try {
-        const response = await fetch(`api/get_oee_piechart.php?${new URLSearchParams({
-            startDate: document.getElementById("startDate")?.value || '',
-            endDate: document.getElementById("endDate")?.value || '',
-            line: document.getElementById("lineFilter")?.value || '',
-            model: document.getElementById("modelFilter")?.value || ''
-        }).toString()}`);
+        // --- [แก้ไข] API Call 1: สำหรับ Pie Charts ใช้ filter dates ตรงๆ ---
+        console.log(`Pie Charts: Fetching data from ${filterStartDateStr} to ${filterEndDateStr}`);
+        const pieParams = new URLSearchParams({
+            startDate: filterStartDateStr,
+            endDate: filterEndDateStr,
+            line: filterLine,
+            model: filterModel
+        });
+        const response = await fetch(`api/get_oee_piechart.php?${pieParams.toString()}`);
         if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
-        
+
         const result = await response.json();
         if (!result.success) throw new Error(result.error || "Piechart API: API error");
-        const data = result;
+        const data = result; // API นี้ส่งข้อมูลกลับมาตรงๆ
 
+        // --- Render Pie Charts และ Info Boxes (ใช้ data จาก Call 1) ---
         const themeColors = getChartThemeColors();
         const lossColor = themeColors.lossBgColor;
-
-        const totalLoss = 100 - (data.oee || 0);
+        const totalLoss = Math.max(0, 100 - (data.oee || 0));
         const qualityLossRatio = Math.max(0, 1 - ((data.quality || 0) / 100));
         const performanceLossRatio = Math.max(0, 1 - ((data.performance || 0) / 100));
         const availabilityLossRatio = Math.max(0, 1 - ((data.availability || 0) / 100));
         const totalRatio = qualityLossRatio + performanceLossRatio + availabilityLossRatio;
-        
-        // --- OEE Card ---
-        const oeeHasData = data.oee && data.oee > 0;
-        toggleNoDataMessage("oeePieChart", !oeeHasData);
-        renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"), 
-            ['OEE', 'Loss'], [data.oee || 0, totalLoss], 
+
+        const oeeHasData = data.oee !== undefined && data.oee !== null;
+        toggleNoDataMessage("oeePieChart", !oeeHasData || data.oee <= 0);
+        renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"),
+            ['OEE', 'Loss'], [data.oee || 0, totalLoss],
             [getCssVar('--mes-chart-color-1'), lossColor], OEE_TARGETS.oee,
-            '', oeeHasData
+            '', oeeHasData && data.oee > 0
         );
-        updateInfoBox("oeeInfo", [
+         updateInfoBox("oeeInfo", [
             `OEE Loss: <b>${totalLoss.toFixed(1)} %</b>`,
             `Q Contrib: <b>${(totalRatio > 0 ? (qualityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
             `P Contrib: <b>${(totalRatio > 0 ? (performanceLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
             `A Contrib: <b>${(totalRatio > 0 ? (availabilityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`
         ], OEE_TARGETS.oee);
 
-        // --- Quality Card (ปรับปรุง) ---
         const qualityHasData = (data.actual_output || 0) > 0;
         toggleNoDataMessage("qualityPieChart", !qualityHasData);
-        renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"), 
-            ['Good (FG)', 'Defects'], [data.quality || 0, 100 - (data.quality || 0)], 
+        renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"),
+            ['Good (FG)', 'Defects'], [data.quality || 0, Math.max(0, 100 - (data.quality || 0))],
             [getCssVar('--mes-chart-color-2'), lossColor], OEE_TARGETS.quality,
             `FG: ${(data.fg || 0).toLocaleString()} pcs`, qualityHasData
         );
-        // --- START: เพิ่มการแยกย่อย Defect ---
         updateInfoBox("qualityInfo", [
-            `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
-            `Total Defects: <b>${(data.defects || 0).toLocaleString()}</b> pcs`,
-            `&nbsp; └ Hold: <b>${(data.hold || 0).toLocaleString()}</b> pcs`,
-            `&nbsp; └ Scrap: <b>${(data.scrap || 0).toLocaleString()}</b> pcs`
+             `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
+             `Total Defects: <b>${(data.defects || 0).toLocaleString()}</b> pcs`,
+             `&nbsp; └ Hold: <b>${(data.hold || 0).toLocaleString()}</b> pcs`,
+             `&nbsp; └ Scrap: <b>${(data.scrap || 0).toLocaleString()}</b> pcs`
         ], OEE_TARGETS.quality);
 
-
-        // --- Performance Card (ปรับปรุง) ---
-        const performanceHasData = data.performance && data.performance > 0;
-        toggleNoDataMessage("performancePieChart", !performanceHasData);
-        renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"), 
-            ['Performance', 'Loss'], [data.performance || 0, 100 - (data.performance || 0)], 
+        const performanceHasData = data.runtime !== undefined && data.runtime !== null && data.runtime >= 0;
+        toggleNoDataMessage("performancePieChart", !performanceHasData || data.runtime === 0);
+        renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"),
+            ['Performance', 'Loss'], [data.performance || 0, Math.max(0, 100 - (data.performance || 0))],
             [getCssVar('--mes-chart-color-3'), lossColor], OEE_TARGETS.performance,
-            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`, performanceHasData
+            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`, performanceHasData && (data.performance || 0) > 0 // Check performance > 0
         );
-        updateInfoBox("performanceInfo", [
+         updateInfoBox("performanceInfo", [
             `Actual: <b>${(data.actual_output || 0).toLocaleString()}</b> pcs`,
             `Theo. Time: <b>${formatMinutes(data.total_theoretical_minutes || 0)}</b>`,
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
         ], OEE_TARGETS.performance);
 
-
-        // --- Availability Card (ปรับปรุง) ---
-        const availabilityHasData = data.planned_time && data.planned_time > 0;
-        const runtimePercent = availabilityHasData ? ((data.runtime || 0) / data.planned_time) * 100 : 100;
+        const availabilityHasData = data.planned_time !== undefined && data.planned_time !== null && data.planned_time > 0;
+        const runtimePercent = availabilityHasData ? Math.max(0, Math.min(100, ((data.runtime || 0) / data.planned_time) * 100)) : 0;
+        const downtimePercent = 100 - runtimePercent;
         toggleNoDataMessage("availabilityPieChart", !availabilityHasData);
-        renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"), 
-            ['Runtime', 'Downtime'], [runtimePercent, 100 - runtimePercent], 
+        renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"),
+            ['Runtime', 'Downtime'], [runtimePercent, downtimePercent],
             [getCssVar('--mes-chart-color-4'), lossColor], OEE_TARGETS.availability,
             `Downtime: ${formatMinutes(data.downtime || 0)}`, availabilityHasData
         );
-        
-        let availabilityInfoLines = [
+         updateInfoBox("availabilityInfo", [
             `Planned: <b>${formatMinutes(data.planned_time || 0)}</b>`,
             `Downtime: <b>${formatMinutes(data.downtime || 0)}</b>`,
             `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
-        ];
+        ], OEE_TARGETS.availability);
+        // --- สิ้นสุดการ Render Pie Charts ---
 
-        if (data.planned_time_breakdown && data.planned_time_breakdown.length > 0) {
-            availabilityInfoLines.push('<hr class="my-1">');
-            data.planned_time_breakdown.forEach(item => {
-                availabilityInfoLines.push(`&nbsp; └ ${item.line}: <b>${formatMinutes(item.minutes)}</b>`);
-            });
-        }
-        updateInfoBox("availabilityInfo", availabilityInfoLines, OEE_TARGETS.availability);
-
-        const breakdownContainer = document.getElementById('planned-time-breakdown');
-        if (breakdownContainer) {
-            breakdownContainer.innerHTML = '';
-            if (data.planned_time_breakdown && data.planned_time_breakdown.length > 0) {
-                data.planned_time_breakdown.forEach(item => {
-                    const lineDetail = document.createElement('div');
-                    lineDetail.className = 'd-flex justify-content-between';
-                    lineDetail.innerHTML = `
-                        <small class="text-muted">${item.line}:</small>
-                        <small class="text-muted">${formatMinutes(item.minutes)}</small>
-                    `;
-                    breakdownContainer.appendChild(lineDetail);
-                });
-            }
-        }
-
-        // --- Sparkline ---
-        const sparklineData = data.sparkline_data || [];
-        renderSparkline('oeeSparklineChart', sparklineData.map(d => ({date: d.date, value: d.oee})), getCssVar('--mes-chart-color-1'));
-        renderSparkline('qualitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.quality})), getCssVar('--mes-chart-color-2'));
-        renderSparkline('performanceSparklineChart', sparklineData.map(d => ({date: d.date, value: d.performance})), getCssVar('--mes-chart-color-3'));
-        renderSparkline('availabilitySparklineChart', sparklineData.map(d => ({date: d.date, value: d.availability})), getCssVar('--mes-chart-color-4'));
+        // --- [แก้ไข] เรียก Function ใหม่สำหรับ Fetch และ Render Sparklines ---
+        // ใช้ filter dates เดิมส่งไปให้ Function นี้จัดการปรับวันที่เอง
+        await fetchAndRenderSparklines(filterStartDateStr, filterEndDateStr, filterLine, filterModel);
+        // --- [สิ้นสุดการแก้ไข] ---
 
     } catch (err) {
-        console.error("Pie/Sparkline chart update failed:", err);
+        console.error("Pie chart update failed:", err); // Keep error message specific to pie charts
         chartIds.forEach(id => toggleErrorMessage(id, true));
+        // Attempt to clear/reset sparklines on pie chart error
+        ['oeeSparklineChart', 'qualitySparklineChart', 'performanceSparklineChart', 'availabilitySparklineChart'].forEach(id => {
+             renderSparkline(id, [], '#ccc');
+        });
     } finally {
         chartIds.forEach(id => toggleLoadingState(id, false));
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    fetchAndRenderCharts();
+    // Theme change listener
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                fetchAndRenderCharts(); 
+                console.log("Theme changed, re-rendering charts...");
+                fetchAndRenderCharts(); // Re-render pie charts & sparklines
+                fetchAndRenderLineCharts?.();
+                fetchAndRenderBarCharts?.();
+                fetchAndRenderDailyProductionChart?.();
             }
         }
     });

@@ -146,45 +146,48 @@ session_start();
                     <div class="chart-card cost-summary-card" style="height: 100%;">
                          <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                          <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary (Standard)</h4>
+
                          <div class="row text-center">
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-boxes"></i> Material Cost</h6>
-                                   <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
-                                   <span class="percentage" id="prodCostPercentRM">-- %</span>
-                              </div>
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-hard-hat"></i> Direct Labor Cost</h6>
-                                   <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
-                                   <span class="percentage" id="prodCostPercentDL">-- %</span>
-                              </div>
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-industry"></i> Overhead Cost</h6>
-                                   <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
-                                   <span class="percentage" id="prodCostPercentOH">-- %</span>
-                              </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-cash-register"></i> Total Revenue</h6>
+                                <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-boxes"></i> Material Cost</h6>
+                                <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
+                                <span class="percentage" id="prodCostPercentRM">-- %</span>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-hard-hat"></i> Direct Labor Cost</h6>
+                                <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
+                                <span class="percentage" id="prodCostPercentDL">-- %</span>
+                            </div>
                          </div>
+
                          <hr>
+
                          <div class="row text-center mt-3 mb-4">
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-dollar-sign"></i> Total Standard Cost</h6>
-                                   <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
-                              </div>
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-cash-register"></i> Total Standard Revenue</h6>
-                                   <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
-                              </div>
-                              <div class="col-md-4">
-                                   <h6><i class="fas fa-percentage"></i> Standard Gross Profit</h6>
-                                   <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
-                                   <span class="percentage" id="prodPercentGPStd">-- %</span>
-                              </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-industry"></i> Overhead Cost</h6>
+                                <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
+                                <span class="percentage" id="prodCostPercentOH">-- %</span>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-dollar-sign"></i> Total COGS</h6>
+                                <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-percentage"></i> Standard Gross Profit</h6>
+                                <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
+                                <span class="percentage" id="prodPercentGPStd">-- %</span>
+                            </div>
                          </div>
 
                          <hr>
                          <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
                          <div class="chart-wrapper" style="height: 100%;">
                               <canvas id="dailyProductionChart"></canvas>
-                               <div class="no-data-message" style="margin-top: 1rem;">
+                               <div class="no-data-message" style="margin-top: 10rem;">
                                     <i class="fas fa-info-circle"></i>
                                     <span>No production data available for this period.</span>
                                </div>

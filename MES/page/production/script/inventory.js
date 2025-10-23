@@ -937,24 +937,54 @@ async function openSummaryModal() {
         return;
     }
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
-    
-    // แสดง Modal ก่อนแล้วค่อยโหลดข้อมูล
+
     const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
     summaryModal.show();
 
     const params = {
-        limit: -1, // Request all data for summary
+        limit: -1, // Request all data
         search_term: document.getElementById('filterSearch').value,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
 
+    // <== [แก้ไข] เรียก get_production_history เหมือนเดิม
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
 
-    if (result.success && result.summary.length > 0) {
+    // <== [แก้ไข] เช็ค result.data แทน result.summary
+    if (result.success && result.data && result.data.length > 0) {
         modalBody.innerHTML = '';
-        result.summary.forEach(row => {
+        
+        // --- คำนวณ Summary จาก result.data ---
+        const summary = {}; // ใช้ Object เพื่อรวมยอดตาม Item และ Type
+        let grandTotal = 0;
+
+        // <== [แก้ไข] วนลูป result.data
+        result.data.forEach(row => {
+            const key = `${row.sap_no}|${row.part_no}|${row.count_type}`; // สร้าง Key เฉพาะตัว
+            if (!summary[key]) {
+                summary[key] = {
+                    sap_no: row.sap_no,
+                    part_no: row.part_no,
+                    count_type: row.count_type,
+                    total_quantity: 0
+                };
+            }
+            const quantity = parseFloat(row.quantity) || 0;
+            summary[key].total_quantity += quantity;
+            grandTotal += quantity; // รวมยอด Grand Total ไปด้วยเลย
+        });
+        
+        // --- แสดงผล Summary ที่คำนวณได้ ---
+        // แปลง Object summary เป็น Array แล้วเรียงลำดับ
+        const sortedSummary = Object.values(summary).sort((a, b) => {
+            if (a.sap_no !== b.sap_no) return a.sap_no.localeCompare(b.sap_no);
+            if (a.part_no !== b.part_no) return a.part_no.localeCompare(b.part_no);
+            return a.count_type.localeCompare(b.count_type);
+        });
+
+        sortedSummary.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.sap_no}</td>
@@ -964,12 +994,12 @@ async function openSummaryModal() {
             `;
             modalBody.appendChild(tr);
         });
+        // --- สิ้นสุดการแสดงผล Summary ---
 
-        // Grand Total
+
+        // --- Grand Total ---
         const grandTotalRow = document.createElement('tr');
         grandTotalRow.className = 'table-group-divider fw-bold';
-        let grandTotal = 0;
-        result.grand_total.forEach(row => grandTotal += parseFloat(row.total_quantity));
         grandTotalRow.innerHTML = `
             <td colspan="3" class="text-end">Grand Total</td>
             <td class="text-end">${grandTotal.toLocaleString()}</td>
