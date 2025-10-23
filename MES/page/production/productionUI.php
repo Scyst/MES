@@ -45,7 +45,7 @@
                         <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">ประวัติของออก (OUT)</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">สต็อก (ในไลน์ผลิต)</button>
+                        <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">สต็อก (แบ่งตามพื้นที่)</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">สต็อก (ทั้งหมด)</button>

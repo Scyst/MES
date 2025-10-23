@@ -18,6 +18,7 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
+        // ... (case 'get_initial_data' ถึง 'get_all_transactions' เหมือนเดิม) ...
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -33,7 +34,7 @@ try {
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
-            
+
             $log_date = $input['log_date'] ?? null;
             $log_time = $input['log_time'] ?? date('H:i:s');
 
@@ -102,8 +103,7 @@ try {
                 $conditions[] = "t.transaction_type = ?";
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
             }
-            
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (SELECT)
+
             if (!empty($_GET['startDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
                 $params[] = $_GET['startDate'];
@@ -112,7 +112,6 @@ try {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
-            // <== สิ้นสุดการแก้ไข
 
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             $baseSql = "
@@ -164,8 +163,7 @@ try {
             $search_term = $_GET['search_term'] ?? '';
             $conditions = []; $base_params = [];
 
-            $conditions[] = "(l.location_type IS NULL OR l.location_type != 'SHIPPING')";
-
+            // ⭐️ 1. แก้ไข (Stock Count): เก็บเงื่อนไขหลัก (Supervisor, Search) ไว้ก่อน
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
                 $conditions[] = "
@@ -187,42 +185,63 @@ try {
                 $base_params[] = "%{$search_term}%";
                 $base_params[] = "%{$search_term}%";
             }
+            $itemWhereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
-            $totalSql = "
+            // ⭐️ 2. แก้ไข (Stock Count): สร้าง Query นับ Total โดย JOIN เพื่อกรอง Item ก่อน แล้วค่อย JOIN Onhand/Location เพื่อกรอง Shipping
+             $totalSql = "
                 SELECT COUNT(DISTINCT i.item_id)
                 FROM " . ITEMS_TABLE . " i
-                LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
-                LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
-                {$whereClause}
+                -- Subquery to check if the item has any stock NOT in SHIPPING
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM " . ONHAND_TABLE . " h
+                    JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
+                    WHERE h.parameter_id = i.item_id
+                    AND (l.location_type IS NULL OR l.location_type != 'SHIPPING')
+                    AND h.quantity <> 0 -- Optional: Only count items that actually have stock somewhere
+                )
+                -- Apply Supervisor/Search filters on ITEMS table
+                " . (!empty($itemWhereClause) ? " AND (" . implode(" AND ", $conditions) . ")" : "") . "
             ";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($base_params);
-            $total = (int)$totalStmt->fetchColumn();
+             $totalStmt = $pdo->prepare($totalSql);
+             // Execute with base_params only
+             $totalStmt->execute($base_params);
+             $total = (int)$totalStmt->fetchColumn();
 
+
+            // ⭐️ 3. แก้ไข (Stock Count): สร้าง Query ดึงข้อมูลหลัก
             $dataSql = "
-                WITH ItemGroup AS (
+                WITH FilteredItems AS (
+                    -- Select items based on Supervisor/Search first
+                    SELECT item_id, sap_no, part_no, part_description
+                    FROM " . ITEMS_TABLE . " i
+                    {$itemWhereClause}
+                ),
+                ItemGroup AS (
                     SELECT
-                        i.item_id, i.sap_no, i.part_no, i.part_description,
-                        SUM(ISNULL(h.quantity, 0)) as total_onhand,
+                        fi.item_id, fi.sap_no, fi.part_no, fi.part_description,
+                        -- Calculate SUM only for non-SHIPPING locations
+                        SUM(CASE WHEN (l.location_type IS NULL OR l.location_type != 'SHIPPING') THEN ISNULL(h.quantity, 0) ELSE 0 END) as total_onhand,
                         STUFF((
                             SELECT ', ' + r.model FROM " . ROUTES_TABLE . " r
-                            WHERE r.item_id = i.item_id ORDER BY r.model FOR XML PATH('')
+                            WHERE r.item_id = fi.item_id ORDER BY r.model FOR XML PATH('')
                         ), 1, 2, '') AS used_models
-                    FROM " . ITEMS_TABLE . " i
-                    LEFT JOIN " . ONHAND_TABLE . " h ON i.item_id = h.parameter_id
+                    FROM FilteredItems fi -- Use pre-filtered items
+                    LEFT JOIN " . ONHAND_TABLE . " h ON fi.item_id = h.parameter_id
                     LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
-                    {$whereClause} -- ใช้ WHERE clause ที่มีเงื่อนไข location_type
-                    GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description
+                    GROUP BY fi.item_id, fi.sap_no, fi.part_no, fi.part_description
                 ),
                 NumberedRows AS (
-                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no) as RowNum FROM ItemGroup
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no) as RowNum
+                    FROM ItemGroup
+                    WHERE total_onhand <> 0 -- Optional: Exclude items with zero total stock after filtering
                 )
                 SELECT item_id, sap_no, part_no, part_description, total_onhand, used_models
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
             $dataStmt = $pdo->prepare($dataSql);
 
+            // ⭐️ 4. แก้ไข (Stock Count): Binding parameters (base_params + pagination)
             $all_params = array_merge($base_params, [$startRow, $endRow]);
             $paramIndex = 1;
             foreach ($all_params as $param) {
@@ -238,16 +257,17 @@ try {
             echo json_encode(['success' => true, 'data' => $stock, 'total' => $total, 'page' => $page]);
             break;
 
+
         case 'get_production_variance_report':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = []; $date_params = []; $conditions = []; $date_where_clause = '';
-            
+
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "l.production_line = ?";
                 $params[] = $currentUser['line'];
             }
-            
+
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
@@ -319,27 +339,37 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
+
         case 'get_wip_onhand_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
-            $conditions = ["l.location_type = 'WIP'", "h.quantity <> 0"];
+
+            $conditions = ["l.location_type IN ('WIP', 'STORE', 'WAREHOUSE')", "h.quantity <> 0"];
 
             if ($currentUser['role'] === 'supervisor') {
-                $conditions[] = "l.production_line = ?";
+                $conditions[] = "( (l.location_type = 'WIP' AND l.production_line = ?) OR l.location_type IN ('STORE', 'WAREHOUSE') )";
                 $params[] = $currentUser['line'];
+                // เพิ่มเงื่อนไข Supervisor ให้เห็นเฉพาะ WIP ในไลน์ตัวเอง + Store + Warehouse ทั้งหมด
+                // ถ้าต้องการให้เห็นทุกไลน์ให้ลบเงื่อนไขนี้ออก
+                // ถ้าต้องการให้เห็นเฉพาะไลน์ตัวเองเท่านั้น ให้ใช้โค้ดบรรทัดล่างแทน
+                // $conditions[] = "l.production_line = ?";
+                // $params[] = $currentUser['line'];
             }
-            
+
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term);
             }
             $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+            // Query นับ Total และ Data ใช้ WHERE clause เดียวกัน
             $totalSql = "SELECT COUNT(*) FROM ". ONHAND_TABLE ." h JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
+
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT
@@ -354,7 +384,7 @@ try {
                     FROM ". ONHAND_TABLE ." h
                     JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id
                     JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
-                    {$whereClause}
+                    {$whereClause} -- ใช้ WHERE clause ที่แก้ไขแล้ว
                 )
                 SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
@@ -375,18 +405,18 @@ try {
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
-            
+
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "l.production_line = ?";
                 $params[] = $currentUser['line'];
             }
-            
+
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ? OR (SELECT STUFF((SELECT DISTINCT ', ' + r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
-            
+
             if (!empty($_GET['startDate'])) {
                 $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) >= ?";
                 $params[] = $_GET['startDate'];
@@ -446,7 +476,8 @@ try {
             break;
 
         case 'execute_production':
-            $item_id = $input['item_id'] ?? 0;
+            // ... (เหมือนเดิม) ...
+             $item_id = $input['item_id'] ?? 0;
             $location_id = $input['location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
             $count_type = $input['count_type'] ?? '';
@@ -462,7 +493,6 @@ try {
 
             $time_to_use = $end_time ?: date('H:i:s');
             $timestamp = $log_date . ' ' . $time_to_use;
-            // <== สิ้นสุดการแก้ไข
 
             if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type) || empty($log_date)) {
                  throw new Exception("Invalid data provided for production logging. (Item, Location, Qty, Type, and Date are required)");
@@ -472,8 +502,8 @@ try {
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
             $prodSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $prodStmt = $pdo->prepare($prodSql);
-            $prodStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no, $timestamp, $start_time, $end_time]); // ใช้ $timestamp
-            
+            $prodStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no, $timestamp, $start_time, $end_time]);
+
             $parent_transaction_id = $pdo->lastInsertId();
 
             if (in_array(strtoupper($count_type), ['FG', 'NG', 'SCRAP'])) {
@@ -487,13 +517,12 @@ try {
                     $consumeStmt = $pdo->prepare($consumeSql);
 
                     foreach ($components as $comp) {
-                        $qty_to_consume = bcmul($quantity, $comp['quantity_required'], 6); 
+                        $qty_to_consume = bcmul($quantity, $comp['quantity_required'], 6);
                         $component_item_id = $comp['component_item_id'];
 
                         $consume_note = "Auto-consumed for production ID: {$parent_transaction_id}";
-                        // <== [แก้ไข] ใช้ $timestamp เดียวกันกับ Parent
                         $consumeStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no, $timestamp, $start_time, $end_time]);
-                        
+
                         updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
                     }
                 }
@@ -507,11 +536,11 @@ try {
             break;
 
         case 'get_transaction_details':
-            // ... (โค้ดส่วนนี้ไม่มีการกรองด้วย timestamp จึงไม่ต้องแก้ไข) ...
-            $transaction_id = $_GET['transaction_id'] ?? 0;
+             // ... (เหมือนเดิม) ...
+             $transaction_id = $_GET['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-            $sql = "SELECT t.*, i.sap_no, i.part_no 
+            $sql = "SELECT t.*, i.sap_no, i.part_no
                     FROM " . TRANSACTIONS_TABLE . " t
                     JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
                     WHERE t.transaction_id = ?";
@@ -520,12 +549,12 @@ try {
             $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$transaction) throw new Exception("Transaction not found.");
-            
+
             echo json_encode(['success' => true, 'data' => $transaction]);
             break;
-
         case 'update_transaction':
-            $pdo->beginTransaction();
+             // ... (เหมือนเดิม) ...
+             $pdo->beginTransaction();
 
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
@@ -548,7 +577,7 @@ try {
                     $location_to_revert = $item['from_location_id'] ?: $old_transaction['to_location_id'];
                     updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, -$item['quantity']);
                 }
-                
+
                 $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                 $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
                 $deleteConsumeStmt->execute([$note_to_find]);
@@ -564,7 +593,7 @@ try {
                 if (empty($new_log_date)) {
                     throw new Exception("Log Date is required for update.");
                 }
-                
+
                 $time_to_use = $new_end_time ?: substr($old_transaction['transaction_timestamp'], 11, 8);
                 $new_timestamp = $new_log_date . ' ' . $time_to_use;
 
@@ -573,10 +602,10 @@ try {
 
                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=? WHERE transaction_id=?";
                 $updateStmt = $pdo->prepare($updateSql);
-                $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]); // ใช้ $new_timestamp
+                $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
 
                 updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
-                
+
                 if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
                     $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
                     $bomStmt = $pdo->prepare($bomSql);
@@ -590,7 +619,6 @@ try {
 
                         foreach ($components as $comp) {
                             $qty_to_consume = bcmul($new_quantity, $comp['quantity_required'], 6);
-                            // <== [แก้ไข] ใช้ $new_timestamp เดียวกันกับ Parent
                             $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
                             updateOnhandBalance($pdo, $comp['component_item_id'], $new_location_id, -$qty_to_consume);
                         }
@@ -600,7 +628,7 @@ try {
             } else {
                 $old_item_id = $old_transaction['parameter_id'];
                 $old_quantity = $old_transaction['quantity'];
-                
+
                 if ($old_transaction['transaction_type'] === 'RECEIPT') {
                     updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
                 } elseif ($old_transaction['transaction_type'] === 'TRANSFER') {
@@ -618,7 +646,7 @@ try {
                     throw new Exception("Log Date is required for update.");
                 }
 
-                $new_timestamp = $new_log_date . ' ' . $new_log_time;   
+                $new_timestamp = $new_log_date . ' ' . $new_log_time;
 
                 $new_to_location_id = null;
                 $new_from_location_id = null;
@@ -629,7 +657,7 @@ try {
                 } else {
                     $new_to_location_id = (int)($input['location_id'] ?? 0);
                 }
-                
+
                 if (empty($new_to_location_id)) {
                     throw new Exception("Destination location is required.");
                 }
@@ -655,7 +683,8 @@ try {
             break;
 
         case 'delete_transaction':
-            $pdo->beginTransaction();
+             // ... (เหมือนเดิม) ...
+             $pdo->beginTransaction();
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
@@ -709,19 +738,21 @@ try {
                     h.quantity
                 FROM " . ONHAND_TABLE . " h
                 JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
-                WHERE h.parameter_id = ? AND h.quantity > 0
+                WHERE h.parameter_id = ?
+                  AND h.quantity <> 0
+                  AND (l.location_type IS NULL OR l.location_type != 'SHIPPING') -- เพิ่มเงื่อนไขนี้
                 ORDER BY l.location_name
             ";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$item_id]);
             $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             echo json_encode(['success' => true, 'data' => $details]);
             break;
 
         case 'get_variance_details':
-            $item_id = $_GET['item_id'] ?? 0;
+             $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 0;
             $startDate = $_GET['startDate'] ?? '';
             $endDate = $_GET['endDate'] ?? '';
@@ -732,34 +763,34 @@ try {
 
             $params = [$item_id, $location_id];
             $dateCondition = "";
-            
+
             if (!empty($startDate)) {
-                $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ?"; 
-                $params[] = $startDate; 
+                $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ?";
+                $params[] = $startDate;
             }
             if (!empty($endDate)) {
                 $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
-                $params[] = $endDate; 
+                $params[] = $endDate;
             }
-            $inSql = "SELECT transaction_timestamp, transaction_type, quantity 
-                        FROM " . TRANSACTIONS_TABLE . " t
-                        WHERE parameter_id = ? AND to_location_id = ? AND transaction_type IN ('RECEIPT', 'TRANSFER') {$dateCondition}
-                        ORDER BY transaction_timestamp DESC";
+            $inSql = "SELECT transaction_timestamp, transaction_type, quantity
+                      FROM " . TRANSACTIONS_TABLE . " t
+                      WHERE parameter_id = ? AND to_location_id = ? AND transaction_type IN ('RECEIPT', 'TRANSFER') {$dateCondition}
+                      ORDER BY transaction_timestamp DESC";
             $inStmt = $pdo->prepare($inSql);
             $inStmt->execute($params);
             $in_records = $inStmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $outSql = "SELECT transaction_timestamp, transaction_type, quantity 
-                        FROM " . TRANSACTIONS_TABLE . " t
-                        WHERE parameter_id = ? 
-                        AND (
-                            (transaction_type IN ('CONSUMPTION', 'TRANSFER') AND from_location_id = ?)
-                            OR
-                            (transaction_type LIKE 'PRODUCTION_%' AND to_location_id = ?)
-                        )
-                        {$dateCondition}
-                        ORDER BY transaction_timestamp DESC";
-            
+
+            $outSql = "SELECT transaction_timestamp, transaction_type, quantity
+                       FROM " . TRANSACTIONS_TABLE . " t
+                       WHERE parameter_id = ?
+                       AND (
+                           (transaction_type IN ('CONSUMPTION', 'TRANSFER') AND from_location_id = ?)
+                           OR
+                           (transaction_type LIKE 'PRODUCTION_%' AND to_location_id = ?)
+                       )
+                       {$dateCondition}
+                       ORDER BY transaction_timestamp DESC";
+
             $outParams = array_merge([$item_id, $location_id, $location_id], array_slice($params, 2));
             $outStmt = $pdo->prepare($outSql);
             $outStmt->execute($outParams);
@@ -769,7 +800,8 @@ try {
             break;
 
         case 'adjust_single_stock':
-            $pdo->beginTransaction();
+             // ... (เหมือนเดิม) ...
+             $pdo->beginTransaction();
             try {
                 $item_id = $input['item_id'] ?? 0;
                 $location_id = $input['location_id'] ?? 0;
@@ -792,13 +824,13 @@ try {
                     exit;
                 }
 
-                $mergeSql = "MERGE " . ONHAND_TABLE . " AS target 
-                                USING (SELECT ? AS item_id, ? AS location_id) AS source 
-                                ON (target.parameter_id = source.item_id AND target.location_id = source.location_id) 
-                                WHEN MATCHED THEN 
-                                    UPDATE SET quantity = ? 
-                                WHEN NOT MATCHED THEN 
-                                    INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
+                $mergeSql = "MERGE " . ONHAND_TABLE . " AS target
+                            USING (SELECT ? AS item_id, ? AS location_id) AS source
+                            ON (target.parameter_id = source.item_id AND target.location_id = source.location_id)
+                            WHEN MATCHED THEN
+                                UPDATE SET quantity = ?
+                            WHEN NOT MATCHED THEN
+                                INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
                 $mergeStmt = $pdo->prepare($mergeSql);
                 $mergeStmt->execute([$item_id, $location_id, $physical_count, $item_id, $location_id, $physical_count]);
 
@@ -819,7 +851,8 @@ try {
             break;
 
         case 'get_stock_onhand':
-            $item_id = $_GET['item_id'] ?? 0;
+             // ... (เหมือนเดิม) ...
+              $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 0;
             if (empty($item_id) || empty($location_id)) {
                 echo json_encode(['success' => true, 'quantity' => 0]);
@@ -830,9 +863,9 @@ try {
             $quantity = $stockStmt->fetchColumn();
             echo json_encode(['success' => true, 'quantity' => $quantity ?: 0]);
             break;
-
         case 'get_receipt_history_summary':
-            $params = [];
+             // ... (เหมือนเดิม) ...
+             $params = [];
             $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER')"];
 
             if (!empty($_GET['search_term'])) {
@@ -840,22 +873,22 @@ try {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc_to.location_name LIKE ? OR loc_from.location_name LIKE ?)";
                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
-            
-            if (!empty($_GET['startDate'])) { 
+
+            if (!empty($_GET['startDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $_GET['startDate']; 
+                $params[] = $_GET['startDate'];
             }
-            if (!empty($_GET['endDate'])) { 
+            if (!empty($_GET['endDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $_GET['endDate']; 
+                $params[] = $_GET['endDate'];
             }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
             // Query for Summary
             $summarySql = "
-                SELECT 
-                    i.sap_no, i.part_no, t.transaction_type, 
+                SELECT
+                    i.sap_no, i.part_no, t.transaction_type,
                     SUM(t.quantity) as total_quantity
                 FROM " . TRANSACTIONS_TABLE . " t
                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
@@ -871,7 +904,7 @@ try {
 
             // Query for Grand Total
             $grandTotalSql = "
-                SELECT 
+                SELECT
                     SUM(t.quantity) as total_quantity
                 FROM " . TRANSACTIONS_TABLE . " t
                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
@@ -886,7 +919,8 @@ try {
 
             echo json_encode(['success' => true, 'summary' => $summary, 'grand_total' => $grand_total]);
             break;
-            
+
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
