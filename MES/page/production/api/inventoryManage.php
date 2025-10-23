@@ -34,20 +34,14 @@ try {
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
             
-            $log_date = $input['log_date'] ?? null; 
+            $log_date = $input['log_date'] ?? null;
             $log_time = $input['log_time'] ?? date('H:i:s');
-            
+
             if (empty($log_date)) {
                 throw new Exception("Log Date is required.");
             }
 
-            $actual_date_str = $log_date;
-            if ($log_time >= '00:00:00' && $log_time <= '07:59:59') {
-                $date_obj = new DateTime($log_date);
-                $date_obj->add(new DateInterval('P1D'));
-                $actual_date_str = $date_obj->format('Y-m-d');
-            }
-            $timestamp = $actual_date_str . ' ' . $log_time;
+            $timestamp = $log_date . ' ' . $log_time;
 
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($log_date)) {
                 throw new Exception("Invalid data provided. Item, Quantity, Destination, and Log Date are required.");
@@ -447,32 +441,28 @@ try {
             $count_type = $input['count_type'] ?? '';
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
-            $log_date = $input['log_date'] ?? date('Y-m-d');
+            $log_date = $input['log_date'] ?? null;
             $start_time = $input['start_time'] ?? null;
             $end_time = $input['end_time'] ?? null;
-            
-            // <== [แก้ไข] ตรรกะ 8-Hour Shift (INSERT)
-            $time_to_use = $end_time ?: date('H:i:s');
-            $actual_date_str = $log_date; 
-            // ถ้าเวลาอยู่ระหว่าง 00:00 - 07:59 ให้บวกวันที่จริงไป 1 วัน
-            if ($time_to_use >= '00:00:00' && $time_to_use <= '07:59:59') {
-                $date_obj = new DateTime($log_date);
-                $date_obj->add(new DateInterval('P1D'));
-                $actual_date_str = $date_obj->format('Y-m-d');
+
+            if (empty($log_date)) {
+                throw new Exception("Log Date is required.");
             }
-            $timestamp = $actual_date_str . ' ' . $time_to_use;
+
+            $time_to_use = $end_time ?: date('H:i:s');
+            $timestamp = $log_date . ' ' . $time_to_use;
             // <== สิ้นสุดการแก้ไข
 
-            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type)) {
-                throw new Exception("Invalid data provided for production logging.");
+            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type) || empty($log_date)) {
+                 throw new Exception("Invalid data provided for production logging. (Item, Location, Qty, Type, and Date are required)");
             }
 
             $pdo->beginTransaction();
             $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
             $prodSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $prodStmt = $pdo->prepare($prodSql);
-            $prodStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no, $timestamp, $start_time, $end_time]);
-
+            $prodStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no, $timestamp, $start_time, $end_time]); // ใช้ $timestamp
+            
             $parent_transaction_id = $pdo->lastInsertId();
 
             if (in_array(strtoupper($count_type), ['FG', 'NG', 'SCRAP'])) {
@@ -556,29 +546,23 @@ try {
                 $new_location_id = (int)($input['location_id'] ?? 0);
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? null;
-                
+                $new_log_date = $input['log_date'] ?? null; // <== เอา default ออก
                 $new_start_time = $input['start_time'] ?? null;
                 $new_end_time = $input['end_time'] ?? null;
 
-                if (empty($new_log_date)) {
+                if (empty($new_log_date)) { // <== เช็คค่าว่าง
                     throw new Exception("Log Date is required for update.");
                 }
                 
-                $time_to_use = $new_end_time ?: substr($old_transaction['transaction_timestamp'], 11, 8); 
-                $actual_date_str = $new_log_date;
-                if ($time_to_use >= '00:00:00' && $time_to_use <= '07:59:59') {
-                    $date_obj = new DateTime($new_log_date);
-                    $date_obj->add(new DateInterval('P1D'));
-                    $actual_date_str = $date_obj->format('Y-m-d');
-                }
-                $new_timestamp = $actual_date_str . ' ' . $time_to_use;
+                $time_to_use = $new_end_time ?: substr($old_transaction['transaction_timestamp'], 11, 8);
+                $new_timestamp = $new_log_date . ' ' . $time_to_use;
+
                 $new_count_type = strtoupper($input['count_type'] ?? '');
                 $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=? WHERE transaction_id=?";
                 $updateStmt = $pdo->prepare($updateSql);
-                $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
+                $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]); // ใช้ $new_timestamp
 
                 updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
                 
@@ -616,21 +600,14 @@ try {
                 $new_quantity = ($input['quantity'] ?? '0');
                 $new_lot_no = $input['lot_no'] ?? null;
                 $new_notes = $input['notes'] ?? null;
-                $new_log_date = $input['log_date'] ?? null;
-                $new_log_time = $input['log_time'] ?? date('H:i:s');
-                
-                if (empty($new_log_date)) {
+                $new_log_date = $input['log_date'] ?? null; // <== เอา default ออก
+                $new_log_time = $input['log_time'] ?? date('H:i:s'); // อาจจะใช้เวลาเดิม ถ้าไม่มีอันใหม่?
+
+                if (empty($new_log_date)) { // <== เช็คค่าว่าง
                     throw new Exception("Log Date is required for update.");
                 }
 
-                $time_to_use = $new_log_time;
-                $actual_date_str = $new_log_date;
-                if ($time_to_use >= '00:00:00' && $time_to_use <= '07:59:59') {
-                    $date_obj = new DateTime($new_log_date);
-                    $date_obj->add(new DateInterval('P1D'));
-                    $actual_date_str = $date_obj->format('Y-m-d');
-                }
-                $new_timestamp = $actual_date_str . ' ' . $time_to_use;
+                $new_timestamp = $new_log_date . ' ' . $new_log_time;   
 
                 $new_to_location_id = null;
                 $new_from_location_id = null;
