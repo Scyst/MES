@@ -5,6 +5,7 @@ MES/config/config.php
 # --- Third-Party Libraries ---
 # ไม่ควรเก็บไลบรารีของโปรแกรมอื่นไว้ใน Git ควรติดตั้งแยกต่างหาก
 MES/utils/libs/
+MES/utils/BOM/
 
 # --- Old Versions ---
 # ไม่ควรเก็บโค้ดเวอร์ชันเก่าที่ไม่ใช้งานแล้วไว้ใน Repository
