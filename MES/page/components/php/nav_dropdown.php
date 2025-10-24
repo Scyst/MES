@@ -23,6 +23,13 @@
                 <i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span>
             </a>
         </li>
+
+        <li>
+            <a class="dropdown-item-icon" href="../management/managementDashboard.php" title="Management Dashboard">
+                <i class="fas fa-tachometer-alt fa-fw"></i> <span>Management Dashboard</span>
+            </a>
+        </li>
+        
         <li>
             <a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory">
                 <i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span>
@@ -42,30 +49,41 @@
 
         <li><hr class="dropdown-divider"></li>
 
-        <?php 
+        <?php
           $userRole = $_SESSION['user']['role'] ?? null;
+          // --- Section for Supervisor, Admin, Creator ---
           if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])):
         ?>
-        <li>
-            <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
-                <i class="fas fa-cogs fa-fw"></i>
-                <span>System Settings</span>
-            </a>
-        </li>
+            <li style="display: none;"> <a class="dropdown-item-icon" href="../warehouseOperations/warehouseTransferUI.php" title="Warehouse Operations (Under Development)">
+                     <i class="fas fa-warehouse fa-fw"></i>
+                     <span>Warehouse Ops (WIP)</span> </a>
+            </li>
+
+            <li>
+                <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
+                    <i class="fas fa-cogs fa-fw"></i>
+                    <span>System Settings</span>
+                </a>
+            </li>
         <?php endif; ?>
 
-        <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+        <?php
+          // --- Section for Admin, Creator Only ---
+          if ($userRole && in_array($userRole, ['admin', 'creator'])):
+        ?>
+
             <li>
-            <a class="dropdown-item-icon" href="../maintenanceStock/maintenanceStockUI.php" title="Maintenance Stock">
-                <i class="fas fa-tools fa-fw"></i>
-                <span>Maintenance Stock</span>
-            </a>
+                <a class="dropdown-item-icon" href="../maintenanceStock/maintenanceStockUI.php" title="Maintenance Stock">
+                    <i class="fas fa-tools fa-fw"></i>
+                    <span>Maintenance Stock</span>
+                </a>
             </li>
+
             <li>
-            <a class="dropdown-item-icon" href="../userManage/userManageUI.php" title="User Manager">
-                <i class="fas fa-users-cog fa-fw"></i>
-                <span>User Manager</span>
-            </a>
+                <a class="dropdown-item-icon" href="../userManage/userManageUI.php" title="User Manager">
+                    <i class="fas fa-users-cog fa-fw"></i>
+                    <span>User Manager</span>
+                </a>
             </li>
         <?php endif; ?>
 
@@ -98,7 +116,7 @@
 <script>
     if (typeof manualLogout !== 'function') {
         function manualLogout(event) {
-            event.preventDefault(); 
+            event.preventDefault();
             localStorage.removeItem('pdTableFilters');
             localStorage.removeItem('inventoryUIFilters');
             localStorage.removeItem('sidebarState');

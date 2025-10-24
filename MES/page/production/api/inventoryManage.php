@@ -18,7 +18,6 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        // ... (case 'get_initial_data' ถึง 'get_all_transactions' เหมือนเดิม) ...
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -41,35 +40,65 @@ try {
             if (empty($log_date)) {
                 throw new Exception("Log Date is required.");
             }
-
             $timestamp = $log_date . ' ' . $log_time;
 
-            if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($log_date)) {
-                throw new Exception("Invalid data provided. Item, Quantity, Destination, and Log Date are required.");
+            if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
+                 throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
+            }
+            if (!empty($from_location_id) && empty($from_location_id)) {
+                 throw new Exception("Source location is required for transfer.");
+            }
+            if (!empty($from_location_id) && $from_location_id == $to_location_id) {
+                 throw new Exception("Source and Destination locations cannot be the same for transfer.");
             }
 
             $pdo->beginTransaction();
             try {
                 if (!empty($from_location_id)) {
-                    if ($from_location_id == $to_location_id) {
-                        throw new Exception("Source and Destination locations cannot be the same.");
+                    $locationTypes = [];
+                    $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
+                    $locStmt = $pdo->prepare($locSql);
+                    $locStmt->execute([$from_location_id, $to_location_id]);
+                    while ($row = $locStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $locationTypes[$row['location_id']] = $row['location_type'];
                     }
+                    $from_type = $locationTypes[$from_location_id] ?? null;
+                    $to_type = $locationTypes[$to_location_id] ?? null;
+
+                    $isWarehouseToShipping = ($from_type === 'WAREHOUSE' && $to_type === 'SHIPPING');
+                    $transaction_type = $isWarehouseToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
+                    $log_message_detail = "";
+
                     updateOnhandBalance($pdo, $item_id, $from_location_id, -$quantity);
-                    updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
-                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'TRANSFER', ?, ?, ?, ?, ?, ?)";
+                    if (!$isWarehouseToShipping) {
+                        updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
+                    } else {
+                        $log_message_detail = " (Pending Confirmation)";
+                    }
+
+                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$item_id, $quantity, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
-                    $message = 'Stock transferred successfully.';
+                    $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
+
+                    $logType = $isWarehouseToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
+                    $message = $isWarehouseToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
+                    $logDetail = "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}";
+
                 } else {
                     updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
+
                     $message = 'Stock receipt logged successfully.';
+                    $logType = 'STOCK_IN';
+                    $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";
                 }
+
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'STOCK_IN', $item_id, "Qty: {$quantity}, To: {$to_location_id}, From: {$from_location_id}");
+                logAction($pdo, $currentUser['username'], $logType, $item_id, $logDetail);
                 echo json_encode(['success' => true, 'message' => $message]);
+
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
@@ -79,7 +108,7 @@ try {
         case 'get_receipt_history':
         case 'get_production_history':
         case 'get_all_transactions':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
             $limit = $isExport ? 10000 : 50;
             $offset = ($page - 1) * $limit;
@@ -91,7 +120,7 @@ try {
                 $params[] = $currentUser['line'];
             }
 
-            if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER')";
+             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
 
             if (!empty($_GET['search_term'])) {
@@ -157,13 +186,12 @@ try {
             echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
             break;
 
-        case 'get_stock_inventory_report':
+         case 'get_stock_inventory_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit; $endRow = $startRow + $limit;
             $search_term = $_GET['search_term'] ?? '';
             $conditions = []; $base_params = [];
 
-            // ⭐️ 1. แก้ไข (Stock Count): เก็บเงื่อนไขหลัก (Supervisor, Search) ไว้ก่อน
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
                 $conditions[] = "
@@ -187,32 +215,26 @@ try {
             }
             $itemWhereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            // ⭐️ 2. แก้ไข (Stock Count): สร้าง Query นับ Total โดย JOIN เพื่อกรอง Item ก่อน แล้วค่อย JOIN Onhand/Location เพื่อกรอง Shipping
              $totalSql = "
                 SELECT COUNT(DISTINCT i.item_id)
                 FROM " . ITEMS_TABLE . " i
-                -- Subquery to check if the item has any stock NOT in SHIPPING
                 WHERE EXISTS (
                     SELECT 1
                     FROM " . ONHAND_TABLE . " h
                     JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
                     WHERE h.parameter_id = i.item_id
                     AND (l.location_type IS NULL OR l.location_type != 'SHIPPING')
-                    AND h.quantity <> 0 -- Optional: Only count items that actually have stock somewhere
+                    AND h.quantity <> 0
                 )
-                -- Apply Supervisor/Search filters on ITEMS table
                 " . (!empty($itemWhereClause) ? " AND (" . implode(" AND ", $conditions) . ")" : "") . "
             ";
              $totalStmt = $pdo->prepare($totalSql);
-             // Execute with base_params only
              $totalStmt->execute($base_params);
              $total = (int)$totalStmt->fetchColumn();
 
 
-            // ⭐️ 3. แก้ไข (Stock Count): สร้าง Query ดึงข้อมูลหลัก
             $dataSql = "
                 WITH FilteredItems AS (
-                    -- Select items based on Supervisor/Search first
                     SELECT item_id, sap_no, part_no, part_description
                     FROM " . ITEMS_TABLE . " i
                     {$itemWhereClause}
@@ -220,13 +242,12 @@ try {
                 ItemGroup AS (
                     SELECT
                         fi.item_id, fi.sap_no, fi.part_no, fi.part_description,
-                        -- Calculate SUM only for non-SHIPPING locations
                         SUM(CASE WHEN (l.location_type IS NULL OR l.location_type != 'SHIPPING') THEN ISNULL(h.quantity, 0) ELSE 0 END) as total_onhand,
                         STUFF((
                             SELECT ', ' + r.model FROM " . ROUTES_TABLE . " r
                             WHERE r.item_id = fi.item_id ORDER BY r.model FOR XML PATH('')
                         ), 1, 2, '') AS used_models
-                    FROM FilteredItems fi -- Use pre-filtered items
+                    FROM FilteredItems fi
                     LEFT JOIN " . ONHAND_TABLE . " h ON fi.item_id = h.parameter_id
                     LEFT JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
                     GROUP BY fi.item_id, fi.sap_no, fi.part_no, fi.part_description
@@ -234,14 +255,13 @@ try {
                 NumberedRows AS (
                     SELECT *, ROW_NUMBER() OVER (ORDER BY sap_no) as RowNum
                     FROM ItemGroup
-                    WHERE total_onhand <> 0 -- Optional: Exclude items with zero total stock after filtering
+                    WHERE total_onhand <> 0
                 )
                 SELECT item_id, sap_no, part_no, part_description, total_onhand, used_models
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
             ";
             $dataStmt = $pdo->prepare($dataSql);
 
-            // ⭐️ 4. แก้ไข (Stock Count): Binding parameters (base_params + pagination)
             $all_params = array_merge($base_params, [$startRow, $endRow]);
             $paramIndex = 1;
             foreach ($all_params as $param) {
@@ -341,20 +361,15 @@ try {
 
 
         case 'get_wip_onhand_report':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
 
             $conditions = ["l.location_type IN ('WIP', 'STORE', 'WAREHOUSE')", "h.quantity <> 0"];
 
             if ($currentUser['role'] === 'supervisor') {
-                $conditions[] = "( (l.location_type = 'WIP' AND l.production_line = ?) OR l.location_type IN ('STORE', 'WAREHOUSE') )";
-                $params[] = $currentUser['line'];
-                // เพิ่มเงื่อนไข Supervisor ให้เห็นเฉพาะ WIP ในไลน์ตัวเอง + Store + Warehouse ทั้งหมด
-                // ถ้าต้องการให้เห็นทุกไลน์ให้ลบเงื่อนไขนี้ออก
-                // ถ้าต้องการให้เห็นเฉพาะไลน์ตัวเองเท่านั้น ให้ใช้โค้ดบรรทัดล่างแทน
-                // $conditions[] = "l.production_line = ?";
-                // $params[] = $currentUser['line'];
+                 $conditions[] = "( (l.location_type = 'WIP' AND l.production_line = ?) OR l.location_type IN ('STORE', 'WAREHOUSE') )";
+                 $params[] = $currentUser['line'];
             }
 
             if (!empty($_GET['search_term'])) {
@@ -364,7 +379,6 @@ try {
             }
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            // Query นับ Total และ Data ใช้ WHERE clause เดียวกัน
             $totalSql = "SELECT COUNT(*) FROM ". ONHAND_TABLE ." h JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
@@ -384,7 +398,7 @@ try {
                     FROM ". ONHAND_TABLE ." h
                     JOIN ". ITEMS_TABLE ." i ON h.parameter_id = i.item_id
                     JOIN ". LOCATIONS_TABLE ." l ON h.location_id = l.location_id
-                    {$whereClause} -- ใช้ WHERE clause ที่แก้ไขแล้ว
+                    {$whereClause}
                 )
                 SELECT item_id, location_id, location_name, sap_no, part_no, part_description, model, quantity
                 FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?
@@ -401,7 +415,7 @@ try {
             break;
 
         case 'get_wip_report_by_lot':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
@@ -476,7 +490,6 @@ try {
             break;
 
         case 'execute_production':
-            // ... (เหมือนเดิม) ...
              $item_id = $input['item_id'] ?? 0;
             $location_id = $input['location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
@@ -536,8 +549,7 @@ try {
             break;
 
         case 'get_transaction_details':
-             // ... (เหมือนเดิม) ...
-             $transaction_id = $_GET['transaction_id'] ?? 0;
+              $transaction_id = $_GET['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
             $sql = "SELECT t.*, i.sap_no, i.part_no
@@ -552,8 +564,8 @@ try {
 
             echo json_encode(['success' => true, 'data' => $transaction]);
             break;
+
         case 'update_transaction':
-             // ... (เหมือนเดิม) ...
              $pdo->beginTransaction();
 
             $transaction_id = $input['transaction_id'] ?? 0;
@@ -683,7 +695,6 @@ try {
             break;
 
         case 'delete_transaction':
-             // ... (เหมือนเดิม) ...
              $pdo->beginTransaction();
             $transaction_id = $input['transaction_id'] ?? 0;
             if (!$transaction_id) throw new Exception("Transaction ID is required.");
@@ -727,7 +738,7 @@ try {
             break;
 
         case 'get_stock_details_by_item':
-            $item_id = $_GET['item_id'] ?? 0;
+              $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
                 throw new Exception("Item ID is required.");
             }
@@ -740,7 +751,7 @@ try {
                 JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
                 WHERE h.parameter_id = ?
                   AND h.quantity <> 0
-                  AND (l.location_type IS NULL OR l.location_type != 'SHIPPING') -- เพิ่มเงื่อนไขนี้
+                  AND (l.location_type IS NULL OR l.location_type != 'SHIPPING') -- เงื่อนไขนี้ถูกต้องแล้ว
                 ORDER BY l.location_name
             ";
 
@@ -800,7 +811,6 @@ try {
             break;
 
         case 'adjust_single_stock':
-             // ... (เหมือนเดิม) ...
              $pdo->beginTransaction();
             try {
                 $item_id = $input['item_id'] ?? 0;
@@ -851,7 +861,6 @@ try {
             break;
 
         case 'get_stock_onhand':
-             // ... (เหมือนเดิม) ...
               $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 0;
             if (empty($item_id) || empty($location_id)) {
@@ -863,10 +872,10 @@ try {
             $quantity = $stockStmt->fetchColumn();
             echo json_encode(['success' => true, 'quantity' => $quantity ?: 0]);
             break;
+
         case 'get_receipt_history_summary':
-             // ... (เหมือนเดิม) ...
              $params = [];
-            $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER')"];
+            $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER')"]; // อาจจะต้องรวม Pending/Shipped ที่นี่ด้วย ถ้า Report ต้องการ
 
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
@@ -920,6 +929,122 @@ try {
             echo json_encode(['success' => true, 'summary' => $summary, 'grand_total' => $grand_total]);
             break;
 
+        // ⭐️ เพิ่ม Action ใหม่สำหรับ Management Dashboard
+        case 'get_pending_shipments':
+             // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้ (เช่น admin, creator, หรือ role ใหม่)
+             if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+                 http_response_code(403);
+                 echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
+                 exit;
+             }
+
+             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+             $limit = 50; // หรือตามต้องการ
+             $offset = ($page - 1) * $limit;
+             $params = [];
+             $conditions = ["t.transaction_type = 'TRANSFER_PENDING_SHIPMENT'"];
+
+             // เพิ่ม Filter ถ้าต้องการ (เช่น Search, Date Range)
+             if (!empty($_GET['search_term'])) {
+                 $search_term = '%' . $_GET['search_term'] . '%';
+                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
+                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+             }
+             if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+             if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+
+             $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+             $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
+                           JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                           LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                           LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                           LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                           {$whereClause}";
+             $totalStmt = $pdo->prepare($totalSql);
+             $totalStmt->execute($params);
+             $total = (int)$totalStmt->fetchColumn();
+
+             $dataSql = "
+                 SELECT
+                     t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity,
+                     loc_from.location_name AS from_location,
+                     loc_to.location_name AS to_location,
+                     u.username AS requested_by, t.notes
+                 FROM " . TRANSACTIONS_TABLE . " t
+                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                 LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                 LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                 {$whereClause}
+                 ORDER BY t.transaction_timestamp ASC -- เรียงตามเก่าไปใหม่ เพื่อให้ Confirm ตามลำดับ
+                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+             ";
+             $dataStmt = $pdo->prepare($dataSql);
+             $paramIndex = 1;
+             foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+             $dataStmt->execute();
+             $pending_shipments = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+             echo json_encode(['success' => true, 'data' => $pending_shipments, 'total' => $total, 'page' => $page]);
+             break;
+
+         case 'confirm_shipment':
+             // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้
+             if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+                 http_response_code(403);
+                 echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
+                 exit;
+             }
+
+             $transaction_ids = $input['transaction_ids'] ?? []; // รับเป็น Array เผื่อ Confirm หลายรายการ
+             if (empty($transaction_ids) || !is_array($transaction_ids)) {
+                 throw new Exception("No valid Transaction IDs provided for confirmation.");
+             }
+
+             $pdo->beginTransaction();
+             try {
+                 $confirmed_count = 0;
+                 // (Optional) เพิ่ม Field สำหรับเก็บข้อมูลการ Confirm
+                 // ALTER TABLE STOCK_TRANSACTIONS[_TEST] ADD confirmed_by_user_id INT NULL, confirmed_at DATETIME NULL;
+
+                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
+                               SET transaction_type = 'SHIPPED'
+                               -- , confirmed_by_user_id = ?, confirmed_at = GETDATE() -- uncomment ถ้ามี fields นี้
+                               WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
+                 $updateStmt = $pdo->prepare($updateSql);
+
+                 foreach ($transaction_ids as $tid) {
+                     $updateParams = [ $tid ];
+                     // if (isset($currentUser['id'])) { array_unshift($updateParams, $currentUser['id']); } // uncomment ถ้ามี field confirmed_by_user_id
+                     $updateStmt->execute($updateParams);
+
+                     if ($updateStmt->rowCount() > 0) {
+                         $confirmed_count++;
+                         // Log การ Confirm แต่ละรายการ
+                         logAction($pdo, $currentUser['username'], 'CONFIRM SHIPMENT', $tid);
+                     } else {
+                         error_log("Failed to confirm shipment for transaction ID: " . $tid . " - Status might not be PENDING or ID invalid.");
+                     }
+                 }
+
+                 $pdo->commit();
+
+                 if ($confirmed_count > 0) {
+                     echo json_encode(['success' => true, 'message' => "Successfully confirmed {$confirmed_count} shipment(s)."]);
+                 } else {
+                     echo json_encode(['success' => false, 'message' => 'No shipments were confirmed. They might have been confirmed already or the IDs were invalid.']);
+                 }
+
+             } catch (Exception $e) {
+                 if ($pdo->inTransaction()) {
+                     $pdo->rollBack();
+                 }
+                 throw $e;
+             }
+             break;
 
         default:
             http_response_code(400);

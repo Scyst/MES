@@ -28,7 +28,7 @@
 
             <div class="container-fluid pt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Production & inventory</h2>
+                    <h2 class="mb-0">Production & Inventory</h2>
                 </div>
 
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
