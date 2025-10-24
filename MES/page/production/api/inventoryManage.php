@@ -29,17 +29,14 @@ try {
         case 'execute_receipt':
             $item_id = $input['item_id'] ?? 0;
             $to_location_id = $input['to_location_id'] ?? 0;
-            $from_location_id = $input['from_location_id'] ?? 0;
+            $from_location_id = $input['from_location_id'] ?? 0; // Will have value if it's a Transfer
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
-
             $log_date = $input['log_date'] ?? null;
             $log_time = $input['log_time'] ?? date('H:i:s');
 
-            if (empty($log_date)) {
-                throw new Exception("Log Date is required.");
-            }
+            if (empty($log_date)) { throw new Exception("Log Date is required."); }
             $timestamp = $log_date . ' ' . $log_time;
 
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
@@ -52,9 +49,12 @@ try {
                  throw new Exception("Source and Destination locations cannot be the same for transfer.");
             }
 
+
             $pdo->beginTransaction();
             try {
-                if (!empty($from_location_id)) {
+                if (!empty($from_location_id)) { // --- This is the Transfer part ---
+
+                    // 1. Get Location Types
                     $locationTypes = [];
                     $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
                     $locStmt = $pdo->prepare($locSql);
@@ -62,34 +62,39 @@ try {
                     while ($row = $locStmt->fetch(PDO::FETCH_ASSOC)) {
                         $locationTypes[$row['location_id']] = $row['location_type'];
                     }
-                    $from_type = $locationTypes[$from_location_id] ?? null;
+                    $from_type = $locationTypes[$from_location_id] ?? null; // Keep for logging if needed
                     $to_type = $locationTypes[$to_location_id] ?? null;
 
-                    $isWarehouseToShipping = ($from_type === 'WAREHOUSE' && $to_type === 'SHIPPING');
-                    $transaction_type = $isWarehouseToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
-                    $log_message_detail = "";
+                    // ⭐️ 2. Check if DESTINATION is SHIPPING ⭐️
+                    $isTransferToShipping = ($to_type === 'SHIPPING');
+                    $transaction_type = $isTransferToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
+                    $log_message_detail = ""; // For logging
 
+                    // 3. Update Source Stock (Always do this for transfer)
                     updateOnhandBalance($pdo, $item_id, $from_location_id, -$quantity);
-                    if (!$isWarehouseToShipping) {
+
+                    // 4. Update Destination Stock (ONLY if NOT transferring to Shipping)
+                    if (!$isTransferToShipping) {
                         updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
                     } else {
                         $log_message_detail = " (Pending Confirmation)";
                     }
 
+                    // 5. Insert Transaction Log (Use determined $transaction_type)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
 
-                    $logType = $isWarehouseToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
-                    $message = $isWarehouseToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
+                    // 6. Set Log Type and Message
+                    $logType = $isTransferToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
+                    $message = $isTransferToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
                     $logDetail = "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}";
 
-                } else {
+                } else { // --- This is the Receipt part (remains unchanged) ---
                     updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
-
                     $message = 'Stock receipt logged successfully.';
                     $logType = 'STOCK_IN';
                     $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";

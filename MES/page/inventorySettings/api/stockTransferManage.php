@@ -119,16 +119,15 @@ try {
             $notes = $input['notes'] ?? null;
 
             if (empty($item_id) || empty($from_location_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
-                throw new Exception("Invalid data provided for transfer. Item, From Location, To Location, and Quantity are required.");
-            }
-            if ($from_location_id == $to_location_id) {
-                throw new Exception("From and To locations cannot be the same.");
-            }
+                 throw new Exception("Invalid data provided for transfer. Item, From Location, To Location, and Quantity are required.");
+             }
+             if ($from_location_id == $to_location_id) {
+                 throw new Exception("From and To locations cannot be the same.");
+             }
 
             $pdo->beginTransaction();
-
             try {
-                // 1. ดึง Location Types
+                // 1. Get Location Types
                 $locationTypes = [];
                 $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
                 $locStmt = $pdo->prepare($locSql);
@@ -136,38 +135,36 @@ try {
                 while ($row = $locStmt->fetch(PDO::FETCH_ASSOC)) {
                     $locationTypes[$row['location_id']] = $row['location_type'];
                 }
-                $from_type = $locationTypes[$from_location_id] ?? null;
+                // $from_type = $locationTypes[$from_location_id] ?? null; // Not strictly needed for logic now
                 $to_type = $locationTypes[$to_location_id] ?? null;
 
-                // 2. ตรวจสอบเงื่อนไข Warehouse -> Shipping
-                $isWarehouseToShipping = ($from_type === 'WAREHOUSE' && $to_type === 'SHIPPING');
-                $transaction_type = $isWarehouseToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
+                // ⭐️ 2. Check if DESTINATION is SHIPPING ⭐️
+                $isTransferToShipping = ($to_type === 'SHIPPING');
+                $transaction_type = $isTransferToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
                 $log_message_detail = ""; // For logging
 
-                // 3. อัปเดตสต็อกต้นทาง (ทำทุกกรณี) ใช้ helper function
+                // 3. Update Source Stock
                 updateOnhandBalance($pdo, $item_id, $from_location_id, -$quantity);
-                // ตรวจสอบว่า update สำเร็จหรือไม่ (helper จะ throw exception ถ้าไม่พอ)
 
-                // 4. อัปเดตสต็อกปลายทาง (เฉพาะกรณีที่ไม่ใช่ Warehouse -> Shipping) ใช้ helper function
-                if (!$isWarehouseToShipping) {
+                // 4. Update Destination Stock (ONLY if NOT transferring to Shipping)
+                if (!$isTransferToShipping) {
                     updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
                 } else {
                     $log_message_detail = " (Pending Confirmation)";
                 }
 
-                // 5. บันทึก Transaction (ใช้ $transaction_type ที่กำหนดไว้)
+                // 5. Insert Transaction Log
                 $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $transStmt = $pdo->prepare($transSql);
-                // ⭐️ แก้ไข: Parameter ที่ส่งให้ execute ต้องตรงกับ placeholders (?)
                 $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes]);
 
                 $pdo->commit();
 
-                // 6. Log Action ตามประเภท Transaction
-                $logType = $isWarehouseToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
+                // 6. Log Action
+                $logType = $isTransferToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
                 logAction($pdo, $currentUser['username'], $logType, $item_id, "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}");
 
-                $message = $isWarehouseToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transfer executed successfully.';
+                $message = $isTransferToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transfer executed successfully.';
                 echo json_encode(['success' => true, 'message' => $message]);
 
             } catch (Exception $e) {

@@ -19,6 +19,31 @@
 <head>
     <title>Management Dashboard</title>
     <?php include_once '../components/common_head.php'; ?>
+    <style>
+        /* CSS เดิม */
+        .table th:first-child, .table td:first-child { width: 3%; text-align: center; }
+        .table th:last-child, .table td:last-child { width: 10%; text-align: center; }
+        .summary-bar { /* ... เหมือนเดิม ... */ }
+
+        /* ⭐️ เพิ่ม: ทำให้ Note แก้ไขได้ */
+        .editable-note {
+            cursor: pointer;
+            min-width: 100px; /* กำหนดความกว้างขั้นต่ำ */
+            display: inline-block; /* ทำให้ min-width ทำงาน */
+        }
+        .editable-note:hover {
+            background-color: var(--bs-tertiary-bg); /* Highlight ตอน Hover */
+            outline: 1px dashed var(--bs-secondary);
+        }
+        .editable-note:focus {
+            background-color: var(--bs-light); /* สีพื้นหลังตอนแก้ไข */
+            outline: 1px solid var(--bs-primary);
+            cursor: text;
+        }
+        [data-bs-theme="dark"] .editable-note:focus {
+             background-color: var(--bs-gray-700);
+        }
+    </style>
 </head>
 
 <body class="page-with-table">
@@ -29,109 +54,69 @@
             <?php include_once('../components/php/spinner.php'); ?>
 
             <div class="container-fluid pt-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Management Dashboard</h2>
-                </div>
-
-                <ul class="nav nav-tabs" id="managementTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="shipment-confirm-tab" data-bs-toggle="tab" data-bs-target="#shipment-confirm-pane" type="button" role="tab" aria-controls="shipment-confirm-pane" aria-selected="true">
-                            Shipment Confirmation
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="shipment-history-tab" data-bs-toggle="tab" data-bs-target="#shipment-history-pane" type="button" role="tab" aria-controls="shipment-history-pane" aria-selected="false">
-                            Shipment History
-                        </button>
-                    </li>
-                    </ul>
+                 <div class="d-flex justify-content-between align-items-center mb-3">
+                     <h2 class="mb-0">Management Dashboard</h2>
+                 </div>
             </div>
 
             <div class="content-wrapper">
-                <div class="tab-content" id="managementTabContent">
+                <div class="sticky-bar">
+                     <div class="container-fluid">
+                        <div class="row my-3 align-items-center">
+                            <div class="col-md-9">
+                                <div class="filter-controls-wrapper d-flex flex-wrap gap-2" id="shipment-filters">
+                                    <div class="btn-group" role="group" aria-label="Shipment Status Filter">
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusPending" value="pending" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary btn-sm" for="statusPending">Pending</label>
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusShipped" value="shipped" autocomplete="off">
+                                        <label class="btn btn-outline-primary btn-sm" for="statusShipped">Shipped</label>
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusRejected" value="rejected" autocomplete="off">
+                                         <label class="btn btn-outline-danger btn-sm" for="statusRejected">Rejected</label>
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusAll" value="all" autocomplete="off">
+                                        <label class="btn btn-outline-secondary btn-sm" for="statusAll">All</label>
+                                    </div>
+                                    <input type="search" id="shipmentSearch" class="form-control form-control-sm flex-grow-1" style="min-width: 200px;" placeholder="Search...">
+                                    <input type="date" id="shipmentStartDate" class="form-control form-control-sm" style="width: auto;">
+                                    <span>-</span>
+                                    <input type="date" id="shipmentEndDate" class="form-control form-control-sm" style="width: auto;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex justify-content-end gap-2">
+                                     <button class="btn btn-outline-success btn-sm" id="exportHistoryBtn"><i class="fas fa-file-excel"></i> Export</button>
+                                     <button class="btn btn-danger btn-sm" id="rejectSelectedBtn" disabled><i class="fas fa-ban"></i> Reject Selected</button>
+                                    <button class="btn btn-primary btn-sm" id="confirmSelectedBtn" disabled><i class="fas fa-check-double"></i> Confirm Selected</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="tab-pane fade show active" id="shipment-confirm-pane" role="tabpanel" aria-labelledby="shipment-confirm-tab" tabindex="0">
-                        <div class="sticky-bar">
-                             <div class="container-fluid">
-                                <div class="row my-3 align-items-center">
-                                    <div class="col-md-8">
-                                        <div class="filter-controls-wrapper" id="shipment-filters">
-                                            <input type="search" id="shipmentSearch" class="form-control me-2" placeholder="Search Item, Location, User...">
-                                            <input type="date" id="shipmentStartDate" class="form-control me-1">
-                                            <span>-</span>
-                                            <input type="date" id="shipmentEndDate" class="form-control ms-1">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="d-flex justify-content-end gap-2">
-                                            <button class="btn btn-primary" id="confirmSelectedBtn" disabled><i class="fas fa-check-double"></i> Confirm Selected</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 3%;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllCheckbox"></th>
-                                        <th style="width: 15%;" class="text-start">Request Date</th>
-                                        <th style="width: 25%;" class="text-center">Item (SAP / Part No)</th>
-                                        <!--<th class="text-center">Description</th>-->
-                                        <th style="width: 10%;" class="text-center">Quantity</th>
-                                        <th class="text-center">Notes</th>
-                                        <th style="width: 15%;" class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pendingShipmentsTableBody">
-                                    <tr><td colspan="7" class="text-center">Loading pending shipments...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div><div class="tab-pane fade" id="shipment-history-pane" role="tabpanel" aria-labelledby="shipment-history-tab" tabindex="0">
-                        <div class="sticky-bar">
-                             <div class="container-fluid">
-                                <div class="row my-3 align-items-center">
-                                    <div class="col-md-8">
-                                        <div class="filter-controls-wrapper" id="history-filters">
-                                            <input type="search" id="historySearch" class="form-control me-2" placeholder="Search Item, Location, User...">
-                                            <input type="date" id="historyStartDate" class="form-control me-1">
-                                            <span>-</span>
-                                            <input type="date" id="historyEndDate" class="form-control ms-1">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="d-flex justify-content-end">
-                                             <button class="btn btn-outline-success" id="exportHistoryBtn"><i class="fas fa-file-excel"></i> Export</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="summary-bar" id="historySummaryBar">
-                            Total Shipped Quantity: <span id="totalShippedQty">0</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 10%;" class="text-start">Shipped Date</th>
-                                        <th style="width: 25%;" class="text-center">Item (SAP / Part No)</th>
-                                        <!--<th class="text-center">Description</th>-->
-                                        <th style="width: 15%;" class="text-center">From</th>
-                                        <th style="width: 15%;" class="text-center">To</th>
-                                        <th style="width: 10%;" class="text-center">Quantity</th>
-                                        <th class="text-center">Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="shipmentHistoryTableBody">
-                                    <tr><td colspan="8" class="text-center">Loading shipment history...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div></div> </div> <nav class="pagination-footer" data-tab-target="#shipment-confirm-pane" style="display: block;"> <ul class="pagination justify-content-center" id="shipmentPagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#shipment-history-pane" style="display: none;"> <ul class="pagination justify-content-center" id="historyPagination"></ul>
+                <div class="summary-bar" id="shipmentSummaryBar" style="display: none;"> /*...*/ </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 3%;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllCheckbox"></th>
+                                <th style="width: 10%;">Status</th>
+                                <th style="width: 12%;">Date</th>
+                                <th style="width: 20%;">Item (SAP / Part No)</th>
+                                <th style="width: 10%;" class="text-end">Quantity</th>
+                                <th style="width: 15%;">Transfer Path</th>
+                                <th>Notes</th>
+                                <th style="width: 15%;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shipmentsTableBody">
+                            <tr><td colspan="8" class="text-center">Loading shipments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <nav class="pagination-footer">
+                 <ul class="pagination justify-content-center" id="shipmentPagination"></ul>
             </nav>
 
             <div id="toast"></div>
@@ -142,11 +127,34 @@
         </main>
     </div>
 
+    <div class="modal fade" id="rejectReasonModal" tabindex="-1" aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="rejectReasonModalLabel">Rejection Reason</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="rejectTransactionIds">
+            <div class="mb-3">
+              <label for="rejectReasonText" class="form-label">Reason (optional):</label>
+              <textarea class="form-control" id="rejectReasonText" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmRejectBtn">Confirm Reject</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
         const SHIPMENT_API = 'api/shipment.php';
     </script>
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
+    <script src="../components/js/sendRequest.js?v=<?php echo filemtime('../components/js/sendRequest.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/managementDashboard.js?v=<?php echo filemtime('script/managementDashboard.js'); ?>"></script>
 
