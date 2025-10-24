@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = `<tr><td colspan="8" class="text-center">Loading...</td></tr>`; // ⭐️ ปรับ Colspan เป็น 8
         summaryBar.style.display = 'none';
 
-        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'pending';
+        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'all';
 
         const params = {
             page: currentPage,
@@ -116,13 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="text-center">
                     ${isPending ? `<input class="form-check-input row-checkbox" type="checkbox" value="${item.transaction_id}">` : ''}
                 </td>
-                <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
-                <td>${requestDateTimeFormatted}</td> <td>${item.sap_no || ''} / ${item.part_no || ''}</td>
-                <td class="text-end">${parseFloat(item.quantity).toLocaleString()}</td>
+                <td>${requestDateTimeFormatted}</td> 
+                <td>${item.sap_no || ''} / ${item.part_no || ''}</td>
                 <td>${transferPath}</td>
+                <td class="text-center">${parseFloat(item.quantity).toLocaleString()}</td>
                 <td>
-                    <span class="editable-note ${isRejected ? 'text-muted text-decoration-line-through' : ''}" contenteditable="${!isRejected}" data-id="${item.transaction_id}" tabindex="0">${item.notes || ''}</span>
+                    <span class="editable-note ${isRejected ? 'text-muted' : ''}" contenteditable="${!isRejected}" data-id="${item.transaction_id}" tabindex="0">${item.notes || ''}</span>
                 </td>
+                <td class="text-center"><span class="badge ${statusBadgeClass}">${statusText}</span></td>
                 <td class="text-center">
                     ${isPending ? `
                         <button class="btn btn-sm btn-success confirm-single-btn" data-id="${item.transaction_id}" title="Confirm this shipment">
@@ -380,10 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     setDefaultDates();
     fetchShipments(1);
-
-    const initialStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'pending';
-    const isInitialViewOnly = initialStatus === 'shipped' || initialStatus === 'rejected';
-    if(confirmSelectedBtn) confirmSelectedBtn.style.display = isInitialViewOnly ? 'none' : 'inline-block';
-    if(rejectSelectedBtn) rejectSelectedBtn.style.display = isInitialViewOnly ? 'none' : 'inline-block';
+    
+    if(confirmSelectedBtn) confirmSelectedBtn.style.display = 'inline-block';
+    if(rejectSelectedBtn) rejectSelectedBtn.style.display = 'inline-block';
 
 }); // End DOMContentLoaded

@@ -61,19 +61,22 @@
 
             <div class="content-wrapper">
                 <div class="sticky-bar">
-                     <div class="container-fluid">
+                    <div class="container-fluid">
                         <div class="row my-3 align-items-center">
                             <div class="col-md-9">
                                 <div class="filter-controls-wrapper d-flex flex-wrap gap-2" id="shipment-filters">
-                                    <div class="btn-group" role="group" aria-label="Shipment Status Filter">
-                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusPending" value="pending" autocomplete="off" checked>
-                                        <label class="btn btn-outline-primary btn-sm" for="statusPending">Pending</label>
+                                    <div class="btn-group d-flex" role="group" aria-label="Shipment Status Filter">
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusAll" value="all" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm flex-fill" for="statusAll">All</label>
+                                        
+                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusPending" value="pending" autocomplete="off">
+                                        <label class="btn btn-outline-primary btn-sm flex-fill" for="statusPending">Pending</label>
+
                                         <input type="radio" class="btn-check" name="shipmentStatus" id="statusShipped" value="shipped" autocomplete="off">
-                                        <label class="btn btn-outline-primary btn-sm" for="statusShipped">Shipped</label>
+                                        <label class="btn btn-outline-success btn-sm flex-fill" for="statusShipped">Shipped</label>
+
                                         <input type="radio" class="btn-check" name="shipmentStatus" id="statusRejected" value="rejected" autocomplete="off">
-                                         <label class="btn btn-outline-danger btn-sm" for="statusRejected">Rejected</label>
-                                        <input type="radio" class="btn-check" name="shipmentStatus" id="statusAll" value="all" autocomplete="off">
-                                        <label class="btn btn-outline-secondary btn-sm" for="statusAll">All</label>
+                                        <label class="btn btn-outline-danger btn-sm flex-fill" for="statusRejected">Rejected</label>
                                     </div>
                                     <input type="search" id="shipmentSearch" class="form-control form-control-sm flex-grow-1" style="min-width: 200px;" placeholder="Search...">
                                     <input type="date" id="shipmentStartDate" class="form-control form-control-sm" style="width: auto;">
@@ -83,8 +86,8 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="d-flex justify-content-end gap-2">
-                                     <button class="btn btn-outline-success btn-sm" id="exportHistoryBtn"><i class="fas fa-file-excel"></i> Export</button>
-                                     <button class="btn btn-danger btn-sm" id="rejectSelectedBtn" disabled><i class="fas fa-ban"></i> Reject Selected</button>
+                                    <button class="btn btn-outline-success btn-sm" id="exportHistoryBtn"><i class="fas fa-file-excel"></i> Export</button>
+                                    <button class="btn btn-danger btn-sm" id="rejectSelectedBtn" disabled><i class="fas fa-ban"></i> Reject Selected</button>
                                     <button class="btn btn-primary btn-sm" id="confirmSelectedBtn" disabled><i class="fas fa-check-double"></i> Confirm Selected</button>
                                 </div>
                             </div>
@@ -99,13 +102,13 @@
                         <thead>
                             <tr>
                                 <th style="width: 3%;" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllCheckbox"></th>
-                                <th style="width: 10%;">Status</th>
-                                <th style="width: 12%;">Date</th>
-                                <th style="width: 20%;">Item (SAP / Part No)</th>
-                                <th style="width: 10%;" class="text-end">Quantity</th>
+                                <th style="width: 12%;">Time</th>
+                                <th style="width: 15%;">Item (SAP / Part No)</th>
                                 <th style="width: 15%;">Transfer Path</th>
-                                <th>Notes</th>
-                                <th style="width: 15%;" class="text-center">Actions</th>
+                                <th style="width: 10%;" class="text-center">Quantity</th>
+                                <th class="text-center">Notes</th>
+                                <th style="width: 8%;" class="text-center">Status</th>
+                                <th style="width: 8%;" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="shipmentsTableBody">
