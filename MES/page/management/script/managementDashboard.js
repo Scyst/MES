@@ -4,20 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // SECTION 1: GLOBAL VARIABLES & CONSTANTS
     // =================================================================
-    let currentPage = 1;
-    let currentConfirmPage = 1;
-    let currentHistoryPage = 1;
+    let currentShipmentPage = 1; // ⭐️ เปลี่ยนชื่อตัวแปร page
     const ROWS_PER_PAGE = 50;
 
-    // --- DOM Elements ---
-    const tableBody = document.getElementById('shipmentsTableBody'); // ⭐️ ใช้ ID ที่ถูกต้อง
-    const paginationControls = document.getElementById('shipmentPagination');
+    // --- DOM Elements (Shipment Section) ---
+    const shipmentTableBody = document.getElementById('shipmentsTableBody'); // ⭐️ เปลี่ยนชื่อ
+    const shipmentPaginationControls = document.getElementById('shipmentPagination'); // ⭐️ เปลี่ยนชื่อ
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const confirmSelectedBtn = document.getElementById('confirmSelectedBtn');
-    const searchInput = document.getElementById('shipmentSearch');
-    const startDateInput = document.getElementById('shipmentStartDate');
-    const endDateInput = document.getElementById('shipmentEndDate');
-    const summaryBar = document.getElementById('shipmentSummaryBar');
+    const shipmentSearchInput = document.getElementById('shipmentSearch'); // ⭐️ เปลี่ยนชื่อ
+    const shipmentStartDateInput = document.getElementById('shipmentStartDate'); // ⭐️ เปลี่ยนชื่อ
+    const shipmentEndDateInput = document.getElementById('shipmentEndDate');   // ⭐️ เปลี่ยนชื่อ
+    const shipmentSummaryBar = document.getElementById('shipmentSummaryBar');   // ⭐️ เปลี่ยนชื่อ
     const totalSelectedQtySpan = document.getElementById('totalSelectedQty');
     const exportHistoryBtn = document.getElementById('exportHistoryBtn');
     const statusFilterRadios = document.querySelectorAll('input[name="shipmentStatus"]');
@@ -27,29 +25,196 @@ document.addEventListener('DOMContentLoaded', () => {
     const rejectReasonText = document.getElementById('rejectReasonText');
     const rejectTransactionIdsInput = document.getElementById('rejectTransactionIds');
 
+    // --- DOM Elements (DLOT Section) ---
+    const dlotEntryForm = document.getElementById('dlot-entry-form');
+    const dlotEntryDateInput = document.getElementById('dlot-entry-date');
+    const dlotEntryLineSelect = document.getElementById('dlot-entry-line');
+    const dlotHeadcountInput = document.getElementById('dlot-headcount');
+    const dlotDlCostInput = document.getElementById('dlot-dl-cost');
+    const dlotOtCostInput = document.getElementById('dlot-ot-cost');
+    const btnSaveDlot = document.getElementById('btn-save-dlot');
+
+    const costSummaryStartDateInput = document.getElementById('cost-summary-start-date');
+    const costSummaryEndDateInput = document.getElementById('cost-summary-end-date');
+    const costSummaryLineSelect = document.getElementById('cost-summary-line');
+    const btnRefreshCostSummary = document.getElementById('btn-refresh-cost-summary');
+
+    const stdDlCostDisplay = document.getElementById('std-dl-cost-display');
+    const actualDlotCostDisplay = document.getElementById('actual-dlot-cost-display');
+    const dlVarianceDisplay = document.getElementById('dl-variance-display');
+    const varianceCard = document.getElementById('variance-card');
+
+    // --- ⭐️ DOM Elements (Tabs) ---
+    const costDlotTab = document.getElementById('cost-dlot-tab');
+    const shipmentTab = document.getElementById('shipment-tab');
+
+    // --- API Constants ---
+    // (กำหนดไว้ใน <script> block ใน .php)
+    // const SHIPMENT_API = 'api/shipment.php';
+    // const DLOT_API = 'api/dlot_manual_manage.php';
+    // const FILTERS_API = '../OEE_Dashboard/api/get_dashboard_filters.php';
+
     // Debounce Timer
     let searchDebounceTimer;
     let noteEditDebounceTimer;
 
     // =================================================================
-    // SECTION 2: CORE FUNCTIONS
+    // SECTION 2: DLOT & COST SUMMARY FUNCTIONS
+    // =================================================================
+
+    function setAllDefaultDates() {
+        const today = new Date().toISOString().split('T')[0];
+        const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+        if (shipmentStartDateInput && !shipmentStartDateInput.value) shipmentStartDateInput.value = today;
+        if (shipmentEndDateInput && !shipmentEndDateInput.value) shipmentEndDateInput.value = today;
+        if (costSummaryStartDateInput && !costSummaryStartDateInput.value) costSummaryStartDateInput.value = firstDayOfMonth;
+        if (costSummaryEndDateInput && !costSummaryEndDateInput.value) costSummaryEndDateInput.value = today;
+        if (dlotEntryDateInput && !dlotEntryDateInput.value) dlotEntryDateInput.value = today;
+    }
+
+    async function fetchDashboardLines() {
+        try {
+            const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
+            if (result.success && result.lines) {
+                const lines = result.lines;
+                // Clear existing options first (optional, prevents duplicates if called multiple times)
+                costSummaryLineSelect.querySelectorAll('option:not([value="ALL"])').forEach(opt => opt.remove());
+                dlotEntryLineSelect.querySelectorAll('option:not([value="ALL"])').forEach(opt => opt.remove());
+
+                lines.forEach(line => {
+                    costSummaryLineSelect.appendChild(new Option(line, line));
+                    dlotEntryLineSelect.appendChild(new Option(line, line));
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching lines:", error);
+            showToast('Failed to load production lines.', 'var(--bs-danger)');
+        }
+    }
+
+    async function fetchCostSummary() {
+        // Only fetch if the cost tab is active or potentially visible
+        if (!costDlotTab || !costDlotTab.classList.contains('active')) return;
+
+        showSpinner();
+        const params = {
+            startDate: costSummaryStartDateInput.value,
+            endDate: costSummaryEndDateInput.value,
+            line: costSummaryLineSelect.value
+        };
+
+        try {
+            const result = await sendRequest(DLOT_API, 'get_cost_summary', 'GET', null, params);
+            if (result.success && result.data) {
+                updateCostSummaryUI(result.data.standard, result.data.actual);
+            } else {
+                throw new Error(result.message || 'Failed to load cost summary');
+            }
+        } catch (error) {
+            console.error("Error fetching cost summary:", error);
+            showToast(error.message, 'var(--bs-danger)');
+            updateCostSummaryUI(null, null);
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    function updateCostSummaryUI(standardData, actualData) {
+        const stdCost = (standardData && standardData.TotalDLCost) ? parseFloat(standardData.TotalDLCost) : 0;
+        const actualCost = (actualData && actualData.TotalActualDLOT) ? parseFloat(actualData.TotalActualDLOT) : 0;
+        const variance = actualCost - stdCost;
+
+        stdDlCostDisplay.textContent = stdCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        actualDlotCostDisplay.textContent = actualCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        dlVarianceDisplay.textContent = variance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        varianceCard.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-light');
+        if (variance < 0) {
+            varianceCard.classList.add('text-bg-success');
+             varianceCard.classList.add('text-white'); // เพิ่ม text-white สำหรับ Dark mode
+        } else if (variance > 0) {
+            varianceCard.classList.add('text-bg-danger');
+             varianceCard.classList.add('text-white'); // เพิ่ม text-white
+        } else {
+            varianceCard.classList.add('text-bg-light');
+             varianceCard.classList.remove('text-white');
+        }
+    }
+
+    async function handleDlotDateChange() {
+         // Only fetch if the cost tab is active or potentially visible
+        if (!costDlotTab || !costDlotTab.classList.contains('active')) return;
+
+        const entry_date = dlotEntryDateInput.value;
+        const line = dlotEntryLineSelect.value;
+        if (!entry_date) return;
+
+        dlotHeadcountInput.value = '';
+        dlotDlCostInput.value = '';
+        dlotOtCostInput.value = '';
+
+        try {
+            const body = { action: 'get_daily_costs', entry_date: entry_date, line: line };
+            const result = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', body);
+            if (result.success && result.data) {
+                dlotHeadcountInput.value = parseFloat(result.data.headcount) || '';
+                dlotDlCostInput.value = parseFloat(result.data.dl_cost) || '';
+                dlotOtCostInput.value = parseFloat(result.data.ot_cost) || '';
+            }
+        } catch (error) {
+            console.error("Error fetching daily DLOT entry:", error);
+            showToast('Failed to load existing entry data.', 'var(--bs-danger)');
+        }
+    }
+
+    async function handleSaveDlotForm(event) {
+        event.preventDefault();
+        showSpinner();
+        try {
+            const body = {
+                action: 'save_daily_costs',
+                entry_date: dlotEntryDateInput.value,
+                line: dlotEntryLineSelect.value,
+                headcount: dlotHeadcountInput.value || 0,
+                dl_cost: dlotDlCostInput.value || 0,
+                ot_cost: dlotOtCostInput.value || 0
+            };
+            const result = await sendRequest(DLOT_API, 'save_daily_costs', 'POST', body);
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            if (result.success) {
+                await fetchCostSummary(); // Refresh summary after save
+            }
+        } catch (error) {
+            console.error("Error saving DLOT entry:", error);
+            showToast('An unexpected error occurred.', 'var(--bs-danger)');
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    // =================================================================
+    // SECTION 3: SHIPMENT FUNCTIONS
     // =================================================================
 
     async function fetchShipments(page = 1) {
-        currentPage = page;
+        // ⭐️ Only fetch if the shipment tab is active ⭐️
+        if (!shipmentTab || !shipmentTab.classList.contains('active')) return;
+
+        currentShipmentPage = page; // ⭐️ ใช้ currentShipmentPage
         showSpinner();
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center">Loading...</td></tr>`; // ⭐️ ปรับ Colspan เป็น 8
-        summaryBar.style.display = 'none';
+        shipmentTableBody.innerHTML = `<tr><td colspan="8" class="text-center">Loading...</td></tr>`;
+        if(shipmentSummaryBar) shipmentSummaryBar.style.display = 'none';
 
         const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'all';
 
         const params = {
-            page: currentPage,
+            page: currentShipmentPage, // ⭐️ ใช้ currentShipmentPage
             limit: ROWS_PER_PAGE,
             status: selectedStatus,
-            search_term: searchInput.value,
-            startDate: startDateInput.value,
-            endDate: endDateInput.value
+            search_term: shipmentSearchInput.value, // ⭐️ ใช้ shipmentSearchInput
+            startDate: shipmentStartDateInput.value, // ⭐️ ใช้ shipmentStartDateInput
+            endDate: shipmentEndDateInput.value     // ⭐️ ใช้ shipmentEndDateInput
         };
 
         try {
@@ -57,25 +222,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success && result.data) {
                 renderShipmentsTable(result.data);
                 if (typeof renderPagination === 'function') {
-                    renderPagination('shipmentPagination', result.total, result.page, ROWS_PER_PAGE, fetchShipments);
-                } else { console.error('renderPagination function not defined.'); paginationControls.innerHTML = ''; }
+                    // ⭐️ ใช้ shipmentPaginationControls และ currentShipmentPage
+                    renderPagination('shipmentPagination', result.total, currentShipmentPage, ROWS_PER_PAGE, fetchShipments);
+                } else { console.error('renderPagination function not defined.'); shipmentPaginationControls.innerHTML = ''; }
                 updateConfirmSelectedButtonState();
 
-                if (summaryBar && totalSelectedQtySpan && result.summary) {
+                if (shipmentSummaryBar && totalSelectedQtySpan && result.summary) {
                      totalSelectedQtySpan.textContent = parseFloat(result.summary.total_quantity || 0).toLocaleString();
-                     summaryBar.style.display = 'block';
+                     shipmentSummaryBar.style.display = 'block';
                 }
 
             } else {
-                tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${result.message || 'Failed to load data.'}</td></tr>`; // ⭐️ ปรับ Colspan เป็น 8
-                paginationControls.innerHTML = '';
-                 if (summaryBar) summaryBar.style.display = 'none';
+                shipmentTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${result.message || 'Failed to load data.'}</td></tr>`;
+                shipmentPaginationControls.innerHTML = '';
+                 if (shipmentSummaryBar) shipmentSummaryBar.style.display = 'none';
             }
         } catch (error) {
             console.error("Error fetching shipments:", error);
-            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">An error occurred.</td></tr>`; // ⭐️ ปรับ Colspan เป็น 8
-            paginationControls.innerHTML = '';
-             if (summaryBar) summaryBar.style.display = 'none';
+            shipmentTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">An error occurred.</td></tr>`;
+            shipmentPaginationControls.innerHTML = '';
+             if (shipmentSummaryBar) shipmentSummaryBar.style.display = 'none';
         } finally {
             hideSpinner();
             if (selectAllCheckbox) selectAllCheckbox.checked = false;
@@ -83,9 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderShipmentsTable(data) {
-        tableBody.innerHTML = '';
+        shipmentTableBody.innerHTML = '';
         if (data.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No shipments found for the selected criteria.</td></tr>`;
+            shipmentTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No shipments found for the selected criteria.</td></tr>`;
             return;
         }
 
@@ -95,7 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const isPending = item.transaction_type === 'TRANSFER_PENDING_SHIPMENT';
             const isRejected = item.transaction_type === 'REJECTED_SHIPMENT';
 
-            const requestDateObj = new Date(item.transaction_timestamp);
+            // ... (การ format วันที่และ status เหมือนเดิม) ...
+             const requestDateObj = new Date(item.transaction_timestamp);
+             // ... (Code for formatting date, status, path) ...
             const day = String(requestDateObj.getDate()).padStart(2, '0');
             const month = String(requestDateObj.getMonth() + 1).padStart(2, '0');
             const year = String(requestDateObj.getFullYear()).slice(-2);
@@ -112,11 +280,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const transferPath = `${item.from_location || 'N/A'} → ${item.to_location || 'N/A'}`;
 
+
             tr.innerHTML = `
                 <td class="text-center">
                     ${isPending ? `<input class="form-check-input row-checkbox" type="checkbox" value="${item.transaction_id}">` : ''}
                 </td>
-                <td>${requestDateTimeFormatted}</td> 
+                <td>${requestDateTimeFormatted}</td>
                 <td>${item.sap_no || ''} / ${item.part_no || ''}</td>
                 <td>${transferPath}</td>
                 <td class="text-center">${parseFloat(item.quantity).toLocaleString()}</td>
@@ -133,11 +302,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <i class="fas fa-ban"></i>
                         </button>
                         ` : ''}
-                     ${isRejected ? `<span class="text-muted fst-italic">Rejected</span>` : ''}
-                     ${item.transaction_type === 'SHIPPED' ? `<span class="text-muted fst-italic">Shipped</span>` : ''}
+                   ${isRejected ? `<span class="text-muted fst-italic">Rejected</span>` : ''}
+                   ${item.transaction_type === 'SHIPPED' ? `<span class="text-muted fst-italic">Shipped</span>` : ''}
                 </td>
             `;
-            tableBody.appendChild(tr);
+            shipmentTableBody.appendChild(tr);
         });
     }
 
@@ -147,12 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await sendRequest(SHIPMENT_API, 'confirm_shipment', 'POST', { transaction_ids: [transactionId] });
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-            if (result.success) await fetchShipments(currentPage);
+            if (result.success) await fetchShipments(currentShipmentPage); // ⭐️ ใช้ currentShipmentPage
         } finally { hideSpinner(); }
     }
 
     async function handleConfirmSelected() {
-        const selectedCheckboxes = tableBody.querySelectorAll('.row-checkbox:checked');
+        const selectedCheckboxes = shipmentTableBody.querySelectorAll('.row-checkbox:checked'); // ⭐️ ใช้ shipmentTableBody
         const transactionIdsToConfirm = Array.from(selectedCheckboxes).map(cb => cb.value);
         if (transactionIdsToConfirm.length === 0) { showToast('Please select at least one shipment to confirm.', 'var(--bs-warning)'); return; }
         if (!confirm(`Confirm ${transactionIdsToConfirm.length} selected shipment(s)?`)) return;
@@ -161,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await sendRequest(SHIPMENT_API, 'confirm_shipment', 'POST', { transaction_ids: transactionIdsToConfirm });
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success || result.message.includes("No shipments were confirmed")) {
-                await fetchShipments(1);
+                await fetchShipments(1); // Refresh page 1
             }
         } finally { hideSpinner(); }
     }
@@ -169,43 +338,44 @@ document.addEventListener('DOMContentLoaded', () => {
     async function exportHistoryToExcel() {
         showSpinner();
         showToast('Preparing export...', 'var(--bs-info)');
-        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'pending';
+        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'all'; // ⭐️ Default เป็น all
         const params = {
-            limit: -1,
+            limit: -1, // Export all matching
             status: selectedStatus,
-            search_term: searchInput.value,
-            startDate: startDateInput.value,
-            endDate: endDateInput.value
+            search_term: shipmentSearchInput.value,
+            startDate: shipmentStartDateInput.value,
+            endDate: shipmentEndDateInput.value
         };
         try {
             const result = await sendRequest(SHIPMENT_API, 'get_shipments', 'GET', null, params);
             if (result.success && result.data.length > 0) {
+                 // ... (โค้ดสร้าง Excel เหมือนเดิม) ...
                  const worksheetData = result.data.map(item => {
-                     const dateObj = new Date(item.transaction_timestamp);
-                     const day = String(dateObj.getDate()).padStart(2, '0');
-                     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                     const year = dateObj.getFullYear();
-                     const dateFormatted = `${day}/${month}/${year}`;
-                     let statusText = item.transaction_type === 'TRANSFER_PENDING_SHIPMENT' ? 'Pending' : (item.transaction_type === 'SHIPPED' ? 'Shipped' : item.transaction_type);
-                     // Add Rejected status text
-                     if (item.transaction_type === 'REJECTED_SHIPMENT') statusText = 'Rejected';
+                     // ... (mapping logic) ...
+                       const dateObj = new Date(item.transaction_timestamp);
+                       const day = String(dateObj.getDate()).padStart(2, '0');
+                       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                       const year = dateObj.getFullYear();
+                       const dateFormatted = `${day}/${month}/${year}`;
+                       let statusText = item.transaction_type === 'TRANSFER_PENDING_SHIPMENT' ? 'Pending' : (item.transaction_type === 'SHIPPED' ? 'Shipped' : item.transaction_type);
+                       if (item.transaction_type === 'REJECTED_SHIPMENT') statusText = 'Rejected';
 
-                     return {
-                         'Status': statusText,
-                         'Date': dateFormatted,
-                         'SAP No': item.sap_no,
-                         'Part No': item.part_no,
-                         'Quantity': parseFloat(item.quantity),
-                         'From': item.from_location,
-                         'To': item.to_location,
-                         'Notes': item.notes
-                     };
+                       return {
+                           'Status': statusText,
+                           'Date': dateFormatted,
+                           'SAP No': item.sap_no,
+                           'Part No': item.part_no,
+                           'Quantity': parseFloat(item.quantity),
+                           'From': item.from_location,
+                           'To': item.to_location,
+                           'Notes': item.notes
+                       };
                  });
                 const worksheet = XLSX.utils.json_to_sheet(worksheetData);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Shipments");
-                const startDate = startDateInput.value || 'all';
-                const endDate = endDateInput.value || 'all';
+                const startDate = shipmentStartDateInput.value || 'all';
+                const endDate = shipmentEndDateInput.value || 'all';
                 XLSX.writeFile(workbook, `Shipments_${selectedStatus}_${startDate}_to_${endDate}.xlsx`);
                 showToast('Export successful!', 'var(--bs-success)');
             } else {
@@ -217,32 +387,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleNoteEdit(transactionId, newNote) {
-        // showSpinner(); // อาจจะไม่ต้องใช้ก็ได้
         try {
              const result = await sendRequest(SHIPMENT_API, 'update_shipment_note', 'POST', {
-                 transaction_id: transactionId,
-                 notes: newNote
+                 transaction_id: transactionId, notes: newNote
              });
              if (!result.success) {
-                  showToast(result.message, 'var(--bs-danger)');
-                  // Optional: revert
+                 showToast(result.message, 'var(--bs-danger)');
              } else {
-                 // Optional: Visual feedback
-                 const noteSpan = tableBody.querySelector(`.editable-note[data-id="${transactionId}"]`);
-                 if(noteSpan) {
-                     noteSpan.style.boxShadow = '0 0 0 2px var(--bs-success)'; // Highlight border
-                     setTimeout(() => { noteSpan.style.boxShadow = ''; }, 1500);
-                 }
+                const noteSpan = shipmentTableBody.querySelector(`.editable-note[data-id="${transactionId}"]`); // ⭐️ ใช้ shipmentTableBody
+                if(noteSpan) {
+                    noteSpan.style.boxShadow = '0 0 0 2px var(--bs-success)';
+                    setTimeout(() => { noteSpan.style.boxShadow = ''; }, 1500);
+                }
              }
-        } finally {
-            // hideSpinner();
+        } catch (error) {
+             console.error("Error updating note:", error);
+             showToast('Failed to update note.', 'var(--bs-danger)');
         }
     }
 
     function openRejectModal(transactionIds) {
          if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
-              showToast('No items selected for rejection.', 'var(--bs-warning)');
-              return;
+             showToast('No items selected for rejection.', 'var(--bs-warning)'); return;
          }
          rejectTransactionIdsInput.value = JSON.stringify(transactionIds);
          rejectReasonText.value = '';
@@ -253,28 +419,28 @@ document.addEventListener('DOMContentLoaded', () => {
          const transactionIds = JSON.parse(rejectTransactionIdsInput.value || '[]');
          const reason = rejectReasonText.value;
          if (transactionIds.length === 0) return;
-
          rejectReasonModal.hide();
          showSpinner();
          try {
              const result = await sendRequest(SHIPMENT_API, 'reject_shipment', 'POST', {
-                 transaction_ids: transactionIds,
-                 reason: reason
+                 transaction_ids: transactionIds, reason: reason
              });
              showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
              if (result.success || result.message.includes("No shipments were rejected")) {
-                 await fetchShipments(1);
+                 await fetchShipments(1); // Refresh page 1
              }
          } finally {
              hideSpinner();
          }
     }
 
-    // SECTION 3: HELPER FUNCTIONS
+    // =================================================================
+    // SECTION 4: HELPER FUNCTIONS
+    // =================================================================
     function updateConfirmSelectedButtonState() {
-        const selectedCheckboxes = tableBody.querySelectorAll('.row-checkbox:checked'); // ⭐️ ใช้ tableBody
+        const selectedCheckboxes = shipmentTableBody.querySelectorAll('.row-checkbox:checked'); // ⭐️ ใช้ shipmentTableBody
         const selectedCount = selectedCheckboxes.length;
-        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'pending';
+        const selectedStatus = document.querySelector('input[name="shipmentStatus"]:checked')?.value || 'all'; // ⭐️ Default เป็น all
 
         if (confirmSelectedBtn) {
             confirmSelectedBtn.disabled = !(selectedCount > 0 && (selectedStatus === 'pending' || selectedStatus === 'all'));
@@ -284,29 +450,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function setDefaultDates() {
-        const today = new Date().toISOString().split('T')[0];
-        if (!startDateInput.value) startDateInput.value = today;
-        if (!endDateInput.value) endDateInput.value = today;
+    // =================================================================
+    // SECTION 5: EVENT LISTENERS
+    // =================================================================
+
+    // --- ⭐️ Tab Switching Event ---
+    if (costDlotTab && shipmentTab) {
+        const triggerTabList = [].slice.call(document.querySelectorAll('#managementTab button'));
+        triggerTabList.forEach(triggerEl => {
+            const tabTrigger = new bootstrap.Tab(triggerEl);
+            triggerEl.addEventListener('click', event => {
+                event.preventDefault();
+                tabTrigger.show();
+            });
+        });
+
+        // Add listeners for when a tab has finished showing
+        costDlotTab.addEventListener('shown.bs.tab', () => {
+             console.log("Cost/DLOT Tab shown");
+             // Refresh cost summary and form data when tab becomes visible
+             fetchCostSummary();
+             handleDlotDateChange();
+             // Hide shipment pagination if needed
+             if (shipmentPaginationControls) shipmentPaginationControls.style.display = 'none';
+        });
+        shipmentTab.addEventListener('shown.bs.tab', () => {
+            console.log("Shipment Tab shown");
+            // Fetch shipment data when tab becomes visible
+            fetchShipments(currentShipmentPage); // Fetch current page first
+             // Show shipment pagination
+             if (shipmentPaginationControls) shipmentPaginationControls.style.display = 'flex'; // Or 'block' depending on your CSS
+        });
     }
 
-    // =================================================================
-    // SECTION 4: EVENT LISTENERS - *** ตรวจสอบ Argument ตัวที่สอง ***
-    // =================================================================
+    // --- DLOT Cost Summary Filter Events ---
+    btnRefreshCostSummary?.addEventListener('click', fetchCostSummary);
+    costSummaryStartDateInput?.addEventListener('change', fetchCostSummary);
+    costSummaryEndDateInput?.addEventListener('change', fetchCostSummary);
+    costSummaryLineSelect?.addEventListener('change', fetchCostSummary);
 
-    // --- Filter Events ---
-    searchInput?.addEventListener('input', () => { // ✅ Argument 2: Function
+    // --- DLOT Entry Form Events ---
+    dlotEntryForm?.addEventListener('submit', handleSaveDlotForm);
+    dlotEntryDateInput?.addEventListener('change', handleDlotDateChange);
+    dlotEntryLineSelect?.addEventListener('change', handleDlotDateChange);
+
+    // --- Shipment Filter Events ---
+    shipmentSearchInput?.addEventListener('input', () => { // ⭐️ ใช้ shipmentSearchInput
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => fetchShipments(1), 500);
     });
-    startDateInput?.addEventListener('change', () => fetchShipments(1)); // ✅ Argument 2: Function
-    endDateInput?.addEventListener('change', () => fetchShipments(1));   // ✅ Argument 2: Function
-    exportHistoryBtn?.addEventListener('click', exportHistoryToExcel);     // ✅ Argument 2: Function Name
+    shipmentStartDateInput?.addEventListener('change', () => fetchShipments(1)); // ⭐️ ใช้ shipmentStartDateInput
+    shipmentEndDateInput?.addEventListener('change', () => fetchShipments(1)); // ⭐️ ใช้ shipmentEndDateInput
+    exportHistoryBtn?.addEventListener('click', exportHistoryToExcel);
 
     // --- Status Filter ---
     statusFilterRadios.forEach(radio => {
-        radio.addEventListener('change', () => { // ✅ Argument 2: Function
-            fetchShipments(1);
+        radio.addEventListener('change', () => {
+            fetchShipments(1); // Fetch page 1 when status changes
             const isViewOnly = radio.value === 'shipped' || radio.value === 'rejected';
             if (confirmSelectedBtn) confirmSelectedBtn.style.display = isViewOnly ? 'none' : 'inline-block';
             if (rejectSelectedBtn) rejectSelectedBtn.style.display = isViewOnly ? 'none' : 'inline-block';
@@ -319,18 +519,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Checkbox Events ---
-    selectAllCheckbox?.addEventListener('change', (e) => { // ✅ Argument 2: Function
-        tableBody.querySelectorAll('.row-checkbox').forEach(checkbox => {
+    selectAllCheckbox?.addEventListener('change', (e) => {
+        shipmentTableBody.querySelectorAll('.row-checkbox').forEach(checkbox => { // ⭐️ ใช้ shipmentTableBody
             checkbox.checked = e.target.checked;
         });
         updateConfirmSelectedButtonState();
     });
 
-    if (tableBody) {
-        tableBody.addEventListener('change', (e) => { // ✅ Argument 2: Function
+    if (shipmentTableBody) { // ⭐️ ใช้ shipmentTableBody
+        shipmentTableBody.addEventListener('change', (e) => {
             if (e.target.classList.contains('row-checkbox')) {
-                const allCheckboxes = tableBody.querySelectorAll('.row-checkbox');
-                const checkedCount = tableBody.querySelectorAll('.row-checkbox:checked').length;
+                const allCheckboxes = shipmentTableBody.querySelectorAll('.row-checkbox');
+                const checkedCount = shipmentTableBody.querySelectorAll('.row-checkbox:checked').length;
                 if (selectAllCheckbox) {
                     selectAllCheckbox.checked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
                 }
@@ -340,24 +540,24 @@ document.addEventListener('DOMContentLoaded', () => {
     } else { console.error("Element with ID 'shipmentsTableBody' not found."); }
 
     // --- Button Click Events ---
-    confirmSelectedBtn?.addEventListener('click', handleConfirmSelected); // ✅ Argument 2: Function Name
-    rejectSelectedBtn?.addEventListener('click', () => { // ✅ Argument 2: Function
-          const selectedCheckboxes = tableBody.querySelectorAll('.row-checkbox:checked');
-          const transactionIdsToReject = Array.from(selectedCheckboxes).map(cb => cb.value);
-          openRejectModal(transactionIdsToReject);
-     });
-    confirmRejectBtn?.addEventListener('click', executeReject); // ✅ Argument 2: Function Name
+    confirmSelectedBtn?.addEventListener('click', handleConfirmSelected);
+    rejectSelectedBtn?.addEventListener('click', () => {
+         const selectedCheckboxes = shipmentTableBody.querySelectorAll('.row-checkbox:checked'); // ⭐️ ใช้ shipmentTableBody
+         const transactionIdsToReject = Array.from(selectedCheckboxes).map(cb => cb.value);
+         openRejectModal(transactionIdsToReject);
+      });
+    confirmRejectBtn?.addEventListener('click', executeReject);
 
     // --- Table Click/Input Events (Delegation) ---
-    if (tableBody) {
-        tableBody.addEventListener('click', (e) => { // ✅ Argument 2: Function
+    if (shipmentTableBody) { // ⭐️ ใช้ shipmentTableBody
+        shipmentTableBody.addEventListener('click', (e) => {
             const confirmButton = e.target.closest('.confirm-single-btn');
             if (confirmButton) { handleConfirmShipment(confirmButton.dataset.id); return; }
             const rejectButton = e.target.closest('.reject-single-btn');
             if (rejectButton) { openRejectModal([rejectButton.dataset.id]); return; }
         });
 
-        tableBody.addEventListener('blur', (e) => { // ✅ Argument 2: Function
+        shipmentTableBody.addEventListener('blur', (e) => {
              if (e.target.classList.contains('editable-note') && !e.target.classList.contains('text-muted')) {
                  const span = e.target;
                  const transactionId = span.dataset.id;
@@ -367,22 +567,38 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         }, true);
 
-        tableBody.addEventListener('keydown', (e) => { // ✅ Argument 2: Function
+        shipmentTableBody.addEventListener('keydown', (e) => {
              if (e.target.classList.contains('editable-note') && e.key === 'Enter' && !e.target.classList.contains('text-muted')) {
-                 e.preventDefault();
-                 e.target.blur();
+                 e.preventDefault(); e.target.blur();
              }
         });
 
     } else { console.error("Element with ID 'shipmentsTableBody' not found."); }
 
     // =================================================================
-    // SECTION 5: INITIALIZATION
+    // SECTION 6: INITIALIZATION
     // =================================================================
-    setDefaultDates();
-    fetchShipments(1);
-    
-    if(confirmSelectedBtn) confirmSelectedBtn.style.display = 'inline-block';
-    if(rejectSelectedBtn) rejectSelectedBtn.style.display = 'inline-block';
+
+    setAllDefaultDates();
+    fetchDashboardLines();
+
+    // ⭐️ Initial load depends on which tab is active first (Cost/DLOT)
+    if (costDlotTab && costDlotTab.classList.contains('active')) {
+        fetchCostSummary();
+        handleDlotDateChange();
+         if (shipmentPaginationControls) shipmentPaginationControls.style.display = 'none';
+    } else if (shipmentTab && shipmentTab.classList.contains('active')) {
+        fetchShipments(1);
+         if (shipmentPaginationControls) shipmentPaginationControls.style.display = 'flex';
+    } else {
+        // Fallback: Load Cost/DLOT if no tab is marked active initially
+        fetchCostSummary();
+        handleDlotDateChange();
+        if (shipmentPaginationControls) shipmentPaginationControls.style.display = 'none';
+    }
+
+
+    if(confirmSelectedBtn) confirmSelectedBtn.style.display = 'inline-block'; // Consider hiding/showing based on active tab?
+    if(rejectSelectedBtn) rejectSelectedBtn.style.display = 'inline-block'; // Consider hiding/showing based on active tab?
 
 }); // End DOMContentLoaded
