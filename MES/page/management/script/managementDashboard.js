@@ -62,15 +62,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // SECTION 2: DLOT & COST SUMMARY FUNCTIONS
     // =================================================================
 
-    function setAllDefaultDates() {
-        const today = new Date().toISOString().split('T')[0];
-        const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    /**
+     * Formats a Date object into YYYY-MM-DD string for input fields, respecting local timezone.
+     * @param {Date} date The date object to format.
+     * @returns {string} The formatted date string.
+     */
+    function formatDateForInput(date) {
+        if (!(date instanceof Date) || isNaN(date)) {
+            // Return empty or a default if the date is invalid
+            console.error("Invalid date passed to formatDateForInput:", date);
+            return new Date().toISOString().split('T')[0]; // Fallback to today UTC just in case
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
-        if (shipmentStartDateInput && !shipmentStartDateInput.value) shipmentStartDateInput.value = today;
-        if (shipmentEndDateInput && !shipmentEndDateInput.value) shipmentEndDateInput.value = today;
-        if (costSummaryStartDateInput && !costSummaryStartDateInput.value) costSummaryStartDateInput.value = firstDayOfMonth;
-        if (costSummaryEndDateInput && !costSummaryEndDateInput.value) costSummaryEndDateInput.value = today;
-        if (dlotEntryDateInput && !dlotEntryDateInput.value) dlotEntryDateInput.value = today;
+    function setAllDefaultDates() {
+        const today = new Date();
+        const firstDayOfMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        // ใช้ฟังก์ชัน formatDateForInput ใหม่
+        const todayFormatted = formatDateForInput(today);
+        const firstDayOfMonthFormatted = formatDateForInput(firstDayOfMonthDate);
+
+        // Dates for Shipment Filter
+        if (shipmentStartDateInput && !shipmentStartDateInput.value) shipmentStartDateInput.value = todayFormatted;
+        if (shipmentEndDateInput && !shipmentEndDateInput.value) shipmentEndDateInput.value = todayFormatted;
+
+        // Dates for Cost Summary Filter
+        if (costSummaryStartDateInput && !costSummaryStartDateInput.value) costSummaryStartDateInput.value = firstDayOfMonthFormatted; // ⬅️ ใช้ Format ใหม่
+        if (costSummaryEndDateInput && !costSummaryEndDateInput.value) costSummaryEndDateInput.value = todayFormatted;           // ⬅️ ใช้ Format ใหม่
+
+        // Date for DLOT Entry Form
+        if (dlotEntryDateInput && !dlotEntryDateInput.value) dlotEntryDateInput.value = todayFormatted;                           // ⬅️ ใช้ Format ใหม่
     }
 
     async function fetchDashboardLines() {

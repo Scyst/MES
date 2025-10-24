@@ -158,7 +158,7 @@ session_start();
                                 <span class="percentage" id="prodCostPercentRM">-- %</span>
                             </div>
                             <div class="col-md-4">
-                                <h6><i class="fas fa-hard-hat"></i> Direct Labor Cost</h6>
+                                <h6><i class="fas fa-hard-hat"></i> Total DLOT</h6>
                                 <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentDL">-- %</span>
                             </div>
