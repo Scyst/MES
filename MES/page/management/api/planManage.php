@@ -1,0 +1,336 @@
+<?php
+// ไฟล์: MES/page/management/api/planManage.php
+// API สำหรับจัดการข้อมูล Production Plan
+
+header('Content-Type: application/json');
+ini_set('display_errors', 1); // แสดง Error (สำหรับ Debugging)
+error_reporting(E_ALL);
+
+// 1. Include dependencies
+session_start();
+require_once '../../../auth/check_auth.php'; // ตรวจสอบสิทธิ์
+require_once '../../db.php'; // เชื่อมต่อฐานข้อมูล ($pdo) และ Config
+
+// 2. ตรวจสอบสิทธิ์ (ปรับตาม Role ที่ต้องการ)
+if (!hasRole(['admin', 'creator', 'planner'])) {
+    http_response_code(403); // Forbidden
+    echo json_encode(['success' => false, 'message' => 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้']);
+    exit;
+}
+
+// 3. กำหนดชื่อตารางจาก Config
+if (!defined('PRODUCTION_PLANS_TABLE') || !defined('ITEMS_TABLE')) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Configuration Error: Table constants are not defined.']);
+    exit;
+}
+$planTable = '[dbo].[' . PRODUCTION_PLANS_TABLE . ']';
+$itemTable = '[dbo].[' . ITEMS_TABLE . ']'; // ต้องใช้ join เพื่อแสดงชื่อ Item
+
+// 4. อ่านข้อมูล Request (GET สำหรับดึง, POST สำหรับ CUD)
+$method = $_SERVER['REQUEST_METHOD'];
+$data = [];
+$action = '';
+
+if ($method === 'GET') {
+    $data = $_GET;
+    $action = $data['action'] ?? '';
+} elseif ($method === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $action = $data['action'] ?? '';
+}
+
+if (empty($action)) {
+    http_response_code(400); // Bad Request
+    echo json_encode(['success' => false, 'message' => 'No action specified.']);
+    exit;
+}
+
+// 5. เตรียมข้อมูล User
+$currentUser = $_SESSION['username'] ?? 'system';
+
+// 6. ประมวลผลตาม Action
+try {
+    switch ($action) {
+        // ===================================
+        // ACTION: get_plans
+        // ===================================
+        case 'get_plans':
+            if ($method !== 'GET') throw new Exception("Invalid request method for get_plans.");
+
+            $planDate = $data['planDate'] ?? date('Y-m-d'); // Default to today if not provided
+            $line = $data['line'] ?? null;
+            $shift = $data['shift'] ?? null;
+
+            // Build base query
+            $sql = "SELECT
+                        p.plan_id,
+                        CONVERT(varchar, p.plan_date, 23) as plan_date, -- Format YYYY-MM-DD
+                        p.line,
+                        p.shift,
+                        p.item_id,
+                        i.sap_no,
+                        i.part_no,
+                        i.part_description,
+                        p.original_planned_quantity,
+                        p.carry_over_quantity,
+                        p.adjusted_planned_quantity,
+                        p.note,
+                        p.updated_at,
+                        p.updated_by
+                    FROM
+                        $planTable p
+                    INNER JOIN
+                        $itemTable i ON p.item_id = i.item_id
+                    WHERE
+                        p.plan_date = :planDate";
+
+            $params = [':planDate' => $planDate];
+
+            // Add optional filters
+            if (!empty($line)) {
+                $sql .= " AND p.line = :line";
+                $params[':line'] = $line;
+            }
+            if (!empty($shift)) {
+                $sql .= " AND p.shift = :shift";
+                $params[':shift'] = $shift;
+            }
+
+            $sql .= " ORDER BY p.line, p.shift, i.sap_no"; // เรียงลำดับ
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $plans]);
+            break;
+
+        // ===================================
+        // ACTION: save_plan (Handles Insert & Update)
+        // ===================================
+        case 'save_plan':
+            if ($method !== 'POST') throw new Exception("Invalid request method for save_plan.");
+
+            // Validate required fields
+            $requiredFields = ['plan_date', 'line', 'shift', 'item_id', 'original_planned_quantity'];
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field]) || ($field !== 'original_planned_quantity' && empty($data[$field]))) {
+                     throw new Exception("Missing or empty required field: " . $field);
+                }
+                 // Allow 0 for quantity
+                if ($field === 'original_planned_quantity' && !is_numeric($data[$field])) {
+                     throw new Exception("Planned quantity must be a number.");
+                }
+            }
+
+            $planId = isset($data['plan_id']) ? (int)$data['plan_id'] : 0;
+            $planDate = $data['plan_date'];
+            $line = $data['line'];
+            $shift = $data['shift'];
+            $itemId = (int)$data['item_id'];
+            $originalQuantity = (float)$data['original_planned_quantity'];
+            $note = $data['note'] ?? null;
+
+             // Ensure item_id is valid before saving
+             $itemCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM $itemTable WHERE item_id = ?");
+             $itemCheckStmt->execute([$itemId]);
+             if ($itemCheckStmt->fetchColumn() == 0) {
+                 throw new Exception("Invalid Item ID provided.");
+             }
+
+
+            if ($planId > 0) {
+                // --- UPDATE ---
+                // Note: We only update original_planned_quantity and note.
+                // carry_over_quantity is updated by a separate process.
+                $sql = "UPDATE $planTable SET
+                            plan_date = :plan_date,
+                            line = :line,
+                            shift = :shift,
+                            item_id = :item_id,
+                            original_planned_quantity = :original_planned_quantity,
+                            note = :note,
+                            updated_at = GETDATE(), -- Let the trigger handle this ideally
+                            updated_by = :updated_by
+                        WHERE plan_id = :plan_id";
+                $params = [
+                    ':plan_date' => $planDate,
+                    ':line' => $line,
+                    ':shift' => $shift,
+                    ':item_id' => $itemId,
+                    ':original_planned_quantity' => $originalQuantity,
+                    ':note' => $note,
+                    ':updated_by' => $currentUser,
+                    ':plan_id' => $planId
+                ];
+                $message = 'Production plan updated successfully.';
+
+            } else {
+                // --- INSERT ---
+                // We only insert the original plan. Carry-over starts at 0.
+                $sql = "INSERT INTO $planTable
+                            (plan_date, line, shift, item_id, original_planned_quantity, note, updated_by)
+                        VALUES
+                            (:plan_date, :line, :shift, :item_id, :original_planned_quantity, :note, :updated_by)";
+                 $params = [
+                    ':plan_date' => $planDate,
+                    ':line' => $line,
+                    ':shift' => $shift,
+                    ':item_id' => $itemId,
+                    ':original_planned_quantity' => $originalQuantity,
+                    ':note' => $note,
+                    ':updated_by' => $currentUser
+                ];
+                $message = 'Production plan added successfully.';
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+
+            echo json_encode(['success' => true, 'message' => $message]);
+            break;
+
+        // ===================================
+        // ACTION: delete_plan
+        // ===================================
+        case 'delete_plan':
+             if ($method !== 'POST') throw new Exception("Invalid request method for delete_plan.");
+
+             $planId = isset($data['plan_id']) ? (int)$data['plan_id'] : 0;
+             if ($planId <= 0) {
+                 throw new Exception("Invalid Plan ID for deletion.");
+             }
+
+             $sql = "DELETE FROM $planTable WHERE plan_id = :plan_id";
+             $stmt = $pdo->prepare($sql);
+             $stmt->execute([':plan_id' => $planId]);
+
+             $rowCount = $stmt->rowCount();
+             if ($rowCount > 0) {
+                echo json_encode(['success' => true, 'message' => 'Production plan deleted successfully.']);
+             } else {
+                 // Might happen if the ID doesn't exist or was already deleted
+                 echo json_encode(['success' => false, 'message' => 'Plan not found or could not be deleted.']);
+             }
+             break;
+
+        case 'update_carry_over':
+            if ($method !== 'POST') throw new Exception("Invalid request method for update_carry_over.");
+
+            $planId = isset($data['plan_id']) ? (int)$data['plan_id'] : 0;
+            // ตรวจสอบว่าค่าที่ส่งมาเป็นตัวเลขหรือไม่ และไม่ติดลบ
+            if (!isset($data['carry_over_quantity']) || !is_numeric($data['carry_over_quantity']) || $data['carry_over_quantity'] < 0) {
+                 throw new Exception("Invalid or missing Carry Over Quantity provided. It must be a non-negative number.");
+            }
+             $newCarryOverQuantity = (float)$data['carry_over_quantity'];
+
+
+            if ($planId <= 0) {
+                throw new Exception("Invalid Plan ID for updating carry-over.");
+            }
+
+            // สร้าง SQL UPDATE เฉพาะคอลัมน์ carry_over_quantity และ updated_by
+            // updated_at จะถูกอัปเดตโดย Trigger ที่เราสร้างไว้
+            $sql = "UPDATE $planTable SET
+                        carry_over_quantity = :carry_over_quantity,
+                        updated_by = :updated_by
+                    WHERE plan_id = :plan_id";
+
+            $params = [
+                ':carry_over_quantity' => $newCarryOverQuantity,
+                ':updated_by' => $currentUser,
+                ':plan_id' => $planId
+            ];
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+
+            if ($stmt->rowCount() > 0) {
+                 echo json_encode(['success' => true, 'message' => 'Carry-over quantity updated successfully.']);
+            } else {
+                 // อาจจะหา plan_id ไม่เจอ
+                 http_response_code(404); // Not Found
+                 echo json_encode(['success' => false, 'message' => 'Plan not found or carry-over value was the same.']);
+            }
+            break;
+
+        case 'calculate_carry_over':
+            // ใช้ POST หรือ GET ก็ได้
+            $endDate = $data['endDate'] ?? date('Y-m-d'); // วันสิ้นสุด (Default เป็นวันนี้)
+            $startDate = $data['startDate'] ?? null;     // วันเริ่มต้น (Optional)
+
+            // ตรวจสอบ Format endDate
+            if (!preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $endDate)) {
+                 throw new Exception("Invalid End Date format provided. Use YYYY-MM-DD.");
+            }
+
+            // --- หา StartDate อัตโนมัติ ถ้าไม่ได้ระบุมา ---
+            if (empty($startDate)) {
+                // หา plan_date แรกสุด ที่ carry_over ยังเป็น 0 และ adjusted_plan > 0 (แสดงว่ายังไม่เคยถูกคำนวณ หรือถูก Reset)
+                // หรืออาจจะหา MAX(plan_date) ที่ updated_at เก่าที่สุด? --> ซับซ้อนและอาจไม่แม่นยำ
+                // วิธีที่ง่ายกว่า: หา MIN(plan_date) ที่เก่าที่สุดที่อาจจะต้องคำนวณ
+                // หรือ เริ่มจาก X วันก่อนหน้า endDate (เช่น 30 วัน) เพื่อความปลอดภัย
+                // ลองเริ่มจาก 30 วันก่อนหน้า endDate ก่อน เพื่อความง่าย
+                 $potentialStartDate = date('Y-m-d', strtotime('-30 days', strtotime($endDate)));
+
+                 // หรือจะ Query หา MIN(plan_date) จริงๆ?
+                 $minDateSql = "SELECT MIN(plan_date) FROM $planTable WHERE plan_date <= :endDate";
+                 $minStmt = $pdo->prepare($minDateSql);
+                 $minStmt->execute([':endDate' => $endDate]);
+                 $minPlanDate = $minStmt->fetchColumn();
+
+                 // ใช้ค่าที่ใหม่กว่าระหว่าง 30 วันก่อน หรือ วันแรกที่มีแผน
+                 if ($minPlanDate && $minPlanDate > $potentialStartDate) {
+                     $startDate = $minPlanDate;
+                 } else {
+                     $startDate = $potentialStartDate;
+                 }
+                 // อาจจะต้องมี Logic เพิ่มเติมเพื่อหา "วันที่ยังไม่ได้คำนวณ" จริงๆ
+                 // แต่การเริ่มจาก 30 วันก่อน หรือวันแรกที่มีแผน น่าจะครอบคลุมกรณีส่วนใหญ่
+                 // *** หมายเหตุ: การคำนวณย้อนหลังเยอะๆ อาจใช้เวลา ***
+            } else {
+                 // ตรวจสอบ Format startDate ถ้าส่งมา
+                 if (!preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $startDate)) {
+                      throw new Exception("Invalid Start Date format provided. Use YYYY-MM-DD.");
+                 }
+                 if ($startDate > $endDate) {
+                     throw new Exception("StartDate cannot be after EndDate.");
+                 }
+            }
+
+
+            // เลือก Stored Procedure ตาม Environment
+            $spName = IS_DEVELOPMENT
+                        ? '[dbo].[sp_UpdatePlanCarryOver_TEST]'
+                        : '[dbo].[sp_UpdatePlanCarryOver]';
+
+            // เตรียมและ Execute Stored Procedure
+            $stmt = $pdo->prepare("EXEC {$spName} @StartDate = ?, @EndDate = ?"); // ส่ง Parameter 2 ตัว
+            $stmt->bindParam(1, $startDate, PDO::PARAM_STR);
+            $stmt->bindParam(2, $endDate, PDO::PARAM_STR);
+            $stmt->execute();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Carry-over calculation triggered successfully from ' . $startDate . ' to ' . $endDate
+            ]);
+            break;
+
+        default:
+            http_response_code(400); // Bad Request
+            echo json_encode(['success' => false, 'message' => 'Invalid action specified.']);
+            break;
+    }
+
+} catch (PDOException $e) {
+    http_response_code(500); // Internal Server Error
+    error_log("Database Error in planManage.php: Action '{$action}' - " . $e->getMessage()); // Log detailed error
+    echo json_encode(['success' => false, 'message' => 'A database error occurred. Please check logs.']); // Generic message to user
+} catch (Exception $e) {
+    http_response_code(400); // Bad Request (usually for validation errors) or 500 for others
+    error_log("General Error in planManage.php: Action '{$action}' - " . $e->getMessage()); // Log detailed error
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]); // Show specific error message (can be refined)
+}
+
+?>
