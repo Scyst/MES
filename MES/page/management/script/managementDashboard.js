@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ROWS_PER_PAGE = 50;
     let allPlanningItems = []; // เก็บ Item ทั้งหมดสำหรับ Autocomplete
     let selectedPlanItem = null; // เก็บ Item ที่ถูกเลือกใน Modal
+    let planVsActualChart = null;
+    let planVsActualChartInstance = null;
 
     // --- DOM Elements (Shared & Tabs) ---
     const costPlanningTab = document.getElementById('cost-planning-tab');
@@ -165,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchCostSummary() {
-        // ... (function remains the same) ...
         if (!costPlanningTab || !costPlanningTab.classList.contains('active')) return;
         showSpinner();
         const params = { startDate: costSummaryStartDateInput.value, endDate: costSummaryEndDateInput.value, line: costSummaryLineSelect.value || null }; // Send null if ALL
@@ -186,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCostSummaryUI(standardData, actualData) {
-        // ... (function remains the same) ...
         const stdCost = (standardData && standardData.TotalDLCost != null) ? parseFloat(standardData.TotalDLCost) : 0; // Check for null
         const actualCost = (actualData && actualData.TotalActualDLOT != null) ? parseFloat(actualData.TotalActualDLOT) : 0; // Check for null
         const variance = actualCost - stdCost;
@@ -207,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     async function handleDlotDateChange() {
-        // ... (function remains the same) ...
         if (!costPlanningTab || !costPlanningTab.classList.contains('active')) return;
         const entry_date = dlotEntryDateInput.value;
         const line = dlotEntryLineSelect.value || 'ALL'; // Default to ALL if empty
@@ -251,6 +250,142 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
 
     /**
+     * Renders or updates the Plan vs Actual comparison chart using Chart.js.
+     * @param {Array} planData Array of plan objects (already filtered by date/line/shift).
+     */
+    function renderPlanVsActualChart(planData) {
+        const chartCanvas = document.getElementById('planVsActualChart'); // Get the canvas element
+        const chartDateDisplay = document.getElementById('chartDateDisplay');
+        if (!chartCanvas) return; // Exit if canvas not found
+
+        // Get the 2D context for Chart.js
+        const ctx = chartCanvas.getContext('2d');
+
+        // Update chart title date
+        if (chartDateDisplay && planData.length > 0) {
+            chartDateDisplay.textContent = planData[0].plan_date;
+        } else if (chartDateDisplay) {
+            chartDateDisplay.textContent = planDateFilter.value;
+        }
+
+        // --- Prepare data for Chart.js ---
+        const labels = planData.map(p => p.sap_no || p.part_no || 'N/A');
+        const adjustedPlanData = planData.map(p => parseFloat(p.adjusted_planned_quantity || 0));
+        const actualQtyData = planData.map(p => parseFloat(p.actual_quantity || 0));
+
+        // --- Chart.js Configuration ---
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                label: 'Adjusted Plan',
+                data: adjustedPlanData,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Actual Qty',
+                data: actualQtyData,
+                backgroundColor: (context) => { // Dynamic color based on comparison
+                    const index = context.dataIndex;
+                    const planValue = adjustedPlanData[index];
+                    const actualValue = actualQtyData[index];
+                    if (actualValue < planValue) {
+                        return 'rgba(255, 99, 132, 0.7)'; // Red if less than plan
+                    } else if (actualValue >= planValue && planValue > 0) {
+                        return 'rgba(75, 192, 192, 0.7)'; // Green if met or exceeded (and plan > 0)
+                    }
+                    return 'rgba(201, 203, 207, 0.7)'; // Grey otherwise (e.g., plan is 0)
+                },
+                borderColor: (context) => {
+                    const index = context.dataIndex;
+                    const planValue = adjustedPlanData[index];
+                    const actualValue = actualQtyData[index];
+                    if (actualValue < planValue) {
+                        return 'rgba(255, 99, 132, 1)';
+                    } else if (actualValue >= planValue && planValue > 0) {
+                        return 'rgba(75, 192, 192, 1)';
+                    }
+                    return 'rgba(201, 203, 207, 1)';
+                },
+                borderWidth: 1
+            }]
+        };
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false, // Allow chart to fill container height
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity'
+                    },
+                    ticks: { // Format Y-axis labels with commas
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        minRotation: 0,
+                        font: {
+                            size: 12
+                        },
+                        autoSkip: true,
+                        maxTicksLimit: 15
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                    label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toLocaleString(); // Format tooltip value
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: { // Using chartjs-plugin-datalabels
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: (value, context) => {
+                        return value > 0 ? value.toLocaleString() : ''; // Show label if > 0, formatted
+                    },
+                    font: {
+                        size: 10
+                    },
+                    color: '#444' // Adjust label color if needed
+                }
+            }
+        };
+
+        // Destroy previous chart instance if it exists before creating a new one
+        if (planVsActualChartInstance) {
+            planVsActualChartInstance.destroy();
+        }
+
+        // Create the new chart instance
+        planVsActualChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: chartOptions,
+            plugins: [ChartDataLabels] // Register the datalabels plugin
+        });
+    }
+
+    /**
      * Fetches production plans based on current filters.
      */
     async function fetchPlans(page = 1) {
@@ -274,16 +409,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (result.success && result.data) {
                 renderPlanTable(result.data);
+                renderPlanVsActualChart(result.data);
                 // Add pagination rendering if implementing pagination for plans
                 // if (typeof renderPagination === 'function' && result.total > ROWS_PER_PAGE) {
                 //     renderPagination('planPagination', result.total, currentPlanPage, ROWS_PER_PAGE, fetchPlans);
                 // }
             } else {
                 productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">${result.message || 'Failed to load plans.'}</td></tr>`;
+                renderPlanVsActualChart([]);
             }
         } catch (error) {
             console.error("Error fetching plans:", error);
             productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">An error occurred while loading plans.</td></tr>`;
+            renderPlanVsActualChart([]);
         } finally {
             hideSpinner();
         }
@@ -308,6 +446,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalPlan = parseFloat(plan.original_planned_quantity || 0);
             const carryOver = parseFloat(plan.carry_over_quantity || 0);
             const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
+            const actualQty = parseFloat(plan.actual_quantity || 0);
+
+            let actualClass = '';
+            if (actualQty < adjustedPlan) {
+                actualClass = 'text-danger'; // สีแดงถ้าน้อยกว่าแผน
+            } else if (actualQty >= adjustedPlan && adjustedPlan > 0) { // adjustedPlan > 0 ป้องกันกรณีแผนเป็น 0 แล้วผลิตได้
+                actualClass = 'text-success'; // สีเขียวถ้าเท่ากับหรือมากกว่าแผน
+            }
 
             tr.innerHTML = `
                 <td>${plan.plan_date || ''}</td>
@@ -317,14 +463,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="fw-bold">${plan.sap_no || 'N/A'}</span> / ${plan.part_no || 'N/A'}
                     <small class="d-block text-muted">${plan.part_description || ''}</small>
                 </td>
-                <td class="text-end">${originalPlan.toLocaleString()}</td>
-                <td class="text-end ${carryOver > 0 ? 'text-warning' : ''}">
-                     <span class="editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" inputmode="decimal" tabindex="0">${carryOver.toLocaleString()}</span>
-                 </td>
-                <td class="text-end fw-bold" data-field="adjusted_plan">${adjustedPlan.toLocaleString()}</td>
-                <td>
+                <td class="text-center">${originalPlan.toLocaleString()}</td>
+                <td class="text-center ${actualClass}">${actualQty.toLocaleString()}</td>
+                <td class="text-center ${carryOver > 0 ? 'text-warning' : ''}">
+                    <span class="editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" inputmode="decimal" tabindex="0">${carryOver.toLocaleString()}</span>
+                </td>
+                <td class="text-center fw-bold" data-field="adjusted_plan">${adjustedPlan.toLocaleString()}</td>
+                <td class="text-center">
                     <span class="editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="note" tabindex="0">${plan.note || ''}</span>
-                 </td>
+                </td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary edit-plan-btn" title="Edit Plan">
                         <i class="fas fa-edit"></i>

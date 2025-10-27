@@ -63,6 +63,20 @@
              overflow-y: auto; /* Allow DLOT form to scroll if content is long */
         }
 
+        #cost-planning-tab-pane .left-column .card.chart-card-plan {
+            height: 400px; /* ★★★ กำหนดความสูงคงที่ (ปรับค่าได้ตามต้องการ) ★★★ */
+            flex-shrink: 0; /* ป้องกันไม่ให้ Card หดตัว */
+            display: flex; /* ทำให้ Card เป็น Flex Container */
+            flex-direction: column; /* จัดเรียง Header และ Body แนวตั้ง */
+        }
+
+        #cost-planning-tab-pane .left-column .card.chart-card-plan .card-body {
+            position: relative; /* ★★★ จำเป็นสำหรับ Canvas ที่จะอยู่ข้างใน ★★★ */
+            flex-grow: 1; /* ★★★ ทำให้ card-body ยืดเต็มความสูงที่เหลือของ Card ★★★ */
+            padding: 0.5rem; /* ลด Padding ลงเล็กน้อย หรือปรับตามต้องการ */
+            min-height: 0; /* ช่วยให้ Flexbox ทำงานถูกต้อง */
+        }
+
 
         #shipment-tab-pane .content-wrapper { flex-grow: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
         #shipment-tab-pane .table-responsive { flex-grow: 1; overflow-y: auto; min-height: 0; }
@@ -136,6 +150,19 @@
                                     </div>
                                 </div>
 
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <div class="card shadow-sm chart-card-plan">
+                                            <div class="card-header">
+                                                Plan vs Actual Production (<span id="chartDateDisplay"></span>)
+                                            </div>
+                                            <div class="card-body">
+                                                <canvas id="planVsActualChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="planning-table-wrapper table-responsive">
                                     <table class="table table-striped table-hover table-sm" id="productionPlanTable">
                                         <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
@@ -144,10 +171,11 @@
                                                 <th style="width: 10%;">Line</th>
                                                 <th style="width: 8%;">Shift</th>
                                                 <th>Item (SAP / Part No)</th>
-                                                <th style="width: 10%;" class="text-end">Plan Qty</th>
-                                                <th style="width: 10%;" class="text-end">Carry Over</th>
-                                                <th style="width: 10%;" class="text-end">Adjusted Plan</th>
-                                                <th>Note</th>
+                                                <th style="width: 10%;" class="text-center">Plan Qty</th>
+                                                <th style="width: 10%;" class="text-center">Actual Qty</th>
+                                                <th style="width: 10%;" class="text-center">Carry Over</th>
+                                                <th style="width: 10%;" class="text-center">Adjusted Plan</th>
+                                                <th class="text-center">Note</th>
                                                 <th class="text-center">Actions</th>
                                             </tr>
                                         </thead>

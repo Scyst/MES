@@ -65,7 +65,7 @@ try {
             // Build base query
             $sql = "SELECT
                         p.plan_id,
-                        CONVERT(varchar, p.plan_date, 23) as plan_date, -- Format YYYY-MM-DD
+                        CONVERT(varchar, p.plan_date, 23) as plan_date,
                         p.line,
                         p.shift,
                         p.item_id,
@@ -77,17 +77,48 @@ try {
                         p.adjusted_planned_quantity,
                         p.note,
                         p.updated_at,
-                        p.updated_by
+                        p.updated_by,
+                        ISNULL(actual.ActualQty, 0) AS actual_quantity
                     FROM
                         $planTable p
                     INNER JOIN
                         $itemTable i ON p.item_id = i.item_id
+                    LEFT JOIN (
+                        SELECT
+                            CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) AS ActualDate,
+                            l.production_line AS ActualLine,
+                            CASE
+                                WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0
+                                AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
+                                ELSE 'NIGHT'
+                            END AS ActualShift,
+                            t.parameter_id AS ActualItemId,
+                            SUM(t.quantity) AS ActualQty
+                        FROM
+                            [dbo].[STOCK_TRANSACTIONS_TEST] t 
+                        INNER JOIN
+                            [dbo].[LOCATIONS_TEST] l ON t.to_location_id = l.location_id
+                        WHERE
+                            t.transaction_type = 'PRODUCTION_FG'
+                        GROUP BY
+                            CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE),
+                            l.production_line,
+                            CASE
+                                WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0
+                                AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
+                                ELSE 'NIGHT'
+                            END,
+                            t.parameter_id
+                    ) AS actual ON p.plan_date = actual.ActualDate
+                                AND p.line = actual.ActualLine
+                                AND p.shift = actual.ActualShift
+                                AND p.item_id = actual.ActualItemId
                     WHERE
-                        p.plan_date = :planDate";
+                        p.plan_date = :planDate
+                ";
 
             $params = [':planDate' => $planDate];
 
-            // Add optional filters
             if (!empty($line)) {
                 $sql .= " AND p.line = :line";
                 $params[':line'] = $line;
@@ -97,7 +128,7 @@ try {
                 $params[':shift'] = $shift;
             }
 
-            $sql .= " ORDER BY p.line, p.shift, i.sap_no"; // เรียงลำดับ
+            $sql .= " ORDER BY p.line, p.shift, i.sap_no";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
