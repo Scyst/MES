@@ -58,66 +58,59 @@ try {
         case 'get_plans':
             if ($method !== 'GET') throw new Exception("Invalid request method for get_plans.");
 
-            $planDate = $data['planDate'] ?? date('Y-m-d'); // Default to today if not provided
+            // รับช่วงวันที่ แทนวันที่เดียว (สำหรับ FullCalendar)
+            $startDate = $data['start'] ?? null; // FullCalendar ส่ง 'start'
+            $endDate = $data['end'] ?? null; // FullCalendar ส่ง 'end'
+            $planDateSingle = $data['planDate'] ?? null; // ยังรองรับการดึงวันเดียว (สำหรับ Table)
+
             $line = $data['line'] ?? null;
             $shift = $data['shift'] ?? null;
 
-            // Build base query
-            $sql = "SELECT
-                        p.plan_id,
-                        CONVERT(varchar, p.plan_date, 23) as plan_date,
-                        p.line,
-                        p.shift,
-                        p.item_id,
-                        i.sap_no,
-                        i.part_no,
-                        i.part_description,
-                        p.original_planned_quantity,
-                        p.carry_over_quantity,
-                        p.adjusted_planned_quantity,
-                        p.note,
-                        p.updated_at,
-                        p.updated_by,
-                        ISNULL(actual.ActualQty, 0) AS actual_quantity
-                    FROM
-                        $planTable p
-                    INNER JOIN
-                        $itemTable i ON p.item_id = i.item_id
-                    LEFT JOIN (
-                        SELECT
-                            CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) AS ActualDate,
-                            l.production_line AS ActualLine,
-                            CASE
-                                WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0
-                                AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
-                                ELSE 'NIGHT'
-                            END AS ActualShift,
-                            t.parameter_id AS ActualItemId,
-                            SUM(t.quantity) AS ActualQty
-                        FROM
-                            [dbo].[STOCK_TRANSACTIONS_TEST] t 
-                        INNER JOIN
-                            [dbo].[LOCATIONS_TEST] l ON t.to_location_id = l.location_id
-                        WHERE
-                            t.transaction_type = 'PRODUCTION_FG'
-                        GROUP BY
-                            CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE),
-                            l.production_line,
-                            CASE
-                                WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0
-                                AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
-                                ELSE 'NIGHT'
-                            END,
-                            t.parameter_id
-                    ) AS actual ON p.plan_date = actual.ActualDate
-                                AND p.line = actual.ActualLine
-                                AND p.shift = actual.ActualShift
-                                AND p.item_id = actual.ActualItemId
-                    WHERE
-                        p.plan_date = :planDate
-                ";
+            $sql = "
+                SELECT
+                    p.plan_id, CONVERT(varchar, p.plan_date, 23) as plan_date,
+                    p.line, p.shift, p.item_id, i.sap_no, i.part_no, i.part_description,
+                    p.original_planned_quantity, p.carry_over_quantity, p.adjusted_planned_quantity,
+                    p.note, p.updated_at, p.updated_by,
+                    ISNULL(actual.ActualQty, 0) AS actual_quantity
+                FROM $planTable p
+                INNER JOIN $itemTable i ON p.item_id = i.item_id
+                LEFT JOIN (
+                    SELECT
+                        CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) AS ActualDate,
+                        l.production_line AS ActualLine,
+                        CASE WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END AS ActualShift,
+                        t.parameter_id AS ActualItemId, SUM(t.quantity) AS ActualQty
+                    FROM [dbo].[STOCK_TRANSACTIONS_TEST] t INNER JOIN [dbo].[LOCATIONS_TEST] l ON t.to_location_id = l.location_id
+                    WHERE t.transaction_type = 'PRODUCTION_FG'
+                    GROUP BY CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE), l.production_line,
+                            CASE WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END, t.parameter_id
+                ) AS actual ON p.plan_date = actual.ActualDate AND p.line = actual.ActualLine AND p.shift = actual.ActualShift AND p.item_id = actual.ActualItemId
+                WHERE 1=1 "; // Start WHERE clause
 
-            $params = [':planDate' => $planDate];
+            $params = [];
+
+            // --- เงื่อนไขตามประเภท Request ---
+            if (!empty($startDate) && !empty($endDate)) {
+                // ดึงข้อมูลตามช่วง (จาก FullCalendar)
+                // FullCalendar ส่ง end date มาเป็นวันถัดไป ต้องลบออก 1 วันถ้าจำเป็น
+                // หรือปรับ WHERE ให้เป็น p.plan_date >= :startDate AND p.plan_date < :endDate
+                $sql .= " AND p.plan_date >= :startDate AND p.plan_date < :endDate";
+                $params[':startDate'] = $startDate;
+                $params[':endDate'] = $endDate; // ถ้า end date ของ FC คือ exclusive
+            } elseif (!empty($planDateSingle)) {
+                // ดึงข้อมูลวันเดียว (จาก Table View)
+                $sql .= " AND p.plan_date = :planDateSingle";
+                $params[':planDateSingle'] = $planDateSingle;
+            } else {
+                // ถ้าไม่มีวันที่ส่งมา อาจจะ default เป็นวันนี้ หรือ ไม่ดึงอะไรเลย
+                $today = date('Y-m-d');
+                $sql .= " AND p.plan_date = :today";
+                $params[':today'] = $today;
+                // throw new Exception("Date or Date Range is required.");
+            }
+            // --- จบเงื่อนไข ---
+
 
             if (!empty($line)) {
                 $sql .= " AND p.line = :line";
@@ -128,7 +121,7 @@ try {
                 $params[':shift'] = $shift;
             }
 
-            $sql .= " ORDER BY p.line, p.shift, i.sap_no";
+            $sql .= " ORDER BY p.plan_date, p.line, p.shift, i.sap_no";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
