@@ -51,16 +51,15 @@ body {
 .page-container {
     display: flex;
     height: 100vh;
-    overflow: hidden; /* ★★★ บังคับให้กรอบนอกสุดไม่มี Scrollbar ★★★ */
+    overflow: hidden;
 }
 
-/* --- กฎพื้นฐานสำหรับ #main-content (ใช้กับทุกหน้า) --- */
 #main-content {
     flex-grow: 1;
     width: 100%;
-    margin-left: 70px; /* ★★★ แก้ไขตามโค้ดของคุณ ★★★ */
+    margin-left: 70px;
     transition: margin-left 0.3s ease-in-out;
-    display: flex; /* ★★★ ทำให้เป็น Flex Container เสมอ ★★★ */
+    display: flex;
     flex-direction: column;
 }
 
@@ -71,16 +70,14 @@ body {
     min-height: 0;
 }
 
-/* --- กฎพิเศษสำหรับหน้า Dashboard เท่านั้น --- */
 .dashboard-page #main-content {
-    overflow: hidden; /* ห้ามมี Scrollbar ที่ตัวแม่ */
+    overflow: hidden;
 }
 
-/* --- กฎพิเศษสำหรับหน้าตาราง เท่านั้น --- */
 .page-with-table #main-content {
     height: 100vh;
     overflow-y: auto;
-    padding: 0 1.5rem; /* <<< คง padding ไว้สำหรับด้านข้างและบน */
+    padding: 0 1.5rem;
     padding-bottom: 70px;
     display: flex;
     flex-direction: column;
@@ -98,7 +95,6 @@ body {
     overflow-x: hidden;
 }
 
-/* --- Header & Toggle Button --- */
 .sidebar-header {
     height: 60px;
     display: flex;
@@ -112,18 +108,17 @@ body {
     transition: background-color 0.2s;
 }
 #sidebar-toggle-btn:hover { background-color: var(--bs-tertiary-bg); }
-#sidebar-toggle-btn img { 
+#sidebar-toggle-btn img {
     width: 24px; height: 24px; filter: var(--bs-icon-filter);
     transition: filter 0.3s ease-in-out;
 }
 
-/* --- Menu Container & Items --- */
 .sidebar .custom-dropdown {
     background: transparent; border: none; padding: 0;
     min-width: 100%; overflow-y: auto; flex-grow: 1;
 }
 .sidebar .custom-dropdown li { list-style: none; padding: 0; margin: 0; }
-.sidebar .dropdown-divider { 
+.sidebar .dropdown-divider {
     border-top: 1px solid var(--bs-border-color); margin: 8px 16px;
     transition: border-color 0.3s ease-in-out;
 }
@@ -141,10 +136,10 @@ body {
     border-bottom: 1px solid var(--bs-border-color);
     transition: border-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
-.sidebar .dropdown-item-icon:hover { 
-    background-color: var(--bs-tertiary-bg); 
+.sidebar .dropdown-item-icon:hover {
+    background-color: var(--bs-tertiary-bg);
 }
-.sidebar .dropdown-username img, 
+.sidebar .dropdown-username img,
 .sidebar .dropdown-item-icon img {
     width: 24px; height: 24px;
     flex-shrink: 0;
@@ -152,7 +147,7 @@ body {
     margin-right: 24px;
     transition: filter 0.3s ease-in-out;
 }
-.sidebar .dropdown-item-icon span, 
+.sidebar .dropdown-item-icon span,
 .sidebar .dropdown-username div {
     white-space: nowrap;
     overflow: hidden;
@@ -161,24 +156,22 @@ body {
     transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
 }
 
-/* --- Sidebar Icon Theming --- */
 .sidebar .dropdown-item-icon i {
     width: 24px;
     height: 24px;
     margin-right: 24px;
     color: inherit;
     text-align: center;
-    font-size: 18px; /* ★★★ เพิ่มบรรทัดนี้: กำหนดขนาดไอคอนให้ชัดเจน ★★★ */
-    line-height: 24px; /* ★★★ เพิ่มบรรทัดนี้: จัดให้ไอคอนอยู่กลางแนวตั้งพอดี ★★★ */
+    font-size: 18px;
+    line-height: 24px;
 }
 
-/* --- Sidebar States --- */
 .sidebar[data-state="collapsed"] { width: 70px; }
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
 .sidebar[data-state="expanded"] + #main-content .pagination-footer {
-    left: 280px; /* ขยับไปทางขวาตาม sidebar expanded width */
-    width: calc(100% - 280px); /* ลดความกว้างลง */
+    left: 280px;
+    width: calc(100% - 280px);
 }
 .sidebar[data-state="expanded"] .dropdown-item-icon span,
 .sidebar[data-state="expanded"] .dropdown-username div,
@@ -197,7 +190,7 @@ body {
     position: fixed;
     top: 10px;
     right: 15px;
-    z-index: 1050; 
+    z-index: 1050;
 }
 
 .command-center-btn {
@@ -242,7 +235,6 @@ body {
     color: inherit;
 }
 
-/* Keyframes สำหรับ Animation การเด้ง */
 @keyframes pop-in {
     0% {
         opacity: 0;
@@ -257,11 +249,10 @@ body {
     }
 }
 
-/* 2. Docking Sidebar (The main panel container) */
 .docking-sidebar {
     position: fixed;
     top: 0;
-    right: -400px; 
+    right: -400px;
     width: 400px;
     height: 100vh;
     background-color: var(--bs-secondary-bg);
@@ -270,14 +261,13 @@ body {
     transition: right 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
-    padding-top: 65px; 
+    padding-top: 65px;
 }
 
 .docking-sidebar.open {
     right: 0;
 }
 
-/* 3. Individual Panels inside the Sidebar (เหมือนเดิม) */
 .docking-panel {
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
@@ -322,26 +312,23 @@ body {
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
     flex-direction: column;
-    /* ★★★ แก้ไข: เพิ่ม transition ให้ครอบคลุมมากขึ้น ★★★ */
-    transition: flex-basis 0.35s ease-in-out, 
-                opacity 0.3s ease-in-out, 
+    transition: flex-basis 0.35s ease-in-out,
+                opacity 0.3s ease-in-out,
                 padding 0.3s ease-in-out,
                 margin 0.3s ease-in-out;
     overflow: hidden;
 }
 
-/* ★★★ เพิ่ม: สไตล์สำหรับ Panel ที่กำลังจะปิด ★★★ */
 .docking-panel.is-closing {
-    flex-basis: 0 !important; /* บังคับให้ความสูงเป็น 0 */
+    flex-basis: 0 !important;
     opacity: 0;
     padding-top: 0;
     padding-bottom: 0;
-    margin-top: -1px; /* ทำให้เส้นขอบหายไปอย่างนุ่มนวล */
+    margin-top: -1px;
     border-bottom-width: 0;
     overflow: hidden;
 }
 
-/* --- ★★★ Alert Item Styling (ย้ายมาไว้ที่นี่) ★★★ --- */
 .alert-item {
     display: flex;
     align-items: flex-start;
@@ -353,7 +340,7 @@ body {
 }
 
 .alert-item:hover {
-    background-color: var(--bs-tertiary-bg); /* เปลี่ยนจาก --sidebar-hover-bg */
+    background-color: var(--bs-tertiary-bg);
 }
 
 .alert-icon {
@@ -388,7 +375,7 @@ body {
     z-index: 1030;
     border-bottom: 1px solid var(--bs-border-color);
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-    flex-shrink: 0; /* ป้องกันไม่ให้ Header หดตัว */
+    flex-shrink: 0;
 }
 .dashboard-header-sticky {
     top: 0;
@@ -399,21 +386,21 @@ body {
     top: 0;
     padding: 0.1rem 0rem;
     flex-shrink: 0;
-    position: sticky; /* <<< ยังคง sticky */
+    position: sticky;
     top: 0;
     z-index: 1030;
 }
 
 .pagination-footer {
-    position: fixed; /* <<< เปลี่ยนเป็น fixed */
-    bottom: 0; /* <<< ติดขอบล่างของ viewport */
-    left: 70px; /* <<< ปรับให้สอดคล้องกับ sidebar collapsed width */
-    width: calc(100% - 70px); /* <<< คำนวณความกว้างที่เหลือ */
+    position: fixed;
+    bottom: 0;
+    left: 70px;
+    width: calc(100% - 70px);
     background-color: var(--bs-secondary-bg);
     box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
     padding-top: 1rem;
     border-top: 1px solid var(--bs-border-color);
-    z-index: 1020; /* ให้ต่ำกว่า sticky-bar เล็กน้อย */
+    z-index: 1020;
     transition: left 0.3s ease-in-out, width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
 
@@ -473,7 +460,7 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.07);
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     width: 100%;
-    position: relative; /* ★★★ เพิ่มบรรทัดนี้ เพื่อให้ Progress Bar อ้างอิงตำแหน่งได้ ★★★ */
+    position: relative;
     overflow: hidden;
 }
 .chart-card h4 {
@@ -492,10 +479,10 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 4px; /* ความหนาของแถบโหลด */
-    background-color: transparent; /* ปกติจะโปร่งใส */
+    height: 4px;
+    background-color: transparent;
     z-index: 10;
-    opacity: 0; /* ซ่อนไว้เป็นค่าเริ่มต้น */
+    opacity: 0;
     transition: opacity 0.3s ease;
 }
 
@@ -505,12 +492,12 @@ body {
     left: 0;
     height: 100%;
     width: 100%;
-    background-color: var(--mes-chart-color-1); /* ใช้สีน้ำเงินหลักเป็นสีของแถบ */
-    transform: translateX(-100%); /* เริ่มต้นโดยการซ่อนไว้ทางซ้าย */
+    background-color: var(--mes-chart-color-1);
+    transform: translateX(-100%);
 }
 
 .chart-card.is-loading .progress-bar-wrapper {
-    opacity: 1; /* แสดงผลเมื่อการ์ดมี class 'is-loading' */
+    opacity: 1;
 }
 
 .chart-card.is-loading .progress-bar-indicator {
@@ -529,40 +516,34 @@ body {
     }
 }
 
-/*[data-bs-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-[data-bs-theme="dark"] .chart-card h4 i { color: #adb5bd; }*/
-
-/* -- Pie Chart Card Specifics -- */
 .pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
 .pie-chart-card .pie-chart-details { flex-grow: 1; flex-basis: 0; min-width: 150px; display: flex; flex-direction: column; justify-content: center; }
 .pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 160px; position: relative; }
 
-/* --- Styles for Upgraded KPI Card Info Box --- */
 .pie-chart-card .chart-info {
     font-size: 1rem;
     margin-top: 1rem;
 }
 .pie-chart-card .info-grid {
     display: grid;
-    grid-template-columns: auto 1fr; 
+    grid-template-columns: auto 1fr;
     gap: 0.25rem 1rem;
     align-items: center;
 }
 .pie-chart-card .info-label {
-    text-align: left; /* <<< จัดชิดซ้าย */
+    text-align: left;
     font-weight: 300;
-    opacity: 0.8; 
+    opacity: 0.8;
 }
 .pie-chart-card .info-value {
-    text-align: right; /* <<< แก้ไข: จัดชิดขวา */
-    font-weight: 600; 
+    text-align: right;
+    font-weight: 600;
 }
 
-/* --- Styles for New KPI Info Bar --- */
 .info-summary-card {
     flex-direction: row;
     justify-content: space-around;
-    align-items: stretch; /* ทำให้แต่ละกลุ่มสูงเท่ากัน */
+    align-items: stretch;
     padding: 1rem;
 }
 .info-summary-card .info-group {
@@ -575,16 +556,14 @@ body {
     border-right: none;
 }
 .info-summary-card .info-grid {
-    gap: 0.1rem 1rem; /* ลดระยะห่างแถวลง */
+    gap: 0.1rem 1rem;
 }
 
-/* ปรับขนาด Chart Wrapper ใน KPI Section ให้ใหญ่ขึ้น */
 #kpi-section .kpi-chart-card .chart-wrapper {
     width: 180px;
     height: 180px;
 }
 
-/* --- Fix for KPI Scorecard Layout --- */
 #kpi-section .row {
     height: 100%;
     width: 100%;
@@ -594,39 +573,34 @@ body {
     margin-left: 0;
 }
 
-/* --- Styles for New KPI Chart Bar --- */
 .kpi-chart-card {
     min-height: 250px;
-    align-items: center; /* จัดหัวข้อและกราฟให้อยู่กลาง */
+    align-items: center;
     text-align: center;
 }
 .kpi-chart-card h4 {
-    margin-bottom: 1rem; /* เพิ่มระยะห่างใต้หัวข้อ */
+    margin-bottom: 1rem;
 }
 .kpi-chart-card .chart-wrapper {
     width: 160px;
     height: 160px;
 }
 
-/* --- Styles for Individual Dashboard Sections --- */
-
-/* กฎสำหรับ Section KPI (Scorecards) */
 #kpi-section {
-    height: 100%; /* <<< ทำให้ยืดเต็มความสูงของ container */
+    height: 100%;
     min-height: 650px;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* <<< จัดให้อยู่กลางแนวตั้ง */
+    justify-content: center;
     padding: 1.5rem 0.8rem;
-    gap: 1.5rem; /* เพิ่มระยะห่างระหว่างแถวของการ์ด */
+    gap: 1.5rem;
 }
 
-/* MES: Add some basic styling for the cost summary */
 .cost-summary-card .value {
-    font-size: 1.25rem; /* Make numbers slightly larger */
+    font-size: 1.25rem;
     font-weight: 500;
-    color: var(--bs-primary); /* Use theme color */
-    display: block; /* Ensure value takes its own line */
+    color: var(--bs-primary);
+    display: block;
     margin-top: 0.25rem;
 }
 .cost-summary-card .percentage {
@@ -646,35 +620,32 @@ body {
 .cost-summary-card .col-md-4:last-child {
         border-right: none;
 }
-    /* Add loading indicator */
 .cost-summary-card .loading-indicator {
     color: var(--bs-secondary);
     font-style: italic;
 }
 
-/* กฎสำหรับ Section Line Chart */
 #linechart-section {
     height: calc(100vh - 80px);
     min-height: 650px;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* จัดกราฟให้อยู่กลางแนวตั้ง */
+    justify-content: center;
 }
 
-/* กฎสำหรับ Section Bar Charts */
 #barchart-section {
     height: calc(100vh - 80px);
     min-height: 650px;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* จัดกราฟให้อยู่กลางแนวตั้ง */
+    justify-content: center;
 }
 
-#kpi-section .col-xl-3, 
+#kpi-section .col-xl-3,
 #kpi-section .col-md-6,
 #kpi-section .col-12 {
-    display: flex; /* <<< ทำให้ column เป็น flex container ด้วย */
-    align-items: stretch; /* <<< ทำให้การ์ดสูงเท่ากัน */
+    display: flex;
+    align-items: stretch;
 }
 
 .kpi-scorecard {
@@ -683,33 +654,33 @@ body {
     min-height: 500px;
     display: flex;
     flex-direction: column;
-    flex: 1; /* <<< เพิ่มบรรทัดนี้: ทำให้การ์ดยืดขยายเต็มพื้นที่ */
+    flex: 1;
 }
 
 .kpi-scorecard .pie-chart-wrapper {
-    flex-shrink: 0; /* ป้องกันการหดตัว */
-    width: 200px;   /* คืนค่าความกว้างเดิม */
-    height: 200px;  /* คืนค่าความสูงเดิม */
+    flex-shrink: 0;
+    width: 200px;
+    height: 200px;
     position: relative;
-    margin: 1rem auto; /* จัดกลางและเพิ่มระยะห่าง */
+    margin: 1rem auto;
 }
 
 .kpi-scorecard .chart-info {
     font-size: 1rem;
     margin-top: 1rem;
-    width: 100%; /* ทำให้เต็มความกว้าง */
+    width: 100%;
 }
 
 .kpi-scorecard .chart-info .info-grid {
-    display: grid !important; /* ★★★ บังคับใช้ display: grid ★★★ */
-    grid-template-columns: auto 1fr; /* คอลัมน์แรกกว้างตามเนื้อหา, คอลัมน์สองเอาที่เหลือ */
-    gap: 0.25rem 1rem; /* ระยะห่าง แถว และ คอลัมน์ */
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 1rem;
     align-items: center;
 }
 
 .kpi-scorecard .chart-info .info-grid .info-label {
     text-align: left;
-    font-weight: 400; /* ปรับความหนาตัวอักษรเล็กน้อย */
+    font-weight: 400;
     opacity: 0.8;
 }
 
@@ -726,60 +697,52 @@ body {
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--bs-border-color);
     transition: border-color 0.3s ease-in-out;
-    flex-shrink: 0; /* <<< เพิ่ม: ป้องกันไม่ให้ส่วนหัวหดตัว */
+    flex-shrink: 0;
 }
 .scorecard-header h4 {
     margin-bottom: 1rem;
 }
 
-/* --- ส่วนที่แก้ไขหลัก --- */
 .pie-chart-wrapper {
-    flex-grow: 1; /* <<< เพิ่ม: ทำให้กราฟยืดขยายเต็มพื้นที่ที่เหลือ */
-    width: 100%; /* <<< แก้ไข: ใช้ความกว้างเต็ม */
-    max-width: 220px; /* <<< เพิ่ม: กำหนดความกว้างสูงสุด */
-    margin: 0 auto; /* <<< จัดให้อยู่กลาง */
+    flex-grow: 1;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
 }
 
 .scorecard-body {
     padding-top: 1rem;
-    flex-shrink: 0; /* <<< เพิ่ม: ป้องกันไม่ให้ส่วนข้อมูลหดตัว */
+    flex-shrink: 0;
 }
 .sparkline-wrapper {
     height: 80px;
     margin-bottom: 1rem;
 }
 
-/* ================================================== */
-/* ★★★ CSS สำหรับปรับแก้ Chart Section Layout ★★★ */
-/* ================================================== */
 #charts-section {
     display: flex;
-    flex-direction: column; /* จัดเรียง .row 2 แถวในแนวตั้ง (บน-ล่าง) */
+    flex-direction: column;
     gap: 1.5rem;
 }
 
-/* บอกให้ .row ที่เป็นลูกโดยตรงของ #charts-section แบ่งความสูงกัน */
 #charts-section > .row {
     flex: 1;
-    min-height: 0; /* ยังคงจำเป็นสำหรับ Flexbox เพื่อให้ยืดหดได้ถูกต้อง */
+    min-height: 0;
 }
 
-/* ทำให้ Card ยืดเต็มความสูงของ Column ที่มันอยู่ */
 #charts-section .chart-card {
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%; /* สั่งให้ Card สูงเต็มพื้นที่ที่ Bootstrap จัดให้ */
+    height: 100%;
 }
 
-/* ทำให้ Wrapper ยืดหยุ่นตามพื้นที่ที่เหลือใน Card */
 #charts-section .chart-wrapper {
     position: relative;
-    flex-grow: 1; /* Key: ทำให้ Wrapper ยืดเต็มพื้นที่ที่เหลือใน Card */
+    flex-grow: 1;
     min-height: 0;
 }
 
-/* ทำให้ Canvas ยืดเต็ม Wrapper (ยังคงจำเป็น) */
 #charts-section .chart-wrapper > canvas {
     position: absolute;
     top: 0;
@@ -788,21 +751,11 @@ body {
     height: 100%;
 }
 
-/* -- Line & Bar Chart Card Specifics -- */
 .line-chart-card,
 .bar-chart-card {
-    height: 100%; /* <<< สั่งให้การ์ดยืดเต็มความสูงของ col ที่ครอบอยู่ */
+    height: 100%;
 }
 
-/*
-.line-chart-card .chart-wrapper { 
-    height: 90%; 
-}
-.bar-chart-card .chart-wrapper { 
-    height: 85%;
-}
-*/
-/* -- Scoped Styles from old CSS files -- */
 .line-chart-card .chart-error,
 .bar-chart-card .stopCauseBarError,
 .bar-chart-card .scrapBarError {
@@ -836,7 +789,6 @@ body {
     pointer-events: none;
 }
 
-/* --- No Data Message Style --- */
 .no-data-message {
     color: var(--bs-secondary-color);
 }
@@ -850,7 +802,6 @@ body {
     opacity: 0.7;
 }
 
-/* --- Error Message Style --- */
 .error-message {
     color: var(--bs-danger);
     z-index: 6;
@@ -865,7 +816,6 @@ body {
     opacity: 0.8;
 }
 
-/* --- Logic for Showing/Hiding --- */
 .chart-wrapper.has-no-data .no-data-message {
     display: flex;
 }
@@ -957,22 +907,22 @@ body {
 }
 
 .main-content-flex {
-    display: block; /* ไม่ใช้ flex แล้ว เพราะไม่มี sidebar แล้ว */
+    display: block;
 }
 
 .documents-table-container {
     flex-grow: 1;
-    overflow-y: auto; /* ทำให้ตารางมี scrollbar ของตัวเองถ้ามีเนื้อหามากเกินไป */
+    overflow-y: auto;
     min-height: 0;
 }
 
 /* --- Styles สำหรับ Dropdown/Drilldown Picker --- */
 .category-picker-dropdown .dropdown-menu {
-    min-width: 300px; /* กำหนดความกว้างขั้นต่ำ */
-    max-height: calc(100vh - 200px); /* <<< ปรับตรงนี้: ให้คำนวณจากความสูงของ viewport (100vh) แล้วหักส่วนหัวและส่วนท้ายออก */
-    overflow-y: auto; /* มี scrollbar ถ้าเนื้อหาเกิน */
+    min-width: 300px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
     padding: 0;
-    z-index: 1050; /* เพิ่ม z-index ให้สูงกว่า modal (z-index: 1050) หรือ sticky footer */
+    z-index: 1050;
 }
 .category-picker-dropdown .dropdown-header {
     padding: 0.75rem 1rem;
@@ -996,10 +946,10 @@ body {
     display: flex;
     align-items: center;
     padding: 0.5rem 1rem;
-    white-space: nowrap; /* ป้องกันไม่ให้ข้อความขึ้นบรรทัดใหม่ */
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* แสดง ... ถ้าข้อความยาวเกิน */
-    border-bottom: 1px solid var(--bs-dropdown-divider-bg); /* เพิ่มเส้นแบ่งระหว่างรายการ */
+    text-overflow: ellipsis;
+    border-bottom: 1px solid var(--bs-dropdown-divider-bg);
 }
 .category-picker-dropdown .dropdown-item:last-child {
     border-bottom: none;
@@ -1011,20 +961,18 @@ body {
 }
 .category-picker-dropdown .dropdown-item i {
     margin-right: 0.75rem;
-    width: 1.25rem; /* กำหนดความกว้างไอคอน */
+    width: 1.25rem;
     text-align: center;
 }
 .category-picker-dropdown .dropdown-item .folder-arrow {
-    margin-left: auto; /* จัดให้อยู่ขวา */
+    margin-left: auto;
 }
 
 /* =================================================================== */
 /* 5. RESPONSIVE STYLES (สไตล์สำหรับจอขนาดต่างๆ) */
 /* =================================================================== */
 
-/* เมื่อจอกว้างน้อยกว่า 992px (ขนาด Tablet และเล็กกว่า) */
 @media (max-width: 991.98px) {
-    /* จัดเรียงเนื้อหาในการ์ด Pie Chart เป็นแนวตั้ง */
     .pie-chart-card {
         flex-direction: column;
         align-items: center;
@@ -1038,11 +986,10 @@ body {
 
     .pie-chart-card .chart-info {
         text-align: center;
-        margin-left: 0; /* ลบ margin-left เดิม */
+        margin-left: 0;
     }
 }
 
-/* เมื่อจอกว้างน้อยกว่า 768px */
 @media (max-width: 767.98px) {
 
     .pagination-footer {
@@ -1062,9 +1009,7 @@ body {
     }
 }
 
-/* เมื่อจอกว้างน้อยกว่า 576px (ขนาดมือถือ) */
 @media (max-width: 575.98px) {
-    /* ลดขนาดฟอนต์และระยะห่างเพื่อให้พอดีกับจอมือถือ */
     .dashboard-header-sticky {
         padding: 0.75rem;
     }
@@ -1082,7 +1027,6 @@ body {
     }
 }
 
-/* --- Responsive Adjustments --- */
 @media (max-width: 991.98px) {
     .info-summary-card {
         flex-direction: column;
@@ -1100,34 +1044,30 @@ body {
 }
 
 @media (max-width: 767px) {
-    /* ซ่อนหัวตารางบนจอมือถือ */
     .page-with-table .table thead {
         display: none;
     }
 
-    /* ทำให้แต่ละแถวเป็นเหมือน "การ์ด" */
     .page-with-table .table tbody tr {
         display: block;
         margin-bottom: 1rem;
         border: 1px solid var(--bs-border-color);
         border-radius: 0.5rem;
     }
-    
-    /* ทำให้แต่ละ Cell เรียงต่อกันในแนวตั้ง */
+
     .page-with-table .table tbody td {
         display: block;
-        text-align: right; /* จัดข้อมูลชิดขวา */
+        text-align: right;
         position: relative;
-        padding-left: 50%; /* เว้นที่ให้ Label ด้านซ้าย */
+        padding-left: 50%;
         border-top: 1px solid var(--bs-tertiary-bg);
     }
     .page-with-table .table tbody tr td:first-child {
         border-top: none;
     }
 
-    /* สร้าง Label ขึ้นมาข้างหน้าข้อมูลโดยใช้ data-label */
     .page-with-table .table tbody td::before {
-        content: attr(data-label); /* ดึงข้อความจาก attribute 'data-label' */
+        content: attr(data-label);
         position: absolute;
         left: 0.75rem;
         width: 45%;
@@ -1135,3 +1075,142 @@ body {
         font-weight: bold;
     }
 }
+
+/* =================================================================== */
+/* 6. PLANNING DASHBOARD STYLES (เพิ่มส่วนนี้)                          */
+/* =================================================================== */
+
+/* ใช้ .planning-dashboard เพื่อ scope สไตล์เหล่านี้ */
+.planning-dashboard #main-content {
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.planning-dashboard .planning-header {
+    position: sticky; top: 0; z-index: 1030;
+    background-color: var(--bs-secondary-bg);
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+
+.planning-dashboard .planning-view-content {
+    flex-grow: 1;
+    overflow: hidden; /* Important: Prevents this level from scrolling */
+    display: flex;
+    min-height: 0; /* Allows shrinking */
+    padding: 1rem;
+}
+
+.planning-dashboard .view-pane {
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden; /* <-- เพิ่มบรรทัดนี้ */
+}
+
+.planning-dashboard .view-pane.active {
+    display: flex;
+}
+
+.planning-dashboard #table-view-pane .table-chart-row {
+    flex-shrink: 0;
+    margin-bottom: 1rem;
+}
+.planning-dashboard #table-view-pane .table-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+    position: relative;
+}
+
+.planning-dashboard #table-view-pane .table {
+    margin-bottom: 0; /* Remove default margin if it pushes content */
+}
+
+.planning-dashboard #table-view-pane .table thead {
+     position: sticky; top: 0; z-index: 1;
+     background-color: var(--bs-tertiary-bg);
+}
+[data-bs-theme="dark"] .planning-dashboard #table-view-pane .table thead {
+     background-color: var(--bs-secondary-bg); /* Adjust for dark theme */
+}
+
+.planning-dashboard #table-view-pane .chart-card-plan {
+    height: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.planning-dashboard #table-view-pane .chart-card-plan .card-body {
+    position: relative;
+    flex-grow: 1;
+    padding: 0.5rem;
+    min-height: 0;
+}
+
+.planning-dashboard #table-view-pane #dlot-entry-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Allow card to shrink within its column space */
+    flex-grow: 1; /* Allow card to grow if cost summary is small */
+}
+
+.planning-dashboard #table-view-pane #dlot-entry-card .card-body {
+     overflow-y: auto; /* Enable scroll if form content is long */
+     flex-grow: 1; /* Allow body to take space */
+     min-height: 0; /* Allow body to shrink */
+}
+
+/* Styles specific to editable fields in planning */
+.planning-dashboard .editable-note,
+.planning-dashboard .editable-plan {
+    cursor: pointer;
+    min-width: 80px;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+}
+.planning-dashboard .editable-note:hover,
+.planning-dashboard .editable-plan:hover {
+    background-color: var(--bs-tertiary-bg);
+    outline: 1px dashed var(--bs-secondary);
+}
+.planning-dashboard .editable-note:focus,
+.planning-dashboard .editable-plan:focus {
+    background-color: var(--bs-light);
+    outline: 1px solid var(--bs-primary);
+    cursor: text;
+}
+[data-bs-theme="dark"] .planning-dashboard .editable-note:focus,
+[data-bs-theme="dark"] .planning-dashboard .editable-plan:focus {
+    background-color: var(--bs-gray-700);
+}
+.planning-dashboard .editable-plan {
+    text-align: right;
+}
+
+/* Styles for table column widths in planning */
+.planning-dashboard #productionPlanTable th:nth-child(4),
+.planning-dashboard #productionPlanTable td:nth-child(4) { min-width: 200px; } /* Item */
+.planning-dashboard #productionPlanTable th:nth-child(9),
+.planning-dashboard #productionPlanTable td:nth-child(9) { min-width: 150px; } /* Note */
+.planning-dashboard #productionPlanTable th:last-child,
+.planning-dashboard #productionPlanTable td:last-child { width: 120px; text-align: center; } /* Actions */
+
+/* Styles for stat cards in planning (if reused) */
+.planning-dashboard .stat-card-header { font-size: 0.8rem; font-weight: 500; padding: 0.5rem 1rem; opacity: 0.9; }
+.planning-dashboard .stat-card-body h4 { font-size: 1.75rem; font-weight: 700; }
+.planning-dashboard .stat-card-body small { font-size: 0.9rem; font-weight: 500; }
+
+.planning-dashboard .pagination-footer { display: none; } /* Hide old pagination */
+
+/* Add styles for FullCalendar container later if needed 
+#calendar-view-pane {
+     
+}*/
