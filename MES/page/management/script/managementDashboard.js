@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainContent = document.getElementById('main-content');
     const planModalElement = document.getElementById('planModal');
     const planModal = new bootstrap.Modal(planModalElement);
-    const planDateFilter = document.getElementById('planDateFilter');
+    const startDateFilter = document.getElementById('startDateFilter');
+    const endDateFilter = document.getElementById('endDateFilter');
     const planLineFilter = document.getElementById('planLineFilter');
     const planShiftFilter = document.getElementById('planShiftFilter');
     const btnRefreshPlan = document.getElementById('btn-refresh-plan');
@@ -40,15 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const dlotDateDisplayEntry = document.getElementById('dlotDateDisplayEntry');
     const dlotEntryForm = document.getElementById('dlot-entry-form');
     const dlotEntryDateInputHidden = document.getElementById('dlot-entry-date');
-    const dlotEntryLineSelect = document.getElementById('dlot-entry-line');
     const dlotHeadcountInput = document.getElementById('dlot-headcount');
     const dlotDlCostInput = document.getElementById('dlot-dl-cost');
     const dlotOtCostInput = document.getElementById('dlot-ot-cost');
     const btnSaveDlot = document.getElementById('btn-save-dlot');
     
     // DLOT Cost Summary
-    const costSummaryLineSelectDlot = document.getElementById('cost-summary-line-dlot');
-    const btnRefreshCostSummaryDlot = document.getElementById('btn-refresh-cost-summary-dlot');
     const stdDlCostDisplayDlot = document.getElementById('std-dl-cost-display-dlot');
     const actualDlotCostDisplayDlot = document.getElementById('actual-dlot-cost-display-dlot');
     const dlVarianceDisplayDlot = document.getElementById('dl-variance-display-dlot');
@@ -97,9 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function setAllDefaultDates() {
         const today = new Date();
         const todayFormatted = formatDateForInput(today);
-        if (planDateFilter && !planDateFilter.value) {
-            planDateFilter.value = todayFormatted;
-        }
+
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        const sevenDaysAgoFormatted = formatDateForInput(sevenDaysAgo);
+
+        if (startDateFilter && !startDateFilter.value) startDateFilter.value = sevenDaysAgoFormatted;
+        if (endDateFilter && !endDateFilter.value) endDateFilter.value = todayFormatted;
     }
 
     // =================================================================
@@ -114,10 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
             if (result.success && result.data && result.data.lines) {
                 const lines = result.data.lines;
-                [planLineFilter, planModalLine, dlotEntryLineSelect, costSummaryLineSelectDlot].forEach(select => {
+                
+                [planLineFilter, planModalLine].forEach(select => { 
+
                     if (select) {
-                        const isAllOption = select.id === 'dlot-entry-line' || select.id === 'cost-summary-line-dlot';
-                        const valueToKeep = (select.id === 'planLineFilter' || select.id === 'planModalLine') ? "" : (isAllOption ? "ALL" : "");
+                        const valueToKeep = (select.id === 'planLineFilter' || select.id === 'planModalLine') ? "" : "";
                         select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
                         lines.forEach(line => {
                             select.appendChild(new Option(line, line));
@@ -165,10 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchPlans() {
         showSpinner();
         productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center">Loading...</td></tr>`;
-        const params = {
-            planDate: planDateFilter.value,
-            line: planLineFilter.value || null,
-            shift: planShiftFilter.value || null
+        const params = { 
+            startDate: startDateFilter.value, 
+            endDate: endDateFilter.value, 
+            line: planLineFilter.value || null, 
+            shift: planShiftFilter.value || null 
         };
         try {
             const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
@@ -236,8 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const chartCanvas = planVsActualChartCanvas;
         if (!chartCanvas) return;
         const ctx = chartCanvas.getContext('2d');
-        if (chartDateDisplay) {
-            chartDateDisplay.textContent = planDateFilter.value || 'Selected';
+        if (chartDateDisplay) { 
+            chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`; 
         }
         
         const labels = planData.map(p => p.sap_no || p.part_no || 'N/A');
@@ -479,8 +483,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dlotDateDisplayEntry) dlotDateDisplayEntry.textContent = dateString;
         dlotEntryDateInputHidden.value = dateString;
         
-        loadDlotDataForDate(dateString, dlotEntryLineSelect.value || 'ALL');
-        fetchCostSummaryForDate(dateString, costSummaryLineSelectDlot.value || 'ALL');
+        loadDlotDataForDate(dateString, planLineFilter.value || 'ALL');
+        fetchCostSummaryForDate(dateString, planLineFilter.value || 'ALL');
     }
 
     /**
@@ -510,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const body = {
                 action: 'save_daily_costs',
                 entry_date: dlotEntryDateInputHidden.value,
-                line: dlotEntryLineSelect.value || 'ALL',
+                line: planLineFilter.value || 'ALL',
                 headcount: dlotHeadcountInput.value || 0,
                 dl_cost: dlotDlCostInput.value || 0,
                 ot_cost: dlotOtCostInput.value || 0
@@ -518,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await sendRequest(DLOT_API, 'save_daily_costs', 'POST', body);
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
-                await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, costSummaryLineSelectDlot.value || 'ALL');
+                await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
             }
         } catch (error) {
             console.error("Error saving DLOT:", error);
@@ -832,15 +836,39 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Attach Event Listeners ---
         
         // Global Filters
-        planDateFilter?.addEventListener('change', fetchPlans);
+        startDateFilter?.addEventListener('change', fetchPlans);
+        endDateFilter?.addEventListener('change', fetchPlans);
+        
         planLineFilter?.addEventListener('change', () => {
             fetchPlans();
             if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+
+            if (dlotViewContainer.style.display === 'flex') {
+                const currentDate = dlotEntryDateInputHidden.value;
+                loadDlotDataForDate(currentDate, planLineFilter.value || 'ALL');
+                fetchCostSummaryForDate(currentDate, planLineFilter.value || 'ALL');
+            }
         });
-        planShiftFilter?.addEventListener('change', fetchPlans);
+
+        planShiftFilter?.addEventListener('change', () => {
+            fetchPlans();
+
+            if (dlotViewContainer.style.display === 'flex') {
+                const currentDate = dlotEntryDateInputHidden.value;
+                loadDlotDataForDate(currentDate, planLineFilter.value || 'ALL');
+                fetchCostSummaryForDate(currentDate, planLineFilter.value || 'ALL');
+            }
+        });
+
         btnRefreshPlan?.addEventListener('click', () => {
             fetchPlans();
             if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+
+            if (dlotViewContainer.style.display === 'flex') {
+                const currentDate = dlotEntryDateInputHidden.value;
+                loadDlotDataForDate(currentDate, planLineFilter.value || 'ALL');
+                fetchCostSummaryForDate(currentDate, planLineFilter.value || 'ALL');
+            }
         });
 
         // Main Actions
@@ -878,21 +906,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // DLOT View
         backToCalendarBtn?.addEventListener('click', switchToCalendarView);
         dlotEntryForm?.addEventListener('submit', handleSaveDlotForm);
-        dlotEntryLineSelect?.addEventListener('change', () => {
-            if (dlotViewContainer.style.display !== 'none') {
-                loadDlotDataForDate(dlotEntryDateInputHidden.value, dlotEntryLineSelect.value || 'ALL');
-            }
-        });
-        costSummaryLineSelectDlot?.addEventListener('change', () => {
-            if (dlotViewContainer.style.display !== 'none') {
-                fetchCostSummaryForDate(dlotEntryDateInputHidden.value, costSummaryLineSelectDlot.value || 'ALL');
-            }
-        });
-        btnRefreshCostSummaryDlot?.addEventListener('click', () => {
-            if (dlotViewContainer.style.display !== 'none') {
-                fetchCostSummaryForDate(dlotEntryDateInputHidden.value, costSummaryLineSelectDlot.value || 'ALL');
-            }
-        });
 
         // Production Plan Table (Event Delegation)
         productionPlanTableBody?.addEventListener('click', (e) => {

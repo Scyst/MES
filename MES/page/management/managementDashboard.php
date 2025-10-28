@@ -84,8 +84,15 @@ $currentUserForJS = $_SESSION['user'] ?? null;
             min-height: 0; 
         }
         
-        #planningCalendarContainer { width:100%; height: 100%; }
-        #planningCalendarContainer .fc-daygrid-day-number { font-weight: bold; text-decoration: none; }
+        #planningCalendarContainer { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%; 
+            height: 100%; 
+        }
+
+        #planningCalendarContainer .fc-daygrid-day-number { font-weight: bold; text-decoration: none; }        
         #planningCalendarContainer .fc-event { padding: 2px 4px; font-size: 0.75em; cursor: pointer; }
         
         /* สไตล์สำหรับ DLOT View ภายในปฏิทิน */
@@ -144,8 +151,10 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                 <div class="row">
                     <div class="col-12">
                           <div class="d-flex flex-wrap justify-content-center align-items-center gap-2" id="planning-global-filters">
-                            <label for="planDateFilter" class="form-label mb-0 small">Date:</label>
-                            <input type="date" id="planDateFilter" class="form-control form-control-sm" style="width: auto;">
+                            <label for="startDateFilter" class="form-label mb-0 small">Start:</label>
+                            <input type="date" id="startDateFilter" class="form-control form-control-sm" style="width: auto;">
+                            <label for="endDateFilter" class="form-label mb-0 small ms-lg-2">End:</label>
+                            <input type="date" id="endDateFilter" class="form-control form-control-sm" style="width: auto;">
                             <label for="planLineFilter" class="form-label mb-0 small ms-lg-2">Line:</label>
                             <select id="planLineFilter" class="form-select form-select-sm" style="width: auto; min-width: 120px;"> <option value="">All Lines</option> </select>
                             <label for="planShiftFilter" class="form-label mb-0 small ms-lg-2">Shift:</label>
@@ -182,11 +191,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                                 <div class="card shadow-sm flex-grow-1" id="dlot-entry-card">                                 
                                                     <div class="card-body p-2 d-flex flex-column">
                                                         <div class="mb-2">
-                                                            <div class="d-flex justify-content-end align-items-center gap-1 mb-2">
-                                                                <span id="dlotDateDisplayCost" class="visually-hidden"></span>
-                                                                <select id="cost-summary-line-dlot" class="form-select form-select-sm" style="width: auto;" title="Select Line"><option value="ALL">All</option></select>
-                                                                <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btn-refresh-cost-summary-dlot" title="Refresh Summary"><i class="fas fa-sync-alt fa-xs"></i></button>
-                                                            </div>
                                                             <div class="row g-2">
                                                                 <div class="col-4"><div class="card text-center text-bg-secondary h-100"><div class="stat-card-header py-0 px-2 small">Std DL Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="std-dl-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
                                                                 <div class="col-4"><div class="card text-center text-bg-primary h-100"><div class="stat-card-header py-0 px-2 small">Actual DLOT Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="actual-dlot-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
@@ -199,10 +203,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                                         <form id="dlot-entry-form" class="flex-grow-1 d-flex flex-column">
                                                             <span id="dlotDateDisplayEntry" class="visually-hidden"></span>
                                                             <input type="hidden" id="dlot-entry-date">
-                                                            <div class="mb-1">
-                                                                <label for="dlot-entry-line" class="form-label small mb-0">Line:</label>
-                                                                <select id="dlot-entry-line" class="form-select form-select-sm"><option value="ALL" selected>All Lines</option></select>
-                                                            </div>
                                                             <div class="row g-2 mb-2">
                                                                 <div class="col-md-4">
                                                                     <label for="dlot-headcount" class="form-label small mb-0">Headcount:</label>
