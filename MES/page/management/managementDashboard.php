@@ -34,7 +34,7 @@ $currentUserForJS = $_SESSION['user'] ?? null;
              * *** คุณอาจต้องปรับค่า 130px นี้เล็กน้อย (เช่น 120px, 140px) ***
              * *** เพื่อให้มันพอดีกับหน้าจอของคุณที่สุด ***
              */
-            height: calc(100vh - 130px - 3rem);
+            height: calc(100vh - 120px - 3rem);
         }
 
         /* 2. ให้ content-wrapper ยืดเต็ม "โลกใหม่" ของเรา */
@@ -43,7 +43,7 @@ $currentUserForJS = $_SESSION['user'] ?? null;
             display: flex;
             flex-direction: column;
             min-height: 0; /* <-- สำคัญมาก! อนุญาตให้หดตัวได้ */
-            gap: 1rem;
+            gap: 2rem;
         }
 
         /* 3. แถวบน (กราฟ/ปฏิทิน) - 50% ของพื้นที่ */
@@ -105,6 +105,17 @@ $currentUserForJS = $_SESSION['user'] ?? null;
         .dlot-view-container #dlot-entry-card { flex-grow: 1; min-height: 0; display: flex; flex-direction: column;}
         .dlot-view-container #dlot-entry-card .card-body { flex-grow: 1; overflow-y: auto; min-height: 0; }
 
+        #cost-summary-card-dlot .stat-card-body h4 {
+            font-size: 1rem; /* ลดขนาดตัวเลขลงเล็กน้อย */
+        }
+        #cost-summary-card-dlot .stat-card-header {
+            font-size: 0.75rem; /* ลดขนาดหัวข้อลงเล็กน้อย */
+        }
+        hr {
+            border-color: var(--bs-border-color);
+            opacity: 0.25;
+        }
+
         /* สไตล์สำหรับช่องที่แก้ไขได้ และความกว้างตาราง */
         .editable-note, .editable-plan { cursor: pointer; min-width: 80px; display: inline-block; padding: 0.25rem 0.5rem; text-align: right;}
         .editable-note:hover, .editable-plan:hover { background-color: var(--bs-tertiary-bg); outline: 1px dashed var(--bs-secondary); }
@@ -153,13 +164,13 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                     <div id="planning-view">
                         <div class="planning-section-content">
                             <div class="row g-3 planning-top-row">
-                                <div class="col-lg-7 h-100">
+                                <div class="col-lg-8 h-100">
                                     <div class="card shadow-sm chart-card-plan h-100">
                                         <div class="card-header"> Plan vs Actual (<span id="chartDateDisplay"></span>) </div>
                                         <div class="card-body"> <canvas id="planVsActualChart"></canvas> </div>
                                     </div>
                                 </div>
-                                <div class="col-lg-5 h-100">
+                                <div class="col-lg-4 h-100">
                                     <div class="card shadow-sm calendar-card h-100">
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <span id="calendar-title">Planning Calendar</span>
@@ -168,42 +179,43 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                         <div class="card-body">
                                             <div id="planningCalendarContainer" style="width:100%; height: 100%;"> Loading Calendar... </div>
                                             <div id="dlotViewContainer" class="dlot-view-container">
-                                                <div class="card shadow-sm" id="cost-summary-card-dlot">
-                                                    <div class="card-header d-flex justify-content-between align-items-center gap-2 p-2">
-                                                        <h6 class="mb-0 card-title fw-bold small"><i class="fas fa-chart-line me-1 text-primary"></i>Cost Summary (<span id="dlotDateDisplayCost"></span>)</h6>
-                                                        <div class="d-flex gap-1 align-items-center">
-                                                            <select id="cost-summary-line-dlot" class="form-select form-select-sm" style="width: auto;" title="Select Line"><option value="ALL">All</option></select>
-                                                            <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btn-refresh-cost-summary-dlot" title="Refresh Summary"><i class="fas fa-sync-alt fa-xs"></i></button>
-                                                        </div>
-                                                    </div>
-                                                    <div class="card-body p-2">
-                                                        <div class="row g-2">
-                                                            <div class="col-12"><div class="card text-center text-bg-secondary mb-1"><div class="stat-card-header py-0 px-2 small">Std DL Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="std-dl-cost-display-dlot" style="font-size: 1.1rem;">0.00</h4></div></div></div>
-                                                            <div class="col-12"><div class="card text-center text-bg-primary mb-1"><div class="stat-card-header py-0 px-2 small">Actual DLOT Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="actual-dlot-cost-display-dlot" style="font-size: 1.1rem;">0.00</h4></div></div></div>
-                                                            <div class="col-12"><div class="card text-center" id="variance-card-dlot"><div class="stat-card-header py-0 px-2 small">Variance</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="dl-variance-display-dlot" style="font-size: 1.1rem;">0.00</h4></div></div></div>
-                                                        </div>
-                                                    </div>
-                                                </div> 
-                                                <div class="card shadow-sm flex-grow-1" id="dlot-entry-card">
-                                                    <div class="card-header p-2"><h6 class="mb-0 card-title fw-bold small"><i class="fas fa-edit me-1 text-success"></i>Daily Cost Entry (<span id="dlotDateDisplayEntry"></span>)</h6></div>
+                                                <div class="card shadow-sm flex-grow-1" id="dlot-entry-card">                                 
                                                     <div class="card-body p-2 d-flex flex-column">
+                                                        <div class="mb-2">
+                                                            <div class="d-flex justify-content-end align-items-center gap-1 mb-2">
+                                                                <span id="dlotDateDisplayCost" class="visually-hidden"></span>
+                                                                <select id="cost-summary-line-dlot" class="form-select form-select-sm" style="width: auto;" title="Select Line"><option value="ALL">All</option></select>
+                                                                <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btn-refresh-cost-summary-dlot" title="Refresh Summary"><i class="fas fa-sync-alt fa-xs"></i></button>
+                                                            </div>
+                                                            <div class="row g-2">
+                                                                <div class="col-4"><div class="card text-center text-bg-secondary h-100"><div class="stat-card-header py-0 px-2 small">Std DL Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="std-dl-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
+                                                                <div class="col-4"><div class="card text-center text-bg-primary h-100"><div class="stat-card-header py-0 px-2 small">Actual DLOT Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="actual-dlot-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
+                                                                <div class="col-4"><div class="card text-center h-100" id="variance-card-dlot"><div class="stat-card-header py-0 px-2 small">Variance</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="dl-variance-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!--<hr class="my-3">-->
+
                                                         <form id="dlot-entry-form" class="flex-grow-1 d-flex flex-column">
+                                                            <span id="dlotDateDisplayEntry" class="visually-hidden"></span>
                                                             <input type="hidden" id="dlot-entry-date">
                                                             <div class="mb-1">
                                                                 <label for="dlot-entry-line" class="form-label small mb-0">Line:</label>
                                                                 <select id="dlot-entry-line" class="form-select form-select-sm"><option value="ALL" selected>All Lines</option></select>
                                                             </div>
-                                                            <div class="mb-1">
-                                                                <label for="dlot-headcount" class="form-label small mb-0">Headcount:</label>
-                                                                <input type="number" class="form-control form-control-sm" id="dlot-headcount" placeholder="0" min="0" step="1">
-                                                            </div>
-                                                            <div class="mb-1">
-                                                                <label for="dlot-dl-cost" class="form-label small mb-0">Direct Labor (DL):</label>
-                                                                <input type="number" class="form-control form-control-sm" id="dlot-dl-cost" placeholder="0.00" min="0" step="0.01">
-                                                            </div>
-                                                            <div class="mb-2">
-                                                                <label for="dlot-ot-cost" class="form-label small mb-0">Overtime (OT):</label>
-                                                                <input type="number" class="form-control form-control-sm" id="dlot-ot-cost" placeholder="0.00" min="0" step="0.01">
+                                                            <div class="row g-2 mb-2">
+                                                                <div class="col-md-4">
+                                                                    <label for="dlot-headcount" class="form-label small mb-0">Headcount:</label>
+                                                                    <input type="number" class="form-control form-control-sm" id="dlot-headcount" placeholder="0" min="0" step="1">
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label for="dlot-dl-cost" class="form-label small mb-0">Direct Labor (DL):</label>
+                                                                    <input type="number" class="form-control form-control-sm" id="dlot-dl-cost" placeholder="0.00" min="0" step="0.01">
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label for="dlot-ot-cost" class="form-label small mb-0">Overtime (OT):</label>
+                                                                    <input type="number" class="form-control form-control-sm" id="dlot-ot-cost" placeholder="0.00" min="0" step="0.01">
+                                                                </div>
                                                             </div>
                                                             <div class="mt-auto pt-1">
                                                                 <button type="submit" class="btn btn-success btn-sm w-100" id="btn-save-dlot"><i class="fas fa-save me-1"></i> Save</button>
