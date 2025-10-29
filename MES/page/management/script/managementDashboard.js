@@ -234,72 +234,112 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Renders the Plan vs Actual bar chart.
+     * Renders the Plan vs Actual bar chart (Aggregated Version).
      */
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
         if (!chartCanvas) return;
         const ctx = chartCanvas.getContext('2d');
-        if (chartDateDisplay) { 
-            chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`; 
+        if (chartDateDisplay) {
+            chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
         }
-        
-        const labels = planData.map(p => p.sap_no || p.part_no || 'N/A');
-        const adjustedPlanData = planData.map(p => parseFloat(p.adjusted_planned_quantity || 0));
-        const actualQtyData = planData.map(p => parseFloat(p.actual_quantity || 0));
-        
+
+        // --- [แก้ไข] สรุปรวมข้อมูล ---
+        const aggregatedData = {}; // ใช้ Object เพื่อรวมยอดตาม Item
+
+        planData.forEach(p => {
+            const itemId = p.item_id; // หรือ p.sap_no || p.part_no ถ้าต้องการใช้เป็น Key
+            const identifier = p.sap_no || p.part_no || `Item ${itemId}`; // ชื่อที่จะแสดงบนแกน X
+            const adjustedPlan = parseFloat(p.adjusted_planned_quantity || 0);
+            const actualQty = parseFloat(p.actual_quantity || 0);
+
+            if (!aggregatedData[itemId]) {
+                aggregatedData[itemId] = {
+                    label: identifier,
+                    totalAdjustedPlan: 0,
+                    totalActualQty: 0
+                };
+            }
+            aggregatedData[itemId].totalAdjustedPlan += adjustedPlan;
+            aggregatedData[itemId].totalActualQty += actualQty;
+        });
+
+        // แปลง Object ที่รวมยอดแล้ว เป็น Array สำหรับ Chart.js
+        const aggregatedArray = Object.values(aggregatedData);
+
+        const labels = aggregatedArray.map(agg => agg.label);
+        const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan);
+        const totalActualQtyData = aggregatedArray.map(agg => agg.totalActualQty);
+        // --- จบการแก้ไขส่วนรวมข้อมูล ---
+
+
         const chartData = {
             labels: labels,
             datasets: [
                 {
-                    label: 'Adjusted Plan',
-                    data: adjustedPlanData,
+                    label: 'Total Adjusted Plan', // [แก้ไข] เปลี่ยนชื่อ Legend
+                    data: totalAdjustedPlanData, // [แก้ไข] ใช้ข้อมูลรวม
                     backgroundColor: 'rgba(54, 162, 235, 0.7)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
                 },
                 {
-                    label: 'Actual Qty',
-                    data: actualQtyData,
+                    label: 'Total Actual Qty', // [แก้ไข] เปลี่ยนชื่อ Legend
+                    data: totalActualQtyData, // [แก้ไข] ใช้ข้อมูลรวม
+                    // --- [แก้ไข] Logic การกำหนดสีแท่ง Actual ---
                     backgroundColor: (ctx) => {
-                        const i = ctx.dataIndex; if (i >= adjustedPlanData.length) return '#CCC';
-                        const pVal = adjustedPlanData[i]; const aVal = actualQtyData[i];
-                        if (aVal < pVal) return 'rgba(255, 99, 132, 0.7)';
-                        else if (aVal >= pVal && pVal > 0) return 'rgba(75, 192, 192, 0.7)';
+                        const i = ctx.dataIndex;
+                        if (i >= totalAdjustedPlanData.length) return '#CCC'; // กรณีข้อมูลไม่ครบ
+                        const totalPlan = totalAdjustedPlanData[i];
+                        const totalActual = totalActualQtyData[i];
+
+                        // ถ้า Actual >= Plan (และ Plan > 0) -> สีเขียว
+                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)';
+                        // ถ้า Actual < Plan (แต่ Actual > 0) -> สีแดง
+                        else if (totalActual < totalPlan && totalActual > 0) return 'rgba(255, 99, 132, 0.7)';
+                        // ถ้า Actual > 0 แต่ Plan = 0 -> สีฟ้า (ผลิตโดยไม่มีแผน)
+                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(54, 162, 235, 0.5)'; // สีฟ้าอ่อนลงหน่อย
+                        // กรณีอื่นๆ (เช่น Actual = 0) -> สีเทา
                         return 'rgba(201, 203, 207, 0.7)';
                     },
                     borderColor: (ctx) => {
-                        const i = ctx.dataIndex; if (i >= adjustedPlanData.length) return '#AAA';
-                        const pVal = adjustedPlanData[i]; const aVal = actualQtyData[i];
-                        if (aVal < pVal) return 'rgba(255, 99, 132, 1)';
-                        else if (aVal >= pVal && pVal > 0) return 'rgba(75, 192, 192, 1)';
+                        const i = ctx.dataIndex;
+                        if (i >= totalAdjustedPlanData.length) return '#AAA';
+                        const totalPlan = totalAdjustedPlanData[i];
+                        const totalActual = totalActualQtyData[i];
+
+                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 1)';
+                        else if (totalActual < totalPlan && totalActual > 0) return 'rgba(255, 99, 132, 1)';
+                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(54, 162, 235, 1)';
                         return 'rgba(201, 203, 207, 1)';
                     },
+                    // --- จบการแก้ไข Logic สี ---
                     borderWidth: 1
                 }
             ]
         };
-        
+
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Quantity' }, ticks: { callback: v => v.toLocaleString() } },
-                x: { ticks: { maxRotation: 0, minRotation: 0, font: { size: 12 }, autoSkip: true, maxTicksLimit: 15 } }
+                y: { beginAtZero: true, title: { display: true, text: 'Total Quantity' }, ticks: { callback: v => v.toLocaleString() } },
+                // [แก้ไข] ปรับแกน X ให้ดูดีขึ้น สำหรับชื่อ Item
+                x: { ticks: { maxRotation: 0, minRotation: 0, font: { size: 12 }, autoSkip: true, maxTicksLimit: 20 } }
             },
             plugins: {
-                legend: { position: 'top' },
+                legend: { position: 'top' }, // [แก้ไข] ย้าย Legend ลงล่างอาจจะดีกว่า
                 tooltip: { callbacks: { label: c => `${c.dataset.label || ''}: ${c.parsed.y !== null ? c.parsed.y.toLocaleString() : ''}` } },
                 datalabels: { anchor: 'end', align: 'top', formatter: (v) => v > 0 ? v.toLocaleString() : '', font: { size: 10 }, color: '#444' }
             }
         };
-        
+
         if (planVsActualChartInstance) {
             planVsActualChartInstance.destroy();
         }
-        
+
         const availablePlugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
-        planVsActualChartInstance = new Chart(ctx, { type: 'bar', data: chartData, options: chartOptions, plugins: availablePlugins });
+        planVsActualChartInstance = new Chart(ctx, { type: 'bar', data: chartData, options: chartOptions , plugins: availablePlugins });
         if (availablePlugins.length === 0) { console.warn("ChartDataLabels plugin not found."); }
     }
 
@@ -308,11 +348,18 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
         showSpinner();
-        const params = {
-            start: fetchInfo.startStr.substring(0, 10),
-            end: fetchInfo.endStr.substring(0, 10),
-            line: planLineFilter.value || null
+        const startDate = fetchInfo.startStr.substring(0, 10);
+        
+        const calendarEndDate = new Date(fetchInfo.endStr);
+        calendarEndDate.setDate(calendarEndDate.getDate() - 1); // Subtract one day
+        const endDate = formatDateForInput(calendarEndDate); // Use our helper function
+
+        const params = { 
+            startDate: startDate,
+            endDate: endDate,
+            line: planLineFilter.value || null 
         };
+
         try {
             const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
             if (result.success && result.data) {
@@ -625,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         planModalItemSearch.classList.remove('is-invalid');
         itemSearchError.style.display = 'none';
         deletePlanButton.style.display = 'none';
-        planModalDate.value = planDateFilter.value || formatDateForInput(new Date());
+        planModalDate.value = endDateFilter.value || startDateFilter.value || formatDateForInput(new Date());
         planModalLine.value = planLineFilter.value || "";
         planModalShift.value = planShiftFilter.value || "";
         if (planModalItemResults) {
@@ -654,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deletePlanButton.style.display = 'inline-block';
         } else {
             // Add Mode
-            planModalDate.value = planDateFilter.value || formatDateForInput(new Date());
+            planModalDate.value = endDateFilter.value || startDateFilter.value || formatDateForInput(new Date());
             planModalLine.value = planLineFilter.value || "";
             planModalShift.value = planShiftFilter.value || "";
         }

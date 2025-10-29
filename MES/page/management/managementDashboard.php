@@ -161,8 +161,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                             <select id="planShiftFilter" class="form-select form-select-sm" style="width: auto;"> <option value="">All Shifts</option> <option value="DAY">DAY</option> <option value="NIGHT">NIGHT</option> </select>
                             <span class="vr mx-1 d-none d-md-inline"></span>
                             <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-plan" title="Refresh Plans"> <i class="fas fa-sync-alt"></i> </button>
-                            <button class="btn btn-sm btn-outline-warning py-1 px-2" id="btnCalculateCarryOver" title="Calculate missing carry-over values up to today"> <i class="fas fa-calculator me-1"></i> Calc C/O </button>
-                            <button class="btn btn-sm btn-success" id="btnAddPlan"> <i class="fas fa-plus me-1"></i> Add Plan </button>
                         </div>
                     </div>
                 </div>
@@ -228,19 +226,30 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                     </div>
                                 </div>
                             </div>
-                            <div class="planning-table-wrapper">
-                                <table class="table table-striped table-hover table-sm" id="productionPlanTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 10%;">Date</th> <th style="width: 10%;">Line</th> <th style="width: 8%;">Shift</th> <th>Item (SAP / Part No)</th>
-                                            <th style="width: 10%;" class="text-center">Plan Qty</th> <th style="width: 10%;" class="text-center">Actual Qty</th> <th style="width: 10%;" class="text-center">Carry Over</th> <th style="width: 10%;" class="text-center">Adjusted Plan</th>
-                                            <th class="text-center">Note</th> <th class="text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="productionPlanTableBody"> <tr><td colspan="10" class="text-center">Loading plans...</td></tr> </tbody>
-                                </table>
+                            <div class="card border-1 shadow-sm d-flex flex-column flex-grow-1" style="min-height: 0;">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>Production Plan Details</span> 
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-warning py-1 px-2" id="btnCalculateCarryOver" title="Calculate missing carry-over values up to today"> <i class="fas fa-calculator me-1"></i> Calc C/O </button>
+                                        <button class="btn btn-sm btn-success" id="btnAddPlan"> <i class="fas fa-plus me-1"></i> Add Plan </button>
+                                    </div>
+                                </div>
+                                <div class="planning-table-wrapper">
+                                    <table class="table table-striped table-hover table-sm" id="productionPlanTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 10%;">Date</th> <th style="width: 10%;">Line</th> <th style="width: 8%;">Shift</th> <th>Item (SAP / Part No)</th>
+                                                <th style="width: 10%;" class="text-center">Plan Qty</th> <th style="width: 10%;" class="text-center">Actual Qty</th> <th style="width: 10%;" class="text-center">Carry Over</th> <th style="width: 10%;" class="text-center">Adjusted Plan</th>
+                                                <th class="text-center">Note</th> <th class="text-center">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="productionPlanTableBody"> <tr><td colspan="10" class="text-center">Loading plans...</td></tr> </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div> </div> </section>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <div id="toast"></div>
