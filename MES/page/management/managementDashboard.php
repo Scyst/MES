@@ -173,18 +173,33 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                             <div class="row g-3 planning-top-row">
                                 <div class="col-lg-8 h-100">
                                     <div class="card shadow-sm chart-card-plan h-100">
-                                        <div class="card-header"> Plan vs Actual (<span id="chartDateDisplay"></span>) </div>
+                                        <div class="card-header fw-bold text-truncate"> Plan vs Actual (<span id="chartDateDisplay"></span>) </div>
                                         <div class="card-body"> <canvas id="planVsActualChart"></canvas> </div>
                                     </div>
                                 </div>
                                 <div class="col-lg-4 h-100">
                                     <div class="card shadow-sm calendar-card h-100">
                                         <div class="card-header d-flex justify-content-between align-items-center">
-                                            <span id="calendar-title">Planning Calendar</span>
-                                            <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary" style="display: none;"> <i class="fas fa-arrow-left me-1"></i> Back </button>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <button id="calendar-prev-button" class="btn btn-sm btn-outline-secondary" title="Previous month/week">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </button>
+                                                <button id="calendar-next-button" class="btn btn-sm btn-outline-secondary" title="Next month/week">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                                <button id="calendar-today-button" class="btn btn-sm btn-outline-secondary ms-1">Today</button>
+                                            </div>
+
+                                            <span id="calendar-title" class="fw-bold mx-2 text-truncate" style="font-size: 1rem;">Planning Calendar</span> <div class="d-flex align-items-center gap-1">
+                                                <div class="btn-group btn-group-sm" role="group" aria-label="Calendar View">
+                                                    <button id="calendar-month-view-button" type="button" class="btn btn-outline-primary active">Month</button>
+                                                    <button id="calendar-week-view-button" type="button" class="btn btn-outline-primary">Week</button>
+                                                </div>
+                                                <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;"> <i class="fas fa-arrow-left me-1"></i> Back </button>
+                                            </div>
                                         </div>
-                                        <div class="card-body">
-                                            <div id="planningCalendarContainer" style="width:100%; height: 100%;"> Loading Calendar... </div>
+                                        <div class="card-body p-0">
+                                            <div id="planningCalendarContainer"> Loading Calendar... </div>
                                             <div id="dlotViewContainer" class="dlot-view-container">
                                                 <div class="card shadow-sm flex-grow-1" id="dlot-entry-card">                                 
                                                     <div class="card-body p-2 d-flex flex-column">
@@ -228,7 +243,7 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                             </div>
                             <div class="card border-1 shadow-sm d-flex flex-column flex-grow-1" style="min-height: 0;">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>Production Plan Details</span> 
+                                    <span class="fw-bold mx-2 text-truncate">Production Plan Details</span> 
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-sm btn-warning py-1 px-2" id="btnCalculateCarryOver" title="Calculate missing carry-over values up to today"> <i class="fas fa-calculator me-1"></i> Calc C/O </button>
                                         <button class="btn btn-sm btn-success" id="btnAddPlan"> <i class="fas fa-plus me-1"></i> Add Plan </button>

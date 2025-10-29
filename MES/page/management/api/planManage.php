@@ -151,7 +151,7 @@ try {
                 $params[':shift'] = $shift;
             }
 
-            $sql .= " ORDER BY p.plan_date, p.line, p.shift, i.sap_no";
+            $sql .= "  ORDER BY p.plan_date DESC, p.line, p.shift, i.sap_no";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);

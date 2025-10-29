@@ -478,6 +478,9 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Initializes the FullCalendar instance.
      */
+    /**
+     * Initializes the FullCalendar instance.
+     */
     function initializeCalendar() {
         if (!planningCalendarContainer) {
             console.error("Calendar container missing.");
@@ -486,16 +489,28 @@ document.addEventListener('DOMContentLoaded', () => {
         planningCalendarContainer.innerHTML = '';
         fullCalendarInstance = new FullCalendar.Calendar(planningCalendarContainer, {
             initialView: 'dayGridMonth',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+            headerToolbar: false,
             editable: false,
             selectable: true,
             selectMirror: true,
             dayMaxEvents: 3,
-            events: fetchCalendarEvents, // API call
-            dateClick: handleDateClick, // Action
-            eventClick: handleEventClick, // Action
+            events: fetchCalendarEvents,
+            dateClick: handleDateClick,
+            eventClick: handleEventClick,
             themeSystem: 'bootstrap5',
-            buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right', prevYear: 'bi-chevron-double-left', nextYear: 'bi-chevron-double-right' }
+            buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right', prevYear: 'bi-chevron-double-left', nextYear: 'bi-chevron-double-right' }, // เก็บไว้ เผื่อใช้กับปุ่ม Custom
+
+            datesSet: function(dateInfo) {
+                if (calendarTitle) {
+                    // ใช้ title ที่ FullCalendar สร้างให้ มาแสดงใน span ของเรา
+                    calendarTitle.textContent = dateInfo.view.title;
+                }
+            },
+            viewDidMount: function(dateInfo) { // เรียกตอนโหลดครั้งแรกด้วย
+                 if (calendarTitle) {
+                    calendarTitle.textContent = dateInfo.view.title;
+                }
+            }
         });
         fullCalendarInstance.render();
     }
@@ -1049,6 +1064,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.target.blur();
                 }
             }
+        });
+
+        document.getElementById('calendar-prev-button')?.addEventListener('click', () => {
+            fullCalendarInstance?.prev(); // เรียก method .prev() ของ FullCalendar
+        });
+        document.getElementById('calendar-next-button')?.addEventListener('click', () => {
+            fullCalendarInstance?.next(); // เรียก method .next()
+        });
+        document.getElementById('calendar-today-button')?.addEventListener('click', () => {
+            fullCalendarInstance?.today(); // เรียก method .today()
+        });
+        document.getElementById('calendar-month-view-button')?.addEventListener('click', () => {
+            fullCalendarInstance?.changeView('dayGridMonth'); // เปลี่ยน View เป็น Month
+            // สลับ active class ของปุ่ม View
+            document.getElementById('calendar-month-view-button')?.classList.add('active');
+            document.getElementById('calendar-week-view-button')?.classList.remove('active');
+        });
+        document.getElementById('calendar-week-view-button')?.addEventListener('click', () => {
+            fullCalendarInstance?.changeView('timeGridWeek'); // เปลี่ยน View เป็น Week
+            // สลับ active class ของปุ่ม View
+            document.getElementById('calendar-month-view-button')?.classList.remove('active');
+            document.getElementById('calendar-week-view-button')?.classList.add('active');
         });
 
         // --- Initial Data Load ---
