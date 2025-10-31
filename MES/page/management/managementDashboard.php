@@ -132,6 +132,19 @@ $currentUserForJS = $_SESSION['user'] ?? null;
             /* (ใช้สี default ของปฏิทิน) */
         }
         
+        .fc-event.dlot-marker-bg {
+            /* ⭐️ ใช้ display: background !important */
+            display: background !important; 
+            background-color: var(--bs-success) !important;
+            opacity: 0.15; /* ⭐️ ทำให้สีจางๆ */
+            z-index: -1; /* ⭐️ ให้อยู่หลังสุด */
+        }
+
+        /* ⭐️ (Optional) ทำให้คลิกทะลุ Background Event ไปยัง "วันที่" ได้ */
+        .fc-bg-event {
+            pointer-events: none;
+        }
+
         #cost-summary-card-dlot .stat-card-body h4 {
             font-size: 1rem; /* ลดขนาดตัวเลขลงเล็กน้อย */
         }

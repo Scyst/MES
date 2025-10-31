@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // SECTION 1: GLOBAL VARIABLES & CONSTANTS
     // =================================================================
 
+    const todayString = formatDateForInput(new Date());
+
     // --- State Variables ---
     let allPlanningItems = [];
     let selectedPlanItem = null;
@@ -33,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const productionPlanTableBody = document.getElementById('productionPlanTableBody');
     
     // Calendar & DLOT View
-    const todayString = formatDateForInput(new Date());
     const calendarCardHeader = document.querySelector('.calendar-card .card-header');
     const calendarTitle = document.getElementById('calendar-title');
     const backToCalendarBtn = document.getElementById('backToCalendarBtn');
@@ -221,11 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="text-center">${originalPlan.toLocaleString()}</td>
                 <td class="text-center ${actualClass}">${actualQty.toLocaleString()}</td>
                 <td class="text-center ${carryOver > 0 ? 'text-warning' : ''}">
-                    <span class="editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" inputmode="decimal" tabindex="0">${carryOver.toLocaleString()}</span>
+                    <span class="text-center editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" inputmode="decimal" tabindex="0">${carryOver.toLocaleString()}</span>
                 </td>
                 <td class="text-center fw-bold" data-field="adjusted_plan">${adjustedPlan.toLocaleString()}</td>
                 <td class="text-center">
-                    <span class="editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="note" tabindex="0">${plan.note || ''}</span>
+                    <span class="text-center editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="note" tabindex="0">${plan.note || ''}</span>
                 </td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary edit-plan-btn" title="Edit"><i class="fas fa-edit"></i></button>
@@ -469,9 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * [UPGRADED v2] Fetches events AND DLOT dates.
-     * Includes a fix for the dayCellDidMount race condition by forcing a
-     * re-render ONLY if the dlotDateSet has changed.
+     * [REVERTED] Fetches ONLY Plan events for the FullCalendar.
+     * (DLOT is now handled by fetchDlotMarkers)
      */
     async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
         showSpinner();
@@ -487,52 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
             line: planLineFilter.value || null 
         };
         
-        const dlotParams = {
-            startDate: startDate,
-            endDate: endDate,
-            line: planLineFilter.value || 'ALL'
-        };
-
         try {
-            // 1. ดึงข้อมูล 2 ส่วนพร้อมกัน (เหมือนเดิม)
-            const planPromise = sendRequest(PLAN_API, 'get_plans', 'GET', null, planParams);
-            const dlotPromise = sendRequest(DLOT_API, 'get_dlot_dates', 'GET', null, dlotParams);
+            // 1. ดึงเฉพาะ Plan
+            const planResult = await sendRequest(PLAN_API, 'get_plans', 'GET', null, planParams);
 
-            const [planResult, dlotResult] = await Promise.all([planPromise, dlotPromise]);
-
-            // --- ⭐️ [THE FIX IS HERE] ⭐️ ---
-            let dlotChanged = false; // 1. สร้างตัวแปรติดตามการเปลี่ยนแปลง
-
-            // 2. ประมวลผล DLOT Dates
-            const newDlotSet = (dlotResult.success && Array.isArray(dlotResult.data)) ? new Set(dlotResult.data) : new Set();
-            
-            // 3. เช็คว่า Set ใหม่ ต่างจาก Set เก่า (dlotDateSet) หรือไม่
-            if (newDlotSet.size !== dlotDateSet.size || ![...newDlotSet].every(date => dlotDateSet.has(date))) {
-                dlotChanged = true;
-                dlotDateSet = newDlotSet; // 4. ถ้าต่าง -> อัปเดต Set และตั้งธง
-            }
-            // --- [END OF FIX (PART 1)] ---
-
-            // 5. ประมวลผล Plan Events (เหมือนเดิม)
+            // 2. ประมวลผล Plan Events
             if (planResult.success && planResult.data) {
                 successCallback(transformPlansToEvents(planResult.data));
             } else {
                 throw new Error(planResult.message || 'Failed load events');
             }
-
-            // --- ⭐️ [THE FIX (PART 2)] ⭐️ ---
-            // 6. ถ้าธง dlotChanged เป็น true (แปลว่า 💰 อัปเดต)
-            // ให้สั่ง re-render ปฏิทิน (ซึ่งจะไปเรียก dayCellDidMount อีกครั้ง)
-            if (dlotChanged && fullCalendarInstance) {
-                // เราใช้ setTimeout 0ms เพื่อหน่วงให้การ render event หลักเสร็จก่อน
-                // ค่อยสั่ง render cell อีกที
-                setTimeout(() => {
-                    fullCalendarInstance.render();
-                    // นี่อาจจะเรียก fetchCalendarEvents อีกครั้ง
-                    // แต่ครั้งที่ 2 dlotChanged จะเป็น false -> จึงไม่เกิด Loop ครับ
-                }, 0);
-            }
-            // --- [END OF FIX (PART 2)] ---
 
         } catch (error) {
             console.error("Error fetching calendar data:", error);
@@ -543,39 +507,104 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * [NEW v2 - Background Event] Fetches DLOT (Direct Labor/OT) entry dates.
+     * These will be rendered as background events.
+     */
+    async function fetchDlotMarkers(fetchInfo, successCallback, failureCallback) {
+        const startDate = fetchInfo.startStr.substring(0, 10);
+        
+        const calendarEndDate = new Date(fetchInfo.endStr);
+        calendarEndDate.setDate(calendarEndDate.getDate() - 1);
+        const endDate = formatDateForInput(calendarEndDate);
+
+        const params = { 
+            startDate: startDate,
+            endDate: endDate,
+            line: planLineFilter.value || 'ALL'
+        };
+
+        try {
+            const result = await sendRequest(DLOT_API, 'get_dlot_dates', 'GET', null, params);
+            
+            if (result.success && Array.isArray(result.data)) {
+                // ⭐️ แปลง "วันที่" ให้เป็น Background Event
+                const dlotEvents = result.data.map(dateString => ({
+                    // ⭐️ ไม่ต้องมี Title
+                    start: dateString,
+                    allDay: true,
+                    display: 'background', // ⭐️⭐️ [สำคัญ] แสดงเป็นพื้นหลัง
+                    className: 'dlot-marker-bg', // ⭐️⭐️ [สำคัญ] ใช้ CSS ที่เราเพิ่งเพิ่ม
+                    extendedProps: { type: 'dlot_marker' } 
+                }));
+                successCallback(dlotEvents);
+            } else {
+                throw new Error(result.message || 'Failed to load DLOT markers');
+            }
+        } catch (error) {
+            console.error("Error fetching DLOT markers:", error);
+            failureCallback(error);
+        }
+    }
+
+    /**
+     * [UPGRADED v3 - Synced Colors]
+     * Uses the exact same color palette as the Bar Chart for consistency.
+     */
     function transformPlansToEvents(plans) {
         return plans.map(plan => {
+            // --- 1. ดึงข้อมูล ---
             const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
             const actualQty = parseFloat(plan.actual_quantity || 0);
-            let statusColor = '#6c757d'; // เทา (Default)
-            let titlePrefix = '📅 ';
+            const planDate = plan.plan_date;
 
-            if (adjustedPlan > 0) {
-                if (actualQty >= adjustedPlan) { 
-                    statusColor = '#198754'; // เขียว
-                    titlePrefix = '✅ '; 
-                } else if (actualQty > 0 || parseFloat(plan.carry_over_quantity || 0) > 0) {
-                    statusColor = '#ffc107'; // เหลือง (ถ้าผลิตแล้วแต่ขาด หรือ มียอด C/O)
-                    titlePrefix = '⚠️ '; 
-                } else {
-                    statusColor = '#0dcaf0'; // ฟ้า (แผนใหม่ ยังไม่ผลิต)
-                    titlePrefix = '📝 ';
-                }
-            } else if (actualQty > 0) {
-                statusColor = '#6f42c1'; // ม่วง (ผลิตเกินแผน/ไม่มีแผน)
-                titlePrefix = '📦 ';
+            // --- 2. กำหนดค่าเริ่มต้น (จาก Chart Palette) ---
+            let statusColor = 'rgba(201, 203, 207, 0.7)'; // Default: สีเทา (Chart Gray)
+            let borderStyle = 'solid';
+
+            // --- 3. ใช้ Logic 7 ข้อ (ด้วยสีชุดใหม่) ---
+
+            // ⭐️ Rule 6: ปิดยอดแล้ว (สีเขียว)
+            // (ใช้สีเขียว/Teal จากกราฟ)
+            if (adjustedPlan > 0 && actualQty >= adjustedPlan) {
+                statusColor = 'rgba(75, 192, 192, 0.7)'; // Chart Green
             }
+            // ⭐️ Rule 5: ผลิตโดยไม่มีแผน (สีม่วง)
+            // (ใช้สีม่วงจากกราฟ)
+            else if (adjustedPlan <= 0 && actualQty > 0) {
+                statusColor = 'rgba(153, 102, 255, 0.7)'; // Chart Purple (Unplanned)
+            }
+            // ⭐️ Rule 7: "กำลังทำ" ในวันนี้ (สีส้ม)
+            // (ใช้สีส้ม C/O จากกราฟ แทนสีม่วงเดิม)
+            else if (adjustedPlan > 0 && actualQty < adjustedPlan && planDate === todayString) {
+                statusColor = 'rgba(255, 159, 64, 0.7)'; // Chart Orange (Carry Over)
+                borderStyle = 'dashed'; // ⭐️ ทำให้แตกต่าง
+            }
+            // ⭐️ Rule 4: "ตกแผน" (อดีต) (สีแดง)
+            // (ใช้สีแดงจากกราฟ)
+            else if (adjustedPlan > 0 && actualQty < adjustedPlan && planDate < todayString) {
+                statusColor = 'rgba(255, 99, 132, 0.7)'; // Chart Red (Shortfall)
+            }
+            // ⭐️ Rule 2: "แผนในอนาคต" (สีเทา)
+            // (ใช้สีเทาจากกราฟ)
+            else if (adjustedPlan > 0 && planDate > todayString) {
+                statusColor = 'rgba(201, 203, 207, 0.7)'; // Chart Gray
+            }
+            // --- (กรณีอื่นๆ: เช่น แผน 0 ยอด 0 จะใช้สีเทา Default) ---
+
+
+            // --- 4. สร้าง Title (เอาไอคอนออก) ---
+            const title = `${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`;
             
-            // ⭐️ [NEW TITLE] ทำให้สั้นลง
-            const title = `${titlePrefix}${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`;
-            
+            // --- 5. คืนค่า Event Object ---
             return {
                 id: plan.plan_id,
-                title: title, // ⭐️ ใช้ Title ใหม่
+                title: title,
                 start: plan.plan_date,
                 allDay: true,
                 backgroundColor: statusColor,
-                borderColor: statusColor,
+                borderColor: statusColor.replace('0.7', '1'),
+                borderStyle: borderStyle,
                 extendedProps: { planData: plan }
             };
         });
@@ -654,8 +683,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
 
     /**
-     * [UPGRADED v2] Initializes the FullCalendar instance.
-     * Uses `dayCellDidMount` to add CSS Classes for coloring.
+     * [UPGRADED v3 - Event Sources] Initializes the FullCalendar instance.
+     * Uses TWO event sources (Plans + DLOT Backgrounds)
+     * Removes the problematic dayCellDidMount hook.
      */
     function initializeCalendar() {
         if (!planningCalendarContainer) {
@@ -671,11 +701,20 @@ document.addEventListener('DOMContentLoaded', () => {
             selectMirror: true,
             dayMaxEvents: 3,
             
-            // ⭐️ [แก้ไข] ใช้ "events" แบบเดียว (ซึ่งจะไปเรียก fetchCalendarEvents)
-            events: fetchCalendarEvents,
+            // ⭐️ [แก้ไข] ใช้ eventSources เพื่อดึงข้อมูล 2 ชุด
+            eventSources: [
+                {
+                    id: 'planEvents',
+                    events: fetchCalendarEvents // (ฟังก์ชันนี้จะดึงแค่ "Plan" อย่างเดียว)
+                },
+                {
+                    id: 'dlotMarkers',
+                    events: fetchDlotMarkers // (ฟังก์ชันนี้จะดึง "Background" อย่างเดียว)
+                }
+            ],
 
             dateClick: handleDateClick,
-            eventClick: handleEventClick,
+            eventClick: handleEventClick, // ⭐️ (เราต้องแก้ handleEventClick ด้วย)
             themeSystem: 'bootstrap5',
             buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right' },
 
@@ -688,35 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
                  if (calendarTitle) {
                     calendarTitle.textContent = dateInfo.view.title;
                 }
-            },
-
-            // ⭐️⭐️ [อัปเกรด] HOOK ใหม่สำหรับ "ทาสี" วันที่ ⭐️⭐️
-            dayCellDidMount: function(hookProps) {
-                
-                // 1. ค้นหา Cell (<td>)
-                const cellEl = hookProps.el;
-
-                // 2. เคลียร์ Class เก่า (ป้องกันการวาดทับซ้อน)
-                cellEl.classList.remove('dlot-entered', 'dlot-missing-past', 'dlot-pending');
-
-                // 3. ใช้ Logic ใหม่ในการทาสี
-                // (เราต้องเช็ค
-                if (dlotDateSet.has(hookProps.dateStr)) {
-                    // Condition 1: กรอก DLOT แล้ว
-                    cellEl.classList.add('dlot-entered');
-
-                } else {
-                    // Condition 2 & 3: ยังไม่กรอก DLOT
-                    // (todayString ถูกประกาศไว้ที่บรรทัดบนสุดแล้ว)
-                    if (hookProps.dateStr < todayString) {
-                        // เป็น "อดีต" ที่ยังไม่กรอก
-                        cellEl.classList.add('dlot-missing-past');
-                    } else {
-                        // เป็น "วันนี้" หรือ "อนาคต" ที่รอการกรอก
-                        cellEl.classList.add('dlot-pending');
-                    }
-                }
             }
+            
+            // ⭐️⭐️ [ลบ] ลบ dayCellDidMount ทั้งหมด (ถ้ายังมี) ⭐️⭐️
+            // dayCellDidMount: function(hookProps) { ... }
         });
         fullCalendarInstance.render();
     }
@@ -729,12 +743,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Handles click on an event in the calendar.
+     * [UPGRADED] Handles click on an event in the calendar.
+     * Differentiates between clicking a Plan or a DLOT Marker (if clickable).
      */
     function handleEventClick(eventClickInfo) {
-        if (eventClickInfo.event.extendedProps?.planData) {
-            openPlanModal(eventClickInfo.event.extendedProps.planData);
+        const props = eventClickInfo.event.extendedProps;
+
+        if (props?.planData) {
+            // 1. ถ้าคลิก "แผน" (มี planData) -> เปิด Modal แก้ไข
+            openPlanModal(props.planData);
+            
+        } else if (props?.type === 'dlot_marker') {
+            // 2. ถ้าคลิก "DLOT Marker" (เผื่อคลิกโดน) -> เปิดหน้า DLOT
+            switchToDlotView(eventClickInfo.event.startStr);
+            
         } else {
+            // 3. อื่นๆ (ถ้ามี)
             console.warn("Clicked on an unknown event type", eventClickInfo.event);
         }
     }
@@ -791,8 +815,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
                 await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
+                // ⭐️ [แก้ไข]
                 if (fullCalendarInstance) {
-                    fullCalendarInstance.refetchEvents();
+                    // สั่งโหลด DLOT Markers ใหม่อย่างเดียว (เพราะ Plan ไม่เปลี่ยน)
+                    fullCalendarInstance.getEventSourceById('dlotMarkers')?.refetch();
                 }
             }
         } catch (error) {
@@ -971,8 +997,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 planModal.hide();
                 fetchPlans();
+                // ⭐️ [แก้ไข]
                 if (fullCalendarInstance) {
-                    fullCalendarInstance.refetchEvents();
+                    // สั่งโหลด Plan Events ใหม่อย่างเดียว (เพราะ DLOT ไม่เปลี่ยน)
+                    fullCalendarInstance.getEventSourceById('planEvents')?.refetch();
                 }
             }
         } catch (e) {
@@ -1136,8 +1164,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRefreshPlan?.addEventListener('click', () => {
             fetchPlans();
             if (fullCalendarInstance) {
-            fullCalendarInstance.refetchEvents();
-        }
+                fullCalendarInstance.getEventSourceById('planEvents')?.refetch();
+                fullCalendarInstance.getEventSourceById('dlotMarkers')?.refetch();
+            }
 
             if (dlotViewContainer.style.display === 'flex') {
                 const currentDate = dlotEntryDateInputHidden.value;
