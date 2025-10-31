@@ -107,6 +107,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (endDateFilter && !endDateFilter.value) endDateFilter.value = todayFormatted;
     }
 
+    function updateDlotSummaryView() {
+        // 1. ค้นหา DOM elements ใหม่
+        const dlDisplay = document.getElementById('dl-cost-summary-display');
+        const otDisplay = document.getElementById('ot-cost-summary-display');
+        const totalDisplay = document.getElementById('total-dlot-summary-display');
+
+        if (!dlDisplay || !otDisplay || !totalDisplay) return;
+
+        // 2. อ่านค่าจาก Inputs
+        const dlValue = parseFloat(dlotDlCostInput.value || 0);
+        const otValue = parseFloat(dlotOtCostInput.value || 0);
+        const totalValue = dlValue + otValue;
+
+        // 3. อัปเดต UI
+        dlDisplay.textContent = dlValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        otDisplay.textContent = otValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        totalDisplay.textContent = totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     // =================================================================
     // SECTION 3: DATA FETCHING & UI RENDERING
     // =================================================================
@@ -272,9 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * [UPGRADED v1.1 - Bug Fix] Renders the Plan vs Actual chart as a Stacked Bar Chart.
-     * Fixes the 'i is not defined' ReferenceError.
-     * Datalabel is correctly placed on the stacked bar.
+     * [REFACTORED] Renders the Plan vs Actual chart.
+     * This version centralizes all datalabel logic into the `plugins.datalabels`
+     * configuration to avoid structural inconsistencies in the datasets,
+     * which caused the "3-slot" rendering bug.
      */
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
@@ -286,11 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof startDateFilter !== 'undefined' && typeof endDateFilter !== 'undefined') {
                 chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
             } else if (typeof planDateFilter !== 'undefined') {
-                 chartDateDisplay.textContent = planDateFilter.value;
+                chartDateDisplay.textContent = planDateFilter.value;
             }
         }
 
-        // --- 2. [ปรับปรุง] AggregatedData: เพิ่ม Original & Carry Over ---
+        // --- 2. AggregatedData (เหมือนเดิม) ---
         const aggregatedData = {};
         planData.forEach(p => {
             const itemId = p.item_id;
@@ -316,92 +336,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const aggregatedArray = Object.values(aggregatedData);
 
-        // --- 3. [ปรับปรุง] Data Arrays: สร้าง 4 arrays ---
+        // --- 3. Data Arrays (เหมือนเดิม) ---
         const labels = aggregatedArray.map(agg => agg.label);
+        
+        // Plan Data
         const totalOriginalPlanData = aggregatedArray.map(agg => agg.totalOriginalPlan);
         const totalCarryOverData = aggregatedArray.map(agg => agg.totalCarryOver);
-        const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan);
-        const totalActualQtyData = aggregatedArray.map(agg => agg.totalActualQty);
+        const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan); 
         
-        const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...totalActualQtyData);
+        // Actual Data (Exploded)
+        const metPlanData = aggregatedArray.map(agg => 
+            (agg.totalActualQty >= agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalActualQty : null
+        );
+        const shortfallData = aggregatedArray.map(agg => 
+            (agg.totalActualQty < agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalActualQty : null
+        );
+        const unplannedData = aggregatedArray.map(agg => 
+            (agg.totalActualQty > 0 && agg.totalAdjustedPlan <= 0) ? agg.totalActualQty : null
+        );
+        
+        // Suggested Max Y-Axis (เหมือนเดิม)
+        const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...aggregatedArray.map(agg => agg.totalActualQty));
         const suggestedTopValue = dataMaxValue > 0 ? dataMaxValue * 1.15 : 10;
         
-        // --- 4. [ปรับปรุง] ChartData Datasets: ใช้สี Hardcode ---
+        // --- 4. ChartData Datasets (⭐️ [CLEANED] ลบ datalabels ทั้งหมด) ---
         const chartData = {
             labels: labels,
             datasets: [
-                // ⭐️ [สลับที่ 1] เอา Original Plan มาเป็น "ฐาน" (Base)
+                // --- Plan Stack ---
                 {
                     label: 'Original Plan',
                     data: totalOriginalPlanData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // ⭐️ ฟ้า
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', 
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
-                    stack: 'plan',
-                    datalabels: { display: false } // ⭐️ ฐานไม่ต้องแสดงป้าย
+                    stack: 'plan'
+                    // ⭐️ (ลบ datalabels ออก)
                 },
-                // ⭐️ [สลับที่ 2] เอา Carry Over มา "ซ้อนทับ" (On Top)
                 {
                     label: 'Carry Over',
                     data: totalCarryOverData,
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)', // ⭐️ ส้ม
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
                     borderColor: 'rgba(255, 159, 64, 1)',
                     borderWidth: 1,
-                    stack: 'plan',
-                    // ⭐️ [แก้ไข] ย้าย Logic ป้ายกำกับยอดรวมมาไว้ที่นี่
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'top',
-                        color: '#444', 
-                        font: { size: 10, weight: 'bold' },
-                        // ⭐️ [แก้ไข] ให้มันแสดงค่าจาก totalAdjustedPlanData (ยอดรวม)
-                        formatter: (value, context) => {
-                            const totalPlan = totalAdjustedPlanData[context.dataIndex];
-                            return totalPlan > 0 ? totalPlan.toLocaleString() : '';
-                        },
-                        offset: -5 
-                    }
+                    stack: 'plan'
+                    // ⭐️ (ลบ datalabels ออก)
                 },
-                // 3. แท่ง Actual Qty (เหมือนเดิม)
+                // --- Actual Group ---
                 {
-                    label: 'Total Actual Qty',
-                    data: totalActualQtyData,
-                    backgroundColor: (ctx) => {
-                        // ⭐️⭐️ [BUG FIX] เพิ่มบรรทัดนี้กลับเข้ามา ⭐️⭐️
-                        const i = ctx.dataIndex; 
-                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 0.7)';
-                        const totalPlan = totalAdjustedPlanData[i];
-                        const totalActual = totalActualQtyData[i];
-                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)';
-                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 0.7)';
-                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 0.7)';
-                        return 'rgba(201, 203, 207, 0.7)';
-                    },
-                    borderColor: (ctx) => {
-                        // ⭐️⭐️ [BUG FIX] เพิ่มบรรทัดนี้กลับเข้ามา ⭐️⭐️
-                        const i = ctx.dataIndex;
-                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 1)';
-                        const totalPlan = totalAdjustedPlanData[i];
-                        const totalActual = totalActualQtyData[i];
-                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 1)';
-                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 1)';
-                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 1)';
-                        return 'rgba(201, 203, 207, 1)';
-                    },
-                    borderWidth: 1
-                    // ⭐️ (แท่งนี้จะใช้ Datalabel จาก "plugins.datalabels" ด้านล่าง)
+                    label: 'Actual (Met Plan)',
+                    data: metPlanData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    stack: 'actual'
+                    // ⭐️ (ลบ datalabels ออก)
+                },
+                {
+                    label: 'Actual (Shortfall)',
+                    data: shortfallData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    stack: 'actual'
+                    // ⭐️ (ลบ datalabels ออก)
+                },
+                {
+                    label: 'Actual (Unplanned)',
+                    data: unplannedData,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    stack: 'actual'
+                    // ⭐️ (ลบ datalabels ออก)
                 }
-                // ⭐️ [ลบ] Dataset ที่ 4 (ที่เป็น line) ทิ้งไป
             ]
         };
 
-        // --- 5. [ปรับปรุง] ChartOptions: เปิด Stacked ---
+        // --- 5. ChartOptions (⭐️ [REFACTORED] ย้าย Logic ทั้งหมดมาที่นี่) ---
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
             layout: {
                 padding: {
-                    top: 25 // ⭐️ เพิ่ม padding ด้านบน 25px เพื่อให้มีที่สำหรับ datalabel
+                    top: 25 
                 }
             },
             scales: {
@@ -410,61 +428,82 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: { display: true, text: 'Total Quantity' }, 
                     ticks: { callback: v => v.toLocaleString() },
                     suggestedMax: suggestedTopValue,
-                    stacked: true
+                    stacked: true // 👈 Y-axis ซ้อนกัน
                 },
                 x: { 
-                    ticks: { maxRotation: 0, minRotation: 0, font: { size: 12 }, autoSkip: true, maxTicksLimit: 20 },
-                    stacked: true
+                    ticks: { 
+                        maxRotation: 0,
+                        minRotation: 0,
+                        font: { size: 11 },
+                        autoSkip: false
+                    },
+                    stacked: true,
+                    offset: true
                 }
             },
             plugins: {
-                // --- 6. [ปรับปรุง] Legend ---
                 legend: { 
                     position: 'top',
-                    labels: {
-                        generateLabels: function(chart) {
-                            const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                            const finalLabels = originalLabels.filter(l => 
-                                l.text === 'Carry Over' || l.text === 'Original Plan'
-                            );
-                            
-                            finalLabels.push({
-                                text: 'Actual (Met Plan)',
-                                fillStyle: 'rgba(75, 192, 192, 0.7)', // ⭐️ เขียว
-                                strokeStyle: 'rgba(75, 192, 192, 1)',
-                                lineWidth: 1, hidden: false
-                            });
-                            finalLabels.push({
-                                text: 'Actual (Shortfall)',
-                                fillStyle: 'rgba(255, 99, 132, 0.7)', // ⭐️ แดง
-                                strokeStyle: 'rgba(255, 99, 132, 1)',
-                                lineWidth: 1, hidden: false
-                            });
-                            finalLabels.push({
-                                text: 'Actual (Unplanned)',
-                                fillStyle: 'rgba(153, 102, 255, 0.7)', // ⭐️ ม่วง
-                                strokeStyle: 'rgba(153, 102, 255, 1)',
-                                lineWidth: 1, hidden: false
-                            });
-                            return finalLabels;
-                        }
-                    }
                 },
                 tooltip: { 
                     callbacks: { 
-                        label: c => `${c.dataset.label || ''}: ${c.parsed.y !== null ? c.parsed.y.toLocaleString() : ''}` 
+                        label: c => {
+                            if (c.parsed.y === null) return null;
+                            return `${c.dataset.label || ''}: ${c.parsed.y.toLocaleString()}`;
+                        }
                     },
                     mode: 'index',
                     intersect: false
                 },
-                // --- 7. [ปรับปรุง] Datalabels: ตั้งค่า default สำหรับแท่ง Actual ---
-                datalabels: { 
-                    anchor: 'end', 
-                    align: 'top', 
-                    formatter: (v) => v > 0 ? v.toLocaleString() : '', 
-                    font: { size: 10 }, 
-                    color: '#444' // ⭐️ สีข้อความ Datalabel (Hardcode)
+                
+                // ⭐️⭐️⭐️ [REFACTORED] ⭐️⭐️⭐️
+                // ย้าย Logic การแสดงผล Datalabels ทั้งหมดมาไว้ที่นี่
+                datalabels: {
+                    // --- 1. Logic การแสดงผล (Formatter) ---
+                    formatter: (value, context) => {
+                        const label = context.dataset.label;
+
+                        // 1.1 ถ้าเป็น 'Original Plan' -> ซ่อน (return null)
+                        if (label === 'Original Plan') {
+                            return null;
+                        }
+                        
+                        // 1.2 ถ้าเป็น 'Carry Over' -> ให้แสดง "ยอดยกมา"
+                        //     (ซึ่งเราจะใช้ Logic พิเศษให้มันแสดง "ยอดรวม Plan")
+                        if (label === 'Carry Over') {
+                            const totalPlan = totalAdjustedPlanData[context.dataIndex];
+                            return totalPlan > 0 ? totalPlan.toLocaleString() : '';
+                        }
+                        
+                        // 1.3 ถ้าเป็นกลุ่ม 'Actual' (ที่เหลือ)
+                        //     ให้แสดงค่าของมันเอง (ถ้ามีค่า > 0)
+                        return (value !== null && value > 0) ? value.toLocaleString() : '';
+                    },
+                    
+                    // --- 2. Logic การจัดรูปแบบ (Styling) ---
+                    
+                    // ตั้งค่าพื้นฐาน (จะถูกใช้โดย 'Actual' ทั้ง 3 ตัว)
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#444',
+                    
+                    // ตั้งค่า Font (ใช้เงื่อนไข)
+                    font: (context) => {
+                        // 2.1 ถ้าเป็น 'Carry Over' (ที่เป็นยอดรวม) ให้ทำตัวหนา
+                        if (context.dataset.label === 'Carry Over') {
+                            return { size: 10, weight: 'bold' };
+                        }
+                        // 2.2 ที่เหลือใช้ Font ปกติ
+                        return { size: 10 };
+                    },
+                    
+                    // ตั้งค่า Offset (ใช้เงื่อนไข)
+                    offset: (context) => {
+                        // 2.3 ถ้าเป็น 'Carry Over' (ยอดรวม) ให้ขยับขึ้นเล็กน้อย
+                        return (context.dataset.label === 'Carry Over') ? -5 : 0;
+                    }
                 }
+                // ⭐️⭐️⭐️ [END REFACTORED] ⭐️⭐️⭐️
             },
         };
 
@@ -620,16 +659,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Loads existing DLOT data for a specific date/line.
+     * [UPGRADED] Loads existing DLOT data and updates the new summary view.
      */
     async function loadDlotDataForDate(entry_date, line) {
         if (!entry_date) return;
+        
+        // เคลียร์ค่า Input
         dlotHeadcountInput.value = '';
         dlotDlCostInput.value = '';
         dlotOtCostInput.value = '';
+
         try {
             const body = { action: 'get_daily_costs', entry_date: entry_date, line: line };
             const result = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', body);
+            
             if (result.success && result.data) {
                 dlotHeadcountInput.value = result.data.headcount > 0 ? result.data.headcount : '';
                 dlotDlCostInput.value = result.data.dl_cost > 0 ? result.data.dl_cost : '';
@@ -640,12 +683,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error fetching DLOT:", error);
             showToast('Failed load entry data.', 'var(--bs-danger)');
+        } finally {
+            // ⭐️ [NEW] อัปเดต Summary (ไม่ว่าจะโหลดสำเร็จหรือล้มเหลว)
+            updateDlotSummaryView();
         }
     }
 
-    /**
-     * Fetches and renders the cost summary for the DLOT view.
-     */
+    /* (เก็บเอาไว้ก่อน เผื่อใช้ในอนาคต)
     async function fetchCostSummaryForDate(date, line) {
         if (!date) return;
         stdDlCostDisplayDlot.textContent = '...';
@@ -666,9 +710,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Updates the DLOT cost summary UI elements.
-     */
     function updateCostSummaryUIDlot(standardData, actualData) {
         const stdCost = (standardData?.TotalDLCost != null) ? parseFloat(standardData.TotalDLCost) : 0;
         const actualCost = (actualData?.TotalActualDLOT != null) ? parseFloat(actualData.TotalActualDLOT) : 0;
@@ -686,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
             varianceCardDlot.classList.add('text-bg-light');
         }
     }
+    */
 
     // =================================================================
     // SECTION 4: ACTIONS & MODAL LOGIC
@@ -785,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dlotEntryDateInputHidden.value = dateString;
         
         loadDlotDataForDate(dateString, planLineFilter.value || 'ALL');
-        fetchCostSummaryForDate(dateString, planLineFilter.value || 'ALL');
+        //fetchCostSummaryForDate(dateString, planLineFilter.value || 'ALL');
     }
 
     /**
@@ -823,10 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await sendRequest(DLOT_API, 'save_daily_costs', 'POST', body);
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
-                await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
-                // ⭐️ [แก้ไข]
+                //await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
                 if (fullCalendarInstance) {
-                    // สั่งโหลด DLOT Markers ใหม่อย่างเดียว (เพราะ Plan ไม่เปลี่ยน)
                     fullCalendarInstance.getEventSourceById('dlotMarkers')?.refetch();
                 }
             }
@@ -1219,7 +1259,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // DLOT View
         backToCalendarBtn?.addEventListener('click', switchToCalendarView);
         dlotEntryForm?.addEventListener('submit', handleSaveDlotForm);
-
+        
+        dlotDlCostInput?.addEventListener('input', updateDlotSummaryView);
+        dlotOtCostInput?.addEventListener('input', updateDlotSummaryView);
+        
         // Production Plan Table (Event Delegation)
         productionPlanTableBody?.addEventListener('click', (e) => {
             // Edit button click

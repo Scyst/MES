@@ -145,15 +145,15 @@ session_start();
                 </section> <section class="dashboard-section mb-4" id="cost-summary-section">
                     <div class="chart-card cost-summary-card" style="height: 100%;">
                          <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
-                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary (Standard)</h4>
+                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary</h4>
 
                          <div class="row text-center">
                             <div class="col-md-4">
-                                <h6><i class="fas fa-cash-register"></i> Total Revenue</h6>
+                                <h6><i class="fas fa-cash-register"></i> Total Revenue (Production)</h6>
                                 <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
                             </div>
                             <div class="col-md-4">
-                                <h6><i class="fas fa-boxes"></i> Material Cost</h6>
+                                <h6><i class="fas fa-boxes"></i> Material Cost (Standard)</h6>
                                 <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentRM">-- %</span>
                             </div>
@@ -168,7 +168,7 @@ session_start();
 
                          <div class="row text-center mt-3 mb-4">
                             <div class="col-md-4">
-                                <h6><i class="fas fa-industry"></i> Overhead Cost</h6>
+                                <h6><i class="fas fa-industry"></i> Overhead (Standard)</h6>
                                 <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentOH">-- %</span>
                             </div>
@@ -177,7 +177,7 @@ session_start();
                                 <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
                             </div>
                             <div class="col-md-4">
-                                <h6><i class="fas fa-percentage"></i> Standard Gross Profit</h6>
+                                <h6><i class="fas fa-percentage"></i> Gross Profit</h6>
                                 <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodPercentGPStd">-- %</span>
                             </div>

@@ -238,9 +238,21 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                                     <div class="card-body p-2 d-flex flex-column">
                                                         <div class="mb-2">
                                                             <div class="row g-2">
-                                                                <div class="col-4"><div class="card text-center text-bg-secondary h-100"><div class="stat-card-header py-0 px-2 small">Std DL Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="std-dl-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
-                                                                <div class="col-4"><div class="card text-center text-bg-primary h-100"><div class="stat-card-header py-0 px-2 small">Actual DLOT Cost</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="actual-dlot-cost-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
-                                                                <div class="col-4"><div class="card text-center h-100" id="variance-card-dlot"><div class="stat-card-header py-0 px-2 small">Variance</div><div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="dl-variance-display-dlot" style="font-size: 1rem;">0.00</h4></div></div></div>
+                                                                <div class="col-4">
+                                                                    <div class="card text-center text-bg-secondary text-white h-100"> <div class="stat-card-header py-0 px-2 small">Direct Labor (DL)</div>
+                                                                        <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="dl-cost-summary-display" style="font-size: 1rem;">0.00</h4></div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-4">
+                                                                    <div class="card text-center text-bg-secondary text-white h-100"> <div class="stat-card-header py-0 px-2 small">Overtime (OT)</div>
+                                                                        <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="ot-cost-summary-display" style="font-size: 1rem;">0.00</h4></div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-4">
+                                                                    <div class="card text-center text-bg-primary h-100" id="total-dlot-summary-card"> <div class="stat-card-header py-0 px-2 small">Total DLOT</div>
+                                                                        <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="total-dlot-summary-display" style="font-size: 1rem;">0.00</h4></div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
 

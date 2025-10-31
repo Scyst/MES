@@ -25,7 +25,9 @@ if (!defined('PRODUCTION_PLANS_TABLE') || !defined('ITEMS_TABLE')) {
     exit;
 }
 $planTable = '[dbo].[' . PRODUCTION_PLANS_TABLE . ']';
-$itemTable = '[dbo].[' . ITEMS_TABLE . ']'; // ต้องใช้ join เพื่อแสดงชื่อ Item
+$itemTable = '[dbo].[' . ITEMS_TABLE . ']';
+$transTable = '[dbo].[' . TRANSACTIONS_TABLE . ']';
+$locTable = '[dbo].[' . LOCATIONS_TABLE . ']';
 
 // 4. อ่านข้อมูล Request (GET สำหรับดึง, POST สำหรับ CUD)
 $method = $_SERVER['REQUEST_METHOD'];
@@ -65,51 +67,59 @@ try {
             $line = $data['line'] ?? null;
             $shift = $data['shift'] ?? null;
 
+            $actualsSubQuery = "
+                SELECT
+                    CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) AS ActualDate,
+                    l.production_line AS ActualLine,
+                    CASE
+                        WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
+                        ELSE 'NIGHT'
+                    END AS ActualShift,
+                    t.parameter_id AS ActualItemId,
+                    SUM(t.quantity) AS ActualQty
+                FROM $transTable t
+                INNER JOIN $locTable l ON t.to_location_id = l.location_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                GROUP BY
+                    CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE),
+                    l.production_line,
+                    CASE
+                        WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
+                        ELSE 'NIGHT'
+                    END,
+                    t.parameter_id
+            ";
+            
             $sql = "
                 SELECT
-                    p.plan_id,
-                    CONVERT(varchar, p.plan_date, 23) as plan_date,
-                    p.line,
-                    p.shift,
-                    p.item_id,
+                    ISNULL(p.plan_id, 0) AS plan_id,
+                    CONVERT(varchar, ISNULL(p.plan_date, actual.ActualDate), 23) as plan_date,
+                    ISNULL(p.line, actual.ActualLine) AS line,
+                    ISNULL(p.shift, actual.ActualShift) AS shift,
+                    i.item_id,
                     i.sap_no,
                     i.part_no,
                     i.part_description,
-                    p.original_planned_quantity,
-                    p.carry_over_quantity,
-                    p.adjusted_planned_quantity,
+                    ISNULL(p.original_planned_quantity, 0) AS original_planned_quantity,
+                    ISNULL(p.carry_over_quantity, 0) AS carry_over_quantity,
+                    ISNULL(p.adjusted_planned_quantity, 0) AS adjusted_planned_quantity,
                     p.note,
                     p.updated_at,
                     p.updated_by,
                     ISNULL(actual.ActualQty, 0) AS actual_quantity
-                FROM $planTable p
-                INNER JOIN $itemTable i ON p.item_id = i.item_id
-                LEFT JOIN (
-                    SELECT
-                        CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) AS ActualDate,
-                        l.production_line AS ActualLine,
-                        CASE
-                            WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
-                            ELSE 'NIGHT'
-                        END AS ActualShift,
-                        t.parameter_id AS ActualItemId,
-                        SUM(t.quantity) AS ActualQty
-                    FROM [dbo].[STOCK_TRANSACTIONS_TEST] t
-                    INNER JOIN [dbo].[LOCATIONS_TEST] l ON t.to_location_id = l.location_id
-                    WHERE t.transaction_type = 'PRODUCTION_FG'
-                    GROUP BY
-                        CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE),
-                        l.production_line,
-                        CASE
-                            WHEN DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) >= 0 AND DATEPART(hour, DATEADD(HOUR, -8, t.transaction_timestamp)) < 12 THEN 'DAY'
-                            ELSE 'NIGHT'
-                        END,
-                        t.parameter_id
-                ) AS actual ON p.plan_date = actual.ActualDate
-                            AND p.line = actual.ActualLine
-                            AND p.shift = actual.ActualShift
-                            AND p.item_id = actual.ActualItemId
-                WHERE 1=1 ";
+                
+                FROM ($actualsSubQuery) AS actual
+                
+                FULL OUTER JOIN $planTable p ON 
+                    p.plan_date = actual.ActualDate
+                    AND p.line = actual.ActualLine
+                    AND p.shift = actual.ActualShift
+                    AND p.item_id = actual.ActualItemId
+                
+                JOIN $itemTable i ON i.item_id = ISNULL(p.item_id, actual.ActualItemId)
+                
+                WHERE 1=1 
+            ";
 
             $params = [];
 
@@ -121,37 +131,37 @@ try {
                 if ($startDate > $endDate) {
                     throw new Exception("Start date cannot be after end date.");
                 }
-                $sql .= " AND p.plan_date BETWEEN :startDate AND :endDate";
+                $sql .= " AND ISNULL(p.plan_date, actual.ActualDate) BETWEEN :startDate AND :endDate";
                 $params[':startDate'] = $startDate;
                 $params[':endDate'] = $endDate;
             } elseif (!empty($startDate)) {
                 if (!preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $startDate)) {
                     throw new Exception("Invalid start date format. Use YYYY-MM-DD.");
                 }
-                $sql .= " AND p.plan_date >= :startDate";
+                $sql .= " AND ISNULL(p.plan_date, actual.ActualDate) >= :startDate";
                 $params[':startDate'] = $startDate;
             } elseif (!empty($endDate)) {
                 if (!preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $endDate)) {
                     throw new Exception("Invalid end date format. Use YYYY-MM-DD.");
                 }
-                $sql .= " AND p.plan_date <= :endDate";
+                $sql .= " AND ISNULL(p.plan_date, actual.ActualDate) <= :endDate";
                 $params[':endDate'] = $endDate;
             } else {
                 $today = date('Y-m-d');
-                $sql .= " AND p.plan_date = :today";
+                $sql .= " AND ISNULL(p.plan_date, actual.ActualDate) = :today";
                 $params[':today'] = $today;
             }
 
             if (!empty($line)) {
-                $sql .= " AND p.line = :line";
+                $sql .= " AND ISNULL(p.line, actual.ActualLine) = :line";
                 $params[':line'] = $line;
             }
             if (!empty($shift)) {
-                $sql .= " AND p.shift = :shift";
+                $sql .= " AND ISNULL(p.shift, actual.ActualShift) = :shift";
                 $params[':shift'] = $shift;
             }
 
-            $sql .= "  ORDER BY p.plan_date DESC, p.line, p.shift, i.sap_no";
+            $sql .= " ORDER BY plan_date DESC, line, shift, i.sap_no";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
