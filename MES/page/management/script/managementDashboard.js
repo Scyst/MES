@@ -272,9 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * [UPGRADED v1 - Hardcoded Colors] Renders the Plan vs Actual chart as a Stacked Bar Chart.
-     * Shows Original Plan + Carry Over (Stacked) vs. Actual Qty.
-     * Uses hardcoded RGBA colors.
+     * [UPGRADED v1.1 - Bug Fix] Renders the Plan vs Actual chart as a Stacked Bar Chart.
+     * Fixes the 'i is not defined' ReferenceError.
+     * Datalabel is correctly placed on the stacked bar.
      */
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
@@ -330,15 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chartData = {
             labels: labels,
             datasets: [
-                {
-                    label: 'Carry Over',
-                    data: totalCarryOverData,
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)', // ⭐️ ส้ม
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1,
-                    stack: 'plan',
-                    datalabels: { display: false }
-                },
+                // ⭐️ [สลับที่ 1] เอา Original Plan มาเป็น "ฐาน" (Base)
                 {
                     label: 'Original Plan',
                     data: totalOriginalPlanData,
@@ -346,22 +338,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
                     stack: 'plan',
-                    datalabels: { display: false }
+                    datalabels: { display: false } // ⭐️ ฐานไม่ต้องแสดงป้าย
                 },
+                // ⭐️ [สลับที่ 2] เอา Carry Over มา "ซ้อนทับ" (On Top)
+                {
+                    label: 'Carry Over',
+                    data: totalCarryOverData,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)', // ⭐️ ส้ม
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1,
+                    stack: 'plan',
+                    // ⭐️ [แก้ไข] ย้าย Logic ป้ายกำกับยอดรวมมาไว้ที่นี่
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#444', 
+                        font: { size: 10, weight: 'bold' },
+                        // ⭐️ [แก้ไข] ให้มันแสดงค่าจาก totalAdjustedPlanData (ยอดรวม)
+                        formatter: (value, context) => {
+                            const totalPlan = totalAdjustedPlanData[context.dataIndex];
+                            return totalPlan > 0 ? totalPlan.toLocaleString() : '';
+                        },
+                        offset: -5 
+                    }
+                },
+                // 3. แท่ง Actual Qty (เหมือนเดิม)
                 {
                     label: 'Total Actual Qty',
                     data: totalActualQtyData,
                     backgroundColor: (ctx) => {
-                        const i = ctx.dataIndex;
-                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 0.7)'; // ⭐️ เทา
+                        // ⭐️⭐️ [BUG FIX] เพิ่มบรรทัดนี้กลับเข้ามา ⭐️⭐️
+                        const i = ctx.dataIndex; 
+                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 0.7)';
                         const totalPlan = totalAdjustedPlanData[i];
                         const totalActual = totalActualQtyData[i];
-                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)'; // ⭐️ เขียว
-                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 0.7)'; // ⭐️ แดง
-                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 0.7)'; // ⭐️ ม่วง
-                        return 'rgba(201, 203, 207, 0.7)'; // ⭐️ เทา
+                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)';
+                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 0.7)';
+                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 0.7)';
+                        return 'rgba(201, 203, 207, 0.7)';
                     },
                     borderColor: (ctx) => {
+                        // ⭐️⭐️ [BUG FIX] เพิ่มบรรทัดนี้กลับเข้ามา ⭐️⭐️
                         const i = ctx.dataIndex;
                         if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 1)';
                         const totalPlan = totalAdjustedPlanData[i];
@@ -372,22 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         return 'rgba(201, 203, 207, 1)';
                     },
                     borderWidth: 1
-                },
-                {
-                    type: 'line', 
-                    label: 'Total Plan (Label)',
-                    data: totalAdjustedPlanData,
-                    borderColor: 'transparent',
-                    pointRadius: 0,
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'top',
-                        color: '#444', // ⭐️ สีข้อความ Datalabel (Hardcode)
-                        font: { size: 10, weight: 'bold' },
-                        formatter: (v) => v > 0 ? v.toLocaleString() : '',
-                        offset: -5 
-                    }
+                    // ⭐️ (แท่งนี้จะใช้ Datalabel จาก "plugins.datalabels" ด้านล่าง)
                 }
+                // ⭐️ [ลบ] Dataset ที่ 4 (ที่เป็น line) ทิ้งไป
             ]
         };
 
@@ -395,6 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 25 // ⭐️ เพิ่ม padding ด้านบน 25px เพื่อให้มีที่สำหรับ datalabel
+                }
+            },
             scales: {
                 y: { 
                     beginAtZero: true, 
