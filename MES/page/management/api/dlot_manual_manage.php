@@ -192,6 +192,40 @@ try {
             echo json_encode(['success' => true, 'data' => $response]);
             break;
 
+        case 'get_dlot_dates':
+            if ($method !== 'GET') {
+                throw new Exception("Invalid request method for get_dlot_dates.");
+            }
+            
+            $startDate = $data['startDate'] ?? null;
+            $endDate = $data['endDate'] ?? null;
+            $line = isset($data['line']) && $data['line'] !== 'ALL' ? $data['line'] : 'ALL'; 
+
+            if (empty($startDate) || empty($endDate)) {
+                 throw new Exception("Start date and end date are required for dlot dates.");
+            }
+
+            $sql_get_dates = "
+                SELECT DISTINCT
+                    CONVERT(varchar, entry_date, 23) as entry_date
+                FROM
+                    $tableName
+                WHERE
+                    entry_date BETWEEN ? AND ?
+                    AND line = ?
+                    AND cost_category = 'LABOR'
+                    AND cost_type IN ('DIRECT_LABOR', 'OVERTIME')
+                    AND cost_value > 0
+            ";
+            
+            $stmt_get_dates = $pdo->prepare($sql_get_dates);
+            $stmt_get_dates->execute([$startDate, $endDate, $line]);
+            
+            $dates = $stmt_get_dates->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'data' => $dates ?: []]);
+            break;
+
         default:
             // แก้ไข: ใช้ 'success' => false
             echo json_encode(['success' => false, 'message' => 'Invalid action specified.']);

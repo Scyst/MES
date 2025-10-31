@@ -112,6 +112,26 @@ $currentUserForJS = $_SESSION['user'] ?? null;
         .dlot-view-container #dlot-entry-card { flex-grow: 1; min-height: 0; display: flex; flex-direction: column;}
         .dlot-view-container #dlot-entry-card .card-body { flex-grow: 1; overflow-y: auto; min-height: 0; }
 
+        .dlot-entered .fc-daygrid-day-number {
+            color: var(--bs-success) !important;
+            font-weight: 700;
+            text-decoration: none !important; /* ลบขีดฆ่า ถ้าบังเอิญเป็นอดีต */
+        }
+
+        /* 2. วันที่ผ่านมาแล้ว แต่ "ยังไม่กรอก" DLOT (สีแดง + ขีดฆ่า) */
+        .dlot-missing-past .fc-daygrid-day-number {
+            color: var(--bs-danger) !important;
+            font-weight: 400;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        /* 3. วันนี้ หรือ อนาคต ที่ยังไม่กรอก (สีเทา Default) */
+        .dlot-pending .fc-daygrid-day-number {
+            opacity: 0.8; 
+            /* (ใช้สี default ของปฏิทิน) */
+        }
+        
         #cost-summary-card-dlot .stat-card-body h4 {
             font-size: 1rem; /* ลดขนาดตัวเลขลงเล็กน้อย */
         }

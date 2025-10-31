@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPlanItem = null;
     let planVsActualChartInstance = null;
     let fullCalendarInstance = null;
+    let dlotDateSet = new Set();
     let planNoteEditDebounceTimer;
     let planCarryOverEditDebounceTimer;
     let debounceTimerAutocomplete;
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const productionPlanTableBody = document.getElementById('productionPlanTableBody');
     
     // Calendar & DLOT View
+    const todayString = formatDateForInput(new Date());
     const calendarCardHeader = document.querySelector('.calendar-card .card-header');
     const calendarTitle = document.getElementById('calendar-title');
     const backToCalendarBtn = document.getElementById('backToCalendarBtn');
@@ -234,106 +236,229 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Renders the Plan vs Actual bar chart (Aggregated Version).
+     * [HELPER] อ่านค่าสีจาก CSS Variable และแปลงเป็น RGBA
+     * @param {string} varName - ชื่อตัวแปร CSS (เช่น '--mes-chart-color-1')
+     * @param {float} alpha - ค่าความโปร่งใส (เช่น 0.7)
+     * @returns {string} - สตริงสี rgba()
+     */
+    function getCssVarAsRgba(varName, alpha = 1.0) {
+        try {
+            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!colorValue) throw new Error(`CSS var ${varName} not found.`);
+
+            let hex = colorValue.replace('#', '');
+            
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+        } catch (error) {
+            console.warn(error.message);
+            // Fallback (เผื่อหา CSS Var ไม่เจอ)
+            if (varName.includes('danger')) return `rgba(220, 53, 69, ${alpha})`;
+            if (varName.includes('success')) return `rgba(25, 135, 84, ${alpha})`;
+            if (varName.includes('warning')) return `rgba(255, 193, 7, ${alpha})`;
+            if (varName.includes('chart-color-3')) return `rgba(253, 126, 20, ${alpha})`; // Orange
+            if (varName.includes('chart-color-2')) return `rgba(111, 66, 193, ${alpha})`; // Purple
+            return `rgba(13, 110, 253, ${alpha})`; // Default Blue
+        }
+    }
+
+    /**
+     * [UPGRADED v1 - Hardcoded Colors] Renders the Plan vs Actual chart as a Stacked Bar Chart.
+     * Shows Original Plan + Carry Over (Stacked) vs. Actual Qty.
+     * Uses hardcoded RGBA colors.
      */
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
         if (!chartCanvas) return;
         const ctx = chartCanvas.getContext('2d');
+        
+        // 1. ตั้งค่า Header (เหมือนเดิม)
         if (chartDateDisplay) {
-            chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
+            if (typeof startDateFilter !== 'undefined' && typeof endDateFilter !== 'undefined') {
+                chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
+            } else if (typeof planDateFilter !== 'undefined') {
+                 chartDateDisplay.textContent = planDateFilter.value;
+            }
         }
 
-        // --- [แก้ไข] สรุปรวมข้อมูล ---
-        const aggregatedData = {}; // ใช้ Object เพื่อรวมยอดตาม Item
-
+        // --- 2. [ปรับปรุง] AggregatedData: เพิ่ม Original & Carry Over ---
+        const aggregatedData = {};
         planData.forEach(p => {
-            const itemId = p.item_id; // หรือ p.sap_no || p.part_no ถ้าต้องการใช้เป็น Key
-            const identifier = p.sap_no || p.part_no || `Item ${itemId}`; // ชื่อที่จะแสดงบนแกน X
+            const itemId = p.item_id;
+            const identifier = p.sap_no || p.part_no || `Item ${itemId}`;
             const adjustedPlan = parseFloat(p.adjusted_planned_quantity || 0);
             const actualQty = parseFloat(p.actual_quantity || 0);
+            const originalPlan = parseFloat(p.original_planned_quantity || 0);
+            const carryOver = parseFloat(p.carry_over_quantity || 0);
 
             if (!aggregatedData[itemId]) {
                 aggregatedData[itemId] = {
                     label: identifier,
                     totalAdjustedPlan: 0,
-                    totalActualQty: 0
+                    totalActualQty: 0,
+                    totalOriginalPlan: 0,
+                    totalCarryOver: 0
                 };
             }
             aggregatedData[itemId].totalAdjustedPlan += adjustedPlan;
             aggregatedData[itemId].totalActualQty += actualQty;
+            aggregatedData[itemId].totalOriginalPlan += originalPlan;
+            aggregatedData[itemId].totalCarryOver += carryOver;
         });
-
-        // แปลง Object ที่รวมยอดแล้ว เป็น Array สำหรับ Chart.js
         const aggregatedArray = Object.values(aggregatedData);
 
+        // --- 3. [ปรับปรุง] Data Arrays: สร้าง 4 arrays ---
         const labels = aggregatedArray.map(agg => agg.label);
+        const totalOriginalPlanData = aggregatedArray.map(agg => agg.totalOriginalPlan);
+        const totalCarryOverData = aggregatedArray.map(agg => agg.totalCarryOver);
         const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan);
         const totalActualQtyData = aggregatedArray.map(agg => agg.totalActualQty);
-        // --- จบการแก้ไขส่วนรวมข้อมูล ---
-
-
+        
+        const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...totalActualQtyData);
+        const suggestedTopValue = dataMaxValue > 0 ? dataMaxValue * 1.15 : 10;
+        
+        // --- 4. [ปรับปรุง] ChartData Datasets: ใช้สี Hardcode ---
         const chartData = {
             labels: labels,
             datasets: [
                 {
-                    label: 'Total Adjusted Plan', // [แก้ไข] เปลี่ยนชื่อ Legend
-                    data: totalAdjustedPlanData, // [แก้ไข] ใช้ข้อมูลรวม
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
+                    label: 'Carry Over',
+                    data: totalCarryOverData,
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)', // ⭐️ ส้ม
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1,
+                    stack: 'plan',
+                    datalabels: { display: false }
                 },
                 {
-                    label: 'Total Actual Qty', // [แก้ไข] เปลี่ยนชื่อ Legend
-                    data: totalActualQtyData, // [แก้ไข] ใช้ข้อมูลรวม
-                    // --- [แก้ไข] Logic การกำหนดสีแท่ง Actual ---
+                    label: 'Original Plan',
+                    data: totalOriginalPlanData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // ⭐️ ฟ้า
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    stack: 'plan',
+                    datalabels: { display: false }
+                },
+                {
+                    label: 'Total Actual Qty',
+                    data: totalActualQtyData,
                     backgroundColor: (ctx) => {
                         const i = ctx.dataIndex;
-                        if (i >= totalAdjustedPlanData.length) return '#CCC'; // กรณีข้อมูลไม่ครบ
+                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 0.7)'; // ⭐️ เทา
                         const totalPlan = totalAdjustedPlanData[i];
                         const totalActual = totalActualQtyData[i];
-
-                        // ถ้า Actual >= Plan (และ Plan > 0) -> สีเขียว
-                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)';
-                        // ถ้า Actual < Plan (แต่ Actual > 0) -> สีแดง
-                        else if (totalActual < totalPlan && totalActual > 0) return 'rgba(255, 99, 132, 0.7)';
-                        // ถ้า Actual > 0 แต่ Plan = 0 -> สีฟ้า (ผลิตโดยไม่มีแผน)
-                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(54, 162, 235, 0.5)'; // สีฟ้าอ่อนลงหน่อย
-                        // กรณีอื่นๆ (เช่น Actual = 0) -> สีเทา
-                        return 'rgba(201, 203, 207, 0.7)';
+                        if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 0.7)'; // ⭐️ เขียว
+                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 0.7)'; // ⭐️ แดง
+                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 0.7)'; // ⭐️ ม่วง
+                        return 'rgba(201, 203, 207, 0.7)'; // ⭐️ เทา
                     },
                     borderColor: (ctx) => {
                         const i = ctx.dataIndex;
-                        if (i >= totalAdjustedPlanData.length) return '#AAA';
+                        if (i >= totalAdjustedPlanData.length) return 'rgba(201, 203, 207, 1)';
                         const totalPlan = totalAdjustedPlanData[i];
                         const totalActual = totalActualQtyData[i];
-
                         if (totalActual >= totalPlan && totalPlan > 0) return 'rgba(75, 192, 192, 1)';
-                        else if (totalActual < totalPlan && totalActual > 0) return 'rgba(255, 99, 132, 1)';
-                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(54, 162, 235, 1)';
+                        else if (totalActual < totalPlan && totalPlan > 0) return 'rgba(255, 99, 132, 1)';
+                        else if (totalActual > 0 && totalPlan <= 0) return 'rgba(153, 102, 255, 1)';
                         return 'rgba(201, 203, 207, 1)';
                     },
-                    // --- จบการแก้ไข Logic สี ---
                     borderWidth: 1
+                },
+                {
+                    type: 'line', 
+                    label: 'Total Plan (Label)',
+                    data: totalAdjustedPlanData,
+                    borderColor: 'transparent',
+                    pointRadius: 0,
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#444', // ⭐️ สีข้อความ Datalabel (Hardcode)
+                        font: { size: 10, weight: 'bold' },
+                        formatter: (v) => v > 0 ? v.toLocaleString() : '',
+                        offset: -5 
+                    }
                 }
             ]
         };
 
+        // --- 5. [ปรับปรุง] ChartOptions: เปิด Stacked ---
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Total Quantity' }, ticks: { callback: v => v.toLocaleString() } },
-                // [แก้ไข] ปรับแกน X ให้ดูดีขึ้น สำหรับชื่อ Item
-                x: { ticks: { maxRotation: 0, minRotation: 0, font: { size: 12 }, autoSkip: true, maxTicksLimit: 20 } }
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'Total Quantity' }, 
+                    ticks: { callback: v => v.toLocaleString() },
+                    suggestedMax: suggestedTopValue,
+                    stacked: true
+                },
+                x: { 
+                    ticks: { maxRotation: 0, minRotation: 0, font: { size: 12 }, autoSkip: true, maxTicksLimit: 20 },
+                    stacked: true
+                }
             },
             plugins: {
-                legend: { position: 'top' }, // [แก้ไข] ย้าย Legend ลงล่างอาจจะดีกว่า
-                tooltip: { callbacks: { label: c => `${c.dataset.label || ''}: ${c.parsed.y !== null ? c.parsed.y.toLocaleString() : ''}` } },
-                datalabels: { anchor: 'end', align: 'top', formatter: (v) => v > 0 ? v.toLocaleString() : '', font: { size: 10 }, color: '#444' }
-            }
+                // --- 6. [ปรับปรุง] Legend ---
+                legend: { 
+                    position: 'top',
+                    labels: {
+                        generateLabels: function(chart) {
+                            const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            const finalLabels = originalLabels.filter(l => 
+                                l.text === 'Carry Over' || l.text === 'Original Plan'
+                            );
+                            
+                            finalLabels.push({
+                                text: 'Actual (Met Plan)',
+                                fillStyle: 'rgba(75, 192, 192, 0.7)', // ⭐️ เขียว
+                                strokeStyle: 'rgba(75, 192, 192, 1)',
+                                lineWidth: 1, hidden: false
+                            });
+                            finalLabels.push({
+                                text: 'Actual (Shortfall)',
+                                fillStyle: 'rgba(255, 99, 132, 0.7)', // ⭐️ แดง
+                                strokeStyle: 'rgba(255, 99, 132, 1)',
+                                lineWidth: 1, hidden: false
+                            });
+                            finalLabels.push({
+                                text: 'Actual (Unplanned)',
+                                fillStyle: 'rgba(153, 102, 255, 0.7)', // ⭐️ ม่วง
+                                strokeStyle: 'rgba(153, 102, 255, 1)',
+                                lineWidth: 1, hidden: false
+                            });
+                            return finalLabels;
+                        }
+                    }
+                },
+                tooltip: { 
+                    callbacks: { 
+                        label: c => `${c.dataset.label || ''}: ${c.parsed.y !== null ? c.parsed.y.toLocaleString() : ''}` 
+                    },
+                    mode: 'index',
+                    intersect: false
+                },
+                // --- 7. [ปรับปรุง] Datalabels: ตั้งค่า default สำหรับแท่ง Actual ---
+                datalabels: { 
+                    anchor: 'end', 
+                    align: 'top', 
+                    formatter: (v) => v > 0 ? v.toLocaleString() : '', 
+                    font: { size: 10 }, 
+                    color: '#444' // ⭐️ สีข้อความ Datalabel (Hardcode)
+                }
+            },
         };
 
+        // --- 8. Render (เหมือนเดิม) ---
         if (planVsActualChartInstance) {
             planVsActualChartInstance.destroy();
         }
@@ -344,56 +469,109 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Fetches events for the FullCalendar instance.
+     * [UPGRADED v2] Fetches events AND DLOT dates.
+     * Includes a fix for the dayCellDidMount race condition by forcing a
+     * re-render ONLY if the dlotDateSet has changed.
      */
     async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
         showSpinner();
-        const startDate = fetchInfo.startStr.substring(0, 10);
         
+        const startDate = fetchInfo.startStr.substring(0, 10);
         const calendarEndDate = new Date(fetchInfo.endStr);
-        calendarEndDate.setDate(calendarEndDate.getDate() - 1); // Subtract one day
-        const endDate = formatDateForInput(calendarEndDate); // Use our helper function
+        calendarEndDate.setDate(calendarEndDate.getDate() - 1);
+        const endDate = formatDateForInput(calendarEndDate);
 
-        const params = { 
+        const planParams = { 
             startDate: startDate,
             endDate: endDate,
             line: planLineFilter.value || null 
         };
+        
+        const dlotParams = {
+            startDate: startDate,
+            endDate: endDate,
+            line: planLineFilter.value || 'ALL'
+        };
 
         try {
-            const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
-            if (result.success && result.data) {
-                successCallback(transformPlansToEvents(result.data));
-            } else {
-                throw new Error(result.message || 'Failed load events');
+            // 1. ดึงข้อมูล 2 ส่วนพร้อมกัน (เหมือนเดิม)
+            const planPromise = sendRequest(PLAN_API, 'get_plans', 'GET', null, planParams);
+            const dlotPromise = sendRequest(DLOT_API, 'get_dlot_dates', 'GET', null, dlotParams);
+
+            const [planResult, dlotResult] = await Promise.all([planPromise, dlotPromise]);
+
+            // --- ⭐️ [THE FIX IS HERE] ⭐️ ---
+            let dlotChanged = false; // 1. สร้างตัวแปรติดตามการเปลี่ยนแปลง
+
+            // 2. ประมวลผล DLOT Dates
+            const newDlotSet = (dlotResult.success && Array.isArray(dlotResult.data)) ? new Set(dlotResult.data) : new Set();
+            
+            // 3. เช็คว่า Set ใหม่ ต่างจาก Set เก่า (dlotDateSet) หรือไม่
+            if (newDlotSet.size !== dlotDateSet.size || ![...newDlotSet].every(date => dlotDateSet.has(date))) {
+                dlotChanged = true;
+                dlotDateSet = newDlotSet; // 4. ถ้าต่าง -> อัปเดต Set และตั้งธง
             }
+            // --- [END OF FIX (PART 1)] ---
+
+            // 5. ประมวลผล Plan Events (เหมือนเดิม)
+            if (planResult.success && planResult.data) {
+                successCallback(transformPlansToEvents(planResult.data));
+            } else {
+                throw new Error(planResult.message || 'Failed load events');
+            }
+
+            // --- ⭐️ [THE FIX (PART 2)] ⭐️ ---
+            // 6. ถ้าธง dlotChanged เป็น true (แปลว่า 💰 อัปเดต)
+            // ให้สั่ง re-render ปฏิทิน (ซึ่งจะไปเรียก dayCellDidMount อีกครั้ง)
+            if (dlotChanged && fullCalendarInstance) {
+                // เราใช้ setTimeout 0ms เพื่อหน่วงให้การ render event หลักเสร็จก่อน
+                // ค่อยสั่ง render cell อีกที
+                setTimeout(() => {
+                    fullCalendarInstance.render();
+                    // นี่อาจจะเรียก fetchCalendarEvents อีกครั้ง
+                    // แต่ครั้งที่ 2 dlotChanged จะเป็น false -> จึงไม่เกิด Loop ครับ
+                }, 0);
+            }
+            // --- [END OF FIX (PART 2)] ---
+
         } catch (error) {
-            console.error("Error fetching events:", error);
-            showToast('Error loading calendar events.', 'var(--bs-danger)');
+            console.error("Error fetching calendar data:", error);
+            showToast('Error loading calendar data.', 'var(--bs-danger)');
             failureCallback(error);
         } finally {
             hideSpinner();
         }
     }
 
-    /**
-     * Transforms raw plan data into FullCalendar event objects.
-     */
     function transformPlansToEvents(plans) {
         return plans.map(plan => {
             const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
             const actualQty = parseFloat(plan.actual_quantity || 0);
-            let statusColor = '#6c757d';
+            let statusColor = '#6c757d'; // เทา (Default)
             let titlePrefix = '📅 ';
+
             if (adjustedPlan > 0) {
-                if (actualQty >= adjustedPlan) { statusColor = '#198754'; titlePrefix = '✅ '; } 
-                else if (actualQty > 0) { statusColor = '#ffc107'; titlePrefix = '⚠️ '; }
+                if (actualQty >= adjustedPlan) { 
+                    statusColor = '#198754'; // เขียว
+                    titlePrefix = '✅ '; 
+                } else if (actualQty > 0 || parseFloat(plan.carry_over_quantity || 0) > 0) {
+                    statusColor = '#ffc107'; // เหลือง (ถ้าผลิตแล้วแต่ขาด หรือ มียอด C/O)
+                    titlePrefix = '⚠️ '; 
+                } else {
+                    statusColor = '#0dcaf0'; // ฟ้า (แผนใหม่ ยังไม่ผลิต)
+                    titlePrefix = '📝 ';
+                }
             } else if (actualQty > 0) {
-                statusColor = '#0dcaf0'; titlePrefix = '📦 ';
+                statusColor = '#6f42c1'; // ม่วง (ผลิตเกินแผน/ไม่มีแผน)
+                titlePrefix = '📦 ';
             }
+            
+            // ⭐️ [NEW TITLE] ทำให้สั้นลง
+            const title = `${titlePrefix}${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`;
+            
             return {
                 id: plan.plan_id,
-                title: `${titlePrefix}${plan.line} ${plan.shift}: ${plan.sap_no || plan.part_no} (${adjustedPlan.toLocaleString()}/${actualQty.toLocaleString()})`,
+                title: title, // ⭐️ ใช้ Title ใหม่
                 start: plan.plan_date,
                 allDay: true,
                 backgroundColor: statusColor,
@@ -476,10 +654,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
 
     /**
-     * Initializes the FullCalendar instance.
-     */
-    /**
-     * Initializes the FullCalendar instance.
+     * [UPGRADED v2] Initializes the FullCalendar instance.
+     * Uses `dayCellDidMount` to add CSS Classes for coloring.
      */
     function initializeCalendar() {
         if (!planningCalendarContainer) {
@@ -494,21 +670,51 @@ document.addEventListener('DOMContentLoaded', () => {
             selectable: true,
             selectMirror: true,
             dayMaxEvents: 3,
+            
+            // ⭐️ [แก้ไข] ใช้ "events" แบบเดียว (ซึ่งจะไปเรียก fetchCalendarEvents)
             events: fetchCalendarEvents,
+
             dateClick: handleDateClick,
             eventClick: handleEventClick,
             themeSystem: 'bootstrap5',
-            buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right', prevYear: 'bi-chevron-double-left', nextYear: 'bi-chevron-double-right' }, // เก็บไว้ เผื่อใช้กับปุ่ม Custom
+            buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right' },
 
             datesSet: function(dateInfo) {
                 if (calendarTitle) {
-                    // ใช้ title ที่ FullCalendar สร้างให้ มาแสดงใน span ของเรา
                     calendarTitle.textContent = dateInfo.view.title;
                 }
             },
-            viewDidMount: function(dateInfo) { // เรียกตอนโหลดครั้งแรกด้วย
+            viewDidMount: function(dateInfo) {
                  if (calendarTitle) {
                     calendarTitle.textContent = dateInfo.view.title;
+                }
+            },
+
+            // ⭐️⭐️ [อัปเกรด] HOOK ใหม่สำหรับ "ทาสี" วันที่ ⭐️⭐️
+            dayCellDidMount: function(hookProps) {
+                
+                // 1. ค้นหา Cell (<td>)
+                const cellEl = hookProps.el;
+
+                // 2. เคลียร์ Class เก่า (ป้องกันการวาดทับซ้อน)
+                cellEl.classList.remove('dlot-entered', 'dlot-missing-past', 'dlot-pending');
+
+                // 3. ใช้ Logic ใหม่ในการทาสี
+                // (เราต้องเช็ค
+                if (dlotDateSet.has(hookProps.dateStr)) {
+                    // Condition 1: กรอก DLOT แล้ว
+                    cellEl.classList.add('dlot-entered');
+
+                } else {
+                    // Condition 2 & 3: ยังไม่กรอก DLOT
+                    // (todayString ถูกประกาศไว้ที่บรรทัดบนสุดแล้ว)
+                    if (hookProps.dateStr < todayString) {
+                        // เป็น "อดีต" ที่ยังไม่กรอก
+                        cellEl.classList.add('dlot-missing-past');
+                    } else {
+                        // เป็น "วันนี้" หรือ "อนาคต" ที่รอการกรอก
+                        cellEl.classList.add('dlot-pending');
+                    }
                 }
             }
         });
@@ -529,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (eventClickInfo.event.extendedProps?.planData) {
             openPlanModal(eventClickInfo.event.extendedProps.planData);
         } else {
-            showToast('Details missing.', 'var(--bs-warning)');
+            console.warn("Clicked on an unknown event type", eventClickInfo.event);
         }
     }
 
@@ -585,6 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
                 await fetchCostSummaryForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
+                if (fullCalendarInstance) {
+                    fullCalendarInstance.refetchEvents();
+                }
             }
         } catch (error) {
             console.error("Error saving DLOT:", error);
@@ -762,7 +971,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 planModal.hide();
                 fetchPlans();
-                if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+                if (fullCalendarInstance) {
+                    fullCalendarInstance.refetchEvents();
+                }
             }
         } catch (e) {
             console.error("Error saving plan:", e);
@@ -924,7 +1135,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnRefreshPlan?.addEventListener('click', () => {
             fetchPlans();
-            if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+            if (fullCalendarInstance) {
+            fullCalendarInstance.refetchEvents();
+        }
 
             if (dlotViewContainer.style.display === 'flex') {
                 const currentDate = dlotEntryDateInputHidden.value;
