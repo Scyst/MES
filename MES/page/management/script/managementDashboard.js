@@ -291,10 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * [REFACTORED] Renders the Plan vs Actual chart.
-     * This version centralizes all datalabel logic into the `plugins.datalabels`
-     * configuration to avoid structural inconsistencies in the datasets,
-     * which caused the "3-slot" rendering bug.
+     * [REFACTORED v4 - Final Logic]
+     * Renders the Plan vs Actual chart.
+     * - (Goal 1) Consolidates 'Actual' datalabels into a single total,
+     * displayed on the topmost segment ('Unplanned').
+     * - (Goal 2) Enriches the tooltip to include Part No. and Description.
      */
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
@@ -310,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // --- 2. AggregatedData (เหมือนเดิม) ---
+        // --- 2. AggregatedData (⭐️ [FIX 1] เพิ่ม PartNo/Desc สำหรับ Tooltip) ---
         const aggregatedData = {};
         planData.forEach(p => {
             const itemId = p.item_id;
@@ -323,6 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!aggregatedData[itemId]) {
                 aggregatedData[itemId] = {
                     label: identifier,
+                    part_no: p.part_no, // 👈 [เพิ่ม] สำหรับ Tooltip
+                    part_description: p.part_description, // 👈 [เพิ่ม] สำหรับ Tooltip
                     totalAdjustedPlan: 0,
                     totalActualQty: 0,
                     totalOriginalPlan: 0,
@@ -335,119 +338,97 @@ document.addEventListener('DOMContentLoaded', () => {
             aggregatedData[itemId].totalCarryOver += carryOver;
         });
         const aggregatedArray = Object.values(aggregatedData);
+        // --- [END FIX 1] ---
 
-        // --- 3. Data Arrays (เหมือนเดิม) ---
+        // --- 3. Data Arrays (Logic v3 - ถูกต้องแล้ว) ---
         const labels = aggregatedArray.map(agg => agg.label);
-        
-        // Plan Data
         const totalOriginalPlanData = aggregatedArray.map(agg => agg.totalOriginalPlan);
         const totalCarryOverData = aggregatedArray.map(agg => agg.totalCarryOver);
         const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan); 
         
-        // Actual Data (Exploded)
-        const metPlanData = aggregatedArray.map(agg => 
-            (agg.totalActualQty >= agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalActualQty : null
-        );
-        const shortfallData = aggregatedArray.map(agg => 
-            (agg.totalActualQty < agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalActualQty : null
-        );
-        const unplannedData = aggregatedArray.map(agg => 
-            (agg.totalActualQty > 0 && agg.totalAdjustedPlan <= 0) ? agg.totalActualQty : null
-        );
+        const metPlanData = aggregatedArray.map(agg => {
+            const Plan = agg.totalAdjustedPlan;
+            const Actual = agg.totalActualQty;
+            return (Actual >= Plan && Plan > 0) ? Plan : null;
+        });
         
-        // Suggested Max Y-Axis (เหมือนเดิม)
+        const shortfallData = aggregatedArray.map(agg => {
+            const Plan = agg.totalAdjustedPlan;
+            const Actual = agg.totalActualQty;
+            return (Actual < Plan && Plan > 0) ? Actual : null; 
+        });
+
+        const unplannedData = aggregatedArray.map(agg => {
+            const Plan = agg.totalAdjustedPlan;
+            const Actual = agg.totalActualQty;
+            return (Actual > 0) ? Math.max(0, Actual - Plan) : null;
+        });
+        
         const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...aggregatedArray.map(agg => agg.totalActualQty));
         const suggestedTopValue = dataMaxValue > 0 ? dataMaxValue * 1.15 : 10;
         
-        // --- 4. ChartData Datasets (⭐️ [CLEANED] ลบ datalabels ทั้งหมด) ---
+        // --- 4. ChartData Datasets (สะอาด) ---
         const chartData = {
             labels: labels,
             datasets: [
-                // --- Plan Stack ---
-                {
-                    label: 'Original Plan',
-                    data: totalOriginalPlanData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)', 
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    stack: 'plan'
-                    // ⭐️ (ลบ datalabels ออก)
-                },
-                {
-                    label: 'Carry Over',
-                    data: totalCarryOverData,
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1,
-                    stack: 'plan'
-                    // ⭐️ (ลบ datalabels ออก)
-                },
-                // --- Actual Group ---
-                {
-                    label: 'Actual (Met Plan)',
-                    data: metPlanData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1,
-                    stack: 'actual'
-                    // ⭐️ (ลบ datalabels ออก)
-                },
-                {
-                    label: 'Actual (Shortfall)',
-                    data: shortfallData,
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1,
-                    stack: 'actual'
-                    // ⭐️ (ลบ datalabels ออก)
-                },
-                {
-                    label: 'Actual (Unplanned)',
-                    data: unplannedData,
-                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    borderWidth: 1,
-                    stack: 'actual'
-                    // ⭐️ (ลบ datalabels ออก)
-                }
+                { label: 'Original Plan', data: totalOriginalPlanData, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1, stack: 'plan' },
+                { label: 'Carry Over', data: totalCarryOverData, backgroundColor: 'rgba(255, 159, 64, 0.7)', borderColor: 'rgba(255, 159, 64, 1)', borderWidth: 1, stack: 'plan' },
+                { label: 'Actual (Met Plan)', data: metPlanData, backgroundColor: 'rgba(75, 192, 192, 0.7)', borderColor: 'rgba(75, 192, 192, 1)', borderWidth: 1, stack: 'actual' },
+                { label: 'Actual (Shortfall)', data: shortfallData, backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1, stack: 'actual' },
+                { label: 'Actual (Unplanned)', data: unplannedData, backgroundColor: 'rgba(153, 102, 255, 0.7)', borderColor: 'rgba(153, 102, 255, 1)', borderWidth: 1, stack: 'actual' }
             ]
         };
 
-        // --- 5. ChartOptions (⭐️ [REFACTORED] ย้าย Logic ทั้งหมดมาที่นี่) ---
+        // --- 5. ChartOptions (⭐️ [FIX 2] แก้ไข Tooltip และ Datalabels) ---
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    top: 25 
-                }
-            },
+            layout: { padding: { top: 25 } },
             scales: {
                 y: { 
                     beginAtZero: true, 
                     title: { display: true, text: 'Total Quantity' }, 
                     ticks: { callback: v => v.toLocaleString() },
                     suggestedMax: suggestedTopValue,
-                    stacked: true // 👈 Y-axis ซ้อนกัน
+                    stacked: true
                 },
                 x: { 
                     ticks: { 
-                        maxRotation: 0,
+                        maxRotation: 0, 
                         minRotation: 0,
                         font: { size: 11 },
                         autoSkip: false
                     },
                     stacked: true,
-                    offset: true
+                    offset: true    
                 }
             },
             plugins: {
                 legend: { 
                     position: 'top',
                 },
+                
+                // ⭐️ [FIX 2.1] เพิ่ม Title Callback ให้ Tooltip
                 tooltip: { 
-                    callbacks: { 
-                        label: c => {
+                    callbacks: {
+                        title: (tooltipItems) => {
+                            if (!tooltipItems.length) return '';
+                            const dataIndex = tooltipItems[0].dataIndex;
+                            const aggItem = aggregatedArray[dataIndex];
+                            if (!aggItem) return '';
+                            
+                            const title = aggItem.label; // SAP No
+                            const partNo = aggItem.part_no || 'N/A';
+                            const desc = aggItem.part_description || 'No Description';
+                            
+                            // คืนค่าเป็น Array เพื่อแสดงผลหลายบรรทัด
+                            return [
+                                title,
+                                partNo,
+                                desc
+                            ];
+                        },
+                        label: c => { // (คงเดิม)
                             if (c.parsed.y === null) return null;
                             return `${c.dataset.label || ''}: ${c.parsed.y.toLocaleString()}`;
                         }
@@ -456,54 +437,59 @@ document.addEventListener('DOMContentLoaded', () => {
                     intersect: false
                 },
                 
-                // ⭐️⭐️⭐️ [REFACTORED] ⭐️⭐️⭐️
-                // ย้าย Logic การแสดงผล Datalabels ทั้งหมดมาไว้ที่นี่
+                // ⭐️ [FIX 2.2] แก้ไข Logic การแสดงผล Datalabels
                 datalabels: {
-                    // --- 1. Logic การแสดงผล (Formatter) ---
                     formatter: (value, context) => {
                         const label = context.dataset.label;
+                        const dataIndex = context.dataIndex;
+                        const aggItem = aggregatedArray[dataIndex];
+                        if (!aggItem) return null;
 
-                        // 1.1 ถ้าเป็น 'Original Plan' -> ซ่อน (return null)
+                        // 1. ซ่อน 'Original Plan'
                         if (label === 'Original Plan') {
                             return null;
                         }
                         
-                        // 1.2 ถ้าเป็น 'Carry Over' -> ให้แสดง "ยอดยกมา"
-                        //     (ซึ่งเราจะใช้ Logic พิเศษให้มันแสดง "ยอดรวม Plan")
+                        // 2. แสดง "Total Plan" บน 'Carry Over'
                         if (label === 'Carry Over') {
-                            const totalPlan = totalAdjustedPlanData[context.dataIndex];
+                            const totalPlan = aggItem.totalAdjustedPlan;
                             return totalPlan > 0 ? totalPlan.toLocaleString() : '';
                         }
-                        
-                        // 1.3 ถ้าเป็นกลุ่ม 'Actual' (ที่เหลือ)
-                        //     ให้แสดงค่าของมันเอง (ถ้ามีค่า > 0)
-                        return (value !== null && value > 0) ? value.toLocaleString() : '';
+
+                        // 3. ซ่อน 'Met Plan' และ 'Shortfall'
+                        if (label === 'Actual (Met Plan)' || label === 'Actual (Shortfall)') {
+                            return null;
+                        }
+
+                        // 4. แสดง "Total Actual" บน 'Unplanned'
+                        if (label === 'Actual (Unplanned)') {
+                            const totalActual = aggItem.totalActualQty;
+                            return totalActual > 0 ? totalActual.toLocaleString() : '';
+                        }
+
+                        return null; // ซ่อน Dataset อื่นๆ (ถ้ามี)
                     },
                     
-                    // --- 2. Logic การจัดรูปแบบ (Styling) ---
-                    
-                    // ตั้งค่าพื้นฐาน (จะถูกใช้โดย 'Actual' ทั้ง 3 ตัว)
+                    // --- ตั้งค่าการจัดรูปแบบ (ให้ Total Plan และ Total Actual เหมือนกัน) ---
                     anchor: 'end',
                     align: 'top',
                     color: '#444',
                     
-                    // ตั้งค่า Font (ใช้เงื่อนไข)
                     font: (context) => {
-                        // 2.1 ถ้าเป็น 'Carry Over' (ที่เป็นยอดรวม) ให้ทำตัวหนา
-                        if (context.dataset.label === 'Carry Over') {
+                        const label = context.dataset.label;
+                        // ถ้าเป็นแท่งบนสุดของ Stack (Carry Over หรือ Unplanned) ให้ตัวหนา
+                        if (label === 'Carry Over' || label === 'Actual (Unplanned)') {
                             return { size: 10, weight: 'bold' };
                         }
-                        // 2.2 ที่เหลือใช้ Font ปกติ
                         return { size: 10 };
                     },
                     
-                    // ตั้งค่า Offset (ใช้เงื่อนไข)
                     offset: (context) => {
-                        // 2.3 ถ้าเป็น 'Carry Over' (ยอดรวม) ให้ขยับขึ้นเล็กน้อย
-                        return (context.dataset.label === 'Carry Over') ? -5 : 0;
+                        const label = context.dataset.label;
+                        // ถ้าเป็นแท่งบนสุดของ Stack ให้ขยับลอยขึ้น
+                        return (label === 'Carry Over' || label === 'Actual (Unplanned)') ? -5 : 0;
                     }
                 }
-                // ⭐️⭐️⭐️ [END REFACTORED] ⭐️⭐️⭐️
             },
         };
 
