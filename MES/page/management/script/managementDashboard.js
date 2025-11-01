@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const aggregatedData = {};
         planData.forEach(p => {
             const itemId = p.item_id;
-            const identifier = p.sap_no || p.part_no || `Item ${itemId}`;
+            const identifier = p.part_no || p.sap_no || `Item ${itemId}`;
             const adjustedPlan = parseFloat(p.adjusted_planned_quantity || 0);
             const actualQty = parseFloat(p.actual_quantity || 0);
             const originalPlan = parseFloat(p.original_planned_quantity || 0);
@@ -324,8 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!aggregatedData[itemId]) {
                 aggregatedData[itemId] = {
                     label: identifier,
-                    part_no: p.part_no, // 👈 [เพิ่ม] สำหรับ Tooltip
-                    part_description: p.part_description, // 👈 [เพิ่ม] สำหรับ Tooltip
+                    part_no: p.part_no,
+                    part_description: p.part_description,
                     totalAdjustedPlan: 0,
                     totalActualQty: 0,
                     totalOriginalPlan: 0,
@@ -394,8 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 x: { 
                     ticks: { 
-                        maxRotation: 0, 
+                        maxRotation: 45, 
                         minRotation: 0,
+                        align: 'end',
                         font: { size: 11 },
                         autoSkip: false
                     },

@@ -108,7 +108,15 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
                     }
                 },
                 scales: {
-                    x: { stacked: isStacked, ticks: { color: themeColors.ticksColor } },
+                    x: { 
+                        stacked: isStacked, 
+                        ticks: { 
+                            color: themeColors.ticksColor,
+                            maxRotation: 45,
+                            minRotation: 0,
+                            align: 'end'
+                        } 
+                    },
                     y: { stacked: isStacked, beginAtZero: true, ticks: { color: themeColors.ticksColor } }
                 }
             }
@@ -199,18 +207,23 @@ async function fetchAndRenderBarCharts() {
 
             // สร้าง Datasets (ส่วนนี้เหมือนเดิม)
             const countTypes = { FG: fgData, HOLD: holdData, SCRAP: scrapData };
-            const colors = { FG: '--mes-color-success', HOLD: '--mes-color-warning', SCRAP: '--mes-color-danger' };
+            const colors = { 
+                FG: 'rgba(75, 192, 192, 0.7)',  // Teal/Green (Met Plan)
+                HOLD: 'rgba(255, 159, 64, 0.7)', // Orange (Carry Over)
+                SCRAP: 'rgba(255, 99, 132, 0.7)'   // Red (Shortfall)
+            };
             
             partDatasets = Object.keys(countTypes)
                 .map(type => ({
                     label: type,
                     data: countTypes[type],
-                    backgroundColor: getCssVar(colors[type])
+                    backgroundColor: colors[type],
+                    borderColor: colors[type].replace('0.7', '1'),
+                    borderWidth: 1
                 }))
                 .filter(ds => ds.data.some(val => val > 0)); 
         }
         
-        // ✅ ไม่ต้องใช้ truncateLabel กับ partLabels อีกต่อไป เพราะมันสั้นอยู่แล้ว
         renderBarChart('partsBarChart', partLabels, partDatasets, { 
             isStacked: true, 
             originalLabels: originalPartLabels, // Tooltip ยังคงใช้ข้อมูลเต็ม
@@ -224,8 +237,10 @@ async function fetchAndRenderBarCharts() {
 
         const stopCauseDatasets = hasStopCauseData ? stopCauseData.datasets : [];
         if (hasStopCauseData) {
-            // ทำให้มีสีเดียวเสมอ
-            stopCauseDatasets[0].backgroundColor = getCssVar('--mes-chart-color-1');
+            const stopColor = 'rgba(255, 99, 132, 0.7)'; // Red
+            stopCauseDatasets[0].backgroundColor = stopColor;
+            stopCauseDatasets[0].borderColor = stopColor.replace('0.7', '1');
+            stopCauseDatasets[0].borderWidth = 1;
         }
 
         renderBarChart('stopCauseBarChart', hasStopCauseData ? stopCauseData.labels : [], stopCauseDatasets, { 

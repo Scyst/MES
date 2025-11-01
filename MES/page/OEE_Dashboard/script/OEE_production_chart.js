@@ -49,18 +49,30 @@ function getDailyProdChartThemeColors() { // Renamed to be specific
 }
 
 // ===== Data Processing Function =====
-
 function processProductionDataForChart(data) {
-    // ... (no changes needed) ...
      if (!data || data.length === 0) {
         return { labels: [], datasets: [] };
     }
     const dates = [...new Set(data.map(item => item.ProductionDate))].sort();
     const items = [...new Set(data.map(item => item.ItemIdentifier))].sort();
-    // Using a standard color palette
-    const colors = ['#0d6efd', '#6f42c1', '#fd7e14', '#17a2b8', '#198754', '#ffc107', '#dc3545', '#6c757d'];
+
+    const baseColors = [
+        { bg: 'rgba(54, 162, 235, 0.7)', border: 'rgba(54, 162, 235, 1)' },  // 1. Blue
+        { bg: 'rgba(75, 192, 192, 0.7)', border: 'rgba(75, 192, 192, 1)' },  // 2. Teal
+        { bg: 'rgba(255, 159, 64, 0.7)', border: 'rgba(255, 159, 64, 1)' },  // 3. Orange
+        { bg: 'rgba(153, 102, 255, 0.7)', border: 'rgba(153, 102, 255, 1)' }, // 4. Purple
+        { bg: 'rgba(255, 99, 132, 0.7)', border: 'rgba(255, 99, 132, 1)' },   // 5. Red
+        { bg: 'rgba(255, 205, 86, 0.7)', border: 'rgba(255, 205, 86, 1)' },   // 6. Yellow
+        { bg: 'rgba(25, 135, 84, 0.7)', border: 'rgba(25, 135, 84, 1)' },   // 7. Green
+        { bg: 'rgba(111, 66, 193, 0.7)', border: 'rgba(111, 66, 193, 1)' },  // 8. Indigo
+        { bg: 'rgba(13, 202, 240, 0.7)', border: 'rgba(13, 202, 240, 1)' },   // 9. Cyan
+        { bg: 'rgba(214, 51, 132, 0.7)', border: 'rgba(214, 51, 132, 1)' },  // 10. Pink
+        { bg: 'rgba(253, 126, 20, 0.7)', border: 'rgba(253, 126, 20, 1)' },   // 11. Bright Orange
+        { bg: 'rgba(108, 117, 125, 0.7)', border: 'rgba(108, 117, 125, 1)' }  // 12. Gray
+    ];
+
     const itemColorMap = items.reduce((map, item, index) => {
-        map[item] = colors[index % colors.length];
+        map[item] = baseColors[index % baseColors.length];
         return map;
     }, {});
 
@@ -69,22 +81,26 @@ function processProductionDataForChart(data) {
             const entry = data.find(d => d.ProductionDate === date && d.ItemIdentifier === item);
             return entry ? entry.TotalQuantity : 0;
         });
+        
+        const color = itemColorMap[item];
+        
         return {
             label: item,
             data: itemData,
-            backgroundColor: itemColorMap[item]
+            backgroundColor: color.bg,
+            borderColor: color.border,
+            borderWidth: 1
         };
     });
     return { labels: dates, datasets: datasets };
 }
 
 // ===== Main Fetch and Render Function =====
-
 async function fetchAndRenderDailyProductionChart() {
     const canvasId = DAILY_PROD_CHART_ID;
-    toggleLoadingState_ProdChart(canvasId, true); // Use renamed helper
-    toggleNoDataMessage_ProdChart(canvasId, false); // Use renamed helper
-    toggleErrorMessage_ProdChart(canvasId, false); // Use renamed helper
+    toggleLoadingState_ProdChart(canvasId, true); 
+    toggleNoDataMessage_ProdChart(canvasId, false);
+    toggleErrorMessage_ProdChart(canvasId, false);
 
     const startDate = document.getElementById("startDate")?.value || '';
     const endDate = document.getElementById("endDate")?.value || '';
@@ -98,7 +114,7 @@ async function fetchAndRenderDailyProductionChart() {
         const result = await response.json();
 
         const hasData = result.success && result.data && result.data.length > 0;
-        toggleNoDataMessage_ProdChart(canvasId, !hasData); // Use renamed helper
+        toggleNoDataMessage_ProdChart(canvasId, !hasData);
 
         let chartData = { labels: [], datasets: [] };
         if (hasData) {
@@ -111,9 +127,9 @@ async function fetchAndRenderDailyProductionChart() {
 
         const datalabelsConfig = {
             display: true,
-            anchor: 'end', // Position label at the top of the bar segment
-            align: 'end',   // Align label text to the top edge
-            color: themeColors.labelColor, // Use theme color for labels
+            anchor: 'end',
+            align: 'end',
+            color: themeColors.labelColor,
             font: {
                 weight: 'bold'
             },
@@ -135,7 +151,61 @@ async function fetchAndRenderDailyProductionChart() {
               }, offset: -5
           };
 
-        // ===== MES: Use the local instance variable =====
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 500 },
+            plugins: {
+                 legend: {
+                    display: chartData.datasets.length > 1 && chartData.datasets.length < 15,
+                    position: 'bottom',
+                    labels: { color: themeColors.legendColor }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                     callbacks: {
+                        filter: function(tooltipItem) {
+                            return tooltipItem.parsed.y > 0;
+                        },
+                        label: (context) => {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) label += context.parsed.y.toLocaleString();
+                            return label;
+                        },
+                        footer: (tooltipItems) => {
+                            let sum = 0;
+                            tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
+                            return 'Total: ' + sum.toLocaleString();
+                        }
+                    }
+                },
+                 title: { display: false },
+                 datalabels: datalabelsConfig
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { 
+                        color: themeColors.ticksColor,
+                        maxRotation: 45,
+                        minRotation: 0,
+                        align: 'end'
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { color: themeColors.ticksColor },
+                    grid: { color: themeColors.gridColor },
+                    title: { display: true, text: 'Quantity Produced', color: themeColors.labelColor }
+                }
+             }
+        };
+
+
         if (dailyProductionChartInstance && typeof dailyProductionChartInstance.destroy === 'function' && dailyProductionChartInstance.ctx === null) {
              console.warn(`Chart instance for ${canvasId} was destroyed. Recreating.`);
              dailyProductionChartInstance = null;
@@ -147,65 +217,22 @@ async function fetchAndRenderDailyProductionChart() {
                 type: 'bar',
                 data: chartData,
                 plugins: [ChartDataLabels],
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 500 },
-                    plugins: {
-                         legend: {
-                            display: chartData.datasets.length > 1 && chartData.datasets.length < 15,
-                            position: 'bottom',
-                            labels: { color: themeColors.legendColor }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                             callbacks: {
-                                label: (context) => {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null) label += context.parsed.y.toLocaleString();
-                                    return label;
-                                },
-                                footer: (tooltipItems) => {
-                                    let sum = 0;
-                                    tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
-                                    return 'Total: ' + sum.toLocaleString();
-                                }
-                            }
-                        },
-                         title: { display: false },
-                         datalabels: datalabelsConfig
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            ticks: { color: themeColors.ticksColor },
-                            grid: { display: false }
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            ticks: { color: themeColors.ticksColor },
-                            grid: { color: themeColors.gridColor },
-                            title: { display: true, text: 'Quantity Produced', color: themeColors.labelColor }
-                        }
-                     }
-                }
+                options: chartOptions
             });
         } else {
             console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Updating existing chart.`);
+            
             dailyProductionChartInstance.data.labels = chartData.labels;
-
             dailyProductionChartInstance.data.datasets.forEach((oldDataset, index) => {
                 const newDataset = chartData.datasets[index];
                 if (newDataset) {
                     oldDataset.label = newDataset.label;
                     oldDataset.data = newDataset.data;
                     oldDataset.backgroundColor = newDataset.backgroundColor;
+                    oldDataset.borderColor = newDataset.borderColor;
+                    oldDataset.borderWidth = newDataset.borderWidth;
                 }
             });
-            // ===== MES: Use the local instance variable =====
             if (chartData.datasets.length > dailyProductionChartInstance.data.datasets.length) {
                 for (let i = dailyProductionChartInstance.data.datasets.length; i < chartData.datasets.length; i++) {
                     dailyProductionChartInstance.data.datasets.push(chartData.datasets[i]);
@@ -214,14 +241,10 @@ async function fetchAndRenderDailyProductionChart() {
                 dailyProductionChartInstance.data.datasets.length = chartData.datasets.length;
             }
 
-            // Update theme colors
-            dailyProductionChartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
-            dailyProductionChartInstance.options.scales.y.ticks.color = themeColors.ticksColor;
-            dailyProductionChartInstance.options.scales.y.title.color = themeColors.labelColor;
-            dailyProductionChartInstance.options.scales.y.grid.color = themeColors.gridColor;
-            dailyProductionChartInstance.options.plugins.legend.labels.color = themeColors.legendColor;
-            dailyProductionChartInstance.options.plugins.legend.display = chartData.datasets.length > 1 && chartData.datasets.length < 15;
-            dailyProductionChartInstance.options.plugins.datalabels.color = themeColors.labelColor;
+            dailyProductionChartInstance.options.plugins.legend = chartOptions.plugins.legend;
+            dailyProductionChartInstance.options.plugins.tooltip = chartOptions.plugins.tooltip;
+            dailyProductionChartInstance.options.plugins.datalabels = chartOptions.plugins.datalabels;
+            dailyProductionChartInstance.options.scales = chartOptions.scales;
 
             dailyProductionChartInstance.update();
         }

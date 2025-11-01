@@ -80,6 +80,7 @@ async function fetchAndRenderCostSummary() {
             if (elements.ohCost) elements.ohCost.textContent = formatNumber(data.TotalOHCost, false, 2);
             if (elements.ohPercent) elements.ohPercent.textContent = formatNumber(data.PercentOH, true, 1);
             if (elements.totalCost) elements.totalCost.textContent = formatNumber(data.TotalStdCost, false, 2);
+            //if (elements.totalCost) elements.totalCost.textContent = formatNumber(data.TotalDLCost, false, 2); <--พี่พิมพ์อยากได้มั้ง รอคอนเฟิรมว่าใช่ไหม
             if (elements.totalRevenue) elements.totalRevenue.textContent = formatNumber(data.TotalStdRevenue, false, 2);
             if (elements.gpValue) elements.gpValue.textContent = formatNumber(gp, false, 2);
             if (elements.gpPercent) elements.gpPercent.textContent = formatNumber(data.PercentGPStd, true, 1);
