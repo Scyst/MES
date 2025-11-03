@@ -806,7 +806,22 @@ async function handleItemFormSubmit(event) {
         planned_output: form.querySelector('#planned_output').value,
         part_description: form.querySelector('#part_description').value,
         min_stock: form.querySelector('#min_stock').value,
-        max_stock: form.querySelector('#max_stock').value
+        max_stock: form.querySelector('#max_stock').value,
+
+        Cost_RM: form.querySelector('#Cost_RM').value,
+        Cost_PKG: form.querySelector('#Cost_PKG').value,
+        Cost_SUB: form.querySelector('#Cost_SUB').value,
+        Cost_DL: form.querySelector('#Cost_DL').value,
+        Cost_OH_Machine: form.querySelector('#Cost_OH_Machine').value,
+        Cost_OH_Utilities: form.querySelector('#Cost_OH_Utilities').value,
+        Cost_OH_Indirect: form.querySelector('#Cost_OH_Indirect').value,
+        Cost_OH_Staff: form.querySelector('#Cost_OH_Staff').value,
+        Cost_OH_Accessory: form.querySelector('#Cost_OH_Accessory').value,
+        Cost_OH_Others: form.querySelector('#Cost_OH_Others').value,
+        Cost_Total: form.querySelector('#Cost_Total').value,
+        StandardPrice: form.querySelector('#StandardPrice').value,
+        StandardGP: form.querySelector('#StandardGP').value,
+        Price_USD: form.querySelector('#Price_USD').value
     };
 
     const routesData = [];

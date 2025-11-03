@@ -1,6 +1,13 @@
 <?php
 // Use absolute paths for consistency and reliability
 require_once __DIR__ . '/../../db.php'; // Correct path to db.php which includes config.php
+require_once __DIR__ . '/../../../auth/check_auth.php';
+
+if (!isset($_SESSION['user']) && !isset($_SESSION['username'])) {
+    http_response_code(403); // Forbidden
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
 
 // Allow GET requests
 header('Content-Type: application/json');

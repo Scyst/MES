@@ -483,7 +483,7 @@ try {
                         $stmt = $pdo->prepare($sql);
                         $stmt->execute([$route['line'], $route['model'], (int)$route['planned_output'], $route_id]);
                     }
-                }
+               }
                 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Item and routes saved successfully.']);

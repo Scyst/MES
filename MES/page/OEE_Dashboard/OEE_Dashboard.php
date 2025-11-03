@@ -1,5 +1,6 @@
 <?php 
 session_start(); 
+$isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset($_SESSION['username']) && !empty($_SESSION['username']));
 ?>
 
 <!DOCTYPE html>
@@ -142,12 +143,15 @@ session_start();
                     </div>
                 </section>
 
-                </section> <section class="dashboard-section mb-4" id="cost-summary-section">
+                <section class="dashboard-section mb-4" id="cost-summary-section">
                     <div class="chart-card cost-summary-card" style="height: 100%;">
-                         <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
-                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary</h4>
+                        <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
+                        <?php
+                        if ($isLoggedIn): 
+                        ?>
+                        <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary</h4>
 
-                         <div class="row text-center">
+                        <div class="row text-center">
                             <div class="col-md-4">
                                 <h6><i class="fas fa-cash-register"></i> Total Revenue (Production)</h6>
                                 <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
@@ -162,11 +166,11 @@ session_start();
                                 <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentDL">-- %</span>
                             </div>
-                         </div>
+                        </div>
 
-                         <hr>
+                        <hr>
 
-                         <div class="row text-center mt-3 mb-4">
+                        <div class="row text-center mt-3 mb-4">
                             <div class="col-md-4">
                                 <h6><i class="fas fa-industry"></i> Overhead (Standard)</h6>
                                 <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
@@ -181,21 +185,24 @@ session_start();
                                 <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodPercentGPStd">-- %</span>
                             </div>
-                         </div>
+                        </div>
+                        <hr>
+                        <?php
+                        endif; 
+                        ?>
 
-                         <hr>
-                         <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
-                         <div class="chart-wrapper" style="height: 100%;">
-                              <canvas id="dailyProductionChart"></canvas>
-                               <div class="no-data-message" style="margin-top: 10rem;">
-                                    <i class="fas fa-info-circle"></i>
-                                    <span>No production data available for this period.</span>
-                               </div>
-                               <div class="error-message" style="margin-top: 1rem;">
-                                   <i class="fas fa-exclamation-triangle"></i>
-                                   <span>Failed to load production data.</span>
-                               </div>
-                         </div>
+                        <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
+                        <div class="chart-wrapper" style="height: 100%;">
+                            <canvas id="dailyProductionChart"></canvas>
+                            <div class="no-data-message" style="margin-top: 10rem;">
+                                <i class="fas fa-info-circle"></i>
+                                <span>No production data available for this period.</span>
+                            </div>
+                            <div class="error-message" style="margin-top: 1rem;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Failed to load production data.</span>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -219,6 +226,9 @@ session_start();
                         </div>
                     </div>
 
+                    <?php
+                    if ($isLoggedIn): 
+                    ?>
                     <div class="row g-4">
                         <div class="col-lg-6 mt-0">
                             <div class="chart-card bar-chart-card">
@@ -259,6 +269,9 @@ session_start();
                             </div>
                         </div>
                     </div>
+                    <?php
+                    endif; 
+                    ?>
                 </section>
 
             </div>
@@ -266,8 +279,18 @@ session_start();
         </main>
     </div>
     
-    <?php include_once('../components/php/command_center.php'); ?>
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
+    <?php 
+    if ($isLoggedIn): 
+    ?>
+        <?php include_once('../components/php/command_center.php'); ?>
+        <?php include_once('../components/php/docking_sidebar.php'); ?>
+    <?php 
+    endif; 
+    ?>
+
+    <script>
+        const isLoggedIn = <?php echo json_encode($isLoggedIn); ?>;
+    </script>
 
     <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
     <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>

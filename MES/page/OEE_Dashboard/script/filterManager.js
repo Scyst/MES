@@ -23,6 +23,9 @@ function formatNumber(value, isPercent = false, decimals = 2) {
  * It does NOT apply minimum date range logic.
  */
 async function fetchAndRenderCostSummary() {
+    if (typeof isLoggedIn !== 'undefined' && !isLoggedIn) {
+        return;
+    }
     const costCardElement = document.getElementById('cost-summary-section')?.querySelector('.chart-card');
     if (!costCardElement) return;
 
@@ -188,7 +191,9 @@ function handleFilterChange() {
     fetchAndRenderBarCharts?.();        // From OEE_barchart.js
 
     // Cost summary function (uses dates directly)
-    fetchAndRenderCostSummary();        // From this file
+    if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
+        fetchAndRenderCostSummary();        // From this file
+    }      // From this file
 
     // Example: Assumed function for Production Chart (likely uses dates directly)
     fetchAndRenderDailyProductionChart?.(); // From OEE_production_chart.js
