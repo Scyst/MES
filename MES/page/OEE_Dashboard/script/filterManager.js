@@ -159,12 +159,8 @@ async function applyFiltersAndInitCharts() {
     handleFilterChange();
 }
 
-/**
- * Main function to trigger data fetching for all dashboard components based on current filters.
- * NOTE: This function ONLY reads filter values and calls other fetch functions.
- * The logic to adjust date ranges (min 7 days for sparkline, min 30 days for line chart)
- * MUST BE IMPLEMENTED INSIDE the respective fetch functions (e.g., fetchAndRenderSparkline, fetchAndRenderLineCharts).
- */
+// filterManager.js
+
 function handleFilterChange() {
     const startDate = document.getElementById("startDate")?.value || '';
     const endDate = document.getElementById("endDate")?.value || '';
@@ -176,30 +172,16 @@ function handleFilterChange() {
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
 
-    console.log(`[${new Date().toLocaleTimeString()}] Fetching dashboard data...`);
+    console.log(`[${new Date().toLocaleTimeString()}] Fetching dashboard data (Decoupled)...`);
 
     // --- Call fetch/render functions from other script files ---
-    // IMPORTANT: The functions below need to handle their own minimum date range logic internally.
-
-    // Example: Assumed function for Pie Charts (likely uses dates directly)
-    fetchAndRenderCharts?.();           // From OEE_piechart.js
-
-    // Example: Assumed function for Line Charts (NEEDS internal logic for min 30 days)
-    fetchAndRenderLineCharts?.();       // From OEE_linechart.js
-
-    // Example: Assumed function for Bar Charts (likely uses dates directly)
-    fetchAndRenderBarCharts?.();        // From OEE_barchart.js
-
-    // Cost summary function (uses dates directly)
+    fetchAndRenderPieCharts?.(); // จาก OEE_OEEchart.js
+    fetchAndRenderLineCharts?.(); // จาก OEE_OEEchart.js
+    fetchAndRenderBarCharts?.(); // จาก OEE_barchart.js
     if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
-        fetchAndRenderCostSummary();        // From this file
-    }      // From this file
-
-    // Example: Assumed function for Production Chart (likely uses dates directly)
-    fetchAndRenderDailyProductionChart?.(); // From OEE_production_chart.js
-
-    // Example: Assumed function for Sparkline (NEEDS internal logic for min 7 days)
-    // fetchAndRenderSparkline?.(); // <--- ต้องเรียกฟังก์ชัน Sparkline ของคุณที่นี่
+        fetchAndRenderCostSummary();    
+    }
+    fetchAndRenderDailyProductionChart?.(); // จาก OEE_production_chart.js
 }
 
 // ===== Event Listeners Setup =====

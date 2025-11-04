@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../../db.php';
 
+// ✅ [แก้ไข 1/2] เพิ่มการเรียก config.php โดยตรง
+require_once __DIR__ . '/../../../config/config.php';
+
 // กำหนด Content Type เป็น JSON
 header('Content-Type: application/json');
 
@@ -11,13 +14,13 @@ $line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : nul
 $model = (!empty($_GET['model']) && $_GET['model'] !== 'All') ? $_GET['model'] : null;
 
 try {
-    // --- เลือก Stored Procedure ตาม Environment ---
-    $spName = IS_DEVELOPMENT === true
-        ? '[dbo].[sp_GetDailyProductionSummary_TEST]'
-        : '[dbo].[sp_GetDailyProductionSummary]';
+    // --- [ลบออก] ลบ Logic การเลือก $spName เก่า ---
 
     // --- เตรียมและ Execute Stored Procedure ---
-    $stmt = $pdo->prepare("EXEC {$spName} @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?");
+    // ✅ [แก้ไข 2/2] ใช้ค่าคงที่ SP_GET_DAILY_PROD
+    $spNameWithSchema = 'dbo.' . SP_GET_DAILY_PROD;
+    $stmt = $pdo->prepare("EXEC {$spNameWithSchema} @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?");
+    
     $stmt->bindParam(1, $startDate, PDO::PARAM_STR);
     $stmt->bindParam(2, $endDate, PDO::PARAM_STR);
     $stmt->bindParam(3, $line, $line === null ? PDO::PARAM_NULL : PDO::PARAM_STR);

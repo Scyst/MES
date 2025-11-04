@@ -158,7 +158,7 @@ async function fetchAndRenderDailyProductionChart() {
             plugins: {
                  legend: {
                     display: chartData.datasets.length > 1 && chartData.datasets.length < 15,
-                    position: 'bottom',
+                    position: 'top',
                     labels: { color: themeColors.legendColor }
                 },
                 tooltip: {

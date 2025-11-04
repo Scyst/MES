@@ -292,9 +292,8 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         const isLoggedIn = <?php echo json_encode($isLoggedIn); ?>;
     </script>
 
-    <script src="script/OEE_piechart.js?v=<?php echo filemtime('script/OEE_piechart.js'); ?>"></script>
     <script src="script/OEE_sparkline.js?v=<?php echo filemtime('script/OEE_sparkline.js'); ?>"></script>
-    <script src="script/OEE_linechart.js?v=<?php echo filemtime('script/OEE_linechart.js'); ?>"></script>
+    <script src="script/OEE_OEEchart.js?v=<?php echo filemtime('script/OEE_OEEchart.js'); ?>"></script>
     <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
     <script src="script/OEE_production_chart.js?v=<?php echo filemtime('script/OEE_production_chart.js'); ?>"></script>
     <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
