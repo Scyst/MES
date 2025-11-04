@@ -83,7 +83,6 @@ async function fetchAndRenderCostSummary() {
             if (elements.ohCost) elements.ohCost.textContent = formatNumber(data.TotalOHCost, false, 2);
             if (elements.ohPercent) elements.ohPercent.textContent = formatNumber(data.PercentOH, true, 1);
             if (elements.totalCost) elements.totalCost.textContent = formatNumber(data.TotalStdCost, false, 2);
-            //if (elements.totalCost) elements.totalCost.textContent = formatNumber(data.TotalDLCost, false, 2); <--พี่พิมพ์อยากได้มั้ง รอคอนเฟิรมว่าใช่ไหม
             if (elements.totalRevenue) elements.totalRevenue.textContent = formatNumber(data.TotalStdRevenue, false, 2);
             if (elements.gpValue) elements.gpValue.textContent = formatNumber(gp, false, 2);
             if (elements.gpPercent) elements.gpPercent.textContent = formatNumber(data.PercentGPStd, true, 1);
@@ -147,7 +146,7 @@ async function applyFiltersAndInitCharts() {
         console.error("Error fetching filters:", err);
     }
 
-    // --- [แก้ไข] Set dates from URL or default to TODAY ---
+    // --- Set dates from URL or default to TODAY ---
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0]; // Get today's date YYYY-MM-DD
 
@@ -159,8 +158,9 @@ async function applyFiltersAndInitCharts() {
     handleFilterChange();
 }
 
-// filterManager.js
-
+/**
+ * Main function to trigger data fetching for all dashboard components based on current filters.
+ */
 function handleFilterChange() {
     const startDate = document.getElementById("startDate")?.value || '';
     const endDate = document.getElementById("endDate")?.value || '';
@@ -172,16 +172,27 @@ function handleFilterChange() {
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
 
-    console.log(`[${new Date().toLocaleTimeString()}] Fetching dashboard data (Decoupled)...`);
+    console.log(`[${new Date().toLocaleTimeString()}] Fetching dashboard data (Hourly Sparklines)...`);
 
     // --- Call fetch/render functions from other script files ---
-    fetchAndRenderPieCharts?.(); // จาก OEE_OEEchart.js
-    fetchAndRenderLineCharts?.(); // จาก OEE_OEEchart.js
-    fetchAndRenderBarCharts?.(); // จาก OEE_barchart.js
+
+    // ✅ [แก้ไข] 1. เรียก Pie Charts (Real-Time)
+    fetchAndRenderPieCharts?.();           // From  OEE_OEEchart.js
+
+    // ✅ [แก้ไข] 2. เรียก Line Chart (Min 30 days)
+    fetchAndRenderLineCharts?.();       // From  OEE_OEEchart.js
+    
+    // ✅ [แก้ไข 3/3] 3. เรียก Sparklines (Hourly 24h)
+    fetchAndRenderHourlySparklines?.(); // From  OEE_OEEchart.js
+
+    // 4. เรียกฟังก์ชันอื่นๆ (เหมือนเดิม)
+    fetchAndRenderBarCharts?.();        // From OEE_barchart.js
+
     if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
-        fetchAndRenderCostSummary();    
-    }
-    fetchAndRenderDailyProductionChart?.(); // จาก OEE_production_chart.js
+        fetchAndRenderCostSummary();        // From this file
+    }      
+
+    fetchAndRenderDailyProductionChart?.(); // From OEE_production_chart.js
 }
 
 // ===== Event Listeners Setup =====

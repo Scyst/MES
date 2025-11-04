@@ -6,9 +6,6 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../db.php';
 
-// ✅ [แก้ไข 1/2] เพิ่มการเรียก config.php โดยตรงเพื่อให้รู้จัก SP_CALC_OEE_LINE
-require_once __DIR__ . '/../../../config/config.php';
-
 try {
     $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-29 days'));
     $endDateStr   = $_GET['endDate'] ?? date('Y-m-d');
