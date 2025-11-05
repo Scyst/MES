@@ -113,8 +113,9 @@ try {
         case 'get_receipt_history':
         case 'get_production_history':
         case 'get_all_transactions':
-             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
+            $default_limit = ($action === 'get_all_transactions') ? 50 : 25;
             $limit = $isExport ? 10000 : 50;
             $offset = ($page - 1) * $limit;
             $params = [];
@@ -136,6 +137,11 @@ try {
             if (!empty($_GET['count_type']) && $action === 'get_production_history') {
                 $conditions[] = "t.transaction_type = ?";
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
+            }
+
+            if (!empty($_GET['user_filter'])) {
+                $conditions[] = "u.username = ?";
+                $params[] = $_GET['user_filter'];
             }
 
             if (!empty($_GET['startDate'])) {
@@ -936,120 +942,136 @@ try {
 
         // ⭐️ เพิ่ม Action ใหม่สำหรับ Management Dashboard
         case 'get_pending_shipments':
-             // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้ (เช่น admin, creator, หรือ role ใหม่)
-             if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+            // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้ (เช่น admin, creator, หรือ role ใหม่)
+            if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
+                exit;
+            }
+
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50; // หรือตามต้องการ
+            $offset = ($page - 1) * $limit;
+            $params = [];
+            $conditions = ["t.transaction_type = 'TRANSFER_PENDING_SHIPMENT'"];
+
+            // เพิ่ม Filter ถ้าต้องการ (เช่น Search, Date Range)
+            if (!empty($_GET['search_term'])) {
+                $search_term = '%' . $_GET['search_term'] . '%';
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
+                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            }
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+
+            $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
+                        JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                        LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                        LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                        {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            $dataSql = "
+                SELECT
+                    t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity,
+                    loc_from.location_name AS from_location,
+                    loc_to.location_name AS to_location,
+                    u.username AS requested_by, t.notes
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
+                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                {$whereClause}
+                ORDER BY t.transaction_timestamp ASC -- เรียงตามเก่าไปใหม่ เพื่อให้ Confirm ตามลำดับ
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $pending_shipments = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $pending_shipments, 'total' => $total, 'page' => $page]);
+            break;
+
+        case 'confirm_shipment':
+            // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้
+            if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
+                exit;
+            }
+
+            $transaction_ids = $input['transaction_ids'] ?? []; // รับเป็น Array เผื่อ Confirm หลายรายการ
+            if (empty($transaction_ids) || !is_array($transaction_ids)) {
+                throw new Exception("No valid Transaction IDs provided for confirmation.");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $confirmed_count = 0;
+                // (Optional) เพิ่ม Field สำหรับเก็บข้อมูลการ Confirm
+                // ALTER TABLE STOCK_TRANSACTIONS[_TEST] ADD confirmed_by_user_id INT NULL, confirmed_at DATETIME NULL;
+
+                $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
+                            SET transaction_type = 'SHIPPED'
+                            -- , confirmed_by_user_id = ?, confirmed_at = GETDATE() -- uncomment ถ้ามี fields นี้
+                            WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
+                $updateStmt = $pdo->prepare($updateSql);
+
+                foreach ($transaction_ids as $tid) {
+                    $updateParams = [ $tid ];
+                    // if (isset($currentUser['id'])) { array_unshift($updateParams, $currentUser['id']); } // uncomment ถ้ามี field confirmed_by_user_id
+                    $updateStmt->execute($updateParams);
+
+                    if ($updateStmt->rowCount() > 0) {
+                        $confirmed_count++;
+                        // Log การ Confirm แต่ละรายการ
+                        logAction($pdo, $currentUser['username'], 'CONFIRM SHIPMENT', $tid);
+                    } else {
+                        error_log("Failed to confirm shipment for transaction ID: " . $tid . " - Status might not be PENDING or ID invalid.");
+                    }
+                }
+
+                $pdo->commit();
+
+                if ($confirmed_count > 0) {
+                    echo json_encode(['success' => true, 'message' => "Successfully confirmed {$confirmed_count} shipment(s)."]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'No shipments were confirmed. They might have been confirmed already or the IDs were invalid.']);
+                }
+
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
+            }
+            break;
+            
+        case 'get_locations_for_qr':
+            // ตรวจสอบสิทธิ์ (เฉพาะ Admin/Creator)
+            if (!hasRole(['admin', 'creator'])) {
                  http_response_code(403);
-                 echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
+                 echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
                  exit;
-             }
-
-             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-             $limit = 50; // หรือตามต้องการ
-             $offset = ($page - 1) * $limit;
-             $params = [];
-             $conditions = ["t.transaction_type = 'TRANSFER_PENDING_SHIPMENT'"];
-
-             // เพิ่ม Filter ถ้าต้องการ (เช่น Search, Date Range)
-             if (!empty($_GET['search_term'])) {
-                 $search_term = '%' . $_GET['search_term'] . '%';
-                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
-                 array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
-             }
-             if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-             if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
-
-             $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-             $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
-                           JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                           LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                           LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                           LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                           {$whereClause}";
-             $totalStmt = $pdo->prepare($totalSql);
-             $totalStmt->execute($params);
-             $total = (int)$totalStmt->fetchColumn();
-
-             $dataSql = "
-                 SELECT
-                     t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity,
-                     loc_from.location_name AS from_location,
-                     loc_to.location_name AS to_location,
-                     u.username AS requested_by, t.notes
-                 FROM " . TRANSACTIONS_TABLE . " t
-                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                 LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                 LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                 {$whereClause}
-                 ORDER BY t.transaction_timestamp ASC -- เรียงตามเก่าไปใหม่ เพื่อให้ Confirm ตามลำดับ
-                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-             ";
-             $dataStmt = $pdo->prepare($dataSql);
-             $paramIndex = 1;
-             foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
-             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
-             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-             $dataStmt->execute();
-             $pending_shipments = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-             echo json_encode(['success' => true, 'data' => $pending_shipments, 'total' => $total, 'page' => $page]);
-             break;
-
-         case 'confirm_shipment':
-             // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้
-             if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
-                 http_response_code(403);
-                 echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
-                 exit;
-             }
-
-             $transaction_ids = $input['transaction_ids'] ?? []; // รับเป็น Array เผื่อ Confirm หลายรายการ
-             if (empty($transaction_ids) || !is_array($transaction_ids)) {
-                 throw new Exception("No valid Transaction IDs provided for confirmation.");
-             }
-
-             $pdo->beginTransaction();
-             try {
-                 $confirmed_count = 0;
-                 // (Optional) เพิ่ม Field สำหรับเก็บข้อมูลการ Confirm
-                 // ALTER TABLE STOCK_TRANSACTIONS[_TEST] ADD confirmed_by_user_id INT NULL, confirmed_at DATETIME NULL;
-
-                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
-                               SET transaction_type = 'SHIPPED'
-                               -- , confirmed_by_user_id = ?, confirmed_at = GETDATE() -- uncomment ถ้ามี fields นี้
-                               WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
-                 $updateStmt = $pdo->prepare($updateSql);
-
-                 foreach ($transaction_ids as $tid) {
-                     $updateParams = [ $tid ];
-                     // if (isset($currentUser['id'])) { array_unshift($updateParams, $currentUser['id']); } // uncomment ถ้ามี field confirmed_by_user_id
-                     $updateStmt->execute($updateParams);
-
-                     if ($updateStmt->rowCount() > 0) {
-                         $confirmed_count++;
-                         // Log การ Confirm แต่ละรายการ
-                         logAction($pdo, $currentUser['username'], 'CONFIRM SHIPMENT', $tid);
-                     } else {
-                         error_log("Failed to confirm shipment for transaction ID: " . $tid . " - Status might not be PENDING or ID invalid.");
-                     }
-                 }
-
-                 $pdo->commit();
-
-                 if ($confirmed_count > 0) {
-                     echo json_encode(['success' => true, 'message' => "Successfully confirmed {$confirmed_count} shipment(s)."]);
-                 } else {
-                     echo json_encode(['success' => false, 'message' => 'No shipments were confirmed. They might have been confirmed already or the IDs were invalid.']);
-                 }
-
-             } catch (Exception $e) {
-                 if ($pdo->inTransaction()) {
-                     $pdo->rollBack();
-                 }
-                 throw $e;
-             }
-             break;
+            }
+            
+            // ดึงข้อมูล Location จากฐานข้อมูล
+            $stmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
+            $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // ส่งข้อมูลกลับเป็น JSON
+            echo json_encode(['success' => true, 'locations' => $locations]);
+            break;
 
         default:
             http_response_code(400);
