@@ -737,10 +737,6 @@ function openAddPartModal() {
     }
     const now = new Date();
     document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
-    const currentTime = now.toTimeString().substring(0, 8);
-    document.getElementById('out_start_time').value = currentTime;
-    document.getElementById('out_end_time').value = currentTime;
-
     new bootstrap.Modal(document.getElementById('addPartModal')).show();
 }
 
@@ -1117,16 +1113,26 @@ async function handleFormSubmit(event) {
     const form = event.target;
     const action = form.dataset.action;
 
+    // === ⭐️ 1. Logic สำหรับ "ADD" (ยังคงใช้ Dropdown) ⭐️ ===
     if (action === 'addPart') {
         showSpinner();
         
+        // (อ่านค่าจาก Dropdown "time_slot")
+        const timeSlot = form.querySelector('#out_time_slot').value; 
+        const [startTime, endTime] = timeSlot.split('|');
+        if (!startTime || !endTime) {
+            showToast('Invalid time slot selected.', 'var(--bs-danger)');
+            hideSpinner(); return;
+        }
+
+        // (สร้าง baseData โดยใช้ startTime/endTime ที่แปลงแล้ว)
         const baseData = {
             item_id: form.querySelector('#out_item_id').value,
             location_id: form.querySelector('#out_location_id').value,
             lot_no: form.querySelector('#out_lot_no').value,
             log_date: form.querySelector('#out_log_date').value,
-            start_time: form.querySelector('#out_start_time').value,
-            end_time: form.querySelector('#out_end_time').value,
+            start_time: startTime, // ⭐️
+            end_time: endTime,     // ⭐️
             notes: form.querySelector('#out_notes').value
         };
 
@@ -1153,19 +1159,12 @@ async function handleFormSubmit(event) {
         
         let allSuccess = true;
         let lastErrorMessage = '';
-
         for (const trans of transactions) {
             const dataToSend = { ...baseData, ...trans };
             const result = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', dataToSend);
-            if (!result.success) {
-                allSuccess = false;
-                lastErrorMessage = result.message;
-                break; 
-            }
+            if (!result.success) { allSuccess = false; lastErrorMessage = result.message; break; }
         }
-        
         hideSpinner();
-
         if (allSuccess) {
             showToast('All production records saved successfully.', 'var(--bs-success)');
             bootstrap.Modal.getInstance(form.closest('.modal')).hide();
@@ -1182,20 +1181,16 @@ async function handleFormSubmit(event) {
     let apiAction = '';
     let successCallback = null;
 
-    switch(action) {
-        case 'addEntry':
-            apiAction = 'execute_receipt';
-            if (!data.item_id) { /* ... */ return; }
-            successCallback = fetchReceiptHistory;
-            break;
-        case 'editEntry':
-            apiAction = 'update_transaction';
-            successCallback = () => fetchReceiptHistory(receiptHistoryCurrentPage);
-            break;
-        case 'editProduction':
-            apiAction = 'update_transaction';
-            successCallback = () => fetchProductionHistory(productionHistoryCurrentPage);
-            break;
+    if (action === 'editProduction') {
+        apiAction = 'update_transaction';
+        successCallback = () => fetchProductionHistory(productionHistoryCurrentPage);
+
+    } else if (action === 'addEntry') {
+        apiAction = 'execute_receipt';
+        successCallback = fetchReceiptHistory;
+    } else if (action === 'editEntry') {
+        apiAction = 'update_transaction';
+        successCallback = () => fetchReceiptHistory(receiptHistoryCurrentPage);
     }
 
     if (!apiAction) {

@@ -1,5 +1,7 @@
 <?php 
     include_once("../../auth/check_auth.php");
+
+    date_default_timezone_set('Asia/Bangkok');
     
     $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
     $currentUserForJS = $_SESSION['user'] ?? null;
@@ -13,6 +15,8 @@
         exit;
     }
     $is_manual_mode = ($location_id <= 0);
+
+    $current_hour = (int)date('H'); 
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,17 +84,30 @@
                 <input type="hidden" id="out_item_id" name="item_id">
 
                 <div class="row">
-                    <div class="col-md-4 col-12 mb-3">
+                    <div class="col-md-6 col-12 mb-3">
                         <label for="out_log_date" class="form-label">วันที่</label>
                         <input type="date" id="out_log_date" name="log_date" class="form-control" required>
                     </div>
-                    <div class="col-md-4 col-6 mb-3">
-                        <label for="out_start_time" class="form-label">เวลาเริ่ม</label>
-                        <input type="text" id="out_start_time" name="start_time" class="form-control" placeholder="HH:MM:SS">
-                    </div>
-                    <div class="col-md-4 col-6 mb-3">
-                        <label for="out_end_time" class="form-label">เวลาสิ้นสุด</label>
-                        <input type="text" id="out_end_time" name="end_time" class="form-control" placeholder="HH:MM:SS">
+                    <div class="col-md-6 col-12 mb-3">
+                        <label for="out_time_slot" class="form-label">ช่วงเวลาการผลิต</label>
+                        <select id="out_time_slot" name="time_slot" class="form-select">
+                            <?php
+                                // วน Loop สร้าง 24 ชั่วโมง
+                                for ($h = 0; $h < 24; $h++) {
+                                    $start_time = sprintf('%02d:00:00', $h);
+                                    $end_time = sprintf('%02d:59:59', $h);
+                                    $display_text = sprintf('%02d:00 - %02d:59', $h, $h);
+                                    
+                                    // (สำคัญ) เราจะเก็บค่าทั้งสองไว้ใน value โดยคั่นด้วย |
+                                    $value = $start_time . '|' . $end_time;
+                                    
+                                    // (สำคัญ) เลือกชั่วโมงปัจจุบันเป็น Default
+                                    $selected = ($h == $current_hour) ? 'selected' : '';
+                                    
+                                    echo "<option value=\"$value\" $selected>$display_text</option>";
+                                }
+                            ?>
+                        </select>
                     </div>
                 </div>
                 <label for="out_item_search" class="form-label">ค้นหาชิ้นส่วน</label>

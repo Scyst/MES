@@ -44,10 +44,10 @@ function applyTimeMask(event) {
 // =================================================================
 
 function initEntryPage() {
-    populateInitialData(); // ⭐️ (อัปเดตแล้ว)
+    populateInitialData();
     initializeDateTimeFields(); 
-    
-    const timeInputs = document.querySelectorAll('input[name="start_time"], input[name="end_time"], input[name="log_time"]');
+
+    const timeInputs = document.querySelectorAll('input[name="log_time"]');
     timeInputs.forEach(input => input.addEventListener('input', applyTimeMask));
 
     if (g_EntryType === 'production') {
@@ -55,20 +55,18 @@ function initEntryPage() {
         document.getElementById('mobileProductionForm')?.addEventListener('submit', handleFormSubmit); // ⭐️ (อัปเดตแล้ว)
     } else {
         setupAutocomplete('entry_item_search', 'entry_item_id');
-        document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit); // ⭐️ (อัปเดตแล้ว)
+        document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit);
     }
 }
 
-function initializeDateTimeFields() { /* (เหมือนเดิม) */
+function initializeDateTimeFields() {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().substring(0, 8);
+
     const outLogDate = document.getElementById('out_log_date');
     if (outLogDate) outLogDate.value = dateStr;
-    const outStartTime = document.getElementById('out_start_time');
-    if (outStartTime) outStartTime.value = timeStr;
-    const outEndTime = document.getElementById('out_end_time');
-    if (outEndTime) outEndTime.value = timeStr;
+    
     const inLogDate = document.getElementById('entry_log_date');
     if (inLogDate) inLogDate.value = dateStr;
     const inLogTime = document.getElementById('entry_log_time');
@@ -344,52 +342,51 @@ async function deleteTransaction(transactionId, successCallback) { /* (เหม
     }
 }
 
-/**
- * (สำคัญ) "รวม" handleFormSubmit
- * (ฉบับแก้ไข: ย้าย manualLocationId logic เข้าไปข้างใน)
- */
 async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const action = form.dataset.action;
     
-    // --- ⭐️ โค้ดที่แก้ไข ⭐️ ---
-    // 1. ตรวจสอบโหมด
     const isManualMode = (g_LocationId <= 0);
-    let manualLocationId = null; // 2. ประกาศตัวแปรไว้ก่อน (เป็น null)
+    let manualLocationId = null; 
     
     showSpinner();
-    // --- ⭐️ จบส่วนที่แก้ไข ⭐️ ---
-
     
     // ------------------------------------
-    // 1. Logic จาก mobile_entry.php (ADD)
+    // 1. Logic (ADD PART)
     // ------------------------------------
     if (action === 'addPart') {
         
-        // --- ⭐️ โค้ดที่แก้ไข ⭐️ ---
-        // 3. ย้ายโค้ดที่อ่าน .value มาไว้ "ข้างใน" นี้
         if (isManualMode) {
             manualLocationId = document.getElementById('location_display').value;
         }
-        // --- ⭐️ จบส่วนที่แก้ไข ⭐️ ---
-
         const locationId = isManualMode ? manualLocationId : g_LocationId;
         if (!locationId) {
             showToast('Please select a location.', 'var(--bs-warning)');
             hideSpinner(); return;
         }
 
+        // 1. (ใหม่) อ่านค่าจาก Dropdown
+        const timeSlot = form.querySelector('#out_time_slot').value; // เช่น "11:00:00|11:59:59"
+        // 2. (ใหม่) แยกค่า
+        const [startTime, endTime] = timeSlot.split('|');
+
+        if (!startTime || !endTime) {
+            showToast('Invalid time slot selected.', 'var(--bs-danger)');
+            hideSpinner(); return;
+        }
+
+        // 3. (แก้ไข) สร้าง baseData โดยใช้ค่าใหม่
         const baseData = {
             item_id: form.querySelector('#out_item_id').value,
             location_id: locationId, 
             lot_no: form.querySelector('#out_lot_no').value,
             log_date: form.querySelector('input[name="log_date"]').value,
-            start_time: form.querySelector('input[name="start_time"]').value,
-            end_time: form.querySelector('input[name="end_time"]').value,
+            start_time: startTime,
+            end_time: endTime,
             notes: form.querySelector('#out_notes').value
         };
-        // ... (โค้ดแยก FG/HOLD/SCRAP เหมือนเดิม) ...
+
         const transactions = [];
         const qtyFg = parseFloat(form.querySelector('#out_qty_fg').value) || 0;
         const qtyHold = parseFloat(form.querySelector('#out_qty_hold').value) || 0;
@@ -491,15 +488,13 @@ async function handleFormSubmit(event) {
 document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById('review-container')) {
-        // --- 1. ถ้าเราอยู่ที่หน้า mobile_review.php ---
         initReviewPage();
         document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
         document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
         document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
         document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
 
-    } else if (document.getElementById('entry-container')) { // ⭐️ (เปลี่ยน ID ที่เช็ค)
-        // --- 2. ถ้าเราอยู่ที่หน้า mobile_entry.php ---
+    } else if (document.getElementById('entry-container')) {
         initEntryPage();
     }
 });
