@@ -44,15 +44,15 @@ function applyTimeMask(event) {
 // =================================================================
 
 function initEntryPage() {
-    populateInitialData();
+    populateInitialData(); 
     initializeDateTimeFields(); 
-
+    
     const timeInputs = document.querySelectorAll('input[name="log_time"]');
     timeInputs.forEach(input => input.addEventListener('input', applyTimeMask));
 
     if (g_EntryType === 'production') {
         setupAutocomplete('out_item_search', 'out_item_id');
-        document.getElementById('mobileProductionForm')?.addEventListener('submit', handleFormSubmit); // ⭐️ (อัปเดตแล้ว)
+        document.getElementById('mobileProductionForm')?.addEventListener('submit', handleFormSubmit);
     } else {
         setupAutocomplete('entry_item_search', 'entry_item_id');
         document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit);
@@ -76,24 +76,19 @@ function initializeDateTimeFields() {
 // === ⭐️ โค้ดที่แก้ไข (สำคัญ) ⭐️ ===
 async function populateInitialData() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
-    if (result.success) {
+     if (result.success) {
         allItems = result.items;
         allLocations = result.locations;
         
         const locationDisplay = document.getElementById('location_display');
-        if (!locationDisplay) return; // (ถ้าเราอยู่หน้า Review ก็ให้ออกไป)
+        if (!locationDisplay) return; 
 
         const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
 
-        // g_LocationId มาจาก PHP (อาจจะเป็น 0 หรือ 10)
         if (g_LocationId > 0) {
-            // --- 1. QR Mode ---
-            // (เหมือนเดิม)
             const foundLocation = allLocations.find(loc => loc.location_id == g_LocationId);
             locationDisplay.options[0].text = foundLocation ? foundLocation.location_name : 'Error: Unknown Location';
         } else {
-            // --- 2. Manual Mode (ปุ่ม "กลับ") ---
-            // (ใหม่) เติม Location ทั้งหมดลงใน Dropdown ที่ "เปิดอยู่"
             locationDisplay.innerHTML = '<option value="">-- กรุณาเลือก Location --</option>' + optionsHtml;
         }
 
@@ -102,11 +97,78 @@ async function populateInitialData() {
             fromLocationSelect.innerHTML = '<option value="">-- From Warehouse / External --</option>' + optionsHtml;
             fromLocationSelect.addEventListener('change', updateAvailableStockDisplay);
         }
+        if (g_AutoFillData && g_AutoFillData.sap_no) {
+            autoFillForm(g_AutoFillData);
+        }
     }
 }
-// === ⭐️ จบส่วนที่แก้ไข ⭐️ ===
 
-async function updateAvailableStockDisplay() { /* (เหมือนเดิม) */
+async function autoFillForm(data) {
+    if (!data || !data.sap_no || !data.lot) return;
+
+    // 1. ⭐️ (ใหม่) แสดง Spinner ขณะตรวจสอบ
+    showSpinner();
+    
+    try {
+        // 2. ⭐️ (ใหม่) ถาม API เพื่อตรวจสอบสถานะ
+        const result = await sendRequest(INVENTORY_API_URL, 'check_lot_status', 'GET', null, {
+            sap_no: data.sap_no,
+            lot_no: data.lot
+        });
+        
+        if (!result.success) {
+            throw new Error(result.message || "Failed to check status.");
+        }
+
+        // 3. ⭐️ (ใหม่) ตรวจสอบผลลัพธ์
+        if (result.status === 'received') {
+            // --- 3A. ถ้า "รับไปแล้ว" ---
+            const details = result.details;
+            const receivedDate = new Date(details.transaction_timestamp);
+            const dateStr = receivedDate.toLocaleDateString('en-GB');
+            const timeStr = receivedDate.toTimeString().substring(0, 8);
+            
+            // (แสดงข้อความใน Overlay)
+            document.getElementById('status-details').innerHTML = 
+                `Lot นี้ถูกรับเข้าแล้วโดย: <strong>${details.username}</strong><br>
+                 วันที่: <strong>${dateStr}</strong> เวลา: <strong>${timeStr}</strong>`;
+            
+            // (แสดง Overlay)
+            document.getElementById('status-overlay').style.display = 'flex';
+            hideSpinner(); // ซ่อน Spinner
+
+        } else if (result.status === 'new') {
+            // --- 3B. ถ้าเป็น "ของใหม่" ---
+            // (ทำเหมือนเดิม คือ กรอกฟอร์ม)
+            const item = allItems.find(i => i.sap_no === data.sap_no);
+            if (item) {
+                selectedItem = item;
+                document.getElementById('entry_item_search').value = `${item.sap_no} | ${item.part_no}`;
+                document.getElementById('entry_item_id').value = item.item_id;
+            }
+            if (data.lot) {
+                document.getElementById('entry_lot_no').value = data.lot;
+            }
+            if (data.qty) {
+                document.getElementById('entry_quantity_in').value = data.qty;
+            }
+            if (data.from_loc_id) {
+                document.getElementById('entry_from_location_id').value = data.from_loc_id;
+                updateAvailableStockDisplay();
+            }
+            
+            document.getElementById('mobileReceiptForm').scrollIntoView({ behavior: 'smooth', block: 'end' });
+            showToast("ข้อมูลถูกกรอกอัตโนมัติแล้ว กรุณาตรวจสอบและยืนยัน", 'var(--bs-info)');
+            hideSpinner(); // ซ่อน Spinner
+        }
+
+    } catch (error) {
+        hideSpinner();
+        showToast(error.message, 'var(--bs-danger)');
+    }
+}
+
+async function updateAvailableStockDisplay() {
     const display = document.getElementById('entry_available_stock');
     const fromLocationId = document.getElementById('entry_from_location_id').value;
     display.textContent = '--';
@@ -496,5 +558,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } else if (document.getElementById('entry-container')) {
         initEntryPage();
+    }
+
+    const closeBtn = document.getElementById('close-overlay-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('status-overlay').style.display = 'none';
+        });
     }
 });

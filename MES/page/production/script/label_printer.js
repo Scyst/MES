@@ -5,7 +5,7 @@
 // =================================================================
 let allItems = [];
 let allLocations = [];
-let selectedItem = null; // เก็บข้อมูล Item (SAP No, Part No, Desc)
+let selectedItem = null;
 
 // =================================================================
 // SECTION: CORE & UTILITY (คัดลอกจาก mobile.js)
@@ -34,7 +34,7 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
     }
 }
 
-// (คัดลอก Autocomplete จาก mobile.js)
+// (Autocomplete: เหมือนเดิม)
 function setupAutocomplete(inputId, hiddenId) {
     const searchInput = document.getElementById(inputId);
     if (!searchInput) return;
@@ -46,7 +46,7 @@ function setupAutocomplete(inputId, hiddenId) {
     searchInput.addEventListener('input', () => {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
-        selectedItem = null; // ⭐️ (สำคัญ) รีเซ็ต
+        selectedItem = null; 
         document.getElementById(hiddenId).value = '';
 
         if (value.length < 2) return;
@@ -63,7 +63,7 @@ function setupAutocomplete(inputId, hiddenId) {
             resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
             resultItem.addEventListener('click', () => {
                 searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                selectedItem = item; // ⭐️ (สำคัญ) เก็บข้อมูล Item ทั้งหมด
+                selectedItem = item; 
                 document.getElementById(hiddenId).value = item.item_id;
                 resultsWrapper.innerHTML = '';
             });
@@ -77,7 +77,7 @@ function setupAutocomplete(inputId, hiddenId) {
     });
 }
 
-// (คัดลอก/ดัดแปลง populateInitialData จาก mobile.js)
+// (populateInitialData: เหมือนเดิม)
 async function populateInitialData() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
      if (result.success) {
@@ -94,41 +94,39 @@ async function populateInitialData() {
 // SECTION: LABEL PRINTING LOGIC
 // =================================================================
 
-/**
- * (ใหม่) จัดการการกดปุ่ม Generate
- */
+// (handleGenerateLabel: เหมือนเดิม)
+// นี่คือบรรทัด ~146
 async function handleGenerateLabel(event) {
     event.preventDefault();
     
-    // 1. --- รวบรวมข้อมูลจากฟอร์ม ---
     const locationId = document.getElementById('location_id').value;
     const locationInfo = allLocations.find(l => l.location_id == locationId);
-    
     const qty = document.getElementById('quantity').value;
     const lot = document.getElementById('lot_no').value;
     const type = document.getElementById('count_type').value;
     const notes = document.getElementById('notes').value;
     const date = new Date();
-    const printTime = date.toLocaleString('en-GB'); // (เช่น 05/11/2025, 14:30:05)
+    const printTime = date.toLocaleString('en-GB');
 
-    // 2. --- ตรวจสอบข้อมูล ---
     if (!selectedItem || !locationId || !qty || !lot) {
         showToast("Please fill in all required fields: Part, Location, Lot, and Quantity.", 'var(--bs-danger)');
         return;
     }
 
-    // 3. --- สร้าง Data String สำหรับ QR Code ---
-    // (ตอบโจทย์ข้อ 3: [Part No]|[Lot]|[Qty]|[Type]|[Location Name])
-    const qrDataString = [
-        selectedItem.part_no, // (ใช้ Part No หรือ SAP No. ก็ได้)
-        lot,
-        qty,
-        type,
-        locationInfo.location_name
-    ].join('|');
+    // 1. สร้าง URL
+    const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
+    const params = new URLSearchParams({
+        type: 'receipt',
+        sap_no: selectedItem.sap_no,
+        lot: lot,
+        qty: qty,
+        from_loc_id: locationId 
+    });
     
-    // 4. --- สร้าง Object ข้อมูลสำหรับพิมพ์ (Human-Readable) ---
-    // (ตอบโจทย์ข้อ 2)
+    // (สำคัญ) นี่คือตัวแปรชื่อ 'qrDataURL'
+    const qrDataURL = `${baseUrl}?${params.toString()}`;
+    
+    // 2. สร้างข้อมูลฉลาก
     const labelData = {
         sap_no: selectedItem.sap_no,
         part_no: selectedItem.part_no,
@@ -141,15 +139,18 @@ async function handleGenerateLabel(event) {
         notes: notes
     };
 
-    // 5. --- ส่งไปพิมพ์ ---
-    openPrintWindow(labelData, qrDataString);
+    // 3. ส่ง 'qrDataURL' (ตัวแปร) เข้าไปในฟังก์ชัน
+    openPrintWindow(labelData, qrDataURL);
 }
 
 
 /**
- * (ใหม่) สร้างหน้าต่างพิมพ์ (ดัดแปลงจาก print_qr.js)
+ * (หน้าต่างพิมพ์: แก้ไขแล้ว)
  */
-function openPrintWindow(data, qrString) {
+// (สำคัญ) พารามิเตอร์ที่ 2 ต้องชื่อ 'qrStringURL' 
+// (หรือชื่ออะไรก็ได้ที่ตรงกับที่ 'handleGenerateLabel' ส่งมา)
+// *** เราจะทำให้มันเหมือนกัน 100% เพื่อป้องกันการสับสน ***
+function openPrintWindow(data, qrDataURL) { // ⭐️ (แก้ไข) เปลี่ยนชื่อพารามิเตอร์เป็น 'qrDataURL'
     const newWin = window.open("", "Print Label", "width=800,height=600");
     if (!newWin) {
         alert("Please allow popups for this site to generate the print page.");
@@ -224,7 +225,7 @@ function openPrintWindow(data, qrString) {
                 <div class="desc">${data.description}</div>
                 <div><strong>Loc:</strong> ${data.location_name} (${data.count_type})</div>
                 <div><strong>Note:</strong> ${data.notes || '-'}</div>
-                <div class_lot">LOT: ${data.lot_no}</div>
+                <div class="lot">LOT: ${data.lot_no}</div>
             </div>
             <div class="label-right">
                 <div id="qr-placeholder" class="qr-img"></div>
@@ -234,12 +235,14 @@ function openPrintWindow(data, qrString) {
         <div style="font-size: 7pt; margin-top: 1mm;">Printed: ${data.print_time} by ${currentUser.username}</div>
     `);
 
-    // เขียน JS (Inline) เพื่อวาด QR Code (ข้อมูลจากข้อ 3)
+    // (JS Inline: แก้ไขแล้ว)
+    // นี่คือบรรทัด ~243
     newWin.document.write(`
         <script>
             window.onload = function() {
                 try {
-                    const qrData = "${qrString}";
+                    const qrData = "${qrDataURL}"; 
+                    
                     new QRCode(document.getElementById('qr-placeholder'), {
                         text: qrData,
                         width: 115, // (30mm)
@@ -265,7 +268,6 @@ function openPrintWindow(data, qrString) {
 // SECTION: INITIALIZATION
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // (นี่คือ Router ง่ายๆ)
     if (document.getElementById('printer-container')) {
         populateInitialData();
         setupAutocomplete('item_search', 'item_id');

@@ -1056,6 +1056,55 @@ try {
                 throw $e;
             }
             break;
+
+            case 'check_lot_status':
+            $lot_no = $_GET['lot_no'] ?? '';
+            $sap_no = $_GET['sap_no'] ?? ''; // ใช้ SAP No. เพื่อความแม่นยำ
+
+            if (empty($lot_no) || empty($sap_no)) {
+                throw new Exception("Lot No and SAP No are required for status check.");
+            }
+            
+            // ค้นหา Item ID จาก SAP No.
+            $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
+            $itemStmt->execute([$sap_no]);
+            $item_id = $itemStmt->fetchColumn();
+
+            if (!$item_id) {
+                // ไม่เจอ Part นี้ = ใหม่แน่นอน
+                echo json_encode(['success' => true, 'status' => 'new']);
+                exit;
+            }
+
+            // ค้นหา Transaction "รับเข้า" (RECEIPT หรือ TRANSFER) ที่มี Lot นี้
+            $sql = "
+                SELECT TOP 1 
+                    t.transaction_timestamp, 
+                    u.username 
+                FROM " . TRANSACTIONS_TABLE . " t
+                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                WHERE t.parameter_id = ? 
+                  AND t.reference_id = ?
+                  AND t.transaction_type IN ('RECEIPT', 'TRANSFER')
+                ORDER BY t.transaction_timestamp DESC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$item_id, $lot_no]);
+            $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($transaction) {
+                // ⭐️ ถ้าเจอ = ถูกรับไปแล้ว
+                echo json_encode([
+                    'success' => true, 
+                    'status' => 'received', 
+                    'details' => $transaction // ส่ง 'timestamp' และ 'username' กลับไป
+                ]);
+            } else {
+                // ⭐️ ถ้าไม่เจอ = ใหม่
+                echo json_encode(['success' => true, 'status' => 'new']);
+            }
+            break;
             
         case 'get_locations_for_qr':
             // ตรวจสอบสิทธิ์ (เฉพาะ Admin/Creator)

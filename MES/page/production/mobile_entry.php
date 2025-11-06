@@ -1,14 +1,21 @@
 <?php 
     include_once("../../auth/check_auth.php");
-
-    date_default_timezone_set('Asia/Bangkok');
     
     $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
     $currentUserForJS = $_SESSION['user'] ?? null;
     
-    $entry_type = $_GET['type'] ?? 'production'; 
+    $entry_type = $_GET['type'] ?? 'production';
+    $g_autofill = null;
+    if ($entry_type === 'receipt') {
+        $g_autofill = [
+            'sap_no' => $_GET['sap_no'] ?? null,
+            'lot' => $_GET['lot'] ?? null,
+            'qty' => $_GET['qty'] ?? null,
+            'from_loc_id' => $_GET['from_loc_id'] ?? null
+        ];
+    }
+
     $location_id = $_GET['location_id'] ?? 0;
-    
     if (!$canAdd) { 
         header("HTTP/1.0 403 Forbidden");
         echo "Access Denied, insufficient role.";
@@ -16,6 +23,7 @@
     }
     $is_manual_mode = ($location_id <= 0);
 
+    date_default_timezone_set('Asia/Bangkok');
     $current_hour = (int)date('H'); 
 ?>
 <!DOCTYPE html>
@@ -56,12 +64,47 @@
 
         [data-bs-theme="light"] #theme-icon-sun { display: none; }
         [data-bs-theme="dark"] #theme-icon-moon { display: none; }
+
+        #status-overlay {
+            display: none; /* (ซ่อนไว้ก่อน) */
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 1045; /* (ให้อยู่เหนือ Spinner) */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .status-box {
+            background-color: var(--bs-secondary-bg);
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--bs-border-color);
+        }
+        .status-box i {
+            font-size: 3rem;
+            color: var(--bs-warning);
+        }
+        .status-box h4 {
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body id="entry-container">
     <div class="container">
         <?php include_once('../components/php/spinner.php'); ?>
         <div id="toast"></div>
+
+        <div id="status-overlay">
+            <div class="status-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h4>สถานะ: รับเข้าแล้ว</h4>
+                <p id="status-details">Lot นี้ถูกรับเข้าแล้วโดย...</p>
+                <button id="close-overlay-btn" class="btn btn-outline-secondary mt-3">ปิด</button>
+            </div>
+        </div>
 
         <h3 class="text-center mb-4">
             <?php echo ($entry_type == 'production') ? 'บันทึกของออก (OUT)' : 'บันทึกของเข้า (IN)'; ?>
@@ -190,6 +233,7 @@
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
         const g_EntryType = <?php echo json_encode($entry_type); ?>;
         const g_LocationId = <?php echo json_encode($location_id); ?>; 
+        const g_AutoFillData = <?php echo json_encode($g_autofill); ?>;
     </script>
     <script src="script/mobile.js?v=<?php echo time(); ?>"></script>
 </body>

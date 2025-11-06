@@ -17,15 +17,12 @@
     <title>Label Printer</title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* (ใช้สไตล์เดียวกับ mobile_entry.php เพื่อความคุ้นเคย) */
-        :root { --bs-body-bg: #212529; --bs-body-color: #dee2e6; }
         body { padding-top: 20px; }
         .container { max-width: 600px; }
         .form-control, .form-select { margin-bottom: 15px; }
         
-        /* (สไตล์ Autocomplete) */
         .autocomplete-results {
-             background: #fff; border: 1px solid #aaa;
+             background: #fff;
              color: #000; list-style: none; padding: 0; margin: 0;
              position: absolute; width: calc(100% - 2px);
              z-index: 1050; max-height: 250px; overflow-y: auto;
@@ -34,7 +31,6 @@
         .autocomplete-item:hover { background: #eee; }
         .autocomplete-item small { color: #555; }
         
-        /* (สไตล์ปุ่มสลับธีม) */
         .footer-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
         #theme-switcher-btn { font-size: 1.2rem; cursor: pointer; color: var(--bs-secondary-color); }
         #theme-switcher-btn:hover { color: var(--bs-primary); }
