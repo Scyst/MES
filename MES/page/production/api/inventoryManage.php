@@ -4,6 +4,24 @@ require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 require_once __DIR__ . '/../../components/api/inventory_helpers.php';
 
+header('Content-Type: application/json; charset=utf-8');
+
+function generateShortUUID($length = 8) {
+    try {
+        $bytes = random_bytes(ceil($length / 2));
+        $hex = bin2hex($bytes);
+        return substr(strtoupper($hex), 0, $length);
+    } catch (Exception $e) {
+        // Fallback for environments without random_bytes
+        $chars = '0123456789ABCDEF';
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $chars[rand(0, 15)];
+        }
+        return $randomString;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -35,6 +53,7 @@ try {
             $notes = $input['notes'] ?? null;
             $log_date = $input['log_date'] ?? null;
             $log_time = $input['log_time'] ?? date('H:i:s');
+            $scan_job_id = $input['scan_job_id'] ?? null;
 
             if (empty($log_date)) { throw new Exception("Log Date is required."); }
             $timestamp = $log_date . ' ' . $log_time;
@@ -51,7 +70,18 @@ try {
 
 
             $pdo->beginTransaction();
+            
             try {
+                if (!empty($scan_job_id)) {
+                    $claimSql = "UPDATE " . SCAN_JOBS_TABLE . " SET is_used = 1 WHERE scan_id = ? AND is_used = 0";
+                    $claimStmt = $pdo->prepare($claimSql);
+                    $claimStmt->execute([$scan_job_id]);
+                    
+                    if ($claimStmt->rowCount() === 0) {
+                        throw new Exception("SCAN_ALREADY_USED");
+                    }
+                }
+
                 if (!empty($from_location_id)) { // --- This is the Transfer part ---
 
                     // 1. Get Location Types
@@ -1059,53 +1089,77 @@ try {
 
             case 'check_lot_status':
             $lot_no = $_GET['lot_no'] ?? '';
-            $sap_no = $_GET['sap_no'] ?? ''; // ใช้ SAP No. เพื่อความแม่นยำ
+            $sap_no = $_GET['sap_no'] ?? ''; // (อันนี้อาจจะไม่ต้องการแล้ว แต่เผื่อไว้)
+            $scan_id = $_GET['scan_id'] ?? null; // ⭐️ (ใหม่) รับ scan_id มาด้วย
 
+            // --- Logic ใหม่: ตรวจสอบจาก Scan ID ก่อน (ถ้ามี) ---
+            if (!empty($scan_id)) {
+                $sql = "SELECT is_used, job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$scan_id]);
+                $job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($job && $job['is_used'] == 1) {
+                    // ⭐️ 1. เจอ Job และ "ถูกใช้ไปแล้ว"
+                    // เราต้องไปหาว่าใครใช้ จากตาราง TRANSACTIONS
+                    $job_data = json_decode($job['job_data'], true);
+                    $lot_to_find = $job_data['lot'] ?? $lot_no; // ใช้ Lot จาก job_data เพื่อความแม่นยำ
+
+                    $transSql = "SELECT TOP 1 t.transaction_timestamp, u.username 
+                                 FROM " . TRANSACTIONS_TABLE . " t
+                                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                                 WHERE t.reference_id = ? AND i.sap_no = ?
+                                 ORDER BY t.transaction_timestamp DESC";
+                    $transStmt = $pdo->prepare($transSql);
+                    $transStmt->execute([$lot_to_find, $job_data['sap_no'] ?? $sap_no]);
+                    $transaction = $transStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    echo json_encode([
+                        'success' => true, 
+                        'status' => 'received', // ⭐️ ส่งสถานะ "รับแล้ว"
+                        'details' => $transaction // ส่งข้อมูลคนที่บันทึกไป
+                    ]);
+                    exit;
+                } else if ($job && $job['is_used'] == 0) {
+                    // ⭐️ 2. เจอ Job และ "ยังไม่ถูกใช้"
+                    echo json_encode(['success' => true, 'status' => 'new']); // ⭐️ ส่งสถานะ "ใหม่"
+                    exit;
+                }
+                // (ถ้าไม่เจอ Job ID เลย -> ปล่อยให้ไปเช็คแบบเดิมด้านล่าง)
+            }
+
+            // --- Logic เดิม (Fallback กรณีไม่มี Scan ID) ---
             if (empty($lot_no) || empty($sap_no)) {
                 throw new Exception("Lot No and SAP No are required for status check.");
             }
-            
-            // ค้นหา Item ID จาก SAP No.
             $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
             $itemStmt->execute([$sap_no]);
             $item_id = $itemStmt->fetchColumn();
 
             if (!$item_id) {
-                // ไม่เจอ Part นี้ = ใหม่แน่นอน
                 echo json_encode(['success' => true, 'status' => 'new']);
                 exit;
             }
 
-            // ค้นหา Transaction "รับเข้า" (RECEIPT หรือ TRANSFER) ที่มี Lot นี้
-            $sql = "
-                SELECT TOP 1 
-                    t.transaction_timestamp, 
-                    u.username 
-                FROM " . TRANSACTIONS_TABLE . " t
-                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                WHERE t.parameter_id = ? 
-                  AND t.reference_id = ?
-                  AND t.transaction_type IN ('RECEIPT', 'TRANSFER')
-                ORDER BY t.transaction_timestamp DESC
-            ";
+            $sql = "SELECT TOP 1 t.transaction_timestamp, u.username 
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                    WHERE t.parameter_id = ? AND t.reference_id = ?
+                    AND t.transaction_type IN ('RECEIPT', 'TRANSFER')
+                    ORDER BY t.transaction_timestamp DESC";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$item_id, $lot_no]);
             $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($transaction) {
-                // ⭐️ ถ้าเจอ = ถูกรับไปแล้ว
-                echo json_encode([
-                    'success' => true, 
-                    'status' => 'received', 
-                    'details' => $transaction // ส่ง 'timestamp' และ 'username' กลับไป
-                ]);
+                echo json_encode(['success' => true, 'status' => 'received', 'details' => $transaction]);
             } else {
-                // ⭐️ ถ้าไม่เจอ = ใหม่
                 echo json_encode(['success' => true, 'status' => 'new']);
             }
             break;
-            
+
         case 'get_locations_for_qr':
             // ตรวจสอบสิทธิ์ (เฉพาะ Admin/Creator)
             if (!hasRole(['admin', 'creator'])) {
@@ -1120,6 +1174,100 @@ try {
             
             // ส่งข้อมูลกลับเป็น JSON
             echo json_encode(['success' => true, 'locations' => $locations]);
+            break;
+
+        case 'get_next_serial':
+            $parent_lot = $input['parent_lot'] ?? '';
+            if (empty($parent_lot)) {
+                throw new Exception("Parent Lot (Lot No.) is required.");
+            }
+
+            $sql = "
+                MERGE INTO " . LOT_SERIALS_TABLE . " AS T
+                USING (SELECT ? AS parent_lot) AS S
+                ON (T.parent_lot = S.parent_lot)
+                WHEN MATCHED THEN
+                    UPDATE SET 
+                        T.last_serial = T.last_serial + 1, 
+                        T.updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (parent_lot, last_serial, updated_at) 
+                    VALUES (S.parent_lot, 1, GETDATE())
+                OUTPUT inserted.last_serial;
+            ";
+
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$parent_lot]);
+                $new_serial = $stmt->fetchColumn();
+                $pdo->commit();
+                echo json_encode(['success' => true, 'new_serial_number' => $new_serial]);
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'create_scan_job':
+            // 1. รับข้อมูลจาก label_printer.js
+            $jobData = [
+                'sap_no' => $input['sap_no'] ?? null,
+                'lot' => $input['lot'] ?? null,
+                'qty' => $input['qty'] ?? null,
+                'from_loc_id' => $input['from_loc_id'] ?? null
+            ];
+
+            if (empty($jobData['sap_no']) || empty($jobData['lot']) || empty($jobData['qty'])) {
+                throw new Exception("Incomplete job data provided (SAP, Lot, Qty required).");
+            }
+
+            // 2. สร้างรหัสสั้นๆ ที่ไม่ซ้ำ (ลอง 5 ครั้ง)
+            $scan_id = '';
+            $max_tries = 5;
+            for ($i = 0; $i < $max_tries; $i++) {
+                $scan_id = generateShortUUID(8); // สร้างรหัส 8 ตัว
+                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?");
+                $checkStmt->execute([$scan_id]);
+                if ($checkStmt->fetchColumn() == 0) {
+                    break; // ไม่ซ้ำ ใช้ได้
+                }
+                if ($i === $max_tries - 1) {
+                    throw new Exception("Failed to generate a unique Scan ID.");
+                }
+            }
+
+            // 3. บันทึกข้อมูล (ในรูปแบบ JSON)
+            $sql = "INSERT INTO " . SCAN_JOBS_TABLE . " (scan_id, job_data, created_at, is_used) VALUES (?, ?, GETDATE(), 0)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$scan_id, json_encode($jobData)]);
+
+            // 4. ส่งรหัสสั้นๆ กลับไป
+            echo json_encode(['success' => true, 'scan_id' => $scan_id]);
+            break;
+
+        // ⭐️ CASE 2: ดึงข้อมูล Job (เมื่อสแกน) ⭐️
+        case 'get_scan_job_data':
+            $scan_id = $_GET['scan_id'] ?? '';
+            if (empty($scan_id)) {
+                throw new Exception("Scan ID is required.");
+            }
+
+            $sql = "SELECT job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$scan_id]);
+            $job_data_json = $stmt->fetchColumn();
+
+            if ($job_data_json) {
+                // (ทางเลือก) อัปเดตว่าใช้แล้ว
+                // $updateStmt = $pdo->prepare("UPDATE " . SCAN_JOBS_TABLE . " SET is_used = 1 WHERE scan_id = ?");
+                // $updateStmt->execute([$scan_id]);
+
+                // ส่งข้อมูล JSON กลับไปตรงๆ
+                echo json_encode(['success' => true, 'data' => json_decode($job_data_json)]);
+            } else {
+                throw new Exception("Scan ID not found or already used.");
+            }
             break;
 
         default:
