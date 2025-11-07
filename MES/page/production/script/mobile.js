@@ -160,7 +160,7 @@ async function populateInitialData() {
                 const foundLocation = allLocations.find(loc => loc.location_id == g_LocationId);
                 locationDisplay.innerHTML = `<option value="${g_LocationId}">${foundLocation ? foundLocation.location_name : 'Unknown Location'}</option>`;
             } else {
-                locationDisplay.innerHTML = '<option value="">-- กรุณาเลือก Location --</option>' + optionsHtml;
+                locationDisplay.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
             }
         }
 
@@ -168,7 +168,7 @@ async function populateInitialData() {
             const fromLocationSelect = document.getElementById('entry_from_location_id');
             if (fromLocationSelect) {
                 const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
-                fromLocationSelect.innerHTML = '<option value="">-- From Warehouse / External --</option>' + optionsHtml;
+                fromLocationSelect.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
                 fromLocationSelect.addEventListener('change', updateAvailableStockDisplay);
             }
         }
@@ -319,8 +319,9 @@ async function updateAvailableStockDisplay() {
     const fromLocationId = document.getElementById('entry_from_location_id')?.value;
     
     if (!display) return;
+
+    display.className = 'form-control-plaintext ps-2 fw-bold mb-3';
     display.textContent = '--';
-    display.className = 'form-control-plaintext ps-2 fw-bold text-white'; // Reset class
 
     if (!selectedItem || !fromLocationId) return;
 
@@ -333,7 +334,9 @@ async function updateAvailableStockDisplay() {
     if (result.success) {
         const qty = parseFloat(result.quantity);
         display.textContent = qty.toLocaleString();
-        if (qty <= 0) display.classList.add('text-danger');
+        if (qty <= 0) {
+            display.classList.add('text-danger');
+        }
     } else {
         display.textContent = 'Error';
         display.classList.add('text-danger');
