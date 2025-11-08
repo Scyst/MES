@@ -38,12 +38,8 @@
     </div>
 
     <?php
-        // เราจะใช้ Modal เดิมจาก productionUI.php
-        if ($canManage) {
-            // (ผมคาดว่าคุณมีไฟล์ editEntryModal.php อยู่ใน components/ ครับ)
-            include('components/editEntryModal.php'); 
-            include('components/editProductionModal.php');
-        }
+        include('components/editEntryModal.php'); 
+        include('components/editProductionModal.php');
     ?>
 
     <?php include_once('components/mobile_nav.php'); ?>

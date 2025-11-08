@@ -937,50 +937,23 @@ async function openSummaryModal() {
     const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
     summaryModal.show();
 
+    // 1. [แก้ไข] รวบรวมฟิลเตอร์เหมือนเดิม
     const params = {
-        limit: -1, // Request all data
         search_term: document.getElementById('filterSearch').value,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
 
-    // <== [แก้ไข] เรียก get_production_history เหมือนเดิม
-    const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
+    // 2. [แก้ไข] เรียก API ใหม่ (get_production_summary)
+    const result = await sendRequest(INVENTORY_API_URL, 'get_production_summary', 'GET', null, params);
 
-    // <== [แก้ไข] เช็ค result.data แทน result.summary
-    if (result.success && result.data && result.data.length > 0) {
+    // 3. [แก้ไข] ตรวจสอบ result.summary
+    if (result.success && result.summary && result.summary.length > 0) {
         modalBody.innerHTML = '';
         
-        // --- คำนวณ Summary จาก result.data ---
-        const summary = {}; // ใช้ Object เพื่อรวมยอดตาม Item และ Type
-        let grandTotal = 0;
-
-        // <== [แก้ไข] วนลูป result.data
-        result.data.forEach(row => {
-            const key = `${row.sap_no}|${row.part_no}|${row.count_type}`; // สร้าง Key เฉพาะตัว
-            if (!summary[key]) {
-                summary[key] = {
-                    sap_no: row.sap_no,
-                    part_no: row.part_no,
-                    count_type: row.count_type,
-                    total_quantity: 0
-                };
-            }
-            const quantity = parseFloat(row.quantity) || 0;
-            summary[key].total_quantity += quantity;
-            grandTotal += quantity; // รวมยอด Grand Total ไปด้วยเลย
-        });
-        
-        // --- แสดงผล Summary ที่คำนวณได้ ---
-        // แปลง Object summary เป็น Array แล้วเรียงลำดับ
-        const sortedSummary = Object.values(summary).sort((a, b) => {
-            if (a.sap_no !== b.sap_no) return a.sap_no.localeCompare(b.sap_no);
-            if (a.part_no !== b.part_no) return a.part_no.localeCompare(b.part_no);
-            return a.count_type.localeCompare(b.count_type);
-        });
-
-        sortedSummary.forEach(row => {
+        // 4. [แก้ไข] วนลูป summary ที่ได้จาก API (ไม่ต้องคำนวณเอง)
+        result.summary.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.sap_no}</td>
@@ -990,17 +963,33 @@ async function openSummaryModal() {
             `;
             modalBody.appendChild(tr);
         });
-        // --- สิ้นสุดการแสดงผล Summary ---
 
+        // 5. [แก้ไข] สร้าง Grand Total จาก result.grand_total (ที่ API คำนวณมาให้)
+        let overallGrandTotal = 0;
+        
+        // (เพิ่มแถวสำหรับแต่ละ Type)
+        result.grand_total.forEach(row => {
+            const quantity = parseFloat(row.total_quantity) || 0;
+            overallGrandTotal += quantity;
+            const tr = document.createElement('tr');
+            tr.className = 'table-group-divider fw-bold';
+            tr.innerHTML = `
+                <td colspan="3" class="text-end">Grand Total (${row.count_type})</td>
+                <td class="text-end">${quantity.toLocaleString()}</td>
+            `;
+            modalBody.appendChild(tr);
+        });
 
-        // --- Grand Total ---
-        const grandTotalRow = document.createElement('tr');
-        grandTotalRow.className = 'table-group-divider fw-bold';
-        grandTotalRow.innerHTML = `
-            <td colspan="3" class="text-end">Grand Total</td>
-            <td class="text-end">${grandTotal.toLocaleString()}</td>
-        `;
-        modalBody.appendChild(grandTotalRow);
+        // (เพิ่มแถวสำหรับยอดรวมทั้งหมด)
+        if (result.grand_total.length > 1) { // แสดงยอดรวมก็ต่อเมื่อมีมากกว่า 1 Type
+            const tr = document.createElement('tr');
+            tr.className = 'table-dark fw-bold';
+            tr.innerHTML = `
+                <td colspan="3" class="text-end">OVERALL GRAND TOTAL</td>
+                <td class="text-end">${overallGrandTotal.toLocaleString()}</td>
+            `;
+            modalBody.appendChild(tr);
+        }
 
     } else {
         modalBody.innerHTML = '<tr><td colspan="4" class="text-center">No summary data available.</td></tr>';

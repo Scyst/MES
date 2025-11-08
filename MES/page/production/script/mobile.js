@@ -551,7 +551,7 @@ async function fetchReviewData(page = 1) {
 
 function renderReviewCards(data, type) {
     const container = document.getElementById('review-list-container');
-    container.innerHTML = '';
+    container.innerHTML = ''; // ล้างของเก่า
     
     data.forEach(row => {
         const card = document.createElement('div');
@@ -559,27 +559,66 @@ function renderReviewCards(data, type) {
         card.dataset.transactionId = row.transaction_id;
         card.dataset.type = type;
 
+        // --- 1. เตรียมข้อมูลแสดงผล ---
         const dateObj = new Date(row.transaction_timestamp);
-        // ปรับเวลาให้เป็น Local Time แบบอ่านง่าย
         const dateStr = dateObj.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
         const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-        let header, body;
+        let badgeHtml = '';
+        let qtyDisplay = '';
+        let locationName = '';
+
         if (type === 'production') {
-            header = `<span class="text-primary fw-bold">${row.count_type}</span> <span class="float-end fw-bold">${parseFloat(row.quantity).toLocaleString()}</span>`;
-            body = `<div class="text-white">${row.part_no}</div>
-                    <small class="text-muted">Loc: ${row.location_name} | Lot: ${row.lot_no || '-'}</small>`;
-        } else {
-            header = `<span class="text-success fw-bold">IN</span> <span class="float-end fw-bold">+${parseFloat(row.quantity).toLocaleString()}</span>`;
-            body = `<div class="text-white">${row.part_no}</div>
-                    <small class="text-muted">To: ${row.destination_location} | From: ${row.source_location || 'Ext.'}</small>`;
+            // --- Logic สีของ Badge (OUT) ---
+            let badgeClass = 'bg-secondary'; // Default
+            switch (row.count_type.toUpperCase()) {
+                case 'FG': badgeClass = 'bg-primary'; break;
+                case 'HOLD': badgeClass = 'bg-warning text-dark'; break;
+                case 'SCRAP': badgeClass = 'bg-danger'; break;
+            }
+            badgeHtml = `<span class="badge ${badgeClass}">${row.count_type}</span>`;
+            qtyDisplay = `<span class="fw-bold">${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
+            locationName = row.location_name || 'N/A';
+            
+        } else { // 'receipt'
+            badgeHtml = `<span class="badge bg-success">IN</span>`;
+            qtyDisplay = `<span class="fw-bold text-success">+${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
+            locationName = row.destination_location || 'N/A';
         }
 
+        // --- 2. ประกอบร่าง HTML (ตาม Layout ใหม่) ---
+
+        // บรรทัดที่ 1 (Header): SAP No. (เด่น) และ Badge (สถานะ)
+        const header = `
+            <span class="fs-6 fw-bold">${row.sap_no}</span>
+            ${badgeHtml}
+        `;
+
+        // บรรทัดที่ 2: Part No. และ Description
+        const line2 = `<div class="mb-1">
+                         <span class="text-body fw-medium">${row.part_no}</span>
+                         <small class="text-muted fst-italic">(${(row.part_description || 'No Desc.')})</small>
+                       </div>`;
+
+        // บรรทัดที่ 3: Location และ Lot
+        const line3 = `<small class="text-muted d-block">
+                         Loc: ${locationName} | Lot: ${row.lot_no || '-'}
+                       </small>`;
+        
+        const body = line2 + line3;
+
+        // Footer: วันที่/เวลา และ จำนวน
+        const footer = `
+            <span>${dateStr} ${timeStr}</span>
+            ${qtyDisplay}
+        `;
+
+        // --- 3. ยิง HTML เข้าการ์ด ---
         card.innerHTML = `
             <div class="card-header d-flex justify-content-between align-items-center">${header}</div>
             <div class="card-body py-2">${body}</div>
-            <div class="card-footer text-end text-muted py-1" style="font-size: 0.8rem;">
-                ${dateStr} ${timeStr}
+            <div class="card-footer d-flex justify-content-between align-items-center text-muted py-1" style="font-size: 0.8rem;">
+                ${footer}
             </div>
         `;
         container.appendChild(card);
@@ -691,7 +730,7 @@ async function editTransaction(transactionId, type) {
         if (!result.success) throw new Error(result.message);
         const data = result.data;
         let modalId;
-        if (type === 'entry') {
+        if (type === 'receipt') {
             modalId = 'editEntryModal';
             document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
             document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;

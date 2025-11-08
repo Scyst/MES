@@ -14,17 +14,24 @@
         <h3 class="text-center mb-4">ตั้งค่า</h3>
 
         <div class="list-group">
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item d-flex justify-content-between align-items-center" 
+                 id="theme-switcher-btn" title="Toggle Theme" style="cursor: pointer;">
+                
                 <span>เปลี่ยนธีม (สว่าง/มืด)</span>
-                <div id="theme-switcher-btn" title="Toggle Theme">
+                
+                <div> 
                     <i class="fas fa-moon" id="theme-icon-moon"></i>
                     <i class="fas fa-sun" id="theme-icon-sun"></i>
                 </div>
             </div>
             
-            <a href="../../auth/logout.php" class="list-group-item list-group-item-action text-danger d-flex justify-content-between align-items-center">
-                <span>ออกจากระบบ (<?php echo htmlspecialchars($currentUserForJS['username']); ?>)</span>
-                <i class="fas fa-sign-out-alt"></i>
+            </div>
+
+
+        <div class="mt-5">
+            <a href="../../auth/logout.php" class="btn btn-outline-danger w-100">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                ออกจากระบบ (<?php echo htmlspecialchars($currentUserForJS['username']); ?>)
             </a>
         </div>
         
