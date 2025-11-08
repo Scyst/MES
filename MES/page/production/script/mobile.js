@@ -175,7 +175,38 @@ async function populateInitialData() {
             }
         }
 
-        // ⭐️ ตรวจสอบและเริ่ม Autofill ⭐️
+        // 🛑 === [เพิ่ม] โค้ดอ่าน LocalStorage === 🛑
+        // (เราจะอ่านค่าที่จำไว้ก่อน)
+        if (g_EntryType === 'production') {
+            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
+            if (lastData && lastData.item_id) {
+                document.getElementById('out_item_search').value = lastData.item_display_text || '';
+                document.getElementById('out_item_id').value = lastData.item_id;
+                // (ตั้งค่า Location ถ้าเป็น Manual Mode)
+                if (g_LocationId <= 0 && lastData.location_id) {
+                    document.getElementById('location_display').value = lastData.location_id;
+                }
+                // (ดึงข้อมูล Item ไว้รอเลย)
+                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
+            }
+        } else { // (g_EntryType === 'receipt')
+            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
+            if (lastData && lastData.item_id) {
+                document.getElementById('entry_item_search').value = lastData.item_display_text || '';
+                document.getElementById('entry_item_id').value = lastData.item_id;
+                document.getElementById('entry_from_location_id').value = lastData.from_location_id || '';
+                // (ตั้งค่า Location ถ้าเป็น Manual Mode)
+                if (g_LocationId <= 0 && lastData.to_location_id) {
+                    document.getElementById('location_display').value = lastData.to_location_id;
+                }
+                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
+                updateAvailableStockDisplay(); // (อัปเดตสต็อกคงเหลือ)
+            }
+        }
+        // 🛑 === [จบส่วนที่เพิ่ม] === 🛑
+
+        // ⭐️ ตรวจสอบและเริ่ม Autofill (จาก QR Code) ⭐️
+        // (ส่วนนี้จะทำงาน "ทับ" ค่าจาก LocalStorage ถ้ามี g_AutoFillData)
         console.log("Autofill Data from PHP:", g_AutoFillData);
         if (g_AutoFillData && g_AutoFillData.sap_no) {
             console.log("Starting Autofill process...");
@@ -657,7 +688,7 @@ async function handleFormSubmit(event) {
                 // เตรียมข้อมูลสำหรับส่ง (Base Data)
                 const baseData = {
                     item_id: data.item_id,
-                    location_id: locationId,
+                    location_id: locationId, // (ใช้ locationId ที่ตรวจสอบแล้ว)
                     lot_no: data.lot_no,
                     log_date: data.log_date,
                     start_time: startTime,
@@ -673,28 +704,62 @@ async function handleFormSubmit(event) {
 
                 if (transactions.length === 0) throw new Error("กรุณากรอกจำนวนอย่างน้อย 1 ประเภท");
 
+                let allSuccess = true; // (ย้ายตัวแปรมาไว้ตรงนี้)
+                
                 // ส่งข้อมูลทีละรายการ
                 for (const trans of transactions) {
                     const res = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', trans);
-                    if (!res.success) throw new Error(res.message);
+                    if (!res.success) {
+                        allSuccess = false;
+                        throw new Error(res.message); // (แก้ให้โยน Error เลย)
+                    }
+                }
+                
+                // [แก้ไข] ย้ายการบันทึก localStorage มาไว้ตรงนี้
+                if (allSuccess) { 
+                    showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+                    
+                    // 🛑 [เพิ่ม] บันทึก _OUT ลง LocalStorage
+                    const searchInputValue = document.getElementById('out_item_search').value;
+                    let lastEntryData = {
+                        item_id: baseData.item_id,
+                        item_display_text: searchInputValue,
+                        location_id: locationId // (ใช้ locationId ที่เรามีอยู่แล้ว)
+                    };
+                    localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
+                    
+                    form.reset(); // (ย้าย form.reset() มาไว้ข้างในนี้)
+                    initializeDateTimeFields();
+                    selectedItem = null;
+                    document.getElementById('out_item_id').value = '';
+                    if (g_LocationId <= 0) document.getElementById('location_display').value = '';
                 }
 
-            } else {
+            } else { // (action === 'addEntry')
                 // จัดการ Receipt (IN)
                 data.to_location_id = locationId; // บังคับใช้ Location ที่เลือก
                 const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                 if (!res.success) throw new Error(res.message);
-            }
 
-            // สำเร็จ: ล้างฟอร์มและแจ้งเตือน
-            showToast("บันทึกสำเร็จ", 'var(--bs-success)');
-            form.reset();
-            initializeDateTimeFields();
-            // ล้างค่าที่เลือกค้างไว้
-            selectedItem = null;
-            document.getElementById(action === 'addPart' ? 'out_item_id' : 'entry_item_id').value = '';
-            if (g_LocationId <= 0) document.getElementById('location_display').value = '';
-            if (action === 'addEntry') updateAvailableStockDisplay();
+                showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+
+                // 🛑 [เพิ่ม] บันทึก _IN ลง LocalStorage
+                const searchInputValue = document.getElementById('entry_item_search').value;
+                let lastEntryData = {
+                    item_id: data.item_id,
+                    item_display_text: searchInputValue,
+                    from_location_id: data.from_location_id,
+                    to_location_id: locationId
+                };
+                localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
+
+                form.reset(); // (ย้าย form.reset() มาไว้ข้างในนี้)
+                initializeDateTimeFields();
+                selectedItem = null;
+                document.getElementById('entry_item_id').value = '';
+                if (g_LocationId <= 0) document.getElementById('location_display').value = '';
+                updateAvailableStockDisplay();
+            }
 
         } 
         // --- กรณี EDIT (จากหน้า Review) ---

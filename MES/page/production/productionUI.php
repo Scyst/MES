@@ -33,16 +33,16 @@
 
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">ผลต่าง (Variance)</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">ผลต่าง (ตามล็อต)</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">ประวัติของเข้า (IN)</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">ประวัติของออก (OUT)</button>
+                        <button class="nav-link active" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">ประวัติของออก (OUT)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">ผลต่าง (Variance)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">ผลต่าง (ตามล็อต)</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">สต็อก (แบ่งตามพื้นที่)</button>
@@ -90,16 +90,16 @@
 
             <div class="content-wrapper">
                 <div class="tab-content" id="mainTabContent">
-                    <div class="tab-pane fade show active" id="production-variance-pane" role="tabpanel">
+                    <div class="tab-pane fade" id="production-variance-pane" role="tabpanel">
                             <div class="table-responsive mt-2">
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th class="text-start" style="width: 10%;">Location</th>
-                                        <th class="text-start" style="width: 10%;">SAP No.</th>
-                                        <th class="text-start" style="width: 10%;">Part Number</th>
-                                        <th class="text-start" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 25%;">Part Description</th>
+                                        <th class="text-start" style="width: 8%;">Location</th>
+                                        <th class="text-center" style="width: 10%;">SAP No.</th>
+                                        <th class="text-center" style="width: 10%;">Part No.</th>
+                                        <th class="text-center" style="width: 10%;">Model</th>
+                                        <th class="text-start" style="width: 27%; padding-left: 1rem;">Part Description</th>
                                         <th class="text-end" style="width: 10%;">Total IN</th>
                                         <th class="text-end" style="width: 10%;">Total OUT</th>
                                         <th class="text-end" style="width: 15%;">Variance (OUT - IN)</th>
@@ -118,7 +118,7 @@
                                         <th class="text-start" style="width: 10%;">SAP No.</th>
                                         <th class="text-start" style="width: 10%;">Part Number</th>
                                         <th class="text-start" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 25%;">Part Description</th>
+                                        <th class="text-start" style="width: 25%; padding-left: 1rem;">Part Description</th>
                                         <th class="text-center" style="width: 10%;">Lot Number</th>
                                         <th class="text-end" style="width: 10%;">Total IN</th>
                                         <th class="text-end" style="width: 10%;">Total OUT</th>
@@ -135,16 +135,15 @@
                             <table class="table table-hover table-striped">
                                 <thead>
                                     <tr>
-                                        <th class="text-start" style="width: 8%;">Date</th>
-                                        <th class="text-start" style="width: 12%;">Time</th>
+                                        <th class="text-start" style="width: 10%;">Date</th>
+                                        <th class="text-start" style="width: 10%;">Time</th>
                                         <th class="text-center" style="width: 10%;">From</th>
                                         <th class="text-center" style="width: 10%;">To</th>
                                         <th class="text-center" style="width: 10%;">SAP No.</th>
-                                        <th class="text-center" style="width: 10%;">Part No.</th>
-                                        <th class="text-center" style="width: 10%;">Model</th>
+                                        <th class="text-center" style="width: 15%;">Part No.</th>
                                         <th class="text-center" style="width: 10%;">Lot. / Ref.</th>
                                         <th class="text-center" style="width: 10%;">Quantity</th>
-                                        <th class="text-center" style="width: 10%;">Notes</th>
+                                        <th class="text-center" style="width: 15%;">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="entryHistoryTableBody"></tbody>
@@ -152,21 +151,21 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="production-history-pane" role="tabpanel">
+                    <div class="tab-pane fade show active" id="production-history-pane" role="tabpanel">
                             <div class="table-responsive mt-2">
                             <table id="partTable" class="table table-striped table-hover">
                                 <thead>
                                     <tr>
                                         <th class="text-start" style="width: 8%;">Date</th>
-                                        <th class="text-start" style="width: 12%;">Time (Start-End)</th>
-                                        <th class="text-center" style="width: 8%;">Duration (m)</th>
-                                        <th class="text-center" style="width: 10%;">Location</th>
+                                        <th class="text-start" style="width: 8%;">Time</th>
+                                        <th class="text-center" style="width: 10%;">SAP No.</th>
                                         <th class="text-center" style="width: 10%;">Part No.</th>
                                         <th class="text-center" style="width: 8%;">Model</th>
                                         <th class="text-center" style="width: 10%;">Lot / Ref.</th>
+                                        <th class="text-center" style="width: 10%;">Location</th>
                                         <th class="text-center" style="width: 8%;">Quantity</th>
                                         <th class="text-center" style="width: 8%;">Type</th>
-                                        <th class="text-center" style="width: 16%;">Notes</th>
+                                        <th class="text-center" style="width: 20%;">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="partTableBody"></tbody>
@@ -180,10 +179,10 @@
                                 <thead>
                                     <tr>
                                         <th class="text-start" style="width: 10%;">Location</th>
-                                        <th class="text-start" style="width: 10%;">SAP No.</th>
-                                        <th class="text-start" style="width: 10%;">Part Number</th>
-                                        <th class="text-start" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 45%;">Part Description</th>
+                                        <th class="text-center" style="width: 10%;">SAP No.</th>
+                                        <th class="text-center" style="width: 10%;">Part No.</th>
+                                        <th class="text-center" style="width: 10%;">Model</th>
+                                        <th class="text-start" style="width: 45%; padding-left: 1rem;">Part Description</th>
                                         <th class="text-end" style="width: 15%;">On-Hand Quantity (WIP)</th>
                                     </tr>
                                 </thead>
@@ -200,7 +199,7 @@
                                         <th class="text-start" style="width: 10%;">SAP No.</th>
                                         <th class="text-start" style="width: 10%;">Part No.</th>
                                         <th class="text-start" style="width: 10%;">Models</th>
-                                        <th class="text-start" style="width: 55%;">Part Description</th>
+                                        <th class="text-start" style="width: 55%; padding-left: 1rem;">Part Description</th>
                                         <th class="text-end" style="width: 15%;">Total On-Hand</th>
                                     </tr>
                                 </thead>
@@ -233,7 +232,7 @@
                 </div>
             </div>
 
-            <nav class="pagination-footer" data-tab-target="#production-variance-pane">
+            <nav class="pagination-footer" data-tab-target="#production-variance-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="productionVariancePagination"></ul>
             </nav>
             <nav class="pagination-footer" data-tab-target="#wip-by-lot-pane" style="display: none;">
@@ -242,7 +241,7 @@
             <nav class="pagination-footer" data-tab-target="#entry-history-pane" style="display: none;">
                 <ul class="pagination justify-content-center" id="entryHistoryPagination"></ul>
             </nav>
-            <nav class="pagination-footer" data-tab-target="#production-history-pane" style="display: none;">
+            <nav class="pagination-footer" data-tab-target="#production-history-pane">
                 <ul class="pagination justify-content-center" id="paginationControls"></ul>
             </nav>
             <nav class="pagination-footer" data-tab-target="#wip-onhand-pane" style="display: none;">

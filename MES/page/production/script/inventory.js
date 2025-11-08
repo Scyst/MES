@@ -214,7 +214,7 @@ function setupEntryAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedInItem = null;
-        document.getElementById('entry_item_id').value = '';
+        //document.getElementById('entry_item_id').value = '';
 
         if (value.length < 2) return;
 
@@ -260,7 +260,7 @@ function setupProductionAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedOutItem = null;
-        document.getElementById('out_item_id').value = '';
+        //document.getElementById('out_item_id').value = '';
 
         if (value.length < 2) return;
 
@@ -343,10 +343,10 @@ function renderProductionVarianceTable(data) {
 
         tr.innerHTML = `
             <td class="text-start">${row.location_name}</td>
-            <td class="text-start">${row.sap_no}</td>
-            <td class="text-start">${row.part_no}</td>
-            <td class="text-start">${row.model || ''}</td>
-            <td class="text-center">${row.part_description || ''}</td>
+            <td class="text-center">${row.sap_no}</td>
+            <td class="text-center">${row.part_no}</td>
+            <td class="text-center">${row.model || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
@@ -400,7 +400,7 @@ function renderWipReportByLotTable(data) {
             <td class="text-start">${row.sap_no}</td>
             <td class="text-start">${row.part_no}</td>
             <td class="text-start">${row.model || ''}</td>
-            <td class="text-start">${row.part_description || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
             <td class="text-center">${row.lot_no}</td>
             <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
             <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
@@ -453,7 +453,6 @@ function renderReceiptHistoryTable(data) {
             <td class="text-center">${row.destination_location || 'N/A'}</td>
             <td class="text-center">${row.sap_no}</td>
             <td class="text-center">${row.part_no}</td>
-            <td class="text-center">${row.model || ''}</td>
             <td class="text-center">${row.lot_no || ''}</td>
             <td  class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
             <td class="text-center">${row.notes || ''}</td>
@@ -487,10 +486,13 @@ async function fetchProductionHistory(page = 1) {
 function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = '';
+    
+    // ( colspan="10" ยังคงถูกต้อง เพราะ Layout ใหม่ของเราก็มี 10 คอลัมน์)
     if (!data || data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found.</td></tr>`;
         return;
     }
+    
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.transactionId = row.transaction_id;
@@ -498,34 +500,36 @@ function renderProductionHistoryTable(data) {
         tr.title = 'Click to edit';
         tr.addEventListener('click', () => editTransaction(row.transaction_id, 'production'));
 
+        // --- [แก้ไข] ส่วนของการเตรียมข้อมูล Date/Time ---
         const transactionDate = new Date(row.transaction_timestamp);
-
-        const startTimeStr = row.start_time || '00:00:00';
-        const endTimeStr = row.end_time || '00:00:00';
-        const timeRange = (row.start_time && row.end_time) ? `${startTimeStr} - ${endTimeStr}` : (transactionDate.toTimeString().substring(0, 8));
-        let durationInMinutes = '-';
-        if (row.start_time && row.end_time) {
-            const startDate = new Date(`1970-01-01T${startTimeStr}Z`);
-            const endDate = new Date(`1970-01-01T${endTimeStr}Z`);
-            if (endDate < startDate) {
-                endDate.setDate(endDate.getDate() + 1);
-            }
-            const diffMs = endDate - startDate;
-            durationInMinutes = Math.round(diffMs / 60000);
-        }
         
+        // (Date): ใช้ Date object หลัก
+        const dateStr = transactionDate.toLocaleDateString('en-GB');
+
+        // (Time): เราจะใช้ 'end_time' ถ้ามี, 
+        // ถ้าไม่มี (หรือเป็น 00:00:00) ให้ใช้เวลาจาก 'transaction_timestamp' หลักแทน
+        const timeStr = (row.end_time && row.end_time.substring(0, 8) !== '00:00:00')
+                        ? row.end_time.substring(0, 8)
+                        : transactionDate.toTimeString().substring(0, 8);
+        
+        // (ลบการคำนวณ 'timeRange' และ 'durationInMinutes' ออกทั้งหมด)
+        // --- [จบส่วนแก้ไข] ---
+        
+        
+        // --- [แก้ไข] ส่วนของ tr.innerHTML ---
+        // (จัดเรียงใหม่ตาม Layout ที่ตกลงกัน)
         tr.innerHTML = `
-            <td class="text-start">${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td class="text-start">${timeRange}</td>
-            <td class="text-center">${durationInMinutes}</td>
-            <td class="text-center">${row.location_name || 'N/A'}</td>
-            <td class="text-center">${row.part_no}</td>
+            <td class="text-start">${dateStr}</td>
+            <td class="text-start">${timeStr}</td>
+            <td class="text-center">${row.sap_no}</td> <td class="text-center">${row.part_no}</td>
             <td class="text-center">${row.model || ''}</td>
             <td class="text-center">${row.lot_no || ''}</td>
-            <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center">${row.location_name || 'N/A'}</td> <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
             <td class="text-center">${row.count_type}</td>
             <td class="text-center">${row.notes || ''}</td>
         `;
+        // --- [จบส่วนแก้ไข] ---
+        
         tbody.appendChild(tr);
     });
 }
@@ -565,10 +569,10 @@ function renderWipOnHandTable(data) {
         const onHandQty = parseFloat(row.quantity) || 0;
         tr.innerHTML = `
             <td class="text-start">${row.location_name}</td>
-            <td class="text-start">${row.sap_no}</td>
-            <td class="text-start">${row.part_no}</td>
-            <td class="text-start">${row.model || ''}</td>
-            <td class="text-start">${row.part_description || ''}</td>
+            <td class="text-center">${row.sap_no}</td>
+            <td class="text-center">${row.part_no}</td>
+            <td class="text-center">${row.model || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -614,7 +618,7 @@ function renderStockInventoryTable(data) {
             <td class="text-start">${row.sap_no}</td>
             <td class="text-start">${row.part_no}</td>
             <td class="text-start">${row.used_models || '-'}</td>
-            <td class="text-start">${row.part_description || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
             <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -725,10 +729,11 @@ function openAddPartModal() {
     const searchInput = document.getElementById('out_item_search');
     searchInput.value = '';
 
-    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry'));
+    // 🛑 [แก้ไข] อ่านจาก Key "_OUT"
+    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT')); 
     if (lastData) {
         const locationSelect = document.getElementById('out_location_id');
-        if (locationSelect) locationSelect.value = lastData.location_id || '';
+        if (locationSelect) locationSelect.value = lastData.location_id || ''; // (แก้ชื่อ key ให้ตรง)
         searchInput.value = lastData.item_display_text || '';
         document.getElementById('out_item_id').value = lastData.item_id || '';
         if (lastData.item_id) {
@@ -757,8 +762,8 @@ function openAddEntryModal() {
     document.getElementById('entry_log_date').value = now.toISOString().split('T')[0];
     document.getElementById('entry_log_time').value = now.toTimeString().substring(0, 8);
 
-    // 3. โหลดข้อมูลล่าสุดจาก localStorage (ถ้ามี)
-    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry'));
+    // 3. 🛑 [แก้ไข] อ่านจาก Key "_IN"
+    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
     if (lastData) {
         // 3.1 ตั้งค่า Item ที่เคยเลือกไว้
         document.getElementById('entry_item_search').value = lastData.item_display_text || '';
@@ -1156,6 +1161,14 @@ async function handleFormSubmit(event) {
         hideSpinner();
         if (allSuccess) {
             showToast('All production records saved successfully.', 'var(--bs-success)');
+            const searchInputValue = document.getElementById('out_item_search').value;
+            let lastEntryData = {
+                item_id: baseData.item_id, // (ใช้ baseData.item_id ที่เรามีอยู่แล้ว)
+                item_display_text: searchInputValue,
+                location_id: baseData.location_id // (ใช้ baseData.location_id)
+            };
+            // (บันทึกลง Key "_OUT" ที่เราแก้ไว้ใน openAddPartModal)
+            localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
             bootstrap.Modal.getInstance(form.closest('.modal')).hide();
             await fetchProductionHistory();
         } else {
@@ -1192,23 +1205,26 @@ async function handleFormSubmit(event) {
         const result = await sendRequest(endpoint, apiAction, 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
         if (result.success) {
-            if (action === 'addPart' || action === 'addEntry') {
-                const searchInputId = (action === 'addPart') ? 'out_item_search' : 'entry_item_search';
-                const searchInputValue = document.getElementById(searchInputId).value;
-
+            
+            // 🛑 [แก้ไข] แยก Logic การบันทึก LocalStorage
+            if (action === 'addPart') {
+                const searchInputValue = document.getElementById('out_item_search').value;
                 let lastEntryData = {
                     item_id: data.item_id,
-                    item_display_text: searchInputValue
+                    item_display_text: searchInputValue,
+                    location_id: data.location_id // (ใช้ key 'location_id' ให้ตรงกับตอนอ่าน)
                 };
+                localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
 
-                if (action === 'addEntry') {
-                    lastEntryData.from_location_id = data.from_location_id;
-                    lastEntryData.to_location_id = data.to_location_id;
-                } else {
-                    lastEntryData.out_location_id = data.location_id;
-                }
-
-                localStorage.setItem('inventoryUILastEntry', JSON.stringify(lastEntryData));
+            } else if (action === 'addEntry') {
+                const searchInputValue = document.getElementById('entry_item_search').value;
+                let lastEntryData = {
+                    item_id: data.item_id,
+                    item_display_text: searchInputValue,
+                    from_location_id: data.from_location_id,
+                    to_location_id: data.to_location_id
+                };
+                localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
             }
 
             const modalId = form.closest('.modal').id;
