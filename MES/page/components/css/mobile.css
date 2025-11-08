@@ -142,15 +142,40 @@ body {
     border: none;
     background: none;
     margin-bottom: 0;
-    margin-top: 1rem;
+    margin-top: 0;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
 }
+
 #qr-reader {
     width: 100%;
     border: 1px solid #555;
     border-radius: 8px;
+    z-index: 1;
 }
 
-/* (จาก mobile_review.php) */
+.qr-file-scanner-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 10;
+}
+
+.qr-file-scanner-overlay .btn {
+    background-color: rgba(0, 0, 0, 0.4); 
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+    backdrop-filter: blur(2px);
+}
+
+.qr-file-scanner-overlay .btn:hover {
+    background-color: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
 .review-card {
     background-color: var(--bs-secondary-bg);
     border: 1px solid var(--bs-border-color);
@@ -184,4 +209,26 @@ body {
     align-items: center;
     gap: 1.5rem;
     margin-bottom: 1rem;
+}
+
+/* --- 6. (ใหม่) ซ่อนปุ่ม UI ที่ไม่ต้องการของ Library --- */
+
+/* (ซ่อนกล่อง Dashboard ที่หุ้มปุ่ม Stop) */
+#qr-reader__dashboard {
+    display: none !important;
+}
+
+/* ซ่อนปุ่ม "Stop Scanning" ที่ติดมากับกล้อง */
+#html5-qrcode-button-camera-stop {
+    display: none !important;
+}
+
+/* ซ่อนลิงก์ "Scan an Image File" (เพราะเรามีปุ่มของเราเองแล้ว) */
+#html5-qrcode-anchor-scan-type-change {
+    display: none !important;
+}
+
+/* (เผื่อไว้) ซ่อนส่วนเลือกกล้อง ถ้ามีหลายกล้อง */
+#html5-qrcode-select-camera {
+    display: none !important;
 }

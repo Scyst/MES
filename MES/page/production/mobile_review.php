@@ -20,14 +20,19 @@
 
         <h3 class="text-center mb-4">ตรวจสอบ/แก้ไข ย้อนหลัง</h3>
 
-        <div class="btn-group w-100 mb-3" role="group">
-            <button type="button" class="btn btn-primary active" id="btn-load-out">
-                <i class="fas fa-upload"></i> ประวัติ (OUT)
-            </button>
-            <button type="button" class="btn btn-success" id="btn-load-in">
-                <i class="fas fa-download"></i> ประวัติ (IN)
-            </button>
-        </div>
+        <ul class="nav nav-tabs nav-fill mb-3" id="reviewTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="review-out-tab" data-bs-toggle="tab" type="button" role="tab" aria-selected="true">
+                    <i class="fas fa-upload"></i> ประวัติ (OUT)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="review-in-tab" data-bs-toggle="tab" type="button" role="tab" aria-selected="false">
+                    <i class="fas fa-download"></i> ประวัติ (IN)
+                </button>
+            </li>
+        </ul>
+        <div id="review-list-container"></div>
 
         <div id="review-list-container"></div>
     </div>

@@ -157,23 +157,22 @@
                 </ul>
             
                 <div class="tab-content" id="scanTabContent">
-
                     <div class="tab-pane fade show active" id="scan-camera-pane" role="tabpanel">
-                        <div class="d-grid">
-                            <button type="button" id="start-scan-btn" class="btn btn-outline-info">
-                                <i class="fas fa-camera"></i> เปิดกล้อง
-                            </button>
-                        </div>
                         <div id="qr-reader-container">
                             <div id="qr-reader"></div>
-                            <button type="button" id="stop-scan-btn" class="btn btn-outline-secondary w-100 mt-2">ปิดกล้อง</button>
+
+                            <div class="qr-file-scanner-overlay">
+                                <label for="scan-image-file" class="btn btn-lg btn-outline-light">
+                                    <i class="fas fa-image"></i>
+                                </label>
+                                <input type="file" id="scan-image-file" accept="image/*" style="display: none;">
+                            </div>
                         </div>
                     </div>
             
                     <div class="tab-pane fade" id="scan-manual-pane" role="tabpanel">
                         <div class="input-group">
                             <input type="text" id="manual_scan_id_input" class="form-control" placeholder="กรอก ID (ที่อยู่บนฉลาก) เช่น C6DD3050" style="text-transform: uppercase;">
-                            
                             <button class="btn btn-secondary" type="button" id="manual_scan_id_btn" title="โหลดข้อมูล">
                                 <i class="fas fa-search"></i>
                             </button>

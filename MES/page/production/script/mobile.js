@@ -125,16 +125,19 @@ function handleManualScanLoad() {
 
 function initializeDateTimeFields() {
     const now = new Date();
-    // ปรับเวลาให้เป็น Local Timezone (Asia/Bangkok) แบบง่ายๆ
-    const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-    const localDate = new Date(now.getTime() - offsetMs);
-    
-    const dateStr = localDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    const timeStr = localDate.toTimeString().substring(0, 8); // HH:MM:SS
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timeStr = `${hours}:${minutes}:${seconds}`;
 
     const outLogDate = document.getElementById('out_log_date');
-    if (outLogDate) outLogDate.value = dateStr;
-    
+    if (outLogDate) outLogDate.value = dateStr;    
     const inLogDate = document.getElementById('entry_log_date');
     if (inLogDate) inLogDate.value = dateStr;
     const inLogTime = document.getElementById('entry_log_time');
@@ -142,7 +145,6 @@ function initializeDateTimeFields() {
 }
 
 async function populateInitialData() {
-    // ดึงข้อมูล Items และ Locations
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
     
     if (result.success) {
@@ -182,30 +184,45 @@ async function populateInitialData() {
     }
 }
 
-function initQrScanner() {
-    const scanBtn = document.getElementById('start-scan-btn');
-    const stopBtn = document.getElementById('stop-scan-btn');
-    const readerDivId = "qr-reader";
+// (ใน mobile.js)
 
+// ⭐️ 1. สร้างฟังก์ชัน "หยุดสแกน" (แยกออกมา) ⭐️
+// (เราใช้ .clear() ที่แก้ไปล่าสุด)
+function stopScanning() {
+    if (html5QrCodeScanner) {
+        html5QrCodeScanner.clear().then(_ => {
+            const readerContainer = document.getElementById('qr-reader-container');
+            if (readerContainer) readerContainer.style.display = 'none';
+            html5QrCodeScanner = null;
+        }).catch(err => console.warn("Scanner clear failed", err));
+    }
+}
+
+// ⭐️ 2. สร้างฟังก์ชัน "เริ่มสแกน" (แยกออกมา) ⭐️
+function startScanning() {
+    if (html5QrCodeScanner) return; // (ถ้าทำงานอยู่แล้ว ก็ไม่ต้องทำอะไร)
+
+    const readerContainer = document.getElementById('qr-reader-container');
+    const readerDivId = "qr-reader";
+    if (readerContainer) readerContainer.style.display = 'block'; // (ทำให้ช่องกล้องแสดงขึ้นมา)
+
+    // (ฟังก์ชันเมื่อสแกนสำเร็จ - เหมือนเดิม)
     const onScanSuccess = (decodedText, decodedResult) => {
         console.log(`Scan result: ${decodedText}`);
-        stopScanning();
+        stopScanning(); // (หยุดกล้องเมื่อสแกนติด)
         
         try {
-            // ตรวจสอบว่าเป็น URL ที่มีพารามิเตอร์ ?scan= หรือไม่
             let scanId = null;
             try {
                 const scannedUrl = new URL(decodedText);
                 scanId = scannedUrl.searchParams.get('scan');
             } catch (e) {
-                // ถ้าไม่ใช่ URL อาจจะเป็น Plain Text รหัสโค้ดเลยก็ได้ (เผื่อไว้)
                 if (decodedText.length >= 6 && decodedText.length <= 20 && /^[A-Z0-9]+$/i.test(decodedText)) {
                     scanId = decodedText;
                 }
             }
 
             if (scanId) {
-                // ถ้าเจอ Scan ID ให้ Reload หน้าเว็บเหมือนการกรอก Manual
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('scan', scanId);
                 ['type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
@@ -215,30 +232,87 @@ function initQrScanner() {
             } else {
                 throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Scan ID)");
             }
-
         } catch (e) {
             console.error(e);
             showToast(e.message, 'var(--bs-danger)');
         }
     };
-    
-    const stopScanning = () => {
-        if (html5QrCodeScanner) {
-            html5QrCodeScanner.clear().then(_ => {
-                document.getElementById('qr-reader-container').style.display = 'none';
-                html5QrCodeScanner = null;
-            }).catch(err => console.warn("Scanner clear failed", err));
-        }
-    };
 
-    scanBtn?.addEventListener('click', () => {
-        if (html5QrCodeScanner) return;
-        document.getElementById('qr-reader-container').style.display = 'block';
-        html5QrCodeScanner = new Html5QrcodeScanner(readerDivId, { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-        html5QrCodeScanner.render(onScanSuccess, (err) => { /* ignore failures */ });
+    // (สร้างกล้อง)
+    html5QrCodeScanner = new Html5QrcodeScanner(
+        readerDivId, 
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+    );
+    html5QrCodeScanner.render(onScanSuccess, (err) => { /* ignore failures */ });
+}
+
+async function handleFileScan(file) {
+    if (!file) return;
+    stopScanning(); 
+    showSpinner();
+
+    try {
+        const html5QrCode = new Html5Qrcode("qr-reader"); 
+        const decodedText = await html5QrCode.scanFile(file, false);
+        
+        console.log(`File scan result: ${decodedText}`);
+        
+        let scanId = null;
+        try {
+            const scannedUrl = new URL(decodedText);
+            scanId = scannedUrl.searchParams.get('scan');
+        } catch (e) {
+            if (decodedText.length >= 6 && decodedText.length <= 20 && /^[A-Z0-9]+$/i.test(decodedText)) {
+                scanId = decodedText;
+            }
+        }
+
+        if (scanId) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('scan', scanId);
+            ['type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
+            
+            window.location.href = currentUrl.toString();
+        } else {
+            throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Scan ID)");
+        }
+
+    } catch (err) {
+        console.error("File scan error:", err);
+        showToast(err.message || "ไม่พบ QR Code ในภาพที่เลือก", 'var(--bs-danger)');
+        hideSpinner();
+    }
+}
+
+function initQrScanner() {
+    const cameraTab = document.getElementById('scan-camera-tab');
+    const manualTab = document.getElementById('scan-manual-tab');
+    const fileInput = document.getElementById('scan-image-file');
+
+    if (cameraTab) {
+        cameraTab.addEventListener('shown.bs.tab', () => {
+            startScanning();
+        });
+    }
+
+    if (manualTab) {
+        manualTab.addEventListener('shown.bs.tab', () => {
+            stopScanning();
+        });
+    }
+
+    fileInput?.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            handleFileScan(file);
+            e.target.value = null; 
+        }
     });
 
-    stopBtn?.addEventListener('click', stopScanning);
+    if (cameraTab && cameraTab.classList.contains('active')) {
+        startScanning();
+    }
 }
 
 async function autoFillForm(data) {
@@ -404,24 +478,19 @@ function setupAutocomplete(inputId, hiddenId) {
 // SECTION: REVIEW PAGE LOGIC (mobile_review.php)
 // =================================================================
 
-function initReviewPage() {
-    // (ใช้ populateInitialData เพื่อโหลด Location มาใส่ใน Dropdown ของ Modal แก้ไข ถ้ามี)
-    // populateInitialData(); --> อาจจะไม่จำเป็นในหน้านี้ถ้าไม่ได้ใช้ Dropdown แบบเต็ม
+async function initReviewPage() {
+    await populateReviewModals(); // ⭐️ 1. รอให้ Modal โหลดเสร็จก่อน
+    const reviewOutTab = document.getElementById('review-out-tab');
+    const reviewInTab = document.getElementById('review-in-tab');
     
-    const btnOut = document.getElementById('btn-load-out');
-    const btnIn = document.getElementById('btn-load-in');
-    
-    btnOut?.addEventListener('click', () => {
+    reviewOutTab?.addEventListener('shown.bs.tab', () => {
         currentReviewType = 'production';
-        btnOut.classList.add('active');
-        btnIn.classList.remove('active');
-        fetchReviewData();
+        fetchReviewData(); // (ในแท็บไม่ต้อง await)
     });
-    btnIn?.addEventListener('click', () => {
+
+    reviewInTab?.addEventListener('shown.bs.tab', () => {
         currentReviewType = 'receipt';
-        btnIn.classList.add('active');
-        btnOut.classList.remove('active');
-        fetchReviewData();
+        fetchReviewData(); // (ในแท็บไม่ต้อง await)
     });
 
     document.getElementById('review-list-container')?.addEventListener('click', (event) => {
@@ -431,7 +500,31 @@ function initReviewPage() {
         }
     });
 
-    fetchReviewData();
+    if (reviewOutTab && reviewOutTab.classList.contains('active')) {
+        currentReviewType = 'production';
+    } else {
+        currentReviewType = 'receipt';
+    }
+    await fetchReviewData(); // ⭐️ 2. ค่อยโหลดประวัติ (การ์ด) ทีหลัง
+}
+
+async function populateReviewModals() {
+    const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
+    if (result.success && result.locations) {
+        allLocations = result.locations;
+        
+        const editInLocationSelect = document.getElementById('edit_entry_location_id');
+        const editOutLocationSelect = document.getElementById('edit_production_location_id');
+        
+        const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+
+        if (editInLocationSelect) {
+            editInLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+        if (editOutLocationSelect) {
+            editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        }
+    }
 }
 
 async function fetchReviewData(page = 1) {
