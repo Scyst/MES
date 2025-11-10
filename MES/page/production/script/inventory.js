@@ -84,9 +84,32 @@ function handleFilterChange() {
 async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
+        
+        // 🛑 [START] แก้ไขส่วนนี้
         if (params) {
-            url += `&${new URLSearchParams(params).toString()}`;
+            const encodeParam = (key, value) => {
+                // (สร้าง key=value ที่ถูกต้อง)
+                return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+            };
+
+            // (แปลง Object params เป็น Array ของ String)
+            const paramStrings = Object.entries(params).flatMap(([key, value]) => {
+                if (Array.isArray(value)) {
+                    // ถ้า value เป็น Array (เช่น search_terms[])
+                    // ให้สร้าง param หลายๆ ตัว (เช่น search_terms[]=spot&search_terms[]=30023213)
+                    return value.map(item => encodeParam(key, item));
+                } else {
+                    // ถ้า value เป็นค่าเดี่ยว (เช่น page=1)
+                    return [encodeParam(key, value)];
+                }
+            });
+            
+            if (paramStrings.length > 0) {
+                 url += `&${paramStrings.join('&')}`;
+            }
         }
+        // 🛑 [END] จบส่วนที่แก้ไข
+
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
         const options = { method, headers: {} };
@@ -164,10 +187,20 @@ function updateControls(activeTabId) {
     switch (activeTabId) {
         case 'production-history-tab':
             buttonGroup.innerHTML = `
-                <button class="btn btn-info" onclick="openSummaryModal(this)">Summary</button>
+                <div class="btn-group">
+                  <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-chart-pie me-2"></i> Summaries
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="openSummaryModal(this); return false;">Summary by Part</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="openHourlyProductionModal(); return false;">Hourly Summary</a></li>
+                  </ul>
+                </div>
+                
                 <button class="btn btn-primary" onclick="exportProductionHistoryToExcel()">Export</button>
                 ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
             `;
+
             summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
             break;
         case 'entry-history-tab':
@@ -298,9 +331,13 @@ function setupProductionAutocomplete() {
 async function fetchProductionVarianceReport(page = 1) {
     varianceCurrentPage = page;
     showSpinner();
+    
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+                                
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
@@ -355,13 +392,16 @@ function renderProductionVarianceTable(data) {
     });
 }
 
-// --- Functions for WIP By Lot Tab ---
 async function fetchWipReportByLot(page = 1) {
     wipByLotCurrentPage = page;
     showSpinner();
+    
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+                                
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
@@ -410,13 +450,16 @@ function renderWipReportByLotTable(data) {
     });
 }
 
-// --- Functions for Entry History Tab (IN) ---
 async function fetchReceiptHistory(page = 1) {
     receiptHistoryCurrentPage = page;
     showSpinner();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
@@ -465,9 +508,15 @@ function renderReceiptHistoryTable(data) {
 async function fetchProductionHistory(page = 1) {
     productionHistoryCurrentPage = page;
     showSpinner();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',')      // 1. แยกด้วยจุลภาค
+                                .map(term => term.trim())  // 2. ตัดช่องว่างหน้า-หลัง
+                                .filter(term => term.length > 0); // 3. กรองคำว่างๆ ทิ้ง
+    
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms, 
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
@@ -528,19 +577,21 @@ function renderProductionHistoryTable(data) {
             <td class="text-center">${row.count_type}</td>
             <td class="text-center">${row.notes || ''}</td>
         `;
-        // --- [จบส่วนแก้ไข] ---
         
         tbody.appendChild(tr);
     });
 }
 
-// --- Functions for WIP On-Hand Tab ---
 async function fetchWipOnHandReport(page = 1) {
     wipOnHandCurrentPage = page;
     showSpinner();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value
+        'search_terms[]': searchTerms
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_wip_onhand_report', 'GET', null, params);
@@ -579,13 +630,16 @@ function renderWipOnHandTable(data) {
     });
 }
 
-// --- Functions for Stock Count Tab ---
 async function fetchStockInventoryReport(page = 1) {
     stockCountCurrentPage = page;
     showSpinner();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value
+        'search_terms[]': searchTerms
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_stock_inventory_report', 'GET', null, params);
@@ -625,13 +679,16 @@ function renderStockInventoryTable(data) {
     });
 }
 
-// --- Functions for Transaction Log Tab ---
 async function fetchAllTransactions(page = 1) {
     transactionLogCurrentPage = page;
     showSpinner();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+                                
     const params = {
         page: page,
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
@@ -942,9 +999,10 @@ async function openSummaryModal() {
     const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
     summaryModal.show();
 
-    // 1. [แก้ไข] รวบรวมฟิลเตอร์เหมือนเดิม
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
     const params = {
-        search_term: document.getElementById('filterSearch').value,
+        'search_terms[]': searchTerms,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
@@ -977,9 +1035,9 @@ async function openSummaryModal() {
             const quantity = parseFloat(row.total_quantity) || 0;
             overallGrandTotal += quantity;
             const tr = document.createElement('tr');
-            tr.className = 'table-group-divider fw-bold';
+            tr.className = 'table-dark fw-bold';
             tr.innerHTML = `
-                <td colspan="3" class="text-end">Grand Total (${row.count_type})</td>
+                <td colspan="3" class="text-start">Grand Total (${row.count_type})</td>
                 <td class="text-end">${quantity.toLocaleString()}</td>
             `;
             modalBody.appendChild(tr);
@@ -990,7 +1048,7 @@ async function openSummaryModal() {
             const tr = document.createElement('tr');
             tr.className = 'table-dark fw-bold';
             tr.innerHTML = `
-                <td colspan="3" class="text-end">OVERALL GRAND TOTAL</td>
+                <td colspan="3" class="text-start">OVERALL GRAND TOTAL</td>
                 <td class="text-end">${overallGrandTotal.toLocaleString()}</td>
             `;
             modalBody.appendChild(tr);
@@ -1012,14 +1070,16 @@ async function openHistorySummaryModal() {
     const summaryModal = new bootstrap.Modal(document.getElementById('historySummaryModal'));
     summaryModal.show();
 
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
     const params = {
-        limit: -1, // ขอข้อมูลทั้งหมดเพื่อทำ Summary
-        search_term: document.getElementById('filterSearch').value,
+        limit: -1,
+        'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
     };
 
-    // เราจะเรียก API เดิม แต่ต้องไปแก้ API ให้ส่งค่า Summary กลับมาด้วย
     const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history_summary', 'GET', null, params);
 
     if (result.success && result.summary.length > 0) {
@@ -1040,7 +1100,7 @@ async function openHistorySummaryModal() {
         let grandTotal = 0;
         result.grand_total.forEach(row => grandTotal += parseFloat(row.total_quantity));
         grandTotalRow.innerHTML = `
-            <td colspan="3" class="text-end">Grand Total</td>
+            <td colspan="3" class="text-start">Grand Total</td>
             <td class="text-end">${grandTotal.toLocaleString()}</td>
         `;
         modalBody.appendChild(grandTotalRow);
@@ -1323,6 +1383,199 @@ async function editTransaction(transactionId, type) {
     }
 }
 
+// [ใหม่] ฟังก์ชันสำหรับเปิด Modal สรุปรายชั่วโมง
+async function openHourlySummaryModal() {
+    const modalBody = document.getElementById('hourlySummaryTableBody');
+    if (!modalBody) {
+        console.error('Hourly Summary modal body not found!');
+        return;
+    }
+    modalBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading hourly data...</td></tr>';
+
+    const summaryModal = new bootstrap.Modal(document.getElementById('hourlySummaryModal'));
+    summaryModal.show();
+
+    // 1. รวบรวมฟิลเตอร์
+    // (สำคัญ: SP ตัวนี้ใช้แค่ 'endDate' เป็นหลัก)
+    const params = {
+        endDate: document.getElementById('filterEndDate').value,
+        // (เราสามารถส่งฟิลเตอร์อื่นไปได้ ถ้า SP รองรับ)
+        // search_term: document.getElementById('filterSearch').value, 
+    };
+
+    // 2. เรียก API ใหม่
+    const result = await sendRequest(INVENTORY_API_URL, 'get_production_hourly_summary', 'GET', null, params);
+
+    // 3. แสดงผลข้อมูล
+    if (result.success && result.data && result.data.length > 0) {
+        modalBody.innerHTML = '';
+        
+        result.data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center">${row.hour}</td>
+                <td class="text-end">${parseFloat(row.availability).toFixed(1)}%</td>
+                <td class="text-end">${parseFloat(row.performance).toFixed(1)}%</td>
+                <td class="text-end">${parseFloat(row.quality).toFixed(1)}%</td>
+                <td class="text-end fw-bold">${parseFloat(row.oee).toFixed(1)}%</td>
+            `;
+            modalBody.appendChild(tr);
+        });
+
+    } else {
+        modalBody.innerHTML = '<tr><td colspan="5" class="text-center">No hourly data available for this date.</td></tr>';
+    }
+}
+
+async function openHourlyProductionModal() {
+    const tableHead = document.getElementById('hourly-production-thead');
+    const tableBody = document.getElementById('hourly-production-tbody');
+    const tableFoot = document.getElementById('hourly-production-tfoot');
+    const subTitle = document.getElementById('hourly-production-subtitle');
+    const navContainer = document.getElementById('hourly-production-nav');
+    
+    tableHead.innerHTML = '';
+    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading hourly data...</td></tr>';
+    tableFoot.innerHTML = '';
+    navContainer.innerHTML = '';
+    
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+    subTitle.textContent = `แสดงผลสรุปยอดรวม ตั้งแต่วันที่: ${startDate} ถึง ${endDate} (อ้างอิงกะ 8:00 - 8:00)`;
+
+    const summaryModal = new bootstrap.Modal(document.getElementById('hourlyProductionModal'));
+    summaryModal.show();
+
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+                                
+    const params = {
+        startDate: startDate,
+        endDate: endDate,
+        'search_terms[]': searchTerms,
+    };
+    const result = await sendRequest(INVENTORY_API_URL, 'get_production_hourly_counts', 'GET', null, params);
+
+    if (!result.success || !result.data || result.data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No hourly data available for this date/filter.</td></tr>';
+        return;
+    }
+
+    const dataByDate = {};
+
+    result.data.forEach(row => {
+        const dateKey = row.ProductionDate;
+        const hour = parseInt(row.hour_of_day);
+        const pivotKey = `${row.part_no} (${row.sap_no})`; 
+        
+        const counts = {
+            fg: parseFloat(row.Qty_FG),
+            hold: parseFloat(row.Qty_HOLD),
+            scrap: parseFloat(row.Qty_SCRAP)
+        };
+        
+        if (!dataByDate[dateKey]) {
+            dataByDate[dateKey] = {
+                pivotData: {},      
+                pivotKeys: new Set(),
+                totalsByPivotKey: {}
+            };
+        }
+        
+        const dayData = dataByDate[dateKey];
+        dayData.pivotKeys.add(pivotKey);
+        
+        if (!dayData.totalsByPivotKey[pivotKey]) dayData.totalsByPivotKey[pivotKey] = { fg: 0, hold: 0, scrap: 0 };
+        if (!dayData.pivotData[hour]) dayData.pivotData[hour] = {};
+
+        dayData.pivotData[hour][pivotKey] = counts;
+        
+        dayData.totalsByPivotKey[pivotKey].fg += counts.fg;
+        dayData.totalsByPivotKey[pivotKey].hold += counts.hold;
+        dayData.totalsByPivotKey[pivotKey].scrap += counts.scrap;
+    });
+
+    function createCellHtml(counts, isHeader = false) {
+        const c = counts || { fg: 0, hold: 0, scrap: 0 };
+        const total = c.fg + c.hold + c.scrap;
+        if (total === 0) {
+            return isHeader ? '<th>-</th>' : '<td class="text-end">-</td>';
+        }
+        const tag = isHeader ? 'th' : 'td';
+        const breakdownHtml = `
+            <small class="ms-1 text-muted">
+                (<span class="text-success fw-medium">${c.fg.toLocaleString()}</span>/
+                 <span class="text-warning fw-medium">${c.hold.toLocaleString()}</span>/
+                 <span class="text-danger fw-medium">${c.scrap.toLocaleString()}</span>)
+            </small>
+        `;
+        return `<${tag} class="text-end">
+                    ${total.toLocaleString()}
+                    ${breakdownHtml}
+                </${tag}>`;
+    }
+
+    function renderTableForDate(dateKey) {
+        const dayData = dataByDate[dateKey];
+        const sortedPivotKeys = Array.from(dayData ? dayData.pivotKeys : new Set()).sort(); 
+        
+        let headerHtml = '<tr><th class="text-center" style="width: 150px;">Time</th>';
+        sortedPivotKeys.forEach(key => {
+            headerHtml += `<th class="text-center" style="min-width: 180px;">${key}</th>`;
+        });
+        headerHtml += '</tr>';
+        tableHead.innerHTML = headerHtml;
+
+        let bodyHtml = '';
+        const hoursInDay = [];
+        const startHour = 8;
+        for (let i = 0; i < 24; i++) hoursInDay.push((startHour + i) % 24);
+
+        hoursInDay.forEach(hour => {
+            const hourLabel = `${String(hour).padStart(2, '0')}:00 - ${String(hour).padStart(2, '0')}:59`;
+            bodyHtml += `<tr><td class="text-center fw-medium" style="width: 150px;">${hourLabel}</td>`;
+            
+            const hourData = dayData ? (dayData.pivotData[hour] || {}) : {};
+
+            sortedPivotKeys.forEach(key => {
+                bodyHtml += createCellHtml(hourData[key], false);
+            });
+            bodyHtml += '</tr>';
+        });
+        tableBody.innerHTML = bodyHtml;
+
+        let footerHtml = '<tr><th class="text-end" style="width: 150px;">Total</th>';
+        const totals = dayData ? dayData.totalsByPivotKey : {};
+        
+        sortedPivotKeys.forEach(key => {
+            footerHtml += createCellHtml(totals[key], true);
+        });
+        footerHtml += '</tr>';
+        tableFoot.innerHTML = footerHtml;
+    }
+
+    navContainer.innerHTML = '';
+    const dates = Object.keys(dataByDate).sort();
+
+    dates.forEach((dateKey, index) => {
+        const isActive = (index === 0);
+        const button = document.createElement('button');
+        button.className = `nav-link ${isActive ? 'active' : ''}`;
+        button.dataset.bsToggle = 'pill';
+        button.dataset.dateKey = dateKey;
+        button.textContent = dateKey;
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderTableForDate(e.target.dataset.dateKey); 
+        });
+        navContainer.appendChild(button);
+    });
+    if (dates.length > 0) {
+        renderTableForDate(dates[0]);
+    } else {
+         tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No production data found for this period.</td></tr>';
+    }
+}
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================

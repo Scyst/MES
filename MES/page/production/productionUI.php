@@ -270,6 +270,7 @@
                 include('components/varianceDetailModal.php');
                 include('components/summaryModal.php');
                 include('components/historySummaryModal.php');
+                include('components/hourlyProductionModal.php');
                 include('../components/php/autoLogoutUI.php');
             ?>
         </main>    

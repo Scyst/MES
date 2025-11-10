@@ -146,77 +146,74 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
             
-            // (ใช้ default limit เดิมจากไฟล์ของคุณ)
-            $default_limit = ($action === 'get_all_transactions') ? 50 : 25; 
-            $limit = $isExport ? 10000 : 50; // (ใช้ 50 ตามไฟล์เดิม)
+            $default_limit = ($action === 'get_all_transactions') ? 50 : 25;
+            $limit = $isExport ? 10000 : 50;
             $offset = ($page - 1) * $limit;
             
             $params = [];
             $conditions = [];
 
-            // 🛑 === [START] LOGIC การกรองตาม ROLE ที่แก้ไขใหม่ === 🛑
-
-            // 1. ตรวจสอบว่า Action นี้เป็นการดึงประวัติ (IN/OUT) หรือไม่
+            // (Logic การกรอง Role ที่เราทำไว้)
             if ($action === 'get_receipt_history' || $action === 'get_production_history') {
-                
-                // 2. ดึงชื่อผู้ใช้ที่ส่งมาจาก Frontend (mobile.js)
                 $user_filter_username = $_GET['user_filter'] ?? null;
-
-                // 3. แยกตรรกะตาม Role
                 if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                    // Admin/Creator: ไม่ต้องใส่เงื่อนไข (เห็นทั้งหมด)
-                
+                    // Admin/Creator: No conditions
                 } else if ($currentUser['role'] === 'supervisor') {
-                    // Supervisor: เห็น (ของ Line ตัวเอง) OR (ของที่ตัวเองสร้าง)
                     $supervisorConditions = [];
-                    
                     $supervisorConditions[] = "loc.production_line = ?";
                     $params[] = $currentUser['line'];
-                    
                     if (!empty($user_filter_username)) {
                         $supervisorConditions[] = "u.username = ?";
                         $params[] = $user_filter_username;
                     }
-                    
-                    // (สำคัญ) รวมเงื่อนไขของ Supervisor ด้วย "OR"
                     $conditions[] = "(" . implode(" OR ", $supervisorConditions) . ")";
-
                 } else {
-                    // Operator (หรือ Role อื่นๆ): เห็นเฉพาะของตัวเอง
                     if (!empty($user_filter_username)) {
                         $conditions[] = "u.username = ?";
                         $params[] = $user_filter_username;
                     }
                 }
-                
             } else {
-                // (สำหรับ 'get_all_transactions' หรืออื่นๆ ให้ใช้ Logic เดิมไปก่อน)
                 if ($currentUser['role'] === 'supervisor') {
                     $conditions[] = "loc.production_line = ?";
                     $params[] = $currentUser['line'];
                 }
-                // (และถ้า get_all_transactions มีการใช้ user_filter ก็ใส่ที่นี่)
                 if (!empty($_GET['user_filter'])) {
                     $conditions[] = "u.username = ?";
                     $params[] = $_GET['user_filter'];
                 }
             }
-
-            // --- ส่วนที่เหลือ (เงื่อนไขอื่นๆ) ---
-
+            
+            // (เงื่อนไข Type)
             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
-
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            
+            // 🛑 [START] โค้ด Smart Search ใหม่
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "t.reference_id LIKE ?";
+                    $term_conditions[] = "loc.location_name LIKE ?";
+                    $term_conditions[] = "loc.production_line LIKE ?"; // (ที่เราเพิ่มไว้)
+                    $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
+            // 🛑 [END] โค้ด Smart Search ใหม่
+
             if (!empty($_GET['count_type']) && $action === 'get_production_history') {
                 $conditions[] = "t.transaction_type = ?";
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
             }
-
             if (!empty($_GET['startDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
                 $params[] = $_GET['startDate'];
@@ -276,7 +273,7 @@ try {
          case 'get_stock_inventory_report':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit; $endRow = $startRow + $limit;
-            $search_term = $_GET['search_term'] ?? '';
+            
             $conditions = []; $base_params = [];
 
             if ($currentUser['role'] === 'supervisor') {
@@ -294,11 +291,21 @@ try {
                 $base_params[] = $supervisor_line;
             }
 
-            if (!empty($search_term)) {
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
-                $base_params[] = "%{$search_term}%";
-                $base_params[] = "%{$search_term}%";
-                $base_params[] = "%{$search_term}%";
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "i.part_description LIKE ?";
+                    
+                    array_push($base_params, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
             $itemWhereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
@@ -315,10 +322,9 @@ try {
                 )
                 " . (!empty($itemWhereClause) ? " AND (" . implode(" AND ", $conditions) . ")" : "") . "
             ";
-             $totalStmt = $pdo->prepare($totalSql);
-             $totalStmt->execute($base_params);
-             $total = (int)$totalStmt->fetchColumn();
-
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($base_params);
+            $total = (int)$totalStmt->fetchColumn();
 
             $dataSql = "
                 WITH FilteredItems AS (
@@ -366,7 +372,7 @@ try {
 
 
         case 'get_production_variance_report':
-             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = []; $date_params = []; $conditions = []; $date_where_clause = '';
 
@@ -375,10 +381,23 @@ try {
                 $params[] = $currentUser['line'];
             }
 
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term);
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "l.location_name LIKE ?";
+                    $term_conditions[] = "l.production_line LIKE ?"; // (เพิ่ม)
+                    $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
 
             if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
@@ -448,7 +467,7 @@ try {
 
 
         case 'get_wip_onhand_report':
-             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
 
@@ -459,10 +478,23 @@ try {
                  $params[] = $currentUser['line'];
             }
 
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR l.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term);
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "l.location_name LIKE ?";
+                    $term_conditions[] = "l.production_line LIKE ?";
+                    $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
@@ -502,7 +534,7 @@ try {
             break;
 
         case 'get_wip_report_by_lot':
-             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = [];
             $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
@@ -512,10 +544,24 @@ try {
                 $params[] = $currentUser['line'];
             }
 
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR l.location_name LIKE ? OR (SELECT STUFF((SELECT DISTINCT ', ' + r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "t.reference_id LIKE ?";
+                    $term_conditions[] = "l.location_name LIKE ?";
+                    $term_conditions[] = "l.production_line LIKE ?";
+                    $term_conditions[] = "(SELECT STUFF((SELECT DISTINCT ', ' + r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id FOR XML PATH('')), 1, 2, '')) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
 
             if (!empty($_GET['startDate'])) {
@@ -1021,11 +1067,24 @@ try {
              $params = [];
              $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')"]; // [แก้ไข] เพิ่ม Type ให้ครบ
 
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                // [แก้ไข] เปลี่ยนเงื่อนไข search ให้เหมือนตารางหลัก
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "t.reference_id LIKE ?";
+                    $term_conditions[] = "loc.location_name LIKE ?";
+                    $term_conditions[] = "loc.production_line LIKE ?";
+                    $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
 
             if (!empty($_GET['startDate'])) {
@@ -1085,11 +1144,24 @@ try {
             $params = [];
             $conditions = ["t.transaction_type LIKE 'PRODUCTION_%'"]; 
 
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                // [แก้ไข] เพิ่ม model search ให้เหมือนตารางหลัก
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR loc.location_name LIKE ? OR (SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
+                $search_terms = $_GET['search_terms'];
+                foreach ($search_terms as $term) {
+                    if (empty($term)) continue;
+                    $search_like = '%' . $term . '%';
+                    
+                    $term_conditions = [];
+                    $term_conditions[] = "i.sap_no LIKE ?";
+                    $term_conditions[] = "i.part_no LIKE ?";
+                    $term_conditions[] = "t.reference_id LIKE ?";
+                    $term_conditions[] = "loc.location_name LIKE ?";
+                    $term_conditions[] = "loc.production_line LIKE ?";
+                    $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?";
+                    
+                    array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like);
+                    
+                    $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                }
             }
             
             if (!empty($_GET['count_type'])) {
@@ -1449,6 +1521,121 @@ try {
                 echo json_encode(['success' => true, 'data' => json_decode($job_data_json)]);
             } else {
                 throw new Exception("Scan ID not found or already used.");
+            }
+            break;
+
+        case 'get_production_hourly_summary':
+            try {
+                // 1. ดึง SP name จาก config
+                $sp_name = SP_CALC_OEE_HOURLY; // (มาจาก config.php)
+
+                // 2. ดึง Filters (SP นี้ใช้ endDate เป็น 'TargetDate')
+                $target_date = $_GET['endDate'] ?? date('Y-m-d');
+                $line_filter = $_GET['line'] ?? null; // (เผื่ออนาคต)
+                $model_filter = $_GET['model'] ?? null; // (เผื่ออนาคต)
+
+                // 3. เตรียมและเรียก Stored Procedure
+                $stmt = $pdo->prepare("EXEC {$sp_name} @TargetDate = ?, @Line = ?, @Model = ?");
+                $stmt->bindParam(1, $target_date, PDO::PARAM_STR);
+                $stmt->bindParam(2, $line_filter, PDO::PARAM_STR);
+                $stmt->bindParam(3, $model_filter, PDO::PARAM_STR);
+                
+                $stmt->execute();
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo json_encode(['success' => true, 'data' => $data]);
+
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            }
+            break;
+
+        case 'get_production_hourly_counts':
+            try {
+                $start_date = $_GET['startDate'] ?? date('Y-m-d');
+                $target_date = $_GET['endDate'] ?? date('Y-m-d');
+                $line_filter = $currentUser['line'] ?? null;
+                // [แก้ไข] เปลี่ยนชื่อตัวแปร
+                $search_terms_array = $_GET['search_terms'] ?? []; 
+
+                $params = [];
+                $conditions = [];
+                $production_date_col = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)";
+                $conditions[] = "{$production_date_col} BETWEEN ? AND ?";
+                $params[] = $start_date;
+                $params[] = $target_date;
+
+                $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
+
+                if ($currentUser['role'] === 'supervisor') {
+                    $conditions[] = "l.production_line = ?";
+                    $params[] = $line_filter;
+                }
+                
+                if (!empty($search_terms_array) && is_array($search_terms_array)) {
+                    foreach ($search_terms_array as $term) {
+                        if (empty($term)) continue;
+                        $search_like = '%' . $term . '%';
+                        
+                        $term_conditions = [];
+                        $term_conditions[] = "i.sap_no LIKE ?";
+                        $term_conditions[] = "i.part_no LIKE ?";
+                        $term_conditions[] = "l.location_name LIKE ?";
+                        $term_conditions[] = "l.production_line LIKE ?";
+                        $term_conditions[] = "r.model LIKE ?";
+                        
+                        array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like);
+                        
+                        $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
+                    }
+                }
+
+                $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+                // 4. [แก้ไข] Query หลัก (เปลี่ยน r.model เป็น i.part_no)
+                $sql = "
+                    SELECT 
+                        {$production_date_col} AS ProductionDate,
+                        DATEPART(hour, t.transaction_timestamp) AS hour_of_day,
+                        i.part_no,
+                        i.sap_no,
+                        
+                        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) AS Qty_FG,
+                        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) AS Qty_HOLD,
+                        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) AS Qty_SCRAP
+
+                    FROM 
+                        " . TRANSACTIONS_TABLE . " t
+                    JOIN 
+                        " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+                    JOIN 
+                        " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+                    JOIN 
+                        " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
+                    {$whereClause}
+                    GROUP BY 
+                        {$production_date_col},
+                        DATEPART(hour, t.transaction_timestamp), 
+                        i.part_no,
+                        i.sap_no
+                    HAVING 
+                        SUM(t.quantity) > 0
+                    ORDER BY 
+                        ProductionDate,
+                        hour_of_day, 
+                        i.part_no
+                ";
+                
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo json_encode(['success' => true, 'data' => $data]);
+
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
             }
             break;
 

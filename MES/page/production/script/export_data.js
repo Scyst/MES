@@ -3,9 +3,14 @@ async function exportProductionHistoryToExcel() {
     showSpinner();
 
     try {
-        // --- 1. รวบรวม Parameters (เหมือนเดิม) ---
+        // [Logic ใหม่]
+        const searchString = document.getElementById('filterSearch').value;
+        const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
         const params = {
-            search_term: document.getElementById('filterSearch').value,
+            page: 1,
+            limit: -1, // Get all data
+            'search_terms[]': searchTerms, // [แก้ไข]
             count_type: document.getElementById('filterCountType').value,
             startDate: document.getElementById('filterStartDate').value,
             endDate: document.getElementById('filterEndDate').value,
@@ -98,16 +103,19 @@ async function exportProductionHistoryToExcel() {
     }
 }
 
-// (ฟังก์ชัน exportHistoryToExcel ดูถูกต้องแล้ว ไม่ต้องแก้ไข)
 async function exportHistoryToExcel() {
     showToast('Exporting data... This may take a moment.', 'var(--bs-info)');
     showSpinner();
 
     try {
+        // [Logic ใหม่]
+        const searchString = document.getElementById('filterSearch').value;
+        const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+
         const params = {
             page: 1,
             limit: -1, // Get all data
-            search_term: document.getElementById('filterSearch').value,
+            'search_terms[]': searchTerms, // [แก้ไข]
             startDate: document.getElementById('filterStartDate').value,
             endDate: document.getElementById('filterEndDate').value,
         };
