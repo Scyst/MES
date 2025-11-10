@@ -71,6 +71,12 @@
           // --- Section for Admin, Creator Only ---
           if ($userRole && in_array($userRole, ['admin', 'creator'])):
         ?>
+            <li>
+                <a class="dropdown-item-icon" href="../production/print_location_qr.php" title="Location QR Printer">
+                    <i class="fas fa-map-marked-alt fa-fw"></i>
+                    <span>Location QR Printer</span>
+                </a>
+            </li>
 
             <li>
                 <a class="dropdown-item-icon" href="../maintenanceStock/maintenanceStockUI.php" title="Maintenance Stock">

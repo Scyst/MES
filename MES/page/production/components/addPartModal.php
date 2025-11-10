@@ -54,7 +54,6 @@
                         </div>
                     </div>
 
-                    <hr>
                     <p class="form-label fw-bold">กรอกจำนวน:</p>
                     <div class="row">
                         <div class="col-md-4 mb-3">
@@ -70,7 +69,6 @@
                             <input type="number" id="out_qty_scrap" name="quantity_scrap" class="form-control" min="0" placeholder="0">
                         </div>
                     </div>
-                    <hr>
                     
                     <div class="mb-3">
                         <label for="out_notes" class="form-label">หมายเหตุ</label>
@@ -78,6 +76,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <a href="label_printer.php" target="_blank" class="btn btn-outline-secondary me-auto">
+                        <i class="fas fa-print"></i>
+                        Open Label Printer
+                    </a>
                     <button type="submit" class="btn btn-primary">บันทึก</button>
                 </div>
             </form>
