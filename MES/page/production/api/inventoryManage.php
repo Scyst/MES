@@ -992,7 +992,12 @@ try {
             break;
 
         case 'adjust_single_stock':
-             $pdo->beginTransaction();
+            if (!hasRole(['admin', 'creator'])) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized: You do not have permission to adjust stock.']);
+                exit;
+            }
+            $pdo->beginTransaction();
             try {
                 $item_id = $input['item_id'] ?? 0;
                 $location_id = $input['location_id'] ?? 0;

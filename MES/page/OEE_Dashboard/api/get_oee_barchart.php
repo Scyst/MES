@@ -12,16 +12,16 @@ try {
     $startDate = $_GET['startDate'] ?? date('Y-m-d');
     $endDate = $_GET['endDate'] ?? date('Y-m-d');
     $line = !empty($_GET['line']) ? $_GET['line'] : null;
-    $model = !empty($_GET['model']) ? $_GET['model'] : null; // ยังคงรับค่ามาเผื่ออนาคต
+    $model = !empty($_GET['model']) ? $_GET['model'] : null;
 
     // =============================================================
-    // START: LOGIC การคำนวณ BAR CHART (NEW LOGIC)
+    // START: LOGIC การคำนวณ BAR CHART
     // =============================================================
 
-    // --- 1. ดึงข้อมูล Stop Causes ---
-    $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; // รับค่า, ถ้าไม่มีให้ใช้ 'cause' เป็น default
-
-    $stopConditions = ["log_date BETWEEN ? AND ?"];
+    // --- 1. ดึงข้อมูล Stop Causes (ส่วนนี้แก้ไขแล้วจากครั้งก่อน) ---
+    $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; 
+    
+    $stopConditions = ["CAST(DATEADD(HOUR, -8, stop_begin) AS DATE) BETWEEN ? AND ?"];
     $stopParams = [$startDate, $endDate];
     if ($line) {
         $stopConditions[] = "line = ?";
@@ -29,12 +29,11 @@ try {
     }
     $stopWhereClause = "WHERE " . implode(" AND ", $stopConditions);
 
-    // ✅ ใช้ if-else เพื่อสร้าง Query ตาม GroupBy ที่เลือก
     if ($stopCauseGroupBy === 'line') {
         $stopSql = "SELECT line as label, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes 
                     FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} 
                     GROUP BY line ORDER BY total_minutes DESC";
-    } else { // Default to 'cause'
+    } else {
         $stopSql = "SELECT cause as label, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes 
                     FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} 
                     GROUP BY cause ORDER BY total_minutes DESC";
@@ -44,9 +43,12 @@ try {
     $stopStmt->execute($stopParams);
     $stopResults = $stopStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 2. ดึงข้อมูล Production Results จากระบบใหม่ ---
-    $partConditions = ["t.transaction_timestamp BETWEEN ? AND DATEADD(day, 1, ?)"];
+    // --- 2. ดึงข้อมูล Production Results (ส่วนนี้คือที่แก้ไข) ---
+    
+    // (ใช้ Logic 8-Hour Shift ที่เราแก้ไปครั้งที่แล้ว)
+    $partConditions = ["CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) BETWEEN ? AND ?"];
     $partParams = [$startDate, $endDate];
+    
     if ($line) {
         $partConditions[] = "l.production_line = ?";
         $partParams[] = $line;
@@ -57,22 +59,34 @@ try {
     }
     $partWhereClause = "WHERE " . implode(" AND ", $partConditions);
 
+    // ✅ [แก้ไข] เปลี่ยน JOIN เป็น LEFT JOIN และเพิ่ม ISNULL
     $partSql = "
         SELECT 
             i.part_no,
-            l.production_line,
-            r.model,
+            ISNULL(l.production_line, 'N/A') as production_line,
+            ISNULL(r.model, 'N/A') as model,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as FG,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as HOLD,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) as SCRAP
         FROM " . TRANSACTIONS_TABLE . " t
-        JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+        
+        -- ✅ [แก้ไข] Item ต้องมีเสมอ (ใช้ INNER JOIN ถูกต้อง)
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-        JOIN " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
-        {$partWhereClause} AND l.production_line IS NOT NULL
-        GROUP BY i.part_no, l.production_line, r.model -- ✅ จัดกลุ่มให้ละเอียดขึ้น
-        HAVING SUM(t.quantity) > 0 -- ✅ แสดงเฉพาะรายการที่มีการผลิต
-        ORDER BY i.part_no, l.production_line, r.model ASC
+        
+        -- ✅ [แก้ไข] Location อาจไม่มี (ใช้ LEFT JOIN)
+        LEFT JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+        
+        -- ✅ [แก้ไข] Route อาจยังไม่ถูกตั้งค่า (ใช้ LEFT JOIN)
+        LEFT JOIN " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
+        
+        {$partWhereClause} 
+        -- 🔴 [ลบออก] ลบ AND l.production_line IS NOT NULL (เพราะจะทำให้ LEFT JOIN กลายเป็น INNER JOIN)
+        
+        -- ✅ [แก้ไข] เพิ่ม ISNULL ใน GROUP BY เพื่อรองรับค่าว่าง
+        GROUP BY i.part_no, ISNULL(l.production_line, 'N/A'), ISNULL(r.model, 'N/A')
+        
+        HAVING SUM(t.quantity) > 0 
+        ORDER BY i.part_no, production_line, model ASC
     ";
 
     $partStmt = $pdo->prepare($partSql);
@@ -83,7 +97,7 @@ try {
     $stopCauseLabels = array_column($stopResults, 'label');
     $stopCauseData = array_column($stopResults, 'total_minutes');
 
-    // --- 4. ส่งข้อมูลกลับ (ส่ง partResults ไปทั้งก้อน) ---
+    // --- 4. ส่งข้อมูลกลับ ---
     echo json_encode([
         "success" => true,
         "data" => [

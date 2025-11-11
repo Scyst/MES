@@ -723,7 +723,9 @@ function renderAllTransactionsTable(data) {
             <td class="text-center">${row.lot_no || ''}</td>
             <td class="text-center fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
             <td class="text-center"><span class="badge bg-secondary">${row.transaction_type}</span></td>
-            <td class="text-center">${row.username || 'N/A'}</td>
+            
+            <td class="text-center">${row.created_by || 'N/A'}</td> 
+            
             <td class="text-center">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
