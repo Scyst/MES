@@ -77,7 +77,7 @@
                                     <input type="date" id="filterEndDate" class="form-control">
                                 </div>
                             </div>
-                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
                         </div>

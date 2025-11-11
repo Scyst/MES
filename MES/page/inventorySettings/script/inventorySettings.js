@@ -4,8 +4,6 @@
 // SECTION 1: API & GLOBAL VARIABLES
 // =================================================================
 const LOCATIONS_API = 'api/locationsManage.php';
-const TRANSFER_API = 'api/stockTransferManage.php';
-const OPENING_BALANCE_API = 'api/openingBalanceManage.php';
 const ITEM_MASTER_API = 'api/itemMasterManage.php';
 const BOM_API_ENDPOINT = 'api/bomManager.php';
 
@@ -14,7 +12,7 @@ let allItems = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 50;
 let selectedItemId = null;
-let selectedItem = null;
+// 🔴 'selectedItem' (สำหรับ Transfer) ถูกลบออกแล้ว
 
 // Variables from paraManage.js
 let allSchedules = [], allMissingParams = [], allBomFgs = [];
@@ -184,307 +182,26 @@ async function handleLocationFormSubmit(event) {
 }
 
 
-// --- STOCK TRANSFER TAB FUNCTIONS ---
-async function fetchTransferHistory(page = 1) {
-    currentPage = page;
-    showSpinner();
-    const params = {
-        page: currentPage,
-        part_no: document.getElementById('filterPartNo').value,
-        from_location: document.getElementById('filterFromLocation').value,
-        to_location: document.getElementById('filterToLocation').value,
-        startDate: document.getElementById('filterStartDate').value,
-        endDate: document.getElementById('filterEndDate').value,
-    };
-    try {
-        const result = await sendRequest(TRANSFER_API, 'get_transfer_history', 'GET', null, params);
-        if (result.success) {
-            const tbody = document.getElementById('transferTableBody');
-            tbody.innerHTML = '';
-            if (result.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No transfer history found.</td></tr>';
-            } else {
-                result.data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.dataset.transactionId = row.transaction_id;
-                    tr.innerHTML = `
-                        <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
-                        <td>${row.part_no}</td>
-                        <td>${row.part_description || ''}</td>
-                        <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
-                        <td class="text-center">${row.transfer_path}</td>
-                        <td>${row.created_by || 'N/A'}</td>
-                        <td class="editable-cell" contenteditable="true" data-field="notes">${row.notes || ''}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-            renderPagination('paginationControls', result.total, result.page, ROWS_PER_PAGE, fetchTransferHistory);
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function openTransferModal() {
-    document.getElementById('transferForm').reset();
-    document.getElementById('fromStock').textContent = '--';
-    document.getElementById('toStock').textContent = '--';
-    selectedItem = null;
-    openModal('transferModal');
-}
-
-async function populateTransferInitialData() {
-    const result = await sendRequest(TRANSFER_API, 'get_initial_data', 'GET');
-    if (!result.success) return;
-
-    const fromSelect = document.getElementById('from_location_id');
-    const toSelect = document.getElementById('to_location_id');
-    const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
-    fromSelect.innerHTML = '<option value="">-- Select Source --</option>' + optionsHtml;
-    toSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
-
-    allItems = result.items;
-}
-
-async function updateStockDisplay(locationSelectId, displaySpanId) {
-    const locationId = document.getElementById(locationSelectId).value;
-    const displaySpan = document.getElementById(displaySpanId);
-    if (!locationId || !selectedItem) {
-        displaySpan.textContent = '--';
-        return;
-    }
-    const result = await sendRequest(TRANSFER_API, 'get_stock_onhand', 'GET', null, { item_id: selectedItem.item_id, location_id: locationId });
-    if (result.success) {
-        displaySpan.textContent = parseFloat(result.quantity).toLocaleString();
-    }
-}
-
-const updateBothStockDisplays = () => {
-    updateStockDisplay('from_location_id', 'fromStock');
-    updateStockDisplay('to_location_id', 'toStock');
-};
-
-function setupTransferAutocomplete() {
-    const searchInput = document.getElementById('transfer_part_no');
-    const resultsWrapper = document.createElement('div');
-    resultsWrapper.className = 'autocomplete-results';
-    searchInput.parentNode.appendChild(resultsWrapper);
-
-    searchInput.addEventListener('input', () => {
-        const value = searchInput.value.toLowerCase();
-        resultsWrapper.innerHTML = '';
-        if (value.length < 2) {
-            selectedItem = null;
-            return;
-        }
-        const filteredItems = allItems.filter(item => 
-            item.sap_no.toLowerCase().includes(value) ||
-            item.part_no.toLowerCase().includes(value) ||
-            (item.part_description || '').toLowerCase().includes(value)
-        ).slice(0, 10);
-        filteredItems.forEach(item => {
-            const resultItem = document.createElement('div');
-            resultItem.className = 'autocomplete-item';
-            resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no} <br><small>${item.part_description || ''}</small>`;
-            resultItem.addEventListener('click', () => {
-                searchInput.value = `${item.sap_no} | ${item.part_no}`;
-                selectedItem = item;
-                resultsWrapper.innerHTML = '';
-                updateBothStockDisplays();
-            });
-            resultsWrapper.appendChild(resultItem);
-        });
-        resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
-    });
-    document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) resultsWrapper.style.display = 'none';
-    });
-}
-
-async function handleTransferFormSubmit(event) {
-    event.preventDefault();
-    if (!selectedItem) {
-        showToast('Please select a valid item from the list.', 'var(--bs-warning)');
-        return;
-    }
-    const data = Object.fromEntries(new FormData(event.target).entries());
-    data.item_id = selectedItem.item_id;
-    const result = await sendRequest(TRANSFER_API, 'execute_transfer', 'POST', data);
-    showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-    if (result.success) {
-        closeModal('transferModal');
-        await fetchTransferHistory(1);
-    }
-}
-
-async function handleCellEdit(event) {
-    const cell = event.target;
-    const tr = cell.closest('tr');
-    const transactionId = tr.dataset.transactionId;
-    const fieldName = cell.dataset.field;
-    const newValue = cell.textContent;
-    const result = await sendRequest(TRANSFER_API, 'update_transfer', 'POST', {
-        transaction_id: transactionId,
-        [fieldName]: newValue
-    });
-    showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-    if (!result.success) {
-        await fetchTransferHistory(currentPage); 
-    }
-}
+// 🔴 --- (กลุ่มฟังก์ชัน STOCK TRANSFER TAB ถูกลบออกทั้งหมด) ---
+// 🔴 fetchTransferHistory()
+// 🔴 openTransferModal()
+// 🔴 populateTransferInitialData()
+// 🔴 updateStockDisplay()
+// 🔴 updateBothStockDisplays()
+// 🔴 setupTransferAutocomplete()
+// 🔴 handleTransferFormSubmit()
+// 🔴 handleCellEdit()
+// 🔴 --- (จบกลุ่ม Stock Transfer) ---
 
 
-// --- OPENING BALANCE TAB FUNCTIONS ---
-async function populateOpeningBalanceLocations() {
-    const locationSelect = document.getElementById('locationSelect');
-    const result = await sendRequest(OPENING_BALANCE_API, 'get_locations', 'GET');
-    if (result.success) {
-        locationSelect.innerHTML = '<option value="">-- Please select a location --</option>';
-        result.data.forEach(loc => {
-            locationSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
-        });
-    }
-}
-
-async function loadItemsForLocation() {
-    const locationId = document.getElementById('locationSelect').value;
-    const tableBody = document.getElementById('stockTakeTableBody');
-    const searchInput = document.getElementById('addItemSearch');
-    const saveBtn = document.getElementById('saveStockBtn');
-    if (!locationId) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Please select a location to begin.</td></tr>';
-        searchInput.disabled = true;
-        saveBtn.disabled = true;
-        return;
-    }
-    searchInput.disabled = false;
-    saveBtn.disabled = false;
-    showSpinner();
-    try {
-        const result = await sendRequest(OPENING_BALANCE_API, 'get_items_for_location', 'GET', null, { location_id: locationId });
-        if (result.success) {
-            renderOpeningBalanceItemsTable(result.data);
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load items.</td></tr>';
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-function renderOpeningBalanceItemsTable(items) {
-    const tableBody = document.getElementById('stockTakeTableBody');
-    tableBody.innerHTML = '';
-    if (items.length === 0) {
-        tableBody.innerHTML = '<tr class="no-items-row"><td colspan="5" class="text-center">No items found. Use search to add items.</td></tr>';
-        return;
-    }
-    items.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.dataset.itemId = item.item_id;
-        const originalQty = parseFloat(item.onhand_qty);
-        tr.innerHTML = `
-            <td>${item.sap_no}</td>
-            <td>${item.part_no}</td>
-            <td>${item.part_description || ''}</td>
-            <td class="text-center">${originalQty.toLocaleString()}</td>
-            <td>
-                <input type="number" class="form-control form-control-sm stock-input text-center" 
-                       value="${originalQty}" data-original-value="${originalQty}" min="0" step="any"> 
-            </td>
-        `;
-        tableBody.appendChild(tr);
-    });
-}
-
-function setupStockAdjustmentAutocomplete() {
-    const searchInput = document.getElementById('addItemSearch');
-    const resultsWrapper = document.createElement('div');
-    resultsWrapper.className = 'autocomplete-results';
-    searchInput.parentNode.appendChild(resultsWrapper);
-    searchInput.addEventListener('input', () => {
-        clearTimeout(window.debounceTimer);
-        const value = searchInput.value;
-        const locationId = document.getElementById('locationSelect').value;
-        resultsWrapper.innerHTML = '';
-        if (value.length < 2 || !locationId) return;
-        window.debounceTimer = setTimeout(async () => {
-            const result = await sendRequest(OPENING_BALANCE_API, 'search_all_items', 'GET', null, { 
-                search: value,
-                location_id: locationId
-            });
-            if (result.success) {
-                result.data.forEach(item => {
-                    const resultItem = document.createElement('div');
-                    resultItem.className = 'autocomplete-item';
-                    resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small>${item.part_description || ''}</small>`;
-                    resultItem.addEventListener('click', () => {
-                        addItemToTable(item);
-                        searchInput.value = '';
-                        resultsWrapper.style.display = 'none';
-                    });
-                    resultsWrapper.appendChild(resultItem);
-                });
-                resultsWrapper.style.display = result.data.length > 0 ? 'block' : 'none';
-            }
-        }, 300);
-    });
-    document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) resultsWrapper.style.display = 'none';
-    });
-}
-
-function addItemToTable(item) {
-    const tableBody = document.getElementById('stockTakeTableBody');
-    const noItemsRow = tableBody.querySelector('.no-items-row');
-    if (noItemsRow) tableBody.innerHTML = '';
-    if (tableBody.querySelector(`tr[data-item-id="${item.item_id}"]`)) {
-        showToast('This item is already in the list.', 'var(--bs-warning)');
-        return;
-    }
-    const tr = document.createElement('tr');
-    tr.dataset.itemId = item.item_id;
-    const originalQty = parseFloat(item.onhand_qty);
-    tr.innerHTML = `
-        <td>${item.sap_no}</td>
-        <td>${item.part_no}</td>
-        <td>${item.part_description || ''}</td>
-        <td class="text-center">${originalQty.toLocaleString()}</td>
-        <td>
-            <input type="number" class="form-control form-control-sm stock-input text-center is-changed" 
-                   value="0" data-original-value="0" min="0" step="any">
-        </td>
-    `;
-    tableBody.prepend(tr);
-    tr.querySelector('.stock-input').focus();
-}
-
-async function saveStockTake() {
-    const locationId = document.getElementById('locationSelect').value;
-    if (!locationId) return;
-    const rows = document.querySelectorAll('#stockTakeTableBody tr');
-    const stock_data = [];
-    rows.forEach(row => {
-        const input = row.querySelector('.stock-input');
-        if (input) {
-            stock_data.push({
-                item_id: row.dataset.itemId,
-                quantity: parseFloat(input.value) || 0
-            });
-        }
-    });
-    if (stock_data.length === 0) return;
-    if (!confirm(`Are you sure you want to save stock levels for ${stock_data.length} items? This will overwrite existing values.`)) return;
-    showSpinner();
-    try {
-        const result = await sendRequest(OPENING_BALANCE_API, 'save_stock_take', 'POST', { location_id: locationId, stock_data: stock_data });
-        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        if (result.success) await loadItemsForLocation();
-    } finally {
-        hideSpinner();
-    }
-}
+// 🔴 --- (กลุ่มฟังก์ชัน OPENING BALANCE TAB ถูกลบออกทั้งหมด) ---
+// 🔴 populateOpeningBalanceLocations()
+// 🔴 loadItemsForLocation()
+// 🔴 renderOpeningBalanceItemsTable()
+// 🔴 setupStockAdjustmentAutocomplete()
+// 🔴 addItemToTable()
+// 🔴 saveStockTake()
+// 🔴 --- (จบกลุ่ม Opening Balance) ---
 
 
 // --- ITEM MASTER & ROUTES TAB FUNCTIONS ---
@@ -555,7 +272,8 @@ function renderItemsTable(items, totalItems, page) {
             <td>${item.part_no}</td>
             <td>${item.used_in_models || ''}</td>
             <td>${item.part_description || ''}</td>
-            <td class="text-center">${item.planned_output || 0}</td>
+            
+            <td class="text-center">${item.route_speed_range || 'N/A'}</td>
             
             <td class="text-center">${parseFloat(item.min_stock || 0).toFixed(3)}</td>
             <td class="text-center">${parseFloat(item.max_stock || 0).toFixed(3)}</td>
@@ -690,7 +408,6 @@ async function openItemModal(item = null) {
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
-        document.getElementById('planned_output').value = item.planned_output;
         document.getElementById('part_description').value = item.part_description;
         document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
         document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
@@ -714,14 +431,6 @@ async function openItemModal(item = null) {
         const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
         const routes = result.success ? result.data : [];
         renderRoutesInModal(routes);
-
-        if (routes.length > 0) {
-            const validOutputs = routes.map(r => r.planned_output).filter(p => p > 0);
-            if (validOutputs.length > 0) {
-                const minOutput = Math.min(...validOutputs);
-                document.getElementById('planned_output').value = minOutput;
-            }
-        }
 
     } else {
         modalTitle.textContent = 'Add New Item';
@@ -803,7 +512,6 @@ async function handleItemFormSubmit(event) {
         item_id: form.querySelector('#item_id').value,
         sap_no: form.querySelector('#sap_no').value,
         part_no: form.querySelector('#part_no').value,
-        planned_output: form.querySelector('#planned_output').value,
         part_description: form.querySelector('#part_description').value,
         min_stock: form.querySelector('#min_stock').value,
         max_stock: form.querySelector('#max_stock').value,
@@ -1556,8 +1264,8 @@ async function loadHealthCheckData() {
             result.data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.line || ''}</td>
-                    <td>${item.model || ''}</td>
+                    <td>${item.line || 'N/A'}</td>
+                    <td>${item.model || 'N/A'}</td>
                     <td>${item.part_no || ''}</td>
                     <td class="text-center"><button class="btn btn-sm btn-primary" onclick="jumpToItemMaster('${item.sap_no}')">Go to Item Master</button></td>
                 `;
@@ -1714,8 +1422,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         switch (targetTabId) {
             case '#locations-pane': loadLocations(); break;
-            case '#transfer-pane': populateTransferInitialData(); fetchTransferHistory(1); break;
-            case '#opening-balance-pane': populateOpeningBalanceLocations(); break;
+            
+            // 🔴 ลบ 2 case นี้ 🔴
+            // case '#transfer-pane': populateTransferInitialData(); fetchTransferHistory(1); break;
+            // case '#opening-balance-pane': populateOpeningBalanceLocations(); break;
+            
             case '#item-master-pane': fetchItems(1); break;
             case '#bom-manager-pane': initializeBomManager(); initializeCreateBomModal(); break;
             case '#lineSchedulesPane': if (canManage) loadSchedules(); break;
@@ -1741,8 +1452,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- General Event Listeners Setup ---
     document.getElementById('addLocationBtn')?.addEventListener('click', () => openLocationModal());
     document.getElementById('locationForm')?.addEventListener('submit', handleLocationFormSubmit);
-    document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
-    document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
+    
+    // 🔴 ลบ 2 บรรทัดนี้ 🔴
+    // document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
+    // document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
+    
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
     document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
     document.getElementById('itemAndRoutesForm')?.addEventListener('submit', handleItemFormSubmit);
@@ -1802,6 +1516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // END MES Additions
 
     // --- BOM Manager Tab ---
+    // ( ... โค้ดส่วน BOM ทั้งหมดเหมือนเดิม ... )
     // 1. ปุ่ม Create New BOM
     document.getElementById('createNewBomBtn')?.addEventListener('click', () => {
         openModal('createBomModal');
@@ -1876,8 +1591,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
-    document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
+    // 🔴 ลบ 2 บรรทัดนี้ 🔴
+    // document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
+    // document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
+
     document.getElementById('exportAllConsolidatedBtn')?.addEventListener('click', async () => {
         showSpinner();
         try {
@@ -1933,7 +1650,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupItemMasterAutocomplete();
     setupModelFilterAutocomplete();
     setupBomComponentAutocomplete();
-    setupStockAdjustmentAutocomplete();
+    
+    // 🔴 ลบ 1 บรรทัดนี้ 🔴
+    // setupStockAdjustmentAutocomplete();
+    
     initializeManageBomModalListeners(); 
 
     // --- Initial Page Load ---

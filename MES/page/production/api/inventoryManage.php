@@ -623,7 +623,7 @@ try {
             break;
 
         case 'execute_production':
-             $item_id = $input['item_id'] ?? 0;
+            $item_id = $input['item_id'] ?? 0;
             $location_id = $input['location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
             $count_type = $input['count_type'] ?? '';
@@ -643,42 +643,33 @@ try {
             if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type) || empty($log_date)) {
                  throw new Exception("Invalid data provided for production logging. (Item, Location, Qty, Type, and Date are required)");
             }
-
-            $pdo->beginTransaction();
-            $prod_transaction_type = 'PRODUCTION_' . strtoupper($count_type);
-            $prodSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $prodStmt = $pdo->prepare($prodSql);
-            $prodStmt->execute([$item_id, $quantity, $prod_transaction_type, $location_id, $currentUser['id'], $notes, $lot_no, $timestamp, $start_time, $end_time]);
-
-            $parent_transaction_id = $pdo->lastInsertId();
-
-            if (in_array(strtoupper($count_type), ['FG', 'NG', 'SCRAP'])) {
-                $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
-                $bomStmt = $pdo->prepare($bomSql);
-                $bomStmt->execute([$item_id]);
-                $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                if (!empty($components)) {
-                    $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?)";
-                    $consumeStmt = $pdo->prepare($consumeSql);
-
-                    foreach ($components as $comp) {
-                        $qty_to_consume = bcmul($quantity, $comp['quantity_required'], 6);
-                        $component_item_id = $comp['component_item_id'];
-
-                        $consume_note = "Auto-consumed for production ID: {$parent_transaction_id}";
-                        $consumeStmt->execute([$component_item_id, -$qty_to_consume, $location_id, $currentUser['id'], $consume_note, $lot_no, $timestamp, $start_time, $end_time]);
-
-                        updateOnhandBalance($pdo, $component_item_id, $location_id, -$qty_to_consume);
-                    }
-                }
+            try {
+                $sql = "EXEC dbo." . SP_EXECUTE_PRODUCTION . " 
+                            @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
+                            @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
+                            @user_id = ?, @username = ?";
+                
+                $stmt = $pdo->prepare($sql);
+                
+                $stmt->execute([
+                    $item_id,
+                    $location_id,
+                    $quantity,
+                    $count_type,
+                    $lot_no,
+                    $notes,
+                    $timestamp,
+                    $start_time,
+                    $end_time,
+                    $currentUser['id'],
+                    $currentUser['username']
+                ]);
+                echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
+            
+            } catch (Exception $e) {
+                http_response_code(500);
+                throw new Exception("Database Transaction Failed: " . $e->getMessage());
             }
-
-            updateOnhandBalance($pdo, $item_id, $location_id, $quantity);
-
-            $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'PRODUCTION LOG', $item_id, "Type: {$count_type}, Qty: {$quantity}, Location: {$location_id}, Lot: {$lot_no}");
-            echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
             break;
 
         case 'get_transaction_details':

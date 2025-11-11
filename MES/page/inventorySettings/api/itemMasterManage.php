@@ -93,19 +93,31 @@ try {
                 WITH NumberedRows AS (
                     SELECT 
                         DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
-                        i.is_active, i.planned_output, i.min_stock, i.max_stock, i.is_tracking
-                        {$costingCols_CTE} -- MES: ADDED COSTING COLUMNS
+                        i.is_active, i.min_stock, i.max_stock, i.is_tracking
+                        {$costingCols_CTE} 
                         ,
                         STUFF((
                             SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub
                             WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
                         ), 1, 2, '') AS used_in_models,
+                        (
+                            SELECT 
+                                CASE 
+                                    WHEN COUNT(r_spd.route_id) = 0 THEN 'N/A'
+                                    WHEN MIN(r_spd.planned_output) = MAX(r_spd.planned_output) THEN CAST(MIN(r_spd.planned_output) AS VARCHAR(20))
+                                    ELSE CAST(MIN(r_spd.planned_output) AS VARCHAR(20)) + ' - ' + CAST(MAX(r_spd.planned_output) AS VARCHAR(20))
+                                END
+                            FROM " . ROUTES_TABLE . " r_spd
+                            WHERE r_spd.item_id = i.item_id AND r_spd.planned_output > 0
+                        ) AS route_speed_range,
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
                     {$fromClause}
                     {$whereClause}
                 )
-                SELECT item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models, planned_output, min_stock, max_stock, is_tracking
-                {$costingCols_Final} -- MES: ADDED COSTING COLUMNS
+                SELECT 
+                    item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models,
+                    route_speed_range,min_stock, max_stock, is_tracking
+                {$costingCols_Final} 
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
             ";
@@ -413,7 +425,7 @@ try {
                 if ($item_id > 0) {
                     // MES: Modified UPDATE statement
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, part_description = ?, planned_output = ?, min_stock = ?, max_stock = ?, is_tracking = ?,
+                                sap_no = ?, part_no = ?, part_description = ?, /* planned_output = ?, */ min_stock = ?, max_stock = ?, is_tracking = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
                                 Cost_Total = ?, StandardPrice = ?, StandardGP = ?, Price_USD = ?
@@ -422,8 +434,7 @@ try {
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
-                        $item_details['part_description'], 
-                        (int)$item_details['planned_output'],
+                        $item_details['part_description'],
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
@@ -436,14 +447,13 @@ try {
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 } else {
-                    // MES: Modified INSERT statement
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, part_description, created_at, planned_output, min_stock, max_stock, is_tracking,
+                                sap_no, part_no, part_description, created_at, /* planned_output, */ min_stock, max_stock, is_tracking,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 Cost_Total, StandardPrice, StandardGP, Price_USD
                             ) VALUES (
-                                ?, ?, ?, GETDATE(), ?, ?, ?, ?,
+                                ?, ?, ?, GETDATE(), /* ?, */ ?, ?, ?,
                                 ?, ?, ?, ?, 
                                 ?, ?, ?, ?, ?, ?, 
                                 ?, ?, ?, ?
@@ -452,8 +462,7 @@ try {
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
-                        $item_details['part_description'], 
-                        (int)$item_details['planned_output'],
+                        $item_details['part_description'],  
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
@@ -526,21 +535,36 @@ try {
             $stmt->execute([(int)$id]);
             echo json_encode(['success' => true, 'message' => 'Schedule deleted.']);
             break;
-
+            
         case 'health_check_parameters':
-            if (defined('USE_NEW_OEE_CALCULATION') && USE_NEW_OEE_CALCULATION === true) {
-                $sql = "
-                    SELECT DISTINCT i.sap_no, i.part_no, i.part_description
+            $sql = "
+                WITH ProducedItems AS (
+                    -- 1. ค้นหา Item ทั้งหมดที่มีการผลิตจริง (มี Transaction)
+                    SELECT DISTINCT t.parameter_id AS item_id
                     FROM " . TRANSACTIONS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                    WHERE t.transaction_type LIKE 'PRODUCTION_%' AND (i.planned_output IS NULL OR i.planned_output <= 0)
-                    ORDER BY i.sap_no";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute();
-            } else {
-                $stmt = $pdo->prepare("EXEC dbo.sp_GetMissingParameters");
-                $stmt->execute();
-            }
+                    WHERE t.transaction_type LIKE 'PRODUCTION_%'
+                ),
+                ItemRoutes AS (
+                    -- 2. ค้นหา Routes ทั้งหมดที่มีการตั้งค่าความเร็ว
+                    SELECT DISTINCT r.item_id
+                    FROM " . ROUTES_TABLE . " r
+                    WHERE r.planned_output > 0
+                )
+                -- 3. ค้นหา Item ที่อยู่ใน (1) แต่ไม่อยู่ใน (2)
+                SELECT 
+                    i.sap_no, i.part_no, i.part_description,
+                    'N/A' as line, -- (ปรับปรุง: เพิ่ม line/model ถ้าจำเป็น)
+                    'N/A' as model 
+                FROM ProducedItems p
+                JOIN " . ITEMS_TABLE . " i ON p.item_id = i.item_id
+                WHERE 
+                    p.item_id NOT IN (SELECT item_id FROM ItemRoutes)
+                    AND i.is_active = 1
+                ORDER BY i.sap_no
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
             

@@ -24,16 +24,12 @@
                             <label for="part_description" class="form-label">Part Description</label>
                             <textarea class="form-control" id="part_description" name="part_description" rows="2"></textarea>
                         </div>
-                        <div class="col-md-4">
-                            <label for="planned_output" class="form-label">Default Planned Output</label>
-                            <input type="number" class="form-control" id="planned_output" name="planned_output" required min="0">
-                        </div>
-
-                        <div class="col-md-4">
+                        
+                        <div class="col-md-6"> 
                             <label for="min_stock" class="form-label">Min Stock</label>
                             <input type="number" step="any" class="form-control" id="min_stock" name="min_stock" placeholder="0.00">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6"> 
                             <label for="max_stock" class="form-label">Max Stock</label>
                             <input type="number" step="any" class="form-control" id="max_stock" name="max_stock" placeholder="0.00">
                         </div>

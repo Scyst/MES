@@ -50,12 +50,6 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations-pane" type="button" role="tab">Location Manager</button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-pane" type="button" role="tab">Stock Transfer</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="opening-balance-tab" data-bs-toggle="tab" data-bs-target="#opening-balance-pane" type="button" role="tab">Opening Balance</button>
-                        </li>
                     <?php endif; ?>
                     <?php if ($canManage):?>
                     <li class="nav-item" role="presentation">
@@ -71,12 +65,6 @@
                 <div class="tab-content" id="settingsTabContent">
                     <div class="tab-pane fade" id="locations-pane" role="tabpanel">
                         <?php include('components/locationsUI.php'); ?>
-                    </div>
-                    <div class="tab-pane fade" id="transfer-pane" role="tabpanel">
-                        <?php include('components/stockTransferUI.php'); ?>
-                    </div>
-                    <div class="tab-pane fade" id="opening-balance-pane" role="tabpanel">
-                        <?php include('components/openingBalanceUI.php'); ?>
                     </div>
                     <div class="tab-pane fade show active" id="item-master-pane" role="tabpanel">
                         <?php include('components/itemMasterUI.php'); ?>
