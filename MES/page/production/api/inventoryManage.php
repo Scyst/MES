@@ -61,30 +61,30 @@ try {
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
                  throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
             }
-            if (!empty($from_location_id) && empty($from_location_id)) {
-                 throw new Exception("Source location is required for transfer.");
-            }
+            // (การตรวจสอบเงื่อนไขอื่นๆ เหมือนเดิม)
             if (!empty($from_location_id) && $from_location_id == $to_location_id) {
                  throw new Exception("Source and Destination locations cannot be the same for transfer.");
             }
 
-
             $pdo->beginTransaction();
             
             try {
+                // (ส่วนของ Scan Job เหมือนเดิม)
                 if (!empty($scan_job_id)) {
                     $claimSql = "UPDATE " . SCAN_JOBS_TABLE . " SET is_used = 1 WHERE scan_id = ? AND is_used = 0";
                     $claimStmt = $pdo->prepare($claimSql);
                     $claimStmt->execute([$scan_job_id]);
-                    
                     if ($claimStmt->rowCount() === 0) {
                         throw new Exception("SCAN_ALREADY_USED");
                     }
                 }
 
-                if (!empty($from_location_id)) { // --- This is the Transfer part ---
+                // (SP สำหรับเรียก 'ประตูนิรภัย')
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
 
-                    // 1. Get Location Types
+                if (!empty($from_location_id)) { // --- This is the Transfer part ---
+                    
+                    // ... (โค้ดดึง Location Types และตั้งค่า $transaction_type เหมือนเดิม) ...
                     $locationTypes = [];
                     $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
                     $locStmt = $pdo->prepare($locSql);
@@ -92,39 +92,40 @@ try {
                     while ($row = $locStmt->fetch(PDO::FETCH_ASSOC)) {
                         $locationTypes[$row['location_id']] = $row['location_type'];
                     }
-                    $from_type = $locationTypes[$from_location_id] ?? null; // Keep for logging if needed
                     $to_type = $locationTypes[$to_location_id] ?? null;
-
-                    // ⭐️ 2. Check if DESTINATION is SHIPPING ⭐️
                     $isTransferToShipping = ($to_type === 'SHIPPING');
                     $transaction_type = $isTransferToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
-                    $log_message_detail = ""; // For logging
+                    $log_message_detail = ""; 
 
-                    // 3. Update Source Stock (Always do this for transfer)
-                    updateOnhandBalance($pdo, $item_id, $from_location_id, -$quantity);
+                    // ✅ [แก้ไข] 3. Update Source Stock (เรียก SP)
+                    $spStock->execute([$item_id, $from_location_id, -$quantity]);
 
-                    // 4. Update Destination Stock (ONLY if NOT transferring to Shipping)
+                    // ✅ [แก้ไข] 4. Update Destination Stock (เรียก SP)
                     if (!$isTransferToShipping) {
-                        updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
+                        $spStock->execute([$item_id, $to_location_id, $quantity]);
                     } else {
                         $log_message_detail = " (Pending Confirmation)";
                     }
 
-                    // 5. Insert Transaction Log (Use determined $transaction_type)
+                    // 5. Insert Transaction Log (เหมือนเดิม)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
 
-                    // 6. Set Log Type and Message
                     $logType = $isTransferToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
                     $message = $isTransferToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
                     $logDetail = "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}";
 
-                } else { // --- This is the Receipt part (remains unchanged) ---
-                    updateOnhandBalance($pdo, $item_id, $to_location_id, $quantity);
+                } else { // --- This is the Receipt part ---
+                    
+                    // ✅ [แก้ไข] เรียก SP แทน updateOnhandBalance()
+                    $spStock->execute([$item_id, $to_location_id, $quantity]);
+
+                    // (Insert Transaction Log เหมือนเดิม)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
+                    
                     $message = 'Stock receipt logged successfully.';
                     $logType = 'STOCK_IN';
                     $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";
@@ -695,7 +696,6 @@ try {
                 $transaction_id = $input['transaction_id'] ?? 0;
                 if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-                // 🛑 === [START] ตรวจสอบสิทธิ์ (Authorization) === 🛑
                 $stmt = $pdo->prepare("SELECT created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $owner_user_id = $stmt->fetchColumn();
@@ -708,13 +708,11 @@ try {
                 $is_owner = ($currentUser['id'] == $owner_user_id);
 
                 if (!$is_admin_or_supervisor && !$is_owner) {
-                    // ถ้าไม่ใช่ Admin/Supervisor และ ไม่ใช่เจ้าของ -> ปฏิเสธ
                     http_response_code(403);
                     echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only update your own records.']);
                     $pdo->rollBack();
                     exit;
                 }
-                // 🛑 === [END] ตรวจสอบสิทธิ์ === 🛑
 
                 // (ดึงข้อมูล $old_transaction หลังจากเช็คสิทธิ์แล้ว)
                 $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
@@ -852,7 +850,6 @@ try {
                 $transaction_id = $input['transaction_id'] ?? 0;
                 if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
-                // 🛑 === [START] ตรวจสอบสิทธิ์ (Authorization) === 🛑
                 $stmt = $pdo->prepare("SELECT created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $owner_user_id = $stmt->fetchColumn();
@@ -865,13 +862,11 @@ try {
                 $is_owner = ($currentUser['id'] == $owner_user_id);
 
                 if (!$is_admin_or_supervisor && !$is_owner) {
-                    // ถ้าไม่ใช่ Admin/Supervisor และ ไม่ใช่เจ้าของ -> ปฏิเสธ
                     http_response_code(403);
                     echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only delete your own records.']);
                     $pdo->rollBack();
                     exit;
                 }
-                // 🛑 === [END] ตรวจสอบสิทธิ์ === 🛑
                 
                 // (ดึงข้อมูล $transaction หลังจากเช็คสิทธิ์แล้ว)
                 $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
@@ -879,7 +874,6 @@ try {
                 $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$transaction) throw new Exception("Transaction not found (lock failed).");
 
-                // --- (ส่วนที่เหลือคือโค้ดเดิมของคุณ) ---
                 if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
                     updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']);
                 } elseif ($transaction['transaction_type'] === 'TRANSFER') {
@@ -997,7 +991,8 @@ try {
                 echo json_encode(['success' => false, 'message' => 'Unauthorized: You do not have permission to adjust stock.']);
                 exit;
             }
-            $pdo->beginTransaction();
+
+             $pdo->beginTransaction();
             try {
                 $item_id = $input['item_id'] ?? 0;
                 $location_id = $input['location_id'] ?? 0;
@@ -1008,30 +1003,27 @@ try {
                     throw new Exception("Item, Location, and a valid Physical Count are required.");
                 }
 
+                // (ดึงยอดปัจจุบัน)
                 $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
                 $onhandStmt->execute([$item_id, $location_id]);
                 $current_quantity = ($onhandStmt->fetchColumn() ?: '0');
 
+                // (คำนวณยอดต่าง)
                 $variance = $physical_count - $current_quantity;
 
                 if ($variance == 0) {
                     echo json_encode(['success' => true, 'message' => 'No adjustment needed as quantity is already correct.']);
-                    $pdo->commit();
+                    $pdo->commit(); // (ต้อง Commit แม้ไม่ทำอะไร)
                     exit;
                 }
 
-                $mergeSql = "MERGE " . ONHAND_TABLE . " AS target
-                            USING (SELECT ? AS item_id, ? AS location_id) AS source
-                            ON (target.parameter_id = source.item_id AND target.location_id = source.location_id)
-                            WHEN MATCHED THEN
-                                UPDATE SET quantity = ?
-                            WHEN NOT MATCHED THEN
-                                INSERT (parameter_id, location_id, quantity) VALUES (?, ?, ?);";
-                $mergeStmt = $pdo->prepare($mergeSql);
-                $mergeStmt->execute([$item_id, $location_id, $physical_count, $item_id, $location_id, $physical_count]);
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $spStock->execute([$item_id, $location_id, $variance]);
 
+                // (Insert Transaction Log เหมือนเดิม)
                 $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes) VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?)";
                 $transStmt = $pdo->prepare($transSql);
+                // (ข้อควรระวัง: เราบันทึก 'variance' (ยอดต่าง) ไม่ใช่ 'physical_count')
                 $transStmt->execute([$item_id, $variance, $location_id, $currentUser['id'], $notes]);
 
                 $pdo->commit();

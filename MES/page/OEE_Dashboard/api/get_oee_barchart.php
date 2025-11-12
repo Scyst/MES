@@ -13,6 +13,8 @@ try {
     $endDate = $_GET['endDate'] ?? date('Y-m-d');
     $line = !empty($_GET['line']) ? $_GET['line'] : null;
     $model = !empty($_GET['model']) ? $_GET['model'] : null;
+    $actualStartDate = $startDate . ' 08:00:00';
+    $actualEndDate = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day 8 hours'));
 
     // =============================================================
     // START: LOGIC การคำนวณ BAR CHART
@@ -21,14 +23,17 @@ try {
     // --- 1. ดึงข้อมูล Stop Causes (ส่วนนี้แก้ไขแล้วจากครั้งก่อน) ---
     $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; 
     
-    $stopConditions = ["CAST(DATEADD(HOUR, -8, stop_begin) AS DATE) BETWEEN ? AND ?"];
-    $stopParams = [$startDate, $endDate];
+    $stopConditions = [
+        "stop_begin >= ?", 
+        "stop_begin < ?" 
+    ];
+    $stopParams = [$actualStartDate, $actualEndDate];
     if ($line) {
         $stopConditions[] = "line = ?";
         $stopParams[] = $line;
     }
     $stopWhereClause = "WHERE " . implode(" AND ", $stopConditions);
-
+    
     if ($stopCauseGroupBy === 'line') {
         $stopSql = "SELECT line as label, SUM(DATEDIFF(MINUTE, stop_begin, stop_end)) as total_minutes 
                     FROM " . STOP_CAUSES_TABLE . " {$stopWhereClause} 
@@ -45,9 +50,11 @@ try {
 
     // --- 2. ดึงข้อมูล Production Results (ส่วนนี้คือที่แก้ไข) ---
     
-    // (ใช้ Logic 8-Hour Shift ที่เราแก้ไปครั้งที่แล้ว)
-    $partConditions = ["CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) BETWEEN ? AND ?"];
-    $partParams = [$startDate, $endDate];
+    $partConditions = [
+        "t.transaction_timestamp >= ?", 
+        "t.transaction_timestamp < ?"
+    ];
+    $partParams = [$actualStartDate, $actualEndDate];
     
     if ($line) {
         $partConditions[] = "l.production_line = ?";
@@ -59,7 +66,6 @@ try {
     }
     $partWhereClause = "WHERE " . implode(" AND ", $partConditions);
 
-    // ✅ [แก้ไข] เปลี่ยน JOIN เป็น LEFT JOIN และเพิ่ม ISNULL
     $partSql = "
         SELECT 
             i.part_no,
@@ -69,22 +75,11 @@ try {
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as HOLD,
             SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) as SCRAP
         FROM " . TRANSACTIONS_TABLE . " t
-        
-        -- ✅ [แก้ไข] Item ต้องมีเสมอ (ใช้ INNER JOIN ถูกต้อง)
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-        
-        -- ✅ [แก้ไข] Location อาจไม่มี (ใช้ LEFT JOIN)
         LEFT JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
-        
-        -- ✅ [แก้ไข] Route อาจยังไม่ถูกตั้งค่า (ใช้ LEFT JOIN)
         LEFT JOIN " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
-        
-        {$partWhereClause} 
-        -- 🔴 [ลบออก] ลบ AND l.production_line IS NOT NULL (เพราะจะทำให้ LEFT JOIN กลายเป็น INNER JOIN)
-        
-        -- ✅ [แก้ไข] เพิ่ม ISNULL ใน GROUP BY เพื่อรองรับค่าว่าง
+        {$partWhereClause}
         GROUP BY i.part_no, ISNULL(l.production_line, 'N/A'), ISNULL(r.model, 'N/A')
-        
         HAVING SUM(t.quantity) > 0 
         ORDER BY i.part_no, production_line, model ASC
     ";
