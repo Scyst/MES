@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
-require_once __DIR__ . '/../../components/api/inventory_helpers.php';
 
 // --- กำหนดสิทธิ์การเข้าถึง API นี้ ---
 if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
@@ -202,19 +201,20 @@ try {
             try {
                 $rejected_count = 0;
                 $processed_ids = [];
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
 
                 $getSql = "SELECT transaction_id, parameter_id, quantity, from_location_id, transaction_type
                            FROM " . TRANSACTIONS_TABLE . "
                            WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
                 $getStmt = $pdo->prepare($getSql);
 
-                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
-                              SET transaction_type = 'REJECTED_SHIPMENT', notes = ISNULL(notes + CHAR(13)+CHAR(10), '') + ?
-                              -- , rejected_by_user_id = ?, rejected_at = GETDATE(), reject_reason = ?
-                              WHERE transaction_id = ?";
-                 $updateStmt = $pdo->prepare($updateSql);
+                $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
+                            SET transaction_type = 'REJECTED_SHIPMENT', notes = ISNULL(notes + CHAR(13)+CHAR(10), '') + ?
+                            -- , rejected_by_user_id = ?, rejected_at = GETDATE(), reject_reason = ?
+                            WHERE transaction_id = ?";
+                $updateStmt = $pdo->prepare($updateSql);
 
-                 foreach ($transaction_ids as $tid) {
+                foreach ($transaction_ids as $tid) {
                     if (in_array($tid, $processed_ids)) continue;
 
                     $getStmt->execute([$tid]);
@@ -222,7 +222,7 @@ try {
 
                     if ($original_txn) {
                         $quantity_to_return = abs($original_txn['quantity']);
-                        updateOnhandBalance($pdo, $original_txn['parameter_id'], $original_txn['from_location_id'], $quantity_to_return);
+                        $spStock->execute([$original_txn['parameter_id'], $original_txn['from_location_id'], $quantity_to_return]);
 
                         $reject_note = "Rejected: " . $reason;
                         $updateParams = [ $reject_note, $tid ];

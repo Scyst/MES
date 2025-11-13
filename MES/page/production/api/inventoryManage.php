@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
-require_once __DIR__ . '/../../components/api/inventory_helpers.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -12,7 +11,6 @@ function generateShortUUID($length = 8) {
         $hex = bin2hex($bytes);
         return substr(strtoupper($hex), 0, $length);
     } catch (Exception $e) {
-        // Fallback for environments without random_bytes
         $chars = '0123456789ABCDEF';
         $randomString = '';
         for ($i = 0; $i < $length; $i++) {
@@ -47,7 +45,7 @@ try {
         case 'execute_receipt':
             $item_id = $input['item_id'] ?? 0;
             $to_location_id = $input['to_location_id'] ?? 0;
-            $from_location_id = $input['from_location_id'] ?? 0; // Will have value if it's a Transfer
+            $from_location_id = $input['from_location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
@@ -61,7 +59,6 @@ try {
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
                  throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
             }
-            // (การตรวจสอบเงื่อนไขอื่นๆ เหมือนเดิม)
             if (!empty($from_location_id) && $from_location_id == $to_location_id) {
                  throw new Exception("Source and Destination locations cannot be the same for transfer.");
             }
@@ -69,7 +66,6 @@ try {
             $pdo->beginTransaction();
             
             try {
-                // (ส่วนของ Scan Job เหมือนเดิม)
                 if (!empty($scan_job_id)) {
                     $claimSql = "UPDATE " . SCAN_JOBS_TABLE . " SET is_used = 1 WHERE scan_id = ? AND is_used = 0";
                     $claimStmt = $pdo->prepare($claimSql);
@@ -79,12 +75,9 @@ try {
                     }
                 }
 
-                // (SP สำหรับเรียก 'ประตูนิรภัย')
                 $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
 
-                if (!empty($from_location_id)) { // --- This is the Transfer part ---
-                    
-                    // ... (โค้ดดึง Location Types และตั้งค่า $transaction_type เหมือนเดิม) ...
+                if (!empty($from_location_id)) {
                     $locationTypes = [];
                     $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
                     $locStmt = $pdo->prepare($locSql);
@@ -96,18 +89,14 @@ try {
                     $isTransferToShipping = ($to_type === 'SHIPPING');
                     $transaction_type = $isTransferToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
                     $log_message_detail = ""; 
-
-                    // ✅ [แก้ไข] 3. Update Source Stock (เรียก SP)
                     $spStock->execute([$item_id, $from_location_id, -$quantity]);
 
-                    // ✅ [แก้ไข] 4. Update Destination Stock (เรียก SP)
                     if (!$isTransferToShipping) {
                         $spStock->execute([$item_id, $to_location_id, $quantity]);
                     } else {
                         $log_message_detail = " (Pending Confirmation)";
                     }
 
-                    // 5. Insert Transaction Log (เหมือนเดิม)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
@@ -116,12 +105,8 @@ try {
                     $message = $isTransferToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
                     $logDetail = "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}";
 
-                } else { // --- This is the Receipt part ---
-                    
-                    // ✅ [แก้ไข] เรียก SP แทน updateOnhandBalance()
+                } else {
                     $spStock->execute([$item_id, $to_location_id, $quantity]);
-
-                    // (Insert Transaction Log เหมือนเดิม)
                     $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
                     $transStmt = $pdo->prepare($transSql);
                     $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
@@ -692,7 +677,7 @@ try {
 
         case 'update_transaction':
              $pdo->beginTransaction();
-            try { // (เพิ่ม try/catch หุ้ม)
+            try {
                 $transaction_id = $input['transaction_id'] ?? 0;
                 if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
@@ -720,9 +705,9 @@ try {
                 $old_transaction = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$old_transaction) throw new Exception("Original transaction not found (lock failed).");
 
-                // --- (ส่วนที่เหลือคือโค้ดเดิมของคุณ) ---
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
                 if (strpos($old_transaction['transaction_type'], 'PRODUCTION_') === 0) {
-                    updateOnhandBalance($pdo, $old_transaction['parameter_id'], $old_transaction['to_location_id'], -$old_transaction['quantity']);
+                    $spStock->execute([$old_transaction['parameter_id'], $old_transaction['to_location_id'], -$old_transaction['quantity']]);
 
                     $note_to_find = "Auto-consumed for production ID: " . $transaction_id;
                     $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
@@ -732,7 +717,7 @@ try {
 
                     foreach ($consumed_items as $item) {
                         $location_to_revert = $item['from_location_id'] ?: $old_transaction['to_location_id'];
-                        updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, -$item['quantity']);
+                        $spStock->execute([$item['parameter_id'], $location_to_revert, -$item['quantity']]);
                     }
 
                     $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
@@ -761,7 +746,7 @@ try {
                     $updateStmt = $pdo->prepare($updateSql);
                     $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
 
-                    updateOnhandBalance($pdo, $old_transaction['parameter_id'], $new_location_id, $new_quantity);
+                    $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
 
                     if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
                         $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
@@ -777,7 +762,7 @@ try {
                             foreach ($components as $comp) {
                                 $qty_to_consume = bcmul($new_quantity, $comp['quantity_required'], 6);
                                 $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
-                                updateOnhandBalance($pdo, $comp['component_item_id'], $new_location_id, -$qty_to_consume);
+                                $spStock->execute([$comp['component_item_id'], $new_location_id, -$qty_to_consume]);
                             }
                         }
                     }
@@ -787,10 +772,10 @@ try {
                     $old_quantity = $old_transaction['quantity'];
 
                     if ($old_transaction['transaction_type'] === 'RECEIPT') {
-                        updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
+                        $spStock->execute([$old_item_id, $old_transaction['to_location_id'], -$old_quantity]);
                     } elseif ($old_transaction['transaction_type'] === 'TRANSFER') {
-                        updateOnhandBalance($pdo, $old_item_id, $old_transaction['from_location_id'], $old_quantity);
-                        updateOnhandBalance($pdo, $old_item_id, $old_transaction['to_location_id'], -$old_quantity);
+                        $spStock->execute([$old_item_id, $old_transaction['from_location_id'], $old_quantity]);
+                        $spStock->execute([$old_item_id, $old_transaction['to_location_id'], -$old_quantity]);
                     }
 
                     $new_quantity = ($input['quantity'] ?? '0');
@@ -827,10 +812,10 @@ try {
                     $stmt->execute([$new_quantity, $new_from_location_id ?: null, $new_to_location_id, $new_lot_no, $new_notes, $new_timestamp, $transaction_id]);
 
                     if ($old_transaction['transaction_type'] === 'RECEIPT') {
-                        updateOnhandBalance($pdo, $old_item_id, $new_to_location_id, $new_quantity);
+                        $spStock->execute([$old_item_id, $new_to_location_id, $new_quantity]);
                     } elseif ($old_transaction['transaction_type'] === 'TRANSFER') {
-                        updateOnhandBalance($pdo, $old_item_id, $new_from_location_id, -$new_quantity);
-                        updateOnhandBalance($pdo, $old_item_id, $new_to_location_id, $new_quantity);
+                        $spStock->execute([$old_item_id, $new_from_location_id, -$new_quantity]);
+                        $spStock->execute([$old_item_id, $new_to_location_id, $new_quantity]);
                     }
                 }
 
@@ -838,7 +823,7 @@ try {
                 logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id, "Updated transaction.");
                 echo json_encode(['success' => true, 'message' => 'Transaction updated successfully.']);
                 
-            } catch (Exception $e) { // (เพิ่ม catch)
+            } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e; 
             }
@@ -846,7 +831,7 @@ try {
 
         case 'delete_transaction':
              $pdo->beginTransaction();
-            try { // (เพิ่ม try)
+            try {
                 $transaction_id = $input['transaction_id'] ?? 0;
                 if (!$transaction_id) throw new Exception("Transaction ID is required.");
 
@@ -874,11 +859,12 @@ try {
                 $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$transaction) throw new Exception("Transaction not found (lock failed).");
 
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
                 if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
-                    updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']);
+                    $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']]);
                 } elseif ($transaction['transaction_type'] === 'TRANSFER') {
-                    updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['from_location_id'], $transaction['quantity']);
-                    updateOnhandBalance($pdo, $transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']);
+                    $spStock->execute([$transaction['parameter_id'], $transaction['from_location_id'], $transaction['quantity']]);
+                    $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']]);
                 }
 
                 if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0) {
@@ -891,7 +877,7 @@ try {
                     foreach ($consumed_items as $item) {
                         $qty_to_revert = -$item['quantity'];
                         $location_to_revert = $item['from_location_id'] ?: $transaction['to_location_id'];
-                        updateOnhandBalance($pdo, $item['parameter_id'], $location_to_revert, $qty_to_revert);
+                        $spStock->execute([$item['parameter_id'], $location_to_revert, $qty_to_revert]);
                     }
 
                     $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
