@@ -166,7 +166,6 @@ try {
                     $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
                 }
             }
-            // 🛑 [END] โค้ด Smart Search ใหม่
 
             if (!empty($_GET['count_type']) && $action === 'get_production_history') {
                 $conditions[] = "t.transaction_type = ?";

@@ -306,6 +306,135 @@ try {
             echo json_encode(['success' => true, 'message' => 'ยกเลิกรายการสำเร็จ! สต็อกถูกย้อนกลับแล้ว']);
             break;
 
+        case 'get_transfer_history':
+            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+
+            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+            $limit = 50;
+            $offset = ($page - 1) * $limit;
+
+            $params = [];
+            $conditions = [];
+
+            // 🔽🔽🔽 [แก้ไข] 🔽🔽🔽
+            // 1. Filter ตามสถานะ (ทำให้ 'PENDING' เป็นค่า Default)
+            $status_filter = $_GET['status_filter'] ?? 'PENDING'; // ⭐️ Default เป็น PENDING
+            if ($status_filter !== 'ALL') {
+                $conditions[] = "t.status = ?";
+                $params[] = $status_filter;
+            }
+            // 🔼🔼🔼 [จบส่วนแก้ไข] 🔼🔼🔼
+
+            // 2. Filter ตามวันที่ (วันที่สร้าง)
+            if (!empty($_GET['startDate'])) {
+                $conditions[] = "CAST(t.created_at AS DATE) >= ?";
+                $params[] = $_GET['startDate'];
+            }
+            if (!empty($_GET['endDate'])) {
+                $conditions[] = "CAST(t.created_at AS DATE) <= ?";
+                $params[] = $_GET['endDate'];
+            }
+
+            // 3. Filter ตาม Role (เหมือนเดิม)
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "(loc_from.production_line = ? OR loc_to.production_line = ?)";
+                $params[] = $currentUser['line'];
+                $params[] = $currentUser['line'];
+            }
+            
+            // (เพิ่ม Search UUID/Lot)
+            if (!empty($_GET['search_term'])) {
+                 $conditions[] = "(t.transfer_uuid LIKE ? OR i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                 $params[] = "%" . $_GET['search_term'] . "%";
+                 $params[] = "%" . $_GET['search_term'] . "%";
+                 $params[] = "%" . $_GET['search_term'] . "%";
+            }
+
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            // --- Query นับ Total ---
+            $totalSql = "SELECT COUNT(*) 
+                         FROM $transferTable t
+                         LEFT JOIN $itemTable i ON t.item_id = i.item_id
+                         LEFT JOIN $locTable loc_from ON t.from_location_id = loc_from.location_id
+                         LEFT JOIN $locTable loc_to ON t.to_location_id = loc_to.location_id
+                         {$whereClause}";
+            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt->execute($params);
+            $total = (int)$totalStmt->fetchColumn();
+
+            // --- Query ดึงข้อมูล ---
+            $dataSql = "
+                SELECT
+                    t.transfer_id, t.transfer_uuid, t.status, t.created_at, t.confirmed_at,
+                    i.sap_no, i.part_no, t.quantity,
+                    loc_from.location_name AS from_location,
+                    loc_to.location_name AS to_location,
+                    u_create.username AS created_by,
+                    u_confirm.username AS confirmed_by,
+                    t.notes
+                FROM $transferTable t
+                JOIN $itemTable i ON t.item_id = i.item_id
+                JOIN $locTable loc_from ON t.from_location_id = loc_from.location_id
+                JOIN $locTable loc_to ON t.to_location_id = loc_to.location_id
+                LEFT JOIN " . USERS_TABLE . " u_create ON t.created_by_user_id = u_create.id
+                LEFT JOIN " . USERS_TABLE . " u_confirm ON t.confirmed_by_user_id = u_confirm.id
+                {$whereClause}
+                ORDER BY t.created_at DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            ";
+            
+            $dataStmt = $pdo->prepare($dataSql);
+            $paramIndex = 1;
+            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+            $dataStmt->execute();
+            $history = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
+            break;
+
+        case 'cancel_pending_transfer':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            $transfer_uuid = $input['transfer_uuid'] ?? ''; 
+            if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
+
+            if (!hasRole(['supervisor', 'admin', 'creator'])) {
+                 throw new Exception("Unauthorized to cancel transfers.");
+            }
+
+            $pdo->beginTransaction();
+
+            $sqlGet = "SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?";
+            $stmtGet = $pdo->prepare($sqlGet);
+            $stmtGet->execute([$transfer_uuid]);
+            $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+            if (!$transfer_order) {
+                $pdo->rollBack();
+                throw new Exception("ไม่พบใบโอนย้ายนี้");
+            }
+            
+            if ($transfer_order['status'] !== 'PENDING') {
+                $pdo->rollBack();
+                throw new Exception("ไม่สามารถยกเลิกได้ สถานะปัจจุบันคือ: " . $transfer_order['status']);
+            }
+
+            $sqlUpdate = "UPDATE $transferTable 
+                          SET status = 'CANCELLED', 
+                              notes = ISNULL(notes, '') + ?
+                          WHERE transfer_id = ?";
+            $note_update = "\nCancelled by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
+            $stmtUpdate = $pdo->prepare($sqlUpdate);
+            $stmtUpdate->execute([$note_update, $transfer_order['transfer_id']]);
+
+            $pdo->commit();
+
+            echo json_encode(['success' => true, 'message' => 'ยกเลิกใบโอน (Pending) สำเร็จ']);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Invalid action: $action"]);
