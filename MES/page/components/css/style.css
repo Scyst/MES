@@ -1210,7 +1210,7 @@ body {
 
 .planning-dashboard .pagination-footer { display: none; } /* Hide old pagination */
 
-/* Add styles for FullCalendar container later if needed 
-#calendar-view-pane {
-     
-}*/
+.form-select.form-control-readonly:disabled,
+.form-select[disabled].form-control-readonly {
+    background-color: var(--bs-tertiary-bg);
+}

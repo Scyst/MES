@@ -1530,7 +1530,6 @@ try {
                 $start_date = $_GET['startDate'] ?? date('Y-m-d');
                 $target_date = $_GET['endDate'] ?? date('Y-m-d');
                 $line_filter = $currentUser['line'] ?? null;
-                // [แก้ไข] เปลี่ยนชื่อตัวแปร
                 $search_terms_array = $_GET['search_terms'] ?? []; 
 
                 $params = [];
@@ -1557,7 +1556,14 @@ try {
                         $term_conditions[] = "i.part_no LIKE ?";
                         $term_conditions[] = "l.location_name LIKE ?";
                         $term_conditions[] = "l.production_line LIKE ?";
-                        $term_conditions[] = "r.model LIKE ?";
+                        
+                        $term_conditions[] = "EXISTS (
+                            SELECT 1 
+                            FROM " . ROUTES_TABLE . " r 
+                            WHERE r.item_id = t.parameter_id 
+                              AND r.line = l.production_line
+                              AND r.model LIKE ?
+                        )";
                         
                         array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like);
                         
@@ -1567,7 +1573,6 @@ try {
 
                 $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-                // 4. [แก้ไข] Query หลัก (เปลี่ยน r.model เป็น i.part_no)
                 $sql = "
                     SELECT 
                         {$production_date_col} AS ProductionDate,
@@ -1585,8 +1590,6 @@ try {
                         " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
                     JOIN 
                         " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
-                    JOIN 
-                        " . ROUTES_TABLE . " r ON t.parameter_id = r.item_id AND l.production_line = r.line
                     {$whereClause}
                     GROUP BY 
                         {$production_date_col},

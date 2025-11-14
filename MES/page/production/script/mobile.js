@@ -9,6 +9,7 @@ let selectedItem = null;
 let currentReviewPage = 1;
 let currentReviewType = 'production';
 let html5QrCodeScanner = null;
+let g_CurrentTransferOrder = null;
 
 // =================================================================
 // SECTION: HELPER FUNCTIONS
@@ -30,7 +31,6 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
         }
         
         const response = await fetch(url, options);
-        // ตรวจสอบว่า Response เป็น JSON หรือไม่
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
              throw new Error("Server returned non-JSON response. Possible PHP Error.");
@@ -41,7 +41,6 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
         return result;
     } catch (error) {
         console.error(`Request for action '${action}' failed:`, error);
-        // แสดง Toast เฉพาะถ้าไม่ใช่การยกเลิกโดยผู้ใช้ (เผื่ออนาคตมี AbortController)
         showToast(error.message || 'An unexpected error occurred.', 'var(--bs-danger)');
         return { success: false, message: error.message || "Network or server error." };
     }
@@ -60,7 +59,6 @@ function applyTimeMask(event) {
 // =================================================================
 
 function initEntryPage() {
-    // เริ่มต้นโหลดข้อมูลพื้นฐาน (Items, Locations)
     populateInitialData(); 
     initializeDateTimeFields(); 
     
@@ -75,22 +73,20 @@ function initEntryPage() {
         setupAutocomplete('entry_item_search', 'entry_item_id');
         document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit);
         
-        // เริ่มระบบสแกน
-        initQrScanner(); 
-
-        // ผูกปุ่ม Manual Load
+        if (!g_TransferId_NEW) {
+            initQrScanner(); 
+        }
+        
         const manualBtn = document.getElementById('manual_scan_id_btn');
         if (manualBtn) {
             manualBtn.addEventListener('click', handleManualScanLoad);
         }
         
-        // บังคับช่องกรอก ID เป็นตัวพิมพ์ใหญ่
         const manualInput = document.getElementById('manual_scan_id_input');
         if(manualInput) {
             manualInput.addEventListener('input', (e) => {
                 e.target.value = e.target.value.toUpperCase();
             });
-            // เพิ่มให้กด Enter ได้ด้วย
             manualInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -103,23 +99,21 @@ function initEntryPage() {
 
 function handleManualScanLoad() {
     const inputElement = document.getElementById('manual_scan_id_input');
-    const scanId = inputElement.value.trim(); 
+    const transferId = inputElement.value.trim(); // ⭐️ (เปลี่ยนชื่อตัวแปร)
 
-    if (!scanId) {
-        showToast("กรุณากรอก Scan ID", 'var(--bs-warning)');
+    if (!transferId) {
+        showToast("กรุณากรอก Transfer ID", 'var(--bs-warning)');
         inputElement.focus();
         return;
     }
 
-    // สร้าง URL ใหม่เพื่อ Reload
     const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('scan', scanId); 
+    currentUrl.searchParams.set('transfer_id', transferId); // ⭐️ (ใช้ 'transfer_id')
     
-    // ล้างพารามิเตอร์เก่าที่อาจค้างอยู่
-    ['type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
+    currentUrl.searchParams.set('type', 'receipt');
+    ['scan', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
 
     showSpinner();
-    // Reload หน้าเว็บไปยัง URL ใหม่
     window.location.href = currentUrl.toString();
 }
 
@@ -151,9 +145,6 @@ async function populateInitialData() {
         allItems = result.items || [];
         allLocations = result.locations || [];
         
-        // Debug: เช็คว่ามีข้อมูลมารึเปล่า
-        console.log(`Loaded ${allItems.length} items and ${allLocations.length} locations.`);
-        
         // Setup Dropdown Locations
         const locationDisplay = document.getElementById('location_display');
         if (locationDisplay) {
@@ -165,7 +156,6 @@ async function populateInitialData() {
                 locationDisplay.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
             }
         }
-
         if (g_EntryType === 'receipt') {
             const fromLocationSelect = document.getElementById('entry_from_location_id');
             if (fromLocationSelect) {
@@ -175,18 +165,14 @@ async function populateInitialData() {
             }
         }
 
-        // 🛑 === [เพิ่ม] โค้ดอ่าน LocalStorage === 🛑
-        // (เราจะอ่านค่าที่จำไว้ก่อน)
         if (g_EntryType === 'production') {
             const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
             if (lastData && lastData.item_id) {
                 document.getElementById('out_item_search').value = lastData.item_display_text || '';
                 document.getElementById('out_item_id').value = lastData.item_id;
-                // (ตั้งค่า Location ถ้าเป็น Manual Mode)
                 if (g_LocationId <= 0 && lastData.location_id) {
                     document.getElementById('location_display').value = lastData.location_id;
                 }
-                // (ดึงข้อมูล Item ไว้รอเลย)
                 selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
             }
         } else { // (g_EntryType === 'receipt')
@@ -195,30 +181,24 @@ async function populateInitialData() {
                 document.getElementById('entry_item_search').value = lastData.item_display_text || '';
                 document.getElementById('entry_item_id').value = lastData.item_id;
                 document.getElementById('entry_from_location_id').value = lastData.from_location_id || '';
-                // (ตั้งค่า Location ถ้าเป็น Manual Mode)
                 if (g_LocationId <= 0 && lastData.to_location_id) {
                     document.getElementById('location_display').value = lastData.to_location_id;
                 }
                 selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
-                updateAvailableStockDisplay(); // (อัปเดตสต็อกคงเหลือ)
+                updateAvailableStockDisplay();
             }
         }
-        // 🛑 === [จบส่วนที่เพิ่ม] === 🛑
+        console.log("Autofill Data (New):", g_TransferId_NEW);
+        console.log("Autofill Data (Old):", g_AutoFillData_OLD);
 
-        // ⭐️ ตรวจสอบและเริ่ม Autofill (จาก QR Code) ⭐️
-        // (ส่วนนี้จะทำงาน "ทับ" ค่าจาก LocalStorage ถ้ามี g_AutoFillData)
-        console.log("Autofill Data from PHP:", g_AutoFillData);
-        if (g_AutoFillData && g_AutoFillData.sap_no) {
-            console.log("Starting Autofill process...");
-            await autoFillForm(g_AutoFillData);
+        if (g_TransferId_NEW) {
+            await autoFillFromTransferOrder(g_TransferId_NEW);
+        } else if (g_AutoFillData_OLD && g_AutoFillData_OLD.sap_no) {
+            await autoFillForm_OLD(g_AutoFillData_OLD);
         }
     }
 }
 
-// (ใน mobile.js)
-
-// ⭐️ 1. สร้างฟังก์ชัน "หยุดสแกน" (แยกออกมา) ⭐️
-// (เราใช้ .clear() ที่แก้ไปล่าสุด)
 function stopScanning() {
     if (html5QrCodeScanner) {
         html5QrCodeScanner.clear().then(_ => {
@@ -229,39 +209,38 @@ function stopScanning() {
     }
 }
 
-// ⭐️ 2. สร้างฟังก์ชัน "เริ่มสแกน" (แยกออกมา) ⭐️
 function startScanning() {
-    if (html5QrCodeScanner) return; // (ถ้าทำงานอยู่แล้ว ก็ไม่ต้องทำอะไร)
+    if (html5QrCodeScanner) return;
 
     const readerContainer = document.getElementById('qr-reader-container');
     const readerDivId = "qr-reader";
-    if (readerContainer) readerContainer.style.display = 'block'; // (ทำให้ช่องกล้องแสดงขึ้นมา)
+    if (readerContainer) readerContainer.style.display = 'block';
 
-    // (ฟังก์ชันเมื่อสแกนสำเร็จ - เหมือนเดิม)
     const onScanSuccess = (decodedText, decodedResult) => {
         console.log(`Scan result: ${decodedText}`);
-        stopScanning(); // (หยุดกล้องเมื่อสแกนติด)
+        stopScanning();
         
         try {
-            let scanId = null;
+            let transferId = null;
             try {
                 const scannedUrl = new URL(decodedText);
-                scanId = scannedUrl.searchParams.get('scan');
+                transferId = scannedUrl.searchParams.get('transfer_id'); 
             } catch (e) {
-                if (decodedText.length >= 6 && decodedText.length <= 20 && /^[A-Z0-9]+$/i.test(decodedText)) {
-                    scanId = decodedText;
+                if (decodedText.startsWith('T-') && decodedText.length > 8) {
+                    transferId = decodedText;
                 }
             }
 
-            if (scanId) {
+            if (transferId) {
                 const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('scan', scanId);
-                ['type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
+                currentUrl.searchParams.set('transfer_id', transferId);
+                currentUrl.searchParams.set('type', 'receipt');
+                ['scan', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
                 
                 showSpinner();
                 window.location.href = currentUrl.toString();
             } else {
-                throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Scan ID)");
+                throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Transfer ID)");
             }
         } catch (e) {
             console.error(e);
@@ -269,7 +248,6 @@ function startScanning() {
         }
     };
 
-    // (สร้างกล้อง)
     html5QrCodeScanner = new Html5QrcodeScanner(
         readerDivId, 
         { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -289,24 +267,24 @@ async function handleFileScan(file) {
         
         console.log(`File scan result: ${decodedText}`);
         
-        let scanId = null;
+        let transferId = null;
         try {
             const scannedUrl = new URL(decodedText);
-            scanId = scannedUrl.searchParams.get('scan');
+            transferId = scannedUrl.searchParams.get('transfer_id');
         } catch (e) {
-            if (decodedText.length >= 6 && decodedText.length <= 20 && /^[A-Z0-9]+$/i.test(decodedText)) {
-                scanId = decodedText;
+            if (decodedText.startsWith('T-') && decodedText.length > 8) {
+                transferId = decodedText;
             }
         }
 
-        if (scanId) {
+        if (transferId) {
             const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('scan', scanId);
-            ['type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
+            currentUrl.searchParams.set('transfer_id', transferId);
+            ['scan', 'type', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
             
             window.location.href = currentUrl.toString();
         } else {
-            throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Scan ID)");
+            throw new Error("QR Code ไม่ถูกต้อง (ไม่พบ Transfer ID)");
         }
 
     } catch (err) {
@@ -346,8 +324,7 @@ function initQrScanner() {
     }
 }
 
-async function autoFillForm(data) {
-    // 1. ตรวจสอบข้อมูลเบื้องต้น
+async function autoFillForm_OLD(data) {
     if (!data || !data.sap_no || !data.lot) {
         console.warn("Autofill data incomplete:", data);
         return;
@@ -419,6 +396,93 @@ async function autoFillForm(data) {
     }
 }
 
+async function autoFillFromTransferOrder(transferId) {
+    if (!transferId) return;
+
+    const scannerBox = document.querySelector('.scanner-box');
+    if (scannerBox) scannerBox.style.display = 'none';
+
+    showSpinner();
+    try {
+        const result = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: transferId });
+        
+        if (!result.success) throw new Error(result.message || "Failed to get transfer details.");
+
+        const order = result.data;
+        g_CurrentTransferOrder = order; 
+
+        if (order.status === 'COMPLETED' || order.status === 'REJECTED') {
+            const statusText = order.status === 'COMPLETED' ? 'รับเข้าแล้ว' : 'ถูกปฏิเสธแล้ว';
+            let detailsHtml = `สถานะ: <strong class="text-warning">${statusText}</strong><br>`;
+            
+            if (order.confirmed_at && order.confirmed_by_user_id) {
+                const confirmedDate = new Date(order.confirmed_at);
+                const dateStr = confirmedDate.toLocaleDateString('th-TH');
+                const timeStr = confirmedDate.toLocaleTimeString('th-TH');
+                detailsHtml += `เมื่อ: <strong>${dateStr} @ ${timeStr}</strong>`;
+            }
+
+            document.getElementById('status-details').innerHTML = detailsHtml;
+            document.getElementById('status-overlay').style.display = 'flex';
+
+        } else if (order.status === 'PENDING') {
+            
+            if (g_LocationId > 0 && g_LocationId != order.to_location_id) {
+                 throw new Error(`QR Code นี้สำหรับคลังอื่น (Destination: ${order.to_location_name})`);
+            }
+
+            selectedItem = {
+                item_id: order.item_id,
+                sap_no: order.sap_no,
+                part_no: order.part_no,
+                part_description: order.part_description
+            };
+            
+            const itemSearchEl = document.getElementById('entry_item_search');
+            const fromLocationEl = document.getElementById('entry_from_location_id');
+            const lotNoEl = document.getElementById('entry_lot_no');
+            const locationDisplayEl = document.getElementById('location_display');
+
+            itemSearchEl.value = `${order.sap_no} | ${order.part_no}`;
+            document.getElementById('entry_item_id').value = order.item_id;
+            lotNoEl.value = order.transfer_uuid;
+            document.getElementById('entry_quantity_in').value = order.quantity;
+            fromLocationEl.value = order.from_location_id;
+            
+            if (g_LocationId <= 0) {
+                 locationDisplayEl.value = order.to_location_id;
+            }
+            
+            document.getElementById('entry_notes').value = order.notes || '';
+
+            itemSearchEl.readOnly = true;
+            itemSearchEl.classList.add('form-control-readonly');
+            
+            lotNoEl.readOnly = true;
+            lotNoEl.classList.add('form-control-readonly');
+
+            fromLocationEl.disabled = true;
+            fromLocationEl.classList.add('form-control-readonly');
+            
+            if (!locationDisplayEl.disabled) {
+                locationDisplayEl.disabled = true;
+                locationDisplayEl.classList.add('form-control-readonly');
+            }
+
+            await updateAvailableStockDisplay(); 
+
+            document.getElementById('mobileReceiptForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showToast("ใบโอนพร้อมยืนยัน", 'var(--bs-success)');
+        }
+
+    } catch (error) {
+        console.error("Autofill Error (New):", error);
+        showToast(error.message, 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
+    }
+}
+
 async function updateAvailableStockDisplay() {
     const display = document.getElementById('entry_available_stock');
     const fromLocationId = document.getElementById('entry_from_location_id')?.value;
@@ -474,7 +538,7 @@ function setupAutocomplete(inputId, hiddenId) {
             item.sap_no.toLowerCase().includes(value) ||
             item.part_no.toLowerCase().includes(value) ||
             (item.part_description || '').toLowerCase().includes(value)
-        ).slice(0, 15); // แสดงสูงสุด 15 รายการ
+        ).slice(0, 15);
 
         if (filteredItems.length === 0) {
             resultsWrapper.style.display = 'none';
@@ -497,7 +561,6 @@ function setupAutocomplete(inputId, hiddenId) {
         resultsWrapper.style.display = 'block';
     });
 
-    // ซ่อนเมื่อคลิกที่อื่น
     document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !resultsWrapper.contains(e.target)) {
             resultsWrapper.style.display = 'none';
@@ -666,29 +729,26 @@ async function handleFormSubmit(event) {
     showSpinner();
 
     try {
-        // --- กรณี ADD (Production/Receipt) ---
-        if (action === 'addPart' || action === 'addEntry') {
-            // 1. ตรวจสอบ Location
+        if (action === 'addPart' || action === 'addEntry') { 
             let locationId = g_LocationId;
-            if (locationId <= 0) { // Manual Mode
+            if (locationId <= 0) {
                 locationId = document.getElementById('location_display').value;
             }
-            if (!locationId) throw new Error("กรุณาเลือก Location");
 
-            // 2. เตรียมข้อมูลพื้นฐาน
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
             if (action === 'addPart') {
-                // จัดการ Time Slot ของ Production
+                if (!locationId) throw new Error("กรุณาเลือก Location");
+                data.location_id = locationId;
+
                 const timeSlot = formData.get('time_slot');
                 if (!timeSlot || !timeSlot.includes('|')) throw new Error("ช่วงเวลาไม่ถูกต้อง");
                 const [startTime, endTime] = timeSlot.split('|');
 
-                // เตรียมข้อมูลสำหรับส่ง (Base Data)
                 const baseData = {
                     item_id: data.item_id,
-                    location_id: locationId, // (ใช้ locationId ที่ตรวจสอบแล้ว)
+                    location_id: locationId, 
                     lot_no: data.lot_no,
                     log_date: data.log_date,
                     start_time: startTime,
@@ -696,7 +756,6 @@ async function handleFormSubmit(event) {
                     notes: data.notes
                 };
 
-                // รวบรวมยอด FG/HOLD/SCRAP
                 const transactions = [];
                 if (data.quantity_fg > 0) transactions.push({ ...baseData, quantity: data.quantity_fg, count_type: 'FG' });
                 if (data.quantity_hold > 0) transactions.push({ ...baseData, quantity: data.quantity_hold, count_type: 'HOLD' });
@@ -704,65 +763,116 @@ async function handleFormSubmit(event) {
 
                 if (transactions.length === 0) throw new Error("กรุณากรอกจำนวนอย่างน้อย 1 ประเภท");
 
-                let allSuccess = true; // (ย้ายตัวแปรมาไว้ตรงนี้)
+                let allSuccess = true;
                 
-                // ส่งข้อมูลทีละรายการ
                 for (const trans of transactions) {
                     const res = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', trans);
                     if (!res.success) {
                         allSuccess = false;
-                        throw new Error(res.message); // (แก้ให้โยน Error เลย)
+                        throw new Error(res.message);
                     }
                 }
                 
-                // [แก้ไข] ย้ายการบันทึก localStorage มาไว้ตรงนี้
                 if (allSuccess) { 
                     showToast("บันทึกสำเร็จ", 'var(--bs-success)');
                     
-                    // 🛑 [เพิ่ม] บันทึก _OUT ลง LocalStorage
                     const searchInputValue = document.getElementById('out_item_search').value;
                     let lastEntryData = {
                         item_id: baseData.item_id,
                         item_display_text: searchInputValue,
-                        location_id: locationId // (ใช้ locationId ที่เรามีอยู่แล้ว)
+                        location_id: locationId
                     };
                     localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
                     
-                    form.reset(); // (ย้าย form.reset() มาไว้ข้างในนี้)
+                    form.reset();
                     initializeDateTimeFields();
                     selectedItem = null;
                     document.getElementById('out_item_id').value = '';
                     if (g_LocationId <= 0) document.getElementById('location_display').value = '';
                 }
+            } else { 
+                
+                const transferUuid = data.transfer_uuid;
 
-            } else { // (action === 'addEntry')
-                // จัดการ Receipt (IN)
-                data.to_location_id = locationId; // บังคับใช้ Location ที่เลือก
-                const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
-                if (!res.success) throw new Error(res.message);
+                if (transferUuid) {
+                    
+                    let toLocationId = g_LocationId;
+                    if (toLocationId <= 0) {
+                        toLocationId = document.getElementById('location_display').value;
+                    }
+                    if (!toLocationId) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
 
-                showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+                    if (g_CurrentTransferOrder && g_CurrentTransferOrder.to_location_id != toLocationId) {
+                         throw new Error(`Location ไม่ตรงกับใบโอน (ใบโอนนี้สำหรับ ${g_CurrentTransferOrder.to_location_name})`);
+                    }
 
-                // 🛑 [เพิ่ม] บันทึก _IN ลง LocalStorage
-                const searchInputValue = document.getElementById('entry_item_search').value;
-                let lastEntryData = {
-                    item_id: data.item_id,
-                    item_display_text: searchInputValue,
-                    from_location_id: data.from_location_id,
-                    to_location_id: locationId
-                };
-                localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
+                    const body = {
+                        transfer_uuid: transferUuid,
+                        confirmed_quantity: data.confirmed_quantity
+                    };
+                    
+                    const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
+                    if (!res.success) throw new Error(res.message);
 
-                form.reset(); // (ย้าย form.reset() มาไว้ข้างในนี้)
-                initializeDateTimeFields();
-                selectedItem = null;
-                document.getElementById('entry_item_id').value = '';
-                if (g_LocationId <= 0) document.getElementById('location_display').value = '';
-                updateAvailableStockDisplay();
+                    showToast("ยืนยันการรับของสำเร็จ!", 'var(--bs-success)');
+                    
+                    form.reset();
+                    initializeDateTimeFields();
+                    selectedItem = null;
+                    g_CurrentTransferOrder = null;
+                    
+                    const itemSearchEl = document.getElementById('entry_item_search');
+                    const fromLocationEl = document.getElementById('entry_from_location_id');
+                    const lotNoEl = document.getElementById('entry_lot_no');
+                    const locationDisplayEl = document.getElementById('location_display');
+
+                    itemSearchEl.readOnly = false;
+                    itemSearchEl.classList.remove('form-control-readonly'); 
+                    
+                    lotNoEl.readOnly = false;
+                    lotNoEl.classList.remove('form-control-readonly'); 
+
+                    fromLocationEl.disabled = false;
+                    fromLocationEl.classList.remove('form-control-readonly'); 
+                    
+                    if (g_LocationId <= 0) {
+                        locationDisplayEl.disabled = false;
+                        locationDisplayEl.classList.remove('form-control-readonly'); 
+                    }
+                    
+                    const scannerBox = document.querySelector('.scanner-box');
+                    if (scannerBox) scannerBox.style.display = 'block';
+                    initQrScanner();
+
+                } else {
+                    
+                    if (!locationId) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
+                    
+                    data.to_location_id = locationId;
+                    const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
+                    if (!res.success) throw new Error(res.message);
+
+                    showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+
+                    const searchInputValue = document.getElementById('entry_item_search').value;
+                    let lastEntryData = {
+                        item_id: data.item_id,
+                        item_display_text: searchInputValue,
+                        from_location_id: data.from_location_id,
+                        to_location_id: locationId
+                    };
+                    localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
+
+                    form.reset();
+                    initializeDateTimeFields();
+                    selectedItem = null;
+                    document.getElementById('entry_item_id').value = '';
+                    if (g_LocationId <= 0) document.getElementById('location_display').value = '';
+                    updateAvailableStockDisplay();
+                }
             }
 
         } 
-        // --- กรณี EDIT (จากหน้า Review) ---
         else if (action === 'editEntry' || action === 'editProduction') {
             const formData = new FormData(form);
             const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
@@ -774,16 +884,23 @@ async function handleFormSubmit(event) {
         }
         hideSpinner();
     } catch (error) {
-        if (error.message === 'SCAN_ALREADY_USED') {
-            hideSpinner();
-            const currentData = {
-               sap_no: selectedItem ? selectedItem.sap_no : '',
-               lot: document.getElementById('entry_lot_no').value
-            };
-            autoFillForm(currentData);
+        hideSpinner();
+        const errorMessage = error.message || 'An unexpected error occurred.';
+        
+        if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage === 'SCAN_ALREADY_USED') {
+            
+            const transferId = document.getElementById('entry_transfer_uuid')?.value;
+            const lotNo = document.getElementById('entry_lot_no')?.value;
+            
+            if (transferId || lotNo) {
+                if(g_TransferId_NEW) {
+                    autoFillFromTransferOrder(g_TransferId_NEW);
+                } else if (g_AutoFillData_OLD) {
+                    autoFillForm_OLD(g_AutoFillData_OLD);
+                }
+            }
         } else {
-            hideSpinner();
-            showToast(error.message, 'var(--bs-danger)');
+            showToast(errorMessage, 'var(--bs-danger)');
         }
     }
 }

@@ -4,6 +4,7 @@
 // SECTION: GLOBAL VARIABLES & CONSTANTS
 // =================================================================
 const INVENTORY_API_URL = 'api/inventoryManage.php';
+const TRANSFER_API_URL = 'api/transferManage.php';
 const ROWS_PER_PAGE = 50;
 
 // State variables
@@ -18,6 +19,7 @@ let transactionLogCurrentPage = 1;
 let allItems = [];
 let selectedInItem = null;
 let selectedOutItem = null;
+let g_CurrentPCTransferOrder = null;
 
 // =================================================================
 // SECTION: CORE & UTILITY FUNCTIONS
@@ -795,33 +797,31 @@ function openAddPartModal() {
 }
 
 function openAddEntryModal() {
-    // 1. รีเซ็ตฟอร์มและค่า state ต่างๆ
     const form = document.getElementById('addEntryForm');
     if(form) form.reset();
     
     selectedInItem = null;
     document.getElementById('entry_item_id').value = '';
     document.getElementById('entry_item_search').value = '';
+    
+    g_CurrentPCTransferOrder = null;
+    const transferInput = document.getElementById('entry_transfer_id_input');
+    const transferUuidHidden = document.getElementById('entry_transfer_uuid');
+    if (transferInput) transferInput.value = '';
+    if (transferUuidHidden) transferUuidHidden.value = '';
+    
+    unlockEntryForm();
 
-    const stockDisplay = document.getElementById('entry_available_stock');
-    if(stockDisplay) stockDisplay.textContent = '--';
-
-    // 2. ตั้งค่าวันที่และเวลาปัจจุบันเป็นค่าเริ่มต้นเสมอ
     const now = new Date();
     document.getElementById('entry_log_date').value = now.toISOString().split('T')[0];
     document.getElementById('entry_log_time').value = now.toTimeString().substring(0, 8);
-
-    // 3. 🛑 [แก้ไข] อ่านจาก Key "_IN"
     const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
     if (lastData) {
-        // 3.1 ตั้งค่า Item ที่เคยเลือกไว้
         document.getElementById('entry_item_search').value = lastData.item_display_text || '';
         document.getElementById('entry_item_id').value = lastData.item_id || '';
         if (lastData.item_id) {
             selectedInItem = allItems.find(item => item.item_id == lastData.item_id) || null;
         }
-        
-        // 3.2 ตั้งค่า Dropdown Location ทั้งสองช่อง
         if (lastData.from_location_id) {
             document.getElementById('entry_from_location_id').value = lastData.from_location_id;
         }
@@ -830,11 +830,80 @@ function openAddEntryModal() {
         }
     }
     
-    // 4. อัปเดตการแสดงผล Available Stock หลังจากตั้งค่าเริ่มต้นทั้งหมดแล้ว
     updateAvailableStockDisplay();
-    
-    // 5. แสดง Modal
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
+}
+
+function lockEntryForm() {
+    document.getElementById('entry_item_search').readOnly = true;
+    document.getElementById('entry_item_search').classList.add('form-control-readonly');
+    document.getElementById('entry_lot_no').readOnly = true;
+    document.getElementById('entry_lot_no').classList.add('form-control-readonly');
+    document.getElementById('entry_from_location_id').disabled = true;
+    document.getElementById('entry_from_location_id').classList.add('form-control-readonly');
+    document.getElementById('entry_to_location_id').disabled = true;
+    document.getElementById('entry_to_location_id').classList.add('form-control-readonly');
+}
+
+function unlockEntryForm() {
+    document.getElementById('entry_item_search').readOnly = false;
+    document.getElementById('entry_item_search').classList.remove('form-control-readonly');
+    document.getElementById('entry_lot_no').readOnly = false;
+    document.getElementById('entry_lot_no').classList.remove('form-control-readonly');
+    document.getElementById('entry_from_location_id').disabled = false;
+    document.getElementById('entry_from_location_id').classList.remove('form-control-readonly');
+    document.getElementById('entry_to_location_id').disabled = false;
+    document.getElementById('entry_to_location_id').classList.remove('form-control-readonly');
+}
+
+async function autoFillFromTransferOrder_PC() {
+    const transferId = document.getElementById('entry_transfer_id_input').value.trim();
+    if (!transferId) {
+        showToast("Please enter a Transfer ID.", 'var(--bs-warning)');
+        return;
+    }
+
+    showSpinner();
+    try {
+        const result = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: transferId });
+        if (!result.success) throw new Error(result.message);
+
+        const order = result.data;
+        g_CurrentPCTransferOrder = order;
+
+        if (order.status !== 'PENDING') {
+            throw new Error(`This transfer is already ${order.status}.`);
+        }
+        selectedInItem = { 
+            item_id: order.item_id, 
+            sap_no: order.sap_no, 
+            part_no: order.part_no, 
+            part_description: order.part_description 
+        };
+        
+        document.getElementById('entry_item_search').value = `${order.sap_no} | ${order.part_no}`;
+        document.getElementById('entry_item_id').value = order.item_id;
+        document.getElementById('entry_lot_no').value = order.transfer_uuid;
+        document.getElementById('entry_quantity_in').value = order.quantity;
+        document.getElementById('entry_from_location_id').value = order.from_location_id;
+        document.getElementById('entry_to_location_id').value = order.to_location_id;
+        document.getElementById('entry_notes').value = order.notes || '';
+        document.getElementById('entry_transfer_uuid').value = order.transfer_uuid;
+
+        lockEntryForm();
+        
+        await updateAvailableStockDisplay();
+        showToast("Transfer order loaded. Please confirm.", 'var(--bs-success)');
+
+    } catch (error) {
+        showToast(error.message, 'var(--bs-danger)');
+        g_CurrentPCTransferOrder = null;
+        document.getElementById('entry_transfer_uuid').value = '';
+        unlockEntryForm(); 
+        selectedInItem = null;
+    } finally {
+        hideSpinner();
+    }
 }
 
 async function openStockDetailModal(itemId, partNo) {
@@ -1127,8 +1196,7 @@ async function updateAvailableStockDisplay() {
     const fromLocationId = document.getElementById('entry_from_location_id').value;
 
     display.textContent = '--';
-    display.classList.remove('text-danger', 'text-white'); 
-
+    display.classList.remove('text-danger');
     if (!selectedInItem || !fromLocationId) {
         return;
     }
@@ -1144,8 +1212,6 @@ async function updateAvailableStockDisplay() {
         display.textContent = quantity.toLocaleString();
         if (quantity < 0) {
             display.classList.add('text-danger');
-        } else {
-            display.classList.add('text-white');
         }
     } else {
         display.textContent = 'Error';
@@ -1153,122 +1219,101 @@ async function updateAvailableStockDisplay() {
     }
 }
 
-// --- Central Form Submission Handler ---
 async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const action = form.dataset.action;
-
-    // === ⭐️ 1. Logic สำหรับ "ADD" (ยังคงใช้ Dropdown) ⭐️ ===
-    if (action === 'addPart') {
-        showSpinner();
-        
-        // (อ่านค่าจาก Dropdown "time_slot")
-        const timeSlot = form.querySelector('#out_time_slot').value; 
-        const [startTime, endTime] = timeSlot.split('|');
-        if (!startTime || !endTime) {
-            showToast('Invalid time slot selected.', 'var(--bs-danger)');
-            hideSpinner(); return;
-        }
-
-        // (สร้าง baseData โดยใช้ startTime/endTime ที่แปลงแล้ว)
-        const baseData = {
-            item_id: form.querySelector('#out_item_id').value,
-            location_id: form.querySelector('#out_location_id').value,
-            lot_no: form.querySelector('#out_lot_no').value,
-            log_date: form.querySelector('#out_log_date').value,
-            start_time: startTime, // ⭐️
-            end_time: endTime,     // ⭐️
-            notes: form.querySelector('#out_notes').value
-        };
-
-        if (!baseData.item_id || !baseData.location_id) {
-            showToast('Please select a valid item and location.', 'var(--bs-warning)');
-            hideSpinner();
-            return;
-        }
-
-        const transactions = [];
-        const qtyFg = parseFloat(form.querySelector('#out_qty_fg').value) || 0;
-        const qtyHold = parseFloat(form.querySelector('#out_qty_hold').value) || 0;
-        const qtyScrap = parseFloat(form.querySelector('#out_qty_scrap').value) || 0;
-
-        if (qtyFg > 0) transactions.push({ quantity: qtyFg, count_type: 'FG' });
-        if (qtyHold > 0) transactions.push({ quantity: qtyHold, count_type: 'HOLD' });
-        if (qtyScrap > 0) transactions.push({ quantity: qtyScrap, count_type: 'SCRAP' });
-
-        if (transactions.length === 0) {
-            showToast('Please enter a quantity for at least one type.', 'var(--bs-warning)');
-            hideSpinner();
-            return;
-        }
-        
-        let allSuccess = true;
-        let lastErrorMessage = '';
-        for (const trans of transactions) {
-            const dataToSend = { ...baseData, ...trans };
-            const result = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', dataToSend);
-            if (!result.success) { allSuccess = false; lastErrorMessage = result.message; break; }
-        }
-        hideSpinner();
-        if (allSuccess) {
-            showToast('All production records saved successfully.', 'var(--bs-success)');
-            const searchInputValue = document.getElementById('out_item_search').value;
-            let lastEntryData = {
-                item_id: baseData.item_id, // (ใช้ baseData.item_id ที่เรามีอยู่แล้ว)
-                item_display_text: searchInputValue,
-                location_id: baseData.location_id // (ใช้ baseData.location_id)
-            };
-            // (บันทึกลง Key "_OUT" ที่เราแก้ไว้ใน openAddPartModal)
-            localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
-            bootstrap.Modal.getInstance(form.closest('.modal')).hide();
-            await fetchProductionHistory();
-        } else {
-            showToast(`An error occurred: ${lastErrorMessage}. Some records may not have been saved.`, 'var(--bs-danger)');
-        }
-        return;
-    }
-
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    let endpoint = INVENTORY_API_URL;
-    let apiAction = '';
-    let successCallback = null;
-
-    if (action === 'editProduction') {
-        apiAction = 'update_transaction';
-        successCallback = () => fetchProductionHistory(productionHistoryCurrentPage);
-
-    } else if (action === 'addEntry') {
-        apiAction = 'execute_receipt';
-        successCallback = fetchReceiptHistory;
-    } else if (action === 'editEntry') {
-        apiAction = 'update_transaction';
-        successCallback = () => fetchReceiptHistory(receiptHistoryCurrentPage);
-    }
-
-    if (!apiAction) {
-        showToast('Form configuration error.', 'var(--bs-danger)');
-        return;
-    }
-
+    
     showSpinner();
     try {
-        const result = await sendRequest(endpoint, apiAction, 'POST', data);
-        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        if (result.success) {
+        if (action === 'addPart') {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
             
-            // 🛑 [แก้ไข] แยก Logic การบันทึก LocalStorage
-            if (action === 'addPart') {
+            const locationId = document.getElementById('out_location_id').value;
+            if (!locationId) throw new Error("กรุณาเลือก Location");
+            
+            const timeSlot = formData.get('time_slot');
+            if (!timeSlot || !timeSlot.includes('|')) throw new Error("ช่วงเวลาไม่ถูกต้อง");
+            const [startTime, endTime] = timeSlot.split('|');
+
+            const baseData = {
+                item_id: data.item_id,
+                location_id: locationId, 
+                lot_no: data.lot_no,
+                log_date: data.log_date,
+                start_time: startTime,
+                end_time: endTime,
+                notes: data.notes
+            };
+            
+            const transactions = [];
+            
+            const qtyFg = parseFloat(data.quantity_fg) || 0;
+            const qtyHold = parseFloat(data.quantity_hold) || 0;
+            const qtyScrap = parseFloat(data.quantity_scrap) || 0;
+
+            if (qtyFg > 0) transactions.push({ ...baseData, quantity: qtyFg, count_type: 'FG' });
+            if (qtyHold > 0) transactions.push({ ...baseData, quantity: qtyHold, count_type: 'HOLD' });
+            if (qtyScrap > 0) transactions.push({ ...baseData, quantity: qtyScrap, count_type: 'SCRAP' });
+
+            if (transactions.length === 0) throw new Error("กรุณากรอกจำนวนอย่างน้อย 1 ประเภท");
+
+            let allSuccess = true;
+            for (const trans of transactions) {
+                const res = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', trans);
+                if (!res.success) { allSuccess = false; throw new Error(res.message); }
+            }
+            if (allSuccess) { 
+                showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+                
                 const searchInputValue = document.getElementById('out_item_search').value;
                 let lastEntryData = {
-                    item_id: data.item_id,
+                    item_id: baseData.item_id,
                     item_display_text: searchInputValue,
-                    location_id: data.location_id // (ใช้ key 'location_id' ให้ตรงกับตอนอ่าน)
+                    location_id: baseData.location_id
                 };
                 localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
+                
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                await fetchProductionHistory(productionHistoryCurrentPage); 
+            }
 
-            } else if (action === 'addEntry') {
+        } else if (action === 'addEntry') {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const transferUuid = data.transfer_uuid;
+
+            if (transferUuid) {
+                if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
+
+                if (g_CurrentPCTransferOrder && g_CurrentPCTransferOrder.to_location_id != data.to_location_id) {
+                     throw new Error(`Location ไม่ตรงกับใบโอน (ใบโอนนี้สำหรับ ${g_CurrentPCTransferOrder.to_location_name})`);
+                }
+
+                const body = {
+                    transfer_uuid: transferUuid,
+                    confirmed_quantity: data.confirmed_quantity 
+                };
+                
+                const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
+                if (!res.success) throw new Error(res.message);
+
+                showToast("ยืนยันการรับของสำเร็จ!", 'var(--bs-success)');
+                
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                await fetchReceiptHistory(receiptHistoryCurrentPage); 
+                selectedInItem = null;
+
+            } else {
+                if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
+                
+                const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
+                if (!res.success) throw new Error(res.message);
+
+                showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+
                 const searchInputValue = document.getElementById('entry_item_search').value;
                 let lastEntryData = {
                     item_id: data.item_id,
@@ -1277,14 +1322,40 @@ async function handleFormSubmit(event) {
                     to_location_id: data.to_location_id
                 };
                 localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
+                
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                await fetchReceiptHistory(receiptHistoryCurrentPage);
+                selectedInItem = null;
             }
 
-            const modalId = form.closest('.modal').id;
-            bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
-            if (successCallback) await successCallback();
+        } else if (action === 'editEntry' || action === 'editProduction') {
+            const formData = new FormData(form);
+            const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
+            if (!res.success) throw new Error(res.message);
+
+            showToast("แก้ไขสำเร็จ", 'var(--bs-success)');
+            bootstrap.Modal.getInstance(form.closest('.modal'))?.hide();
+            if (action === 'editEntry') await fetchReceiptHistory(receiptHistoryCurrentPage);
+            if (action === 'editProduction') await fetchProductionHistory(productionHistoryCurrentPage);
         }
-    } finally {
         hideSpinner();
+    } catch (error) {
+        hideSpinner();
+        const errorMessage = error.message || 'An unexpected error occurred.';
+        
+        if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage.includes("ไม่พบใบโอนย้ายนี้")) {
+            showToast(errorMessage, 'var(--bs-danger)');
+            unlockEntryForm();
+            document.getElementById('entry_transfer_id_input').value = '';
+            document.getElementById('entry_transfer_uuid').value = '';
+            g_CurrentPCTransferOrder = null;
+            selectedInItem = null; 
+
+        } else if (errorMessage === 'SCAN_ALREADY_USED') {
+            showToast("Scan ID นี้ถูกใช้งานไปแล้ว", 'var(--bs-warning)');
+        } else {
+            showToast(errorMessage, 'var(--bs-danger)');
+        }
     }
 }
 
@@ -1618,6 +1689,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilterVisibility(activeTabId);
         handleFilterChange();
         updateControls(activeTabId);
+    }
+
+    const loadTransferBtn = document.getElementById('entry_load_transfer_btn');
+    if (loadTransferBtn) {
+        loadTransferBtn.addEventListener('click', autoFillFromTransferOrder_PC);
+    }
+
+    const transferIdInput = document.getElementById('entry_transfer_id_input');
+    if (transferIdInput) {
+        transferIdInput.addEventListener('keypress', (e) => {
+            e.target.value = e.target.value.toUpperCase(); // (บังคับพิมพ์ใหญ่)
+            if (e.key === 'Enter') {
+                e.preventDefault(); // (กันฟอร์ม Submit)
+                autoFillFromTransferOrder_PC();
+            }
+        });
     }
 
     // Time Mask for time inputs

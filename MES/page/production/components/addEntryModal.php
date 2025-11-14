@@ -8,6 +8,16 @@
                 </div>
                 <div class="modal-body">
                     
+                    <div class="mb-3 p-2 rounded" style="background-color: var(--bs-tertiary-bg);">
+                        <label for="entry_transfer_id_input" class="form-label small">Scan or Enter Transfer ID (Optional)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="entry_transfer_id_input" placeholder="T-A7B9C1..." style="text-transform: uppercase;">
+                            <button class="btn btn-secondary" type="button" id="entry_load_transfer_btn">
+                                <i class="fas fa-search"></i> Load
+                            </button>
+                        </div>
+                        <input type="hidden" id="entry_transfer_uuid" name="transfer_uuid" value="">
+                    </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="entry_log_date" class="form-label">วันที่</label>
@@ -39,11 +49,11 @@
                     <div class="row align-items-end">
                         <div class="col-md-8 mb-3">
                             <label for="entry_quantity_in" class="form-label">จำนวน</label>
-                            <input type="number" class="form-control" id="entry_quantity_in" name="quantity" min="1" step="1" required>
+                            <input type="number" class="form-control" id="entry_quantity_in" name="confirmed_quantity" min="1" step="1" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">สต็อกคงเหลือ</label>
-                            <div id="entry_available_stock" class="form-control-plaintext ps-2 fw-bold text-white">--</div>
+                            <span class="form-label">สต็อกคงเหลือ</span>
+                            <div id="entry_available_stock" class="form-control-plaintext ps-2 fw-bold">--</div>
                         </div>
                     </div>
 

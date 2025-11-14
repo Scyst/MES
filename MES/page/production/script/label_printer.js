@@ -7,6 +7,11 @@ let allItems = [];
 let allLocations = [];
 let selectedItem = null; 
 
+// 🔽🔽🔽 [เพิ่ม] 1. กำหนด API Endpoint ใหม่ 🔽🔽🔽
+const TRANSFER_API_URL = 'api/transferManage.php';
+// (INVENTORY_API_URL ยังคงใช้สำหรับ 'get_initial_data' และ 'get_next_serial')
+// =================================================================
+
 // =================================================================
 // SECTION: CORE & UTILITY
 // =================================================================
@@ -35,6 +40,7 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
 }
 
 function setupAutocomplete(inputId, hiddenId) {
+    // ... (โค้ดส่วนนี้เหมือนเดิม 100% ไม่ต้องแก้ไข) ...
     const searchInput = document.getElementById(inputId);
     if (!searchInput) return;
     const resultsWrapper = document.createElement('div');
@@ -70,43 +76,61 @@ function setupAutocomplete(inputId, hiddenId) {
     });
 }
 
+// 🔽🔽🔽 [แก้ไข] 2. แก้ไขฟังก์ชันนี้ให้รองรับ Dropdown 2 ตัว 🔽🔽🔽
 async function populateInitialData() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
      if (result.success) {
         allItems = result.items;
         allLocations = result.locations;
-        const locationSelect = document.getElementById('location_id');
+        
+        // (อ้างอิง ID ใหม่ที่เราจะสร้างใน .php)
+        const fromLocationSelect = document.getElementById('from_location_id'); 
+        const toLocationSelect = document.getElementById('to_location_id');
+
         const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
-        locationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        
+        if (fromLocationSelect) {
+            fromLocationSelect.innerHTML = '<option value="">-- เลือกคลังต้นทาง --</option>' + optionsHtml;
+        }
+        if (toLocationSelect) {
+            toLocationSelect.innerHTML = '<option value="">-- เลือกไลน์ปลายทาง --</option>' + optionsHtml;
+        }
     }
 }
-
-// =================================================================
-// SECTION: LABEL PRINTING LOGIC (ฉบับไฮบริด)
 // =================================================================
 
+// =================================================================
+// SECTION: LABEL PRINTING LOGIC (ฉบับอัปเกรด)
+// =================================================================
+
+// 🔽🔽🔽 [แก้ไข] 3. แก้ไขฟังก์ชันนี้ทั้งหมด 🔽🔽🔽
 async function handleGenerateLabel(event) {
     event.preventDefault();
     
-    // 1. --- รวบรวมข้อมูล (เหมือนเดิม) ---
-    const locationId = document.getElementById('location_id').value;
-    const locationInfo = allLocations.find(l => l.location_id == locationId);
+    // 1. --- รวบรวมข้อมูล (จากฟอร์มที่แก้ไขใหม่) ---
+    const fromLocationId = document.getElementById('from_location_id').value;
+    const toLocationId = document.getElementById('to_location_id').value;
+    const fromLocationInfo = allLocations.find(l => l.location_id == fromLocationId);
+    
     const qty = document.getElementById('quantity').value;
-    const type = document.getElementById('count_type').value;
     const notes = document.getElementById('notes').value;
     const date = new Date();
     const printTime = date.toLocaleString('en-GB');
     const manualLot = document.getElementById('lot_no').value;
 
-    // 2. --- ตรวจสอบข้อมูล (เหมือนเดิม) ---
-    if (!selectedItem || !locationId || !qty || !manualLot) {
-        showToast("Please fill in all required fields: Part, Location, Lot, and Quantity.", 'var(--bs-danger)');
+    // 2. --- ตรวจสอบข้อมูล (อัปเดตใหม่) ---
+    if (!selectedItem || !fromLocationId || !toLocationId || !qty || !manualLot) {
+        showToast("กรุณากรอกข้อมูล: Part, ต้นทาง, ปลายทาง, Lot, และจำนวน", 'var(--bs-danger)');
+        return;
+    }
+    if (fromLocationId === toLocationId) {
+        showToast("คลังต้นทางและปลายทางห้ามซ้ำกัน", 'var(--bs-warning)');
         return;
     }
 
     showSpinner();
     try {
-        // 3. --- (แก้ไข) ร้องขอ Serial Number (เหมือนเดิม) ---
+        // 3. --- ร้องขอ Serial Number (เหมือนเดิม) ---
         const serialResult = await sendRequest(INVENTORY_API_URL, 'get_next_serial', 'POST', {
             parent_lot: manualLot 
         });
@@ -116,30 +140,33 @@ async function handleGenerateLabel(event) {
         
         const newSerial = serialResult.new_serial_number;
         const serialSuffix = `-${String(newSerial).padStart(3, '0')}`;
-        const uniqueLotID = `${manualLot}${serialSuffix}`;
+        const uniqueLotID = `${manualLot}${serialSuffix}`; // (นี่คือ ID ที่เราจะใช้เป็น "UUID")
 
-        // 4. --- (ใหม่) ส่งข้อมูลไป "ฝาก" ที่ Backend ---
-        const jobData = {
-            sap_no: selectedItem.sap_no,
-            lot: uniqueLotID,
-            qty: qty,
-            from_loc_id: locationId
+        // 4. --- (ใหม่) สร้างใบโอนย้าย (Transfer Order) สถานะ PENDING ---
+        const transferData = {
+            transfer_uuid: uniqueLotID, // ⭐️ ส่ง ID ที่เราสร้างเองไปให้ API
+            item_id: selectedItem.item_id,
+            quantity: qty,
+            from_loc_id: fromLocationId,
+            to_loc_id: toLocationId,
+            notes: notes
         };
         
-        const jobResult = await sendRequest(INVENTORY_API_URL, 'create_scan_job', 'POST', jobData);
-        console.log('Job Create Result:', jobResult);
-        if (!jobResult.success || !jobResult.scan_id) {
-            throw new Error(jobResult.message || "Failed to create scan job.");
+        // ⭐️ เรียก API ใหม่ (transferManage.php) และ Action ใหม่
+        const transferResult = await sendRequest(TRANSFER_API_URL, 'create_transfer_order', 'POST', transferData);
+        
+        if (!transferResult.success) {
+            throw new Error(transferResult.message || "Failed to create transfer order record.");
         }
 
-        const scanId = jobResult.scan_id; // (เช่น "A7B9C1")
-        console.log('Generated Scan ID:', scanId);
+        const transfer_uuid = transferResult.transfer_uuid; // (API จะส่ง ID ที่เราส่งไปกลับมา)
 
-        // 5. --- (ใหม่) สร้าง URL สำหรับ QR Code (แบบสั้น) ---
+        // 5. --- (ใหม่) สร้าง URL สำหรับ QR Code ---
+        // ⭐️ ลิงก์ไปยัง mobile_entry.php โหมด receipt และส่ง transfer_id
         const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
-        const qrDataURL = `${baseUrl}?scan=${scanId}`; // ⭐️ URL สั้นและโปร่งมาก ⭐️
+        const qrDataURL = `${baseUrl}?type=receipt&transfer_id=${transfer_uuid}`;
 
-        // 6. --- สร้าง Data (Human-Readable) (เหมือนเดิม) ---
+        // 6. --- สร้าง Data (Human-Readable) ---
         const labelData = {
             sap_no: selectedItem.sap_no,
             part_no: selectedItem.part_no,
@@ -147,14 +174,14 @@ async function handleGenerateLabel(event) {
             quantity: qty,
             manual_lot: manualLot,
             serial_no: serialSuffix,
-            location_name: locationInfo.location_name,
-            count_type: type,
+            location_name: fromLocationInfo.location_name, // ⭐️ แสดงคลังต้นทาง
+            // count_type: type, // (ลบออก)
             print_time: printTime,
             notes: notes,
-            scan_id_display: scanId // ⭐️ (ใหม่) เพิ่มรหัสสั้นๆ ไปพิมพ์บน Label ด้วย
+            scan_id_display: transfer_uuid // ⭐️ แสดง ID ใบโอน (UUID)
         };
 
-        // 7. --- ส่งไปพิมพ์ ---
+        // 7. --- ส่งไปพิมพ์ (เหมือนเดิม) ---
         openPrintWindow(labelData, qrDataURL);
 
     } catch (error) {
@@ -165,10 +192,11 @@ async function handleGenerateLabel(event) {
 }
 
 /**
- * (หน้าต่างพิมพ์: อัปเดตสำหรับ 4x2 แนวนอน)
- * (ฉบับแก้ไข: Bug 'appendChild of null' และ 'SyntaxError')
+ * (หน้าต่างพิมพ์: ไม่ต้องแก้ไข)
+ * (โค้ดส่วนนี้เหมือนเดิม 100% ครับ)
  */
 function openPrintWindow(data, qrDataURL) {
+    // ... (โค้ดส่วนนี้เหมือนเดิม 100% ไม่ต้องแก้ไข) ...
     const newWin = window.open("", "Print Label", "width=500,height=300");
     if (!newWin) {
         alert("Please allow popups for this site to generate the print page.");
@@ -177,7 +205,6 @@ function openPrintWindow(data, qrDataURL) {
     
     newWin.document.write('<html><head><title>Print Label</title>');
     
-    // (CSS ... เหมือนเดิม)
     newWin.document.write(`
         <style>
             @media print {
@@ -215,13 +242,12 @@ function openPrintWindow(data, qrDataURL) {
     newWin.document.write('<script src="../../utils/libs/qrcode.min.js"><\/script>');
     newWin.document.write('</head><body>');
     
-    // (HTML Layout ... เหมือนเดิม)
     newWin.document.write(`
         <div class="label-box">
             <div class="label-left">
                 <div><strong>Part:</strong> ${data.part_no} (${data.sap_no})</div>
                 <div class="desc">${data.description}</div>
-                <div><strong>Loc:</strong> ${data.location_name} (${data.count_type})</div>
+                <div><strong>Loc:</strong> ${data.location_name}</div>
                 <div><strong>Note:</strong> ${data.notes || '-'}</div>
                 <div class="lot-group">
                     <span class="lot-parent">${data.manual_lot}</span>
@@ -236,18 +262,10 @@ function openPrintWindow(data, qrDataURL) {
         </div>
     `);
 
-    // === ⭐️ โค้ดที่แก้ไข (วิธีที่ปลอดภัย) ⭐️ ===
-    
-    // 1. เราจะ "เขียน" <script> ลงไปใน HTML โดยตรง
-    // 2. (สำคัญ) เราจะใช้ JSON.stringify(qrDataURL) เพื่อแปลง URL (เช่น http://...) 
-    //    ให้เป็น String ของ JavaScript ที่ถูกต้อง (เช่น "http://...")
-    //    นี่คือสิ่งที่แก้ Bug "missing ) after argument list" ครับ
-    
     newWin.document.write(`
         <script>
             window.onload = function() {
                 try {
-                    // (JSON.stringify จะเพิ่ม "" ให้อัตโนมัติ)
                     const qrData = ${JSON.stringify(qrDataURL)}; 
                     
                     new QRCode(document.getElementById('qr-placeholder'), {
@@ -269,17 +287,15 @@ function openPrintWindow(data, qrDataURL) {
         </script>
     `);
     
-    // 3. (เราไม่ใช้ appendChild แล้ว)
-    
     newWin.document.write('</body></html>');
     newWin.document.close();
-    // === ⭐️ จบส่วนที่แก้ไข ⭐️ ===
 }
 
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // ... (โค้ดส่วนนี้เหมือนเดิม 100% ไม่ต้องแก้ไข) ...
     if (document.getElementById('printer-container')) {
         populateInitialData();
         setupAutocomplete('item_search', 'item_id');

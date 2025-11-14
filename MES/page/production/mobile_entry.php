@@ -3,12 +3,14 @@
     
     $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
     $currentUserForJS = $_SESSION['user'] ?? null;
-    
-    // ⭐️ --- LOGIC ใหม่ เริ่มต้นตรงนี้ --- ⭐️
-    $g_autofill = null;
-    $entry_type = $_GET['type'] ?? 'production'; // (ค่า Default เดิม)
-    
-    if (isset($_GET['scan']) && !empty($_GET['scan'])) {
+    $g_autofill_data = null;
+    $g_transfer_id = null;
+    $entry_type = $_GET['type'] ?? 'production'; 
+
+    if (isset($_GET['transfer_id']) && !empty($_GET['transfer_id'])) {
+        $g_transfer_id = $_GET['transfer_id'];
+        $entry_type = 'receipt';
+    } else if (isset($_GET['scan']) && !empty($_GET['scan'])) {
         $scan_id = $_GET['scan'];
         $entry_type = 'receipt';
         
@@ -16,32 +18,25 @@
         require_once __DIR__ . '/../../config/config.php';
 
         try {
-            // ดึงข้อมูล (เหมือนเดิม)
             $sql = "SELECT job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$scan_id]);
             $job_data_json = $stmt->fetchColumn();
 
             if ($job_data_json) {
-                $g_autofill = json_decode($job_data_json, true);
-                
-            } else {
-                // (ถ้าไม่เจอ ก็แค่ไม่เติม, ปล่อย g_autofill เป็น null)
+                $g_autofill_data = json_decode($job_data_json, true);
             }
         } catch (Exception $e) {
             error_log("Failed to get scan job data: " . $e->getMessage());
         }
-
     } else if ($entry_type === 'receipt') {
-        $g_autofill = [
+        $g_autofill_data = [
             'sap_no' => $_GET['sap_no'] ?? null,
             'lot' => $_GET['lot'] ?? null,
             'qty' => $_GET['qty'] ?? null,
             'from_loc_id' => $_GET['from_loc_id'] ?? null
         ];
     }
-    // ⭐️ --- LOGIC ใหม่ สิ้นสุดตรงนี้ --- ⭐️
-
     $location_id = $_GET['location_id'] ?? 0;
     if (!$canAdd) { 
         header("HTTP/1.0 403 Forbidden");
@@ -69,8 +64,8 @@
         <div id="status-overlay">
             <div class="status-box">
                 <i class="fas fa-exclamation-triangle"></i>
-                <h4>สถานะ: รับเข้าแล้ว</h4>
-                <p id="status-details">Lot นี้ถูกรับเข้าแล้วโดย...</p>
+                <h4>สถานะ: ประมวลผลแล้ว</h4>
+                <p id="status-details">ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว...</p>
                 <button id="close-overlay-btn" class="btn btn-outline-secondary mt-3">ปิด</button>
             </div>
         </div>
@@ -80,6 +75,7 @@
         </h3>
 
         <?php if ($entry_type == 'production'): ?>
+            
             <form id="mobileProductionForm" data-action="addPart">
                 <input type="hidden" id="out_location_id" name="location_id" value="<?php echo $location_id; ?>">
                 <input type="hidden" id="out_item_id" name="item_id">
@@ -93,18 +89,12 @@
                         <label for="out_time_slot" class="form-label">ช่วงเวลาการผลิต</label>
                         <select id="out_time_slot" name="time_slot" class="form-select">
                             <?php
-                                // วน Loop สร้าง 24 ชั่วโมง
                                 for ($h = 0; $h < 24; $h++) {
                                     $start_time = sprintf('%02d:00:00', $h);
                                     $end_time = sprintf('%02d:59:59', $h);
                                     $display_text = sprintf('%02d:00 - %02d:59', $h, $h);
-                                    
-                                    // (สำคัญ) เราจะเก็บค่าทั้งสองไว้ใน value โดยคั่นด้วย |
                                     $value = $start_time . '|' . $end_time;
-                                    
-                                    // (สำคัญ) เลือกชั่วโมงปัจจุบันเป็น Default
                                     $selected = ($h == $current_hour) ? 'selected' : '';
-                                    
                                     echo "<option value=\"$value\" $selected>$display_text</option>";
                                 }
                             ?>
@@ -142,6 +132,7 @@
             </form>
 
         <?php else: // (entry_type == 'receipt') ?>
+            
             <div class="scanner-box">
                 <ul class="nav nav-tabs nav-fill" id="scanTab" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -172,7 +163,7 @@
             
                     <div class="tab-pane fade" id="scan-manual-pane" role="tabpanel">
                         <div class="input-group">
-                            <input type="text" id="manual_scan_id_input" class="form-control" placeholder="กรอก ID (ที่อยู่บนฉลาก) เช่น C6DD3050" style="text-transform: uppercase;">
+                            <input type="text" id="manual_scan_id_input" class="form-control" placeholder="กรอก ID (ที่อยู่บนฉลาก) เช่น T-A7B9C1" style="text-transform: uppercase;">
                             <button class="btn btn-secondary" type="button" id="manual_scan_id_btn" title="โหลดข้อมูล">
                                 <i class="fas fa-search"></i>
                             </button>
@@ -180,11 +171,10 @@
                     </div>
                 </div>
             </div>
-
             <form id="mobileReceiptForm" data-action="addEntry">
+                <input type="hidden" id="entry_transfer_uuid" name="transfer_uuid" value="<?php echo htmlspecialchars($g_transfer_id ?? ''); ?>">
                 <input type="hidden" id="entry_to_location_id" name="to_location_id" value="<?php echo $location_id; ?>">
                 <input type="hidden" id="entry_item_id" name="item_id">
-                <input type="hidden" name="scan_job_id" value="<?php echo htmlspecialchars($_GET['scan'] ?? ''); ?>">
                 
                 <div class="row">
                     <div class="col-md-6 col-12">
@@ -203,6 +193,7 @@
 
                 <label for="entry_from_location_id" class="form-label">จาก (From)</label>
                 <select class="form-select" id="entry_from_location_id" name="from_location_id"></select>
+                
                 <div class_mb-3>
                     <label class="form-label">ไปยัง (To):</label>
                     <select id="location_display" class="form-select" <?php echo (!$is_manual_mode) ? 'disabled' : ''; ?>>
@@ -216,10 +207,10 @@
                 <div class="row align-items-end">
                     <div class="col-8">
                         <label for="entry_quantity_in" class="form-label">จำนวน</label>
-                        <input type="number" class="form-control" id="entry_quantity_in" name="quantity" min="1" step="1" required>
+                        <input type="number" class="form-control" id="entry_quantity_in" name="confirmed_quantity" min="1" step="1" required>
                     </div>
                     <div class="col-4">
-                        <label class="form-label">สต็อกคงเหลือ</label>
+                        <sapn class="form-label">สต็อกคงเหลือ</span>
                         <div id="entry_available_stock" class="form-control-plaintext ps-2 fw-bold mb-3">--</div>
                     </div>
                 </div>
@@ -237,10 +228,12 @@
 
     <script>
         const INVENTORY_API_URL = 'api/inventoryManage.php';
+        const TRANSFER_API_URL = 'api/transferManage.php';
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
         const g_EntryType = <?php echo json_encode($entry_type); ?>;
         const g_LocationId = <?php echo json_encode($location_id); ?>; 
-        const g_AutoFillData = <?php echo json_encode($g_autofill); ?>;
+        const g_AutoFillData_OLD = <?php echo json_encode($g_autofill_data); ?>;
+        const g_TransferId_NEW = <?php echo json_encode($g_transfer_id); ?>;
     </script>
     <script src="script/mobile.js?v=<?php echo time(); ?>"></script>
 </body>

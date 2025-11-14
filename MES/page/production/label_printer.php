@@ -1,10 +1,8 @@
 <?php 
-    // 1. --- บังคับ Login ---
     include_once("../../auth/check_auth.php");
     $currentUserForJS = $_SESSION['user'] ?? null;
     $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
     
-    // 2. --- ตรวจสอบสิทธิ์ (เผื่อไว้) ---
     if (!$canAdd) {
         header("HTTP/1.0 403 Forbidden");
         echo "Access Denied, insufficient role.";
@@ -14,8 +12,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Label Printer</title>
-    <?php include_once '../components/common_head.php'; ?>
+    <title>Transfer Label Printer</title> <?php include_once '../components/common_head.php'; ?>
     <style>
         body { padding-top: 20px; }
         .container { max-width: 600px; }
@@ -42,8 +39,7 @@
         <?php include_once('../components/php/spinner.php'); ?>
         <div id="toast"></div>
 
-        <h3 class="text-center mb-4">Label Printer Tool</h3>
-        <p class="text-center text-muted">กรอกข้อมูลสำหรับ 1 ฉลาก (Pallet/Box) แล้วกด Generate</p>
+        <h3 class="text-center mb-4">Print Transfer Label</h3> <p class="text-center text-muted">กรอกข้อมูลเพื่อสร้างใบโอนย้าย (สถานะ PENDING)</p>
 
         <form id="label-generator-form">
             <div class="mb-3 position-relative">
@@ -53,20 +49,19 @@
             </div>
             
             <div class="row">
-                <div class="col-md-8 mb-3">
-                    <label for="location_id" class="form-label">สถานที่ผลิต</label>
-                    <select id="location_id" name="location_id" class="form-select" required></select>
+                <div class="col-md-6 mb-3">
+                    <label for="from_location_id" class="form-label">จาก (From)</label>
+                    <select id="from_location_id" name="from_location_id" class="form-select" required>
+                        <option value="">-- เลือกต้นทาง --</option>
+                    </select>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="count_type" class="form-label">ประเภท</label>
-                    <select id="count_type" name="count_type" class="form-select" required>
-                        <option value="FG">FG</option>
-                        <option value="HOLD">HOLD</option>
-                        <option value="SCRAP">SCRAP</option>
+                <div class="col-md-6 mb-3">
+                    <label for="to_location_id" class="form-label">ไปยัง (To)</label>
+                    <select id="to_location_id" name="to_location_id" class="form-select" required>
+                        <option value="">-- เลือกปลายทาง --</option>
                     </select>
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-md-8 mb-3">
                     <label for="lot_no" class="form-label">เลข Lot / Pallet / อ้างอิง</label>
@@ -77,7 +72,6 @@
                     <input type="number" id="quantity" name="quantity" class="form-control" min="1" required>
                 </div>
             </div>
-
             <div class="mb-3">
                 <label for="notes" class="form-label">หมายเหตุ (Optional)</label>
                 <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
@@ -91,7 +85,7 @@
         </form>
         
         <div class="footer-controls">
-            <a href="mobile_entry.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> กลับไปหน้ากรอกข้อมูล</a>
+            <a href="mobile_entry.php?type=receipt" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> กลับไปหน้า Mobile</a>
             <div id="theme-switcher-btn" title="Toggle Theme">
                 <i class="fas fa-moon" id="theme-icon-moon"></i>
                 <i class="fas fa-sun" id="theme-icon-sun"></i>
