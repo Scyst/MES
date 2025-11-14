@@ -47,22 +47,26 @@ try {
             $to_location_id = $input['to_location_id'] ?? 0;
             $from_location_id = $input['from_location_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
+            
+            if ($quantity <= 0 && isset($input['confirmed_quantity'])) {
+                $quantity = $input['confirmed_quantity'] ?? 0;
+            }
+
             $lot_no = $input['lot_no'] ?? null;
             $notes = $input['notes'] ?? null;
             $log_date = $input['log_date'] ?? null;
             $log_time = $input['log_time'] ?? date('H:i:s');
             $scan_job_id = $input['scan_job_id'] ?? null;
-
             if (empty($log_date)) { throw new Exception("Log Date is required."); }
             $timestamp = $log_date . ' ' . $log_time;
 
             if (empty($item_id) || empty($to_location_id) || !is_numeric($quantity) || $quantity <= 0) {
                  throw new Exception("Invalid data provided. Item, Quantity, and Destination are required.");
             }
-            if (!empty($from_location_id) && $from_location_id == $to_location_id) {
-                 throw new Exception("Source and Destination locations cannot be the same for transfer.");
-            }
 
+            if (!empty($from_location_id) && $from_location_id > 0) {
+                throw new Exception("การโอนย้ายภายในต้องทำผ่านระบบ Transfer Label (พิมพ์ QR) เท่านั้น");
+            }
             $pdo->beginTransaction();
             
             try {
@@ -76,45 +80,14 @@ try {
                 }
 
                 $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-
-                if (!empty($from_location_id)) {
-                    $locationTypes = [];
-                    $locSql = "SELECT location_id, location_type FROM " . LOCATIONS_TABLE . " WHERE location_id IN (?, ?)";
-                    $locStmt = $pdo->prepare($locSql);
-                    $locStmt->execute([$from_location_id, $to_location_id]);
-                    while ($row = $locStmt->fetch(PDO::FETCH_ASSOC)) {
-                        $locationTypes[$row['location_id']] = $row['location_type'];
-                    }
-                    $to_type = $locationTypes[$to_location_id] ?? null;
-                    $isTransferToShipping = ($to_type === 'SHIPPING');
-                    $transaction_type = $isTransferToShipping ? 'TRANSFER_PENDING_SHIPMENT' : 'TRANSFER';
-                    $log_message_detail = ""; 
-                    $spStock->execute([$item_id, $from_location_id, -$quantity]);
-
-                    if (!$isTransferToShipping) {
-                        $spStock->execute([$item_id, $to_location_id, $quantity]);
-                    } else {
-                        $log_message_detail = " (Pending Confirmation)";
-                    }
-
-                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$item_id, $quantity, $transaction_type, $from_location_id, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
-
-                    $logType = $isTransferToShipping ? 'PENDING SHIPMENT' : 'STOCK TRANSFER';
-                    $message = $isTransferToShipping ? 'Transfer initiated, awaiting shipment confirmation.' : 'Stock transferred successfully.';
-                    $logDetail = "Qty: {$quantity}, From: {$from_location_id}, To: {$to_location_id}{$log_message_detail}";
-
-                } else {
-                    $spStock->execute([$item_id, $to_location_id, $quantity]);
-                    $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
-                    $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
-                    
-                    $message = 'Stock receipt logged successfully.';
-                    $logType = 'STOCK_IN';
-                    $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";
-                }
+                $spStock->execute([$item_id, $to_location_id, $quantity]);
+                $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes, reference_id, transaction_timestamp) VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?)";
+                $transStmt = $pdo->prepare($transSql);
+                $transStmt->execute([$item_id, $quantity, $to_location_id, $currentUser['id'], $notes, $lot_no, $timestamp]);
+                
+                $message = 'Stock receipt logged successfully.';
+                $logType = 'STOCK_IN';
+                $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";
 
                 $pdo->commit();
                 logAction($pdo, $currentUser['username'], $logType, $item_id, $logDetail);
@@ -171,10 +144,9 @@ try {
             }
             
             // (เงื่อนไข Type)
-            if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')";
+            if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED', 'INTERNAL_TRANSFER', 'REVERSAL_TRANSFER')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
             
-            // 🛑 [START] โค้ด Smart Search ใหม่
             if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
                 $search_terms = $_GET['search_terms'];
                 foreach ($search_terms as $term) {
@@ -186,7 +158,7 @@ try {
                     $term_conditions[] = "i.part_no LIKE ?";
                     $term_conditions[] = "t.reference_id LIKE ?";
                     $term_conditions[] = "loc.location_name LIKE ?";
-                    $term_conditions[] = "loc.production_line LIKE ?"; // (ที่เราเพิ่มไว้)
+                    $term_conditions[] = "loc.production_line LIKE ?";
                     $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = t.parameter_id AND r.line = loc.production_line) LIKE ?";
                     
                     array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like);
@@ -684,7 +656,7 @@ try {
                 $stmt = $pdo->prepare("SELECT created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $owner_user_id = $stmt->fetchColumn();
-
+                
                 if (!$owner_user_id) {
                     throw new Exception("Original transaction not found.");
                 }
@@ -698,17 +670,18 @@ try {
                     $pdo->rollBack();
                     exit;
                 }
-
-                // (ดึงข้อมูล $old_transaction หลังจากเช็คสิทธิ์แล้ว)
                 $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $old_transaction = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$old_transaction) throw new Exception("Original transaction not found (lock failed).");
 
+                if ($old_transaction['transaction_type'] === 'INTERNAL_TRANSFER' || $old_transaction['transaction_type'] === 'REVERSAL_TRANSFER') {
+                    throw new Exception("ไม่สามารถแก้ไขรายการโอนย้ายที่ยืนยันแล้วได้!");
+                }
                 $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                
                 if (strpos($old_transaction['transaction_type'], 'PRODUCTION_') === 0) {
                     $spStock->execute([$old_transaction['parameter_id'], $old_transaction['to_location_id'], -$old_transaction['quantity']]);
-
                     $note_to_find = "Auto-consumed for production ID: " . $transaction_id;
                     $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
                     $getConsumeStmt = $pdo->prepare($getConsumeSql);
@@ -766,7 +739,7 @@ try {
                             }
                         }
                     }
-
+                
                 } else {
                     $old_item_id = $old_transaction['parameter_id'];
                     $old_quantity = $old_transaction['quantity'];
@@ -853,12 +826,14 @@ try {
                     exit;
                 }
                 
-                // (ดึงข้อมูล $transaction หลังจากเช็คสิทธิ์แล้ว)
                 $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$transaction) throw new Exception("Transaction not found (lock failed).");
 
+                if ($transaction['transaction_type'] === 'INTERNAL_TRANSFER' || $transaction['transaction_type'] === 'REVERSAL_TRANSFER') {
+                    throw new Exception("ไม่สามารถลบรายการโอนย้ายที่ยืนยันแล้วได้! กรุณาใช้ฟังก์ชัน 'ยกเลิก' (Reversal) เท่านั้น");
+                }
                 $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
                 if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
                     $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']]);
@@ -892,7 +867,7 @@ try {
                 logAction($pdo, $currentUser['username'], 'DELETE TRANSACTION', $transaction_id);
                 echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
 
-            } catch (Exception $e) { // (เพิ่ม catch)
+            } catch (Exception $e) { 
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }

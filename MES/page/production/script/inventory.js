@@ -835,10 +835,12 @@ function openAddEntryModal() {
 }
 
 function lockEntryForm() {
+    // (Input)
     document.getElementById('entry_item_search').readOnly = true;
     document.getElementById('entry_item_search').classList.add('form-control-readonly');
     document.getElementById('entry_lot_no').readOnly = true;
     document.getElementById('entry_lot_no').classList.add('form-control-readonly');
+    // (Select)
     document.getElementById('entry_from_location_id').disabled = true;
     document.getElementById('entry_from_location_id').classList.add('form-control-readonly');
     document.getElementById('entry_to_location_id').disabled = true;
@@ -846,10 +848,12 @@ function lockEntryForm() {
 }
 
 function unlockEntryForm() {
+    // (Input)
     document.getElementById('entry_item_search').readOnly = false;
     document.getElementById('entry_item_search').classList.remove('form-control-readonly');
     document.getElementById('entry_lot_no').readOnly = false;
     document.getElementById('entry_lot_no').classList.remove('form-control-readonly');
+    // (Select)
     document.getElementById('entry_from_location_id').disabled = false;
     document.getElementById('entry_from_location_id').classList.remove('form-control-readonly');
     document.getElementById('entry_to_location_id').disabled = false;
@@ -869,11 +873,13 @@ async function autoFillFromTransferOrder_PC() {
         if (!result.success) throw new Error(result.message);
 
         const order = result.data;
-        g_CurrentPCTransferOrder = order;
+        g_CurrentPCTransferOrder = order; 
 
         if (order.status !== 'PENDING') {
             throw new Error(`This transfer is already ${order.status}.`);
         }
+
+        // --- กรอกข้อมูลลงฟอร์ม ---
         selectedInItem = { 
             item_id: order.item_id, 
             sap_no: order.sap_no, 
@@ -890,6 +896,7 @@ async function autoFillFromTransferOrder_PC() {
         document.getElementById('entry_notes').value = order.notes || '';
         document.getElementById('entry_transfer_uuid').value = order.transfer_uuid;
 
+        // --- ล็อกฟอร์ม ---
         lockEntryForm();
         
         await updateAvailableStockDisplay();
@@ -900,7 +907,7 @@ async function autoFillFromTransferOrder_PC() {
         g_CurrentPCTransferOrder = null;
         document.getElementById('entry_transfer_uuid').value = '';
         unlockEntryForm(); 
-        selectedInItem = null;
+        selectedInItem = null; 
     } finally {
         hideSpinner();
     }
@@ -935,27 +942,64 @@ async function openStockDetailModal(itemId, partNo) {
 }
 
 function handleDeleteFromModal(type) {
-    let transactionId;
-    let modalId;
+    let transactionId, modalId, deleteBtn, transferUuid;
 
     if (type === 'entry') {
-        transactionId = document.getElementById('edit_entry_transaction_id').value;
         modalId = 'editEntryModal';
+        const modal = document.getElementById(modalId);
+        transactionId = modal.querySelector('#edit_entry_transaction_id').value;
+        deleteBtn = modal.querySelector('#deleteEntryFromModalBtn');
+        transferUuid = deleteBtn.dataset.transferUuid || null;
+        
     } else {
-        transactionId = document.getElementById('edit_production_transaction_id').value;
         modalId = 'editProductionModal';
+        const modal = document.getElementById(modalId);
+        transactionId = modal.querySelector('#edit_production_transaction_id').value;
+        deleteBtn = modal.querySelector('#deleteProductionFromModalBtn');
+        transferUuid = deleteBtn.dataset.transferUuid || null;
     }
 
     if (!transactionId) {
-        showToast('Cannot find Transaction ID to delete.', 'var(--bs-danger)');
+        showToast('Cannot find Transaction ID.', 'var(--bs-danger)');
         return;
     }
 
     const modalInstance = bootstrap.Modal.getInstance(document.getElementById(modalId));
-    if (modalInstance) {
-        modalInstance.hide();
+    if (modalInstance) modalInstance.hide();
+    
+    deleteOrReverseTransaction(transactionId, transferUuid, type);
+}
+
+async function deleteOrReverseTransaction(transactionId, transferUuid, type) {
+    let confirmMessage = 'Are you sure you want to delete this transaction record?';
+    let apiEndpoint = INVENTORY_API_URL;
+    let action = 'delete_transaction';
+    let body = { transaction_id: transactionId };
+
+    if (transferUuid) {
+        confirmMessage = 'Are you sure you want to REVERSE this transfer? Stock will be returned to the origin.';
+        apiEndpoint = TRANSFER_API_URL;
+        action = 'reverse_transfer';
+        body = { transfer_uuid: transferUuid };
     }
-    deleteTransaction(transactionId, type);
+
+    if (!confirm(confirmMessage)) return;
+
+    showSpinner();
+    try {
+        const result = await sendRequest(apiEndpoint, action, 'POST', body);
+        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+        
+        if (result.success) {
+            if (type === 'entry' || transferUuid) {
+                await fetchReceiptHistory(receiptHistoryCurrentPage);
+            } else if (type === 'production') {
+                await fetchProductionHistory(productionHistoryCurrentPage);
+            }
+        }
+    } finally {
+        hideSpinner();
+    }
 }
 
 async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null) {
@@ -1283,7 +1327,7 @@ async function handleFormSubmit(event) {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
             
-            const transferUuid = data.transfer_uuid;
+            const transferUuid = data.transfer_uuid; 
 
             if (transferUuid) {
                 if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
@@ -1368,7 +1412,6 @@ async function deleteTransaction(transactionId, type) {
         const result = await sendRequest(INVENTORY_API_URL, 'delete_transaction', 'POST', { transaction_id: transactionId });
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
         if (result.success) {
-            // โหลดข้อมูลของ Tab ที่เกี่ยวข้องใหม่
             if (type === 'entry') {
                 fetchReceiptHistory(receiptHistoryCurrentPage);
             } else if (type === 'production') {
@@ -1378,6 +1421,7 @@ async function deleteTransaction(transactionId, type) {
     } finally {
         hideSpinner();
     }
+    console.warn("deleteTransaction is deprecated. Use deleteOrReverseTransaction via handleDeleteFromModal.");
 }
 
 async function editTransaction(transactionId, type) {
@@ -1387,27 +1431,25 @@ async function editTransaction(transactionId, type) {
 
         if (result.success) {
             const data = result.data;
-            let modalId, modal;
+            let modalId, modal, deleteBtn, saveBtn;
 
             if (type === 'entry') {
                 modalId = 'editEntryModal';
+                modal = new bootstrap.Modal(document.getElementById(modalId));
+                deleteBtn = document.getElementById('deleteEntryFromModalBtn');
+                saveBtn = modal._element.querySelector('button[type="submit"]');
                 document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
                 document.getElementById('edit_entry_location_id').value = data.to_location_id;
                 document.getElementById('edit_entry_quantity').value = data.quantity;
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
                 document.getElementById('edit_entry_notes').value = data.notes;
-
                 if (data.transaction_timestamp) {
                     const dateObj = new Date(data.transaction_timestamp);
-
-                    // แยกวันที่เป็น YYYY-MM-DD
                     const year = dateObj.getFullYear();
                     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                     const day = String(dateObj.getDate()).padStart(2, '0');
                     document.getElementById('edit_entry_log_date').value = `${year}-${month}-${day}`;
-
-                    // แยกเวลาเป็น HH:MM:SS
                     const hours = String(dateObj.getHours()).padStart(2, '0');
                     const minutes = String(dateObj.getMinutes()).padStart(2, '0');
                     const seconds = String(dateObj.getSeconds()).padStart(2, '0');
@@ -1416,6 +1458,9 @@ async function editTransaction(transactionId, type) {
 
             } else if (type === 'production') {
                 modalId = 'editProductionModal';
+                modal = new bootstrap.Modal(document.getElementById(modalId));
+                deleteBtn = document.getElementById('deleteProductionFromModalBtn');
+                saveBtn = modal._element.querySelector('button[type="submit"]');
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
                 document.getElementById('edit_production_location_id').value = data.to_location_id; 
@@ -1424,16 +1469,26 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
                 document.getElementById('edit_production_notes').value = data.notes;
 
-                // --- ส่วนที่เพิ่มเข้ามา: จัดการข้อมูลวันที่และเวลา ---
                 if (data.transaction_timestamp) {
-                    // แยกวันที่จาก timestamp หลัก (YYYY-MM-DD)
                     const datePart = data.transaction_timestamp.split(' ')[0];
                     document.getElementById('edit_production_log_date').value = datePart;
                 }
-                // ตั้งค่าเวลา (HH:MM:SS)
-                // ใช้ .substring(0, 8) เพื่อให้แน่ใจว่าได้แค่ HH:mm:ss
                 document.getElementById('edit_production_start_time').value = data.start_time ? data.start_time.substring(0, 8) : '';
                 document.getElementById('edit_production_end_time').value = data.end_time ? data.end_time.substring(0, 8) : '';
+            }
+
+            if (data.transaction_type === 'INTERNAL_TRANSFER' || data.transaction_type === 'REVERSAL_TRANSFER') {
+                deleteBtn.textContent = 'Reversal';
+                deleteBtn.classList.remove('btn-danger');
+                deleteBtn.classList.add('btn-warning');
+                deleteBtn.dataset.transferUuid = data.reference_id;
+                if (saveBtn) saveBtn.style.display = 'none';
+            } else {
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.classList.remove('btn-warning');
+                deleteBtn.classList.add('btn-danger');
+                deleteBtn.dataset.transferUuid = '';
+                if (saveBtn) saveBtn.style.display = 'inline-block';
             }
 
             modal = new bootstrap.Modal(document.getElementById(modalId));
@@ -1446,7 +1501,6 @@ async function editTransaction(transactionId, type) {
     }
 }
 
-// [ใหม่] ฟังก์ชันสำหรับเปิด Modal สรุปรายชั่วโมง
 async function openHourlySummaryModal() {
     const modalBody = document.getElementById('hourlySummaryTableBody');
     if (!modalBody) {

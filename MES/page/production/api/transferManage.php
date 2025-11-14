@@ -221,6 +221,91 @@ try {
             echo json_encode(['success' => true, 'message' => 'รับของเข้าสำเร็จ! สต็อกถูกอัปเดตแล้ว']);
             break;
 
+        // ==========================================================
+        // ACTION: 'reverse_transfer'
+        // (ถูกเรียกจาก UI เมื่อต้องการยกเลิกใบโอนที่ Completed)
+        // ==========================================================
+        case 'reverse_transfer':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            // (เราจะรับ $transfer_uuid จาก UI)
+            $transfer_uuid = $input['transfer_uuid'] ?? ''; 
+            if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
+
+            $pdo->beginTransaction();
+
+            // 1. ดึงใบโอน และล็อกแถว
+            $sqlGet = "SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?";
+            $stmtGet = $pdo->prepare($sqlGet);
+            $stmtGet->execute([$transfer_uuid]);
+            $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+            if (!$transfer_order) {
+                $pdo->rollBack();
+                throw new Exception("ไม่พบใบโอนย้ายนี้");
+            }
+            // ⭐️ (สำคัญ) เราจะอนุญาตให้ยกเลิกได้เฉพาะรายการที่ 'COMPLETED' เท่านั้น
+            if ($transfer_order['status'] !== 'COMPLETED') {
+                $pdo->rollBack();
+                throw new Exception("ไม่สามารถยกเลิกได้ สถานะปัจจุบันคือ: " . $transfer_order['status']);
+            }
+
+            // 2. ดึง Transaction เดิม เพื่อหายอดที่ยืนยันไปจริงๆ
+            $sqlGetTrans = "SELECT * FROM $transTable WHERE reference_id = ? AND transaction_type = 'INTERNAL_TRANSFER'";
+            $stmtGetTrans = $pdo->prepare($sqlGetTrans);
+            $stmtGetTrans->execute([$transfer_uuid]);
+            $original_transaction = $stmtGetTrans->fetch(PDO::FETCH_ASSOC);
+
+            if (!$original_transaction) {
+                 $pdo->rollBack();
+                throw new Exception("ไม่พบประวัติ Transaction เดิม (Internal Error)");
+            }
+
+            $quantity_to_reverse = $original_transaction['quantity']; // ยอดที่ยืนยันไปจริง
+            $item_id = $transfer_order['item_id'];
+            $from_loc_id = $transfer_order['from_location_id']; // (Store)
+            $to_loc_id = $transfer_order['to_location_id']; // (WIP)
+            $transaction_timestamp = date('Y-m-d H:i:s'); 
+
+            // 3. (ย้อนกลับ) เรียก SP เพื่อ "บวก" สต็อกคืนต้นทาง (Store)
+            $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+            $spStock->execute([$item_id, $from_loc_id, $quantity_to_reverse]);
+            $spStock->closeCursor();
+
+            // 4. (ย้อนกลับ) เรียก SP เพื่อ "ลบ" สต็อกออกจากปลายทาง (WIP)
+            $spStock->execute([$item_id, $to_loc_id, -$quantity_to_reverse]);
+            $spStock->closeCursor();
+
+            // 5. อัปเดตสถานะใบโอนเป็น "REVERSED"
+            $sqlUpdate = "UPDATE $transferTable 
+                          SET status = 'REVERSED', 
+                              notes = ISNULL(notes, '') + ?
+                          WHERE transfer_id = ?";
+            $note_update = "\nReversed by " . $currentUser['username'] . " at " . $transaction_timestamp;
+            $stmtUpdate = $pdo->prepare($sqlUpdate);
+            $stmtUpdate->execute([$note_update, $transfer_order['transfer_id']]);
+
+            // 6. บันทึกประวัติการย้อนกลับ (Reversal Transaction)
+            $transSql = "INSERT INTO $transTable 
+                            (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id) 
+                         VALUES 
+                            (?, ?, 'REVERSAL_TRANSFER', ?, ?, ?, ?, ?)";
+            $transStmt = $pdo->prepare($transSql);
+            $transStmt->execute([
+                $item_id,
+                -$quantity_to_reverse, // ⭐️ บันทึกเป็นยอดติดลบ
+                $transaction_timestamp,
+                $from_loc_id, // (ต้นทางเดิม)
+                $to_loc_id,   // (ปลายทางเดิม)
+                $transfer_uuid, 
+                $currentUser['id']
+            ]);
+
+            $pdo->commit();
+
+            echo json_encode(['success' => true, 'message' => 'ยกเลิกรายการสำเร็จ! สต็อกถูกย้อนกลับแล้ว']);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Invalid action: $action"]);
