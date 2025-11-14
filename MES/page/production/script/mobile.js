@@ -573,18 +573,18 @@ function setupAutocomplete(inputId, hiddenId) {
 // =================================================================
 
 async function initReviewPage() {
-    await populateReviewModals(); // ⭐️ 1. รอให้ Modal โหลดเสร็จก่อน
+    await populateReviewModals();
     const reviewOutTab = document.getElementById('review-out-tab');
     const reviewInTab = document.getElementById('review-in-tab');
     
     reviewOutTab?.addEventListener('shown.bs.tab', () => {
         currentReviewType = 'production';
-        fetchReviewData(); // (ในแท็บไม่ต้อง await)
+        fetchReviewData();
     });
 
     reviewInTab?.addEventListener('shown.bs.tab', () => {
         currentReviewType = 'receipt';
-        fetchReviewData(); // (ในแท็บไม่ต้อง await)
+        fetchReviewData();
     });
 
     document.getElementById('review-list-container')?.addEventListener('click', (event) => {
@@ -599,7 +599,7 @@ async function initReviewPage() {
     } else {
         currentReviewType = 'receipt';
     }
-    await fetchReviewData(); // ⭐️ 2. ค่อยโหลดประวัติ (การ์ด) ทีหลัง
+    await fetchReviewData();
 }
 
 async function populateReviewModals() {
@@ -607,14 +607,19 @@ async function populateReviewModals() {
     if (result.success && result.locations) {
         allLocations = result.locations;
         
-        const editInLocationSelect = document.getElementById('edit_entry_location_id');
-        const editOutLocationSelect = document.getElementById('edit_production_location_id');
+        const editInFromLocationSelect = document.getElementById('edit_entry_from_location_id');
+        const editInToLocationSelect = document.getElementById('edit_entry_to_location_id');
         
+        const editOutLocationSelect = document.getElementById('edit_production_location_id');        
         const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
 
-        if (editInLocationSelect) {
-            editInLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        if (editInFromLocationSelect) {
+            editInFromLocationSelect.innerHTML = '<option value="">-- Select Source --</option>' + optionsHtml;
         }
+        if (editInToLocationSelect) {
+            editInToLocationSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
+        }
+
         if (editOutLocationSelect) {
             editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
@@ -904,69 +909,109 @@ async function editTransaction(transactionId, type) {
     showSpinner();
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_transaction_details', 'GET', null, { transaction_id: transactionId });
+        if (!result.success) throw new Error(result.message);
+        
+        const data = result.data;
+        let modalId, modal, deleteBtn, saveBtn;
 
-        if (result.success) {
-            const data = result.data;
-            let modalId, modal, deleteBtn, saveBtn;
+        if (type === 'receipt') {
+            modalId = 'editEntryModal';
+            modal = new bootstrap.Modal(document.getElementById(modalId));
+            
+            deleteBtn = document.getElementById('deleteEntryFromModalBtn');
+            saveBtn = modal._element.querySelector('button[type="submit"]');
 
-            if (type === 'receipt') {
-                modalId = 'editEntryModal';
-                modal = new bootstrap.Modal(document.getElementById(modalId));
-                deleteBtn = document.getElementById('deleteEntryFromModalBtn');
-                saveBtn = modal._element.querySelector('button[type="submit"]');
-
-                document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
-                document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
-                document.getElementById('edit_entry_location_id').value = data.to_location_id;
-                document.getElementById('edit_entry_quantity').value = data.quantity;
-                document.getElementById('edit_entry_lot_no').value = data.reference_id;
-                document.getElementById('edit_entry_notes').value = data.notes;
-                if (data.transaction_timestamp) {
-                    const [datePart, timePart] = data.transaction_timestamp.split(' ');
-                    document.getElementById('edit_entry_log_date').value = datePart;
-                    document.getElementById('edit_entry_log_time').value = timePart ? timePart.substring(0, 8) : '00:00:00';
-                }
-            } else if (type === 'production') {
-                modalId = 'editProductionModal';
-                modal = new bootstrap.Modal(document.getElementById(modalId));
-                deleteBtn = document.getElementById('deleteProductionFromModalBtn');
-                saveBtn = modal._element.querySelector('button[type="submit"]');
-                
-                document.getElementById('edit_production_transaction_id').value = data.transaction_id;
-                document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
-                document.getElementById('edit_production_location_id').value = data.to_location_id; 
-                document.getElementById('edit_production_quantity').value = data.quantity;
-                document.getElementById('edit_production_lot_no').value = data.reference_id;
-                document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
-                document.getElementById('edit_production_notes').value = data.notes;
-                if (data.transaction_timestamp) {
-                    const datePart = data.transaction_timestamp.split(' ')[0];
-                    document.getElementById('edit_production_log_date').value = datePart;
-                }
-                document.getElementById('edit_production_start_time').value = data.start_time ? data.start_time.substring(0, 8) : '';
-                document.getElementById('edit_production_end_time').value = data.end_time ? data.end_time.substring(0, 8) : '';
+            document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
+            document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
+            
+            document.getElementById('edit_entry_from_location_id').value = data.from_location_id || "";
+            document.getElementById('edit_entry_to_location_id').value = data.to_location_id;
+            
+            document.getElementById('edit_entry_quantity').value = data.quantity;
+            document.getElementById('edit_entry_lot_no').value = data.reference_id;
+            document.getElementById('edit_entry_notes').value = data.notes;
+            if (data.transaction_timestamp) {
+                const [datePart, timePart] = data.transaction_timestamp.split(' ');
+                document.getElementById('edit_entry_log_date').value = datePart;
+                document.getElementById('edit_entry_log_time').value = timePart ? timePart.substring(0, 8) : '00:00:00';
             }
 
-            if (data.transaction_type === 'INTERNAL_TRANSFER' || data.transaction_type === 'REVERSAL_TRANSFER') {
-                deleteBtn.textContent = 'Reversal'; 
-                deleteBtn.classList.remove('btn-danger');
-                deleteBtn.classList.add('btn-warning');
-                deleteBtn.dataset.transferUuid = data.reference_id;
-                if (saveBtn) saveBtn.style.display = 'none'; 
-            } else {
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.classList.remove('btn-warning');
-                deleteBtn.classList.add('btn-danger');
-                deleteBtn.dataset.transferUuid = '';
-                if (saveBtn) saveBtn.style.display = 'inline-block'; 
+        } else if (type === 'production') {
+            modalId = 'editProductionModal';
+            modal = new bootstrap.Modal(document.getElementById(modalId));
+            deleteBtn = document.getElementById('deleteProductionFromModalBtn');
+            saveBtn = modal._element.querySelector('button[type="submit"]');
+            
+            document.getElementById('edit_production_transaction_id').value = data.transaction_id;
+            document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
+            document.getElementById('edit_production_location_id').value = data.to_location_id; 
+            document.getElementById('edit_production_quantity').value = data.quantity;
+            document.getElementById('edit_production_lot_no').value = data.reference_id;
+            document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
+            document.getElementById('edit_production_notes').value = data.notes;
+            if (data.transaction_timestamp) {
+                const datePart = data.transaction_timestamp.split(' ')[0];
+                document.getElementById('edit_production_log_date').value = datePart;
             }
-            modal.show();
-        } else {
-            showToast(result.message, 'var(--bs-danger)');
+            document.getElementById('edit_production_start_time').value = data.start_time ? data.start_time.substring(0, 8) : '';
+            document.getElementById('edit_production_end_time').value = data.end_time ? data.end_time.substring(0, 8) : '';
         }
+
+        if (data.transaction_type === 'INTERNAL_TRANSFER' || data.transaction_type === 'REVERSAL_TRANSFER') {
+            deleteBtn.textContent = 'Reversal'; 
+            deleteBtn.classList.remove('btn-danger');
+            deleteBtn.classList.add('btn-warning');
+            deleteBtn.dataset.transferUuid = data.reference_id;
+            if (saveBtn) saveBtn.style.display = 'none'; 
+            
+            if (type === 'entry') setEntryModalReadOnly_Mobile(true);
+
+        } else {
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.classList.remove('btn-warning');
+            deleteBtn.classList.add('btn-danger');
+            deleteBtn.dataset.transferUuid = '';
+            if (saveBtn) saveBtn.style.display = 'inline-block'; 
+            
+            if (type === 'entry') setEntryModalReadOnly_Mobile(false);
+        }
+
+        modal.show();
+    } catch (error) {
+        showToast(error.message, 'var(--bs-danger)');
     } finally {
         hideSpinner();
     }
+}
+
+function setEntryModalReadOnly_Mobile(isReadOnly) {
+    const modal = document.getElementById('editEntryModal');
+    if (!modal) return;
+
+    const fieldsToToggle = [
+        'edit_entry_log_date',
+        'edit_entry_log_time',
+        'edit_entry_to_location_id',
+        'edit_entry_quantity',
+        'edit_entry_notes'
+    ];
+
+    fieldsToToggle.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+                el.disabled = isReadOnly;
+            } else {
+                el.readOnly = isReadOnly;
+            }
+
+            if (isReadOnly) {
+                el.classList.add('form-control-readonly');
+            } else {
+                el.classList.remove('form-control-readonly');
+            }
+        }
+    });
 }
 
 function handleDeleteFromModal(type) {

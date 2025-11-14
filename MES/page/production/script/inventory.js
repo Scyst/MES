@@ -746,7 +746,9 @@ async function populateModalDatalists() {
         const inToLocationSelect = document.getElementById('entry_to_location_id');
         const inFromLocationSelect = document.getElementById('entry_from_location_id');
         const outLocationSelect = document.getElementById('out_location_id');
-        const editInLocationSelect = document.getElementById('edit_entry_location_id');
+        
+        const editInFromLocationSelect = document.getElementById('edit_entry_from_location_id');
+        const editInToLocationSelect = document.getElementById('edit_entry_to_location_id');
         const editOutLocationSelect = document.getElementById('edit_production_location_id');
 
         const optionsHtml = result.locations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
@@ -757,9 +759,17 @@ async function populateModalDatalists() {
         if (outLocationSelect) {
             outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
-        if (editInLocationSelect) {
-            editInLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
+        
+        // 🔽🔽🔽 [เพิ่ม 2 บล็อกนี้] 🔽🔽🔽
+        // (เติม Location ลงใน Edit Modal)
+        if (editInFromLocationSelect) {
+            editInFromLocationSelect.innerHTML = '<option value="">-- Select Source --</option>' + optionsHtml;
         }
+        if (editInToLocationSelect) {
+            editInToLocationSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
+        }
+        // 🔼🔼🔼 [จบส่วนเพิ่ม] 🔼🔼🔼
+        
         if (editOutLocationSelect) {
             editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
@@ -1424,6 +1434,36 @@ async function deleteTransaction(transactionId, type) {
     console.warn("deleteTransaction is deprecated. Use deleteOrReverseTransaction via handleDeleteFromModal.");
 }
 
+function setEntryModalReadOnly(isReadOnly) {
+    const modal = document.getElementById('editEntryModal');
+    if (!modal) return;
+    const fieldsToToggle = [
+        'edit_entry_log_date',
+        'edit_entry_log_time',
+        'edit_entry_to_location_id',
+        'edit_entry_quantity',
+        'edit_entry_notes'
+    ];
+
+    fieldsToToggle.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+                el.disabled = isReadOnly;
+            } else {
+                el.readOnly = isReadOnly;
+            }
+
+            if (isReadOnly) {
+                el.classList.add('form-control-readonly');
+            } else {
+                el.classList.remove('form-control-readonly');
+            }
+        }
+    });
+}
+
+
 async function editTransaction(transactionId, type) {
     showSpinner();
     try {
@@ -1436,14 +1476,20 @@ async function editTransaction(transactionId, type) {
             if (type === 'entry') {
                 modalId = 'editEntryModal';
                 modal = new bootstrap.Modal(document.getElementById(modalId));
+                
                 deleteBtn = document.getElementById('deleteEntryFromModalBtn');
-                saveBtn = modal._element.querySelector('button[type="submit"]');
+                saveBtn = document.querySelector('#editEntryForm button[data-action="save"]');
+
                 document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
-                document.getElementById('edit_entry_location_id').value = data.to_location_id;
+                
+                document.getElementById('edit_entry_from_location_id').value = data.from_location_id || "";
+                document.getElementById('edit_entry_to_location_id').value = data.to_location_id;
+                
                 document.getElementById('edit_entry_quantity').value = data.quantity;
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
                 document.getElementById('edit_entry_notes').value = data.notes;
+                
                 if (data.transaction_timestamp) {
                     const dateObj = new Date(data.transaction_timestamp);
                     const year = dateObj.getFullYear();
@@ -1461,6 +1507,7 @@ async function editTransaction(transactionId, type) {
                 modal = new bootstrap.Modal(document.getElementById(modalId));
                 deleteBtn = document.getElementById('deleteProductionFromModalBtn');
                 saveBtn = modal._element.querySelector('button[type="submit"]');
+                
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
                 document.getElementById('edit_production_location_id').value = data.to_location_id; 
@@ -1468,7 +1515,6 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
                 document.getElementById('edit_production_notes').value = data.notes;
-
                 if (data.transaction_timestamp) {
                     const datePart = data.transaction_timestamp.split(' ')[0];
                     document.getElementById('edit_production_log_date').value = datePart;
@@ -1478,20 +1524,24 @@ async function editTransaction(transactionId, type) {
             }
 
             if (data.transaction_type === 'INTERNAL_TRANSFER' || data.transaction_type === 'REVERSAL_TRANSFER') {
-                deleteBtn.textContent = 'Reversal';
+                deleteBtn.textContent = 'Reversal'; 
                 deleteBtn.classList.remove('btn-danger');
                 deleteBtn.classList.add('btn-warning');
-                deleteBtn.dataset.transferUuid = data.reference_id;
-                if (saveBtn) saveBtn.style.display = 'none';
+                deleteBtn.dataset.transferUuid = data.reference_id; 
+                if (saveBtn) saveBtn.style.display = 'none'; 
+
+                if (type === 'entry') setEntryModalReadOnly(true);
+
             } else {
                 deleteBtn.textContent = 'Delete';
                 deleteBtn.classList.remove('btn-warning');
                 deleteBtn.classList.add('btn-danger');
-                deleteBtn.dataset.transferUuid = '';
-                if (saveBtn) saveBtn.style.display = 'inline-block';
+                deleteBtn.dataset.transferUuid = ''; 
+                if (saveBtn) saveBtn.style.display = 'inline-block'; 
+
+                if (type === 'entry') setEntryModalReadOnly(false);
             }
 
-            modal = new bootstrap.Modal(document.getElementById(modalId));
             modal.show();
         } else {
             showToast(result.message, 'var(--bs-danger)');
