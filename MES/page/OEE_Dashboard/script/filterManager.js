@@ -127,7 +127,8 @@ function populateSelectWithOptions(selectElement, optionsArray, label, selectedV
 
 async function applyFiltersAndInitCharts() {
     const params = new URLSearchParams(window.location.search);
-    const line = params.get("line");
+    const urlLine = params.get("line");
+    const line = urlLine ? urlLine : "ASSEMBLY";
     const model = params.get("model");
     const startDate = params.get("startDate");
     const endDate = params.get("endDate");
@@ -146,13 +147,11 @@ async function applyFiltersAndInitCharts() {
         console.error("Error fetching filters:", err);
     }
 
-    // --- Set dates from URL or default to TODAY ---
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0]; // Get today's date YYYY-MM-DD
 
     document.getElementById("startDate").value = startDate || todayStr; // Use URL value or default to today
     document.getElementById("endDate").value = endDate || todayStr;    // Use URL value or default to today
-    // --- [สิ้นสุดการแก้ไข] ---
 
     // Trigger initial data load for all components
     handleFilterChange();
