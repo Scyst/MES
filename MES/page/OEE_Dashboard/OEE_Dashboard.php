@@ -43,8 +43,8 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
             <div class="dashboard-container">
 
                 <section class="dashboard-section" id="kpi-section">
-                    <div class="row">
-                        <div class="col-xl-3 col-md-6">
+                    <div class="row g-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="chart-card kpi-scorecard">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
@@ -69,7 +69,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="chart-card kpi-scorecard">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
@@ -94,7 +94,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="chart-card kpi-scorecard">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
@@ -117,7 +117,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="chart-card kpi-scorecard">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="scorecard-header">
@@ -143,7 +143,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                     </div>
                 </section>
 
-                <section class="dashboard-section mb-4" id="cost-summary-section">
+                <section class="dashboard-section" id="cost-summary-section">
                     <div class="chart-card cost-summary-card" style="height: 100%;">
                         <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                         <?php
@@ -151,17 +151,17 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         ?>
                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary</h4>
 
-                        <div class="row text-center">
-                            <div class="col-md-4">
+                        <div class="row text-center gy-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-cash-register"></i> Total Revenue (Production)</h6>
                                 <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-boxes"></i> Material Cost (Standard)</h6>
                                 <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentRM">-- %</span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-hard-hat"></i> Total DLOT</h6>
                                 <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentDL">-- %</span>
@@ -170,17 +170,17 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
 
                         <hr>
 
-                        <div class="row text-center mt-3 mb-4">
-                            <div class="col-md-4">
+                        <div class="row text-center mt-3 mb-4 gy-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-industry"></i> Overhead (Standard)</h6>
                                 <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentOH">-- %</span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-dollar-sign"></i> Total COGS</h6>
                                 <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <h6><i class="fas fa-percentage"></i> Gross Profit</h6>
                                 <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodPercentGPStd">-- %</span>
@@ -194,11 +194,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
                         <div class="chart-wrapper" style="height: 100%;">
                             <canvas id="dailyProductionChart"></canvas>
-                            <div class="no-data-message" style="margin-top: 10rem;">
+                            <div class="no-data-message">
                                 <i class="fas fa-info-circle"></i>
                                 <span>No production data available for this period.</span>
                             </div>
-                            <div class="error-message" style="margin-top: 1rem;">
+                            <div class="error-message">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <span>Failed to load production data.</span>
                             </div>
@@ -230,7 +230,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                     if ($isLoggedIn): 
                     ?>
                     <div class="row g-4">
-                        <div class="col-lg-6 mt-0">
+                        <div class="col-12 col-lg-6">
                             <div class="chart-card bar-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <div class="d-flex justify-content-between align-items-center">
@@ -252,7 +252,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             </div>
                             </div>
                         </div>
-                        <div class="col-lg-6 mt-0">
+                        <div class="col-12 col-lg-6">
                             <div class="chart-card bar-chart-card">
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Production Results</h4>

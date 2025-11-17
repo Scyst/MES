@@ -484,8 +484,8 @@ async function fetchAndRenderPieCharts() {
              `&nbsp; └ Scrap: <b>${(data.scrap || 0).toLocaleString()}</b> pcs`
         ], OEE_TARGETS.quality);
 
-        const performanceHasData = data.runtime !== undefined && data.runtime !== null && data.runtime >= 0;
-        toggleNoDataMessage("performancePieChart", !performanceHasData || data.runtime === 0);
+        const performanceHasData = (data.actual_output || 0) > 0;
+        toggleNoDataMessage("performancePieChart", !performanceHasData);
         renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"),
             ['Performance', 'Loss'], [data.performance || 0, Math.max(0, 100 - (data.performance || 0))],
             [getCssVar('--mes-chart-color-3'), lossColor], OEE_TARGETS.performance,
