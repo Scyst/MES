@@ -48,6 +48,10 @@ body {
     font-family: ui-sans-serif, system-ui, sans-serif, 'Prompt';
 }
 
+.mobile-nav {
+    display: none;
+}
+
 .page-container {
     display: flex;
     height: 100vh;

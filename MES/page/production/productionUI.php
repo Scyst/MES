@@ -20,6 +20,12 @@
 </head>
 
 <body class="page-with-table">
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 
@@ -57,32 +63,45 @@
             </div>
             
             <div class="sticky-bar">
+                
                 <div class="container-fluid">
-                    <div class="row my-3 align-items-center">
-                        <div class="col-md-6">
-                            <div class="filter-controls-wrapper" id="main-filters">
-                                
-                                <input type="search" id="filterSearch" class="form-control" placeholder="Search...">
 
-                                <select id="filterCountType" class="form-select" style="display: none;">
-                                    <option value="">All Types</option>
-                                    <option value="FG">FG</option>
-                                    <option value="HOLD">HOLD</option>
-                                    <option value="SCRAP">SCRAP</option>
-                                </select>
+                    <button class="btn btn-primary d-lg-none" id="mobile-filter-toggle-btn" type="button" style="width: 100%; margin-top: 0.5rem;">
+                        <i class="fas fa-filter me-1"></i> 
+                        <span>Show Filters</span>
+                    </button>
 
-                                <div id="date-range-filter" style="display: none; contents: inherit;">
-                                    <input type="date" id="filterStartDate" class="form-control">
-                                    <span>-</span>
-                                    <input type="date" id="filterEndDate" class="form-control">
+                    <div class="all-filters-container">
+                        <div class="row my-3 align-items-center">
+                            
+                            <div class="col-lg-6">
+                                <div class="filter-controls-wrapper" id="main-filters">
+                                    
+                                    <input type="search" id="filterSearch" class="form-control" placeholder="Search...">
+
+                                    <select id="filterCountType" class="form-select" style="display: none;">
+                                        <option value="">All Types</option>
+                                        <option value="FG">FG</option>
+                                        <option value="HOLD">HOLD</option>
+                                        <option value="SCRAP">SCRAP</option>
+                                    </select>
+
+                                    <div id="date-range-filter" style="display: none; contents: inherit;">
+                                        <input type="date" id="filterStartDate" class="form-control">
+                                        <span>-</span>
+                                        <input type="date" id="filterEndDate" class="form-control">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div id="dynamic-button-group" class="d-flex justify-content-end gap-2"></div>
-                        </div>
-                        <div class="col-12 mt-3" style="display: none;" id="summaryRow">
-                            <div id="dynamic-summary-container" class="summary-grand-total"></div>
+                            
+                            <div class="col-lg-6">
+                                <div id="dynamic-button-group" class="d-flex justify-content-center gap-2 mt-2">
+                                    </div>
+                            </div>
+                            
+                            <div class="col-12 mt-3" style="display: none;" id="summaryRow">
+                                <div id="dynamic-summary-container" class="summary-grand-total"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -278,6 +297,7 @@
 
     <?php include_once('../components/php/command_center.php'); ?>
     <?php include_once('../components/php/docking_sidebar.php'); ?>
+    <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;
@@ -288,5 +308,6 @@
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
+    <script src="../components/js/mobile_init.js?v=<?php echo filemtime('../components/js/mobile_init.js'); ?>" defer></script>
 </body>
 </html>

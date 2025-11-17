@@ -179,17 +179,16 @@ function updateControls(activeTabId) {
     switch (activeTabId) {
         case 'production-history-tab':
             buttonGroup.innerHTML = `
-                <div class="btn-group">
-                  <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-chart-pie me-2"></i> Summaries
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#" onclick="openSummaryModal(this); return false;">Summary by Part</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="openHourlyProductionModal(); return false;">Hourly Summary</a></li>
-                  </ul>
-                </div>
-                
                 <button class="btn btn-primary" onclick="exportProductionHistoryToExcel()">Export</button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-chart-pie me-2"></i> Summaries
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="openSummaryModal(this); return false;">Summary by Part</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="openHourlyProductionModal(); return false;">Hourly Summary</a></li>
+                    </ul>
+                </div>
                 ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
             `;
 
@@ -197,8 +196,8 @@ function updateControls(activeTabId) {
             break;
         case 'entry-history-tab':
             buttonGroup.innerHTML = `
-                <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
                 <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
+                <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
                 ${canAdd ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
             `;
             break;
@@ -371,14 +370,14 @@ function renderProductionVarianceTable(data) {
         }
 
         tr.innerHTML = `
-            <td class="text-start">${row.location_name}</td>
-            <td class="text-center">${row.sap_no}</td>
-            <td class="text-center">${row.part_no}</td>
-            <td class="text-center">${row.model || ''}</td>
-            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
-            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
-            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
+            <td class="text-start" data-label="Location">${row.location_name}</td>
+            <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-center" data-label="Part No.">${row.part_no}</td>
+            <td class="text-center" data-label="Model">${row.model || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
+            <td class="text-end" data-label="Total IN">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end" data-label="Total OUT">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}" data-label="Variance (OUT - IN)">${variance.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -429,14 +428,14 @@ function renderWipReportByLotTable(data) {
         }
         
         tr.innerHTML = `
-            <td class="text-start">${row.sap_no}</td>
-            <td class="text-start">${row.part_no}</td>
-            <td class="text-start">${row.model || ''}</td>
-            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
-            <td class="text-center">${row.lot_no}</td>
-            <td class="text-end">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end">${parseFloat(row.total_out).toLocaleString()}</td>
-            <td class="text-end fw-bold ${textColorClass}">${variance.toLocaleString()}</td>
+            <td class="text-start" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-start" data-label="Part Number">${row.part_no}</td>
+            <td class="text-start" data-label="Model">${row.model || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
+            <td class="text-center" data-label="Lot Number">${row.lot_no}</td>
+            <td class="text-end" data-label="Total IN">${parseFloat(row.total_in).toLocaleString()}</td>
+            <td class="text-end" data-label="Total OUT">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end fw-bold ${textColorClass}" data-label="Variance (OUT - IN)">${variance.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -482,29 +481,26 @@ function renderReceiptHistoryTable(data) {
         const transactionDate = new Date(row.transaction_timestamp);
         
         tr.innerHTML = `
-            <td class="text-start">${transactionDate.toLocaleDateString('en-GB')}</td>
-            <td class="text-start">${transactionDate.toTimeString().substring(0, 8)}</td>
-            <td class="text-center">${row.source_location || 'External'}</td>
-            <td class="text-center">${row.destination_location || 'N/A'}</td>
-            <td class="text-center">${row.sap_no}</td>
-            <td class="text-center">${row.part_no}</td>
-            <td class="text-center">${row.lot_no || ''}</td>
-            <td  class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td class="text-center">${row.notes || ''}</td>
+            <td class="text-start" data-label="Date">${transactionDate.toLocaleDateString('en-GB')}</td>
+            <td class="text-start" data-label="Time">${transactionDate.toTimeString().substring(0, 8)}</td>
+            <td class="text-center" data-label="From">${row.source_location || 'External'}</td>
+            <td class="text-center" data-label="To">${row.destination_location || 'N/A'}</td>
+            <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-center" data-label="Part No.">${row.part_no}</td>
+            <td class="text-center" data-label="Lot. / Ref.">${row.lot_no || ''}</td>
+            <td class="text-center" data-label="Quantity">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// --- Functions for Production History Tab (OUT) ---
 async function fetchProductionHistory(page = 1) {
     productionHistoryCurrentPage = page;
     showSpinner();
 
     const searchString = document.getElementById('filterSearch').value;
-    const searchTerms = searchString.split(',')      // 1. แยกด้วยจุลภาค
-                                .map(term => term.trim())  // 2. ตัดช่องว่างหน้า-หลัง
-                                .filter(term => term.length > 0); // 3. กรองคำว่างๆ ทิ้ง
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
     
     const params = {
         page: page,
@@ -528,7 +524,6 @@ function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = '';
     
-    // ( colspan="10" ยังคงถูกต้อง เพราะ Layout ใหม่ของเราก็มี 10 คอลัมน์)
     if (!data || data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found.</td></tr>`;
         return;
@@ -541,33 +536,23 @@ function renderProductionHistoryTable(data) {
         tr.title = 'Click to edit';
         tr.addEventListener('click', () => editTransaction(row.transaction_id, 'production'));
 
-        // --- [แก้ไข] ส่วนของการเตรียมข้อมูล Date/Time ---
         const transactionDate = new Date(row.transaction_timestamp);
-        
-        // (Date): ใช้ Date object หลัก
         const dateStr = transactionDate.toLocaleDateString('en-GB');
-
-        // (Time): เราจะใช้ 'end_time' ถ้ามี, 
-        // ถ้าไม่มี (หรือเป็น 00:00:00) ให้ใช้เวลาจาก 'transaction_timestamp' หลักแทน
         const timeStr = (row.end_time && row.end_time.substring(0, 8) !== '00:00:00')
                         ? row.end_time.substring(0, 8)
                         : transactionDate.toTimeString().substring(0, 8);
         
-        // (ลบการคำนวณ 'timeRange' และ 'durationInMinutes' ออกทั้งหมด)
-        // --- [จบส่วนแก้ไข] ---
-        
-        
-        // --- [แก้ไข] ส่วนของ tr.innerHTML ---
-        // (จัดเรียงใหม่ตาม Layout ที่ตกลงกัน)
         tr.innerHTML = `
-            <td class="text-start">${dateStr}</td>
-            <td class="text-start">${timeStr}</td>
-            <td class="text-center">${row.sap_no}</td> <td class="text-center">${row.part_no}</td>
-            <td class="text-center">${row.model || ''}</td>
-            <td class="text-center">${row.lot_no || ''}</td>
-            <td class="text-center">${row.location_name || 'N/A'}</td> <td class="text-center">${parseFloat(row.quantity).toLocaleString()}</td>
-            <td class="text-center">${row.count_type}</td>
-            <td class="text-center">${row.notes || ''}</td>
+            <td class="text-start" data-label="Date">${dateStr}</td>
+            <td class="text-start" data-label="Time">${timeStr}</td>
+            <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-center" data-label="Part No.">${row.part_no}</td>
+            <td class="text-center" data-label="Model">${row.model || ''}</td>
+            <td class="text-center" data-label="Lot / Ref.">${row.lot_no || ''}</td>
+            <td class="text-center" data-label="Location">${row.location_name || 'N/A'}</td>
+            <td class="text-center" data-label="Quantity">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center" data-label="Type">${row.count_type}</td>
+            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         
         tbody.appendChild(tr);
@@ -610,13 +595,14 @@ function renderWipOnHandTable(data) {
         tr.addEventListener('click', () => openAdjustStockModal(row));
 
         const onHandQty = parseFloat(row.quantity) || 0;
+        
         tr.innerHTML = `
-            <td class="text-start">${row.location_name}</td>
-            <td class="text-center">${row.sap_no}</td>
-            <td class="text-center">${row.part_no}</td>
-            <td class="text-center">${row.model || ''}</td>
-            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
-            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+            <td class="text-start" data-label="Location">${row.location_name}</td>
+            <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-center" data-label="Part No.">${row.part_no}</td>
+            <td class="text-center" data-label="Model">${row.model || ''}</td>
+            <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
+            <td class="text-end fw-bold" data-label="On-Hand Quantity (WIP)">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -661,11 +647,11 @@ function renderStockInventoryTable(data) {
         const onHandQty = parseFloat(row.total_onhand) || 0;
 
         tr.innerHTML = `
-            <td class="text-start">${row.sap_no}</td>
-            <td class="text-start">${row.part_no}</td>
-            <td class="text-start">${row.used_models || '-'}</td>
-            <td class="text-start" style="padding-left: 1rem;">${row.part_description || ''}</td>
-            <td class="text-end fw-bold">${onHandQty.toLocaleString()}</td>
+            <td class="text-start" data-label="SAP No.">${row.sap_no}</td>
+            <td class="text-start" data-label="Part No.">${row.part_no}</td>
+            <td class="text-start" data-label="Models">${row.used_models || '-'}</td>
+            <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
+            <td class="text-end fw-bold" data-label="Total On-Hand">${onHandQty.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -717,18 +703,16 @@ function renderAllTransactionsTable(data) {
         }
         
         tr.innerHTML = `
-            <td class="text-start">${transactionDate.toLocaleString('en-GB')}</td>
-            <td class="text-start">${row.source_location || 'N/A'}</td>
-            <td class="text-start">${row.destination_location || 'N/A'}</td>
-            <td class="text-start">${row.part_no}</td>
-            <td class="text-start">${row.model || ''}</td>
-            <td class="text-center">${row.lot_no || ''}</td>
-            <td class="text-center fw-bold ${quantityClass}">${quantityPrefix}${quantity.toLocaleString()}</td>
-            <td class="text-center"><span class="badge bg-secondary">${row.transaction_type}</span></td>
-            
-            <td class="text-center">${row.created_by || 'N/A'}</td> 
-            
-            <td class="text-center">${row.notes || ''}</td>
+            <td class="text-start" data-label="Date & Time">${transactionDate.toLocaleString('en-GB')}</td>
+            <td class="text-start" data-label="From">${row.source_location || 'N/A'}</td>
+            <td class="text-start" data-label="To">${row.destination_location || 'N/A'}</td>
+            <td class="text-start" data-label="Part No.">${row.part_no}</td>
+            <td class="text-start" data-label="Model">${row.model || ''}</td>
+            <td class="text-center" data-label="Lot / Ref.">${row.lot_no || ''}</td>
+            <td class="text-center fw-bold ${quantityClass}" data-label="Change">${quantityPrefix}${quantity.toLocaleString()}</td>
+            <td class="text-center" data-label="Type"><span class="badge bg-secondary">${row.transaction_type}</span></td>
+            <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td> 
+            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
     });

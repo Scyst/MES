@@ -18,8 +18,17 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
             <?php include_once('../components/php/spinner.php'); ?>
 
             <header class="dashboard-header-sticky">
+
+                <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+                        data-bs-toggle="offcanvas" 
+                        data-bs-target="#globalMobileMenu" 
+                        aria-controls="globalMobileMenu">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <div class="d-flex justify-content-between align-items-center mb-1">
+                    
                     <h2 class="mb-0">TOOLBOX DASHBOARD</h2>
+
                     <div class="text-end">
                         <p id="date" class="mb-0"></p>
                         <p id="time" class="mb-0"></p>
@@ -284,6 +293,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
     ?>
         <?php include_once('../components/php/command_center.php'); ?>
         <?php include_once('../components/php/docking_sidebar.php'); ?>
+        <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php 
     endif; 
     ?>
@@ -297,5 +307,6 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
     <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
     <script src="script/OEE_production_chart.js?v=<?php echo filemtime('script/OEE_production_chart.js'); ?>"></script>
     <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
+    <script src="../components/js/mobile_init.js?v=<?php echo filemtime('../components/js/mobile_init.js'); ?>" defer></script>
 </body>
 </html>
