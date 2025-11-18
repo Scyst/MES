@@ -24,6 +24,7 @@
     .page-container {
         height: auto;
         overflow: visible; 
+        display: block;
     }
 
     .sidebar {
@@ -69,7 +70,7 @@
         margin-bottom: 0; 
         padding-bottom: 0;
     }
-    
+
     .dashboard-page #kpi-section {
         min-height: auto;
         margin-top: 0;
@@ -95,6 +96,54 @@
 
     .no-data-message span {
         font-size: 0.7rem;
+    }
+        
+    #charts-section {
+        gap: 0;
+        margin-bottom: 1rem;
+    }
+
+    #charts-section > .row {
+        flex: 0 0 auto;
+    }
+
+    #charts-section .chart-card {
+        height: auto;
+    }
+
+    .dashboard-page #charts-section .chart-wrapper > canvas {
+        position: static;
+        height: 200px !important;
+        width: 100% !important;
+    }
+
+    .dashboard-page #charts-section .line-chart-card .chart-wrapper {
+        min-height: 300px;
+    }
+
+    .dashboard-page #charts-section .line-chart-card .chart-wrapper > canvas {
+        height: 300px !important;
+    }
+    
+    .dashboard-page #cost-summary-section .chart-wrapper {
+        position: relative;
+        min-height: 200px;
+        height: auto !important;
+    }
+
+    .dashboard-page #cost-summary-section #dailyProductionChart {
+        position: static !important;
+        height: 200px !important;
+        width: 100% !important;
+    }
+
+    .dashboard-page #cost-summary-section .cost-summary-card > .row {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    #cost-summary-section .no-data-message, #cost-summary-section .error-message {
+    top: 50%;
     }
 }
 
@@ -151,51 +200,6 @@
         display: none;
     }
 
-    #charts-section {
-        gap: 0;
-        margin-bottom: 1rem;
-    }
-
-    .dashboard-page #charts-section .chart-wrapper {
-        flex-grow: 0;
-        min-height: 200px;
-    }
-
-    .dashboard-page #charts-section .chart-wrapper > canvas {
-        position: static;
-        height: 200px !important;
-        width: 100% !important;
-    }
-
-    .dashboard-page #charts-section .chart-card {
-        height: auto;
-    }
-
-    .dashboard-page #charts-section .line-chart-card .chart-wrapper {
-        min-height: 300px;
-    }
-
-    .dashboard-page #charts-section .line-chart-card .chart-wrapper > canvas {
-        height: 300px !important;
-    }
-
-    .dashboard-page #cost-summary-section .chart-wrapper {
-        position: relative;
-        min-height: 200px;
-        height: auto !important;
-    }
-
-    .dashboard-page #cost-summary-section #dailyProductionChart {
-        position: static !important;
-        height: 200px !important;
-        width: 100% !important;
-    }
-
-    .dashboard-page #cost-summary-section .cost-summary-card > .row {
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-    }
-    
     .info-summary-card {
         flex-direction: column;
         gap: 1rem;

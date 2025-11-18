@@ -778,8 +778,7 @@ body {
 /* ★★★ UPGRADED Styles for No-Data & Error States ★★★ */
 /* ========================================================== */
 
-.no-data-message,
-.error-message {
+.no-data-message,.error-message {
     display: none;
     position: absolute;
     top: 50%;
@@ -791,6 +790,11 @@ body {
     gap: 0.3rem;
     text-align: center;
     pointer-events: none;
+}
+
+#cost-summary-section .no-data-message,
+#cost-summary-section .error-message {
+    top: 75%;
 }
 
 .no-data-message {
