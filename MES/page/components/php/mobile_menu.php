@@ -1,6 +1,4 @@
 <?php
-// ../components/php/global_mobile_menu.php
-// (ไฟล์นี้ดึง Logic มาจาก nav_dropdown.php)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -21,60 +19,102 @@ $userRole = $_SESSION['user']['role'] ?? null;
 
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../OEE_Dashboard/OEE_Dashboard.php">
-                    <i class="fas fa-chart-line fa-fw me-3"></i><span>OEE Dashboard</span>
+                    <i class="fas fa-chart-line fa-fw me-3"></i>
+                    <span>OEE Dashboard</span>
                 </a>
             </li>
-            <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block" href="../management/managementDashboard.php">
-                    <i class="fas fa-tachometer-alt fa-fw me-3"></i> <span>Management Dashboard</span>
-                </a>
-            </li>
-            <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block" href="../production/productionUI.php">
-                    <i class="fas fa-boxes fa-fw me-3"></i><span>Production & Inventory</span>
-                </a>
-            </li>
-            <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block" href="../Stop_Cause/Stop_Cause.php">
-                    <i class="fas fa-ban fa-fw me-3"></i><span>Stop & Causes</span>
-                </a>
-            </li>
-            <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block" href="../documentCenter/documentCenterUI.php">
-                    <i class="fas fa-folder-open fa-fw me-3"></i><span>Document Center</span>
-                </a>
-            </li>
-
-            <li class="list-group-item" style="background-color: var(--bs-tertiary-bg);"></li>
 
             <?php
-              // --- Section for Supervisor, Admin, Creator ---
+              if ($userRole && in_array($userRole, ['admin', 'creator'])):
+            ?>
+            <li class="list-group-item list-group-item-action disabled">
+                <a class="text-decoration-none text-body d-block" 
+                    href="#"
+                    tabindex="-1" 
+                    aria-disabled="true">
+                    <!--href="../management/managementDashboard.php"-->
+                    <i class="fas fa-tachometer-alt fa-fw me-3"></i>
+                    <span style="text-decoration: line-through;">Management Dashboard <small>(ยังไม่รองรับ)</small></span>
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../production/productionUI.php">
+                    <i class="fas fa-boxes fa-fw me-3"></i>
+                    <span>Production & Inventory</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action disabled">
+                <a class="text-decoration-none text-body d-block" 
+                    href="#" 
+                    tabindex="-1" 
+                    aria-disabled="true">
+                    <!--href="../management/managementDashboard.php"-->
+                    <i class="fas fa-ban fa-fw me-3"></i>
+                    <span style="text-decoration: line-through;">Stop & Causes <small>(ยังไม่รองรับ)</small></span>
+                </a>
+            </li>
+            
+            <?php
+              if ($userRole && in_array($userRole, ['operator','supervisor', 'admin', 'creator'])):
+            ?>
+            <li class="list-group-item list-group-item-action disabled">
+                <a class="text-decoration-none text-body d-block" 
+                    href="#"
+                    tabindex="-1"
+                    aria-disabled="true">
+                    <!--href="../documentCenter/documentCenterUI.php"-->
+                    <i class="fas fa-folder-open fa-fw me-3"></i>
+                    <span style="text-decoration: line-through;">Document Center <small>(ยังไม่รองรับ)</small></span>
+                </a>
+            </li>
+            <li class="list-group-item" style="background-color: var(--bs-tertiary-bg);"></li>
+            <?php endif; ?>
+
+            <?php
               if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])):
             ?>
-                <li class="list-group-item list-group-item-action">
-                    <a class="text-decoration-none text-body d-block" href="../inventorySettings/inventorySettings.php">
-                        <i class="fas fa-cogs fa-fw me-3"></i><span>System Settings</span>
+                <li class="list-group-item list-group-item-action disabled">
+                    <a class="text-decoration-none text-body d-block"
+                        href="#"
+                        tabindex="-1"
+                        aria-disabled="true">
+                        <!--href="../inventorySettings/inventorySettings.php"-->
+                        <i class="fas fa-cogs fa-fw me-3"></i>
+                        <span style="text-decoration: line-through;">System Settings <small>(ยังไม่รองรับ)</small></span>
                     </a>
                 </li>
             <?php endif; ?>
 
             <?php
-              // --- Section for Admin, Creator Only ---
               if ($userRole && in_array($userRole, ['admin', 'creator'])):
             ?>
                 <li class="list-group-item list-group-item-action">
                     <a class="text-decoration-none text-body d-block" href="../production/print_location_qr.php">
-                        <i class="fas fa-map-marked-alt fa-fw me-3"></i><span>Location QR Printer</span>
+                        <i class="fas fa-map-marked-alt fa-fw me-3"></i>
+                        <span>Location QR Printer</span>
                     </a>
                 </li>
-                <li class="list-group-item list-group-item-action">
-                    <a class="text-decoration-none text-body d-block" href="../maintenanceStock/maintenanceStockUI.php">
-                        <i class="fas fa-tools fa-fw me-3"></i><span>Maintenance Stock</span>
+                <li class="list-group-item list-group-item-action disabled">
+                    <a class="text-decoration-none text-body d-block"
+                        href="#"
+                        tabindex="-1"
+                        aria-disabled="true">
+                        <!--href="../maintenanceStock/maintenanceStockUI.php"-->
+                        <i class="fas fa-tools fa-fw me-3"></i>
+                        <span style="text-decoration: line-through;">Maintenance Stock <small>(ยังไม่รองรับ)</small></span>
                     </a>
                 </li>
-                <li class="list-group-item list-group-item-action">
-                    <a class="text-decoration-none text-body d-block" href="../userManage/userManageUI.php">
-                        <i class="fas fa-users-cog fa-fw me-3"></i><span>User Manager</span>
+                <li class="list-group-item list-group-item-action disabled">
+                    <a class="text-decoration-none text-body d-block"
+                        href="#"
+                        tabindex="-1"
+                        aria-disabled="true">
+                        <!--href="../userManage/userManageUI.php"-->
+                        <i class="fas fa-users-cog fa-fw me-3"></i>
+                        <span style="text-decoration: line-through;">User Manager <small>(ยังไม่รองรับ)</small></span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -88,12 +128,22 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 </a>
             </li>
 
-            <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block" href="../../auth/logout.php" onclick="manualLogout(event)" title="Logout">
-                    <i class="fas fa-sign-out-alt fa-fw me-3"></i>
-                    <span>Logout</span>
-                </a>
-            </li>
+            <?php if (isset($_SESSION['user'])): ?>
+                <li class="list-group-item list-group-item-action">
+                    <a class="text-decoration-none text-body d-block" href="../../auth/logout.php" onclick="manualLogout(event)" title="Logout">
+                        <i class="fas fa-sign-out-alt fa-fw me-3"></i>
+                        <span>Logout</span>
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="list-group-item list-group-item-action">
+                    <a class="text-decoration-none text-body d-block" href="../../auth/login_form.php" title="Login">
+                        <i class="fas fa-sign-in-alt fa-fw me-3"></i>
+                        <span>Login</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
         </ul>
         
     </div>

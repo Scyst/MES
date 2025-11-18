@@ -24,11 +24,15 @@
             </a>
         </li>
 
+        <?php
+          if ($userRole && in_array($userRole, ['admin', 'creator'])):
+        ?>
         <li>
             <a class="dropdown-item-icon" href="../management/managementDashboard.php" title="Management Dashboard">
                 <i class="fas fa-tachometer-alt fa-fw"></i> <span>Management Dashboard</span>
             </a>
         </li>
+        <?php endif; ?>
         
         <li>
             <a class="dropdown-item-icon" href="../production/productionUI.php" title="Production & Inventory">
@@ -51,7 +55,6 @@
 
         <?php
           $userRole = $_SESSION['user']['role'] ?? null;
-          // --- Section for Supervisor, Admin, Creator ---
           if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])):
         ?>
             <li style="display: none;"> <a class="dropdown-item-icon" href="../warehouseOperations/warehouseTransferUI.php" title="Warehouse Operations (Under Development)">
@@ -68,7 +71,6 @@
         <?php endif; ?>
 
         <?php
-          // --- Section for Admin, Creator Only ---
           if ($userRole && in_array($userRole, ['admin', 'creator'])):
         ?>
             <li>
