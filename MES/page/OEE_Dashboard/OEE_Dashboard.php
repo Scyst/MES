@@ -262,11 +262,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                     </div>
                                 </div>
                                 <div class="chart-wrapper"><canvas id="stopCauseBarChart"></canvas>
-                                <div class="no-data-message" style="margin-top: 1.5rem;">
+                                <div class="no-data-message">
                                     <i class="fas fa-info-circle"></i>
                                     <span>No data available for the selected period.</span>
                                 </div>
-                                <div class="error-message" style="margin-top: 1.5rem;">
+                                <div class="error-message">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     <span>Failed to load data.</span>
                                 </div>
@@ -278,11 +278,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 <div class="progress-bar-wrapper"><div class="progress-bar-indicator"></div></div>
                                 <h4>Production Results</h4>
                                 <div class="chart-wrapper"><canvas id="partsBarChart"></canvas>
-                                <div class="no-data-message" style="margin-top: 1.5rem;">
+                                <div class="no-data-message">
                                     <i class="fas fa-info-circle"></i>
                                     <span>No data available for the selected period.</span>
                                 </div>
-                                <div class="error-message" style="margin-top: 1.5rem;">
+                                <div class="error-message">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     <span>Failed to load data.</span>
                                 </div>
