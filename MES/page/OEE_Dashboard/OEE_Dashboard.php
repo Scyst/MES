@@ -25,28 +25,40 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         aria-controls="globalMobileMenu">
                     <i class="fas fa-bars"></i>
                 </button>
+
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     
                     <h2 class="mb-0">TOOLBOX DASHBOARD</h2>
 
-                    <div class="text-end">
-                        <p id="date" class="mb-0"></p>
-                        <p id="time" class="mb-0"></p>
+                    <div class="text-end d-flex align-items-center">
+                        
+                        <div class="me-3 d-none d-lg-block">
+                            <p id="date" class="mb-0"></p>
+                            <p id="time" class="mb-0"></p>
+                        </div>
+
+                        <button class="btn btn-link d-lg-none" id="oee-filter-toggle-btn" type="button" title="Toggle Filters">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-12">
-                        <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
-                            <select id="lineFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Lines</option></select>
-                            <select id="modelFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Models</option></select>
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="date" id="startDate" class="form-control" style="width: auto;">
-                                <span>-</span>
-                                <input type="date" id="endDate" class="form-control" style="width: auto;">
+
+                <div class="all-filters-container">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
+                                <select id="lineFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Lines</option></select>
+                                <select id="modelFilter" class="form-select" style="width: auto; min-width: 150px;"><option value="">All Models</option></select>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="date" id="startDate" class="form-control" style="width: auto;">
+                                    <span>-</span>
+                                    <input type="date" id="endDate" class="form-control" style="width: auto;">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </header>
             
             <div class="dashboard-container">
@@ -161,17 +173,17 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         <h4 class="mb-3"><i class="fas fa-coins"></i> Production Cost Summary</h4>
 
                         <div class="row text-center gy-4">
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-cash-register"></i> Total Revenue (Production)</h6>
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-cash-register"></i> Total Revenue (Production)</h5>
                                 <span class="value" id="prodRevenueStd"><span class="loading-indicator">Loading...</span></span>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-boxes"></i> Material Cost (Standard)</h6>
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-boxes"></i> Material Cost (Standard)</h5>
                                 <span class="value" id="prodCostMat"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentRM">-- %</span>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-hard-hat"></i> Total DLOT</h6>
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-hard-hat"></i> Total DLOT</h5>
                                 <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentDL">-- %</span>
                             </div>
@@ -179,18 +191,18 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
 
                         <hr>
 
-                        <div class="row text-center mt-3 mb-4 gy-4">
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-industry"></i> Overhead (Standard)</h6>
+                        <div class="row text-center mt-3 mb-4">
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-industry"></i> Overhead (Standard)</h5>
                                 <span class="value" id="prodCostOH"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodCostPercentOH">-- %</span>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-dollar-sign"></i> Total COGS</h6>
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-dollar-sign"></i> Total COGS</h5>
                                 <span class="value" id="prodCostTotal"><span class="loading-indicator">Loading...</span></span>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <h6><i class="fas fa-percentage"></i> Gross Profit</h6>
+                            <div class="col-12 col-md-4 mb-2">
+                                <h5><i class="fas fa-percentage"></i> Gross Profit</h5>
                                 <span class="value" id="prodGPStd"><span class="loading-indicator">Loading...</span></span>
                                 <span class="percentage" id="prodPercentGPStd">-- %</span>
                             </div>
@@ -200,7 +212,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         endif; 
                         ?>
 
-                        <h4 class="mt-4 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
+                        <h4 class="mt-2 mb-3"><i class="fas fa-chart-bar"></i> Daily Production Output (FG)</h4>
                         <div class="chart-wrapper" style="height: 100%;">
                             <canvas id="dailyProductionChart"></canvas>
                             <div class="no-data-message">

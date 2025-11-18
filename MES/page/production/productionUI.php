@@ -95,7 +95,7 @@
                             </div>
                             
                             <div class="col-lg-6">
-                                <div id="dynamic-button-group" class="d-flex justify-content-center gap-2 mt-2">
+                                <div id="dynamic-button-group" class="d-flex justify-content-end gap-2 mt-2">
                                     </div>
                             </div>
                             

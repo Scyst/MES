@@ -2,17 +2,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 1. เชื่อมปุ่ม Theme-Switcher ในเมนู Off-canvas (มือถือ)
     const mobileThemeBtn = document.getElementById('theme-switcher-btn-mobile');
-    const mainThemeBtn = document.getElementById('theme-switcher-btn'); // ปุ่มเดิมใน sidebar
+    const mainThemeBtn = document.getElementById('theme-switcher-btn');
     
     if (mobileThemeBtn && mainThemeBtn) {
         mobileThemeBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // สั่งให้ปุ่มหลัก (ที่ซ่อนอยู่) ทำงาน
             mainThemeBtn.click(); 
         });
     }
 
-    // 2. สร้างฟังก์ชัน manualLogout สำรองไว้ (ในกรณีที่ไฟล์ nav_dropdown.php ไม่ได้โหลด)
+    // 2. สร้างฟังก์ชัน manualLogout สำรองไว้
     if (typeof manualLogout !== 'function') {
         function manualLogout(event) {
             event.preventDefault();
@@ -23,19 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ★★★ (3. เพิ่ม) โค้ดสำหรับปุ่ม Filter ใน productionUI.php ★★★
+    // 3. โค้ดสำหรับปุ่ม Filter ใน productionUI.php
     const filterToggleBtn = document.getElementById('mobile-filter-toggle-btn');
-    const stickyBar = document.querySelector('.sticky-bar'); // (หา .sticky-bar)
+    const stickyBar = document.querySelector('.sticky-bar');
     
     if (filterToggleBtn && stickyBar) {
         filterToggleBtn.addEventListener('click', () => {
-            // (สลับ class ที่ .sticky-bar)
             stickyBar.classList.toggle('filters-expanded'); 
             
             const btnSpan = filterToggleBtn.querySelector('span');
             const btnIcon = filterToggleBtn.querySelector('i');
             
-            // (สลับข้อความและไอคอนบนปุ่ม)
             if (stickyBar.classList.contains('filters-expanded')) {
                 btnSpan.textContent = 'Hide Filters';
                 btnIcon.classList.remove('fa-filter');
@@ -47,6 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // ★★★ (จบส่วนที่เพิ่ม) ★★★
+    const oeeFilterBtn = document.getElementById('oee-filter-toggle-btn');
+    const oeeHeader = document.querySelector('.dashboard-header-sticky');
 
+    if (oeeFilterBtn && oeeHeader) {
+        oeeFilterBtn.addEventListener('click', () => {
+            // (สลับ class ที่ตัว <header> เอง)
+            oeeHeader.classList.toggle('filters-expanded');
+        });
+
+        // (ทำให้ปุ่ม "Show Filters" ของหน้า Production (ถ้ามี) ทำงานด้วย)
+        // (เผื่อในอนาคตคุณอยากให้มันซ่อนเหมือนกัน)
+        // oeeHeader.classList.add('filters-expanded'); // (Default to expanded)
+    }
 });
