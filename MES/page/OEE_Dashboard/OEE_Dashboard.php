@@ -11,6 +11,13 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
 </head>
 
 <body class="dashboard-page">
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
+    
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 
@@ -18,14 +25,6 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
             <?php include_once('../components/php/spinner.php'); ?>
 
             <header class="dashboard-header-sticky">
-
-                <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
-                        data-bs-toggle="offcanvas" 
-                        data-bs-target="#globalMobileMenu" 
-                        aria-controls="globalMobileMenu">
-                    <i class="fas fa-bars"></i>
-                </button>
-
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     
                     <h2 class="mb-0">TOOLBOX DASHBOARD</h2>
@@ -308,7 +307,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
     <?php 
     endif; 
     ?>
-    
+
     <?php include_once('../components/php/mobile_menu.php'); ?>ป
 
     <script>

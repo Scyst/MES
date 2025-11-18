@@ -64,10 +64,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
             border-radius: var(--bs-card-border-radius, .375rem);
         }
 
-        /* ============================================== */
-        /* ▼▼▼ สไตล์เดิมของคุณ (ที่จำเป็น) ▼▼▼ */
-        /* ============================================== */
-
         .planning-table-wrapper thead { position: sticky; top: 0; z-index: 1; background-color: var(--bs-tertiary-bg); }
         [data-bs-theme="dark"] .planning-table-wrapper thead { background-color: var(--bs-secondary-bg); }
         
@@ -182,6 +178,13 @@ $currentUserForJS = $_SESSION['user'] ?? null;
     </style>
 </head>
 <body class="dashboard-page">
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
+    
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
         <main id="main-content">
@@ -377,6 +380,7 @@ $currentUserForJS = $_SESSION['user'] ?? null;
             <?php include_once('../components/php/docking_sidebar.php'); ?>
             <?php include_once('components/planModal.php'); ?>
             <?php include_once('components/rejectReasonModal.php'); ?>
+            <?php include_once('../components/php/mobile_menu.php'); ?>
 
             <nav class="pagination-footer" data-tab-target="#planning-pane" style="display: block;">
                 <ul class="pagination justify-content-center" id="planningPagination"></ul>
@@ -400,5 +404,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
     <script src="../components/js/sendRequest.js?v=<?php echo filemtime('../components/js/sendRequest.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/managementDashboard.js?v=<?php echo filemtime('script/managementDashboard.js'); ?>"></script>
+    <script src="../components/js/mobile_init.js?v=<?php echo filemtime('../components/js/mobile_init.js'); ?>" defer></script>
 </body>
 </html>

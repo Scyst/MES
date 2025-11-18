@@ -26,6 +26,7 @@
             aria-controls="globalMobileMenu">
         <i class="fas fa-bars"></i>
     </button>
+    
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 
