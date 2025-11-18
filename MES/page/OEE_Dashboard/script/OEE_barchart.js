@@ -112,9 +112,12 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
                         stacked: isStacked, 
                         ticks: { 
                             color: themeColors.ticksColor,
-                            maxRotation: 45,
+                            maxRotation: 0,
                             minRotation: 0,
-                            align: 'end'
+                            autoSkip: true,
+                            autoSkipPadding: 15,
+                            maxTicksLimit: 10,
+                            align: 'center'
                         } 
                     },
                     y: { stacked: isStacked, beginAtZero: true, ticks: { color: themeColors.ticksColor } }
@@ -125,9 +128,6 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
         console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Updating existing chart.`);
         
         chartInstance.data.labels = labels;
-
-        // ===== START: โค้ดที่แก้ไขกลับไปเป็นแบบเดิมของคุณ =====
-        // อัปเดตข้อมูลในแต่ละ dataset เพื่อให้ animation ทำงานถูกต้อง
         chartInstance.data.datasets.forEach((oldDataset, index) => {
             const newDataset = datasets[index];
             if (newDataset) {
@@ -137,17 +137,14 @@ function renderBarChart(canvasId, labels, datasets, options = {}) {
             }
         });
         
-        // หากจำนวน dataset ใหม่มีมากกว่าของเก่า ให้เพิ่มเข้าไป
         if (datasets.length > chartInstance.data.datasets.length) {
             for (let i = chartInstance.data.datasets.length; i < datasets.length; i++) {
                 chartInstance.data.datasets.push(datasets[i]);
             }
         } 
-        // หากจำนวน dataset ใหม่มีน้อยกว่าของเก่า ให้ลบออก
         else if (datasets.length < chartInstance.data.datasets.length) {
              chartInstance.data.datasets.length = datasets.length;
         }
-        // ===== END: โค้ดที่แก้ไขกลับไปเป็นแบบเดิมของคุณ =====
 
         chartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
         chartInstance.options.scales.y.ticks.color = themeColors.ticksColor;
@@ -164,7 +161,6 @@ async function fetchAndRenderBarCharts() {
     toggleErrorMessage("stopCauseBarChart", false);
 
     try {
-        // ✅ เพิ่มการอ่านค่าจากปุ่ม Toggle
         const activeToggle = document.querySelector('#stopCauseToggle .btn.active');
         const stopCauseGroupBy = activeToggle ? activeToggle.dataset.group : 'cause';
 
@@ -173,14 +169,13 @@ async function fetchAndRenderBarCharts() {
             endDate: document.getElementById("endDate")?.value || '',
             line: document.getElementById("lineFilter")?.value || '',
             model: document.getElementById("modelFilter")?.value || '',
-            stopCauseGroupBy: stopCauseGroupBy // ✅ ส่งค่า GroupBy ไปกับ Request
+            stopCauseGroupBy: stopCauseGroupBy
         });
         
         const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
         const responseData = await response.json();
         if (!responseData.success) throw new Error(responseData.error || "Barchart API: Failed to fetch bar chart data.");
 
-        // --- Parts Bar Chart (Production Results) ---
         const partResults = responseData.data?.partResults;
         const hasPartsData = partResults && partResults.length > 0;
         toggleNoDataMessage("partsBarChart", !hasPartsData);
@@ -194,10 +189,7 @@ async function fetchAndRenderBarCharts() {
 
         if (hasPartsData) {
             partResults.forEach(row => {
-                // ✅ Label สำหรับแกน X: กลับไปใช้แค่ Part Number เพื่อความสะอาด
                 partLabels.push(row.part_no);
-                
-                // ✅ Label สำหรับ Tooltip: ยังคงใช้รูปแบบเต็มเพื่อให้ข้อมูลครบถ้วน
                 originalPartLabels.push(`${row.part_no} (${row.production_line} / ${row.model})`);
                 
                 fgData.push(row.FG);
@@ -205,12 +197,11 @@ async function fetchAndRenderBarCharts() {
                 scrapData.push(row.SCRAP);
             });
 
-            // สร้าง Datasets (ส่วนนี้เหมือนเดิม)
             const countTypes = { FG: fgData, HOLD: holdData, SCRAP: scrapData };
             const colors = { 
-                FG: 'rgba(75, 192, 192, 0.7)',  // Teal/Green (Met Plan)
-                HOLD: 'rgba(255, 159, 64, 0.7)', // Orange (Carry Over)
-                SCRAP: 'rgba(255, 99, 132, 0.7)'   // Red (Shortfall)
+                FG: 'rgba(75, 192, 192, 0.7)',
+                HOLD: 'rgba(255, 159, 64, 0.7)',
+                SCRAP: 'rgba(255, 99, 132, 0.7)'
             };
             
             partDatasets = Object.keys(countTypes)
@@ -226,7 +217,7 @@ async function fetchAndRenderBarCharts() {
         
         renderBarChart('partsBarChart', partLabels, partDatasets, { 
             isStacked: true, 
-            originalLabels: originalPartLabels, // Tooltip ยังคงใช้ข้อมูลเต็ม
+            originalLabels: originalPartLabels,
             unitLabel: 'pcs' 
         });
         
@@ -276,14 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
         stopCauseToggle.addEventListener('click', (event) => {
             const button = event.target.closest('button');
             if (!button || button.classList.contains('active')) {
-                return; // ถ้ากดปุ่มเดิมที่ Active อยู่แล้ว ไม่ต้องทำอะไร
+                return;
             }
 
-            // สลับสถานะ Active
             stopCauseToggle.querySelector('.active')?.classList.remove('active');
             button.classList.add('active');
 
-            // โหลดข้อมูลกราฟใหม่
             fetchAndRenderBarCharts();
         });
     }

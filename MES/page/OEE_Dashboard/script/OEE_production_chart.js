@@ -156,7 +156,7 @@ async function fetchAndRenderDailyProductionChart() {
             maintainAspectRatio: false,
             animation: { duration: 500 },
             plugins: {
-                 legend: {
+                legend: {
                     display: chartData.datasets.length > 1 && chartData.datasets.length < 15,
                     position: 'top',
                     labels: { color: themeColors.legendColor }
@@ -164,10 +164,10 @@ async function fetchAndRenderDailyProductionChart() {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                     callbacks: {
-                        filter: function(tooltipItem) {
-                            return tooltipItem.parsed.y > 0;
-                        },
+                    filter: function(tooltipItem) {
+                        return tooltipItem.raw > 0;
+                    },
+                    callbacks: {
                         label: (context) => {
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
@@ -177,21 +177,24 @@ async function fetchAndRenderDailyProductionChart() {
                         footer: (tooltipItems) => {
                             let sum = 0;
                             tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
+                            if (sum <= 0) return '';
                             return 'Total: ' + sum.toLocaleString();
                         }
                     }
                 },
-                 title: { display: false },
-                 datalabels: datalabelsConfig
+                title: { display: false },
+                datalabels: datalabelsConfig
             },
             scales: {
                 x: {
                     stacked: true,
                     ticks: { 
                         color: themeColors.ticksColor,
-                        maxRotation: 45,
+                        maxRotation: 0,
                         minRotation: 0,
-                        align: 'end'
+                        autoSkip: true,
+                        autoSkipPadding: 15,
+                        align: 'center'
                     },
                     grid: { display: false }
                 },
@@ -202,7 +205,7 @@ async function fetchAndRenderDailyProductionChart() {
                     grid: { color: themeColors.gridColor },
                     title: { display: true, text: 'Quantity Produced', color: themeColors.labelColor }
                 }
-             }
+            }
         };
 
 
