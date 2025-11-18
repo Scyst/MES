@@ -308,7 +308,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
     endif; 
     ?>
 
-    <?php include_once('../components/php/mobile_menu.php'); ?>ป
+    <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>
         const isLoggedIn = <?php echo json_encode($isLoggedIn); ?>;

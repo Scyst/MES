@@ -25,6 +25,7 @@
         </li>
 
         <?php
+          $userRole = $_SESSION['user']['role'] ?? null;
           if ($userRole && in_array($userRole, ['admin', 'creator'])):
         ?>
         <li>
