@@ -248,7 +248,15 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="card-body"> <canvas id="planVsActualChart"></canvas> </div>
+                                                <div class="card-body p-0 position-relative"> 
+                                                    <div class="chart-scroll-container" style="overflow-x: auto; height: 100%; width: 100%;">
+                                                        
+                                                        <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
+                                                            <canvas id="planVsActualChart"></canvas>
+                                                        </div>
+
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-lg-4 h-100">

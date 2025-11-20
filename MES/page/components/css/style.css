@@ -1114,3 +1114,29 @@ body {
 .form-select[disabled].form-control-readonly {
     background-color: var(--bs-tertiary-bg);
 }
+
+.chart-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+#planVsActualChartInnerWrapper {
+    height: 100%;
+    position: relative;
+}
+
+.chart-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+.chart-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.chart-scroll-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.chart-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

@@ -311,7 +311,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
-        if (!chartCanvas) return;
+        const chartWrapper = document.getElementById('planVsActualChartInnerWrapper'); 
+        
+        if (!chartCanvas || !chartWrapper) return;
+        
+        const uniqueItemsCount = new Set(planData.map(p => p.item_id)).size;
+        const minWidthPerBar = 100; 
+        const totalWidth = Math.max(100, uniqueItemsCount * minWidthPerBar);
+        
+        chartWrapper.style.width = `${totalWidth}px`;
+        chartWrapper.style.minWidth = '100%'; 
+
         const ctx = chartCanvas.getContext('2d');
         
         if (chartDateDisplay) {
@@ -319,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
             }
         }
+
         const aggregatedData = {};
         planData.forEach(p => {
             const itemId = p.item_id;
@@ -344,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             aggregatedData[itemId].totalOriginalPlan += originalPlan;
             aggregatedData[itemId].totalCarryOver += carryOver;
         });
+
         const aggregatedArray = Object.values(aggregatedData);
         const labels = aggregatedArray.map(agg => agg.label);
         const totalOriginalPlanData = aggregatedArray.map(agg => agg.totalOriginalPlan);
@@ -358,8 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const unplannedData = aggregatedArray.map(agg => {
             return (agg.totalActualQty > 0) ? Math.max(0, agg.totalActualQty - agg.totalAdjustedPlan) : null;
         });
+
         const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...aggregatedArray.map(agg => agg.totalActualQty));
         const suggestedTopValue = dataMaxValue > 0 ? dataMaxValue * 1.15 : 10;
+        
         const chartData = {
             labels: labels,
             datasets: [
@@ -370,13 +384,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: 'Actual (Unplanned)', data: unplannedData, backgroundColor: 'rgba(153, 102, 255, 0.7)', borderColor: 'rgba(153, 102, 255, 1)', borderWidth: 1, stack: 'actual' }
             ]
         };
+
         const chartOptions = {
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { top: 5 } },
+            layout: { padding: { top: 20, right: 20, left: 10, bottom: 10 } },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Total Quantity' }, ticks: { callback: v => v.toLocaleString() }, suggestedMax: suggestedTopValue, stacked: true },
-                x: { ticks: { maxRotation: 45, minRotation: 0, align: 'end', font: { size: 11 }, autoSkip: false }, stacked: true, offset: true }
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'Total Quantity' }, 
+                    ticks: { callback: v => v.toLocaleString() }, 
+                    suggestedMax: suggestedTopValue, 
+                    stacked: true 
+                },
+                x: { 
+                    ticks: { 
+                        maxRotation: 0,
+                        minRotation: 0,
+                        align: 'center', 
+                        font: { size: 11, weight: 'bold' },
+                        autoSkip: false
+                    }, 
+                    stacked: true, 
+                    offset: true,
+                    grid: {
+                        display: true,
+                        drawOnChartArea: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                }
             },
             plugins: {
                 legend: { position: 'top' },
@@ -420,12 +456,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
         };
+
         if (planVsActualChartInstance) {
             planVsActualChartInstance.destroy();
         }
         const availablePlugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
         planVsActualChartInstance = new Chart(ctx, { type: 'bar', data: chartData, options: chartOptions , plugins: availablePlugins });
-        if (availablePlugins.length === 0) { console.warn("ChartDataLabels plugin not found."); }
     }
 
     function initializeCalendar() {
