@@ -19,7 +19,6 @@ $line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : nul
 $model = (!empty($_GET['model']) && $_GET['model'] !== 'All') ? $_GET['model'] : null;
 
 try {
-    // --- 1. Get Standard Cost Summary ---
     if (!defined('SP_CALC_STD_COST')) {
         throw new Exception("Configuration Error: SP_CALC_STD_COST is not defined.");
     }
@@ -34,59 +33,51 @@ try {
     $standardResult = $stmtStd->fetch(PDO::FETCH_ASSOC);
     $stmtStd->closeCursor();
 
-    // --- 2. Get Actual DLOT Summary ---
-    $actualResult = null; // Initialize actualResult
+    $actualResult = null; 
     if (defined('SP_CALC_ACTUAL_COST')) {
         $spActualName = '[dbo].[' . SP_CALC_ACTUAL_COST . ']';
         try {
             $stmtActual = $pdo->prepare("EXEC {$spActualName} @StartDate = ?, @EndDate = ?, @Line = ?");
+            
             $stmtActual->bindParam(1, $startDate, PDO::PARAM_STR);
             $stmtActual->bindParam(2, $endDate, PDO::PARAM_STR);
-            $stmtActual->bindParam(3, $line, $line === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            
+            $forceLineAll = null; 
+            $stmtActual->bindParam(3, $forceLineAll, PDO::PARAM_NULL); 
+
             $stmtActual->execute();
             $actualResult = $stmtActual->fetch(PDO::FETCH_ASSOC);
             $stmtActual->closeCursor();
         } catch (PDOException $e) {
-            error_log("Database Error fetching actual DLOT in get_production_cost_summary.php: " . $e->getMessage());
-            // Do not throw an error, proceed with standard costs
+            error_log("Database Error fetching actual DLOT: " . $e->getMessage());
         }
     } else {
-        error_log("Warning in get_production_cost_summary.php: SP_CALC_ACTUAL_COST constant is not defined.");
+        error_log("Warning: SP_CALC_ACTUAL_COST constant is not defined.");
     }
 
-    // --- 3. Process Results & Overwrite DL Cost if applicable ---
     if ($standardResult) {
-        // Convert numeric strings to floats and handle nulls (defaulting to 0)
         foreach ($standardResult as $key => $value) {
-            if (is_numeric($value)) {
-                $standardResult[$key] = floatval($value);
-            } 
-        }
+            if (is_numeric($value)) $standardResult[$key] = floatval($value);
+        } 
 
-        $isActualCostUsed = false; // Flag to track if overwrite happens
+        $isActualCostUsed = false; 
 
-        // Check if Actual DLOT data exists and is valid (numeric and fetched successfully)
         if ($actualResult && isset($actualResult['TotalActualDLOT']) && is_numeric($actualResult['TotalActualDLOT'])) {
             $actualDLOT = floatval($actualResult['TotalActualDLOT']);
 
-            // *** Overwrite Standard DL with Actual DLOT ***
             $standardResult['TotalDLCost'] = $actualDLOT;
-            $isActualCostUsed = true; // Set flag
+            $isActualCostUsed = true; 
 
-            // Recalculate percentages and totals based on the potentially new TotalDLCost
             $totalRevenue = $standardResult['TotalStdRevenue'] ?? 0;
             $matCost = $standardResult['TotalMatCost'] ?? 0;
             $ohCost = $standardResult['TotalOHCost'] ?? 0;
 
             $standardResult['PercentDL'] = ($totalRevenue > 0) ? ($standardResult['TotalDLCost'] / $totalRevenue) * 100.0 : 0;
-            // Also recalculate dependent values: Total COGS (TotalStdCost) and GP %
             $standardResult['TotalStdCost'] = $matCost + $standardResult['TotalDLCost'] + $ohCost;
             $standardResult['PercentGPStd'] = ($totalRevenue > 0) ? (($totalRevenue - $standardResult['TotalStdCost']) / $totalRevenue) * 100.0 : 0;
         }
 
-        // Add the flag to the result
         $standardResult['isActualDLCost'] = $isActualCostUsed;
-
         echo json_encode(['success' => true, 'data' => $standardResult]);
 
     } else {
