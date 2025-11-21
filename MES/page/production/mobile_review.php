@@ -242,6 +242,12 @@
     </style>
 </head>
 <body>
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
     <div class="container" id="review-container">
         <?php include_once('../components/php/spinner.php'); ?>
         <div id="toast"></div>
@@ -270,6 +276,7 @@
         include('components/editProductionModal.php');
     ?>
 
+    <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php include_once('components/mobile_nav.php'); ?>
 
     <script>

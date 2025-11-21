@@ -118,7 +118,7 @@
 
         <?php if (isset($_SESSION['user'])): ?>
             <li>
-                <a class="dropdown-item-icon" href="../../auth/logout.php" onclick="manualLogout(event)" title="Logout">
+                <a class="dropdown-item-icon logout-action" href="../../auth/logout.php" title="Logout">
                     <i class="fas fa-sign-out-alt fa-fw"></i>
                     <span>Logout</span>
                 </a>
@@ -133,15 +133,3 @@
         <?php endif; ?>
     </ul>
 </nav>
-
-<script>
-    if (typeof manualLogout !== 'function') {
-        function manualLogout(event) {
-            event.preventDefault();
-            localStorage.removeItem('pdTableFilters');
-            localStorage.removeItem('inventoryUIFilters');
-            localStorage.removeItem('sidebarState');
-            window.location.href = event.currentTarget.href;
-        }
-    }
-</script>

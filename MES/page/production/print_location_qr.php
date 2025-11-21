@@ -61,6 +61,12 @@ if (!hasRole(['admin', 'creator'])) {
     </style>
 </head>
 <body class="page-with-table">
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
     <div class="page-container">
         <?php include_once('../components/php/nav_dropdown.php'); ?>
 

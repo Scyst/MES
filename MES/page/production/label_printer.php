@@ -12,7 +12,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Transfer Label Printer</title> <?php include_once '../components/common_head.php'; ?>
+    <title>Transfer Label Printer</title>
+    <?php include_once '../components/common_head.php'; ?>
     <style>
         body { padding-top: 20px; }
         .container { max-width: 600px; }
@@ -36,10 +37,19 @@
     </style>
 </head>
 <body id="printer-container"> <div class="container">
-        <?php include_once('../components/php/spinner.php'); ?>
-        <div id="toast"></div>
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
 
-        <h3 class="text-center mb-4">Print Transfer Label</h3> <p class="text-center text-muted">กรอกข้อมูลเพื่อสร้างใบโอนย้าย (สถานะ PENDING)</p>
+    <?php include_once('../components/php/spinner.php'); ?>
+    
+    <div id="toast"></div>
+
+        <h3 class="text-center mb-4">Print Transfer Label</h3> 
+        <p class="text-center text-muted">กรอกข้อมูลเพื่อสร้างใบโอนย้าย (สถานะ PENDING)</p>
 
         <form id="label-generator-form">
             <div class="mb-3 position-relative">

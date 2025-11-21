@@ -105,7 +105,7 @@ $isStore = in_array($userRole, ['admin', 'creator']);
                         <div class="row my-2 align-items-center">
                             <div class="col-lg-8">
                                 <div class="filter-controls-wrapper d-flex gap-2 flex-wrap">
-                                    <input type="text" id="filterSearch" class="form-control" placeholder="Search Part No, SAP..." style="max-width: 200px;">
+                                    <input type="text" id="filterSearch" class="form-control" placeholder="Search Part No, SAP..." style="max-width: 300px;">
                                     <select id="filterStatus" class="form-select" style="max-width: 180px;" onchange="loadRequests()">
                                         <option value="ALL">Status: All</option>
                                         <option value="PENDING">Status: Pending</option>

@@ -1727,6 +1727,28 @@ async function openHourlyProductionModal() {
          tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No production data found for this period.</td></tr>';
     }
 }
+
+// --- Mobile FAB Logic ---
+function updateMobileFab(activeTabId) {
+    const fabContainer = document.getElementById('mobileFabContainer');
+    const fabBtn = document.getElementById('mobileFabBtn');
+    
+    if (!fabContainer || !fabBtn) return;
+
+    const newFabBtn = fabBtn.cloneNode(true);
+    fabBtn.parentNode.replaceChild(newFabBtn, fabBtn);
+
+    if (activeTabId === 'production-history-tab' && typeof openAddPartModal === 'function') {
+        fabContainer.style.display = 'block';
+        newFabBtn.onclick = () => openAddPartModal();
+    } else if (activeTabId === 'entry-history-tab' && typeof openAddEntryModal === 'function') {
+        fabContainer.style.display = 'block';
+        newFabBtn.onclick = () => openAddEntryModal();
+    } else {
+        fabContainer.style.display = 'none';
+    }
+}
+
 // =================================================================
 // SECTION: INITIALIZATION
 // =================================================================
@@ -1739,7 +1761,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEntryAutocomplete();
     setupProductionAutocomplete();
 
-    // Event Listeners for Forms
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
@@ -1747,36 +1768,35 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
     document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
 
-    // Debounce function for search input
     const debouncedFilterChange = () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(handleFilterChange, 500);
     };
 
-    // Event Listeners for new Filters
     document.getElementById('filterSearch').addEventListener('input', debouncedFilterChange);
     document.getElementById('filterCountType').addEventListener('change', handleFilterChange);
     document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
-
-    // Event Listener for Tab changes
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (event) => {
             const activeTabId = event.target.id;
             updateFilterVisibility(activeTabId);
             handleFilterChange();
             updateControls(activeTabId);
+            
+            updateMobileFab(activeTabId);
         });
     });
 
-    // Initial data load for the active tab
     const activeTab = document.querySelector('#mainTab .nav-link.active');
     if (activeTab) {
         const activeTabId = activeTab.id;
         updateFilterVisibility(activeTabId);
         handleFilterChange();
         updateControls(activeTabId);
+        
+        updateMobileFab(activeTabId);
     }
 
     const loadTransferBtn = document.getElementById('entry_load_transfer_btn');
@@ -1787,15 +1807,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const transferIdInput = document.getElementById('entry_transfer_id_input');
     if (transferIdInput) {
         transferIdInput.addEventListener('keypress', (e) => {
-            e.target.value = e.target.value.toUpperCase(); // (บังคับพิมพ์ใหญ่)
+            e.target.value = e.target.value.toUpperCase();
             if (e.key === 'Enter') {
-                e.preventDefault(); // (กันฟอร์ม Submit)
+                e.preventDefault();
                 autoFillFromTransferOrder_PC();
             }
         });
     }
 
-    // Time Mask for time inputs
     const timeInputs = document.querySelectorAll('input[name="start_time"], input[name="end_time"], input[name="log_time"]');
     timeInputs.forEach(input => {
         input.addEventListener('input', applyTimeMask);

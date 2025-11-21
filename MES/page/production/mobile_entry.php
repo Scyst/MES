@@ -285,6 +285,12 @@
     </style>
 </head>
 <body id="entry-container">
+    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#globalMobileMenu" 
+            aria-controls="globalMobileMenu">
+        <i class="fas fa-bars"></i>
+    </button>
     <div class="container">
         <?php include_once('../components/php/spinner.php'); ?>
         <div id="toast"></div>
@@ -452,7 +458,8 @@
         <?php endif; ?>
     </div>
 
-    </div> <?php include_once('components/mobile_nav.php'); ?>
+    <?php include_once('../components/php/mobile_menu.php'); ?>
+    <?php include_once('components/mobile_nav.php'); ?>
 
     <script>
         const INVENTORY_API_URL = 'api/inventoryManage.php';

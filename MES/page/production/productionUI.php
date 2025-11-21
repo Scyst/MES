@@ -17,6 +17,24 @@
 <head>
     <title>Production & Inventory</title>
     <?php include_once '../components/common_head.php'; ?>
+    <style>
+        /* FAB Button (Mobile Only) - Copy from storeRequest.php */
+        @media (max-width: 991.98px) {
+            .fab-container {
+                position: fixed; bottom: 25px; right: 25px; z-index: 1060;
+            }
+            .fab-btn {
+                width: 60px; height: 60px; font-size: 1.5rem;
+                border: none; border-radius: 50%;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                display: flex; align-items: center; justify-content: center;
+                color: white; cursor: pointer;
+                background-color: #198754; /* Green */
+                transition: transform 0.2s;
+            }
+            .fab-btn:active { transform: scale(0.9); }
+        }
+    </style>
 </head>
 
 <body class="page-with-table">
@@ -36,6 +54,12 @@
             <div class="container-fluid pt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="mb-0">Production & Inventory</h2>
+                    
+                    <button class="btn btn-outline-secondary d-lg-none rounded-circle shadow-sm" 
+                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
+                            type="button" 
+                            id="mobile-filter-toggle-btn"> <i class="fas fa-filter"></i>
+                    </button>
                 </div>
 
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
@@ -66,11 +90,6 @@
             <div class="sticky-bar">
                 
                 <div class="container-fluid">
-
-                    <button class="btn btn-primary d-lg-none" id="mobile-filter-toggle-btn" type="button" style="width: 100%; margin-top: 0.5rem;">
-                        <i class="fas fa-filter me-1"></i> 
-                        <span>Show Filters</span>
-                    </button>
 
                     <div class="all-filters-container">
                         <div class="row my-3 align-items-center">
@@ -275,6 +294,12 @@
             </nav>
             
             <div id="toast"></div>
+
+            <div class="fab-container d-lg-none" id="mobileFabContainer" style="display: none;">
+                <button class="fab-btn" id="mobileFabBtn">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
 
             <?php
                 if ($canAdd) { 

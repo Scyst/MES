@@ -138,7 +138,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
 
             <?php if (isset($_SESSION['user'])): ?>
                 <li class="list-group-item list-group-item-action">
-                    <a class="text-decoration-none text-body d-block" href="../../auth/logout.php" onclick="manualLogout(event)" title="Logout">
+                    <a class="text-decoration-none text-body d-block logout-action" href="../../auth/logout.php" title="Logout">
                         <i class="fas fa-sign-out-alt fa-fw me-3"></i>
                         <span>Logout</span>
                     </a>

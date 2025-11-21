@@ -1,6 +1,35 @@
+// ตำแหน่ง: js/mobile_init.js (หรือ path ที่คุณเก็บไฟล์นี้)
+
 document.addEventListener('DOMContentLoaded', () => {
     
-    // 1. เชื่อมปุ่ม Theme-Switcher ในเมนู Off-canvas (มือถือ)
+    // ============================================================
+    // 1. ระบบ LOGOUT (ใช้ร่วมกันทั้ง Desktop และ Mobile)
+    // ============================================================
+    // ดักจับทุกปุ่มที่มีคลาส .logout-action
+    const logoutButtons = document.querySelectorAll('.logout-action');
+
+    if (logoutButtons.length > 0) {
+        logoutButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); // หยุดการเปลี่ยนหน้าปกติไว้ก่อน
+
+                // ล้างค่า LocalStorage ที่กำหนด
+                const keysToRemove = ['pdTableFilters', 'inventoryUIFilters', 'sidebarState'];
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                // Redirect ไปยัง URL ปลายทาง (logout.php)
+                const targetUrl = btn.getAttribute('href');
+                if (targetUrl) {
+                    window.location.href = targetUrl;
+                }
+            });
+        });
+    }
+
+    // ============================================================
+    // 2. ระบบ THEME SWITCHER (Mobile Proxy)
+    // ============================================================
+    // เมื่อกดปุ่มในมือถือ -> ไปสั่งให้ปุ่มหลัก (Desktop) ทำงานแทน
     const mobileThemeBtn = document.getElementById('theme-switcher-btn-mobile');
     const mainThemeBtn = document.getElementById('theme-switcher-btn');
     
@@ -11,50 +40,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. สร้างฟังก์ชัน manualLogout สำรองไว้
-    if (typeof manualLogout !== 'function') {
-        function manualLogout(event) {
-            event.preventDefault();
-            localStorage.removeItem('pdTableFilters');
-            localStorage.removeItem('inventoryUIFilters');
-            localStorage.removeItem('sidebarState');
-            window.location.href = event.currentTarget.href;
-        }
-    }
-
-    // 3. โค้ดสำหรับปุ่ม Filter ใน productionUI.php
+    // ============================================================
+    // 3. ระบบ FILTER TOGGLE (Production UI)
+    // ============================================================
     const filterToggleBtn = document.getElementById('mobile-filter-toggle-btn');
     const stickyBar = document.querySelector('.sticky-bar');
     
     if (filterToggleBtn && stickyBar) {
         filterToggleBtn.addEventListener('click', () => {
-            stickyBar.classList.toggle('filters-expanded'); 
+            const isExpanded = stickyBar.classList.toggle('filters-expanded'); 
             
             const btnSpan = filterToggleBtn.querySelector('span');
             const btnIcon = filterToggleBtn.querySelector('i');
             
-            if (stickyBar.classList.contains('filters-expanded')) {
-                btnSpan.textContent = 'Hide Filters';
-                btnIcon.classList.remove('fa-filter');
-                btnIcon.classList.add('fa-chevron-up');
-            } else {
-                btnSpan.textContent = 'Show Filters';
-                btnIcon.classList.remove('fa-chevron-up');
-                btnIcon.classList.add('fa-filter');
+            if (btnSpan) btnSpan.textContent = isExpanded ? 'Hide Filters' : 'Show Filters';
+            
+            if (btnIcon) {
+                if (isExpanded) {
+                    btnIcon.classList.replace('fa-filter', 'fa-chevron-up');
+                } else {
+                    btnIcon.classList.replace('fa-chevron-up', 'fa-filter');
+                }
             }
         });
     }
+
+    // ============================================================
+    // 4. ระบบ FILTER TOGGLE (OEE Dashboard)
+    // ============================================================
     const oeeFilterBtn = document.getElementById('oee-filter-toggle-btn');
     const oeeHeader = document.querySelector('.dashboard-header-sticky');
 
     if (oeeFilterBtn && oeeHeader) {
         oeeFilterBtn.addEventListener('click', () => {
-            // (สลับ class ที่ตัว <header> เอง)
             oeeHeader.classList.toggle('filters-expanded');
         });
-
-        // (ทำให้ปุ่ม "Show Filters" ของหน้า Production (ถ้ามี) ทำงานด้วย)
-        // (เผื่อในอนาคตคุณอยากให้มันซ่อนเหมือนกัน)
-        // oeeHeader.classList.add('filters-expanded'); // (Default to expanded)
     }
 });
