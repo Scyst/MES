@@ -513,26 +513,59 @@ try {
             break;
 
         case 'read_schedules':
-            $stmt = $pdo->prepare("EXEC dbo.sp_GetSchedules");
+            $sql = "SELECT id, line, shift_name, 
+                           CONVERT(VARCHAR(8), start_time, 108) AS start_time, 
+                           CONVERT(VARCHAR(8), end_time, 108) AS end_time, 
+                           planned_break_minutes, is_active 
+                    FROM " . SCHEDULES_TABLE . " 
+                    ORDER BY line, shift_name";
+            
+            $stmt = $pdo->prepare($sql);
             $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
         case 'save_schedule':
-            $stmt = $pdo->prepare("EXEC dbo.sp_SaveSchedule @id=?, @line=?, @shift_name=?, @start_time=?, @end_time=?, @planned_break_minutes=?, @is_active=?");
-            $stmt->execute([
-                $input['id'] ?? 0, $input['line'], $input['shift_name'],
-                $input['start_time'], $input['end_time'],
-                $input['planned_break_minutes'], $input['is_active']
-            ]);
-            echo json_encode(['success' => true, 'message' => 'Schedule saved successfully.']);
+            $id = $input['id'] ?? 0;
+            $line = trim($input['line'] ?? '');
+            $shift_name = trim($input['shift_name'] ?? '');
+            $start_time = $input['start_time'] ?? '08:00';
+            $end_time = $input['end_time'] ?? '17:00';
+            $break_min = (int)($input['planned_break_minutes'] ?? 0);
+            $is_active = !empty($input['is_active']) ? 1 : 0;
+
+            if (empty($line) || empty($shift_name)) {
+                throw new Exception("Line and Shift Name are required.");
+            }
+
+            if ($id > 0) {
+                $sql = "UPDATE " . SCHEDULES_TABLE . " 
+                        SET line = ?, shift_name = ?, start_time = ?, end_time = ?, 
+                            planned_break_minutes = ?, is_active = ? 
+                        WHERE id = ?";
+                $params = [$line, $shift_name, $start_time, $end_time, $break_min, $is_active, $id];
+                $msg = 'Schedule updated successfully.';
+            } else {
+                $sql = "INSERT INTO " . SCHEDULES_TABLE . " 
+                        (line, shift_name, start_time, end_time, planned_break_minutes, is_active) 
+                        VALUES (?, ?, ?, ?, ?, ?)";
+                $params = [$line, $shift_name, $start_time, $end_time, $break_min, $is_active];
+                $msg = 'Schedule created successfully.';
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'message' => $msg]);
             break;
 
         case 'delete_schedule':
             $id = $input['id'] ?? 0;
             if (!$id) { throw new Exception("Missing Schedule ID"); }
-            $stmt = $pdo->prepare("EXEC dbo.sp_DeleteSchedule @id=?");
+            
+            $sql = "DELETE FROM " . SCHEDULES_TABLE . " WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$id]);
+            
             echo json_encode(['success' => true, 'message' => 'Schedule deleted.']);
             break;
             

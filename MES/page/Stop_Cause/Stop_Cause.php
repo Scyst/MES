@@ -128,6 +128,6 @@
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
-    <script src="../components/js/mobile_init.js?v=<?php echo filemtime('../components/js/mobile_init.js'); ?>" defer></script>
+    
 </body>
 </html>

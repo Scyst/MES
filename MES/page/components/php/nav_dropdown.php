@@ -40,6 +40,18 @@
                 <i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span>
             </a>
         </li>
+
+        <?php
+          if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])):
+        ?>
+        <li>
+            <a class="dropdown-item-icon" href="../storeManagement/storeRequest.php" title="Store Request & Scrap">
+                <i class="fas fa-dolly-flatbed fa-fw"></i>
+                <span>Store Request & Scrap</span>
+            </a>
+        </li>
+        <?php endif; ?>
+
         <li>
             <a class="dropdown-item-icon" href="../Stop_Cause/Stop_Cause.php" title="Stop Causes">
                 <i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span>

@@ -309,6 +309,6 @@
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
-    <script src="../components/js/mobile_init.js?v=<?php echo filemtime('../components/js/mobile_init.js'); ?>" defer></script>
+    
 </body>
 </html>
