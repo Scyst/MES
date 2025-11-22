@@ -35,16 +35,29 @@ function formatDateTime(dateTimeString) {
  */
 async function fetchStopData(page = 1) {
     currentPage = page;
-    const filters = {
-        cause: document.getElementById('filterCause')?.value,
-        line: document.getElementById('filterLine')?.value,
-        machine: document.getElementById('filterMachine')?.value,
-        startDate: document.getElementById('filterStartDate')?.value,
-        endDate: document.getElementById('filterEndDate')?.value,
-    };
-    const params = new URLSearchParams({ action: 'get_stops', page: currentPage, limit: 50, ...filters });
 
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
+    // Helper ในการดึงค่า ถ้าหาไม่เจอให้คืนค่าว่าง ''
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+
+    const filters = {
+        cause: getValue('filterCause'),
+        line: getValue('filterLine'),
+        machine: getValue('filterMachine'),
+        startDate: getValue('filterStartDate'),
+        endDate: getValue('filterEndDate'),
+    };
+
+    const params = new URLSearchParams({ 
+        action: 'get_stops', 
+        page: currentPage, 
+        limit: 50, 
+        ...filters 
+    });
+
+    showSpinner();
     try {
         const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();

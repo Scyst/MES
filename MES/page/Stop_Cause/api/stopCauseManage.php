@@ -39,6 +39,14 @@ try {
             if (!empty($_GET['machine'])) { $conditions[] = "LOWER(machine) = LOWER(?)"; $params[] = $_GET['machine']; }
             if (!empty($_GET['startDate'])) { $conditions[] = "log_date >= ?"; $params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $conditions[] = "log_date <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['startDate']) && $_GET['startDate'] !== 'undefined') { // เพิ่มเช็ค !== 'undefined'
+                $conditions[] = "log_date >= ?"; 
+                $params[] = $_GET['startDate']; 
+            }
+            if (!empty($_GET['endDate']) && $_GET['endDate'] !== 'undefined') { // เพิ่มเช็ค !== 'undefined'
+                $conditions[] = "log_date <= ?"; 
+                $params[] = $_GET['endDate']; 
+            }
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
             
             // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
