@@ -15,7 +15,7 @@ $isStore = in_array($userRole, ['admin', 'creator']);
         .badge-PENDING { background-color: #ffc107; color: #000; }
         .badge-COMPLETED { background-color: #198754; color: #fff; }
         .badge-REJECTED { background-color: #dc3545; color: #fff; }
-        
+
         /* --- Mobile Card --- */
         .req-card {
             border-left: 5px solid #ccc;
@@ -40,7 +40,7 @@ $isStore = in_array($userRole, ['admin', 'creator']);
         }
         .autocomplete-item:hover { background-color: #f8f9fa; }
 
-        /* --- FAB Button (Green Add Button Only) --- */
+        /* --- FAB Button (Mobile Only) --- */
         @media (max-width: 991.98px) {
             .fab-container {
                 position: fixed;
@@ -64,6 +64,90 @@ $isStore = in_array($userRole, ['admin', 'creator']);
             #fab-add-btn {
                 width: 60px; height: 60px; font-size: 1.5rem; background-color: #198754;
             }
+        } /* <--- ย้ายวงเล็บปิดมาไว้ตรงนี้ครับ (จบส่วน Mobile) */
+
+        /* --- Button Styles (Global - ใช้ได้ทั้ง Mobile และ Desktop) --- */
+        
+        /* สไตล์สำหรับ Grid ของปุ่ม Store */
+        .store-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        /* สไตล์ปุ่มเลือก Store (ถ้ายังใช้อยู่) */
+        .btn-selection {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            padding: 10px 15px;
+            text-align: left;
+            transition: all 0.2s;
+            width: 100%;
+            border-radius: 6px;
+            position: relative;
+            font-size: 0.95rem;
+        }
+        .btn-selection:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        .btn-selection.selected {
+            background-color: #d1e7dd;
+            border-color: #198754;
+            color: #0f5132;
+            font-weight: bold;
+            box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.2);
+        }
+        .btn-selection.selected::after {
+            content: '\f00c';
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* สไตล์ปุ่มกดแบบเรียบ Uniform (ใช้ร่วมกันทั้ง Store และ Source) */
+        .btn-custom-select {
+            display: block;
+            width: 100%;
+            padding: 12px 10px; /* เพิ่มความสูงนิดนึงให้กดง่าย */
+            background-color: #fff;
+            border: 1px solid #e0e0e0; /* ขอบสีเทาจางๆ */
+            color: #666; /* ตัวหนังสือสีเทากลาง */
+            border-radius: 8px; /* โค้งมนมากขึ้น */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); /* Effect นุ่มนวล */
+            font-size: 0.95rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* เงาบางๆ ให้ดูมีมิติ */
+        }
+
+        .btn-custom-select:hover {
+            background-color: #f8fbff; /* ฟ้าจางมากๆ */
+            border-color: #b3d7ff;     /* ขอบฟ้าอ่อน */
+            color: #0d6efd;            /* ตัวหนังสือเริ่มเป็นสีฟ้า */
+            transform: translateY(-1px); /* ลอยขึ้นนิดนึง */
+        }
+
+        .btn-custom-select.active,
+        .btn-check:checked + .btn-custom-select {
+            background-color: #e7f1ff; /* พื้นหลังฟ้าอ่อน (สบายตา) */
+            border-color: #0d6efd;     /* ขอบน้ำเงินเข้ม (Primary Color) */
+            color: #0d6efd;            /* ตัวหนังสือสีน้ำเงินเข้ม */
+            font-weight: 600;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15); /* เงาสีฟ้าฟุ้งๆ */
+        }
+
+        .store-grid-wrapper {
+            display: grid;
+            /* เทคนิค: ถ้าจอเล็กให้แบ่งตามขนาดขั้นต่ำ, จอใหญ่ให้เฉลี่ยพื้นที่เท่าๆ กันจนเต็มบรรทัด */
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            gap: 0.5rem; /* ระยะห่างเท่ากับ g-2 ของ Bootstrap */
+            width: 100%;
         }
     </style>
 </head>

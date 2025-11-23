@@ -1,7 +1,5 @@
 <div class="modal fade" id="addRequestModal" tabindex="-1" aria-labelledby="addRequestModalLabel" aria-hidden="true">
-    
     <div class="modal-dialog modal-dialog-centered modal-optical-center">
-        
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addRequestModalLabel">แจ้งของเสีย & ขอเบิกทดแทน</h5>
@@ -16,11 +14,32 @@
                                 <option value="" selected disabled>Loading...</option>
                             </select>
                         </div>
+
                         <div class="col-12 mb-3">
-                            <label for="store_loc" class="form-label">เบิกทดแทนจาก (Store)</label>
-                            <select class="form-select" id="store_loc" required>
-                                    <option value="" selected disabled>Loading...</option>
-                            </select>
+                            <label class="form-label d-block">เบิกทดแทนจาก (Store)</label>
+                            <div id="store_buttons_container" class="store-grid-wrapper">
+                                <div class="text-muted small">Loading...</div>
+                            </div>
+                            <input type="hidden" id="store_loc" required>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label d-block">แหล่งที่มาของเสีย</label>
+                            <div class="row g-2"> 
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="defect_source" id="source_snc" value="SNC" checked>
+                                    <label class="btn-custom-select" for="source_snc">
+                                        SNC (ภายใน)
+                                    </label>
+                                </div>
+
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="defect_source" id="source_vendor" value="Vendor">
+                                    <label class="btn-custom-select" for="source_vendor">
+                                        Vendor (ภายนอก)
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

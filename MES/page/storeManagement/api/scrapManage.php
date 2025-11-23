@@ -43,21 +43,25 @@ try {
             $qty = floatval($input['quantity']);
             $wip_loc = $input['wip_location_id'];
             $store_loc = $input['store_location_id'];
-            $reason = $input['reason'];
+            $defect_source = $input['defect_source'] ?? 'SNC';
+            $raw_reason = $input['reason'];
+            
+            // รวม Source เข้ากับเหตุผล
+            $full_reason = "[$defect_source] $raw_reason"; 
             $timestamp = date('Y-m-d H:i:s');
 
             // 2.1 ตัดสต็อกของเสีย (SCRAP) ออกจาก WIP
             $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
             $spStock->execute([$item_id, $wip_loc, -$qty]);
 
-            // Log Transaction (SCRAP)
+            // Log Transaction (SCRAP) - ใช้ $full_reason
             $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'SCRAP', ?, ?, ?, ?)";
-            $pdo->prepare($transSql)->execute([$item_id, -$qty, $wip_loc, $currentUser['id'], "Defect: $reason", $timestamp]);
+            $pdo->prepare($transSql)->execute([$item_id, -$qty, $wip_loc, $currentUser['id'], "Defect: $full_reason", $timestamp]);
 
-            // 2.2 สร้างใบขอเบิก (Transfer Request)
+            // 2.2 สร้างใบขอเบิก (Transfer Request) - ใช้ $full_reason
             $uuid = 'REQ-' . strtoupper(uniqid());
             $sqlReq = "INSERT INTO " . TRANSFER_ORDERS_TABLE . " (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)";
-            $pdo->prepare($sqlReq)->execute([$uuid, $item_id, $qty, $store_loc, $wip_loc, $currentUser['id'], "Replacement for Scrap: $reason"]);
+            $pdo->prepare($sqlReq)->execute([$uuid, $item_id, $qty, $store_loc, $wip_loc, $currentUser['id'], "Replacement: $full_reason"]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'บันทึกของเสียและส่งคำขอเบิกแล้ว']);
@@ -70,6 +74,8 @@ try {
             
             $conditions = [];
             $params = [];
+
+            $conditions[] = "t.transfer_uuid LIKE 'REQ-%'"; // กรองเฉพาะคำขอเบิกที่สร้างจาก Production
 
             // ถ้าไม่ได้ขอ 'ALL' ให้กรองตามสถานะ (เช่น PENDING)
             if ($status !== 'ALL') {

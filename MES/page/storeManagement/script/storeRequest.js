@@ -24,13 +24,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// --- เปิด Modal ---
 function openRequestModal() {
     const form = document.getElementById('scrapForm');
     if (form) form.reset();
-    document.getElementById('selected_item_id').value = '';
     
-    // ซ่อน Autocomplete เสมอเมื่อเปิด Modal ใหม่
+    document.getElementById('selected_item_id').value = '';
+    document.getElementById('source_snc').checked = true;
+
+    const storeContainer = document.getElementById('store_buttons_container');
+    
+    if(storeContainer) {
+        const allBtns = storeContainer.querySelectorAll('.btn-custom-select');
+        allBtns.forEach(b => b.classList.remove('active'));
+
+        const firstBtn = storeContainer.querySelector('.btn-custom-select');
+        if (firstBtn) {
+            firstBtn.click();
+        }
+    }
+    
     const listDiv = document.getElementById('autocomplete-list');
     if(listDiv) listDiv.style.display = 'none';
     
@@ -46,17 +58,35 @@ async function initData() {
         if (res.success) {
             allItems = res.items || [];
             const wipSelect = document.getElementById('wip_loc');
-            const storeSelect = document.getElementById('store_loc');
+            
+            const storeContainer = document.getElementById('store_buttons_container');
+            const storeInput = document.getElementById('store_loc');
 
-            if (wipSelect && storeSelect) {
+            if (wipSelect && storeContainer) {
                 wipSelect.innerHTML = '<option value="">-- เลือก --</option>';
-                storeSelect.innerHTML = '<option value="">-- เลือก --</option>';
+                storeContainer.innerHTML = '';
+
                 res.locations.forEach(loc => {
-                    const opt = new Option(loc.location_name, loc.location_id);
                     if (loc.location_type === 'STORE' || loc.location_type === 'WAREHOUSE') {
-                        storeSelect.add(opt.cloneNode(true));
+                        
+                        const btn = document.createElement('div');
+                        btn.className = 'btn-custom-select'; 
+                        btn.innerText = loc.location_name;
+                        
+                        btn.onclick = () => {
+                            storeInput.value = loc.location_id;
+                            
+                            // ล้าง Active Class
+                            const allBtns = storeContainer.querySelectorAll('.btn-custom-select');
+                            allBtns.forEach(b => b.classList.remove('active'));
+                            
+                            // ใส่ Active Class
+                            btn.classList.add('active');
+                        };
+                        storeContainer.appendChild(btn);
                     } else {
-                        wipSelect.add(opt.cloneNode(true));
+                        const opt = new Option(loc.location_name, loc.location_id);
+                        wipSelect.add(opt);
                     }
                 });
             }
@@ -64,7 +94,6 @@ async function initData() {
     } catch (e) { console.error(e); }
 }
 
-// --- FIX 2: Autocomplete Logic ---
 const searchInp = document.getElementById('item_search');
 const listDiv = document.getElementById('autocomplete-list');
 
@@ -126,15 +155,19 @@ async function submitRequest(e) {
     e.preventDefault();
     if (!confirm('ยืนยันการแจ้งของเสียและขอเบิก?')) return;
 
+    const sourceVal = document.querySelector('input[name="defect_source"]:checked').value;
+
     const data = {
         item_id: document.getElementById('selected_item_id').value,
         wip_location_id: document.getElementById('wip_loc').value,
         store_location_id: document.getElementById('store_loc').value,
         quantity: document.getElementById('qty').value,
-        reason: document.getElementById('reason').value
+        reason: document.getElementById('reason').value,
+        defect_source: sourceVal
     };
 
     if (!data.item_id) return showToast('กรุณาเลือกชิ้นงานจากรายการ', 'var(--bs-warning)');
+    if (!data.store_location_id) return showToast('กรุณาเลือก Store ที่ต้องการเบิก', 'var(--bs-warning)');
 
     showSpinner();
     try {
