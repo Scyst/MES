@@ -50,7 +50,7 @@ function formatTime($date) {
 }
 
 // ==========================================
-// สร้าง PDF
+// ส่วนสร้าง PDF
 // ==========================================
 
 class MYPDF extends TCPDF {
@@ -70,47 +70,63 @@ $pdf->SetTitle('Job Order ' . $jobOrderCode);
 $pdf->SetMargins(10, 10, 10); 
 $pdf->SetFooterMargin(15);
 $pdf->SetAutoPageBreak(TRUE, 10);
-
 $pdf->SetFont('freeserif', '', 11);
+
+$pdf->setCellPaddings(0, 0, 0, 0); 
+$pdf->setCellHeightRatio(1.15); 
 
 $pdf->AddPage();
 
-// --- HTML ---
+// --- HTML Styling & Section 1 & Section 2 ---
+// จุดแก้ที่ 1: เริ่มต้น $html ด้วยการเปิด String
 $html = '
 <style>
-    table { width: 100%; border-collapse: collapse; padding: 0; margin: 0; }
+    table { 
+        width: 100%; 
+        border-collapse: collapse; 
+    }
+    .table-header-title {
+        font-weight: bold;
+        font-size: 12px;
+        border: none; 
+        padding-bottom: 2px;
+        padding-top: 5px;
+    }
     th { 
         border: 1px solid #333; 
         background-color: #f2f2f2; 
         font-weight: bold; 
         text-align: center; 
-        padding: 4px;
         font-size: 12px;
-        line-height: 1.2;
     }
     td { 
         border: 1px solid #333; 
-        padding: 5px; 
         vertical-align: top;
         font-size: 12px;
-        line-height: 1.4;
     }
-    .title-box { font-weight: bold; font-size: 16px; }
-    .code-box { font-weight: bold; font-size: 14px; text-align: right; }
-    .section-head { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+    .no-border-cell { border: none !important; }
+    
+    .title-box { font-weight: bold; font-size: 16px; border: none;}
+    .code-box { font-weight: bold; font-size: 14px; text-align: right; border: none;}
 </style>
 
 <table border="0" cellpadding="2">
     <tr>
-        <td width="60%" style="border: none;" class="title-box">MAINTENANCE JOB ORDER (ใบแจ้งซ่อม)</td>
-        <td width="40%" style="border: none;" class="code-box">Job No: ' . $jobOrderCode . '</td>
+        <td width="60%" class="title-box">MAINTENANCE JOB ORDER (ใบแจ้งซ่อม)</td>
+        <td width="40%" class="code-box">Job No: ' . $jobOrderCode . '</td>
     </tr>
 </table>
-<div style="border-bottom: 2px solid #000; margin-bottom: 10px;"></div>
+<div style="border-bottom: 2px solid #000;"></div>
 
-<div class="section-head">1. ข้อมูลผู้แจ้งซ่อม</div>
-<table cellpadding="4">
+<table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
+    <tr><td height="10" style="border:none;">&nbsp;</td></tr>
+</table>
+
+<table cellpadding="4" cellspacing="0">
     <thead>
+        <tr>
+            <td colspan="5" class="table-header-title">1. ข้อมูลผู้แจ้งซ่อม</td>
+        </tr>
         <tr>
             <th width="15%">วันที่แจ้ง</th>
             <th width="15%">เวลา</th>
@@ -123,17 +139,22 @@ $html = '
         <tr>
             <td width="15%" align="center">' . formatDateTH($job['request_date']) . '</td>
             <td width="15%" align="center">' . formatTime($job['request_date']) . '</td>
-            <td width="25%">' . htmlspecialchars($job['request_by']) . '</td>
+            <td width="25%" align="center">' . htmlspecialchars($job['request_by']) . '</td>
             <td width="20%" align="center">' . htmlspecialchars($job['line']) . '</td>
-            <td width="25%">' . htmlspecialchars($job['machine']) . '</td>
+            <td width="25%" align="center">' . htmlspecialchars($job['machine']) . '</td>
         </tr>
     </tbody>
 </table>
 
-<br>
-<div class="section-head">2. รายละเอียดการซ่อม</div>
-<table cellpadding="4">
+<table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
+    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
+</table>
+
+<table cellpadding="4" cellspacing="0">
     <thead>
+        <tr>
+             <td colspan="2" class="table-header-title">2. รายละเอียดการซ่อม</td>
+        </tr>
         <tr>
             <th width="40%">อาการเสีย (Issue)</th>
             <th width="60%">รายละเอียดการแก้ไข (Work Detail)</th>
@@ -141,79 +162,123 @@ $html = '
     </thead>
     <tbody>
         <tr>
-            <td width="40%" height="70">' . nl2br(htmlspecialchars($job['issue_description'])) . '</td>
+            <td width="40%" height="60">' . nl2br(htmlspecialchars($job['issue_description'])) . '</td>
             <td width="60%">' . nl2br(htmlspecialchars($job['technician_note'] ?? '-')) . '</td>
         </tr>
     </tbody>
+</table>'; // <--- จุดแก้สำคัญ 1: ปิด String ตรงนี้ก่อนเริ่มท่อนใหม่
+
+// --- Section 3 ---
+$html .= '
+<table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
+    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
 </table>
 
-<br>
-<div class="section-head">3. การใช้อะไหล่และเวลาปฏิบัติงาน</div>
-<table cellpadding="4">
-    <tr>
-        <td colspan="4" style="background-color: #fff;">
-            <b>รายการอะไหล่ที่ใช้ (Spare Parts):</b><br>
-            ' . nl2br(htmlspecialchars($job['spare_parts_list'] ?? '-')) . '
-        </td>
-    </tr>
-    <tr>
-        <th width="25%">วันที่เริ่ม</th>
-        <th width="25%">เวลาเริ่ม</th>
-        <th width="25%">วันที่เสร็จ</th>
-        <th width="25%">เวลาเสร็จ</th>
-    </tr>
-    <tr>
-        <td width="25%" align="center">' . formatDateTH($job['started_at']) . '</td>
-        <td width="25%" align="center">' . formatTime($job['started_at']) . '</td>
-        <td width="25%" align="center">' . formatDateTH($job['resolved_at']) . '</td>
-        <td width="25%" align="center">' . formatTime($job['resolved_at']) . '</td>
-    </tr>
+<table cellpadding="4" cellspacing="0">
+    <thead>
+        <tr>
+             <td colspan="4" class="table-header-title">3. การใช้อะไหล่และเวลาปฏิบัติงาน</td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th width="25%">วันที่เริ่ม</th>
+            <th width="25%">เวลาเริ่ม</th>
+            <th width="25%">วันที่เสร็จ</th>
+            <th width="25%">เวลาเสร็จ</th>
+        </tr>
+        <tr>
+            <td width="25%" align="center">' . formatDateTH($job['started_at']) . '</td>
+            <td width="25%" align="center">' . formatTime($job['started_at']) . '</td>
+            <td width="25%" align="center">' . formatDateTH($job['resolved_at']) . '</td>
+            <td width="25%" align="center">' . formatTime($job['resolved_at']) . '</td>
+        </tr>
+        
+        <tr>
+            <td colspan="4" style="background-color: #fff; border-bottom: 1px solid #333; border-top: 1px solid #333;">
+                <b>รายการอะไหล่ที่ใช้ (Spare Parts):</b>
+            </td>
+        </tr>'; 
+
+$parts = preg_split('/[\r\n]+/', $job['spare_parts_list'] ?? '');
+$hasParts = false;
+
+foreach ($parts as $part) {
+    $part = trim($part);
+    if (!empty($part)) {
+        $hasParts = true;
+        $part = ltrim($part, '.-• '); 
+        
+        $html .= '<tr>
+                    <td colspan="4" style="border: 1px solid #333;"> - ' . htmlspecialchars($part) . '</td>
+                  </tr>';
+    }
+}
+
+if (!$hasParts) {
+    $html .= '<tr><td colspan="4">-</td></tr>';
+}
+
+$html .= '
+    </tbody>
 </table>
 
-<br>
-<div class="section-head">4. รูปภาพประกอบ (Images)</div>
+<table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
+    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
+</table>'; 
+
+$html .= '
+<table cellpadding="2" cellspacing="0">
+    <tr>
+         <td colspan="2" class="table-header-title">4. รูปภาพประกอบ (Images)</td>
+    </tr>
+</table>
 <table border="1" cellpadding="2" cellspacing="0">
     <tr>
-        <td width="50%" align="center" height="240" style="vertical-align: middle;">
-            <div style="font-size: 10px; font-weight:bold; margin-bottom:2px;">BEFORE</div>';
+        <td width="50%" align="center" valign="top" height="240">
+            <div style="font-size: 10px; font-weight:bold; margin-bottom:5px; margin-top:5px;">BEFORE</div>';
             
 if ($photoBefore) {
-    // รูปขนาด 200x220 ตามที่คุณต้องการ
-    $html .= '<img src="' . $photoBefore . '" width="200" height="220" style="object-fit:contain;">';
+    $html .= '<br><img src="' . $photoBefore . '" width="200" height="200" border="0">';
+} else {
+    $html .= '<br><br><span style="color:#ccc;">- No Image -</span>';
 }
 
 $html .= '
         </td>
-        <td width="50%" align="center" height="240" style="vertical-align: middle;">
-            <div style="font-size: 10px; font-weight:bold; margin-bottom:2px;">AFTER</div>';
+        <td width="50%" align="center" valign="top" height="240">
+            <div style="font-size: 10px; font-weight:bold; margin-bottom:5px; margin-top:5px;">AFTER</div>';
             
 if ($photoAfter) {
-    $html .= '<img src="' . $photoAfter . '" width="200" height="220" style="object-fit:contain;">';
+    $html .= '<br><img src="' . $photoAfter . '" width="200" height="200" border="0">';
+} else {
+    $html .= '<br><br><span style="color:#ccc;">- No Image -</span>';
 }
 
 $html .= '
         </td>
     </tr>
 </table>
-<br>
+
+<br><br>
 
 <table border="0" cellpadding="0" cellspacing="0">
     <tr>
-        <td width="10%" style="border:none;"></td>
-        <td width="35%" align="center" style="border:none;">
+        <td width="10%" class="no-border-cell"></td>
+        <td width="35%" align="center" class="no-border-cell">
             ผู้แจ้งซ่อม<br><br><br>
             .........................................<br>
             (' . htmlspecialchars($job['request_by']) . ')<br>
             วันที่ ........./........./.........
         </td>
-        <td width="10%" style="border:none;"></td>
-        <td width="35%" align="center" style="border:none;">
+        <td width="10%" class="no-border-cell"></td>
+        <td width="35%" align="center" class="no-border-cell">
             ผู้ซ่อม/ผู้รับผิดชอบ<br><br><br>
             .........................................<br>
             (' . htmlspecialchars($job['resolved_by'] ?? '....................') . ')<br>
             วันที่ ........./........./.........
         </td>
-        <td width="10%" style="border:none;"></td>
+        <td width="10%" class="no-border-cell"></td>
     </tr>
 </table>
 ';
