@@ -147,7 +147,7 @@ $html = '
 </table>
 
 <table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
-    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
+    <tr><td height="10" style="border:none;">&nbsp;</td></tr>
 </table>
 
 <table cellpadding="4" cellspacing="0">
@@ -166,12 +166,12 @@ $html = '
             <td width="60%">' . nl2br(htmlspecialchars($job['technician_note'] ?? '-')) . '</td>
         </tr>
     </tbody>
-</table>'; // <--- จุดแก้สำคัญ 1: ปิด String ตรงนี้ก่อนเริ่มท่อนใหม่
+</table>';
 
 // --- Section 3 ---
 $html .= '
 <table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
-    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
+    <tr><td height="10" style="border:none;">&nbsp;</td></tr>
 </table>
 
 <table cellpadding="4" cellspacing="0">
@@ -193,7 +193,7 @@ $html .= '
             <td width="25%" align="center">' . formatDateTH($job['resolved_at']) . '</td>
             <td width="25%" align="center">' . formatTime($job['resolved_at']) . '</td>
         </tr>
-        
+
         <tr>
             <td colspan="4" style="background-color: #fff; border-bottom: 1px solid #333; border-top: 1px solid #333;">
                 <b>รายการอะไหล่ที่ใช้ (Spare Parts):</b>
@@ -224,7 +224,7 @@ $html .= '
 </table>
 
 <table border="0" cellpadding="0" cellspacing="0" style="line-height:0">
-    <tr><td height="15" style="border:none;">&nbsp;</td></tr>
+    <tr><td height="10" style="border:none;">&nbsp;</td></tr>
 </table>'; 
 
 $html .= '
