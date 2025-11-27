@@ -82,13 +82,37 @@ async function fetchMaintenanceData() {
     }
 }
 
-/**
- * ฟังก์ชันสำหรับแสดงรายละเอียดงานซ่อมใน Modal และตั้งค่าปุ่ม Print
- * @param {number} id - ID ของใบงานซ่อม
- */
+async function resendEmail(id) {
+    if(!confirm('ต้องการส่งอีเมลรายงานซ้ำใช่หรือไม่?')) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    showSpinner();
+    try {
+        const response = await fetch(`${MT_API_URL}?action=resend_email`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('ส่งอีเมลเรียบร้อยแล้ว', '#28a745');
+        } else {
+            showToast(result.message, '#dc3545');
+        }
+    } catch (error) {
+        console.error(error);
+        showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
+    } finally {
+        hideSpinner();
+    }
+}
+
 function viewMaintenanceDetails(id) {
-    // 1. ค้นหาข้อมูลจากตัวแปร Global (currentMaintenanceData) ที่โหลดไว้ตอน fetchMaintenanceData
-    // หมายเหตุ: ต้องมี let currentMaintenanceData = []; อยู่บนสุดของไฟล์
     const data = currentMaintenanceData.find(item => item.id == id);
     
     if (!data) {
@@ -96,22 +120,18 @@ function viewMaintenanceDetails(id) {
         return;
     }
 
-    // Helper Function: ช่วยใส่ข้อความลงใน Element (ถ้าไม่มี Element ให้ข้าม)
     const setText = (elmId, text) => {
         const el = document.getElementById(elmId);
         if(el) el.textContent = text || '-';
     };
 
-    // --- A. ส่วนข้อมูลทั่วไป (Header) ---
     setText('view_machine_line', `${data.machine} (${data.line})`);
     setText('view_issue', data.issue_description);
     setText('view_requested_by', data.request_by);
     
-    // จัดรูปแบบวันที่แจ้งซ่อม
     const reqDate = new Date(data.request_date);
     setText('view_request_date', !isNaN(reqDate) ? reqDate.toLocaleString('th-TH') : '-');
     
-    // จัดการ Badge สถานะ (สีและข้อความ)
     const badge = document.getElementById('view_status_badge');
     if (badge) {
         badge.textContent = data.status;
@@ -121,11 +141,9 @@ function viewMaintenanceDetails(id) {
         }`;
     }
 
-    // --- B. ส่วนข้อมูลการซ่อม (Completion Section) ---
     const completionSection = document.getElementById('view_completion_section');
     
     if (data.status === 'Completed') {
-        // ถ้างานเสร็จแล้ว ให้แสดงส่วนนี้
         if(completionSection) completionSection.classList.remove('d-none');
         
         const start = data.started_at ? new Date(data.started_at) : null;
@@ -137,12 +155,11 @@ function viewMaintenanceDetails(id) {
         setText('view_spare_parts', data.spare_parts_list);
         setText('view_resolved_by', data.resolved_by);
 
-        // จัดการรูปภาพ Before
         const imgBefore = document.getElementById('view_photo_before');
         const noImgBefore = document.getElementById('no_photo_before');
         if (imgBefore && noImgBefore) {
             if (data.photo_before_path) {
-                imgBefore.src = data.photo_before_path; // path จาก DB (มี ../ นำหน้าแล้ว)
+                imgBefore.src = data.photo_before_path;
                 imgBefore.style.display = 'block';
                 noImgBefore.style.display = 'none';
             } else {
@@ -151,7 +168,6 @@ function viewMaintenanceDetails(id) {
             }
         }
 
-        // จัดการรูปภาพ After
         const imgAfter = document.getElementById('view_photo_after');
         const noImgAfter = document.getElementById('no_photo_after');
         if (imgAfter && noImgAfter) {
@@ -166,30 +182,32 @@ function viewMaintenanceDetails(id) {
         }
 
     } else {
-        // ถ้างานยังไม่เสร็จ ให้ซ่อนส่วนนี้
         if(completionSection) completionSection.classList.add('d-none');
     }
 
-    // --- C. จัดการปุ่ม Print (ส่วนที่คุณขอมา) ---
+    const btnResend = document.getElementById('btn_resend_email');
+    if (btnResend) {
+        btnResend.onclick = () => resendEmail(id);
+        if (data.status === 'Completed') {
+            btnResend.classList.remove('d-none');
+        } else {
+            btnResend.classList.add('d-none');
+        }
+    }
+
     const printBtn = document.getElementById('btn_print_job');
     if (printBtn) {
-        // 1. อัปเดต Link ให้ชี้ไปที่ไฟล์ print_job_order.php พร้อมส่ง ID
         printBtn.href = `print_job_order.php?id=${id}`;
         
-        // 2. ตรวจสอบสถานะเพื่อ เปิด/ปิด ปุ่ม
         if (data.status === 'Completed') {
-            // ถ้าเสร็จแล้ว ให้กดได้ (ลบ class disabled)
             printBtn.classList.remove('disabled');
             printBtn.removeAttribute('aria-disabled');
         } else {
-            // ถ้ายังไม่เสร็จ ให้กดไม่ได้ (ใส่ class disabled)
-            // เพราะข้อมูลยังไม่ครบ ปริ้นไปก็โล่งๆ
             printBtn.classList.add('disabled');
             printBtn.setAttribute('aria-disabled', 'true');
         }
     }
 
-    // --- D. เปิด Modal ---
     showBootstrapModal('viewMaintenanceModal');
 }
 

@@ -63,7 +63,12 @@
                     </div>
                 </div>
             </div>
+            
             <div class="modal-footer">
+                <button id="btn_resend_email" type="button" class="btn btn-outline-dark d-none" onclick="">
+                    <i class="fas fa-envelope me-1"></i> Resend Email
+                </button>
+
                 <a id="btn_print_job" href="#" target="_blank" class="btn btn-primary">
                     <i class="fas fa-print me-1"></i> Print Job Order
                 </a>

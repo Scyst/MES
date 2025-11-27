@@ -1,7 +1,19 @@
 <?php
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../db.php'; 
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
+
+// --- PHPMailer Includes (ยังคงต้องถอย 3 ชั้นเพื่อไปหา utils) ---
+require_once __DIR__ . '/../../../utils/libs/phpmailer/src/Exception.php';
+require_once __DIR__ . '/../../../utils/libs/phpmailer/src/PHPMailer.php';
+require_once __DIR__ . '/../../../utils/libs/phpmailer/src/SMTP.php';
+
+// --- [แก้ไข] PDF Generator Include ---
+// ตอนนี้ไฟล์อยู่ข้างกันแล้ว ไม่ต้องถอยหลังครับ
+require_once __DIR__ . '/generate_job_pdf.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
@@ -14,6 +26,94 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $currentUser = $_SESSION['user'];
+
+function sendEmailReport($pdo, $jobId) {
+    $mail = new PHPMailer(true); 
+    try {
+        // 1. ข้อมูล
+        $stmt = $pdo->prepare("SELECT * FROM " . MAINTENANCE_REQUESTS_TABLE . " WHERE id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) return false;
+
+        // 2. ตั้งค่า Server
+        $mail->isSMTP();
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USER;
+        $mail->Password   = SMTP_PASS;
+        $mail->SMTPSecure = SMTP_SECURE;
+        $mail->Port       = SMTP_PORT;
+        $mail->CharSet    = 'UTF-8';
+
+        // 3. ผู้รับ
+        $mail->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
+        $mail->addAddress(EMAIL_TO_REPORT); 
+
+        if (defined('EMAIL_CC_REPORT') && EMAIL_CC_REPORT !== '') {
+            // ลบช่องว่างออกให้หมดก่อน แล้วค่อยระเบิดด้วยลูกน้ำ
+            $cleanCC = str_replace(' ', '', EMAIL_CC_REPORT);
+            $ccList = explode(',', $cleanCC);
+            
+            foreach ($ccList as $email) {
+                if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    // ป้องกันการใส่ CC ซ้ำกับผู้รับหลัก (บาง Server จะ Error)
+                    if (strcasecmp($email, EMAIL_TO_REPORT) !== 0) {
+                        $mail->addCC($email);
+                    }
+                }
+            }
+        }
+
+        // 4. สร้าง PDF (String)
+        $pdfContent = generateJobOrderPDF($pdo, $jobId, true);
+
+        // 5. Attach PDF
+        if ($pdfContent) {
+            $mail->addStringAttachment($pdfContent, 'JobOrder_MT-' . $jobId . '.pdf');
+        }
+
+        // 6. Attach Images
+        // Path รูป: MES/page/uploads/maintenance/
+        // เราอยู่ที่ MES/page/Stop_Cause/api/
+        // ต้องไป ../../uploads/maintenance/
+        $uploadDir = __DIR__ . '/../../uploads/maintenance/'; 
+        
+        if (!empty($job['photo_after_path'])) {
+             $fName = basename($job['photo_after_path']);
+             if (file_exists($uploadDir . $fName)) {
+                 $mail->addAttachment($uploadDir . $fName, 'After_Photo.jpg');
+             }
+        }
+
+        // 7. เนื้อหาเมล
+        $webLink = BASE_URL . "/page/Stop_Cause/print_job_order.php?id=" . $jobId;
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Job Completed: ' . $job['machine'] . ' (Line: ' . $job['line'] . ')';
+        
+        $body = "<h2>Maintenance Job Completed</h2>";
+        $body .= "<p><b>ID:</b> #{$jobId}</p>";
+        $body .= "<p><b>Machine:</b> {$job['machine']} ({$job['line']})</p>";
+        $body .= "<p><b>Issue:</b> {$job['issue_description']}</p>";
+        $body .= "<p><b>Solution:</b> " . ($job['technician_note'] ?? '-') . "</p>";
+        $body .= "<p><b>By:</b> " . ($job['resolved_by'] ?? '-') . "</p>";
+        
+        $body .= "<hr>";
+        $body .= "<p>หากไฟล์แนบแสดงผลไม่ถูกต้อง สามารถคลิกเพื่อดูเอกสารฉบับเต็มได้ที่ลิงก์ด้านล่าง:</p>";
+        $body .= "<p><a href='{$webLink}' target='_blank' style='background-color:#0d6efd; color:white; padding:10px 15px; text-decoration:none; border-radius:5px;'>📄 เปิดดูใบงาน (Web Version)</a></p>";
+        $body .= "<p><small>Link: <a href='{$webLink}'>{$webLink}</a></small></p>";
+
+        $mail->Body = $body;
+        $mail->AltBody = strip_tags($body);
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Mail Error: {$mail->ErrorInfo}");
+        return false;
+    }
+}
 
 try {
     switch ($action) {
@@ -144,9 +244,23 @@ try {
 
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
+                if ($status === 'Completed') {
+                    sendEmailReport($pdo, $id);
+                }
                 echo json_encode(['success' => true, 'message' => 'Status updated successfully.']);
             } else {
                 throw new Exception("Database update failed.");
+            }
+            break;
+
+        case 'resend_email':
+            $id = $input['id'] ?? null;
+            if (!$id) throw new Exception("Invalid ID");
+
+            if (sendEmailReport($pdo, $id)) {
+                echo json_encode(['success' => true, 'message' => 'Email sent successfully.']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to send email.']);
             }
             break;
 
