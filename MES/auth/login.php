@@ -1,57 +1,57 @@
 <?php
-//-- เริ่ม Session และเรียกใช้ไฟล์ที่จำเป็น --
+// MES/auth/login.php
 session_start();
 require_once __DIR__ . '/../page/db.php';
 
-//-- ตั้งค่า Header ให้ตอบกลับเป็น JSON --
 header('Content-Type: application/json');
 
-//-- อ่านข้อมูล Username และ Password จาก Request Body --
 $input = json_decode(file_get_contents("php://input"), true);
 $username = $input['username'] ?? '';
 $password = $input['password'] ?? '';
 
-//-- ตรวจสอบว่ามีการส่งข้อมูลมาครบถ้วนหรือไม่ --
 if (empty($username) || empty($password)) {
     echo json_encode(['success' => false, 'message' => 'Username and password are required.']);
     exit;
 }
 
 try {
-    //-- ค้นหาผู้ใช้จาก Username ในฐานข้อมูล --
-    // *** แก้ไข: เปลี่ยนจาก 'USERS' มาเป็น USERS_TABLE ***
-    $sql = "SELECT id, username, password, role, line FROM " . USERS_TABLE . " WHERE username = ?";
+    // ★★★ แก้ไข SQL: เพิ่ม m.position เข้ามาด้วย ★★★
+    $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, m.name_th, m.position 
+            FROM " . USERS_TABLE . " u
+            LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " m ON u.emp_id = m.emp_id
+            WHERE u.username = ?";
+            
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    //-- ตรวจสอบว่าพบผู้ใช้และรหัสผ่านถูกต้องหรือไม่ --
     if ($user && password_verify($password, $user['password'])) {
-        //-- หากถูกต้อง ให้สร้าง Session ID ใหม่เพื่อความปลอดภัย --
         session_regenerate_id(true);
         
-        //-- เก็บข้อมูลผู้ใช้ลงใน Session --
+        $displayName = !empty($user['name_th']) ? $user['name_th'] : $user['username'];
+        
+        // ★★★ Logic เลือกตำแหน่ง: ถ้ามีตำแหน่งจริงให้ใช้ ถ้าไม่มีให้ใช้ Role ระบบแทน
+        $displayPosition = !empty($user['position']) ? $user['position'] : $user['role'];
+
         $_SESSION['user'] = [
             'id' => $user['id'],
             'username' => $user['username'],
-            'role' => $user['role'],
-            'line' => $user['line']
+            'fullname' => $displayName,
+            'role' => $user['role'],       // Role ระบบ (ใช้เช็คสิทธิ์)
+            'position' => $displayPosition, // ตำแหน่งจริง (ใช้แสดงผล)
+            'line' => $user['line'],
+            'emp_id' => $user['emp_id']
         ];
 
-        //-- สร้าง CSRF Token สำหรับป้องกันการโจมตี --
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        
-        //-- ส่งผลลัพธ์ว่าล็อกอินสำเร็จ --
         echo json_encode(['success' => true, 'message' => 'Login successful.']);
     } else {
-        //-- หากไม่พบผู้ใช้หรือรหัสผ่านไม่ถูกต้อง --
         echo json_encode(['success' => false, 'message' => 'Invalid username or password.']);
     }
 
 } catch (PDOException $e) {
-    //-- กรณีเกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล --
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'A database error occurred.']);
+    echo json_encode(['success' => false, 'message' => 'Database error.']);
     error_log("Login Error: " . $e->getMessage());
 }
 ?>

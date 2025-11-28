@@ -76,7 +76,7 @@ $userRole = $_SESSION['user']['role'];
         /* === LEFT PANE COMPONENTS === */
         
         /* 1. Welcome Box */
-        .welcome-box { margin-bottom: 2rem; }
+        .welcome-box { margin-bottom: 1rem; }
         .welcome-box h1 { font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem; }
         .welcome-info { font-size: 1rem; color: #6b7280; }
 
@@ -85,7 +85,7 @@ $userRole = $_SESSION['user']['role'];
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 1rem; /* เพิ่มช่องว่าง */
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
         .pulse-card {
             background: #fff;
@@ -112,7 +112,7 @@ $userRole = $_SESSION['user']['role'];
         .pulse-card.pending { border-style: dashed; border-width: 2px; }
 
         /* 3. Calendar (Bigger & Clearer) */
-        .calendar-wrapper { margin-top: auto; } /* ดันลงล่าง */
+        .calendar-wrapper { margin-top: 0; } /* ดันลงล่าง */
         .snc-calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -221,7 +221,7 @@ $userRole = $_SESSION['user']['role'];
             <div class="d-flex align-items-center gap-3">
                 <div style="width: 45px; height: 45px; background: #eee; border-radius: 8px; display: grid; place-items: center; font-weight: bold; color: #888; font-size: 0.8rem;">LOGO</div>
                 <div class="d-flex flex-column" style="line-height: 1.2;">
-                    <span class="fw-bold text-dark" style="font-size: 1.1rem;">SNC ONE WAY</span>
+                    <span class="fw-bold text-dark" style="font-size: 1.1rem;">MES TOOLBOX</span>
                     <span class="text-muted" style="font-size: 0.85rem;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
                 </div>
             </div>
@@ -236,11 +236,31 @@ $userRole = $_SESSION['user']['role'];
             <div class="portal-col">
                 
                 <div class="welcome-box">
-                    <h1>สวัสดี, <?php echo htmlspecialchars($_SESSION['user']['username']); ?> 👋</h1>
-                    <div class="welcome-info">
-                        ตำแหน่ง: <span class="badge bg-secondary bg-opacity-10 text-dark border"><?php echo htmlspecialchars($_SESSION['user']['role']); ?></span>
+                    <h1>สวัสดี, <?php echo htmlspecialchars($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']); ?> 👋</h1>
+                    
+                    <div class="welcome-info mt-2">
+                        <span class="badge bg-light text-secondary border me-1 fw-normal">
+                            <i class="fas fa-id-badge me-1"></i> 
+                            <?php echo htmlspecialchars($_SESSION['user']['emp_id'] ?? '-'); ?>
+                        </span>
+
+                        <span class="badge bg-light text-secondary border me-1 fw-normal">
+                            <i class="fas fa-industry me-1"></i> 
+                            Line: <?php echo htmlspecialchars($_SESSION['user']['line'] ?? '-'); ?>
+                        </span>
+
+                        <span class="badge bg-primary bg-opacity-10 text-primary border">
+                            <?php echo htmlspecialchars($_SESSION['user']['position'] ?? $_SESSION['user']['role']); ?>
+                        </span>
                     </div>
                 </div>
+
+                <button id="btnOpenAdminDash" class="btn w-100 mb-4 d-none shadow-sm" style="background: linear-gradient(to right, #667eea, #764ba2); color: white; border: none; padding: 12px; border-radius: 10px;" onclick="adminDashboardModal.show()">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span><i class="fas fa-chart-pie me-2"></i> ภาพรวมทีมงาน (Dashboard)</span>
+                        <i class="fas fa-chevron-right opacity-50"></i>
+                    </div>
+                </button>
 
                 <div class="section-header"><i class="fas fa-heartbeat text-danger"></i> DAILY PULSE (บันทึกประจำวัน)</div>
                 <div id="todayCardsContainer" class="pulse-grid">
@@ -344,6 +364,7 @@ $userRole = $_SESSION['user']['role'];
     </div>
 
     <?php include __DIR__ . '/components/logModals.php'; ?>
+    <?php include __DIR__ . '/components/avgMoodModal.php'; ?>
 
     <script src="script/dailyLog.js?v=<?php echo time(); ?>"></script>
 </body>

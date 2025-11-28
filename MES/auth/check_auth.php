@@ -1,24 +1,33 @@
 <?php
-//-- เริ่ม Session หากยังไม่ได้เริ่ม --
+// MES/auth/check_auth.php
+
+// 1. เริ่ม Session หากยังไม่ได้เริ่ม
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-//-- ตรวจสอบการล็อกอิน: หากยังไม่ได้ล็อกอิน ให้ Redirect ไปยังหน้า login --
+// 2. ตรวจสอบการล็อกอิน: หากยังไม่ได้ล็อกอิน ให้ Redirect ไปยังหน้า login
 if (!isset($_SESSION['user'])) {
-    //-- สร้าง URL ปลายทางสำหรับ Redirect กลับมาหลังล็อกอินสำเร็จ --
-    $redirect_url = str_replace('/oee_dashboard/oee_dashboard-main/OEE_Dashboard', '', $_SERVER['REQUEST_URI']);
-    header("Location: ../../auth/login_form.php?redirect=" . urlencode($redirect_url));
+    // เก็บ URL หน้าปัจจุบันที่ผู้ใช้พยายามจะเข้า (เช่น พยายามเข้าหน้า Store Request)
+    // เพื่อให้หลังจาก Login เสร็จ ระบบจะส่งกลับมาหน้านี้ได้ถูกต้อง
+    $current_url = $_SERVER['REQUEST_URI'];
+    
+    // ส่งไปหน้า Login Form พร้อมแนบ Link หน้าเดิมไปด้วย (Redirect Back)
+    // หมายเหตุ: Path ../../auth/login_form.php อ้างอิงจากตำแหน่งไฟล์ที่เรียกใช้ check_auth (ส่วนใหญ่จะอยู่ใน page/xyz/)
+    header("Location: ../../auth/login_form.php?redirect=" . urlencode($current_url));
     exit;
 }
 
-// --- NEW: Generate CSRF Token if it doesn't exist in the session ---
+// 3. สร้าง CSRF Token หากยังไม่มี (เพื่อป้องกันการโจมตีแบบ Cross-Site Request Forgery)
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
 }
-// ------------------------------------------------------------------
 
-//-- ฟังก์ชันสำหรับตรวจสอบ Role ของผู้ใช้ที่ล็อกอินอยู่ --
+/**
+ * ฟังก์ชันสำหรับตรวจสอบ Role ของผู้ใช้ที่ล็อกอินอยู่
+ * @param string|array $roles - Role เดี่ยว หรือ Array ของ Role ที่อนุญาต
+ * @return bool
+ */
 function hasRole($roles): bool {
     if (empty($_SESSION['user']['role'])) {
         return false;
@@ -31,22 +40,25 @@ function hasRole($roles): bool {
 }
 
 /**
- * ฟังก์ชันสำหรับตรวจสอบว่าผู้ใช้ปัจจุบันมีสิทธิ์ในไลน์ที่ระบุหรือไม่
+ * ฟังก์ชันสำหรับตรวจสอบว่าผู้ใช้ปัจจุบันมีสิทธิ์ในไลน์การผลิตที่ระบุหรือไม่
  * @param string $requiredLine - ไลน์ที่ต้องการตรวจสอบ
  * @return bool - คืนค่า true หากมีสิทธิ์, false หากไม่มี
  */
 function checkLinePermission($requiredLine): bool {
+    // Admin และ Creator เข้าถึงได้ทุกไลน์
     if (hasRole(['admin', 'creator'])) {
         return true;
     }
+    // Supervisor เข้าถึงได้เฉพาะไลน์ที่ตนเองสังกัด
     if (hasRole('supervisor')) {
         return isset($_SESSION['user']['line']) && ($_SESSION['user']['line'] === $requiredLine);
     }
+    // Operator ไม่มีสิทธิ์จัดการระดับไลน์ (โดย default)
     return false;
 }
 
 /**
- * ฟังก์ชันสำหรับบังคับใช้สิทธิ์ของไลน์ หากไม่มีสิทธิ์จะโยน Exception
+ * ฟังก์ชันสำหรับบังคับใช้สิทธิ์ของไลน์ หากไม่มีสิทธิ์จะหยุดการทำงานและแจ้ง Error 403
  * @param string $requiredLine - ไลน์ที่ต้องการบังคับใช้สิทธิ์
  */
 function enforceLinePermission($requiredLine) {
@@ -57,9 +69,9 @@ function enforceLinePermission($requiredLine) {
 }
 
 /**
- * --- NEW FUNCTION ---
- * ฟังก์ชันกลางสำหรับบังคับใช้สิทธิ์ในข้อมูล (Record-Level)
- * @param PDO $pdo - PDO connection object
+ * ฟังก์ชันกลางสำหรับบังคับใช้สิทธิ์ในข้อมูลระดับแถว (Record-Level Permission)
+ * ใช้สำหรับตรวจสอบว่า User เป็นเจ้าของข้อมูลนั้นๆ หรือไม่
+ * * @param PDO $pdo - Object การเชื่อมต่อฐานข้อมูล
  * @param string $tableName - ชื่อตาราง (e.g., 'PARTS_TEST')
  * @param int $recordId - ID ของข้อมูลที่ต้องการตรวจสอบ
  * @param string $idColumn - ชื่อคอลัมน์ Primary Key (e.g., 'id', 'entry_id')
@@ -68,11 +80,12 @@ function enforceLinePermission($requiredLine) {
 function enforceRecordPermission($pdo, $tableName, $recordId, $idColumn, $ownerColumn) {
     $currentUser = $_SESSION['user'];
 
-    // Admins and Creators can do anything
+    // Admin และ Creator แก้ไขได้ทุกข้อมูล
     if (hasRole(['admin', 'creator'])) {
         return;
     }
 
+    // ดึงข้อมูลเจ้าของ Record จากฐานข้อมูล
     $stmt = $pdo->prepare("SELECT line, {$ownerColumn} FROM {$tableName} WHERE {$idColumn} = ?");
     $stmt->execute([$recordId]);
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -82,25 +95,25 @@ function enforceRecordPermission($pdo, $tableName, $recordId, $idColumn, $ownerC
         throw new Exception("Record not found (ID: {$recordId} in table {$tableName}).");
     }
 
-    // Supervisors have permission based on their assigned line
+    // Supervisor แก้ไขได้ถ้าข้อมูลนั้นอยู่ในไลน์ที่ตนเองดูแล
     if (hasRole('supervisor')) {
         if (isset($currentUser['line']) && $currentUser['line'] === $record['line']) {
             return; 
         }
     }
     
-    // Operators have permission only if they are the owner of the record
+    // Operator แก้ไขได้เฉพาะข้อมูลที่ตนเองเป็นคนสร้าง
     if (hasRole('operator')) {
-        // Determine the correct identifier for the current user (ID or username)
+        // ตรวจสอบว่าเป็น ID หรือ Username ที่ใช้เก็บความเป็นเจ้าของ
         $currentUserIdentifier = ($ownerColumn === 'operator_id') ? $currentUser['id'] : $currentUser['username'];
         $ownerIdentifierInDb = $record[$ownerColumn] ?? null;
 
         if ($ownerIdentifierInDb !== null && $ownerIdentifierInDb == $currentUserIdentifier) {
-            return; // Operator owns this record
+            return; // เป็นเจ้าของข้อมูลจริง
         }
     }
 
-    // Default deny for any other case
+    // กรณีอื่นๆ ถือว่าไม่มีสิทธิ์
     http_response_code(403);
     throw new Exception("Permission Denied: You do not have permission to modify this record.");
 }

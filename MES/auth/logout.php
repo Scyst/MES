@@ -1,11 +1,12 @@
 <?php
-//-- เริ่ม Session เพื่อเข้าถึงและจัดการ Session ปัจจุบัน --
+// MES/auth/logout.php
+
 session_start();
 
-//-- 1. ล้างข้อมูลทั้งหมดใน $_SESSION --
+// 1. ล้างข้อมูล
 $_SESSION = array();
 
-//-- 2. ลบ Session Cookie ออกจากเบราว์เซอร์ของผู้ใช้ --
+// 2. ลบ Cookie
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
     setcookie(session_name(), '', time() - 42000,
@@ -14,10 +15,10 @@ if (ini_get("session.use_cookies")) {
     );
 }
 
-//-- 3. ทำลาย Session บนเซิร์ฟเวอร์อย่างสมบูรณ์ --
+// 3. ทำลาย Session
 session_destroy();
 
-//-- 4. ส่งผู้ใช้กลับไปยังหน้า Dashboard เสมอ --
-header("Location: ../page/OEE_Dashboard/OEE_Dashboard.php");
+// 4. แก้ไข: ส่งกลับไปหน้า Login Form โดยตรง (ไฟล์นี้อยู่ในโฟลเดอร์เดียวกัน)
+header("Location: login_form.php");
 exit;
 ?>

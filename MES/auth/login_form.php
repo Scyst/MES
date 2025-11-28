@@ -1,13 +1,14 @@
 <?php
-//-- เริ่ม Session และตรวจสอบว่าผู้ใช้ล็อกอินอยู่แล้วหรือไม่ --
+// MES/auth/login_form.php
+
 session_start();
 if (isset($_SESSION['user'])) {
-    //-- ถ้าล็อกอินอยู่แล้ว ให้ Redirect ไปยังหน้า Dashboard ทันที --
-    header("Location: ../page/OEE_Dashboard/OEE_Dashboard.php");
+    // 1. แก้ไขจุดที่ 1: เปลี่ยนจาก OEE Dashboard เป็น dailyLogUI
+    header("Location: ../page/dailyLog/dailyLogUI.php");
     exit;
 }
-//-- รับค่า URL ที่จะ Redirect กลับไปหลัง Login สำเร็จ --
-$redirect = $_GET['redirect'] ?? '../page/OEE_Dashboard/OEE_Dashboard.php';
+
+$redirect = $_GET['redirect'] ?? '../page/dailyLog/dailyLogUI.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

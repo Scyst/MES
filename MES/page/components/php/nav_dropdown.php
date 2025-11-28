@@ -10,13 +10,19 @@
           <li class="dropdown-username" title="User">
             <i class="fas fa-user-alt fa-fw" style="margin-right: 24px;"></i>
             <div>
-                <?= htmlspecialchars($_SESSION['user']['username']) ?>
+                <?= htmlspecialchars($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']) ?>
                 <small style="display:block; font-size: 0.75rem; color: #aaa;">
                     <?= htmlspecialchars($_SESSION['user']['role'] ?? 'operator') ?>
                 </small>
             </div>
           </li>
         <?php endif; ?>
+
+        <li>
+            <a class="dropdown-item-icon" href="../dailyLog/dailyLogUI.php" title="SNC ONE WAY (Home)">
+                <i class="fas fa-home fa-fw"></i><span>MES TOOLBOX</span>
+            </a>
+        </li>
 
         <li>
             <a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php" title="OEE Dashboard">
@@ -41,9 +47,7 @@
             </a>
         </li>
 
-        <?php
-          if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])):
-        ?>
+        <?php if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
         <li>
             <a class="dropdown-item-icon" href="../storeManagement/storeRequest.php" title="Store Request & Scrap">
                 <i class="fas fa-dolly-flatbed fa-fw"></i>
@@ -66,15 +70,7 @@
 
         <li><hr class="dropdown-divider"></li>
 
-        <?php
-          $userRole = $_SESSION['user']['role'] ?? null;
-          if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])):
-        ?>
-            <li style="display: none;"> <a class="dropdown-item-icon" href="../warehouseOperations/warehouseTransferUI.php" title="Warehouse Operations (Under Development)">
-                     <i class="fas fa-warehouse fa-fw"></i>
-                     <span>Warehouse Ops (WIP)</span> </a>
-            </li>
-
+        <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
             <li>
                 <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
                     <i class="fas fa-cogs fa-fw"></i>
@@ -83,9 +79,7 @@
             </li>
         <?php endif; ?>
 
-        <?php
-          if ($userRole && in_array($userRole, ['admin', 'creator'])):
-        ?>
+        <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
             <li>
                 <a class="dropdown-item-icon" href="../production/print_location_qr.php" title="Location QR Printer">
                     <i class="fas fa-map-marked-alt fa-fw"></i>
