@@ -1,7 +1,7 @@
 <?php 
     include_once("../../auth/check_auth.php"); 
     
-    if (!hasRole(['supervisor', 'admin', 'creator'])) {
+    if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
         exit;
     }

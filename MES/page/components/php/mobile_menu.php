@@ -59,13 +59,10 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 </a>
             </li>
 
-            <li class="list-group-item list-group-item-action disabled">
-                <a class="text-decoration-none text-body d-block" 
-                    href="../management/managementDashboard.php" 
-                    tabindex="-1" 
-                    aria-disabled="true">
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../Stop_Cause/Stop_Cause.php" >
                     <i class="fas fa-ban fa-fw me-3"></i>
-                    <span style="text-decoration: line-through;">Stop & Causes <small>(ยังไม่รองรับ)</small></span>
+                    <span>Stop & Causes</span>
                 </a>
             </li>
             
