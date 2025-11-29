@@ -36,9 +36,9 @@ const periodInfo = {
     }
 };
 
+// Initialize Modals
 const dayManagerModal = new bootstrap.Modal(document.getElementById('dayManagerModal'));
 const logModal = new bootstrap.Modal(document.getElementById('logModal'));
-
 window.adminDashboardModal = new bootstrap.Modal(document.getElementById('adminDashboardModal'));
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -74,6 +74,16 @@ async function fetchData() {
     }
 }
 
+function showLockedAlert(menuName) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        text: `คุณไม่มีสิทธิ์ใช้งานเมนู "${menuName}" \nกรุณาติดต่อผู้ดูแลระบบ หรือเข้าสู่ระบบด้วยบัญชีที่มีสิทธิ์`,
+        confirmButtonText: 'เข้าใจแล้ว',
+        confirmButtonColor: '#6c757d'
+    });
+}
+
 function renderTodayCards(todayLogs) {
     const container = document.getElementById('todayCardsContainer');
     container.innerHTML = '';
@@ -98,14 +108,35 @@ function renderTodayCards(todayLogs) {
                 <div class="text-muted" style="font-size: 0.6rem;">กดบันทึก</div>`;
         }
 
+        // เช็ค Login จากตัวแปร global ที่ประกาศใน PHP
+        const clickAction = IS_LOGGED_IN 
+            ? `openLogModal('${globalTodayDate}', ${pid})` 
+            : `showLoginPrompt()`;
+
         const html = `
             <div>
-                <div class="pulse-card ${cardClass}" onclick="openLogModal('${globalTodayDate}', ${pid})">
+                <div class="pulse-card ${cardClass}" onclick="${clickAction}">
                     <div class="text-muted small fw-bold mb-1">${pinfo.label}</div>
                     ${contentHtml}
                 </div>
             </div>`;
         container.innerHTML += html;
+    });
+}
+
+function showLoginPrompt() {
+    Swal.fire({
+        icon: 'info',
+        title: 'กรุณาเข้าสู่ระบบ',
+        text: 'คุณต้องเข้าสู่ระบบก่อนจึงจะสามารถบันทึกข้อมูลประจำวันได้',
+        showCancelButton: true,
+        confirmButtonText: 'ไปหน้า Login',
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#0d6efd'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '../../auth/login_form.php?redirect=' + encodeURIComponent(window.location.pathname);
+        }
     });
 }
 
@@ -117,7 +148,6 @@ function renderCalendar(data) {
     const year = today.getFullYear();
     const month = today.getMonth(); // 0-11
     
-    // Logic หาจำนวนวันและวันเริ่มต้นเหมือน PHP
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayOfWeek = new Date(year, month, 1).getDay();
 
@@ -144,19 +174,25 @@ function renderCalendar(data) {
             </div>`;
         container.innerHTML += html;
     }
+
+    // === [ADDED] Logic ปรับ Row Grid ให้ยืดเต็มจอ ===
+    const totalSlots = firstDayOfWeek + daysInMonth;
+    const rowCount = Math.ceil(totalSlots / 7);
+    const calendarParent = container.parentElement; 
+    if(calendarParent && calendarParent.classList.contains('snc-calendar')) {
+        calendarParent.style.gridTemplateRows = `35px repeat(${rowCount}, 1fr)`;
+    }
 }
 
 function renderAdminDashboard(dashboardData, factoryMood) {
-    const btnOpen = document.getElementById('btnOpenAdminDash'); // ปุ่มกด
+    const btnOpen = document.getElementById('btnOpenAdminDash'); 
     const moodScoreEl = document.getElementById('factoryMoodScore');
     const moodEmojiEl = document.getElementById('factoryMoodEmoji');
     const listContainer = document.getElementById('teamLogList');
     const emojis = {1:'😤', 2:'😓', 3:'😐', 4:'🙂', 5:'🤩'};
 
-    // 1. แสดงปุ่ม (เฉพาะ Admin/Sup ถึงจะเห็นปุ่มนี้)
     btnOpen.classList.remove('d-none');
 
-    // 2. ใส่ข้อมูลลงใน Modal Elements (เหมือนเดิม)
     const avg = factoryMood.avg ? parseFloat(factoryMood.avg).toFixed(1) : 0;
     moodScoreEl.innerText = avg > 0 ? avg : "-";
     
@@ -164,7 +200,6 @@ function renderAdminDashboard(dashboardData, factoryMood) {
     if(moodInt < 1) moodInt = 3; 
     moodEmojiEl.innerText = emojis[moodInt];
 
-    // 3. Render List
     listContainer.innerHTML = '';
     
     if (Object.keys(dashboardData).length === 0) {
@@ -181,15 +216,10 @@ function renderAdminDashboard(dashboardData, factoryMood) {
         [1, 2, 3].forEach(pid => {
             const hasLog = logs[pid];
             if(hasLog) {
-                // 1. จัดการข้อความ Note (ป้องกันเครื่องหมายคำพูดทำ HTML พัง)
                 const rawNote = hasLog.note || '';
                 const safeNote = rawNote.replace(/"/g, '&quot;'); 
-                
-                // 2. สร้างข้อความที่จะโชว์ใน Tooltip
-                // เช่น: "เช้า (Start): เครื่องจักรมีปัญหา" หรือแค่ "เช้า (Start)" ถ้าไม่มีโน๊ต
                 const tooltipText = `${periodInfo[pid].label}${safeNote ? ': ' + safeNote : ''}`;
 
-                // 3. ใส่ data-bs-toggle="tooltip" และ title
                 statusDots += `
                     <span class="mx-1 position-relative" 
                           style="font-size:1.4rem; cursor:help;" 
@@ -199,7 +229,6 @@ function renderAdminDashboard(dashboardData, factoryMood) {
                         ${emojis[hasLog.mood_score]}
                         ${safeNote ? '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width:8px; height:8px;"></span>' : ''}
                     </span>`;
-                    // ^ บรรทัดบน: ผมแถมจุดแดงเล็กๆ (Notification dot) ให้ด้วย ถ้ามี Note จะได้รู้ว่าควรกดดู
             } else {
                 statusDots += `<span class="text-light bg-secondary bg-opacity-25 rounded-circle mx-1" style="width:10px; height:10px; display:inline-block;"></span>`;
             }
@@ -254,15 +283,11 @@ window.openDayManager = function(dateStr) {
 }
 
 window.openLogModal = function(dateStr, periodId) {
-    // 1. ปิด Modal รายการวัน (ถ้ามันเปิดค้างอยู่)
     dayManagerModal.hide();
 
-    // 2. ใส่ค่าลงใน Hidden Input ของฟอร์ม (เพื่อเตรียมส่งไป Backend)
     document.getElementById('inputTargetDate').value = dateStr;
     document.getElementById('inputPeriodId').value = periodId;
     
-    // 3. จัดการแสดงผล Label หัวข้อ Modal
-    // แปลงวันที่ (YYYY-MM-DD) เป็นรูปแบบไทย (เช่น 28 พ.ย. 2025)
     const dateObj = new Date(dateStr);
     const dateTh = dateObj.toLocaleDateString('th-TH', { 
         day: 'numeric', 
@@ -270,37 +295,24 @@ window.openLogModal = function(dateStr, periodId) {
         year: 'numeric' 
     });
     
-    // แสดงผล 2 บรรทัด: บรรทัดบนบอกวันที่ผลิต, บรรทัดล่างบอกช่วงเวลา (เริ่ม/พัก/เลิก)
     document.getElementById('formPeriodLabel').innerHTML = 
         `<small class="text-muted d-block" style="font-size: 0.85rem;">Production Date: ${dateTh}</small>` + 
         `<span class="fw-bold text-dark" style="font-size: 1.1rem;">${periodInfo[periodId].label}</span>`;
     
-    // 4. รีเซ็ตฟอร์มให้ว่าง (Clearing Form)
-    document.getElementById('inputMood').value = '';   // ล้างค่าอารมณ์
-    document.getElementById('inputQty').value = '';    // ล้างยอดผลิต
-    document.getElementById('inputNote').value = '';   // ล้างโน้ต
+    document.getElementById('inputMood').value = '';   
+    document.getElementById('inputQty').value = '';    
+    document.getElementById('inputNote').value = '';   
     
-    // ล้างการเลือก Emoji (เอา class active ออกให้หมด)
     document.querySelectorAll('.emoji-option').forEach(el => el.classList.remove('active'));
-    // ซ่อนข้อความ Error
     document.getElementById('moodError').classList.add('d-none');
 
-    // 5. ตรวจสอบข้อมูลเก่า (Pre-fill Data)
-    // ถ้าใน globalMonthlyData มีข้อมูลของวันที่นี้ และช่วงเวลานี้อยู่แล้ว แปลว่าเป็นการ "แก้ไข"
     if (globalMonthlyData[dateStr] && globalMonthlyData[dateStr][periodId]) {
         const logData = globalMonthlyData[dateStr][periodId];
-
-        // 5.1 เลือก Emoji ตามค่าเดิม
         selectEmoji(logData.mood);
-
-        // 5.2 ใส่ค่า Qty เดิม (แปลงเป็น Int หรือปล่อยว่างถ้าเป็น 0/null)
         document.getElementById('inputQty').value = logData.qty ? parseInt(logData.qty) : '';
-
-        // 5.3 ใส่ Note เดิม
         document.getElementById('inputNote').value = logData.note || '';
     }
 
-    // 6. สั่งเปิด Modal
     logModal.show();
 }
 
@@ -331,9 +343,8 @@ function setupEventListeners() {
             const res = await response.json();
             
             if (res.success) {
-                // alert(res.message); // หรือใช้ Toast
                 logModal.hide();
-                fetchData(); // Reload data to update UI
+                fetchData();
             } else {
                 alert(res.message);
             }
@@ -342,6 +353,25 @@ function setupEventListeners() {
             alert("Error saving data");
         }
     });
+    
+    const themeBtn = document.getElementById('portal-theme-btn');
+    
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            console.log("Theme button clicked!"); // [DEBUG] เช็คว่ากดติดไหม
+
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            // 1. เปลี่ยน Attribute ที่ <html>
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            
+            // 2. จำค่าลง LocalStorage
+            localStorage.setItem('theme', newTheme);
+        });
+    } else {
+        console.error("Theme button not found!"); // [DEBUG] แจ้งเตือนถ้าหาปุ่มไม่เจอ
+    }
 }
 
 function formatDateTH(dateStr) {

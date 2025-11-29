@@ -38,6 +38,12 @@ $userRole = $_SESSION['user']['role'] ?? null;
                     <span style="text-decoration: line-through;">Management Dashboard <small>(ยังไม่รองรับ)</small></span>
                 </a>
             </li>
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../dailyLog/moodReport.php">
+                    <i class="fas fa-heartbeat fa-fw me-3 text-danger"></i>
+                    <span>Mood Insight Report</span>
+                </a>
+            </li>
             <?php endif; ?>
 
             <li class="list-group-item list-group-item-action">

@@ -1,11 +1,44 @@
 <?php
 // MES/page/dailyLog/dailyLogUI.php
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../auth/check_auth.php';
 
-$pageTitle = "SNC ONE WAY - MES Portal";
-$userId = $_SESSION['user']['id'];
-$userRole = $_SESSION['user']['role'];
+// 1. เริ่ม Session และตรวจสอบสถานะ (แทนการใช้ check_auth.php)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$isLoggedIn = isset($_SESSION['user']);
+$user = $isLoggedIn ? $_SESSION['user'] : null;
+
+// ถ้าไม่ได้ล็อกอิน ให้เป็น 'guest', ถ้าล็อกอินแล้วใช้ role จริง
+$userRole = $isLoggedIn ? $user['role'] : 'guest';
+$fullName = $isLoggedIn ? ($user['fullname'] ?? $user['username']) : 'ผู้เยี่ยมชม (Guest)';
+
+$pageTitle = "MES TOOLBOX";
+
+// --- ฟังก์ชันช่วยสร้างลิงก์ (Helper Function) ---
+// ช่วยลด Code ที่ซ้ำซ้อนในการเช็คสิทธิ์
+function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole, $iconColorClass = '') {
+    // เช็คว่า User ปัจจุบันมีสิทธิ์ไหม
+    $hasPermission = in_array($userRole, $allowedRoles);
+    
+    // กำหนด Class และ Action
+    $lockClass = $hasPermission ? '' : 'locked'; // เพิ่ม class locked ถ้าไม่มีสิทธิ์
+    $href = $hasPermission ? $url : 'javascript:void(0)'; // ลิงก์ปลอมถ้าไม่มีสิทธิ์
+    $onClick = $hasPermission ? '' : 'onclick="showLockedAlert(\'' . $title . '\')"'; // แจ้งเตือนเมื่อกด
+    $lockIcon = $hasPermission ? '' : '<i class="fas fa-lock ms-auto text-secondary opacity-50"></i>';
+
+    echo "
+    <a href=\"{$href}\" class=\"service-item {$lockClass}\" {$onClick}>
+        <div class=\"service-icon {$iconColorClass}\">{$icon}</div>
+        <div class=\"service-text\">
+            <h4>{$title}</h4>
+            <p>{$desc}</p>
+        </div>
+        {$lockIcon}
+    </a>
+    ";
+}
 ?>
 
 <!DOCTYPE html>
@@ -13,221 +46,37 @@ $userRole = $_SESSION['user']['role'];
 <head>
     <?php require_once __DIR__ . '/../components/common_head.php'; ?>
     <title><?php echo $pageTitle; ?></title>
-    <style>
-        /* === GLOBAL LAYOUT === */
-        body.dashboard-page { 
-            background-color: #f8f9fa;
-            overflow: hidden; /* ยังคง concept ไม่ให้ scroll ทั้งหน้า */
-            font-size: 16px; /* ขยาย Base Font */
-        }
-
-        #main-content {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-        }
-
-        /* Header Style */
-        .portal-header {
-            height: 70px; /* เพิ่มความสูง Header */
-            background-color: #fff;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            flex-shrink: 0;
-        }
-
-        /* Grid Layout */
-        .portal-container {
-            display: grid;
-            grid-template-columns: 40% 60%;
-            height: calc(100vh - 70px); /* ลบความสูง Header ใหม่ */
-            background-color: #fff;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .portal-col {
-            overflow-y: auto;
-            border-right: 1px solid #e5e7eb;
-            display: flex;
-            flex-direction: column;
-            /* เพิ่ม Padding ให้เนื้อหาหายใจสะดวก */
-            padding: 1.5rem; 
-        }
-        .portal-col:last-child { border-right: none; background-color: #f9fafb; } /* ขวาเป็นสีเทาอ่อน */
-
-        /* Section Styling */
-        .section-header {
-            font-size: 1rem; /* ใหญ่ขึ้น */
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #f3f4f6;
-        }
-
-        /* === LEFT PANE COMPONENTS === */
-        
-        /* 1. Welcome Box */
-        .welcome-box { margin-bottom: 1rem; }
-        .welcome-box h1 { font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem; }
-        .welcome-info { font-size: 1rem; color: #6b7280; }
-
-        /* 2. Pulse Cards (Bigger) */
-        .pulse-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem; /* เพิ่มช่องว่าง */
-            margin-bottom: 1rem;
-        }
-        .pulse-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 1.25rem 0.5rem; /* เพิ่ม Padding แนวตั้ง */
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .pulse-card:hover { 
-            border-color: var(--bs-primary); 
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
-        }
-        .pulse-card .card-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
-        .pulse-card .card-label { font-size: 0.95rem; font-weight: 600; color: #4b5563; margin-bottom: 0.5rem; }
-        .pulse-card .card-status { font-size: 0.8rem; color: #9ca3af; }
-        
-        .pulse-card.done { background-color: #f0fdf4; border-color: #86efac; }
-        .pulse-card.done .card-status { color: #15803d; font-weight: 600; }
-        .pulse-card.pending { border-style: dashed; border-width: 2px; }
-
-        /* 3. Calendar (Bigger & Clearer) */
-        .calendar-wrapper { margin-top: 0; } /* ดันลงล่าง */
-        .snc-calendar {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #fff;
-        }
-        .snc-cal-head {
-            background-color: #f3f4f6;
-            font-size: 0.85rem; /* ใหญ่ขึ้น */
-            font-weight: 600;
-            text-align: center;
-            padding: 8px 0;
-            border-right: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            color: #4b5563;
-        }
-        .snc-cal-day {
-            height: 65px; /* สูงขึ้นชัดเจน (จาก 45px) */
-            border-right: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 4px;
-            position: relative;
-            cursor: pointer;
-            transition: 0.1s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-        }
-        .snc-cal-day span { font-size: 0.9rem; font-weight: 500; color: #374151; }
-        .snc-cal-day:hover { background-color: #eff6ff; }
-        .snc-cal-day.today { background-color: #eff6ff; box-shadow: inset 0 0 0 2px var(--bs-primary); }
-        .snc-cal-day.today span { color: var(--bs-primary); font-weight: 700; }
-        .snc-cal-day.empty { background-color: #f9fafb; cursor: default; }
-        
-        .cal-dots { 
-            display: flex; gap: 3px; margin-top: auto; margin-bottom: 6px;
-        }
-        .c-dot { width: 8px; height: 8px; border-radius: 50%; background: #e5e7eb; } /* จุดใหญ่ขึ้น */
-        .c-dot.done { background: #10b981; }
-
-        /* === RIGHT PANE COMPONENTS === */
-        
-        .service-group { margin-bottom: 2rem; }
-        .service-group-title {
-            font-size: 0.85rem; font-weight: 700; color: #9ca3af; 
-            text-transform: uppercase; letter-spacing: 0.05em;
-            margin-bottom: 1rem; padding-left: 0.5rem;
-            border-left: 3px solid #d1d5db;
-        }
-        
-        .service-grid {
-            display: grid;
-            /* ปรับให้ Column กว้างขึ้น อย่างน้อย 220px */
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 1rem;
-        }
-        
-        .service-item {
-            display: flex; align-items: center; gap: 1rem;
-            padding: 1rem; /* เพิ่ม Padding */
-            background-color: #fff;
-            border: 1px solid #e5e7eb; border-radius: 10px;
-            text-decoration: none; color: #1f2937; 
-            transition: all 0.2s;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-        .service-item:hover { 
-            border-color: var(--bs-primary); 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-        }
-        
-        .service-icon {
-            width: 48px; height: 48px; flex-shrink: 0; /* ไอคอนใหญ่ขึ้น */
-            background-color: #f3f4f6; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.25rem; color: #6b7280; transition: 0.2s;
-        }
-        .service-item:hover .service-icon { background-color: #dbeafe; color: var(--bs-primary); }
-        
-        .service-text h4 { font-size: 1rem; font-weight: 600; margin: 0 0 2px 0; color: #111827; }
-        .service-text p { font-size: 0.85rem; color: #6b7280; margin: 0; }
-
-        /* Responsive */
-        @media (max-width: 992px) { 
-            .portal-container { grid-template-columns: 1fr; height: auto; display: block; } 
-            .portal-col { border-right: none; height: auto; overflow: visible; } 
-            body.dashboard-page { overflow: auto; } 
-        }
-        
-        /* Modal Style */
-        .emoji-select-wrapper { display: flex; justify-content: center; gap: 15px; margin: 20px 0; }
-        .emoji-option { font-size: 3rem; cursor: pointer; opacity: 0.4; filter: grayscale(1); transition: 0.2s; } /* Emoji ใหญ่บึ้ม */
-        .emoji-option:hover, .emoji-option.active { opacity: 1; transform: scale(1.2); filter: grayscale(0); }
-    </style>
+    <link rel="stylesheet" href="css/portal.css?v=<?php echo time(); ?>">
+    <script>
+        const IS_LOGGED_IN = <?php echo $isLoggedIn ? 'true' : 'false'; ?>;
+        const USER_ROLE = '<?php echo $userRole; ?>';
+    </script>
 </head>
 <body class="dashboard-page">
-    <?php include __DIR__ . '/../components/php/nav_dropdown.php'; ?>
-    <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
     <div id="main-content">
         <div class="portal-header">
             <div class="d-flex align-items-center gap-3">
-                <div style="width: 45px; height: 45px; background: #eee; border-radius: 8px; display: grid; place-items: center; font-weight: bold; color: #888; font-size: 0.8rem;">LOGO</div>
-                <div class="d-flex flex-column" style="line-height: 1.2;">
-                    <span class="fw-bold text-dark" style="font-size: 1.1rem;">MES TOOLBOX</span>
-                    <span class="text-muted" style="font-size: 0.85rem;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
+                <div class="logo-box">LOGO</div> <div class="d-flex flex-column" style="line-height: 1.2;">
+                    <span class="fw-bold" style="font-size: 1.1rem;">MES TOOLBOX</span> <span class="text-muted small">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
                 </div>
             </div>
-            <div class="d-none d-md-flex align-items-center gap-2">
-                <span class="text-muted small me-3"><i class="far fa-clock me-1"></i> <?php echo date('d F Y'); ?></span>
-                <a href="../../auth/logout.php" class="btn btn-light text-danger fw-bold px-3"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+            <div class="d-flex align-items-center gap-2">
+                <span class="d-none d-md-inline text-muted small me-3"><i class="far fa-clock me-1"></i> <?php echo date('d F Y'); ?></span>
+                
+                <button class="btn btn-link text-secondary p-0 me-3" id="portal-theme-btn" type="button" title="Switch Theme">
+                    <i class="fas fa-adjust fa-lg"></i>
+                </button>
+
+                <?php if ($isLoggedIn): ?>
+                    <a href="../../auth/logout.php" class="btn btn-light text-danger fw-bold px-3 border">
+                        <i class="fas fa-sign-out-alt"></i> <span class="d-none d-md-inline ms-2">Logout</span>
+                    </a>
+                <?php else: ?>
+                    <a href="../../auth/login_form.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="btn btn-primary fw-bold px-3">
+                        <i class="fas fa-sign-in-alt"></i> <span class="d-none d-md-inline ms-2">Login</span>
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -236,22 +85,26 @@ $userRole = $_SESSION['user']['role'];
             <div class="portal-col">
                 
                 <div class="welcome-box">
-                    <h1>สวัสดี, <?php echo htmlspecialchars($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']); ?> 👋</h1>
+                    <h1>สวัสดี คุณ <?php echo htmlspecialchars($fullName); ?> 👋</h1>
                     
                     <div class="welcome-info mt-2">
-                        <span class="badge bg-light text-secondary border me-1 fw-normal">
-                            <i class="fas fa-id-badge me-1"></i> 
-                            <?php echo htmlspecialchars($_SESSION['user']['emp_id'] ?? '-'); ?>
-                        </span>
+                        <?php if ($isLoggedIn): ?>
+                            <span class="badge bg-light text-secondary border me-1 fw-normal">
+                                <i class="fas fa-id-badge me-1"></i> 
+                                <?php echo htmlspecialchars($user['emp_id'] ?? '-'); ?>
+                            </span>
 
-                        <span class="badge bg-light text-secondary border me-1 fw-normal">
-                            <i class="fas fa-industry me-1"></i> 
-                            Line: <?php echo htmlspecialchars($_SESSION['user']['line'] ?? '-'); ?>
-                        </span>
+                            <span class="badge bg-light text-secondary border me-1 fw-normal">
+                                <i class="fas fa-industry me-1"></i> 
+                                Line: <?php echo htmlspecialchars($user['line'] ?? '-'); ?>
+                            </span>
 
-                        <span class="badge bg-primary bg-opacity-10 text-primary border">
-                            <?php echo htmlspecialchars($_SESSION['user']['position'] ?? $_SESSION['user']['role']); ?>
-                        </span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border">
+                                <?php echo htmlspecialchars($user['position'] ?? $user['role']); ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-muted"><i class="fas fa-info-circle me-1"></i> กรุณาเข้าสู่ระบบเพื่อใช้งานฟังก์ชันพนักงาน</span>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -271,7 +124,6 @@ $userRole = $_SESSION['user']['role'];
                     <div class="section-header d-flex justify-content-between border-0 pb-2">
                         <span><i class="far fa-calendar-alt"></i> ปฏิทินงาน (<?php echo date('M Y'); ?>)</span>
                     </div>
-                    
                     <div class="snc-calendar">
                         <div class="snc-cal-head text-danger">อา</div>
                         <div class="snc-cal-head">จ</div>
@@ -280,7 +132,6 @@ $userRole = $_SESSION['user']['role'];
                         <div class="snc-cal-head">พฤ</div>
                         <div class="snc-cal-head">ศ</div>
                         <div class="snc-cal-head text-primary">ส</div>
-                        
                         <div id="calendarGrid" style="display: contents;"></div>
                     </div>
                 </div>
@@ -292,72 +143,60 @@ $userRole = $_SESSION['user']['role'];
                 <div class="service-group">
                     <div class="service-group-title">OPERATIONS (ฝ่ายผลิต)</div>
                     <div class="service-grid">
-                        <a href="../production/productionUI.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-boxes"></i></div>
-                            <div class="service-text"><h4>Production Entry</h4><p>บันทึกผลผลิตประจำวัน</p></div>
-                        </a>
-                        <a href="../production/mobile_entry.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-mobile-alt"></i></div>
-                            <div class="service-text"><h4>Mobile Entry</h4><p>ลงยอดผ่านมือถือ (QR)</p></div>
-                        </a>
-                        <a href="../Stop_Cause/Stop_Cause.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-ban"></i></div>
-                            <div class="service-text"><h4>Stop Causes</h4><p>บันทึกเครื่องจักรหยุด</p></div>
-                        </a>
-                        <?php if (in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
-                        <a href="../storeManagement/storeRequest.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-dolly-flatbed"></i></div>
-                            <div class="service-text"><h4>Store Request</h4><p>เบิก/คืน วัตถุดิบ</p></div>
-                        </a>
-                        <?php endif; ?>
+                        <?php 
+                        // ตัวอย่าง: Production Entry (ต้อง Login)
+                        renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole);
+                        
+                        // Mobile Entry
+                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole);
+
+                        // Stop Causes
+                        renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole);
+
+                        // Store Request (เดิมถูกซ่อน ตอนนี้โชว์แต่ล็อค)
+                        renderServiceLink('Store Request', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole);
+                        ?>
                     </div>
                 </div>
 
                 <div class="service-group">
                     <div class="service-group-title">MONITORING (ติดตามผล)</div>
                     <div class="service-grid">
-                        <a href="../OEE_Dashboard/OEE_Dashboard.php" class="service-item">
-                            <div class="service-icon text-primary bg-primary bg-opacity-10"><i class="fas fa-chart-line"></i></div>
-                            <div class="service-text"><h4>OEE Dashboard</h4><p>ประสิทธิภาพเครื่องจักร</p></div>
-                        </a>
-                        <?php if (in_array($userRole, ['admin', 'creator'])): ?>
-                        <a href="../management/managementDashboard.php" class="service-item">
-                            <div class="service-icon text-success bg-success bg-opacity-10"><i class="fas fa-tachometer-alt"></i></div>
-                            <div class="service-text"><h4>Management</h4><p>แดชบอร์ดผู้บริหาร</p></div>
-                        </a>
-                        <?php endif; ?>
-                        <a href="../documentCenter/documentCenterUI.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-folder-open"></i></div>
-                            <div class="service-text"><h4>Document Center</h4><p>คู่มือและเอกสาร</p></div>
-                        </a>
+                        <?php
+                        // OEE Dashboard (ให้ Guest ดูได้ไหม? ถ้าได้ ใส่ 'guest' ลงไป)
+                        // สมมติว่า OEE Dashboard เป็น Public
+                        renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, 'text-primary bg-primary bg-opacity-10');
+
+                        // Management (เฉพาะ Admin/Creator) -> คนอื่นเห็นเป็นล็อค
+                        renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', ['admin', 'creator'], $userRole, 'text-success bg-success bg-opacity-10');
+
+                        // Mood Insight (ต้อง Login)
+                        renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', ['admin', 'creator', 'supervisor'], $userRole, 'text-danger bg-danger bg-opacity-10');
+
+                        // Document Center (Public)
+                        renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole);
+                        ?>
                     </div>
                 </div>
 
-                <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
                 <div class="service-group">
                     <div class="service-group-title">SYSTEM TOOLS (ผู้ดูแล)</div>
                     <div class="service-grid">
-                        <a href="../inventorySettings/inventorySettings.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-cogs"></i></div>
-                            <div class="service-text"><h4>System Settings</h4><p>ตั้งค่าระบบ/Inventory</p></div>
-                        </a>
-                        <?php if (in_array($userRole, ['admin', 'creator'])): ?>
-                        <a href="../production/print_location_qr.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-qrcode"></i></div>
-                            <div class="service-text"><h4>QR Printer</h4><p>พิมพ์ Location Tag</p></div>
-                        </a>
-                        <a href="../maintenanceStock/maintenanceStockUI.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-tools"></i></div>
-                            <div class="service-text"><h4>MT Stock</h4><p>คลังอะไหล่ซ่อมบำรุง</p></div>
-                        </a>
-                        <a href="../userManage/userManageUI.php" class="service-item">
-                            <div class="service-icon"><i class="fas fa-users-cog"></i></div>
-                            <div class="service-text"><h4>User Manager</h4><p>จัดการผู้ใช้งาน</p></div>
-                        </a>
-                        <?php endif; ?>
+                        <?php
+                        // System Settings (Supervisor+)
+                        renderServiceLink('System Settings', 'ตั้งค่าระบบ', '<i class="fas fa-cogs"></i>', '../inventorySettings/inventorySettings.php', ['supervisor', 'admin', 'creator'], $userRole);
+
+                        // QR Printer (Admin+)
+                        renderServiceLink('QR Printer', 'พิมพ์ Location Tag', '<i class="fas fa-qrcode"></i>', '../production/print_location_qr.php', ['admin', 'creator'], $userRole);
+
+                        // MT Stock (Admin+)
+                        renderServiceLink('MT Stock', 'คลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', ['admin', 'creator'], $userRole);
+
+                        // User Manager (Admin+)
+                        renderServiceLink('User Manager', 'จัดการผู้ใช้งาน', '<i class="fas fa-users-cog"></i>', '../userManage/userManageUI.php', ['admin', 'creator'], $userRole);
+                        ?>
                     </div>
                 </div>
-                <?php endif; ?>
 
             </div>
         </div>
@@ -366,6 +205,7 @@ $userRole = $_SESSION['user']['role'];
     <?php include __DIR__ . '/components/logModals.php'; ?>
     <?php include __DIR__ . '/components/avgMoodModal.php'; ?>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="script/dailyLog.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

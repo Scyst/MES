@@ -1,0 +1,294 @@
+/* === GLOBAL LAYOUT & THEME VARIABLES === */
+/* ใช้ตัวแปรจาก style.css หลัก (Root Theme) */
+
+body.dashboard-page { 
+    background-color: var(--bs-body-bg); /* เปลี่ยนจาก #f8f9fa */
+    color: var(--bs-body-color);        /* เปลี่ยนจาก default black */
+    overflow: hidden; 
+    font-size: 16px; 
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#main-content {
+    margin-left: 0 !important;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+#sidebar-toggle-btn { display: none !important; }
+
+/* Header Style */
+.portal-header {
+    height: 70px;
+    background-color: var(--bs-secondary-bg); /* เปลี่ยนจาก #fff */
+    border-bottom: 1px solid var(--bs-border-color); /* เปลี่ยนจาก #e5e7eb */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+
+/* Logo Box styling */
+.logo-box {
+    width: 45px; height: 45px;
+    background: var(--bs-tertiary-bg); /* พื้นหลังโลโก้ตามธีม */
+    color: var(--bs-secondary-color);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: bold; font-size: 0.8rem;
+}
+
+/* Grid Layout */
+.portal-container {
+    display: grid;
+    grid-template-columns: 45% 55%;
+    height: calc(100vh - 70px);
+    background-color: var(--bs-secondary-bg);
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.portal-col {
+    height: 100%;
+    overflow: hidden;
+    border-right: 1px solid var(--bs-border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem; 
+    background-color: var(--bs-secondary-bg);
+}
+
+.portal-col:last-child { 
+    border-right: none; 
+    background-color: var(--bs-body-bg); /* ขวาเป็นสีพื้นหลังหลัก (เทาอ่อน/ดำ) */
+    overflow-y: auto; 
+}
+
+/* Section Styling */
+.section-header {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--bs-body-color); /* สีตัวอักษรตามธีม */
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--bs-tertiary-bg);
+    flex-shrink: 0;
+}
+
+/* === LEFT PANE COMPONENTS === */
+
+/* 1. Welcome Box */
+.welcome-box { margin-bottom: 1rem; flex-shrink: 0; }
+.welcome-box h1 { font-size: 1.75rem; font-weight: 800; color: var(--bs-body-color); margin-bottom: 0.8rem; }
+.welcome-info { font-size: 1rem; color: var(--bs-secondary-color); }
+
+/* 2. Pulse Cards */
+.pulse-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+.pulse-card {
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 1.25rem 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.pulse-card:hover { 
+    border-color: var(--bs-primary); 
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+}
+.pulse-card .card-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+.pulse-card .card-label { font-size: 0.95rem; font-weight: 600; color: var(--bs-secondary-color); margin-bottom: 0.5rem; }
+.pulse-card .card-status { font-size: 0.8rem; color: var(--bs-secondary-color); opacity: 0.7; }
+
+/* Status Colors (ยกเว้นสีพื้นหลังตอน Done ให้ใช้สีอ่อนๆ ของธีมนั้นๆ หรือ Hardcode ถ้าอยากได้เขียวตลอด) */
+.pulse-card.done { 
+    background-color: rgba(25, 135, 84, 0.1); /* สีเขียวจางๆ รองรับ Dark Mode */
+    border-color: var(--mes-color-success); 
+}
+.pulse-card.done .card-status { color: var(--mes-color-success); font-weight: 600; opacity: 1; }
+.pulse-card.pending { border-style: dashed; border-width: 2px; }
+
+/* 3. Calendar */
+.calendar-wrapper { 
+    margin-top: 0; 
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
+    min-height: 0; 
+}
+
+.snc-calendar {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: 35px repeat(auto-fill, minmax(1fr, auto));
+    
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bs-secondary-bg);
+}
+.snc-cal-head {
+    background-color: var(--bs-tertiary-bg); /* หัวตารางสีเข้มขึ้นนิดนึง */
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 0;
+    border-right: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
+}
+.snc-cal-day {
+    height: 100% !important;
+    min-height: 0;
+    border-right: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 4px;
+    position: relative;
+    cursor: pointer;
+    transition: 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+.snc-cal-day span { font-size: 0.9rem; font-weight: 500; color: var(--bs-body-color); }
+.snc-cal-day:hover { background-color: var(--bs-tertiary-bg); }
+
+.snc-cal-day.today { 
+    background-color: rgba(13, 110, 253, 0.1); /* สีน้ำเงินจางๆ */
+    box-shadow: inset 0 0 0 2px var(--bs-primary); 
+}
+.snc-cal-day.today span { color: var(--bs-primary); font-weight: 700; }
+.snc-cal-day.empty { background-color: var(--bs-tertiary-bg); opacity: 0.5; cursor: default; }
+
+.cal-dots { 
+    display: flex; gap: 3px; 
+    margin-top: 0; margin-bottom: 5px; 
+}
+.c-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bs-border-color); }
+.c-dot.done { background: var(--mes-color-success); }
+
+/* === RIGHT PANE COMPONENTS === */
+.service-group { margin-bottom: 2rem; }
+.service-group-title {
+    font-size: 0.85rem; font-weight: 700; color: var(--bs-secondary-color); 
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 1rem; padding-left: 0.5rem;
+    border-left: 3px solid var(--bs-border-color);
+}
+
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 1rem;
+}
+
+.service-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem;
+    background-color: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color); 
+    border-radius: 10px;
+    text-decoration: none; 
+    color: var(--bs-body-color); 
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.service-item:hover { 
+    border-color: var(--bs-primary); 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+}
+
+/* Locked State Styles */
+.service-item.locked {
+    background-color: var(--bs-tertiary-bg); /* เปลี่ยนเป็นสีพื้นหลังที่เข้มขึ้นหน่อย */
+    border-color: var(--bs-border-color);
+    cursor: not-allowed;
+    opacity: 0.7;
+    position: relative;
+}
+.service-item.locked:hover {
+    transform: none; box-shadow: none; border-color: var(--bs-border-color);
+}
+.service-item.locked .service-icon {
+    background-color: var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    filter: grayscale(100%);
+}
+.service-item.locked .service-text h4,
+.service-item.locked .service-text p {
+    color: var(--bs-secondary-color);
+}
+
+.service-icon {
+    width: 48px; height: 48px; flex-shrink: 0;
+    background-color: var(--bs-tertiary-bg); 
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; 
+    color: var(--bs-secondary-color); 
+    transition: 0.2s;
+}
+.service-item:hover .service-icon { 
+    background-color: rgba(13, 110, 253, 0.1); /* สีฟ้าจางๆ */
+    color: var(--bs-primary); 
+}
+
+.service-text h4 { font-size: 1rem; font-weight: 600; margin: 0 0 2px 0; color: var(--bs-body-color); }
+.service-text p { font-size: 0.85rem; color: var(--bs-secondary-color); margin: 0; }
+
+/* Responsive */
+@media (max-width: 992px) { 
+    .portal-container { grid-template-columns: 1fr; height: auto; display: block; } 
+    .portal-col { border-right: none; height: auto; overflow: visible; } 
+    body.dashboard-page { overflow: auto; } 
+    .snc-cal-day { height: 60px !important; } 
+    .welcome-box h1 { font-size: 1.5rem;}
+}
+
+/* Modal Style */
+.emoji-select-wrapper { display: flex; justify-content: center; gap: 15px; margin: 20px 0; }
+.emoji-option { font-size: 3rem; cursor: pointer; opacity: 0.4; filter: grayscale(1); transition: 0.2s; }
+.emoji-option:hover, .emoji-option.active { opacity: 1; transform: scale(1.2); filter: grayscale(0); }
+
+/* เพิ่ม Style ให้ Modal รองรับ Dark Theme ด้วย (ถ้า Bootstrap ยังไม่จัดการให้) */
+[data-bs-theme="dark"] .modal-content {
+    background-color: var(--bs-secondary-bg);
+    border-color: var(--bs-border-color);
+}
+[data-bs-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+body.modal-open {
+    /* บังคับไม่ให้ Bootstrap เติม Padding ขวา */
+    padding-right: 0 !important; 
+    
+    /* บังคับให้ Overflow เป็นสถานะเดิม (หรือ hidden ตาม design ของเรา) */
+    overflow: hidden !important; 
+}
+
+/* ถ้า Header ของคุณเป็น Fixed/Sticky แล้วมันขยับ ให้ล็อกมันไว้ด้วย */
+.portal-header, 
+.report-header {
+    padding-right: 1.5rem !important; /* ค่าเดิมตาม Design ของคุณ */
+}

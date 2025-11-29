@@ -39,6 +39,11 @@
                 <i class="fas fa-tachometer-alt fa-fw"></i> <span>Management Dashboard</span>
             </a>
         </li>
+        <li>
+            <a class="dropdown-item-icon" href="../dailyLog/moodReport.php" title="Mood Insight Report">
+                <i class="fas fa-heartbeat fa-fw text-danger"></i> <span>Mood Insight</span>
+            </a>
+        </li>
         <?php endif; ?>
         
         <li>
