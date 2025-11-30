@@ -213,3 +213,169 @@ async function saveLogChanges() {
         hideSpinner();
     }
 }
+
+let shiftPlannerModal;
+let availableShifts = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Init modal
+    const el = document.getElementById('shiftPlannerModal');
+    if(el) shiftPlannerModal = new bootstrap.Modal(el);
+});
+
+async function openShiftPlanner() {
+    showSpinner();
+    try {
+        const res = await fetch('api/batch_shift_update.php?action=get_options');
+        const json = await res.json();
+
+        if (json.success) {
+            availableShifts = json.shifts;
+            // ส่ง current_assignments ไปด้วย
+            renderShiftPlannerTable(json.lines, json.shifts, json.current_assignments); 
+            shiftPlannerModal.show();
+        } else {
+            alert(json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to load planner data');
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderShiftPlannerTable(lines, shifts, currentAssignments = {}) {
+    const tbody = document.getElementById('shiftPlannerBody');
+    tbody.innerHTML = '';
+
+    // Helper: สร้าง Options และเลือกค่าปัจจุบัน (Selected)
+    const createOptions = (currentShiftId) => {
+        let html = '<option value="">-- Select --</option>';
+        shifts.forEach(s => {
+            // เช็คว่าตรงกับค่าปัจจุบันไหม
+            const isSelected = (s.shift_id == currentShiftId) ? 'selected' : '';
+            // เพิ่มดาว ★ หน้าชื่อกะปัจจุบันเพื่อให้สังเกตง่าย
+            const labelPrefix = isSelected ? '★ ' : ''; 
+            const classText = isSelected ? 'fw-bold text-dark' : '';
+            
+            html += `<option value="${s.shift_id}" ${isSelected} class="${classText}">
+                        ${labelPrefix}${s.shift_name} (${s.start_time.substring(0,5)})
+                     </option>`;
+        });
+        return html;
+    };
+
+    lines.forEach((line, index) => {
+        const safeLine = line.replace(/"/g, '&quot;');
+        
+        // หาค่ากะปัจจุบันของ Team A และ B ในไลน์นี้
+        const currentA = currentAssignments[line] ? currentAssignments[line]['A'] : null;
+        const currentB = currentAssignments[line] ? currentAssignments[line]['B'] : null;
+
+        tbody.innerHTML += `
+            <tr id="row-${index}">
+                <td class="ps-4 fw-bold text-primary align-middle">${line}</td>
+                
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-primary text-white fw-bold" style="width:30px;">A</span>
+                        <select class="form-select fw-bold text-primary" id="shiftA-${index}">
+                            ${createOptions(currentA)}
+                        </select>
+                    </div>
+                </td>
+
+                <td class="text-center align-middle">
+                    <button class="btn btn-sm btn-light border rounded-circle shadow-sm" onclick="swapDropdowns(${index})" title="สลับกะ A <-> B">
+                        <i class="fas fa-exchange-alt text-secondary"></i>
+                    </button>
+                </td>
+
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-warning text-dark fw-bold" style="width:30px;">B</span>
+                        <select class="form-select fw-bold text-dark" id="shiftB-${index}">
+                            ${createOptions(currentB)}
+                        </select>
+                    </div>
+                </td>
+
+                <td class="text-center pe-4 align-middle">
+                    <button class="btn btn-sm btn-outline-success fw-bold w-100" onclick="saveTeamShift('${safeLine}', ${index})">
+                        <i class="fas fa-save me-1"></i> Save
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// ฟังก์ชันสลับค่า Dropdown A <-> B (เพื่อความไว)
+function swapDropdowns(index) {
+    const selA = document.getElementById(`shiftA-${index}`);
+    const selB = document.getElementById(`shiftB-${index}`);
+    
+    const valA = selA.value;
+    selA.value = selB.value;
+    selB.value = valA;
+}
+
+async function saveTeamShift(line, index) {
+    const shiftA = document.getElementById(`shiftA-${index}`).value;
+    const shiftB = document.getElementById(`shiftB-${index}`).value;
+
+    if (!shiftA && !shiftB) {
+        alert("กรุณาเลือกกะอย่างน้อย 1 ทีม");
+        return;
+    }
+
+    if (!confirm(`ยืนยันการเปลี่ยนกะสำหรับ Line: ${line} ?\n\nTeam A -> ${getShiftName(shiftA)}\nTeam B -> ${getShiftName(shiftB)}`)) {
+        return;
+    }
+
+    showSpinner();
+    try {
+        const res = await fetch('api/batch_shift_update.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                action: 'update_team_shift',
+                line: line,
+                shift_a: shiftA,
+                shift_b: shiftB
+            })
+        });
+        const json = await res.json();
+
+        if (json.success) {
+            // alert(json.message);
+            // ใช้ Toast หรือเปลี่ยนสีปุ่มให้รู้ว่าเสร็จ
+            const btn = document.querySelector(`#row-${index} .btn-outline-success`);
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Saved';
+            btn.classList.replace('btn-outline-success', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('btn-success', 'btn-outline-success');
+            }, 2000);
+
+            if(typeof showToast === 'function') showToast(json.message, '#198754');
+            else alert(json.message);
+
+        } else {
+            alert(json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Update failed');
+    } finally {
+        hideSpinner();
+    }
+}
+
+function getShiftName(id) {
+    if (!id) return "No Change";
+    const s = availableShifts.find(x => x.shift_id == id);
+    return s ? s.shift_name : id;
+}
