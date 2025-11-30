@@ -11,14 +11,15 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
-// ฟังก์ชันสำหรับส่ง JSON Error กลับไปเสมอ (ไม่ว่าจะเกิดอะไรขึ้น)
+// Helper function for clean JSON error
 function sendJsonError($message) {
     echo json_encode(['success' => false, 'message' => $message]);
     exit;
 }
 
-// ตั้งค่า Error Handler ให้จับ PHP Error เป็น Exception
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    // ข้าม Warning เรื่อง strtotime ถ้าเผลอหลุดมา แต่เรากันไว้แล้ว
+    if (strpos($errstr, 'strtotime') !== false) return true;
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 });
 
@@ -38,18 +39,12 @@ try {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $response = curl_exec($ch);
-    if (curl_errno($ch)) {
-        throw new Exception("Curl Error: " . curl_error($ch));
-    }
+    if (curl_errno($ch)) throw new Exception("Curl Error: " . curl_error($ch));
     curl_close($ch);
 
-    if (!$response) throw new Exception("Failed to connect to Scanner API (Empty response).");
+    if (!$response) throw new Exception("Failed to connect to Scanner API.");
     
     $apiData = json_decode($response, true);
-    // ถ้า JSON แตก หรือไม่ใช่ Array
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $apiData = []; // หรือ throw Exception ก็ได้
-    }
     if (!is_array($apiData)) $apiData = [];
 
     $pdo->beginTransaction();
@@ -59,14 +54,9 @@ try {
     $stmtInsertEmp = $pdo->prepare("INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " (emp_id, name_th, position, department_api, line, is_active, last_sync_at) VALUES (?, ?, ?, ?, ?, 1, GETDATE())");
     $stmtUpdateEmp = $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET name_th = ?, position = ?, department_api = ?, last_sync_at = GETDATE() WHERE emp_id = ?");
     
-    // Log Statements
-    $stmtCheckLog = $pdo->prepare("SELECT log_id, scan_in_time, scan_out_time, is_verified FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_date = ? AND emp_id = ?");
-    
+    $stmtCheckLog = $pdo->prepare("SELECT log_id, scan_in_time, scan_out_time, is_verified, status FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_date = ? AND emp_id = ?");
     $stmtInsertLog = $pdo->prepare("INSERT INTO " . MANPOWER_DAILY_LOGS_TABLE . " (log_date, emp_id, scan_in_time, scan_out_time, status, updated_at) VALUES (?, ?, ?, NULL, ?, GETDATE())");
-    
     $stmtUpdateLog = $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " SET scan_in_time = ?, scan_out_time = ?, status = ?, updated_at = GETDATE() WHERE log_id = ?");
-
-    // Ghost Cleanup
     $stmtDeleteGhost = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date = ? AND is_verified = 0");
 
     // Load Shifts
@@ -76,9 +66,7 @@ try {
         while ($row = $stmtShifts->fetch(PDO::FETCH_ASSOC)) {
             $shifts[$row['shift_id']] = $row;
         }
-    } catch (Exception $ex) {
-        // ถ้าไม่มีตาราง Shift ให้ข้ามไป (ใช้ Default)
-    }
+    } catch (Exception $ex) {}
 
     $processedCount = 0;
 
@@ -91,23 +79,21 @@ try {
         $deptApi = trim($record['DEPARTMENT'] ?? '');
         $scanTimeRaw = $record['TIMEINOUT'] ?? ''; 
         
-        // [Validate Time] ป้องกัน Error Date
         if (empty($scanTimeRaw) || strtotime($scanTimeRaw) === false) continue;
-
         $scanTs = strtotime($scanTimeRaw);
         
         if (stripos($deptApi, 'TOOLBOX') === false) continue;
 
-        // [Logic 1] Date Offset (-6 Hours)
+        // Logic 1: Date Offset
         $logDate = date('Y-m-d', strtotime('-6 hours', $scanTs));
         
-        // [Ghost Check]
+        // Ghost Check
         $calendarDate = date('Y-m-d', $scanTs);
         if ($logDate !== $calendarDate) {
             $stmtDeleteGhost->execute([$empId, $calendarDate]);
         }
 
-        // --- Upsert Employee ---
+        // Upsert Employee
         $stmtCheckEmp->execute([$empId]);
         $existingEmp = $stmtCheckEmp->fetch(PDO::FETCH_ASSOC);
         $defaultShiftId = null;
@@ -119,13 +105,12 @@ try {
             $defaultShiftId = $existingEmp['default_shift_id'];
         }
 
-        // --- Shift Logic ---
+        // Shift Logic
         $scanHour = (int)date('H', $scanTs);
         $isValidIngress = true;
         $lateStatus = 'PRESENT';
         $dayOfWeek = date('w', strtotime($logDate)); 
 
-        // Shift defaults
         $shiftStartTime = '08:00:00';
         $isNightShift = false;
 
@@ -135,12 +120,8 @@ try {
             $shiftStartHour = (int)date('H', strtotime($shiftStartTime));
             $isNightShift = ($shiftStartHour >= 15);
 
-            // Saturday Night Override
-            if ($dayOfWeek == 6 && $isNightShift) {
-                $shiftStartTime = '17:00:00';
-            }
+            if ($dayOfWeek == 6 && $isNightShift) $shiftStartTime = '17:00:00';
 
-            // Ghost Filter
             if ($isNightShift) {
                 if ($scanHour >= 6 && $scanHour <= 13) $isValidIngress = false;
             } else {
@@ -152,46 +133,50 @@ try {
 
         if (!$isValidIngress) continue;
 
-        // --- Compare & Save (PHP Logic) ---
+        // --- Compare & Save (Fixed Logic) ---
         $stmtCheckLog->execute([$logDate, $empId]);
         $currentLog = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
 
-        if (!$currentLog) {
-            // Insert
-            $shiftStartDateTime = $logDate . ' ' . $shiftStartTime;
-            $lateLimit = strtotime("+" . ($shifts[$defaultShiftId]['late_threshold_minutes'] ?? 5) . " minutes", strtotime($shiftStartDateTime));
-            if ($scanTs > $lateLimit) $lateStatus = 'LATE';
+        $shiftStartDateTime = $logDate . ' ' . $shiftStartTime;
+        $lateLimit = strtotime("+" . ($shifts[$defaultShiftId]['late_threshold_minutes'] ?? 5) . " minutes", strtotime($shiftStartDateTime));
 
+        if (!$currentLog) {
+            // New Record
+            if ($scanTs > $lateLimit) $lateStatus = 'LATE';
             $stmtInsertLog->execute([$logDate, $empId, $scanTimeRaw, $lateStatus]);
         } else {
-            // Update
+            // Update Existing
             if ($currentLog['is_verified'] == 0) {
                 $dbIn = $currentLog['scan_in_time'];
                 $dbOut = $currentLog['scan_out_time'];
+                
+                // [FIX] แปลงเป็น Timestamp หรือ null
+                $currentInTs = $dbIn ? strtotime($dbIn) : null;
+                $currentOutTs = $dbOut ? strtotime($dbOut) : null;
                 
                 $newIn = $dbIn;
                 $newOut = $dbOut;
                 $isUpdated = false;
 
-                // Min Logic (เวลาเข้า)
-                if (strtotime($scanTimeRaw) < strtotime($dbIn)) {
+                // 1. Check Min Time (เวลาเข้า)
+                if ($currentInTs === null || $scanTs < $currentInTs) {
                     $newIn = $scanTimeRaw;
                     $isUpdated = true;
                     
-                    // Re-check late status for new IN time
-                    $shiftStartDateTime = $logDate . ' ' . $shiftStartTime;
-                    $lateLimit = strtotime("+" . ($shifts[$defaultShiftId]['late_threshold_minutes'] ?? 5) . " minutes", strtotime($shiftStartDateTime));
-                    if (strtotime($newIn) <= $lateLimit) $lateStatus = 'PRESENT';
+                    // Recalculate Late Status
+                    if ($scanTs <= $lateLimit) $lateStatus = 'PRESENT';
                     else $lateStatus = 'LATE';
+                    
+                    // Update reference for next step
+                    $currentInTs = $scanTs; 
                 } else {
-                    $lateStatus = $currentLog['status'] ?? 'PRESENT';
+                    $lateStatus = $currentLog['status']; // คงสถานะเดิม
                 }
 
-                // Max Logic (เวลาออก)
-                // ถ้า scan ใหม่ > scan in เดิม -> พิจารณาเป็นเวลาออก
-                if (strtotime($scanTimeRaw) > strtotime($dbIn)) {
-                    // ถ้ายังไม่มี out หรือ scan ใหม่ > out เดิม
-                    if ($dbOut === null || strtotime($scanTimeRaw) > strtotime($dbOut)) {
+                // 2. Check Max Time (เวลาออก)
+                // ต้องมากกว่าเวลาเข้า และ (ยังไม่มีเวลาออก หรือ มากกว่าเวลาออกเดิม)
+                if ($currentInTs !== null && $scanTs > $currentInTs) {
+                    if ($currentOutTs === null || $scanTs > $currentOutTs) {
                         $newOut = $scanTimeRaw;
                         $isUpdated = true;
                     }
@@ -206,7 +191,7 @@ try {
         $processedCount++;
     }
 
-    // --- STEP 3: Fill Absences ---
+    // --- Fill Absences ---
     $currentDate = strtotime($startDate);
     $endTs = strtotime($endDate);
     $absentCount = 0;
@@ -226,16 +211,15 @@ try {
     }
 
     $pdo->commit();
-
     echo json_encode([
         'success' => true,
-        'message' => "Sync OK: $processedCount records processed.",
+        'message' => "Sync OK ($processedCount scanned)",
         'stats' => ['valid' => $processedCount]
     ]);
 
-} catch (Throwable $e) { // Catch ทั้ง Exception และ Error (PHP 7+)
+} catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
-    // ส่งกลับเป็น JSON เสมอ
+    http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Sync Error: ' . $e->getMessage()]);
 }
 ?>

@@ -78,6 +78,21 @@ $pageTitle = "Manpower Management";
             overflow-y: visible; /* ให้ Scroll ตามหน้าเว็บหลัก */
         }
 
+        .cursor-pointer { cursor: pointer; }
+        
+        /* KPI Card Active State */
+        .kpi-card.active {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+            border: 2px solid; /* จะใส่สีด้วย JS */
+        }
+
+        /* Table Header Sort */
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: var(--bs-gray-200); }
+        th.sortable .sort-icon { float: right; opacity: 0.3; }
+        th.sortable.active .sort-icon { opacity: 1; }
+
         /* ... (ส่วน KPI และ Loading เหมือนเดิม) ... */
         .kpi-card {
             background: var(--bs-secondary-bg);
@@ -198,47 +213,39 @@ $pageTitle = "Manpower Management";
 
                 <div class="row mb-4 g-3">
                     <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-primary">
+                        <div class="kpi-card kpi-primary cursor-pointer active" id="card-total" onclick="setFilter('TOTAL')">
                             <div>
                                 <h6 class="text-muted mb-1 text-uppercase small fw-bold">Total</h6>
                                 <h2 class="mb-0 fw-bold text-primary" id="kpi-total">0</h2>
                             </div>
-                            <div class="p-3 bg-primary bg-opacity-10 rounded-circle text-primary">
-                                <i class="fas fa-users fa-2x"></i>
-                            </div>
+                            <div class="p-3 bg-primary bg-opacity-10 rounded-circle text-primary"><i class="fas fa-users fa-2x"></i></div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-success">
+                        <div class="kpi-card kpi-success cursor-pointer" id="card-present" onclick="setFilter('PRESENT')">
                             <div>
                                 <h6 class="text-muted mb-1 text-uppercase small fw-bold">Present</h6>
                                 <h2 class="mb-0 fw-bold text-success" id="kpi-present">0</h2>
                             </div>
-                            <div class="p-3 bg-success bg-opacity-10 rounded-circle text-success">
-                                <i class="fas fa-user-check fa-2x"></i>
-                            </div>
+                            <div class="p-3 bg-success bg-opacity-10 rounded-circle text-success"><i class="fas fa-user-check fa-2x"></i></div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-danger">
+                        <div class="kpi-card kpi-danger cursor-pointer" id="card-absent" onclick="setFilter('ABSENT')">
                             <div>
                                 <h6 class="text-muted mb-1 text-uppercase small fw-bold">Absent</h6>
                                 <h2 class="mb-0 fw-bold text-danger" id="kpi-absent">0</h2>
                             </div>
-                            <div class="p-3 bg-danger bg-opacity-10 rounded-circle text-danger">
-                                <i class="fas fa-user-times fa-2x"></i>
-                            </div>
+                            <div class="p-3 bg-danger bg-opacity-10 rounded-circle text-danger"><i class="fas fa-user-times fa-2x"></i></div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-warning">
+                        <div class="kpi-card kpi-warning cursor-pointer" id="card-other" onclick="setFilter('OTHER')">
                             <div>
                                 <h6 class="text-muted mb-1 text-uppercase small fw-bold">Leave/Late</h6>
                                 <h2 class="mb-0 fw-bold text-warning" id="kpi-other">0</h2>
                             </div>
-                            <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning">
-                                <i class="fas fa-user-clock fa-2x"></i>
-                            </div>
+                            <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning"><i class="fas fa-user-clock fa-2x"></i></div>
                         </div>
                     </div>
                 </div>
@@ -248,13 +255,13 @@ $pageTitle = "Manpower Management";
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light sticky-top" style="z-index: 5;">
                                 <tr class="text-uppercase small text-muted">
-                                    <th class="py-3 ps-4">Date</th>
-                                    <th class="py-3">Emp ID</th>
-                                    <th class="py-3">Name</th>
-                                    <th class="py-3">Position</th>
-                                    <th class="py-3">Line</th>
-                                    <th class="py-3 text-center">Scan Time</th>
-                                    <th class="py-3 text-center">Status</th>
+                                    <th class="py-3 ps-4 sortable" onclick="toggleSort('log_date')">Date <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 sortable" onclick="toggleSort('emp_id')">Emp ID <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 sortable" onclick="toggleSort('name_th')">Name <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 sortable" onclick="toggleSort('position')">Position <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 sortable" onclick="toggleSort('line')">Line <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 text-center sortable" onclick="toggleSort('scan_in_time')">Scan Time <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="py-3 text-center sortable" onclick="toggleSort('status')">Status <i class="fas fa-sort sort-icon"></i></th>
                                     <th class="py-3 text-center">Action</th>
                                 </tr>
                             </thead>
