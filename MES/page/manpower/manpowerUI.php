@@ -176,18 +176,19 @@ $pageTitle = "Manpower Management";
                                 <label class="form-label small text-muted fw-bold">End Date</label>
                                 <input type="date" id="endDate" class="form-control bg-light border-0 fw-bold" value="<?php echo date('Y-m-d'); ?>">
                             </div>
-                            <div class="col-md-6 d-flex gap-2 align-items-end justify-content-end">
-                                <button class="btn btn-primary px-4 fw-bold" onclick="loadManpowerData()">
-                                    <i class="fas fa-search me-2"></i>View Data
-                                </button>
-                                
+                            <div class="col-md-6 d-flex gap-2 align-items-end justify-content-end flex-wrap">
+                                <div class="text-end me-2 d-none d-lg-block">
+                                    <small class="text-muted d-block" style="font-size: 0.7rem;">Last Updated:</small>
+                                    <small class="fw-bold text-primary" id="lastUpdateLabel">-</small>
+                                </div>
+
                                 <?php if (hasRole(['admin', 'creator', 'supervisor'])): ?>
                                 <button class="btn btn-warning text-dark px-3 fw-bold" onclick="openShiftPlanner()">
-                                    <i class="fas fa-exchange-alt me-2"></i>Shift Rotation
+                                    <i class="fas fa-exchange-alt me-2"></i>Rotation
                                 </button>
                                 
-                                <button class="btn btn-success px-4 fw-bold" onclick="syncApiData()">
-                                    <i class="fas fa-sync-alt me-2"></i>Sync API
+                                <button class="btn btn-success px-4 fw-bold" onclick="syncApiData(true)">
+                                    <i class="fas fa-sync-alt me-2"></i>Sync
                                 </button>
                                 <?php endif; ?>
                             </div>

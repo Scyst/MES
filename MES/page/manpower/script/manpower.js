@@ -9,67 +9,101 @@ let currentPage = 1;
 const rowsPerPage = 50;   
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Init Modals
     const modalEl = document.getElementById('editLogModal');
     if(modalEl) editLogModal = new bootstrap.Modal(modalEl);
+    
+    const shiftEl = document.getElementById('shiftPlannerModal');
+    if(shiftEl) shiftPlannerModal = new bootstrap.Modal(shiftEl);
 
+    // [NEW] Auto Load เมื่อเปลี่ยนวันที่
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+
+    if (startInput) startInput.addEventListener('change', loadManpowerData);
+    if (endInput) endInput.addEventListener('change', loadManpowerData);
+
+    // โหลดครั้งแรกตอนเข้าหน้าเว็บ
     loadManpowerData();
 });
 
-async function syncApiData() {
+async function syncApiData(manual = false) {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
     
-    if(!confirm(`Confirm Sync from ${start} to ${end}?`)) return;
+    // ถ้าคนกด ต้องถามยืนยัน
+    if(manual && !confirm(`ยืนยันการดึงข้อมูลจาก Scanner?\nช่วงเวลา: ${start} ถึง ${end}`)) return;
 
-    showSpinner();
+    // ถ้า Auto Sync ให้โชว์ Overlay แบบข้อความต่างกัน
+    if(manual) showSpinner(); 
+    else showAutoSyncSpinner(); // สร้างฟังก์ชันนี้เพิ่ม หรือใช้ showSpinner() ก็ได้
+
     try {
         const response = await fetch(`${API_SYNC_URL}?startDate=${start}&endDate=${end}`);
         const result = await response.json();
         if(result.success) {
-            showToast(result.message, '#198754');
-            loadManpowerData();
+            if(manual) showToast(result.message, '#198754');
+            loadManpowerData(false); // โหลดข้อมูลใหม่ (false = ไม่ต้องเช็ค Auto Sync ซ้ำ)
         } else {
-            showToast(result.message || 'Sync failed', '#dc3545');
+            if(manual) showToast(result.message || 'Sync failed', '#dc3545');
         }
     } catch (err) {
         console.error(err);
-        showToast('Error connecting to server', '#dc3545');
+        if(manual) showToast('Error connecting to server', '#dc3545');
     } finally {
         hideSpinner();
     }
 }
 
-async function loadManpowerData() {
+function showAutoSyncSpinner() {
+    const overlay = document.getElementById('loadingOverlay');
+    const text = overlay.querySelector('h5');
+    if(text) text.innerText = "🚀 ระบบกำลังดึงข้อมูลล่าสุดให้อัตโนมัติ...";
+    overlay.style.display = 'flex';
+}
+
+async function loadManpowerData(checkAutoSync = true) {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
     const tbody = document.getElementById('manpowerTableBody');
     
-    allManpowerData = [];
-    currentPage = 1;
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border text-primary" role="status"></div><br>Loading data...</td></tr>';
-    
+    // แสดงสถานะกำลังโหลดในตาราง (ไม่ใช่ Overlay เพื่อไม่ให้ขัดจังหวะ)
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><div class="spinner-border text-primary" role="status"></div><br>Checking data...</td></tr>';
+    document.getElementById('lastUpdateLabel').innerText = 'Checking...'; // Reset Label
+
     try {
         const response = await fetch(`${API_GET_URL}?startDate=${start}&endDate=${end}`);
         const result = await response.json();
 
         if (result.success) {
+            // 1. อัปเดต KPI & Last Update
             const summary = result.summary;
             document.getElementById('kpi-total').textContent = summary.total || 0;
             document.getElementById('kpi-present').textContent = summary.present || 0;
             document.getElementById('kpi-absent').textContent = summary.absent || 0;
             document.getElementById('kpi-other').textContent = summary.other_total || 0;
+            
+            // อัปเดตป้ายเวลา
+            const updateTime = result.last_update || 'Never';
+            document.getElementById('lastUpdateLabel').innerText = updateTime;
 
             allManpowerData = result.data || [];
 
-            const today = new Date().toISOString().slice(0, 10);
-            if (allManpowerData.length === 0 && start === end && start === today) {
-                showToast("Auto-syncing data...", "#0d6efd");
-                await syncApiData();
+            // 2. [SMART SYNC LOGIC] 🧠
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const isToday = (start === todayStr && end === todayStr);
+            
+            // เงื่อนไข Auto Sync: 
+            // เป็นวันปัจจุบัน AND (ไม่มีข้อมูลเลย OR ข้อมูลเก่าเกินไป(Optional)) AND อนุญาตให้เช็ค
+            if (checkAutoSync && isToday && allManpowerData.length === 0) {
+                console.log("Auto-syncing for today because no data found...");
+                await syncApiData(false); // false = System Triggered
                 return;
             }
             
+            // 3. Render Table
             if (allManpowerData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No data found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลในช่วงเวลานี้</td></tr>';
                 updatePaginationInfo();
             } else {
                 renderTablePage(1);
@@ -96,26 +130,68 @@ function renderTablePage(page) {
         const name = row.name_th || 'Unknown';
         const pos = row.position || '-';
         const line = row.line || '-';
-        const time = row.scan_time_display || '-';
+        // แสดง Team Badge
+        const team = row.team_group ? `<span class="badge bg-light text-secondary border">${row.team_group}</span>` : '-';
         const status = row.status || 'UNKNOWN';
 
+        // --- [แก้ไข] Logic แสดงเวลา เข้า - ออก ---
+        let timeDisplay = '-';
+        if (row.scan_in_time) {
+            // เวลาเข้า (สีเขียว) ตัดเอาเฉพาะ HH:mm
+            const inTime = row.scan_in_time.substring(11, 16); 
+            timeDisplay = `<span class="text-success fw-bold">${inTime}</span>`;
+
+            // เวลาออก (สีแดง) - แสดงเฉพาะถ้ามีข้อมูลและไม่ซ้ำกับเวลาเข้า
+            if (row.scan_out_time && row.scan_out_time !== row.scan_in_time) {
+                const outTime = row.scan_out_time.substring(11, 16);
+                timeDisplay += ` <span class="text-muted mx-1">-</span> <span class="text-danger fw-bold">${outTime}</span>`;
+            }
+        } else {
+            // Fallback กรณีไม่มีข้อมูลดิบ
+            timeDisplay = row.scan_time_display || '-';
+        }
+        // ---------------------------------------
+
+        // Logic สีของ Badge Status
         let badgeClass = 'bg-secondary';
-        if (status === 'PRESENT') badgeClass = 'bg-success';
-        else if (status === 'ABSENT') badgeClass = 'bg-danger';
-        else if (status === 'LATE') badgeClass = 'bg-warning text-dark';
-        else if (status.includes('LEAVE')) badgeClass = 'bg-info text-dark';
+        let icon = '';
+        
+        if (status === 'PRESENT') {
+            badgeClass = 'bg-success'; 
+            icon = '<i class="fas fa-check me-1"></i>';
+        } else if (status === 'ABSENT') {
+            badgeClass = 'bg-danger';
+            icon = '<i class="fas fa-times me-1"></i>';
+        } else if (status === 'LATE') {
+            badgeClass = 'bg-warning text-dark';
+            icon = '<i class="fas fa-clock me-1"></i>';
+        } else if (status.includes('LEAVE')) {
+            badgeClass = 'bg-info text-dark';
+            icon = '<i class="fas fa-file-medical me-1"></i>';
+        } else {
+             badgeClass = 'bg-warning text-dark';
+             icon = '<i class="fas fa-question-circle me-1"></i>';
+        }
+
+        // Highlight แถวที่ขาดงาน (พื้นหลังแดงจางๆ)
+        const rowClass = (status === 'ABSENT') ? 'table-danger bg-opacity-10' : '';
 
         return `
-            <tr>
-                <td><small>${empId}</small></td>
-                <td class="fw-bold">${name}</td>
-                <td>${pos}</td>
+            <tr class="${rowClass}">
+                <td class="ps-4"><span class="font-monospace small text-muted">${row.log_date}</span></td>
+                <td><span class="fw-bold text-primary">${empId}</span></td>
+                <td>
+                    <div class="fw-bold text-dark">${name}</div>
+                    <small class="text-muted">${pos}</small>
+                </td>
+                <td class="text-center">${team}</td>
                 <td><span class="badge bg-light text-dark border">${line}</span></td>
-                <td>-</td>
-                <td>${time}</td>
-                <td><span class="badge ${badgeClass} status-badge">${status}</span></td>
+                
+                <td class="text-center font-monospace small">${timeDisplay}</td>
+                
+                <td class="text-center"><span class="badge ${badgeClass} status-badge shadow-sm">${icon}${status}</span></td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary" onclick='openEditLog(${JSON.stringify(row)})'>
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" style="width:32px; height:32px;" onclick='openEditLog(${JSON.stringify(row)})'>
                         <i class="fas fa-pencil-alt"></i>
                     </button>
                 </td>
@@ -216,12 +292,6 @@ async function saveLogChanges() {
 
 let shiftPlannerModal;
 let availableShifts = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Init modal
-    const el = document.getElementById('shiftPlannerModal');
-    if(el) shiftPlannerModal = new bootstrap.Modal(el);
-});
 
 async function openShiftPlanner() {
     showSpinner();
