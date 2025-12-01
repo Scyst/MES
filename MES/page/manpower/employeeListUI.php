@@ -97,8 +97,9 @@ $pageTitle = "Employee Management";
                                 <tr class="text-uppercase small text-muted">
                                     <th class="py-3 ps-4">Emp ID</th>
                                     <th class="py-3">Name / Dept</th>
-                                    <th class="py-3 text-center">Team</th> <th class="py-3">Line (System)</th>
-                                    <th class="py-3">Default Shift</th>
+                                    <th class="py-3 text-center">Team</th> 
+                                    <th class="py-3 text-center">Line (System)</th>
+                                    <th class="py-3 text-center">Default Shift</th>
                                     <th class="py-3 text-center">Status</th>
                                     <th class="py-3 text-center">Edit</th>
                                 </tr>
@@ -273,8 +274,8 @@ $pageTitle = "Employee Management";
                             <small class="text-muted" style="font-size:0.75em;"><i class="fas fa-building me-1"></i>${emp.department_api || ''}</small>
                         </td>
                         <td class="text-center">${teamBadge}</td>
-                        <td>${lineBadge}</td>
-                        <td>${shiftName}</td>
+                        <td class="text-center">${lineBadge}</td>
+                        <td class="text-center">${shiftName}</td>
                         <td class="text-center">${isActive}</td>
                         <td class="text-center">
                             <button class="btn btn-sm btn-outline-primary rounded-circle" style="width:32px; height:32px;" onclick='openEdit(${JSON.stringify(emp)})' title="Edit">

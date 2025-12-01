@@ -170,6 +170,9 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         // Management (เฉพาะ Admin/Creator) -> คนอื่นเห็นเป็นล็อค
                         renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', ['admin', 'creator'], $userRole, 'text-success bg-success bg-opacity-10');
 
+                        // Manpower Management (Supervisor+) ---
+                        renderServiceLink('Manpower', 'จัดการกำลังคน & กะ', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', ['supervisor', 'admin', 'creator'], $userRole);
+
                         // Mood Insight (ต้อง Login)
                         renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', ['admin', 'creator', 'supervisor'], $userRole, 'text-danger bg-danger bg-opacity-10');
 

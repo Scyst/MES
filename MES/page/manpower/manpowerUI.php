@@ -125,6 +125,18 @@ $pageTitle = "Manpower Management";
             border: 5px solid #e5e7eb; border-top-color: #0d6efd;
             border-radius: 50%; animation: spin 1s linear infinite;
         }
+        .cursor-pointer { cursor: pointer; }
+        .hover-bg:hover { background-color: var(--bs-tertiary-bg) !important; }
+        .btn-xs { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+
+        /* Transition สำหรับ Icon */
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+        /* บังคับให้แถวที่ Collapse เปิดอยู่ มีพื้นหลังเด่นขึ้น */
+        tr[aria-expanded="true"] {
+            background-color: var(--bs-primary-bg-subtle) !important;
+        }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .status-badge { min-width: 90px; }
     </style>
@@ -255,14 +267,13 @@ $pageTitle = "Manpower Management";
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light sticky-top" style="z-index: 5;">
                                 <tr class="text-uppercase small text-muted">
-                                    <th class="py-3 ps-4 sortable" onclick="toggleSort('log_date')">Date <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 sortable" onclick="toggleSort('emp_id')">Emp ID <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 sortable" onclick="toggleSort('name_th')">Name <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 sortable" onclick="toggleSort('position')">Position <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 sortable" onclick="toggleSort('line')">Line <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 text-center sortable" onclick="toggleSort('scan_in_time')">Scan Time <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 text-center sortable" onclick="toggleSort('status')">Status <i class="fas fa-sort sort-icon"></i></th>
-                                    <th class="py-3 text-center">Action</th>
+                                    <th style="width: 50px;"></th>
+                                    <th class="py-3 ps-2">Emp ID</th>
+                                    <th class="py-3">Employee Detail</th>
+                                    <th class="py-3 text-center">Line</th>
+                                    <th class="py-3 text-center">Team</th>
+                                    <th class="py-3 text-center">Shift</th>
+                                    <th class="py-3 text-center">Summary</th>
                                 </tr>
                             </thead>
                             <tbody id="manpowerTableBody" class="border-top-0">
@@ -287,6 +298,7 @@ $pageTitle = "Manpower Management";
     <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php include_once('components/editLogModal.php'); ?>
     <?php include_once('components/shiftChangeModal.php'); ?>
+    <?php include_once('components/editEmployeeModal.php'); ?>
     
     <script>
         // Override Spinner Functions

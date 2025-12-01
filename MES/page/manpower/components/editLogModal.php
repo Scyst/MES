@@ -17,7 +17,7 @@
                     </div>
 
                     <div class="row g-2 mb-3">
-                        <div class="col-6">
+                        <div class="col-12">
                             <label class="form-label">Status</label>
                             <select class="form-select" id="editStatus">
                                 <option value="PRESENT">PRESENT (มา)</option>
@@ -30,8 +30,12 @@
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Scan Time</label>
-                            <input type="datetime-local" class="form-control" id="editScanTime"> 
+                            <label class="form-label">Scan In</label>
+                            <input type="datetime-local" class="form-control" id="editScanInTime"> 
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Scan Out</label>
+                            <input type="datetime-local" class="form-control" id="editScanOutTime"> 
                         </div>
                     </div>
 
