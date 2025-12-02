@@ -38,29 +38,50 @@ try {
         $shifts = $stmtShift->fetchAll(PDO::FETCH_ASSOC);
 
         // --- 3. ดึงรายชื่อ Line ---
-        $lines = [];
+        $productionLines = []; // เก็บไลน์ผลิตจากระบบ
+        
+        // 3.1 ดึงจากตาราง Routes
         try {
             $sqlRoutes = "SELECT DISTINCT line FROM " . ROUTES_TABLE . " WHERE line IS NOT NULL AND line != ''";
             $stmtRoutes = $pdo->query($sqlRoutes);
-            while ($row = $stmtRoutes->fetch(PDO::FETCH_COLUMN)) { $lines[] = trim($row); }
+            while ($row = $stmtRoutes->fetch(PDO::FETCH_COLUMN)) { $productionLines[] = trim($row); }
         } catch (Exception $e) {}
 
+        // 3.2 ดึงจากตาราง Mapping
         try {
             $sqlMap = "SELECT DISTINCT target_line FROM " . $mappingTable . " WHERE is_active = 1";
             $stmtMap = $pdo->query($sqlMap);
-            while ($row = $stmtMap->fetch(PDO::FETCH_COLUMN)) { $lines[] = trim($row); }
+            while ($row = $stmtMap->fetch(PDO::FETCH_COLUMN)) { $productionLines[] = trim($row); }
         } catch (Exception $e) {}
 
-        $lines[] = 'TOOLBOX_POOL';
-        $lines[] = 'OFFICE';
-        $lines = array_unique($lines);
-        sort($lines);
+        // 3.3 กำหนดทีมซัพพอร์ต (Support Sections)
+        // เรียงลำดับตามที่คุณต้องการให้แสดง
+        $supportSections = [
+            'ST/WH',
+            'QA/QC',
+            'MT/PE',
+            'OFFICE',
+            'TOOLBOX_POOL'
+        ];
+
+        // 3.4 จัดระเบียบข้อมูล (Sorting Logic)
+        
+        // กรองเอาชื่อทีมซัพพอร์ต "ออกจาก" ไลน์ผลิต (ถ้ามันบังเอิญมีใน DB)
+        // เพื่อไม่ให้มันไปโผล่ข้างบน ให้มันมากองรวมกันข้างล่างทีเดียว
+        $productionLines = array_diff($productionLines, $supportSections);
+        
+        // ลบตัวซ้ำในไลน์ผลิต และเรียงตามตัวอักษร (A-Z)
+        $productionLines = array_unique($productionLines);
+        sort($productionLines);
+
+        // รวมร่าง: เอาผลิตไว้บน + เอาซัพพอร์ตต่อท้าย
+        $finalLines = array_merge($productionLines, $supportSections);
 
         echo json_encode([
             'success' => true,
             'data' => $employees,
             'shifts' => $shifts,
-            'lines' => array_values($lines)
+            'lines' => array_values($finalLines) // ส่งค่าที่จัดแล้วกลับไป
         ]);
 
     } elseif ($action === 'update') {

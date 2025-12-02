@@ -160,34 +160,34 @@ $pageTitle = "Manpower Management";
         <main id="main-content">
             
             <div class="report-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-flex flex-column">
-                        <span class="fw-bold fs-5 text-body">
-                            <span class="badge bg-primary bg-opacity-10 text-primary me-2"><i class="fas fa-users-cog"></i></span>
-                            Manpower Management
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-warning text-dark bg-opacity-25 me-3 p-2 fs-4 rounded-3">
+                        <i class="fas fa-id-card"></i>
+                    </span>
+
+                    <div class="d-flex align-items-baseline flex-wrap">
+                        <span class="fw-bold fs-4 text-body">
+                            Employee Management
                         </span>
-                        <span class="text-muted small ms-1">
-                            <?php echo htmlspecialchars($currentUser['role']); ?> 
-                            <?php echo $userLine ? " | Line: $userLine" : " | All Lines"; ?>
+                        <span class="text-muted small ms-2 border-start ps-2" style="border-color: #dee2e6 !important;">
+                            รายชื่อพนักงานทั้งหมด
                         </span>
                     </div>
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
+                    <?php if (hasRole(['admin', 'creator'])): ?>
+                    <a href="employeeListUI.php" class="btn btn-light btn-sm text-primary fw-bold border ms-2 rounded-pill px-3">
+                        Employees <i class="fas fa-id-card ms-1"></i>
+                    </a>
+                    <?php endif; ?>
                     <span class="d-none d-md-inline text-muted small me-3">
                         <i class="far fa-clock me-1"></i> <?php echo date('d F Y'); ?>
                     </span>
-                    
                     <button class="btn btn-link text-secondary p-0 me-3" id="page-theme-btn" title="Switch Theme">
                         <i class="fas fa-adjust fa-lg"></i>
                     </button>
-                    
-                    <?php if (hasRole(['admin', 'creator'])): ?>
-                    <a href="employeeListUI.php" class="btn btn-outline-secondary btn-sm fw-bold">
-                        <i class="fas fa-id-card me-1"></i> Employees
-                    </a>
-                    <?php endif; ?>
-                </div>
+                    </div>
             </div>
 
             <div class="container-fluid p-4" style="max-width: 1600px;">

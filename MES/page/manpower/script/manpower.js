@@ -11,7 +11,7 @@ let allManpowerData = [];
 let displayData = [];       
 
 let currentPage = 1;
-const rowsPerPage = 50;
+const rowsPerPage = 100;
 
 // State for Filter & Sort
 let currentFilter = 'TOTAL'; 
@@ -214,10 +214,10 @@ function renderTable(data) {
                     ${info.position || '-'}
                 </div>
             </td>
-            <td><span class="badge bg-light text-dark border">${info.line || '-'}</span></td>
-            <td><span class="badge bg-info bg-opacity-10 text-info border border-info">${info.team_group || '-'}</span></td>
-            <td><span class="badge bg-secondary">${info.shift_name || 'Main'}</span></td>
-            <td>${statBadges || '<span class="text-muted small">-</span>'}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${info.line || '-'}</span></td>
+            <td class="text-center"><span class="badge bg-info bg-opacity-10 text-info border border-info">${info.team_group || '-'}</span></td>
+            <td class="text-center"><span class="badge bg-secondary">${info.shift_name || 'Main'}</span></td>
+            <td class="text-center">${statBadges || '<span class="text-muted small">-</span>'}</td>
         `;
         tbody.appendChild(trMain);
 

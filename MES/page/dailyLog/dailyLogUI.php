@@ -52,11 +52,16 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
 
     <div id="main-content">
         <div class="portal-header">
-            <div class="d-flex align-items-center gap-3">
-                <div class="logo-box">LOGO</div> 
-                <div class="d-flex flex-column" style="line-height: 1.2;">
-                    <span class="fw-bold" style="font-size: 1.1rem;">MES TOOLBOX</span> 
-                    <span class="text-muted small">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <img src="../components/images/logo.webp" alt="SNC Logo" style="height: 35px; width: auto; object-fit: contain;">
+                </div>
+
+                <div class="border-start border-secondary mx-2" style="height: 35px; opacity: 0.2;"></div>
+
+                <div class="d-flex flex-column justify-content-center gap-1" style="line-height: 1.2;">
+                    <span class="fw-bold" style="font-size: 1.2rem; letter-spacing: 0.5px;">MES TOOLBOX</span>
+                    <span class="text-muted" style="font-size: 0.75rem;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
