@@ -47,8 +47,10 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light w-50" data-bs-target="#dayManagerModal" data-bs-toggle="modal">กลับ</button>
-                    <button type="submit" class="btn btn-primary w-50">บันทึก</button>
+                    <div class="d-flex w-100 gap-2">
+                        <button type="button" class="btn btn-light w-100" data-bs-target="#dayManagerModal" data-bs-toggle="modal">กลับ</button>
+                        <button type="submit" class="btn btn-primary w-100">บันทึก</button>
+                    </div>
                 </div>
             </form>
         </div>

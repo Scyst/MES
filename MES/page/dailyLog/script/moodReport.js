@@ -411,7 +411,7 @@ window.openMissingModal = function() {
                             <small class="text-muted"><i class="fas fa-id-badge me-1"></i>${row.emp_id} • Line ${row.line}</small>
                         </div>
                     </div>
-                    <span class="badge bg-warning text-dark border border-warning bg-opacity-25 rounded-pill px-3">Pending</span>
+                    <span class="badge bg-warning text-dark border border-warning bg-opacity-25 rounded-pill px-3">ยังไม่บันทึก</span>
                 </div>
             `;
         });

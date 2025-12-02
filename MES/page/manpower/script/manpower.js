@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. Data Loading & Processing
+// 2. Data Loading & Smart Sync Logic
 // ==========================================
 
 async function loadManpowerData(checkAutoSync = true) {
@@ -52,10 +52,13 @@ async function loadManpowerData(checkAutoSync = true) {
     const end = document.getElementById('endDate').value;
     const tbody = document.getElementById('manpowerTableBody');
     const updateLabel = document.getElementById('lastUpdateLabel');
-
+    
+    // UI: Show Loading State (ถ้ายังไม่มีข้อมูล)
     if (allManpowerData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="text-muted mt-2 fw-bold">กำลังโหลดข้อมูล...</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="text-muted mt-2 fw-bold">กำลังตรวจสอบข้อมูล...</div></td></tr>';
         if(updateLabel) updateLabel.innerText = 'Checking...';
+    } else {
+        if(updateLabel) updateLabel.innerHTML = '<span class="text-muted"><i class="fas fa-sync fa-spin me-1"></i>Checking...</span>';
     }
 
     try {
@@ -66,46 +69,36 @@ async function loadManpowerData(checkAutoSync = true) {
         if (result.success) {
             const summary = result.summary;
             updateKPI(summary);
+            
             if(updateLabel) updateLabel.innerText = result.last_update || 'Never';
+            
             allManpowerData = result.data || [];
+
+            // แสดงผลทันที (Render First)
             processData(); 
 
             // =========================================================
-            // ★ SMART AUTO SYNC V4 (Background Check)
+            // ★ SMART AUTO SYNC Logic
             // =========================================================
-            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayStr = getLocalTodayStr(); // ใช้วันที่เครื่อง User (Local)
             const isToday = (start === todayStr && end === todayStr);
-            const STALE_THRESHOLD_MINUTES = 30; // ตั้งเวลาความเก่าที่ยอมรับได้
+            
+            // Check 1: ข้อมูลเก่าเกินไปไหม?
+            const STALE_THRESHOLD_MINUTES = 30;
             const isStale = checkIfDataIsStale(result.last_update, STALE_THRESHOLD_MINUTES);
             
-            // Gap Detection (เช็คข้อมูลฟันหลอ)
-            let isMissingHead = false;
-            if (allManpowerData.length > 0) {
-                const earliestRec = allManpowerData[allManpowerData.length - 1];
-                const earliestDate = new Date(earliestRec.log_date);
-                const startDate = new Date(start);
-                const diffTime = earliestDate - startDate;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays > 3) isMissingHead = true;
-            } else {
-                isMissingHead = true;
-            }
+            // Check 2: ข้อมูลว่างเปล่าไหม?
+            const isDataEmpty = allManpowerData.length === 0;
 
-            const syncKey = `autosync_${start}_${end}`;
-            const alreadySynced = sessionStorage.getItem(syncKey);
-            const shouldSyncStale = (isToday && isStale);
-            const shouldSyncGap   = (checkAutoSync && isMissingHead && !alreadySynced);
-
-            // ถ้าเข้าเงื่อนไข ให้ Sync ต่อในพื้นหลัง (โดยไม่ล้างตารางที่เพิ่งโชว์ไป)
-            if (shouldSyncStale || shouldSyncGap) {
-                console.log(`Background Sync Triggered. Stale: ${shouldSyncStale}, Gap: ${shouldSyncGap}`);
+            // เงื่อนไข Sync: (ว่างเปล่า) หรือ (เป็นวันนี้และเก่า)
+            if (checkAutoSync && (isDataEmpty || (isToday && isStale))) {
+                console.log(`Auto-sync triggered. Empty: ${isDataEmpty}, Stale: ${isStale}`);
                 
-                if (shouldSyncGap) {
-                    sessionStorage.setItem(syncKey, "true");
-                    showToast("กำลังดึงข้อมูลย้อนหลังเพิ่มเติม...", "#0dcaf0");
-                }
-                syncApiData(false); 
+                // เรียก Sync (Function นี้จะจัดการขยายวันเป็น "เมื่อวาน" ให้เอง)
+                await syncApiData(false); 
+                return; 
             }
+            // =========================================================
 
         } else {
             if (allManpowerData.length === 0) {
@@ -147,6 +140,9 @@ function processData() {
     updateUIState();
 }
 
+// ... (ส่วน renderTable, generateDetailRows, renderPagination, changePage ยังคงเดิมครับ Copy มาวางได้เลย หรือจะใช้ของไฟล์ก่อนหน้าก็ได้) ...
+// (เพื่อความกระชับ ผมขอละไว้ในฐานที่เข้าใจตรงกันนะครับ ถ้าต้องการให้แปะเต็มๆ บอกได้ครับ)
+
 function renderTable(data) {
     const tbody = document.getElementById('manpowerTableBody');
     const paginationControls = document.getElementById('paginationControls');
@@ -161,7 +157,6 @@ function renderTable(data) {
     }
 
     const groupedMap = new Map();
-    
     data.forEach(row => {
         if (!groupedMap.has(row.emp_id)) {
             groupedMap.set(row.emp_id, {
@@ -172,7 +167,6 @@ function renderTable(data) {
         }
         const empGroup = groupedMap.get(row.emp_id);
         empGroup.logs.push(row);
-
         const st = (row.status || '').toUpperCase();
         if (st === 'PRESENT') empGroup.stats.present++;
         else if (st === 'LATE') empGroup.stats.late++;
@@ -282,7 +276,6 @@ function renderTable(data) {
 
 function generateDetailRows(logs) {
     logs.sort((a, b) => new Date(b.log_date) - new Date(a.log_date));
-
     return logs.map(log => {
         const statusBadge = getStatusBadge(log.status);
         const scanIn = log.scan_in_time ? formatTime(log.scan_in_time) : '-';
@@ -333,22 +326,36 @@ window.changePage = function(page) {
 }
 
 // ==========================================
-// 4. API Actions (Sync with Background Mode)
+// 4. API Actions (Sync - Updated for "Yesterday")
 // ==========================================
 
-async function syncApiData(manual = false) {
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
+async function syncApiData(manual = false, overrideStart = null, overrideEnd = null) {
+    let start = overrideStart || document.getElementById('startDate').value;
+    let end = overrideEnd || document.getElementById('endDate').value;
     
-    // Manual: ถามยืนยัน -> แล้วเริ่ม Background Process (ไม่โชว์ Spinner ล็อคจอแล้ว)
+    // [NEW LOGIC] ถ้าช่วงเวลาที่เลือกคือ "วันนี้" (Start = End = Today)
+    // ให้ขยาย Start ย้อนหลังไป 1 วันอัตโนมัติ
+    const todayStr = getLocalTodayStr();
+    if (start === end && start === todayStr) {
+        // คำนวณวันที่เมื่อวาน
+        const d = new Date(start);
+        d.setDate(d.getDate() - 1);
+        const yYear = d.getFullYear();
+        const yMonth = String(d.getMonth() + 1).padStart(2, '0');
+        const yDay = String(d.getDate()).padStart(2, '0');
+        
+        start = `${yYear}-${yMonth}-${yDay}`; // เปลี่ยน Start เป็นเมื่อวาน
+        console.log(`Auto-expanding sync range to include yesterday: ${start} to ${end}`);
+    }
+
     if (manual) {
+        // แสดง Alert ยืนยัน (User จะเห็นว่าวันที่ Start เปลี่ยนเป็นเมื่อวาน)
         if (!confirm(`ยืนยันการดึงข้อมูลจาก Scanner?\nช่วงเวลา: ${start} ถึง ${end}`)) return;
         
-        // [FIXED] ไม่ใช้ showSpinner() ที่บล็อกจอ แต่ใช้ Toast บอกแทน
-        showToast("กำลังดึงข้อมูล... กรุณารอสักครู่", "#0dcaf0"); // สีฟ้า
+        // ใช้ Toast แทน Spinner เพื่อไม่บล็อกจอ
+        showToast("กำลังดึงข้อมูล... กรุณารอสักครู่", "#0dcaf0");
     } 
     
-    // เริ่ม UI ตรง Last Update
     startBackgroundSyncUI();
 
     try {
@@ -356,12 +363,9 @@ async function syncApiData(manual = false) {
         const result = await response.json();
         
         if (result.success) {
-            // แจ้งเตือนเมื่อเสร็จ
             const msg = manual ? result.message : 'ข้อมูลอัปเดตเรียบร้อยแล้ว';
             showToast(msg, '#198754');
-            
-            // โหลดข้อมูลใหม่ (false = ไม่ต้องเช็ค auto sync ซ้ำ)
-            loadManpowerData(false); 
+            loadManpowerData(false); // Reload Data
         } else {
             showToast(result.message, '#dc3545');
         }
@@ -369,12 +373,11 @@ async function syncApiData(manual = false) {
         console.error(err);
         showToast('Connection Error', '#dc3545');
     } finally {
-        // จบการทำงาน Background UI
         stopBackgroundSyncUI();
     }
 }
 
-// --- ฟังก์ชันจัดการ UI ตอนโหลดเบื้องหลัง ---
+// --- Background UI Simulation ---
 function startBackgroundSyncUI() {
     const updateLabel = document.getElementById('lastUpdateLabel');
     if (!updateLabel) return;
@@ -382,58 +385,53 @@ function startBackgroundSyncUI() {
     let progress = 0;
     let startTime = Date.now();
 
-    // เคลียร์ Interval เก่าถ้ามี
     if (syncTimerInterval) clearInterval(syncTimerInterval);
 
-    // แสดงสถานะเริ่มต้น
     updateLabel.innerHTML = `<span class="text-primary fw-bold">
         <span class="spinner-border spinner-border-sm me-1" role="status"></span>
         Syncing... 0%
     </span>`;
 
-    // เริ่มนับเวลา
     syncTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000); // วินาทีที่ผ่านไป
-        
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
         let increment = 0;
 
-        // --- STAGE 1: ช่วงต้น (0-60%) วิ่งโชว์พาว ---
+        // Two-Stage Rocket Logic
         if (progress < 60) {
-            // วิ่งแบบ Linear ปกติ (กะให้ถึง 60% ใน 5-10 วินาที)
             increment = Math.random() * 2 + 1; 
-        } 
-        // --- STAGE 2: ช่วงปลาย (60-99%) วิ่งมาราธอน ---
-        else {
-            // สูตร: (เป้าหมาย - ปัจจุบัน) / ตัวหารความหนืด
-            // ยิ่งใกล้ 99 ยิ่งหนืดขึ้นเรื่อยๆ ไม่มีวันถึง 100
+        } else {
             const remaining = 99 - progress;
-            increment = remaining / 20; // หาร 20 เพื่อให้มันค่อยๆ กระดึ๊บ (ปรับเลขนี้ได้ ยิ่งมากยิ่งช้า)
-            
-            // ถ้าขยับน้อยเกินไป (น้อยกว่าทศนิยม 2 ตำแหน่ง) ให้ขยับนิดนึงเพื่อให้ตัวเลขเปลี่ยน
-            // แต่ต้องระวังไม่ให้มันวิ่งเร็วเกินไปสำหรับงาน 10 นาที
+            increment = remaining / 20; 
             if (increment < 0.01) increment = 0.005; 
         }
         
         progress += increment;
-        
-        // กันทะลุเพดาน 99.9% (เผื่อรอนานระดับชั่วโมง)
         if (progress > 99.9) progress = 99.9;
         
-        // จัดรูปแบบทศนิยม: ช่วงแรกไม่มีจุด, ช่วงหลังมีจุดทศนิยมเพื่อให้เห็นความเคลื่อนไหว
         let displayProgress = progress < 90 ? Math.floor(progress) : progress.toFixed(1);
 
         updateLabel.innerHTML = `<span class="text-primary fw-bold">
             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
             Syncing... ${displayProgress}% <small class="text-muted ms-1">(${elapsed}s)</small>
         </span>`;
-    }, 800); // อัปเดตทุกๆ 0.8 วินาที
+    }, 800); 
 }
 
 function stopBackgroundSyncUI() {
     if (syncTimerInterval) clearInterval(syncTimerInterval);
 }
 
-// ฟังก์ชันช่วยเช็คความเก่าของข้อมูล
+// --- Helpers ---
+
+// ฟังก์ชันหาวันที่ปัจจุบัน (Local Timezone)
+function getLocalTodayStr() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function checkIfDataIsStale(lastUpdateStr, thresholdMinutes) {
     if (!lastUpdateStr || lastUpdateStr === 'Never') return true; 
     try {
@@ -450,9 +448,8 @@ function checkIfDataIsStale(lastUpdateStr, thresholdMinutes) {
     }
 }
 
-// ==========================================
-// 5. Helpers (Formatting & Badges)
-// ==========================================
+// ... (ส่วน Update KPI, Sort, Filter, Edit Modal เหมือนเดิม) ...
+// (เพื่อความสะดวก ผมละส่วนที่เหมือนเดิมไว้ ถ้าต้องการโค้ดเต็ม 100% บอกได้ครับ)
 
 function updateKPI(summary) {
     const setText = (id, val) => {
@@ -534,10 +531,9 @@ function formatDateShort(dateStr) {
 }
 
 function showAutoSyncSpinner() {
-    // Legacy function support
+    // Legacy support
 }
 
-// --- Edit Log / Emp / Shift ---
 window.openEditLogModal = function(logId) {
     const log = allManpowerData.find(l => l.log_id == logId);
     if (!log) return;
@@ -558,7 +554,7 @@ async function saveLogChanges() {
     const remark = document.getElementById('editRemark').value;
     let scanIn = document.getElementById('editScanInTime').value; if (scanIn) scanIn = scanIn.replace('T', ' ') + ':00';
     let scanOut = document.getElementById('editScanOutTime').value; if (scanOut) scanOut = scanOut.replace('T', ' ') + ':00';
-    showSpinner(); // อันนี้เป็น Modal แก้ไข ยังใช้ Spinner ได้
+    showSpinner();
     try {
         const res = await fetch('api/update_daily_manpower.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ log_id: logId, status: status, remark: remark, scan_in_time: scanIn, scan_out_time: scanOut }) });
         const json = await res.json();
