@@ -53,14 +53,14 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
     <div id="main-content">
         <div class="portal-header">
             <div class="d-flex align-items-center">
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 d-none d-md-block">
                     <img src="../components/images/logo.webp" alt="SNC Logo" style="height: 35px; width: auto; object-fit: contain;">
                 </div>
 
-                <div class="border-start border-secondary mx-2" style="height: 35px; opacity: 0.2;"></div>
+                <div class="border-start border-secondary mx-2 d-none d-md-block" style="height: 35px; opacity: 0.2;"></div>
 
-                <div class="d-flex flex-column justify-content-center gap-1" style="line-height: 1.2;">
-                    <span class="fw-bold" style="font-size: 1.2rem; letter-spacing: 0.5px;">MES TOOLBOX</span>
+                <div class="d-flex flex-column justify-content-center" style="line-height: 1.2;">
+                    <span class="fw-bold" style="font-size: 1.25rem; letter-spacing: 0.5px;">MES TOOLBOX</span>
                     <span class="text-muted" style="font-size: 0.75rem;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
                 </div>
             </div>
@@ -157,6 +157,10 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', ['admin', 'creator'], $userRole, $themeMon);
                         renderServiceLink('Manpower', 'จัดการกำลังคน & กะ', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
+                        
+                        // [NEW] Sales Tracking Link added here
+                        renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
+
                         renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', ['admin', 'creator', 'supervisor'], $userRole, $themeMon);
                         renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         ?>
