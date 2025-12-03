@@ -35,11 +35,12 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table  table-striped table-hover">
+    <table class="table table-striped table-hover">
         <thead>
             <tr>
                 <th>SAP No.</th>
                 <th>Part No.</th>
+                <th>Customer SKU</th> 
                 <th>Models</th>
                 <th>Description</th>                
                 <th class="text-center">Planned Output</th>

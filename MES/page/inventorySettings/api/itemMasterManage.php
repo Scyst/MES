@@ -62,8 +62,9 @@ try {
                 $conditions[] = "i.is_active = 1";
             }
             if (!empty($searchTerm)) {
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
-                $params = array_merge($params, ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
+                // [UPDATED] เพิ่มการค้นหาด้วย SKU
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.sku LIKE ? OR i.part_description LIKE ?)";
+                $params = array_merge($params, ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
             }
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
@@ -77,7 +78,6 @@ try {
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
-            // MES: Define Costing Columns for SELECT
             $costingCols_CTE = "
                 , i.Cost_RM, i.Cost_PKG, i.Cost_SUB, i.Cost_DL
                 , i.Cost_OH_Machine, i.Cost_OH_Utilities, i.Cost_OH_Indirect, i.Cost_OH_Staff, i.Cost_OH_Accessory, i.Cost_OH_Others
@@ -89,10 +89,11 @@ try {
                 , Cost_Total, StandardPrice, StandardGP, Price_USD
             ";
 
+            // [UPDATED] เพิ่ม i.sku ใน SELECT
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
                         i.is_active, i.min_stock, i.max_stock, i.is_tracking
                         {$costingCols_CTE} 
                         ,
@@ -115,7 +116,7 @@ try {
                     {$whereClause}
                 )
                 SELECT 
-                    item_id, sap_no, part_no, part_description, created_at, is_active, used_in_models,
+                    item_id, sap_no, part_no, sku, part_description, created_at, is_active, used_in_models,
                     route_speed_range,min_stock, max_stock, is_tracking
                 {$costingCols_Final} 
                 FROM NumberedRows
@@ -130,40 +131,9 @@ try {
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
             break;
 
-        /*case 'save_item':
-            $id = $input['item_id'] ?? 0;
-            $sap_no = trim($input['sap_no'] ?? '');
-            $part_no = trim($input['part_no'] ?? '');
-            $description = trim($input['part_description'] ?? '');
-            $planned_output = (int)($input['planned_output'] ?? 0);
-
-            if (empty($sap_no) || empty($part_no)) {
-                throw new Exception("SAP No. and Part No. are required.");
-            }
-
-            if ($id > 0) {
-                $sql = "UPDATE " . ITEMS_TABLE . " SET sap_no = ?, part_no = ?, part_description = ?, planned_output = ? WHERE item_id = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description, $planned_output, $id]);
-                
-                logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $id, "SAP: {$sap_no}");
-                echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
-            } else {
-                $sql = "INSERT INTO " . ITEMS_TABLE . " (sap_no, part_no, part_description, created_at, planned_output) VALUES (?, ?, ?, GETDATE(), ?)";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$sap_no, $part_no, $description, $planned_output]);
-
-                $newId = $pdo->lastInsertId();
-                logAction($pdo, $currentUser['username'], 'CREATE ITEM', $newId, "SAP: {$sap_no}");
-                echo json_encode(['success' => true, 'message' => 'Item created successfully.']);
-            }
-            break;*/
-
         case 'delete_item':
             $id = $input['item_id'] ?? 0;
-            if (!$id) {
-                throw new Exception("Item ID is required.");
-            }
+            if (!$id) throw new Exception("Item ID is required.");
 
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 0 WHERE item_id = ?";
             $stmt = $pdo->prepare($sql);
@@ -179,9 +149,7 @@ try {
 
         case 'restore_item':
             $id = $input['item_id'] ?? 0;
-            if (!$id) {
-                throw new Exception("Item ID is required.");
-            }
+            if (!$id) throw new Exception("Item ID is required.");
 
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 1 WHERE item_id = ?";
             $stmt = $pdo->prepare($sql);
@@ -221,11 +189,11 @@ try {
 
         case 'bulk_import_items':
             $items = $input;
-            if (empty($items)) {
-                throw new Exception("No items to import.");
-            }
+            if (empty($items)) throw new Exception("No items to import.");
+            
             $pdo->beginTransaction();
             try {
+                // [UPDATED] เพิ่ม sku ใน MERGE Statement
                 $sql = "
                     MERGE INTO " . ITEMS_TABLE . " AS target
                     USING (VALUES (?)) AS source (sap_no)
@@ -233,12 +201,13 @@ try {
                     WHEN MATCHED THEN
                         UPDATE SET 
                             part_no = ?, 
+                            sku = ?, 
                             part_description = ?,
                             planned_output = ?, 
                             is_active = ?
                     WHEN NOT MATCHED THEN
-                        INSERT (sap_no, part_no, part_description, planned_output, is_active, created_at) 
-                        VALUES (?, ?, ?, ?, ?, GETDATE());
+                        INSERT (sap_no, part_no, sku, part_description, planned_output, is_active, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, GETDATE());
                 ";
                 $stmt = $pdo->prepare($sql);
 
@@ -247,13 +216,15 @@ try {
                     if (empty($sap_no)) continue;
 
                     $part_no = trim($item['part_no'] ?? $sap_no);
+                    $sku = trim($item['sku'] ?? ''); // [NEW] รับค่า SKU
                     $desc = trim($item['part_description'] ?? '');
                     $planned_output = (int)($item['planned_output'] ?? 0);
                     $is_active = (bool)($item['is_active'] ?? true);
                     
                     $stmt->execute([
-                        $sap_no, $part_no, $desc, $planned_output, $is_active,
-                        $sap_no, $part_no, $desc, $planned_output, $is_active
+                        $sap_no, 
+                        $part_no, $sku, $desc, $planned_output, $is_active, // UPDATE Params
+                        $sap_no, $part_no, $sku, $desc, $planned_output, $is_active // INSERT Params
                     ]);
                 }
 
@@ -268,21 +239,17 @@ try {
             break;
 
         case 'import_costing_json':
-            // Security check: Only allow admin/creator for costing import
             if (!hasRole(['admin', 'creator'])) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to import costing data.']);
                 exit;
             }
 
-            $costingData = $input; // Data comes directly as JSON array from JS
-            if (empty($costingData)) {
-                throw new Exception("No costing data received to import.");
-            }
+            $costingData = $input; 
+            if (empty($costingData)) throw new Exception("No costing data received to import.");
 
             $pdo->beginTransaction();
             try {
-                // Prepare one UPDATE statement for efficiency
                 $sql = "UPDATE " . ITEMS_TABLE . " SET 
                             Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                             Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
@@ -296,12 +263,8 @@ try {
 
                 foreach ($costingData as $itemCost) {
                     $sap_no = trim($itemCost['sap_no'] ?? '');
-                    if (empty($sap_no)) {
-                        $skippedCount++;
-                        continue; // Skip if sap_no is missing
-                    }
+                    if (empty($sap_no)) { $skippedCount++; continue; }
 
-                    // Execute the update
                     $success = $stmt->execute([
                         $itemCost['Cost_RM'] ?? 0,
                         $itemCost['Cost_PKG'] ?? 0,
@@ -317,38 +280,29 @@ try {
                         $itemCost['StandardPrice'] ?? 0,
                         $itemCost['StandardGP'] ?? 0,
                         $itemCost['Price_USD'] ?? 0,
-                        $sap_no // WHERE clause parameter
+                        $sap_no
                     ]);
 
                     if ($success) {
-                        if ($stmt->rowCount() > 0) {
-                            $updatedCount++;
-                        } else {
-                            // RowCount is 0 means the sap_no wasn't found in ITEMS_TABLE
-                            $notFoundCount++;
-                        }
+                        if ($stmt->rowCount() > 0) $updatedCount++;
+                        else $notFoundCount++;
                     } else {
-                        // Handle potential DB error if needed, though execute usually throws PDOException
                         $skippedCount++; 
                     }
                 }
 
                 $pdo->commit();
-                
                 $message = "Costing import complete. Updated: {$updatedCount}. SAP No. not found: {$notFoundCount}. Skipped rows: {$skippedCount}.";
                 logAction($pdo, $currentUser['username'], 'IMPORT COSTING', null, $message);
                 echo json_encode(['success' => true, 'message' => $message]);
 
             } catch (Exception $e) {
                 $pdo->rollBack();
-                // Log the detailed error for debugging
                 error_log("Costing Import Error: " . $e->getMessage()); 
-                // Send a generic message to the user
                 throw new Exception("An error occurred during the costing import process. Please check the server logs."); 
             }
             break;
 
-        // ====== ROUTES ACTIONS ======
         case 'get_item_routes':
             $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
@@ -368,9 +322,7 @@ try {
             $model = trim($input['route_model'] ?? '');
             $planned_output = (int)($input['route_planned_output'] ?? 0);
 
-            if (empty($item_id) || empty($line) || empty($model)) {
-                throw new Exception("Item ID, Line, and Model are required.");
-            }
+            if (empty($item_id) || empty($line) || empty($model)) throw new Exception("Item ID, Line, and Model are required.");
 
             if ($route_id > 0) {
                 $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
@@ -402,11 +354,11 @@ try {
             $pdo->beginTransaction();
             try {
                 $item_id = (int)$item_details['item_id'];
-                
                 $min_stock = !empty($item_details['min_stock']) ? $item_details['min_stock'] : 0;
                 $max_stock = !empty($item_details['max_stock']) ? $item_details['max_stock'] : 0;
+                $sku = trim($item_details['sku'] ?? ''); // [NEW] รับค่า SKU
 
-                // MES: Extract 14 costing variables, defaulting to 0
+                // Costing variables
                 $Cost_RM = !empty($item_details['Cost_RM']) ? $item_details['Cost_RM'] : 0;
                 $Cost_PKG = !empty($item_details['Cost_PKG']) ? $item_details['Cost_PKG'] : 0;
                 $Cost_SUB = !empty($item_details['Cost_SUB']) ? $item_details['Cost_SUB'] : 0;
@@ -423,9 +375,9 @@ try {
                 $Price_USD = !empty($item_details['Price_USD']) ? $item_details['Price_USD'] : 0;
 
                 if ($item_id > 0) {
-                    // MES: Modified UPDATE statement
+                    // [UPDATED] เพิ่ม sku ใน UPDATE Statement
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, part_description = ?, /* planned_output = ?, */ min_stock = ?, max_stock = ?, is_tracking = ?,
+                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, min_stock = ?, max_stock = ?, is_tracking = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
                                 Cost_Total = ?, StandardPrice = ?, StandardGP = ?, Price_USD = ?
@@ -434,26 +386,26 @@ try {
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
+                        $sku, // [NEW]
                         $item_details['part_description'],
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
-                        // MES: Add 14 Costing variables
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
                         $Cost_Total, $StandardPrice, $StandardGP, $Price_USD,
-                        // END MES
                         $item_id
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 } else {
+                    // [UPDATED] เพิ่ม sku ใน INSERT Statement
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, part_description, created_at, /* planned_output, */ min_stock, max_stock, is_tracking,
+                                sap_no, part_no, sku, part_description, created_at, min_stock, max_stock, is_tracking,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 Cost_Total, StandardPrice, StandardGP, Price_USD
                             ) VALUES (
-                                ?, ?, ?, GETDATE(), /* ?, */ ?, ?, ?,
+                                ?, ?, ?, ?, GETDATE(), ?, ?, ?,
                                 ?, ?, ?, ?, 
                                 ?, ?, ?, ?, ?, ?, 
                                 ?, ?, ?, ?
@@ -462,20 +414,20 @@ try {
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
+                        $sku, // [NEW]
                         $item_details['part_description'],  
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
-                        // MES: Add 14 Costing variables
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
                         $Cost_Total, $StandardPrice, $StandardGP, $Price_USD
-                        // END MES
                     ]);
                     $item_id = $pdo->lastInsertId();
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 }
 
+                // Handle Routes (เหมือนเดิม)
                 foreach ($routes_data as $route) {
                     $route_id = (int)$route['route_id'];
                     $status = $route['status'];
@@ -502,24 +454,17 @@ try {
                 throw $e;
             }
             break;
-
+            
         case 'delete_route':
             $route_id = $input['route_id'] ?? 0;
             if (!$route_id) throw new Exception("Route ID is required.");
-            
             $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
             $stmt->execute([$route_id]);
             echo json_encode(['success' => true, 'message' => 'Route deleted successfully.']);
             break;
-
-        case 'read_schedules':
-            $sql = "SELECT id, line, shift_name, 
-                           CONVERT(VARCHAR(8), start_time, 108) AS start_time, 
-                           CONVERT(VARCHAR(8), end_time, 108) AS end_time, 
-                           planned_break_minutes, is_active 
-                    FROM " . SCHEDULES_TABLE . " 
-                    ORDER BY line, shift_name";
             
+        case 'read_schedules':
+            $sql = "SELECT id, line, shift_name, CONVERT(VARCHAR(8), start_time, 108) AS start_time, CONVERT(VARCHAR(8), end_time, 108) AS end_time, planned_break_minutes, is_active FROM " . SCHEDULES_TABLE . " ORDER BY line, shift_name";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
@@ -533,26 +478,16 @@ try {
             $end_time = $input['end_time'] ?? '17:00';
             $break_min = (int)($input['planned_break_minutes'] ?? 0);
             $is_active = !empty($input['is_active']) ? 1 : 0;
-
-            if (empty($line) || empty($shift_name)) {
-                throw new Exception("Line and Shift Name are required.");
-            }
-
+            if (empty($line) || empty($shift_name)) throw new Exception("Line and Shift Name are required.");
             if ($id > 0) {
-                $sql = "UPDATE " . SCHEDULES_TABLE . " 
-                        SET line = ?, shift_name = ?, start_time = ?, end_time = ?, 
-                            planned_break_minutes = ?, is_active = ? 
-                        WHERE id = ?";
+                $sql = "UPDATE " . SCHEDULES_TABLE . " SET line = ?, shift_name = ?, start_time = ?, end_time = ?, planned_break_minutes = ?, is_active = ? WHERE id = ?";
                 $params = [$line, $shift_name, $start_time, $end_time, $break_min, $is_active, $id];
                 $msg = 'Schedule updated successfully.';
             } else {
-                $sql = "INSERT INTO " . SCHEDULES_TABLE . " 
-                        (line, shift_name, start_time, end_time, planned_break_minutes, is_active) 
-                        VALUES (?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO " . SCHEDULES_TABLE . " (line, shift_name, start_time, end_time, planned_break_minutes, is_active) VALUES (?, ?, ?, ?, ?, ?)";
                 $params = [$line, $shift_name, $start_time, $end_time, $break_min, $is_active];
                 $msg = 'Schedule created successfully.';
             }
-
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             echo json_encode(['success' => true, 'message' => $msg]);
@@ -561,46 +496,19 @@ try {
         case 'delete_schedule':
             $id = $input['id'] ?? 0;
             if (!$id) { throw new Exception("Missing Schedule ID"); }
-            
             $sql = "DELETE FROM " . SCHEDULES_TABLE . " WHERE id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([(int)$id]);
-            
             echo json_encode(['success' => true, 'message' => 'Schedule deleted.']);
             break;
-            
+
         case 'health_check_parameters':
-            $sql = "
-                WITH ProducedItems AS (
-                    -- 1. ค้นหา Item ทั้งหมดที่มีการผลิตจริง (มี Transaction)
-                    SELECT DISTINCT t.parameter_id AS item_id
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    WHERE t.transaction_type LIKE 'PRODUCTION_%'
-                ),
-                ItemRoutes AS (
-                    -- 2. ค้นหา Routes ทั้งหมดที่มีการตั้งค่าความเร็ว
-                    SELECT DISTINCT r.item_id
-                    FROM " . ROUTES_TABLE . " r
-                    WHERE r.planned_output > 0
-                )
-                -- 3. ค้นหา Item ที่อยู่ใน (1) แต่ไม่อยู่ใน (2)
-                SELECT 
-                    i.sap_no, i.part_no, i.part_description,
-                    'N/A' as line, -- (ปรับปรุง: เพิ่ม line/model ถ้าจำเป็น)
-                    'N/A' as model 
-                FROM ProducedItems p
-                JOIN " . ITEMS_TABLE . " i ON p.item_id = i.item_id
-                WHERE 
-                    p.item_id NOT IN (SELECT item_id FROM ItemRoutes)
-                    AND i.is_active = 1
-                ORDER BY i.sap_no
-            ";
-            
+             $sql = "WITH ProducedItems AS (SELECT DISTINCT t.parameter_id AS item_id FROM " . TRANSACTIONS_TABLE . " t WHERE t.transaction_type LIKE 'PRODUCTION_%'), ItemRoutes AS (SELECT DISTINCT r.item_id FROM " . ROUTES_TABLE . " r WHERE r.planned_output > 0) SELECT i.sap_no, i.part_no, i.part_description, 'N/A' as line, 'N/A' as model FROM ProducedItems p JOIN " . ITEMS_TABLE . " i ON p.item_id = i.item_id WHERE p.item_id NOT IN (SELECT item_id FROM ItemRoutes) AND i.is_active = 1 ORDER BY i.sap_no";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
-            
+
         default:
             http_response_code(400);
             throw new Exception("Invalid action specified for Item Master.");

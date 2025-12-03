@@ -166,8 +166,14 @@ $pageTitle = "Sales Order Dashboard";
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-success fw-bold shadow-sm" onclick="document.getElementById('fileInput').click()">
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="modal" data-bs-target="#helpModal" title="คู่มือการใช้งาน">
+                        <i class="fas fa-question" style="padding-top: 5px;"></i>
+                    </button>
+                    <button class="btn btn-primary fw-bold shadow-sm" onclick="document.getElementById('fileInput').click()">
                         <i class="fas fa-file-upload me-2"></i> Import Excel/CSV
+                    </button>
+                    <button class="btn btn-success fw-bold shadow-sm me-2" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-2"></i> New Order
                     </button>
                     <input type="file" id="fileInput" hidden accept=".csv, .xlsx, .xls">
                 </div>
@@ -309,6 +315,11 @@ $pageTitle = "Sales Order Dashboard";
             </div>
         </div>
     </div>
+
+    <?php
+        include('components/createOrderModal.php');
+        include 'components/helpModal.php';
+    ?>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="script/salesDashboard.js?v=<?php echo time(); ?>"></script>

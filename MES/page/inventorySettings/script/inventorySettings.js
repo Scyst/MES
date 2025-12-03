@@ -249,9 +249,8 @@ function renderItemsTable(items, totalItems, page) {
     const tbody = document.getElementById('itemsTableBody');
     tbody.innerHTML = '';
     
-    // ✅ แก้ไข colspan เป็น 8 ให้ตรงกับจำนวนคอลัมน์ใหม่
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No items found.</td></tr>`; // <-- แก้ไข colspan
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center">No items found.</td></tr>`; 
         renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
         return;
     }
@@ -265,11 +264,11 @@ function renderItemsTable(items, totalItems, page) {
             const num = parseFloat(value || 0);
             return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
         };
-        
-        // ✅ นำโครงสร้างเดิมของคุณมาเพิ่มแค่ Min/Max Stock
+
         tr.innerHTML = `
             <td><span class="fw-bold">${item.sap_no}</span> ${!item.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}</td>
             <td>${item.part_no}</td>
+            <td class="text-center">${item.sku || '-'}</td>
             <td>${item.used_in_models || ''}</td>
             <td>${item.part_description || ''}</td>
             
@@ -408,6 +407,7 @@ async function openItemModal(item = null) {
         document.getElementById('item_id').value = item.item_id;
         document.getElementById('sap_no').value = item.sap_no;
         document.getElementById('part_no').value = item.part_no;
+        document.getElementById('itemSku').value = item.sku || ''; 
         document.getElementById('part_description').value = item.part_description;
         document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
         document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
@@ -435,6 +435,7 @@ async function openItemModal(item = null) {
     } else {
         modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
+        document.getElementById('itemSku').value = '';
         setInputValue('Cost_RM', 0);
         setInputValue('Cost_PKG', 0);
         setInputValue('Cost_SUB', 0);
@@ -512,6 +513,7 @@ async function handleItemFormSubmit(event) {
         item_id: form.querySelector('#item_id').value,
         sap_no: form.querySelector('#sap_no').value,
         part_no: form.querySelector('#part_no').value,
+        sku: form.querySelector('#itemSku').value,
         part_description: form.querySelector('#part_description').value,
         min_stock: form.querySelector('#min_stock').value,
         max_stock: form.querySelector('#max_stock').value,
@@ -533,7 +535,7 @@ async function handleItemFormSubmit(event) {
     };
 
     const routesData = [];
-    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');    
+    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');     
     routeRows.forEach(tr => {
         routesData.push({
             route_id: tr.dataset.routeId,

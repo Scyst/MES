@@ -13,13 +13,16 @@ $table = defined('SALES_ORDERS_TABLE') ? SALES_ORDERS_TABLE : 'SALES_ORDERS';
 $itemsTable = defined('IS_DEVELOPMENT') && IS_DEVELOPMENT ? 'ITEMS_TEST' : 'ITEMS';
 
 try {
+    // ------------------------------------------------------------------
     // 1. READ
+    // ------------------------------------------------------------------
     if ($action === 'read') {
         $filter = $_GET['status'] ?? 'ALL';
-        // Join ITEMS เพื่อดึงราคามาด้วย
+        
+        // Join เพื่อดึงราคา (Price)
         $sql = "SELECT s.*, COALESCE(i.Price_USD, i.StandardPrice, 0) as price 
                 FROM $table s 
-                LEFT JOIN $itemsTable i ON s.sku = i.part_no 
+                LEFT JOIN $itemsTable i ON s.sku = i.sku 
                 WHERE 1=1";
         
         if ($filter === 'WAIT_PROD') $sql .= " AND is_production_done = 0";
@@ -32,6 +35,7 @@ try {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // KPI Summary
         $sumSql = "SELECT COUNT(*) as total,
                    SUM(CASE WHEN is_production_done = 0 THEN 1 ELSE 0 END) as wait_prod,
                    SUM(CASE WHEN is_production_done = 1 THEN 1 ELSE 0 END) as prod_done,
@@ -44,9 +48,11 @@ try {
         exit;
     }
 
-    // 2. IMPORT (เหมือนเดิม)
+    // ------------------------------------------------------------------
+    // 2. IMPORT (แก้ไขให้ตรงกับตาราง 18 คอลัมน์)
+    // ------------------------------------------------------------------
     if ($action === 'import') {
-        if (!isset($_FILES['file'])) throw new Exception("No file");
+        if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
         
         $file = $_FILES['file']['tmp_name'];
         
@@ -65,21 +71,25 @@ try {
         $skippedCount = 0;
         $errorLogs = [];
 
-        // SQL MERGE
+        // SQL MERGE (ตัด Chinese Name และ Original Week ออก)
         $sql = "MERGE INTO $table AS T 
-                USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
-                AS S(po, sku, odate, cname, descr, color, qty, dc, olw, osw, ulw, usw, est, p_str, p_stat, l_str, l_stat, rm, insp)
+                USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
+                AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem)
                 ON T.po_number = S.po AND T.sku = S.sku
                 WHEN MATCHED THEN UPDATE SET 
-                    quantity=S.qty, loading_week=S.ulw, shipping_week=S.usw,
-                    production_date_str=S.p_str, production_status=S.p_stat,
-                    load_status_str=S.l_str, loading_status=S.l_stat,
-                    rm_status=S.rm, inspection_info=S.insp, updated_at=GETDATE()
+                    description=S.descr, color=S.color, quantity=S.qty, dc_location=S.dc,
+                    loading_week=S.lweek, shipping_week=S.sweek,
+                    production_date=S.pdate, is_production_done=S.pdone,
+                    loading_date=S.ldate, is_loading_done=S.ldone,
+                    ticket_number=S.ticket, inspection_date=S.idate, inspection_status=S.istat, remark=S.rem,
+                    updated_at=GETDATE()
                 WHEN NOT MATCHED THEN INSERT 
-                    (po_number, sku, order_date, chinese_name, description, color, quantity, dc_location, 
-                     orig_loading_week, orig_shipping_week, loading_week, shipping_week, est_sale,
-                     production_date_str, production_status, load_status_str, loading_status, rm_status, inspection_info)
-                VALUES (S.po, S.sku, S.odate, S.cname, S.descr, S.color, S.qty, S.dc, S.olw, S.osw, S.ulw, S.usw, S.est, S.p_str, S.p_stat, S.l_str, S.l_stat, S.rm, S.insp);";
+                    (order_date, description, color, sku, po_number, quantity, dc_location, 
+                     loading_week, shipping_week, 
+                     production_date, is_production_done, 
+                     loading_date, is_loading_done, 
+                     ticket_number, inspection_date, inspection_status, remark)
+                VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem);";
         
         $stmt = $pdo->prepare($sql);
 
@@ -97,6 +107,7 @@ try {
             }
 
             try {
+                // Date Helper
                 $fnDate = function($val) {
                     if (empty($val)) return null;
                     $d = DateTime::createFromFormat('d/m/Y', $val);
@@ -105,23 +116,43 @@ try {
                 };
                 $oDate = $fnDate($row[0] ?? '');
 
+                // Status Logic
                 $rawPrd = $row[13] ?? '';
-                $prdStatus = (stripos($rawPrd, 'Done') !== false || stripos($rawPrd, 'OK') !== false) ? 'DONE' : 'WAIT';
+                $prdStatus = (stripos($rawPrd, 'Done') !== false || stripos($rawPrd, 'OK') !== false) ? 1 : 0; // เก็บเป็น 0/1
                 
                 $rawLoad = $row[14] ?? '';
-                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 'DONE' : 'WAIT';
+                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 1 : 0; // เก็บเป็น 0/1
                 
                 $qty = intval(str_replace(',', '', $row[6] ?? '0'));
 
+                // Inspection Logic
+                $rawInsp = $row[16] ?? '';
+                $ticket = '';
+                if (preg_match('/INSP-\d+/', $rawInsp, $m)) { $ticket = $m[0]; }
+                
+                $inspDate = $fnDate($rawInsp); // พยายามแกะวันที่จากช่อง Insp (ถ้ามี)
+                $inspStatus = '';
+                if (stripos($rawInsp, 'OK') !== false || stripos($rawInsp, 'Done') !== false) $inspStatus = 'Pass';
+                
+                // Execute SQL (Mapping 17 Parameters)
                 $stmt->execute([
-                    $po, $sku, $oDate,
-                    $row[1] ?? '', $row[2] ?? '', $row[3] ?? '',
-                    $qty,
-                    $row[7] ?? '', $row[8] ?? '', $row[9] ?? '',
-                    $row[10] ?? '', $row[11] ?? '', $row[12] ?? '',
-                    $rawPrd, $prdStatus,
-                    $rawLoad, $loadStatus,
-                    $row[15] ?? '', $row[16] ?? ''
+                    $oDate,                 // Order Date
+                    $row[2] ?? '',          // Description (ข้ามจีนช่อง 1)
+                    $row[3] ?? '',          // Color
+                    $sku,                   // SKU
+                    $po,                    // PO
+                    $qty,                   // QTY
+                    $row[7] ?? '',          // DC
+                    $row[10] ?? '',         // Loading Wk (Updated) -> ข้าม 8,9
+                    $row[11] ?? '',         // Ship Wk (Updated)
+                    $fnDate($rawPrd),       // Prod Date (แกะจาก text)
+                    $prdStatus,             // Prod Status (0/1)
+                    $fnDate($rawLoad),      // Load Date
+                    $loadStatus,            // Load Status (0/1)
+                    $ticket,                // Ticket
+                    $inspDate,              // Insp Date
+                    $inspStatus,            // Insp Status
+                    $row[15] ?? ''          // Remark (RM Status)
                 ]);
                 $count++;
             } catch (Exception $ex) {
@@ -129,6 +160,7 @@ try {
                 $errorLogs[] = "Line " . ($index+1) . ": " . $ex->getMessage();
             }
         }
+
         $pdo->commit();
         echo json_encode([
             'success' => true, 
@@ -140,71 +172,81 @@ try {
         exit;
     }
 
-    // ------------------------------------------------------------------
-    // 3. UPDATE CHECKBOX (เพิ่ม insp)
-    // ------------------------------------------------------------------
+    // 3. UPDATE CHECKBOX (เหมือนเดิม)
     if ($action === 'update_check') {
         $in = json_decode(file_get_contents('php://input'), true);
+        $field = $in['field']; 
         $id = $in['id'];
-        $field = $in['field'];
-        $checked = $in['checked'] ? 1 : 0;
-
-        $sql = "";
-        $params = [$checked, $id];
-
-        // [UPDATED] เพิ่มเคสสำหรับ Inspection
-        if ($field === 'prod') {
-            $sql = "UPDATE $table SET is_production_done = ?, production_date = GETDATE(), updated_at = GETDATE() WHERE id = ?";
-        } elseif ($field === 'load') {
-            $sql = "UPDATE $table SET is_loading_done = ?, loading_date = GETDATE(), updated_at = GETDATE() WHERE id = ?";
-        } elseif ($field === 'insp') {
-            // ถ้าติ๊ก = Pass, ไม่ติ๊ก = Wait (และลงวันที่ตรวจสอบด้วย)
-            $statusText = $checked ? 'Pass' : 'Wait';
-            $sql = "UPDATE $table SET inspection_status = ?, inspection_date = GETDATE(), updated_at = GETDATE() WHERE id = ?";
-            $params = [$statusText, $id];
-        } elseif ($field === 'confirm') {
-            $sql = "UPDATE $table SET is_confirmed = ?, updated_at = GETDATE() WHERE id = ?";
+        $val = $in['checked'] ? 1 : 0;
+        
+        $col = ''; $dateCol = null;
+        if ($field === 'prod') { $col='is_production_done'; $dateCol='production_date'; }
+        elseif ($field === 'load') { $col='is_loading_done'; $dateCol='loading_date'; }
+        elseif ($field === 'insp') { 
+            $val = $in['checked'] ? 'Pass' : 'Wait'; 
+            $col='inspection_status'; $dateCol='inspection_date'; 
         }
+        elseif ($field === 'confirm') { $col='is_confirmed'; }
 
-        if ($sql) {
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+        if ($col) {
+            $sql = "UPDATE $table SET $col = ?";
+            if ($dateCol) $sql .= ", $dateCol = GETDATE()";
+            $sql .= ", updated_at = GETDATE() WHERE id = ?";
+            $pdo->prepare($sql)->execute([$val, $id]);
             echo json_encode(['success'=>true]);
-        } else {
-            echo json_encode(['success'=>false, 'message'=>'Invalid field']);
         }
         exit;
     }
 
-    // ------------------------------------------------------------------
-    // 4. UPDATE CELL (แก้ไขรายช่อง: เพิ่ม inspection_status)
-    // ------------------------------------------------------------------
+    // 4. UPDATE CELL (เหมือนเดิม)
     if ($action === 'update_cell') {
         $in = json_decode(file_get_contents('php://input'), true);
-        $id = $in['id'];
-        $field = $in['field'];
-        $value = $in['value'];
-
-        // ★★★ เพิ่ม inspection_status เข้าไปในรายการที่อนุญาต ★★★
-        $allowedFields = [
-            'quantity', 'loading_week', 'shipping_week', 
-            'ticket_number', 'remark', 
-            'production_date', 'loading_date', 'inspection_date', 
-            'inspection_status' // [NEW]
-        ];
-
-        if (!in_array($field, $allowedFields)) {
-            http_response_code(400); echo json_encode(['success'=>false, 'message'=>'Field not allowed']); exit;
-        }
-
-        if ($value === '') $value = null;
-
-        $stmt = $pdo->prepare("UPDATE $table SET $field = ?, updated_at = GETDATE() WHERE id = ?");
-        if ($stmt->execute([$value, $id])) {
+        $id = $in['id']; $field = $in['field']; $value = $in['value'];
+        $allowedFields = ['quantity', 'loading_week', 'shipping_week', 'ticket_number', 'remark', 'production_date', 'loading_date', 'inspection_date', 'inspection_status'];
+        
+        if (in_array($field, $allowedFields)) {
+            if ($value === '') $value = null;
+            $pdo->prepare("UPDATE $table SET $field = ?, updated_at = GETDATE() WHERE id = ?")->execute([$value, $id]);
             echo json_encode(['success'=>true]);
         } else {
-            http_response_code(500); echo json_encode(['success'=>false]);
+            http_response_code(400); echo json_encode(['success'=>false]);
         }
+        exit;
+    }
+
+    // 5. CREATE SINGLE (เพิ่มทีละรายการ)
+    if ($action === 'create_single') {
+        $in = json_decode(file_get_contents('php://input'), true);
+        
+        if (empty($in['po_number']) || empty($in['sku'])) {
+            throw new Exception("PO Number and SKU are required.");
+        }
+
+        $sql = "INSERT INTO $table (
+                    po_number, sku, order_date, description, color, quantity, dc_location, 
+                    loading_week, shipping_week, remark, 
+                    production_status, loading_status, is_confirmed, created_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, 
+                    ?, ?, ?, 
+                    'WAIT', 'WAIT', 0, GETDATE()
+                )";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            trim($in['po_number']),
+            trim($in['sku']),
+            !empty($in['order_date']) ? $in['order_date'] : null,
+            $in['description'] ?? '',
+            $in['color'] ?? '',
+            intval($in['quantity'] ?? 0),
+            $in['dc_location'] ?? '',
+            $in['loading_week'] ?? '',
+            $in['shipping_week'] ?? '',
+            $in['remark'] ?? ''
+        ]);
+
+        echo json_encode(['success'=>true, 'message'=>'New order created.']);
         exit;
     }
 

@@ -5,19 +5,61 @@ const API_URL = 'api/manage_sales_orders.php';
 let allData = [];
 let currentStatusFilter = 'ALL';
 let importModal;
+let createOrderModal;
 
 document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('importResultModal');
     if (modalEl) importModal = new bootstrap.Modal(modalEl);
 
     loadData();
-
     document.getElementById('universalSearch').addEventListener('input', (e) => {
         renderTable(e.target.value);
     });
-
     document.getElementById('fileInput').addEventListener('change', uploadFile);
+
+    const createEl = document.getElementById('createOrderModal');
+    if (createEl) createOrderModal = new bootstrap.Modal(createEl);
 });
+
+// Functions
+function openCreateModal() {
+    document.getElementById('createOrderForm').reset();
+    createOrderModal.show();
+}
+
+async function submitCreateOrder() {
+    const form = document.getElementById('createOrderForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const formData = new FormData(form);
+    const payload = Object.fromEntries(formData.entries());
+
+    showSpinner();
+    try {
+        const res = await fetch(`${API_URL}?action=create_single`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json.success) {
+            showToast('New order created!', '#198754');
+            createOrderModal.hide();
+            loadData(); // รีโหลดตาราง
+        } else {
+            alert('Error: ' + json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to create order');
+    } finally {
+        hideSpinner();
+    }
+}
 
 async function loadData() {
     showSpinner();

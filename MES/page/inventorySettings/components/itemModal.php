@@ -12,14 +12,21 @@
                     <h6><i class="fas fa-cube"></i> Item Details</h6>
                     <hr class="mt-1">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="sap_no" class="form-label">SAP No.</label>
-                            <input type="text" class="form-control" id="sap_no" name="sap_no" required>
+                            <input type="text" class="form-control fw-bold" id="sap_no" name="sap_no" required>
                         </div>
-                        <div class="col-md-6">
+                        
+                        <div class="col-md-4">
                             <label for="part_no" class="form-label">Part No.</label>
                             <input type="text" class="form-control" id="part_no" name="part_no" required>
                         </div>
+                        
+                        <div class="col-md-4">
+                            <label for="itemSku" class="form-label">Customer SKU</label>
+                            <input type="text" class="form-control" id="itemSku" name="sku" placeholder="Optional">
+                        </div>
+
                         <div class="col-12">
                             <label for="part_description" class="form-label">Part Description</label>
                             <textarea class="form-control" id="part_description" name="part_description" rows="2"></textarea>
