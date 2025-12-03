@@ -67,6 +67,12 @@
                 <span>Store Request & Scrap</span>
             </a>
         </li>
+        <li>
+            <a class="dropdown-item-icon" href="../forklift/forkliftUI.php" title="Forklift Command Center">
+                <i class="fas fa-truck-loading fa-fw"></i>
+                <span>Forklift Booking</span>
+            </a>
+        </li>
         <?php endif; ?>
 
         <li>

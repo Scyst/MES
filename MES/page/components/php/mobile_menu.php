@@ -76,6 +76,13 @@ $userRole = $_SESSION['user']['role'] ?? null;
             </li>
 
             <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../forklift/forkliftUI.php">
+                    <i class="fas fa-truck-loading fa-fw me-3"></i>
+                    <span>Forklift Booking</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../Stop_Cause/Stop_Cause.php" >
                     <i class="fas fa-ban fa-fw me-3"></i>
                     <span>Stop & Causes</span>

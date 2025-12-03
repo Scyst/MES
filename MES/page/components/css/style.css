@@ -1140,3 +1140,62 @@ body {
 .chart-scroll-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* =================================================================== */
+/* 7. GLOBAL LAYOUT: TOP HEADER (PORTAL STYLE)                         */
+/* =================================================================== */
+
+:root {
+    --header-height: 70px; /* ความสูงมาตรฐานของ Header */
+}
+
+/* Header Style (ย้ายมาไว้ตรงกลาง เพื่อใช้ร่วมกันได้) */
+.portal-top-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--header-height);
+    z-index: 1055; /* สูงกว่า Sidebar */
+    background-color: var(--bs-secondary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    transition: background-color 0.3s ease;
+}
+
+/* Layout Logic: เมื่อ Body มี class "layout-top-header" */
+
+/* 1. ดัน Sidebar ลงมาเริ่มใต้ Header */
+body.layout-top-header .sidebar {
+    top: var(--header-height) !important;
+    height: calc(100vh - var(--header-height)) !important;
+    z-index: 1050;
+}
+
+/* 2. ดัน Main Content ลงมาเริ่มใต้ Header */
+body.layout-top-header #main-content {
+    margin-top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    overflow: hidden; /* ซ่อน Scroll ใหญ่ */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. ซ่อนปุ่ม Mobile Toggle เดิม (เพราะย้ายไปบน Header แล้ว) */
+body.layout-top-header > .mobile-hamburger-btn {
+    display: none !important;
+}
+
+/* Utility Class สำหรับ Logo Box บน Header */
+.header-logo-box {
+    width: 45px; 
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}

@@ -1,0 +1,230 @@
+/* MES/page/forklift/css/forklift.css */
+
+/* --- Forklift Card --- */
+.forklift-card {
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-secondary-bg);
+    display: flex;
+    flex-direction: column;
+}
+.forklift-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+    border-color: var(--bs-primary);
+}
+
+.status-strip {
+    height: 6px; width: 100%; position: absolute; top: 0; left: 0;
+}
+.status-available .status-strip { background-color: #198754; }
+.status-in-use .status-strip { background-color: #0d6efd; }
+.status-charging .status-strip { background-color: #ffc107; }
+
+/* Info Rows in Card */
+.card-info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.5rem; font-size: 0.9rem;
+}
+.card-info-label { color: var(--bs-gray-600); font-size: 0.8rem; }
+.card-info-value { font-weight: 600; color: var(--bs-body-color); }
+
+/* Battery Bar */
+.battery-wrapper { 
+    width: 100%; background: #e9ecef; height: 6px; 
+    border-radius: 3px; overflow: hidden; margin-top: 8px;
+}
+.battery-fill { height: 100%; transition: width 0.3s; }
+
+/* --- Slider & Inputs (GLOBAL STYLES) --- */
+.custom-range-track::-webkit-slider-runnable-track {
+    background: #ced4da; /* สีเทาเข้มขึ้น */
+    height: 0.5rem;
+    border-radius: 1rem;
+}
+.custom-range-track::-moz-range-track {
+    background: #ced4da;
+    height: 0.5rem;
+    border-radius: 1rem;
+}
+/* Show Spinner in Number Input */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    opacity: 1;
+}
+
+/* --- Timeline Chart --- */
+.timeline-container {
+    overflow-x: auto;
+    position: relative;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    background-color: var(--bs-body-bg);
+    scrollbar-width: thin;
+}
+
+.timeline-header {
+    display: flex; min-width: 1000px;
+    border-bottom: 1px solid var(--bs-border-color);
+    background-color: var(--bs-tertiary-bg);
+    position: sticky; top: 0; z-index: 10;
+}
+
+.timeline-body {
+    min-width: 1000px;
+    background: repeating-linear-gradient(90deg, transparent, transparent calc(100%/24 - 1px), var(--bs-border-color) calc(100%/24 - 1px), var(--bs-border-color) calc(100%/24));
+}
+
+.timeline-row {
+    display: flex; align-items: center; height: 45px;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.timeline-label-col {
+    width: 100px; flex-shrink: 0; padding: 0 10px;
+    font-weight: 600; font-size: 0.85rem;
+    border-right: 1px solid var(--bs-border-color);
+    background-color: var(--bs-secondary-bg);
+    position: sticky; left: 0; z-index: 5;
+    display: flex; align-items: center;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+}
+
+.time-slot {
+    flex: 1; text-align: center; font-size: 0.7rem; color: var(--bs-gray-600);
+    padding: 4px 0; border-right: 1px solid var(--bs-border-color);
+}
+
+.timeline-track { flex-grow: 1; position: relative; height: 100%; }
+
+.booking-bar {
+    position: absolute;
+    top: 10px; bottom: 10px;
+    background-color: #0d6efd;
+    border-radius: 4px;
+    opacity: 0.85;
+    font-size: 0.7rem;
+    color: white;
+    padding: 0 8px;
+    display: flex; align-items: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.booking-bar.booked { background-color: #0d6efd; }
+.booking-bar.active { background-color: #198754; z-index: 5; opacity: 1; }
+.booking-bar.completed { background-color: #6c757d; opacity: 0.6; }
+.booking-bar:hover { z-index: 20; transform: scaleY(1.2); opacity: 1; }
+
+/* =========================================
+   GLOBAL MODAL TWEAKS
+   ========================================= */
+.modal-dialog-centered {
+    display: flex;
+    align-items: flex-start !important;
+    min-height: calc(100% - 3.5rem);
+}
+.modal-dialog {
+    margin-top: 12vh !important; 
+    margin-bottom: 5vh !important;
+}
+.modal-dialog-scrollable {
+    margin-top: 8vh !important; 
+    height: auto !important;
+    max-height: 85vh !important;
+}
+.modal-content {
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2), 0 5px 15px rgba(0,0,0,0.1) !important;
+    border: none;
+    border-radius: 12px;
+}
+.modal.fade .modal-dialog {
+    transform: translate(0, -30px);
+    transition: transform 0.3s ease-out;
+}
+.modal.show .modal-dialog { transform: none; }
+
+/* =========================================
+   MOBILE RESPONSIVE FIXES
+   ========================================= */
+@media (max-width: 991.98px) {
+    /* 1. Unlock Layout for Scrolling */
+    body.layout-top-header #main-content {
+        height: auto !important;
+        min-height: calc(100vh - 60px);
+        overflow: visible !important;
+        display: block !important;
+    }
+    body.layout-top-header #main-content > .container-fluid {
+        height: auto !important;
+        display: block !important;
+        padding-bottom: 80px !important;
+    }
+
+    /* 2. Timeline Adjustments */
+    .card .card-header {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .flex-grow-1.overflow-auto {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    /* 3. Card & Text Size */
+    .forklift-card {
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    h5.fw-bold { font-size: 1.1rem !important; }
+    .card-info-row { font-size: 0.85rem !important; }
+    
+    /* 4. Timeline Height */
+    .timeline-row { height: 40px !important; }
+    .timeline-header .time-slot { font-size: 0.6rem; }
+    .booking-bar { font-size: 0.6rem; padding: 0 4px; }
+}
+
+/* =========================================
+   SUB-HEADER RESPONSIVE (Small Mobile)
+   ========================================= */
+@media (max-width: 575.98px) {
+    .fleet-toolbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem;
+    }
+    .fleet-toolbar .w-100-mobile {
+        width: 100%; display: flex;
+    }
+    .fleet-toolbar .w-100-mobile .btn {
+        flex: 1; display: flex; justify-content: center; align-items: center; padding: 0.5rem;
+    }
+    .fleet-toolbar h6 { font-size: 1.1rem !important; }
+
+    /* Timeline Toolbar */
+    .timeline-toolbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+    .timeline-toolbar .legend-box {
+        display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%;
+        font-size: 0.75rem !important;
+    }
+    .timeline-toolbar .legend-box .badge {
+        margin-left: 0 !important; margin-right: 4px !important;
+    }
+}
+
+/* Landscape Mode Fix */
+@media (max-height: 500px) and (orientation: landscape) {
+    .portal-top-header { height: 50px !important; padding: 0 1rem; }
+    .header-logo-box { width: 35px; height: 35px; }
+    body.layout-top-header .sidebar { top: 50px !important; }
+    body.layout-top-header #main-content { margin-top: 50px !important; }
+}
