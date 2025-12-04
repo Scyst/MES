@@ -39,27 +39,56 @@ try {
         echo json_encode(['status' => true, 'data' => $forklifts]);
     }
 
+    // 2. Booking & Instant Start (รวมกันในนี้)
     else if ($action === 'book_forklift') {
         $forklift_id = $_POST['forklift_id'];
         $user_id = $_SESSION['user']['id'];
         $user_name = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'];
+        
         $start = date('Y-m-d H:i:s', strtotime($_POST['start_time']));
         $end_est = date('Y-m-d H:i:s', strtotime($_POST['end_time_est']));
         $detail = $_POST['usage_details'];
 
+        // [NEW] รับค่าเพิ่มเติมสำหรับโหมด Walk-in (Instant)
+        $type = $_POST['booking_type'] ?? 'RESERVE'; 
+        $location = $_POST['location'] ?? null; 
+        $start_batt = isset($_POST['start_battery']) ? $_POST['start_battery'] : null;
+
+        // Validation: Check Overlap
         $chk = $pdo->prepare("SELECT COUNT(*) FROM " . FORKLIFT_BOOKINGS_TABLE . " 
             WHERE forklift_id = ? AND status IN ('ACTIVE', 'BOOKED')
             AND ( (start_time < ? AND end_time_est > ?) )");
         $chk->execute([$forklift_id, $end_est, $start]);
         
-        if ($chk->fetchColumn() > 0) throw new Exception("ช่วงเวลานี้มีการจองแล้ว");
+        if ($chk->fetchColumn() > 0) throw new Exception("รถคันนี้ไม่ว่างในช่วงเวลาดังกล่าว");
 
+        $pdo->beginTransaction();
+
+        // [FIX] กำหนดสถานะตาม Type
+        // ถ้า INSTANT -> สถานะเป็น ACTIVE (ใช้งานเลย)
+        // ถ้า RESERVE -> สถานะเป็น BOOKED (จองไว้ก่อน)
+        $status = ($type === 'INSTANT') ? 'ACTIVE' : 'BOOKED';
+
+        // Insert Booking
         $stmt = $pdo->prepare("INSERT INTO " . FORKLIFT_BOOKINGS_TABLE . " 
-            (forklift_id, user_id, user_name, booking_type, start_time, end_time_est, usage_details, status)
-            VALUES (?, ?, ?, 'RESERVE', ?, ?, ?, 'BOOKED')");
-        $stmt->execute([$forklift_id, $user_id, $user_name, $start, $end_est, $detail]);
+            (forklift_id, user_id, user_name, booking_type, start_time, end_time_est, usage_details, status, start_battery)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$forklift_id, $user_id, $user_name, $type, $start, $end_est, $detail, $status, $start_batt]);
 
-        echo json_encode(['status' => true, 'message' => 'Booked']);
+        // [FIX] ถ้าเป็น INSTANT ต้องอัปเดตสถานะรถเป็น IN_USE ทันที!
+        if ($type === 'INSTANT') {
+            // ถ้าไม่ส่งแบตมา ให้ default เป็น 100 ไว้ก่อน (กัน error)
+            $batt_val = $start_batt !== null ? $start_batt : 100;
+            $loc_val = $location !== null ? $location : '-';
+
+            $upd = $pdo->prepare("UPDATE " . FORKLIFTS_TABLE . " 
+                SET status = 'IN_USE', last_location = ?, current_battery = ? 
+                WHERE id = ?");
+            $upd->execute([$loc_val, $batt_val, $forklift_id]);
+        }
+
+        $pdo->commit();
+        echo json_encode(['status' => true, 'message' => 'Success']);
     }
 
     else if ($action === 'start_job') {

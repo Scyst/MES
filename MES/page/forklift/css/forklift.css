@@ -116,7 +116,7 @@ input[type=number]::-webkit-outer-spin-button {
     transition: all 0.2s;
 }
 .booking-bar.booked { background-color: #0d6efd; }
-.booking-bar.active { background-color: #198754; z-index: 5; opacity: 1; }
+.booking-bar.active { background-color: #8b0faa; z-index: 5; opacity: 1; }
 .booking-bar.completed { background-color: #6c757d; opacity: 0.6; }
 .booking-bar:hover { z-index: 20; transform: scaleY(1.2); opacity: 1; }
 
@@ -151,6 +151,41 @@ input[type=number]::-webkit-outer-spin-button {
 /* =========================================
    MOBILE RESPONSIVE FIXES
    ========================================= */
+@media (min-width: 992px) { 
+    
+    /* 1. ปลดล็อก Main Content ให้ยาวลงมาตามเนื้อหา (ไม่ Fix 100vh) */
+    body.layout-top-header #main-content {
+        height: auto !important;
+        min-height: calc(100vh - 70px);
+        overflow: visible !important; /* ให้ใช้ Scrollbar ของ Browser แทน */
+        display: block !important;
+    }
+
+    /* 2. ปลดล็อก Timeline ให้ยืดเต็มที่เท่าจำนวนรถ */
+    .timeline-container {
+        max-height: none !important; /* ยกเลิกการจำกัดความสูง */
+        overflow: visible !important;
+        border: 1px solid var(--bs-border-color);
+    }
+
+    /* 3. ทำให้หัวตารางกราฟ (00:00 - 23:00) ลอยค้าง (Sticky) */
+    /* สำคัญ: ต้องกำหนด Top = 70px เพื่อให้ลอยต่อจาก Navbar หลักพอดี */
+    .timeline-header {
+        position: sticky;
+        top: 70px; /* ความสูงของ Portal Header */
+        z-index: 20; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* เพิ่มเงาให้ดูจมลงไป */
+        border-top: 1px solid var(--bs-border-color);
+    }
+
+    /* 4. ปลดล็อกพื้นที่ Card Grid ด้านล่าง */
+    .flex-grow-1.overflow-auto {
+        overflow: visible !important;
+        height: auto !important;
+        padding-bottom: 50px; /* เผื่อที่ด้านล่างหน่อย */
+    }
+}
+
 @media (max-width: 991.98px) {
     /* 1. Unlock Layout for Scrolling */
     body.layout-top-header #main-content {
@@ -187,6 +222,7 @@ input[type=number]::-webkit-outer-spin-button {
     .timeline-row { height: 40px !important; }
     .timeline-header .time-slot { font-size: 0.6rem; }
     .booking-bar { font-size: 0.6rem; padding: 0 4px; }
+    .offcanvas-body {margin-top: 10px;}
 }
 
 /* =========================================

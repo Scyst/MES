@@ -3,7 +3,7 @@ let globalBookings = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
-    setInterval(loadDashboard, 30000);
+    setInterval(loadDashboard, 5000);
 
     // Auto-fill End Time
     document.getElementById('book_start_time').addEventListener('change', function() {
@@ -47,6 +47,13 @@ async function loadDashboard() {
             globalForkliftData = json.data;
             await loadTimelineData();
             renderGrid(globalForkliftData);
+            
+            // [เพิ่ม] อัปเดตเวลาล่าสุดให้ User เห็น
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const el = document.getElementById('last-update-time');
+            if(el) el.innerText = timeStr;
+            
         } else {
             console.error(json.message);
             document.getElementById('forklift-grid').innerHTML = 
@@ -79,7 +86,7 @@ function renderGrid(forklifts) {
         
         if (fl.status === 'IN_USE') {
             statusClass = 'status-in-use';
-            statusText = 'ใช้งานอยู่ (In Use)';
+            statusText = 'ใช้งานอยู่';
             badgeClass = 'bg-primary';
         } else if (fl.status === 'CHARGING' || fl.current_battery < 20) {
             statusClass = 'status-charging';
@@ -91,24 +98,54 @@ function renderGrid(forklifts) {
         const driverName = fl.current_driver || '-';
         const locationName = fl.last_location || '-';
 
+        // --- BUTTON LOGIC (ปรับข้อความให้เข้ากับ Walk-in) ---
+        
+        const myPendingBooking = globalBookings.find(b => 
+            b.forklift_id == fl.id && b.user_name === CURRENT_USER_NAME && b.status === 'BOOKED'
+        );
+
         let btnHtml = '';
-        if (fl.status === 'IN_USE' && fl.current_driver === CURRENT_USER_NAME) {
-            // ส่งแบตปัจจุบันไปที่ Modal Return ด้วย
-            btnHtml = `<button class="btn btn-warning w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); openReturnModal(${fl.active_booking_id}, ${fl.id}, '${fl.code}', ${fl.current_battery})"><i class="fas fa-undo me-2"></i>คืนรถ (Return)</button>`;
-        } else if (fl.status === 'IN_USE') {
-            btnHtml = `<button class="btn btn-secondary w-100 opacity-75" disabled><i class="fas fa-user-lock me-2"></i>${fl.current_driver}</button>`;
-        } else {
-            btnHtml = `<button class="btn btn-outline-primary w-100 fw-bold" onclick="event.stopPropagation(); checkAction(${fl.id}, '${fl.code}', '${fl.name}')"><i class="far fa-hand-point-up me-2"></i>จัดการ (Action)</button>`;
+
+        // 1. เราขับอยู่ -> คืนรถ
+        if (fl.status === 'IN_USE' && (fl.current_driver === CURRENT_USER_NAME || IS_ADMIN)) {
+            
+            // ถ้าเป็น Admin กดคืนแทนคนอื่น ให้เปลี่ยนสีปุ่มหน่อยจะได้รู้ว่าเป็น Force Return
+            let btnClass = (fl.current_driver === CURRENT_USER_NAME) ? 'btn-warning' : 'btn-danger';
+            let btnText = (fl.current_driver === CURRENT_USER_NAME) ? 'คืนรถ (Return)' : 'บังคับคืน (Force Return)';
+            
+            btnHtml = `<button class="btn ${btnClass} w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})">
+                        <i class="fas fa-undo me-2"></i>${btnText}
+                       </button>`;
+        }
+        // 2. เราจองไว้ (เผื่อระบบจองกลับมาใช้) -> เริ่มงาน
+        else if (fl.status !== 'IN_USE' && myPendingBooking) {
+            btnHtml = `<button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})">เริ่มใช้งาน (Start)</button>`;
+        }
+        // 3. คนอื่นขับ -> จองต่อ (หรือ Disabled ตามต้องการ)
+        else if (fl.status === 'IN_USE') {
+            btnHtml = `<button class="btn btn-outline-secondary w-100" onclick="event.stopPropagation(); checkAction(${fl.id})">ไม่ว่าง</button>`;
+        } 
+        // 4. รถว่าง -> เบิกใช้ทันที (เปลี่ยนข้อความตรงนี้)
+        else {
+            btnHtml = `<button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})">เริ่มใช้งาน (Start)</button>`;
         }
 
+        // --- HTML CARD ---
         const html = `
         <div class="col-md-6 col-xl-3">
-            <div class="forklift-card h-100 rounded-3 shadow-sm p-3" style="cursor: pointer;" onclick="checkAction(${fl.id}, '${fl.code}', '${fl.name}')">
+            <div class="forklift-card h-100 rounded-3 shadow-sm p-3" 
+                 style="cursor: pointer;" 
+                 onclick="checkAction(${fl.id})"> 
+                 
                 <div class="status-strip ${statusClass}"></div>
-                <div class="d-flex justify-content-between align-items-center mb-3 mt-1">
-                    <h5 class="fw-bold mb-0 text-body">${fl.code}</h5>
-                    <span class="badge ${badgeClass} rounded-pill">${statusText}</span>
+                
+                <div class="d-flex justify-content-between align-items-start mb-3 mt-1">
+                    <div class="d-flex flex-column" style="min-width: 0;"> <h5 class="fw-bold mb-0 text-body text-truncate" title="${fl.code}">${fl.code}</h5>
+                        <small class="text-muted text-truncate" style="font-size: 0.8rem;" title="${fl.name}">${fl.name}</small>
+                    </div>
+                    <span class="badge ${badgeClass} rounded-pill ms-2 text-nowrap" style="font-size: 0.75rem;">${statusText}</span>
                 </div>
+                
                 <div class="mb-3">
                     <div class="card-info-row">
                         <span class="card-info-label">Battery</span>
@@ -126,6 +163,7 @@ function renderGrid(forklifts) {
                         <span class="card-info-value text-truncate" style="max-width: 120px;">${locationName}</span>
                     </div>
                 </div>
+
                 <div class="mt-auto pt-2 border-top">
                     ${btnHtml}
                 </div>
@@ -238,11 +276,29 @@ function handleTimelineClick(event, bk) {
     }
 }
 
-// [UPDATED] Check Action with Battery Init
-async function checkAction(forkliftId, code, name) {
+// [FIXED] Action Router: เช็คสถานะให้ครบทุกเคส (คืน -> จอง -> Walk-in)
+// =======================================================
+async function checkAction(forkliftId) {
+    // 1. ดึงข้อมูลรถจากตัวแปร Global (เพื่อให้ได้สถานะล่าสุด)
     const flData = globalForkliftData.find(f => f.id == forkliftId);
-    const currentBatt = flData ? flData.current_battery : 100;
+    if (!flData) return;
 
+    const currentBatt = flData.current_battery || 100;
+
+    // 2. [สำคัญ] เช็คก่อนว่า "ฉันกำลังขับคันนี้อยู่ไหม" (Priority 1: คืนรถ)
+    // ต้องเช็คทั้งสถานะรถ และชื่อคนขับ
+    if (flData.status === 'IN_USE' && flData.current_driver === CURRENT_USER_NAME) {
+        openReturnModal(flData.active_booking_id, flData.id, flData.code, currentBatt);
+        return; 
+    }
+
+    // 3. ถ้าคนอื่นขับอยู่ -> แจ้งเตือน (ห้ามแย่งรถ)
+    if (flData.status === 'IN_USE') {
+        alert(`รถคันนี้กำลังถูกใช้งานโดย: ${flData.current_driver}`);
+        return;
+    }
+
+    // 4. เช็คว่า "ฉันจองคันนี้ค้างไว้ไหม" (Priority 2: เริ่มงานตามที่จอง)
     const myBooking = globalBookings.find(b => 
         b.forklift_id == forkliftId && 
         b.user_name === CURRENT_USER_NAME && 
@@ -250,10 +306,12 @@ async function checkAction(forkliftId, code, name) {
     );
 
     if (myBooking) {
-        // [FIX] ส่ง currentBatt ไปที่ StartJob Modal ด้วย
-        openStartJobModal(myBooking.booking_id, forkliftId, name, myBooking.usage_details, currentBatt);
+        // มีจอง -> เปิดหน้าเริ่มงาน (โดยดึงข้อมูลจองมาใส่)
+        openStartJobModal(myBooking.booking_id, forkliftId, flData.name, myBooking.usage_details, currentBatt);
     } else {
-        openBookingModal(forkliftId, code, name);
+        // 5. ถ้าไม่มีอะไรเลย -> เปิดหน้าเริ่มงานแบบ Walk-in (Instant Start)
+        // ส่ง bookingId = null เพื่อบอกว่าเป็นงานใหม่
+        openStartJobModal(null, forkliftId, flData.name, '', currentBatt);
     }
 }
 
@@ -282,15 +340,13 @@ async function submitBooking() {
     await callApi(formData, '#bookingModal', 'จองสำเร็จ! (กด Start เมื่อต้องการใช้งาน)');
 }
 
-// [UPDATED] openStartJobModal (รับ currentBatt)
 function openStartJobModal(bookingId, forkliftId, name, details, currentBatt) {
     document.getElementById('startJobForm').reset();
-    document.getElementById('start_booking_id').value = bookingId;
+    document.getElementById('start_booking_id').value = bookingId || '';
     document.getElementById('start_forklift_id').value = forkliftId;
     document.getElementById('start_usage_details').value = details || '';
     document.getElementById('start_forklift_name').innerText = name;
 
-    // [FIX] ใช้ syncBatteryInput เพื่อเซ็ตค่าทั้ง Slider และ Input
     const batt = currentBatt || 100;
     syncBatteryInput('start', batt);
     
@@ -302,8 +358,31 @@ async function submitStartJob() {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     
     const formData = new FormData(form);
-    formData.append('action', 'start_job');
-    await callApi(formData, '#startJobModal', 'เริ่มงานแล้ว! (สถานะรถ: Active)');
+    const bookingId = document.getElementById('start_booking_id').value;
+
+    if (bookingId) {
+        // A. กรณีมี Booking เดิม (Flow เก่า - เผื่ออนาคตกลับมาใช้)
+        formData.append('action', 'start_job');
+    } else {
+        // B. [NEW] กรณีไม่มี Booking (Walk-in) -> ใช้ API จองแบบ INSTANT
+        formData.append('action', 'book_forklift');
+        formData.append('booking_type', 'INSTANT');
+        
+        // สร้างเวลาปัจจุบันส่งไปให้ API (เพราะ API จองต้องการเวลา)
+        const now = new Date();
+        const nextHour = new Date(now.getTime() + 60*60*1000); // กะเวลาคืนคร่าวๆ 1 ชม.
+        
+        // แปลงเวลาให้เป็น Format ที่ PHP เข้าใจ (YYYY-MM-DDTHH:mm)
+        const toLocalISO = (date) => {
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+        };
+
+        formData.append('start_time', toLocalISO(now));
+        formData.append('end_time_est', toLocalISO(nextHour));
+    }
+
+    await callApi(formData, '#startJobModal', 'เริ่มงานแล้ว! (ขับขี่ปลอดภัยนะครับ)');
 }
 
 // [UPDATED] openReturnModal (แก้ ID ให้ตรงกับ HTML ใหม่)
@@ -464,19 +543,40 @@ async function openHistoryModal() {
 }
 
 async function callApi(formData, modalId, successMsg) {
+    // 1. หาปุ่ม Submit ใน Modal นั้น แล้วสั่ง Disabled + ใส่ Spinner
+    const modalEl = document.querySelector(modalId);
+    const submitBtn = modalEl.querySelector('.modal-footer .btn-success, .modal-footer .btn-secondary, .modal-footer .btn-primary'); // หาปุ่มยืนยัน
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+
+    if(submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    }
+
     try {
         const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
         const json = await res.json();
         
         if (json.status) {
-            bootstrap.Modal.getInstance(document.querySelector(modalId)).hide();
+            bootstrap.Modal.getInstance(modalEl).hide();
             loadDashboard();
             alert(successMsg);
         } else {
-            alert("Error: " + json.message);
+            // [Fix] ถ้ามีปัญหาเรื่องแย่งกันจอง ให้ปิด Modal แล้วโหลดใหม่เลย
+            alert("แจ้งเตือน: " + json.message);
+            if(json.message.includes('จองแล้ว') || json.message.includes('ไม่ว่าง')) {
+                bootstrap.Modal.getInstance(modalEl).hide();
+                loadDashboard();
+            }
         }
     } catch (e) {
         console.error(e);
-        alert("System Error");
+        alert("System Error: เชื่อมต่อ Server ไม่ได้");
+    } finally {
+        // 2. คืนค่าปุ่ม (เผื่อ Error แล้ว Modal ไม่ปิด)
+        if(submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
     }
 }

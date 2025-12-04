@@ -166,8 +166,8 @@ $pageTitle = "Sales Order Dashboard";
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="modal" data-bs-target="#helpModal" title="คู่มือการใช้งาน">
-                        <i class="fas fa-question" style="padding-top: 5px;"></i>
+                    <button class="btn btn-link text-secondary p-0" data-bs-toggle="modal" data-bs-target="#helpModal" title="คู่มือการใช้งาน">
+                        <i class="far fa-question-circle fa-lg"></i>
                     </button>
                     <button class="btn btn-primary fw-bold shadow-sm" onclick="document.getElementById('fileInput').click()">
                         <i class="fas fa-file-upload me-2"></i> Import Excel/CSV
