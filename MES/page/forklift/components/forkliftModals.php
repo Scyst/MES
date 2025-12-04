@@ -138,26 +138,37 @@
                         <input type="hidden" name="id" id="manage_id"> 
                         <input type="hidden" name="action" id="manage_action" value="add_forklift">
 
-                        <div class="col-md-3">
-                            <label class="small text-muted">Code (รหัสรถ)</label>
+                        <div class="col-md-2">
+                            <label class="small text-muted fw-bold">Code (รหัสรถ)</label>
                             <input type="text" class="form-control form-control-sm" name="code" id="manage_code" placeholder="FL-XX" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="small text-muted">Name/Model (ชื่อรุ่น)</label>
+                        <div class="col-md-3">
+                            <label class="small text-muted fw-bold">Name/Model (ชื่อรุ่น)</label>
                             <input type="text" class="form-control form-control-sm" name="name" id="manage_name" placeholder="Brand / Model" required>
                         </div>
+
                         <div class="col-md-3">
-                            <label class="small text-muted">Initial Location</label>
+                            <label class="small text-muted fw-bold">Status (สถานะ)</label>
+                            <select class="form-select form-select-sm" name="status" id="manage_status">
+                                <option value="AVAILABLE" class="text-success fw-bold">Available (ว่าง)</option>
+                                <option value="MAINTENANCE" class="text-secondary fw-bold">Maintenance (ซ่อม)</option>
+                                <option value="IN_USE" class="text-primary">In Use (ใช้)</option>
+                                <option value="CHARGING" class="text-warning">Charging (ชาร์จ)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small text-muted fw-bold">Current Location</label>
                             <input type="text" class="form-control form-control-sm" name="last_location" id="manage_location" placeholder="Zone A">
                         </div>
                         <div class="col-md-2">
-                            <button type="button" class="btn btn-sm btn-success w-100" id="btn-save-forklift" onclick="saveForklift()">
-                                <i class="fas fa-plus"></i> เพิ่ม
+                            <button type="button" class="btn btn-sm btn-success w-100 fw-bold" id="btn-save-forklift" onclick="saveForklift()">
+                                <i class="fas fa-save me-1"></i> บันทึก
                             </button>
                         </div>
-                        <div class="col-12 mt-1">
-                            <button type="button" class="btn btn-xs btn-link text-danger p-0" id="btn-cancel-edit" style="display:none; font-size: 0.8rem;" onclick="resetManageForm()">
-                                ยกเลิกการแก้ไข (Cancel Edit)
+
+                        <div class="col-12 mt-1 text-end">
+                            <button type="button" class="btn btn-xs btn-link text-danger p-0 text-decoration-none" id="btn-cancel-edit" style="display:none; font-size: 0.8rem;" onclick="resetManageForm()">
+                                <i class="fas fa-times-circle me-1"></i> ยกเลิกการแก้ไข (Cancel Edit)
                             </button>
                         </div>
                     </form>

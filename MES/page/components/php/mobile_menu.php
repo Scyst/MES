@@ -18,7 +18,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
         <ul class="list-group list-group-flush">
 
             <li class="list-group-item list-group-item-action">
-                <a class="text-decoration-none text-body d-block fw-bold text-primary" href="../dailyLog/dailyLogUI.php">
+                <a class="text-decoration-none text-body d-block" href="../dailyLog/dailyLogUI.php">
                     <i class="fas fa-home fa-fw me-3"></i>
                     <span>MES TOOLBOX (Home)</span>
                 </a>
@@ -48,7 +48,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
 
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../dailyLog/moodReport.php">
-                    <i class="fas fa-heartbeat fa-fw me-3 text-danger"></i>
+                    <i class="fas fa-heartbeat fa-fw me-3"></i>
                     <span>Mood Insight Report</span>
                 </a>
             </li>

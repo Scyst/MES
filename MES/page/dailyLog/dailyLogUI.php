@@ -157,9 +157,9 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
 
                         renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', ['admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Manpower', 'จัดการกำลังคน & กะ', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
+                        renderServiceLink('Manpower', 'จัดการกำลังคน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Forklift Booking', 'จองรถโฟร์คลิฟ & ติดตามสถานะ', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
+                        renderServiceLink('Forklift Booking', 'จองรถโฟร์คลิฟ และติดตามสถานะ', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', ['admin', 'creator', 'supervisor'], $userRole, $themeMon);
                         renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
                         ?>

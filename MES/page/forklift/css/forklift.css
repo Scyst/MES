@@ -23,6 +23,7 @@
 .status-available .status-strip { background-color: #198754; }
 .status-in-use .status-strip { background-color: #0d6efd; }
 .status-charging .status-strip { background-color: #ffc107; }
+.status-maintenance .status-strip { background-color: #6c757d; }
 
 /* Info Rows in Card */
 .card-info-row {

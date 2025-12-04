@@ -135,14 +135,16 @@ try {
     }
 
     else if ($action === 'add_forklift') {
-        $stmt = $pdo->prepare("INSERT INTO " . FORKLIFTS_TABLE . " (code, name, last_location, status, current_battery) VALUES (?, ?, ?, 'AVAILABLE', 100)");
-        $stmt->execute([$_POST['code'], $_POST['name'], $_POST['last_location']]);
+        $status = $_POST['status'] ?? 'AVAILABLE';
+        $stmt = $pdo->prepare("INSERT INTO " . FORKLIFTS_TABLE . " (code, name, last_location, status, current_battery) VALUES (?, ?, ?, ?, 100)");
+        $stmt->execute([$_POST['code'], $_POST['name'], $_POST['last_location'], $status]);
         echo json_encode(['status' => true]);
     }
 
     else if ($action === 'edit_forklift') {
-        $stmt = $pdo->prepare("UPDATE " . FORKLIFTS_TABLE . " SET code = ?, name = ?, last_location = ? WHERE id = ?");
-        $stmt->execute([$_POST['code'], $_POST['name'], $_POST['last_location'], $_POST['id']]);
+        $status = $_POST['status'];
+        $stmt = $pdo->prepare("UPDATE " . FORKLIFTS_TABLE . " SET code = ?, name = ?, last_location = ?, status = ? WHERE id = ?");
+        $stmt->execute([$_POST['code'], $_POST['name'], $_POST['last_location'], $status, $_POST['id']]);
         echo json_encode(['status' => true]);
     }
 
