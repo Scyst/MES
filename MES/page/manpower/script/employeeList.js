@@ -15,20 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('editEmpModal');
     if (modalEl) editModal = new bootstrap.Modal(modalEl);
 
-    // Init Theme
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-bs-theme', savedTheme);
-    document.getElementById('page-theme-btn').addEventListener('click', toggleTheme);
+    // [MODIFIED] Theme Switcher: ลบส่วนนี้ออก เพราะ top_header.php จัดการแล้ว
+    // const savedTheme = localStorage.getItem('theme') || 'light';
+    // document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    // document.getElementById('page-theme-btn').addEventListener('click', toggleTheme);
 
     // Initial Fetch
     fetchEmployees();
 
     // Search Listener
-    document.getElementById('searchInput').addEventListener('input', handleSearch);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearch);
+    }
 });
 
 // ==========================================
-// Data & Actions
+// Data & Actions (คงเดิม)
 // ==========================================
 
 async function fetchEmployees() {
@@ -96,7 +99,7 @@ async function saveEmployee() {
 }
 
 // ==========================================
-// UI & Rendering (Pagination)
+// UI & Rendering (คงเดิม)
 // ==========================================
 
 function handleSearch(e) {
@@ -124,7 +127,6 @@ function renderTablePage(page) {
         return;
     }
 
-    // Calculate Pagination Slices
     const totalItems = displayData.length;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     if (currentPage > totalPages) currentPage = totalPages;
@@ -136,7 +138,6 @@ function renderTablePage(page) {
 
     document.getElementById('pageInfo').innerText = `Showing ${start + 1} to ${end} of ${totalItems} employees`;
 
-    // Render Rows
     tbody.innerHTML = pageData.map(emp => {
         const isActive = emp.is_active == 1 
             ? '<span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2">Active</span>' 
@@ -154,12 +155,12 @@ function renderTablePage(page) {
         if(emp.team_group === 'C') teamBadge = '<span class="badge bg-success border border-light shadow-sm" style="width:30px;">C</span>';
         if(emp.team_group === 'D') teamBadge = '<span class="badge bg-danger border border-light shadow-sm" style="width:30px;">D</span>';
 
+        // Escape JSON for onclick
         const safeEmp = JSON.stringify(emp).replace(/"/g, '&quot;');
 
         return `
             <tr class="cursor-pointer hover-bg" onclick="openEdit(${safeEmp})">
                 <td class="ps-4 pe-3 font-monospace text-primary fw-bold">${emp.emp_id}</td>
-                
                 <td>
                     <div class="fw-bold text-dark">${emp.name_th || '-'}</div>
                     <div class="small text-muted">
@@ -168,7 +169,6 @@ function renderTablePage(page) {
                         ${emp.position || '-'}
                     </div>
                 </td>
-
                 <td class="text-center">${teamBadge}</td>
                 <td class="text-center">${lineBadge}</td>
                 <td class="text-center">${shiftName}</td>
@@ -182,13 +182,10 @@ function renderTablePage(page) {
 
 function renderPagination(totalPages, nav) {
     let buttons = '';
-    
-    // Prev
     buttons += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
                     <a class="page-link" href="#" onclick="event.preventDefault(); changePage(${currentPage - 1})">Previous</a>
                 </li>`;
 
-    // Page Numbers (Show window around current)
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
             buttons += `<li class="page-item ${i === currentPage ? 'active' : ''}">
@@ -199,7 +196,6 @@ function renderPagination(totalPages, nav) {
         }
     }
 
-    // Next
     buttons += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
                     <a class="page-link" href="#" onclick="event.preventDefault(); changePage(${currentPage + 1})">Next</a>
                 </li>`;
@@ -214,15 +210,24 @@ window.changePage = function(page) {
 }
 
 // ==========================================
-// Modals & Helpers
+// Modals & Helpers (คงเดิม)
 // ==========================================
 
 window.openEdit = function(emp) {
+    // ต้องแน่ใจว่า ID ใน HTML ตรงกับที่เรียกใช้ (ในไฟล์ employeeListUI.php ใหม่ ID ตรงกันแล้ว)
     document.getElementById('modalEmpName').value = `${emp.emp_id} - ${emp.name_th}`;
     document.getElementById('modalEmpId').value = emp.emp_id;
-    document.getElementById('modalLine').value = emp.line || ''; 
-    document.getElementById('modalShift').value = emp.default_shift_id || '';
-    document.getElementById('modalTeam').value = emp.team_group || ''; 
+    
+    // ตั้งค่า Dropdown (ต้องมี value ใน option ที่ตรงกับข้อมูล)
+    const lineEl = document.getElementById('modalLine');
+    if(lineEl) lineEl.value = emp.line || ''; 
+
+    const shiftEl = document.getElementById('modalShift');
+    if(shiftEl) shiftEl.value = emp.default_shift_id || '';
+
+    const teamEl = document.getElementById('modalTeam');
+    if(teamEl) teamEl.value = emp.team_group || ''; 
+    
     document.getElementById('modalActive').checked = (emp.is_active == 1);
     
     if(editModal) editModal.show();
@@ -237,7 +242,8 @@ function populateDropdowns(json) {
         if (json.lines && json.lines.length > 0) {
             json.lines.forEach(line => lineHtml += `<option value="${line}">${line}</option>`);
         } else {
-            lineHtml += `<option value="TOOLBOX_POOL">TOOLBOX_POOL</option>`;
+            // Fallback options
+            lineHtml += `<option value="L1">L1</option><option value="L2">L2</option>`;
         }
         lineSelect.innerHTML = lineHtml;
     }
@@ -253,11 +259,21 @@ function populateDropdowns(json) {
     }
 }
 
-function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-bs-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-bs-theme', next);
-    localStorage.setItem('theme', next);
+// [MODIFIED] Helper Function: Show Toast (เพราะ HTML ใหม่ไม่ได้ import toast.js แยก)
+function showToast(message, color) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+        document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.className = 'toast show align-items-center text-white border-0 mb-2 shadow';
+    el.style.backgroundColor = color;
+    el.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
 }
 
 function showSpinner() { 

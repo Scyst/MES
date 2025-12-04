@@ -2,14 +2,21 @@
 // page/manpower/manpowerUI.php
 require_once("../../auth/check_auth.php");
 
+// ตรวจสอบสิทธิ์
 if (!hasRole(['admin', 'creator', 'supervisor'])) {
     header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
     exit;
 }
 
+// 1. ตั้งค่า Header Variable
 $currentUser = $_SESSION['user'];
 $userLine = $currentUser['line'] ?? ''; 
+
 $pageTitle = "Manpower Management";
+$pageIcon = "fas fa-users-cog"; // ไอคอนหัวเว็บ
+$pageHeaderTitle = "Manpower Management";
+$pageHeaderSubtitle = "ติดตามสถานะพนักงานและการเข้ากะ (All Lines)";
+$pageHelpId = ""; // ถ้ามี Modal คู่มือ ใส่ ID ตรงนี้
 ?>
 
 <!DOCTYPE html>
@@ -18,100 +25,44 @@ $pageTitle = "Manpower Management";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     
-    <link rel="stylesheet" href="../dailyLog/css/portal.css?v=<?php echo time(); ?>"> 
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* === 🔧 CSS FIXES: แก้ไขปัญหเลย์เอาต์ === */
-        
-        /* 1. บังคับให้ Body เลื่อนได้ */
-        html, body.dashboard-page { 
-            font-family: 'Sarabun', sans-serif;
-            height: auto !important; 
-            min-height: 100vh;
-            overflow-y: auto !important; 
-        }
+        /* Override Font */
+        body { font-family: 'Sarabun', sans-serif; }
 
-        /* 2. จัดการ Main Content ให้ถูกต้อง */
-        #main-content {
-            margin-left: 70px !important;
-            width: calc(100% - 70px) !important;
-            height: auto !important; /* สำคัญมาก */
-            min-height: 100vh;
-            overflow: visible !important;
-            display: block !important; /* เลิกใช้ flex เพื่อให้ scroll ปกติ */
-            padding-bottom: 50px;
-        }
-
-        .page-container {
-            height: auto !important;      /* ปล่อยความสูงอิสระ */
-            overflow: visible !important; /* เปิดให้ Scroll ได้ */
-            display: block !important;    /* เลิกใช้ Flex ที่ดึงจนตึง */
-        }
-
-        /* 3. คืนชีพปุ่ม Hamburger */
-        #sidebar-toggle-btn { display: inline-flex !important; }
-
-        /* 4. Header Style */
-        .report-header {
-            background-color: var(--bs-secondary-bg);
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--bs-border-color);
-            position: sticky; top: 0; z-index: 1020;
-        }
-
-        /* 5. Table Container (สำคัญที่สุดสำหรับการ Scroll ตาราง) */
-        .chart-box {
-            background: var(--bs-secondary-bg);
-            border: 1px solid var(--bs-border-color);
-            border-radius: 16px;
-            overflow: hidden; /* ซ่อนส่วนเกิน */
-            display: flex; flex-direction: column;
-            /* ไม่ต้อง Fix min-height ปล่อยให้ยืดตามตาราง */
-            height: auto; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-
-        /* บังคับให้ตารางมี Scrollbar ของตัวเองถ้ามันยาวเกินไป */
-        .table-responsive {
-            overflow-x: auto;
-            overflow-y: visible; /* ให้ Scroll ตามหน้าเว็บหลัก */
-        }
-
-        .cursor-pointer { cursor: pointer; }
-        
-        /* KPI Card Active State */
-        .kpi-card.active {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-            border: 2px solid; /* จะใส่สีด้วย JS */
-        }
-
-        /* Table Header Sort */
-        th.sortable { cursor: pointer; user-select: none; }
-        th.sortable:hover { background-color: var(--bs-gray-200); }
-        th.sortable .sort-icon { float: right; opacity: 0.3; }
-        th.sortable.active .sort-icon { opacity: 1; }
-
-        /* ... (ส่วน KPI และ Loading เหมือนเดิม) ... */
+        /* KPI Card Styling (เหมือนเดิมแต่ปรับให้ Clean ขึ้น) */
         .kpi-card {
             background: var(--bs-secondary-bg);
             border: 1px solid var(--bs-border-color);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 1.5rem;
             display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             position: relative; overflow: hidden; height: 100%;
+            cursor: pointer;
         }
-        .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.05); }
-        .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+        .kpi-card:hover, .kpi-card.active { 
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08) !important;
+            border-color: var(--bs-primary);
+        }
         
+        .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
         .kpi-primary::before { background-color: #0d6efd; }
         .kpi-success::before { background-color: #198754; }
         .kpi-warning::before { background-color: #ffc107; }
         .kpi-danger::before { background-color: #dc3545; }
 
+        /* Icon Wrapper ใน KPI */
+        .kpi-icon-box {
+            width: 50px; height: 50px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+        }
+
+        /* Loading Overlay */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); z-index: 9999;
@@ -122,153 +73,123 @@ $pageTitle = "Manpower Management";
 
         .spinner-custom {
             width: 3rem; height: 3rem;
-            border: 5px solid #e5e7eb; border-top-color: #0d6efd;
+            border: 4px solid var(--bs-border-color); border-top-color: var(--bs-primary);
             border-radius: 50%; animation: spin 1s linear infinite;
         }
-        .cursor-pointer { cursor: pointer; }
-        .hover-bg:hover { background-color: var(--bs-tertiary-bg) !important; }
-        .btn-xs { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-
-        /* Transition สำหรับ Icon */
-        .expand-icon {
-            transition: transform 0.3s ease;
-        }
-        /* บังคับให้แถวที่ Collapse เปิดอยู่ มีพื้นหลังเด่นขึ้น */
-        tr[aria-expanded="true"] {
-            background-color: var(--bs-primary-bg-subtle) !important;
-        }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .status-badge { min-width: 90px; }
+
+        /* Transition สำหรับ Icon Expand ในตาราง */
+        .expand-icon { transition: transform 0.3s ease; }
+        tr[aria-expanded="true"] { background-color: var(--bs-primary-bg-subtle) !important; }
     </style>
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page layout-top-header">
     
     <div id="loadingOverlay">
         <div class="spinner-custom mb-3"></div>
         <h5 class="fw-bold text-muted">กำลังโหลดข้อมูล...</h5>
     </div>
 
-    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
-            data-bs-toggle="offcanvas" data-bs-target="#globalMobileMenu">
-        <i class="fas fa-bars"></i>
-    </button>
+    <?php include('../components/php/top_header.php'); ?>
 
-    <div class="page-container">
-        <?php include_once('../components/php/nav_dropdown.php'); ?>
-        
-        <main id="main-content">
+    <main id="main-content">
+        <div class="container-fluid p-3" style="max-width: 1600px;">
             
-            <div class="report-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-warning text-dark bg-opacity-25 me-3 p-2 fs-4 rounded-3">
-                        <i class="fas fa-id-card"></i>
-                    </span>
-
-                    <div class="d-flex align-items-baseline flex-wrap">
-                        <span class="fw-bold fs-4 text-body">
-                            Employee Management
-                        </span>
-                        <span class="text-muted small ms-2 border-start ps-2" style="border-color: #dee2e6 !important;">
-                            รายชื่อพนักงานทั้งหมด
-                        </span>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    <?php if (hasRole(['admin', 'creator'])): ?>
-                    <a href="employeeListUI.php" class="btn btn-light btn-sm text-primary fw-bold border ms-2 rounded-pill px-3">
-                        Employees <i class="fas fa-id-card ms-1"></i>
-                    </a>
-                    <?php endif; ?>
-                    <span class="d-none d-md-inline text-muted small me-3">
-                        <i class="far fa-clock me-1"></i> <?php echo date('d F Y'); ?>
-                    </span>
-                    <button class="btn btn-link text-secondary p-0 me-3" id="page-theme-btn" title="Switch Theme">
-                        <i class="fas fa-adjust fa-lg"></i>
-                    </button>
-                    </div>
-            </div>
-
-            <div class="container-fluid p-4" style="max-width: 1600px;">
-                
-                <div class="card border-0 shadow-sm mb-4 bg-body" style="border-radius: 12px;">
-                    <div class="card-body py-3">
-                        <div class="row align-items-end g-3">
-                            <div class="col-md-3">
-                                <label class="form-label small text-muted fw-bold">Start Date</label>
-                                <input type="date" id="startDate" class="form-control bg-light border-0 fw-bold" value="<?php echo date('Y-m-d'); ?>">
+            <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
+                <div class="card-body py-3">
+                    <div class="row align-items-end g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted fw-bold mb-1">Start Date</label>
+                            <input type="date" id="startDate" class="form-control form-control-sm fw-bold border" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted fw-bold mb-1">End Date</label>
+                            <input type="date" id="endDate" class="form-control form-control-sm fw-bold border" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        
+                        <div class="col-md-6 d-flex gap-2 align-items-end justify-content-end flex-wrap">
+                            <div class="text-end me-3 d-none d-lg-block">
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Last Updated:</small>
+                                <small class="fw-bold text-primary" id="lastUpdateLabel">-</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label small text-muted fw-bold">End Date</label>
-                                <input type="date" id="endDate" class="form-control bg-light border-0 fw-bold" value="<?php echo date('Y-m-d'); ?>">
-                            </div>
-                            <div class="col-md-6 d-flex gap-2 align-items-end justify-content-end flex-wrap">
-                                <div class="text-end me-2 d-none d-lg-block">
-                                    <small class="text-muted d-block" style="font-size: 0.7rem;">Last Updated:</small>
-                                    <small class="fw-bold text-primary" id="lastUpdateLabel">-</small>
-                                </div>
 
-                                <?php if (hasRole(['admin', 'creator', 'supervisor'])): ?>
-                                <button class="btn btn-warning text-dark px-3 fw-bold" onclick="openShiftPlanner()">
+                            <?php if (hasRole(['admin', 'creator', 'supervisor'])): ?>
+                                <button class="btn btn-sm btn-outline-warning text-dark fw-bold" onclick="openShiftPlanner()">
                                     <i class="fas fa-exchange-alt me-2"></i>Rotation
                                 </button>
                                 
-                                <button class="btn btn-success px-4 fw-bold" onclick="syncApiData(true)">
-                                    <i class="fas fa-sync-alt me-2"></i>Sync
+                                <button class="btn btn-sm btn-success fw-bold px-3" onclick="syncApiData(true)">
+                                    <i class="fas fa-sync-alt me-2"></i>Sync Data
                                 </button>
-                                <?php endif; ?>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="row mb-4 g-3">
-                    <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-primary cursor-pointer active" id="card-total" onclick="setFilter('TOTAL')">
-                            <div>
-                                <h6 class="text-muted mb-1 text-uppercase small fw-bold">Total</h6>
-                                <h2 class="mb-0 fw-bold text-primary" id="kpi-total">0</h2>
-                            </div>
-                            <div class="p-3 bg-primary bg-opacity-10 rounded-circle text-primary"><i class="fas fa-users fa-2x"></i></div>
+            <div class="row mb-3 g-3">
+                <div class="col-6 col-lg-3">
+                    <div class="kpi-card kpi-primary active" id="card-total" onclick="setFilter('TOTAL')">
+                        <div>
+                            <h6 class="text-muted mb-1 text-uppercase small fw-bold">Total</h6>
+                            <h2 class="mb-0 fw-bold text-primary" id="kpi-total">0</h2>
                         </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-success cursor-pointer" id="card-present" onclick="setFilter('PRESENT')">
-                            <div>
-                                <h6 class="text-muted mb-1 text-uppercase small fw-bold">Present</h6>
-                                <h2 class="mb-0 fw-bold text-success" id="kpi-present">0</h2>
-                            </div>
-                            <div class="p-3 bg-success bg-opacity-10 rounded-circle text-success"><i class="fas fa-user-check fa-2x"></i></div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-danger cursor-pointer" id="card-absent" onclick="setFilter('ABSENT')">
-                            <div>
-                                <h6 class="text-muted mb-1 text-uppercase small fw-bold">Absent</h6>
-                                <h2 class="mb-0 fw-bold text-danger" id="kpi-absent">0</h2>
-                            </div>
-                            <div class="p-3 bg-danger bg-opacity-10 rounded-circle text-danger"><i class="fas fa-user-times fa-2x"></i></div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="kpi-card kpi-warning cursor-pointer" id="card-other" onclick="setFilter('OTHER')">
-                            <div>
-                                <h6 class="text-muted mb-1 text-uppercase small fw-bold">Leave/Late</h6>
-                                <h2 class="mb-0 fw-bold text-warning" id="kpi-other">0</h2>
-                            </div>
-                            <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning"><i class="fas fa-user-clock fa-2x"></i></div>
+                        <div class="kpi-icon-box bg-primary bg-opacity-10 text-primary">
+                            <i class="fas fa-users fa-lg"></i>
                         </div>
                     </div>
                 </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi-card kpi-success" id="card-present" onclick="setFilter('PRESENT')">
+                        <div>
+                            <h6 class="text-muted mb-1 text-uppercase small fw-bold">Present</h6>
+                            <h2 class="mb-0 fw-bold text-success" id="kpi-present">0</h2>
+                        </div>
+                        <div class="kpi-icon-box bg-success bg-opacity-10 text-success">
+                            <i class="fas fa-user-check fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi-card kpi-danger" id="card-absent" onclick="setFilter('ABSENT')">
+                        <div>
+                            <h6 class="text-muted mb-1 text-uppercase small fw-bold">Absent</h6>
+                            <h2 class="mb-0 fw-bold text-danger" id="kpi-absent">0</h2>
+                        </div>
+                        <div class="kpi-icon-box bg-danger bg-opacity-10 text-danger">
+                            <i class="fas fa-user-times fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi-card kpi-warning" id="card-other" onclick="setFilter('OTHER')">
+                        <div>
+                            <h6 class="text-muted mb-1 text-uppercase small fw-bold">Leave/Late</h6>
+                            <h2 class="mb-0 fw-bold text-warning" id="kpi-other">0</h2>
+                        </div>
+                        <div class="kpi-icon-box bg-warning bg-opacity-10 text-warning">
+                            <i class="fas fa-user-clock fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <div class="chart-box">
-                    <div class="table-responsive flex-grow-1">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                     <h6 class="fw-bold mb-0"><i class="fas fa-list-ul me-2"></i>Employee Status List</h6>
+                     <?php if (hasRole(['admin', 'creator'])): ?>
+                     <a href="employeeListUI.php" class="btn btn-sm btn-outline-primary fw-bold px-3 shadow-sm">
+                        <i class="fas fa-users-cog me-1"></i> Manage Employees
+                     </a>
+                     <?php endif; ?>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="min-height: 400px;">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light sticky-top" style="z-index: 5;">
                                 <tr class="text-uppercase small text-muted">
-                                    <th style="width: 50px;"></th>
-                                    <th class="py-3 ps-2">Emp ID</th>
+                                    <th style="width: 50px;"></th> <th class="py-3 ps-3">Emp ID</th>
                                     <th class="py-3">Employee Detail</th>
                                     <th class="py-3 text-center">Line</th>
                                     <th class="py-3 text-center">Team</th>
@@ -280,37 +201,31 @@ $pageTitle = "Manpower Management";
                                 </tbody>
                         </table>
                     </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center p-3 border-top bg-white rounded-bottom">
+                </div>
+                <div class="card-footer bg-white border-top py-3">
+                    <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted" id="pageInfo">Showing 0 entries</small>
                         <nav>
                             <ul class="pagination pagination-sm mb-0 justify-content-end" id="paginationControls"></ul>
                         </nav>
                     </div>
                 </div>
-
             </div>
-        </main>
-    </div>
-    
+
+        </div>
+    </main>
+
     <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php include_once('components/editLogModal.php'); ?>
     <?php include_once('components/shiftChangeModal.php'); ?>
     <?php include_once('components/editEmployeeModal.php'); ?>
+    <?php include_once('components/syncConfirmModal.php'); ?>
     
     <script>
-        // Override Spinner Functions
+        // Override Spinner Functions (เผื่อ JS เดิมเรียกใช้)
         function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
         function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
-        
-        // Theme Switcher (ใช้ ID ใหม่ page-theme-btn)
-        document.getElementById('page-theme-btn').addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-bs-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-bs-theme', next);
-            localStorage.setItem('theme', next);
-        });
     </script>
 
     <script src="script/manpower.js?v=<?php echo filemtime('script/manpower.js'); ?>"></script>

@@ -1180,7 +1180,9 @@ body.layout-top-header .sidebar {
 body.layout-top-header #main-content {
     margin-top: var(--header-height);
     height: calc(100vh - var(--header-height));
-    overflow: hidden; /* ซ่อน Scroll ใหญ่ */
+    overflow-y: auto;
+    overflow-x: hidden;
+    
     display: flex;
     flex-direction: column;
 }

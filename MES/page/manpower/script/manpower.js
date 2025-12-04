@@ -74,31 +74,26 @@ async function loadManpowerData(checkAutoSync = true) {
             
             allManpowerData = result.data || [];
 
-            // แสดงผลทันที (Render First)
+            // 1. แสดงข้อมูลเดิมให้ User เห็นก่อนทันที (User จะได้ไม่รอเก้อ)
             processData(); 
 
             // =========================================================
-            // ★ SMART AUTO SYNC Logic
+            // ★ [EDITED] เปลี่ยนจาก Auto Sync เป็น Show Modal
             // =========================================================
-            const todayStr = getLocalTodayStr(); // ใช้วันที่เครื่อง User (Local)
+            const todayStr = getLocalTodayStr();
             const isToday = (start === todayStr && end === todayStr);
-            
-            // Check 1: ข้อมูลเก่าเกินไปไหม?
-            const STALE_THRESHOLD_MINUTES = 30;
+            const STALE_THRESHOLD_MINUTES = 30; // ตั้งเวลาว่าเก่าแค่ไหนถึงเตือน (นาที)
             const isStale = checkIfDataIsStale(result.last_update, STALE_THRESHOLD_MINUTES);
-            
-            // Check 2: ข้อมูลว่างเปล่าไหม?
             const isDataEmpty = allManpowerData.length === 0;
 
-            // เงื่อนไข Sync: (ว่างเปล่า) หรือ (เป็นวันนี้และเก่า)
+            // เงื่อนไข: ถ้า (ว่างเปล่า) หรือ (เป็นวันนี้ และ ข้อมูลเก่า)
             if (checkAutoSync && (isDataEmpty || (isToday && isStale))) {
-                console.log(`Auto-sync triggered. Empty: ${isDataEmpty}, Stale: ${isStale}`);
+                console.log(`Data stale/empty. Prompting user...`);
                 
-                // เรียก Sync (Function นี้จะจัดการขยายวันเป็น "เมื่อวาน" ให้เอง)
-                await syncApiData(false); 
+                // เรียก Modal แจ้งเตือนแทนการ Sync
+                showSyncConfirmModal(result.last_update || 'ไม่เคยอัปเดต');
                 return; 
             }
-            // =========================================================
 
         } else {
             if (allManpowerData.length === 0) {
@@ -140,8 +135,28 @@ function processData() {
     updateUIState();
 }
 
-// ... (ส่วน renderTable, generateDetailRows, renderPagination, changePage ยังคงเดิมครับ Copy มาวางได้เลย หรือจะใช้ของไฟล์ก่อนหน้าก็ได้) ...
-// (เพื่อความกระชับ ผมขอละไว้ในฐานที่เข้าใจตรงกันนะครับ ถ้าต้องการให้แปะเต็มๆ บอกได้ครับ)
+let syncConfirmModal; // ตัวแปรเก็บ Instance ของ Modal
+
+function showSyncConfirmModal(lastUpdateText) {
+    const el = document.getElementById('syncConfirmModal');
+    if (!el) return;
+
+    // อัปเดตข้อความวันที่ใน Modal
+    const dateSpan = document.getElementById('modalLastUpdate');
+    if(dateSpan) dateSpan.innerText = lastUpdateText;
+
+    // สร้าง Modal Instance
+    if (!syncConfirmModal) syncConfirmModal = new bootstrap.Modal(el);
+    syncConfirmModal.show();
+}
+
+function confirmSyncAction() {
+    // ปิด Modal
+    if (syncConfirmModal) syncConfirmModal.hide();
+    
+    // สั่ง Sync จริงๆ
+    syncApiData(true); 
+}
 
 function renderTable(data) {
     const tbody = document.getElementById('manpowerTableBody');
