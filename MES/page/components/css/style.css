@@ -60,7 +60,6 @@ body {
 
 #main-content {
     flex-grow: 1;
-    width: 100%;
     margin-left: 70px;
     transition: margin-left 0.3s ease-in-out;
     display: flex;

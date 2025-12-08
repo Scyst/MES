@@ -15,7 +15,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
     </div>
     <div class="offcanvas-body p-0">
         
-        <ul class="list-group list-group-flush">
+        <ul class="list-group list-group-flush" style="margin-top: 5px;">
 
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../dailyLog/dailyLogUI.php">

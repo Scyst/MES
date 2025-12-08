@@ -3,18 +3,12 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 
+// 1. กำหนดตัวแปรสำหรับ Header
 $pageTitle = "Forklift Command Center";
-
-function getThaiDate() {
-    $thai_months = [
-        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน', 5 => 'พฤษภาคม', 6 => 'มิถุนายน',
-        7 => 'กรกฎาคม', 8 => 'สิงหาคม', 9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม'
-    ];
-    $day = date('j');
-    $month = $thai_months[(int)date('n')];
-    $year = date('Y') + 543;
-    return "$day $month $year";
-}
+$pageIcon = "fas fa-dolly-flatbed"; 
+$pageHeaderTitle = "Forklift Command Center";
+$pageHeaderSubtitle = "ระบบจองและติดตามสถานะรถโฟร์คลิฟ";
+$pageHelpId = "helpModal"; // ID ของ Modal คู่มือ
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -27,39 +21,13 @@ function getThaiDate() {
     <script>
         const CURRENT_USER_ID = <?php echo $_SESSION['user']['id']; ?>;
         const CURRENT_USER_NAME = "<?php echo $_SESSION['user']['fullname'] ?? $_SESSION['user']['username']; ?>";
-        // เช็ค Role เพื่อแสดงปุ่ม Manage
         const IS_ADMIN = <?php echo in_array($_SESSION['user']['role'], ['admin', 'supervisor', 'creator']) ? 'true' : 'false'; ?>;
     </script>
 </head>
+
 <body class="dashboard-page layout-top-header">
 
-    <header class="portal-top-header">
-        
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-link text-secondary d-xl-none p-0 me-2" id="sidebar-toggle-mobile-top">
-                <i class="fas fa-bars fa-lg"></i>
-            </button>
-
-            <div class="header-logo-box bg-warning bg-opacity-10 text-warning">
-                <i class="fas fa-dolly-flatbed fa-lg"></i>
-            </div>
-            
-            <div class="d-flex flex-column justify-content-center">
-                <h5 class="fw-bold mb-0 text-body" style="line-height: 1.2;">Forklift Command Center</h5>
-                <small class="text-muted" style="font-size: 0.75rem;">ระบบจองและติดตามสถานะรถโฟร์คลิฟ</small>
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-link text-secondary p-0 me-3" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="คู่มือการใช้งาน">
-                <i class="far fa-question-circle fa-lg"></i>
-            </button>
-            <span class="d-none d-lg-inline text-muted small me-3">
-                <i class="far fa-clock me-1"></i> <?php echo getThaiDate(); ?>
-            </span>
-            <?php include_once('../components/php/nav_dropdown.php'); ?>
-        </div>
-    </header>
+    <?php include('../components/php/top_header.php'); ?>
 
     <main id="main-content">
         <div class="container-fluid p-3 h-100 d-flex flex-column" style="max-width: 1600px;">
@@ -72,7 +40,6 @@ function getThaiDate() {
                         <span class="badge bg-secondary me-1 ms-2">&nbsp;</span> Completed
                     </div>
                 </div>
-                
                 <div class="card-body py-2">
                     <div id="timeline-chart" class="timeline-container"></div>
                 </div>
@@ -88,7 +55,6 @@ function getThaiDate() {
                     <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModal()">
                         <i class="fas fa-history me-1"></i> ประวัติ
                     </button>
-                    
                     <?php if (in_array($_SESSION['user']['role'], ['admin', 'supervisor', 'creator'])): ?>
                     <button class="btn btn-sm btn-outline-secondary" onclick="openManageModal()">
                         <i class="fas fa-cog me-1"></i> จัดการ
@@ -111,26 +77,11 @@ function getThaiDate() {
 
     <?php include 'components/forkliftModals.php'; ?>
     <?php include 'components/helpModal.php'; ?>
+    
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script src="script/forklift.js?v=<?php echo time(); ?>"></script>
     
-    <script>
-        // [FIX] ลบ JS Listener ของ Theme Switcher เดิมออก
-        // เพราะเราลบปุ่ม id="theme-btn" ไปแล้ว ถ้าไม่ลบ JS มันจะ Error ใน Console ว่า null
-
-        // Mobile Toggle Linkage
-        const mobileBtn = document.getElementById('sidebar-toggle-mobile-top');
-        if(mobileBtn) {
-            mobileBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const menuElement = document.getElementById('globalMobileMenu');
-                if (menuElement) {
-                    const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(menuElement);
-                    bsOffcanvas.toggle();
-                }
-            });
-        }
-    </script>
-</body>
+    </body>
 </html>

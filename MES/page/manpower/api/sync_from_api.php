@@ -1,8 +1,10 @@
 <?php
 // page/manpower/api/sync_from_api.php
-set_time_limit(600); 
-header('Content-Type: application/json');
 
+ignore_user_abort(true); 
+set_time_limit(600); 
+
+header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
@@ -12,17 +14,18 @@ if (!hasRole(['admin', 'creator', 'supervisor'])) {
     exit;
 }
 
+session_write_close(); 
+
 $startDate = $_GET['startDate'] ?? date('Y-m-d');
 $endDate   = $_GET['endDate']   ?? date('Y-m-d');
 
-// ขยายเวลาดึง API เพื่อครอบคลุมกะดึก
 $apiStartDate = date('Y-m-d', strtotime('-1 day', strtotime($startDate)));
 $apiEndDate   = date('Y-m-d', strtotime('+1 day', strtotime($endDate)));
 
 $apiUrl = "https://oem.sncformer.com/oem-calendar/oem-web-link/api/api.php?router=/man-power-painting&sdate={$apiStartDate}&edate={$apiEndDate}";
 
 try {
-    // 1. Fetch Data
+    // ... (ส่วน Fetch Data เหมือนเดิม) ...
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $apiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -34,37 +37,34 @@ try {
     $rawList = json_decode($apiResponse, true);
     if (!is_array($rawList)) $rawList = [];
 
-    $stats = ['processed' => 0, 'present' => 0, 'absent' => 0, 'late' => 0, 'cleaned' => 0];
+    $stats = ['processed' => 0, 'present' => 0, 'absent' => 0, 'late' => 0, 'cleaned' => 0, 'new_added' => 0];
     $targetDepts = ['Toolbox', 'B9', 'B10', 'B11'];
 
     $pdo->beginTransaction();
 
-    // ---------------------------------------------------------------
-    // STEP 0: เตรียมข้อมูลพื้นฐาน
-    // ---------------------------------------------------------------
+    // ... (STEP 0, STEP 1, STEP 1.5 เหมือนเดิมทุกประการ Copy มาได้เลย) ...
+    // (เพื่อประหยัดพื้นที่ ผมขอข้าม Code ส่วน STEP 0 - 1.5 ที่เหมือนเดิมนะครับ)
+    // ...
+    // ...
     
-    // โหลด Shift Config
+    // ---------------------------------------------------------------
+    // STEP 0: (ใส่โค้ดเดิม)
+    // ---------------------------------------------------------------
     $shiftConfig = [];
     $stmtShifts = $pdo->query("SELECT shift_id, start_time FROM ".MANPOWER_SHIFTS_TABLE);
     while ($row = $stmtShifts->fetch(PDO::FETCH_ASSOC)) {
         $shiftConfig[$row['shift_id']] = $row['start_time']; 
     }
-
-    // Default Shift (08:00)
     $defaultShiftId = 1; 
     foreach ($shiftConfig as $id => $time) {
         if (strpos($time, '08:') === 0) { $defaultShiftId = $id; break; }
     }
-
-    // Fix Null Shifts
     $pdo->exec("UPDATE ".MANPOWER_EMPLOYEES_TABLE." SET default_shift_id = $defaultShiftId WHERE default_shift_id IS NULL AND is_active = 1");
 
-
     // ---------------------------------------------------------------
-    // STEP 1: เตรียมข้อมูล API (Grouping)
+    // STEP 1: (ใส่โค้ดเดิม)
     // ---------------------------------------------------------------
     $groupedData = []; 
-    
     foreach ($rawList as $row) {
         $dept = $row['DEPARTMENT'] ?? '';
         $isMatch = false;
@@ -77,7 +77,6 @@ try {
         if (!isset($groupedData[$empId])) {
             $groupedData[$empId] = ['info' => $row, 'timestamps' => []];
         }
-        
         $ts = strtotime($row['TIMEINOUT']);
         if ($ts && date('Y', $ts) > 2020) { 
             $groupedData[$empId]['timestamps'][] = $ts;
@@ -85,7 +84,37 @@ try {
     }
 
     // ---------------------------------------------------------------
-    // STEP 2: วนลูปตามวัน (Day Loop Logic)
+    // STEP 1.5: (ใส่โค้ดเดิม)
+    // ---------------------------------------------------------------
+    $existingEmpIds = [];
+    $stmtCheckIds = $pdo->query("SELECT emp_id FROM ".MANPOWER_EMPLOYEES_TABLE);
+    while ($row = $stmtCheckIds->fetch(PDO::FETCH_COLUMN)) {
+        $existingEmpIds[] = strval($row); 
+    }
+    $stmtAddNewEmp = $pdo->prepare("INSERT INTO ".MANPOWER_EMPLOYEES_TABLE." (emp_id, name_th, position, department_api, is_active, line, default_shift_id, last_sync_at) VALUES (?, ?, ?, ?, 1, 'TOOLBOX_POOL', ?, GETDATE())");
+    $stmtInsUserNew = $pdo->prepare("INSERT INTO ".USERS_TABLE." (username, password, role, line, emp_id, created_at) VALUES (?, ?, ?, ?, ?, GETDATE())");
+
+    foreach ($groupedData as $apiEmpId => $data) {
+        if (!in_array(strval($apiEmpId), $existingEmpIds)) {
+            $info = $data['info'];
+            $name = $info['NAME'] ?? '-';
+            $pos  = $info['POSITION'] ?? '-';
+            $dept = $info['DEPARTMENT'] ?? '-';
+            $stmtAddNewEmp->execute([$apiEmpId, $name, $pos, $dept, $defaultShiftId]);
+            $chkUser = $pdo->prepare("SELECT id FROM ".USERS_TABLE." WHERE emp_id = ?");
+            $chkUser->execute([$apiEmpId]);
+            if (!$chkUser->fetch()) {
+                $rawPass = (strlen($apiEmpId) >= 4) ? substr($apiEmpId, -4) : $apiEmpId;
+                $role = (stripos($pos, 'Manager') !== false || stripos($pos, 'หัวหน้า') !== false) ? 'supervisor' : 'operator';
+                $stmtInsUserNew->execute([$apiEmpId, password_hash($rawPass, PASSWORD_DEFAULT), $role, 'TOOLBOX_POOL', $apiEmpId]);
+            }
+            $stats['new_added']++;
+        }
+    }
+
+
+    // ---------------------------------------------------------------
+    // STEP 2: วนลูปตามวัน (Day Loop Logic) - [แก้ไขใหม่ตรงนี้!!]
     // ---------------------------------------------------------------
     
     // โหลดพนักงานทั้งหมด
@@ -96,47 +125,38 @@ try {
         $allEmployees[$row['emp_id']] = $row;
     }
 
-    // SQL Statements
+    // Prepare SQL
     $stmtUpdateEmpInfo = $pdo->prepare("UPDATE ".MANPOWER_EMPLOYEES_TABLE." SET name_th=?, position=?, department_api=?, last_sync_at=GETDATE() WHERE emp_id=?");
-    $stmtCheckUser = $pdo->prepare("SELECT id FROM ".USERS_TABLE." WHERE emp_id = ?");
-    $stmtInsUser = $pdo->prepare("INSERT INTO ".USERS_TABLE." (username, password, role, line, emp_id) VALUES (?, ?, ?, ?, ?)");
-
-    // SQL สำหรับจัดการ Log (ลบก่อน แล้วค่อยเพิ่ม)
-    $stmtDeleteOldLog = $pdo->prepare("DELETE FROM ".MANPOWER_DAILY_LOGS_TABLE." WHERE log_date = ? AND is_verified = 0"); // ★ พระเอกของเรา
+    
+    // ★ [FIX] ไม่ลบ (DELETE) แล้ว แต่ใช้การเช็คก่อน Insert
     $stmtCheckLog = $pdo->prepare("SELECT log_id, is_verified FROM ".MANPOWER_DAILY_LOGS_TABLE." WHERE emp_id = ? AND log_date = ?");
-    $stmtInsertLog = $pdo->prepare("INSERT INTO ".MANPOWER_DAILY_LOGS_TABLE." (log_date, emp_id, scan_in_time, scan_out_time, status) VALUES (?, ?, ?, ?, ?)");
+    
+    // ★ [FIX] เตรียมคำสั่ง UPDATE (กรณีมีข้อมูลเดิมอยู่แล้ว)
+    $stmtUpdateLog = $pdo->prepare("UPDATE ".MANPOWER_DAILY_LOGS_TABLE." SET scan_in_time = ?, scan_out_time = ?, status = ?, updated_at = GETDATE() WHERE log_id = ? AND is_verified = 0");
+    
+    // เตรียมคำสั่ง INSERT (กรณีเป็นข้อมูลใหม่)
+    $stmtInsertLog = $pdo->prepare("INSERT INTO ".MANPOWER_DAILY_LOGS_TABLE." (log_date, emp_id, scan_in_time, scan_out_time, status, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE())");
 
 
-    // เริ่มวนลูปวันที่
     $currentDate = strtotime($startDate);
     $endTs = strtotime($endDate);
 
     while ($currentDate <= $endTs) {
         $processingDate = date('Y-m-d', $currentDate);
 
-        // 🔥 [AUTO CLEANUP] ลบข้อมูลเก่าของวันนี้ทิ้งก่อน (เฉพาะที่ยังไม่ Verify)
-        $stmtDeleteOldLog->execute([$processingDate]);
-        $stats['cleaned'] += $stmtDeleteOldLog->rowCount();
+        // ★ [FIX] ตัดบรรทัด $stmtDeleteOldLog ออกไปเลยครับ!
+        // ไม่มีการลบข้อมูลยกแผงอีกต่อไป
         
         foreach ($allEmployees as $empId => $empDB) {
             
-            // 2.1 อัปเดตข้อมูลพื้นฐาน (ถ้ามีใน API)
             if (isset($groupedData[$empId])) {
                 $apiInfo = $groupedData[$empId]['info'];
                 $stmtUpdateEmpInfo->execute([$apiInfo['NAME'], $apiInfo['POSITION'], $apiInfo['DEPARTMENT'], $empId]);
-                
-                $stmtCheckUser->execute([$empId]);
-                if (!$stmtCheckUser->fetch()) {
-                    $rawPass = (strlen($empId) >= 4) ? substr($empId, -4) : $empId;
-                    $role = (stripos($apiInfo['POSITION'], 'Manager') !== false || stripos($apiInfo['POSITION'], 'หัวหน้า') !== false) ? 'supervisor' : 'operator';
-                    $stmtInsUser->execute([$empId, password_hash($rawPass, PASSWORD_DEFAULT), $role, 'TOOLBOX_POOL', $empId]);
-                }
             }
 
-            // 2.2 กำหนด Time Window
+            // คำนวณกะและเวลาเข้างาน (Logic เดิม)
             $shiftId = $empDB['default_shift_id'] ?? $defaultShiftId;
             $shiftStartTimeStr = $shiftConfig[$shiftId] ?? '08:00:00';
-            
             $startHour = (int)substr($shiftStartTimeStr, 0, 2);
             $isNightShift = ($startHour >= 15); 
 
@@ -148,7 +168,6 @@ try {
                 $windowEnd   = strtotime("$processingDate 02:00:00 +1 day");
             }
 
-            // 2.3 กรองสแกน
             $scansInWindow = [];
             if (isset($groupedData[$empId])) {
                 foreach ($groupedData[$empId]['timestamps'] as $ts) {
@@ -158,7 +177,6 @@ try {
                 }
             }
 
-            // 2.4 คำนวณ Status
             $status = 'ABSENT';
             $inTime = null;
             $outTime = null;
@@ -167,7 +185,6 @@ try {
             if (!empty($scansInWindow)) {
                 $inTs = min($scansInWindow);
                 $outTs = max($scansInWindow);
-
                 $expectedStartTs = strtotime("$processingDate $shiftStartTimeStr");
 
                 if ($inTs > ($expectedStartTs + ($lateBufferMinutes * 60))) {
@@ -177,42 +194,40 @@ try {
                     $status = 'PRESENT';
                     $stats['present']++;
                 }
-
                 $inTime = date('Y-m-d H:i:s', $inTs);
                 $outTime = ($inTs == $outTs) ? null : date('Y-m-d H:i:s', $outTs);
                 if ($outTs < 946684800) $outTime = null;
-
             } else {
-                // ขาดงาน (เช็คว่าถึงเวลาตัดสินหรือยัง)
-                if (time() < $windowEnd) continue; // ยังไม่จบกะ ข้ามไปก่อน
+                if (time() < $windowEnd) continue; 
                 $stats['absent']++;
             }
 
-            // 2.5 บันทึก (Insert อย่างเดียว เพราะเราลบของเก่าไปแล้ว)
-            // ยกเว้นกรณีที่มี Verified Record ค้างอยู่ (ลบไม่ออก) เราต้องข้าม
+            // ★ [FIX] Logic การบันทึกแบบ Upsert (Update or Insert)
             $stmtCheckLog->execute([$empId, $processingDate]);
             $existing = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
 
-            if (!$existing) {
-                $stmtInsertLog->execute([$processingDate, $empId, $inTime, $outTime, $status]);
-                $stats['processed']++;
+            if ($existing) {
+                // มีข้อมูลอยู่แล้ว -> อัปเดตทับ (ถ้ายังไม่ Verify)
+                if ($existing['is_verified'] == 0) {
+                    $stmtUpdateLog->execute([$inTime, $outTime, $status, $existing['log_id']]);
+                }
             } else {
-                // ถ้าเข้ามาตรงนี้แสดงว่าเป็น is_verified = 1 (เพราะ = 0 โดนลบไปแล้ว)
-                // เราจะไม่ยุ่งกับข้อมูลที่ Verify แล้ว
+                // ยังไม่มีข้อมูล -> เพิ่มใหม่
+                $stmtInsertLog->execute([$processingDate, $empId, $inTime, $outTime, $status]);
             }
-
-        } // End Employee
+            
+            $stats['processed']++;
+        } 
 
         $currentDate = strtotime('+1 day', $currentDate);
+    } 
 
-    } // End Date
-
-    // 3. Cleanup Users
+    // Cleanup
     $stmtDeactivate = $pdo->prepare("UPDATE ".MANPOWER_EMPLOYEES_TABLE." SET is_active = 0 WHERE last_sync_at < ? AND is_active = 1");
     $stmtDeactivate->execute([date('Y-m-d H:i:s', strtotime('-30 days'))]);
 
     $pdo->commit();
-    echo json_encode(['success' => true, 'message' => "Sync & Auto-Clean Complete.", 'stats' => $stats]);
+    echo json_encode(['success' => true, 'message' => "Sync Completed.", 'stats' => $stats]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();

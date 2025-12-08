@@ -11,30 +11,33 @@ if (!hasRole(['admin', 'creator', 'supervisor'])) {
     exit;
 }
 
-// ชื่อตาราง Mapping (ใช้ตัวแปรจาก Config ถ้ามี หรือกำหนดตรงนี้)
+session_write_close(); 
+
+// ชื่อตาราง Mapping
 $mappingTable = defined('MANPOWER_DEPARTMENT_MAPPING_TABLE') ? MANPOWER_DEPARTMENT_MAPPING_TABLE : (IS_DEVELOPMENT ? 'MANPOWER_DEPARTMENT_MAPPING_TEST' : 'MANPOWER_DEPARTMENT_MAPPING');
 
 $action = $_REQUEST['action'] ?? 'read';
 
 try {
     if ($action === 'read') {
-        // --- 1. ดึงรายชื่อพนักงาน (เพิ่ม E.team_group) ---
+        // --- 1. ดึงรายชื่อพนักงาน ---
+        // ★ [FIX] เพิ่ม WITH (NOLOCK) ให้สามารถอ่านข้อมูลได้แม้ Sync กำลังทำงาน
         $sql = "SELECT 
                     E.id, E.emp_id, E.name_th, E.position, E.line, E.department_api, E.is_active,
-                    E.default_shift_id, E.team_group, -- [NEW] เพิ่ม team_group
+                    E.default_shift_id, E.team_group,
                     S.shift_name
-                FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
+                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S WITH (NOLOCK) ON E.default_shift_id = S.shift_id
                 ORDER BY 
                     CASE WHEN E.line LIKE '%POOL%' THEN 0 ELSE 1 END, 
-                    E.line ASC, E.team_group ASC, E.emp_id ASC"; // เรียงตามทีมด้วย
+                    E.line ASC, E.team_group ASC, E.emp_id ASC";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // --- 2. ดึงข้อมูลกะ ---
-        $stmtShift = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WHERE is_active = 1");
+        $stmtShift = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WITH (NOLOCK) WHERE is_active = 1");
         $shifts = $stmtShift->fetchAll(PDO::FETCH_ASSOC);
 
         // --- 3. ดึงรายชื่อ Line ---

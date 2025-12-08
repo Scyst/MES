@@ -30,15 +30,12 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold text-danger">รูปก่อนซ่อม (Before)</label>
-                            <input type="file" name="photo_before" class="form-control" accept="image/*">
-                            <div class="form-text">ควรถ่ายให้เห็นจุดที่เสียหาย</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold text-success">รูปหลังซ่อม (After)</label>
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold text-success">
+                                <i class="fas fa-camera me-1"></i>หลังซ่อม (After)
+                            </label>
                             <input type="file" name="photo_after" class="form-control" accept="image/*" required>
-                            <div class="form-text">ถ่ายให้เห็นการแก้ไขที่เสร็จสมบูรณ์</div>
+                            <div class="form-text">ถ่ายให้เห็นผลลัพธ์การซ่อม</div>
                         </div>
                     </div>
                 </form>
