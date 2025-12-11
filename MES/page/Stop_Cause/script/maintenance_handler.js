@@ -40,10 +40,10 @@ async function fetchMaintenanceData() {
                 let rowClass = 'cursor-pointer hover-bg'; // เพิ่ม class ให้รู้ว่ากดได้
                 
                 if(row.status === 'Pending') statusBadge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">Pending</span>';
-                else if(row.status === 'In Progress') statusBadge = '<span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2">Processing</span>';
+                else if(row.status === 'In Progress') statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2">Processing</span>';
                 else statusBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success px-2">Completed</span>';
 
-                let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-muted');
+                let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-body');
                 const reqName = row.requester_name || row.request_by;
 
                 const tr = document.createElement('tr');
@@ -59,16 +59,16 @@ async function fetchMaintenanceData() {
 
                 // [NEW] ลบคอลัมน์ Action ออกแล้ว
                 tr.innerHTML = `
-                    <td class="ps-3">${statusBadge}</td>
-                    <td class="small text-nowrap">${new Date(row.request_date).toLocaleString('th-TH')}</td>
-                    <td>
-                        <div class="fw-bold text-dark">${row.line}</div>
+                    <td class="ps-3 text-center">${statusBadge}</td>
+                    <td class="small text-nowrap text-center">${new Date(row.request_date).toLocaleString('th-TH')}</td>
+                    <td class="text-center">
+                        <div class="fw-bold text-body">${row.line}</div>
                         <small class="text-muted">${row.machine}</small>
                     </td>
-                    <td><span class="text-break">${row.issue_description}</span></td>
-                    <td class="${priorityColor} small">${row.priority}</td>
-                    <td class="small text-secondary">${reqName}</td>
-                    <td class="small text-muted note-truncate" title="${row.technician_note || ''}">${row.technician_note || '-'}</td>
+                    <td class="${priorityColor} small text-center">${row.priority}</td>
+                    <td class="small text-body text-center">${reqName}</td>
+                    <td class="text-center"><span class="text-break small">${row.issue_description}</span></td>
+                    <td class="small text-body text-center note-truncate" title="${row.technician_note || ''}">${row.technician_note || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -155,7 +155,7 @@ function viewMaintenanceDetails(id) {
     const priorityEl = document.getElementById('view_priority_text');
     if (priorityEl) {
         priorityEl.textContent = data.priority;
-        priorityEl.className = data.priority === 'Critical' ? 'text-danger' : ''; 
+        priorityEl.className = data.priority === 'Critical' ? 'text-danger fw-bold' : ''; 
     }
 
     // =================================================================

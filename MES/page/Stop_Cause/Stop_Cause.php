@@ -164,13 +164,13 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="bg-light">
                                         <tr class="text-muted small text-uppercase">
-                                            <th class="ps-3" style="width: 10%;">Status</th>
-                                            <th style="width: 15%;">Date/Time</th>
-                                            <th style="width: 20%;">Line / Machine</th>
-                                            <th style="width: 20%;">Issue</th>
-                                            <th style="width: 8%;">Priority</th>
-                                            <th style="width: 10%;">Requester</th>
-                                            <th>Tech Note</th> 
+                                            <th class="ps-3 text-center" style="width: 10%;">Status</th>
+                                            <th class="text-center" style="width: 10%;">Date/Time</th>
+                                            <th class="text-center" style="width: 10%;">Line / Machine</th>
+                                            <th class="text-center" style="width: 10%;">Priority</th>
+                                            <th class="text-center" style="width: 10%;">Requester</th>
+                                            <th class="text-center" style="width: 25%;">Issue</th>
+                                            <th class="text-center" style="width: 25%;">Tech Note</th> 
                                         </tr>
                                     </thead>
                                     <tbody id="maintenanceTableBody" class="border-top-0"></tbody>
