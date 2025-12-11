@@ -5,7 +5,9 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
 if (!isset($_SESSION['user'])) {
-    http_response_code(401); echo json_encode(['success'=>false]); exit;
+    http_response_code(401); 
+    echo json_encode(['success'=>false, 'message'=>'Unauthorized']); 
+    exit;
 }
 
 $action = $_REQUEST['action'] ?? 'read';
@@ -49,7 +51,7 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // 2. IMPORT (แก้ไขให้ตรงกับตาราง 18 คอลัมน์)
+    // 2. IMPORT (Full Logic)
     // ------------------------------------------------------------------
     if ($action === 'import') {
         if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
@@ -71,7 +73,7 @@ try {
         $skippedCount = 0;
         $errorLogs = [];
 
-        // SQL MERGE (ตัด Chinese Name และ Original Week ออก)
+        // SQL MERGE
         $sql = "MERGE INTO $table AS T 
                 USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
                 AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem)
@@ -118,10 +120,10 @@ try {
 
                 // Status Logic
                 $rawPrd = $row[13] ?? '';
-                $prdStatus = (stripos($rawPrd, 'Done') !== false || stripos($rawPrd, 'OK') !== false) ? 1 : 0; // เก็บเป็น 0/1
+                $prdStatus = (stripos($rawPrd, 'Done') !== false || stripos($rawPrd, 'OK') !== false) ? 1 : 0;
                 
                 $rawLoad = $row[14] ?? '';
-                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 1 : 0; // เก็บเป็น 0/1
+                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 1 : 0;
                 
                 $qty = intval(str_replace(',', '', $row[6] ?? '0'));
 
@@ -130,29 +132,29 @@ try {
                 $ticket = '';
                 if (preg_match('/INSP-\d+/', $rawInsp, $m)) { $ticket = $m[0]; }
                 
-                $inspDate = $fnDate($rawInsp); // พยายามแกะวันที่จากช่อง Insp (ถ้ามี)
+                $inspDate = $fnDate($rawInsp);
                 $inspStatus = '';
                 if (stripos($rawInsp, 'OK') !== false || stripos($rawInsp, 'Done') !== false) $inspStatus = 'Pass';
                 
-                // Execute SQL (Mapping 17 Parameters)
+                // Execute SQL
                 $stmt->execute([
                     $oDate,                 // Order Date
-                    $row[2] ?? '',          // Description (ข้ามจีนช่อง 1)
+                    $row[2] ?? '',          // Description
                     $row[3] ?? '',          // Color
                     $sku,                   // SKU
                     $po,                    // PO
                     $qty,                   // QTY
                     $row[7] ?? '',          // DC
-                    $row[10] ?? '',         // Loading Wk (Updated) -> ข้าม 8,9
-                    $row[11] ?? '',         // Ship Wk (Updated)
-                    $fnDate($rawPrd),       // Prod Date (แกะจาก text)
-                    $prdStatus,             // Prod Status (0/1)
+                    $row[10] ?? '',         // Loading Wk
+                    $row[11] ?? '',         // Ship Wk
+                    $fnDate($rawPrd),       // Prod Date
+                    $prdStatus,             // Prod Status
                     $fnDate($rawLoad),      // Load Date
-                    $loadStatus,            // Load Status (0/1)
+                    $loadStatus,            // Load Status
                     $ticket,                // Ticket
                     $inspDate,              // Insp Date
                     $inspStatus,            // Insp Status
-                    $row[15] ?? ''          // Remark (RM Status)
+                    $row[15] ?? ''          // Remark
                 ]);
                 $count++;
             } catch (Exception $ex) {
@@ -172,25 +174,35 @@ try {
         exit;
     }
 
-    // 3. UPDATE CHECKBOX (เหมือนเดิม)
+    // ------------------------------------------------------------------
+    // 3. UPDATE CHECKBOX (ปิด Autofill วันที่ตามข้อ 3)
+    // ------------------------------------------------------------------
     if ($action === 'update_check') {
         $in = json_decode(file_get_contents('php://input'), true);
         $field = $in['field']; 
         $id = $in['id'];
-        $val = $in['checked'] ? 1 : 0;
         
         $col = ''; $dateCol = null;
         if ($field === 'prod') { $col='is_production_done'; $dateCol='production_date'; }
         elseif ($field === 'load') { $col='is_loading_done'; $dateCol='loading_date'; }
         elseif ($field === 'insp') { 
+            $in['checked'] = $in['checked'] ? true : false;
             $val = $in['checked'] ? 'Pass' : 'Wait'; 
             $col='inspection_status'; $dateCol='inspection_date'; 
         }
         elseif ($field === 'confirm') { $col='is_confirmed'; }
 
+        if ($field !== 'insp') {
+            $val = $in['checked'] ? 1 : 0;
+        }
+
         if ($col) {
             $sql = "UPDATE $table SET $col = ?";
-            if ($dateCol) $sql .= ", $dateCol = GETDATE()";
+            
+            // --- [CHANGE] ปิดการ Auto Fill วันที่ (ตาม Requirement ข้อ 3) ---
+            // if ($dateCol) $sql .= ", $dateCol = GETDATE()"; 
+            // -----------------------------------------------------------
+            
             $sql .= ", updated_at = GETDATE() WHERE id = ?";
             $pdo->prepare($sql)->execute([$val, $id]);
             echo json_encode(['success'=>true]);
@@ -198,7 +210,9 @@ try {
         exit;
     }
 
-    // 4. UPDATE CELL (เหมือนเดิม)
+    // ------------------------------------------------------------------
+    // 4. UPDATE CELL
+    // ------------------------------------------------------------------
     if ($action === 'update_cell') {
         $in = json_decode(file_get_contents('php://input'), true);
         $id = $in['id']; $field = $in['field']; $value = $in['value'];
@@ -214,7 +228,9 @@ try {
         exit;
     }
 
-    // 5. CREATE SINGLE (เพิ่มทีละรายการ)
+    // ------------------------------------------------------------------
+    // 5. CREATE SINGLE
+    // ------------------------------------------------------------------
     if ($action === 'create_single') {
         $in = json_decode(file_get_contents('php://input'), true);
         

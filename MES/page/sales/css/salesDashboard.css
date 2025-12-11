@@ -1,0 +1,105 @@
+/* page/sales/css/salesDashboard.css */
+
+/* --- Sticky Header Section --- */
+.dashboard-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: var(--bs-body-bg); /* กลืนไปกับพื้นหลัง */
+    padding: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+/* --- Table Styles --- */
+.table-responsive-custom {
+    height: calc(100vh - 280px); /* คำนวณความสูงให้พอดีจอ (หัก Header + KPIs ออก) */
+    overflow: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bs-secondary-bg);
+}
+
+/* Table Header Sticky */
+thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+/* Sticky Column (PO Number) */
+.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    background-color: #fff !important;
+    border-right: 2px solid #dee2e6;
+}
+thead.sticky-top th.sticky-col {
+    z-index: 40; /* อยู่บนสุด */
+}
+
+/* Sorting Icons */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+th.sortable:hover {
+    background-color: #e9ecef !important;
+}
+th.sortable.active-sort .sort-icon {
+    color: var(--bs-primary);
+}
+th.sortable .sort-icon {
+    margin-left: 5px;
+    font-size: 0.8em;
+    color: #999;
+}
+
+/* --- KPI Cards --- */
+.kpi-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    height: 100%;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+.kpi-card.active {
+    border: 2px solid #0d6efd;
+    background-color: #f0f8ff;
+}
+
+/* --- Utilities / Status --- */
+tr.row-confirmed td, 
+tr.row-confirmed th {
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+}
+
+td.editable:hover {
+    background-color: #fff3cd !important;
+    cursor: text;
+}
+
+td.editable input {
+    width: 100%;
+    min-width: 0;
+}
+
+.long-text-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 5 Columns Grid for KPI */
+@media (min-width: 992px) {
+    .col-lg-20-percent {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+}
