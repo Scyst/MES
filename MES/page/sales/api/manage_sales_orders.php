@@ -21,7 +21,6 @@ try {
     if ($action === 'read') {
         $filter = $_GET['status'] ?? 'ALL';
         
-        // Join เพื่อดึงราคา (Price)
         $sql = "SELECT s.*, COALESCE(i.Price_USD, i.StandardPrice, 0) as price 
                 FROM $table s 
                 LEFT JOIN $itemsTable i ON s.sku = i.sku 
@@ -37,7 +36,6 @@ try {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // KPI Summary
         $sumSql = "SELECT COUNT(*) as total,
                    SUM(CASE WHEN is_production_done = 0 THEN 1 ELSE 0 END) as wait_prod,
                    SUM(CASE WHEN is_production_done = 1 THEN 1 ELSE 0 END) as prod_done,
@@ -51,17 +49,18 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // 2. IMPORT (Full Logic)
+    // 2. IMPORT (Universal Logic: Supports Client File & System Export)
     // ------------------------------------------------------------------
     if ($action === 'import') {
         if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
         
         $file = $_FILES['file']['tmp_name'];
         
-        // Auto-Detect Delimiter
+        // Auto-Detect Delimiter & Clean BOM
         $handle = fopen($file, "r");
         $firstLine = fgets($handle);
         fclose($handle);
+        $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine); 
         $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
 
         $csv = new SplFileObject($file);
@@ -72,94 +71,154 @@ try {
         $count = 0;
         $skippedCount = 0;
         $errorLogs = [];
+        
+        // Header Mapping Logic
+        $csv->rewind();
+        $headers = $csv->current(); 
+        
+        $headerMap = [];
+        if ($headers) {
+            foreach ($headers as $index => $colName) {
+                $cleanName = strtolower(trim(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $colName))); 
+                $headerMap[$cleanName] = $index;
+            }
+        }
 
-        // SQL MERGE
+        $getCol = function($row, $names) use ($headerMap) {
+            foreach ($names as $name) {
+                $n = strtolower($name);
+                if (isset($headerMap[$n]) && isset($row[$headerMap[$n]])) {
+                    return trim($row[$headerMap[$n]]);
+                }
+            }
+            return '';
+        };
+
+        // SQL MERGE (Upsert) - เพิ่มการอัปเดต is_confirmed
         $sql = "MERGE INTO $table AS T 
-                USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
-                AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem)
+                USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
+                AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf)
                 ON T.po_number = S.po AND T.sku = S.sku
                 WHEN MATCHED THEN UPDATE SET 
                     description=S.descr, color=S.color, quantity=S.qty, dc_location=S.dc,
                     loading_week=S.lweek, shipping_week=S.sweek,
                     production_date=S.pdate, is_production_done=S.pdone,
                     loading_date=S.ldate, is_loading_done=S.ldone,
-                    ticket_number=S.ticket, inspection_date=S.idate, inspection_status=S.istat, remark=S.rem,
+                    ticket_number=S.ticket, inspection_date=S.idate, inspection_status=S.istat, 
+                    remark=S.rem, is_confirmed=S.iconf,
                     updated_at=GETDATE()
                 WHEN NOT MATCHED THEN INSERT 
                     (order_date, description, color, sku, po_number, quantity, dc_location, 
                      loading_week, shipping_week, 
                      production_date, is_production_done, 
                      loading_date, is_loading_done, 
-                     ticket_number, inspection_date, inspection_status, remark)
-                VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem);";
+                     ticket_number, inspection_date, inspection_status, remark, is_confirmed)
+                VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf);";
         
         $stmt = $pdo->prepare($sql);
 
-        foreach ($csv as $index => $row) {
-            if ($index === 0) continue; 
-            if (count($row) < 5) continue;
+        $csv->next(); 
+        
+        while (!$csv->eof()) {
+            $row = $csv->current();
+            $csv->next();
+            if (empty($row) || count($row) < 2) continue;
 
-            $po = trim($row[5] ?? '');
-            $sku = trim($row[4] ?? '');
-
+            $po  = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
+            $sku = $getCol($row, ['sku', 'item code', 'material']);
+            
             if (empty($po)) {
                 $skippedCount++;
-                $errorLogs[] = "Line " . ($index+1) . ": Missing PO";
-                continue;
+                continue; 
             }
 
             try {
-                // Date Helper
+                // Date Parser
                 $fnDate = function($val) {
                     if (empty($val)) return null;
+                    if (is_numeric($val)) {
+                         $unix = ($val - 25569) * 86400;
+                         return gmdate("Y-m-d", $unix);
+                    }
                     $d = DateTime::createFromFormat('d/m/Y', $val);
                     if (!$d) $d = DateTime::createFromFormat('Y-m-d', $val);
+                    if (!$d) $d = date_create($val); 
                     return $d ? $d->format('Y-m-d') : null;
                 };
-                $oDate = $fnDate($row[0] ?? '');
 
-                // Status Logic
-                $rawPrd = $row[13] ?? '';
+                $oDate = $fnDate($getCol($row, ['order date', 'date', 'odate']));
+                
+                // Production Status
+                $rawPrd = $getCol($row, ['prd completed date', 'production date', 'prod date', 'pdate']);
                 $prdStatus = (stripos($rawPrd, 'Done') !== false || stripos($rawPrd, 'OK') !== false) ? 1 : 0;
-                
-                $rawLoad = $row[14] ?? '';
-                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 1 : 0;
-                
-                $qty = intval(str_replace(',', '', $row[6] ?? '0'));
+                // เช็คสถานะจากคอลัมน์แยก (ถ้ามาจากไฟล์ Export)
+                $statusColPrd = $getCol($row, ['production status']);
+                if (stripos($statusColPrd, 'Done') !== false) $prdStatus = 1;
+                if ($fnDate($rawPrd)) $prdStatus = 1;
 
-                // Inspection Logic
-                $rawInsp = $row[16] ?? '';
+                // Loading Status
+                $rawLoad = $getCol($row, ['load', 'loading date', 'load date', 'ldate']);
+                $loadStatus = (stripos($rawLoad, 'Shipped') !== false || stripos($rawLoad, 'Done') !== false) ? 1 : 0;
+                $statusColLoad = $getCol($row, ['loading status']);
+                if (stripos($statusColLoad, 'Shipped') !== false) $loadStatus = 1;
+                if ($fnDate($rawLoad)) $loadStatus = 1;
+
+                // Qty
+                $qtyStr = $getCol($row, ['qty', 'quantity', 'amount']);
+                $qty = intval(str_replace(',', '', $qtyStr));
+
+                // Inspection & Ticket
+                $rawInsp = $getCol($row, ['inspection information', 'inspection', 'inspection date', 'qc date']);
                 $ticket = '';
-                if (preg_match('/INSP-\d+/', $rawInsp, $m)) { $ticket = $m[0]; }
-                
+                // 1. ลองหาจากคอลัมน์ Ticket Number โดยตรง (จากไฟล์ Export)
+                $ticketDirect = $getCol($row, ['ticket number', 'ticket']);
+                if (!empty($ticketDirect)) {
+                    $ticket = $ticketDirect;
+                } 
+                // 2. ถ้าไม่มี ลองหาจาก Text ในช่อง Inspection (จากไฟล์ลูกค้า)
+                else if (preg_match('/INSP-\d+/', $rawInsp, $m)) { 
+                    $ticket = $m[0]; 
+                }
+
                 $inspDate = $fnDate($rawInsp);
-                $inspStatus = '';
-                if (stripos($rawInsp, 'OK') !== false || stripos($rawInsp, 'Done') !== false) $inspStatus = 'Pass';
+                $inspStatus = (stripos($rawInsp, 'OK') !== false || stripos($rawInsp, 'Pass') !== false) ? 'Pass' : '';
                 
+                // เช็ค Status แยก (จากไฟล์ Export)
+                $statusColInsp = $getCol($row, ['inspection status']);
+                if (!empty($statusColInsp)) $inspStatus = $statusColInsp;
+
+                // Confirmed Status (รองรับ 'Yes', '1', 'True')
+                $rawConf = $getCol($row, ['confirmed', 'is_confirmed', 'conf.']);
+                $isConf = (stripos($rawConf, 'Yes') !== false || $rawConf == '1' || stripos($rawConf, 'True') !== false) ? 1 : 0;
+
                 // Execute SQL
                 $stmt->execute([
-                    $oDate,                 // Order Date
-                    $row[2] ?? '',          // Description
-                    $row[3] ?? '',          // Color
-                    $sku,                   // SKU
-                    $po,                    // PO
-                    $qty,                   // QTY
-                    $row[7] ?? '',          // DC
-                    $row[10] ?? '',         // Loading Wk
-                    $row[11] ?? '',         // Ship Wk
-                    $fnDate($rawPrd),       // Prod Date
-                    $prdStatus,             // Prod Status
-                    $fnDate($rawLoad),      // Load Date
-                    $loadStatus,            // Load Status
-                    $ticket,                // Ticket
-                    $inspDate,              // Insp Date
-                    $inspStatus,            // Insp Status
-                    $row[15] ?? ''          // Remark
+                    $oDate,
+                    $getCol($row, ['description', 'desc', 'product name']),
+                    $getCol($row, ['color', 'colour']),
+                    $sku,
+                    $po,
+                    $qty,
+                    $getCol($row, ['dc', 'dc location', 'location']),
+                    
+                    // รองรับทั้ง Original... และชื่อปกติ
+                    $getCol($row, ['original loading week', 'loading week', 'load week']), 
+                    $getCol($row, ['original shipping week', 'shipping week', 'ship week']),
+                    
+                    $fnDate($rawPrd),
+                    $prdStatus,
+                    $fnDate($rawLoad),
+                    $loadStatus,
+                    $ticket,
+                    $inspDate,
+                    $inspStatus,
+                    $getCol($row, ['remark', 'comment', 'notes']),
+                    $isConf // เพิ่ม field นี้
                 ]);
                 $count++;
             } catch (Exception $ex) {
                 $skippedCount++;
-                $errorLogs[] = "Line " . ($index+1) . ": " . $ex->getMessage();
+                $errorLogs[] = "PO $po: " . $ex->getMessage();
             }
         }
 
@@ -175,20 +234,20 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // 3. UPDATE CHECKBOX (ปิด Autofill วันที่ตามข้อ 3)
+    // 3. UPDATE CHECKBOX
     // ------------------------------------------------------------------
     if ($action === 'update_check') {
         $in = json_decode(file_get_contents('php://input'), true);
         $field = $in['field']; 
         $id = $in['id'];
         
-        $col = ''; $dateCol = null;
-        if ($field === 'prod') { $col='is_production_done'; $dateCol='production_date'; }
-        elseif ($field === 'load') { $col='is_loading_done'; $dateCol='loading_date'; }
+        $col = ''; 
+        if ($field === 'prod') { $col='is_production_done'; }
+        elseif ($field === 'load') { $col='is_loading_done'; }
         elseif ($field === 'insp') { 
             $in['checked'] = $in['checked'] ? true : false;
             $val = $in['checked'] ? 'Pass' : 'Wait'; 
-            $col='inspection_status'; $dateCol='inspection_date'; 
+            $col='inspection_status'; 
         }
         elseif ($field === 'confirm') { $col='is_confirmed'; }
 
@@ -197,13 +256,7 @@ try {
         }
 
         if ($col) {
-            $sql = "UPDATE $table SET $col = ?";
-            
-            // --- [CHANGE] ปิดการ Auto Fill วันที่ (ตาม Requirement ข้อ 3) ---
-            // if ($dateCol) $sql .= ", $dateCol = GETDATE()"; 
-            // -----------------------------------------------------------
-            
-            $sql .= ", updated_at = GETDATE() WHERE id = ?";
+            $sql = "UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?";
             $pdo->prepare($sql)->execute([$val, $id]);
             echo json_encode(['success'=>true]);
         }
@@ -216,7 +269,7 @@ try {
     if ($action === 'update_cell') {
         $in = json_decode(file_get_contents('php://input'), true);
         $id = $in['id']; $field = $in['field']; $value = $in['value'];
-        $allowedFields = ['quantity', 'loading_week', 'shipping_week', 'ticket_number', 'remark', 'production_date', 'loading_date', 'inspection_date', 'inspection_status'];
+        $allowedFields = ['quantity', 'loading_week', 'shipping_week', 'ticket_number', 'remark', 'production_date', 'loading_date', 'inspection_date', 'inspection_status', 'dc_location'];
         
         if (in_array($field, $allowedFields)) {
             if ($value === '') $value = null;

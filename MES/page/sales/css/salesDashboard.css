@@ -1,41 +1,127 @@
 /* page/sales/css/salesDashboard.css */
 
-/* --- Sticky Header Section --- */
+/* --- Default Mobile First (มือถือเลื่อนจอได้ปกติ) --- */
+#main-content {
+    height: auto; /* ปล่อยความสูงตามเนื้อหา */
+    min-height: 100vh;
+    overflow-y: auto; /* ให้เลื่อนลงได้ */
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 2rem; /* เผื่อที่ด้านล่างนิดหน่อย */
+}
+
+.content-wrapper {
+    padding: 1rem;
+    flex: 1;
+}
+
+.table-responsive-custom {
+    /* บนมือถือ ให้ตารางมีความสูงระดับหนึ่งเพื่อให้เลื่อนแนวนอนได้ง่าย */
+    min-height: 400px; 
+    overflow-x: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bs-body-bg);
+}
+
+/* --- Desktop Layout (จอใหญ่กว่า 992px ล็อคหน้าจอ) --- */
+@media (min-width: 992px) {
+    #main-content {
+        /* บังคับเต็มจอ หัก Header ออก */
+        height: calc(100vh - 70px); 
+        overflow: hidden !important; /* ห้าม Scroll หน้าหลัก */
+    }
+
+    .content-wrapper {
+        /* ให้ Wrapper ยืดเต็มพื้นที่ที่เหลือ */
+        flex: 1;
+        overflow: hidden; 
+        padding: 1rem !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card.table-card {
+        /* การ์ดตารางยืดเต็ม */
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin-bottom: 0 !important;
+    }
+
+    .table-responsive-custom {
+        /* ตารางยืดเต็มการ์ด และ Scroll ภายใน */
+        flex: 1;
+        height: 100% !important;
+        overflow: auto;
+    }
+    
+    /* บังคับ 5 ใบแถวเดียวเฉพาะ Desktop */
+    .col-lg-20-percent {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+}
+
+/* --- Dark Theme Support & Consistency --- */
+
+/* Sticky Header */
 .dashboard-header-sticky {
+    background-color: var(--bs-body-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 1rem;
+    flex-shrink: 0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    background-color: var(--bs-body-bg); /* กลืนไปกับพื้นหลัง */
-    padding: 1rem;
-    padding-bottom: 0.5rem;
 }
 
-/* --- Table Styles --- */
-.table-responsive-custom {
-    height: calc(100vh - 280px); /* คำนวณความสูงให้พอดีจอ (หัก Header + KPIs ออก) */
-    overflow: auto;
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.5rem;
-    background-color: var(--bs-secondary-bg);
-}
-
-/* Table Header Sticky */
+/* Table Header & Sticky Column */
 thead.sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 20;
+    position: static !important; /* ไม้ตายที่ 1 */
+    z-index: auto !important;
+}
+
+thead.sticky-top th {
+    position: sticky !important; /* ไม้ตายที่ 2 */
+    top: 0 !important;           /* บังคับติดบน */
+    z-index: 20;                 /* ชั้นล่าง */
 }
 
 /* Sticky Column (PO Number) */
 .sticky-col {
     position: sticky;
     left: 0;
-    z-index: 30;
-    background-color: #fff !important;
-    border-right: 2px solid #dee2e6;
+    z-index: 30 !important;
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color);
+    border-right: 2px solid var(--bs-border-color) !important;
 }
+
 thead.sticky-top th.sticky-col {
-    z-index: 40; /* อยู่บนสุด */
+    position: sticky !important;
+    left: 0 !important;          /* ติดซ้าย */
+    top: 0 !important;           /* ติดบน (สำคัญ!) */
+    z-index: 40 !important;      /* ชั้นบนสุด */
+    background-color: var(--bs-body-bg) !important; /* กันสีพื้นหลังทะลุ */
+}
+
+thead.sticky-top th[data-sort="is_confirmed"] {
+    position: sticky !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 35 !important;
+    background-color: var(--bs-body-bg) !important;
+}
+
+thead.sticky-top th.ps-3.border-start {
+    position: sticky;
+    right: 0;
+    top: 0;
+    z-index: 35 !important;
+    background-color: var(--bs-body-bg) !important;
 }
 
 /* Sorting Icons */
@@ -45,7 +131,7 @@ th.sortable {
     position: relative;
 }
 th.sortable:hover {
-    background-color: #e9ecef !important;
+    background-color: var(--bs-border-color) !important; /* Hover effect */
 }
 th.sortable.active-sort .sort-icon {
     color: var(--bs-primary);
@@ -53,14 +139,40 @@ th.sortable.active-sort .sort-icon {
 th.sortable .sort-icon {
     margin-left: 5px;
     font-size: 0.8em;
-    color: #999;
+    color: var(--bs-secondary-color);
 }
 
-/* --- KPI Cards --- */
+/* Table Body */
+table.table tbody td {
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+/* Row Hover Effect (Dark Mode Compatible) */
+.table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+/* Input Fields (Dark Mode Compatible) */
+input.form-control, input.form-control-sm {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+}
+input.form-control:focus {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    box-shadow: none;
+    border-color: var(--bs-primary);
+}
+
+/* KPI Cards */
 .kpi-card {
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid transparent;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-body-bg); /* พื้นหลังเปลี่ยนตามธีม */
     height: 100%;
 }
 .kpi-card:hover {
@@ -68,27 +180,50 @@ th.sortable .sort-icon {
     box-shadow: 0 8px 15px rgba(0,0,0,0.1);
 }
 .kpi-card.active {
+    background-color: rgba(13, 110, 253, 0.1) !important; /* สีฟ้าจางๆ โปร่งแสง */
     border: 2px solid #0d6efd;
-    background-color: #f0f8ff;
+}
+/* ให้ตัวเลขในการ์ดเปลี่ยนสีตามธีม */
+.kpi-card h2, .kpi-card .text-body-secondary {
+    color: var(--bs-body-color); 
 }
 
-/* --- Utilities / Status --- */
-tr.row-confirmed td, 
-tr.row-confirmed th {
-    background-color: #d1e7dd !important;
+/* --- Status Colors (ใช้ rgba เพื่อให้เห็นพื้นหลังใน Dark Mode) --- */
+
+/* 1. Confirmed (Green) */
+tr.row-confirmed td {
+    background-color: rgba(25, 135, 84, 0.15) !important;
     color: #0f5132 !important;
 }
-
-td.editable:hover {
-    background-color: #fff3cd !important;
-    cursor: text;
+[data-bs-theme="dark"] tr.row-confirmed td {
+    color: #75b798 !important; /* สีเขียวอ่อนสำหรับ Dark Mode */
 }
 
-td.editable input {
-    width: 100%;
-    min-width: 0;
+/* 2. Late (Red) */
+tr.row-late td {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    color: #842029 !important;
+}
+[data-bs-theme="dark"] tr.row-late td {
+    color: #ea868f !important; /* สีแดงอ่อนสำหรับ Dark Mode */
 }
 
+/* 3. Warning (Yellow) */
+tr.row-warning td {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    color: #664d03 !important;
+}
+[data-bs-theme="dark"] tr.row-warning td {
+    color: #ffda6a !important; /* สีเหลืองอ่อนสำหรับ Dark Mode */
+}
+
+/* Fix Sticky Column Background for Colored Rows */
+/* ต้องใช้ box-shadow ทับสีพื้นหลัง เพราะ td sticky ต้องมี background ทึบ */
+tr.row-confirmed .sticky-col { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.15); }
+tr.row-late .sticky-col      { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(220, 53, 69, 0.15); }
+tr.row-warning .sticky-col   { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(255, 193, 7, 0.15); }
+
+/* Utilities */
 .long-text-cell {
     max-width: 200px;
     white-space: nowrap;
@@ -96,10 +231,8 @@ td.editable input {
     text-overflow: ellipsis;
 }
 
-/* 5 Columns Grid for KPI */
-@media (min-width: 992px) {
-    .col-lg-20-percent {
-        flex: 0 0 auto;
-        width: 20%;
-    }
+td.editable:hover {
+    background-color: var(--bs-tertiary-bg) !important;
+    cursor: text;
+    outline: 1px dashed var(--bs-secondary);
 }

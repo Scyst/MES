@@ -1,94 +1,109 @@
 <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow rounded-4">
-            
-            <div class="modal-header border-0 pb-0 pt-4 px-4 bg-white">
-                <div class="d-flex align-items-center w-100">
-                    <div class="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
-                        <i class="fas fa-book-reader text-info fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0" style="letter-spacing: -0.5px;">คู่มือการใช้งาน</h5>
-                        <p class="text-muted small mb-0">Sales Order Tracking Guide</p>
-                    </div>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
-                </div>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="far fa-question-circle me-2"></i>คู่มือการใช้งาน Sales Dashboard</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-
-            <div class="modal-body p-4 bg-white">
+            <div class="modal-body p-4">
                 
-                <div class="row g-4 mb-4">
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-mouse-pointer me-2"></i>การใช้งานพื้นฐาน</h6>
+                <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <div class="p-3 rounded-3 border border-light bg-light bg-opacity-50 h-100">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
-                                    <i class="fas fa-search text-primary"></i>
-                                </div>
-                                <h6 class="fw-bold text-dark mb-0">1. ค้นหาอัจฉริยะ</h6>
-                            </div>
-                            <p class="text-secondary small mb-2">พิมพ์คำค้นหลายคำเว้นวรรคเพื่อกรองข้อมูลแบบละเอียด (AND Logic)</p>
-                            <div class="bg-white border rounded px-2 py-1 small text-muted font-monospace">
-                                <i class="fas fa-keyboard me-1"></i> Red Chicago Wait
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-secondary me-2">1</span>
+                            <div>
+                                <strong>แก้ไขข้อมูล (Inline Edit)</strong><br>
+                                <span class="text-muted small">ดับเบิลคลิกช่องข้อมูลเพื่อแก้ไข เมื่อพิมพ์เสร็จกด Enter เพื่อบันทึก</span>
                             </div>
                         </div>
                     </div>
-
                     <div class="col-md-6">
-                        <div class="p-3 rounded-3 border border-light bg-light bg-opacity-50 h-100">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
-                                    <i class="fas fa-edit text-success"></i>
-                                </div>
-                                <h6 class="fw-bold text-dark mb-0">2. แก้ไขข้อมูลไว</h6>
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-secondary me-2">2</span>
+                            <div>
+                                <strong>เปลี่ยนสถานะ (Quick Toggle)</strong><br>
+                                <span class="text-muted small">คลิก Checkbox ในช่อง Done, Loaded หรือ Pass เพื่ออัปเดตสถานะ</span>
                             </div>
-                            <ul class="text-secondary small mb-0 ps-3">
-                                <li class="mb-1"><strong>ดับเบิลคลิก</strong> ที่ช่องข้อมูลเพื่อแก้ไขทันที</li>
-                                <li><strong>ติ๊กถูก</strong> เพื่อเปลี่ยนสถานะงาน (ระบบลงเวลาให้เอง)</li>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-secondary me-2">3</span>
+                            <div>
+                                <strong>การค้นหา (Smart Search)</strong><br>
+                                <span class="text-muted small">ค้นหาได้ทั้ง PO, SKU, Status หรือคำอื่นๆ ที่ต้องการ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-secondary me-2">4</span>
+                            <div>
+                                <strong>คำนวณเงินบาท</strong><br>
+                                <span class="text-muted small">แก้ไขเรทเงินในช่อง "1$ =" ระบบจะคำนวณยอดรวมให้อัตโนมัติ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-file-import me-2"></i>การนำเข้าข้อมูล (Smart Import)</h6>
+                <div class="alert alert-light border mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">ระบบรองรับชื่อหัวข้อ (Header) ที่หลากหลาย คุณสามารถใช้ไฟล์จากลูกค้าได้ทันทีหากมีหัวข้อเหล่านี้:</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadTemplate()">
+                            <i class="fas fa-download me-1"></i> โหลด Template
+                        </button>
+                    </div>
+                    <div class="row g-2 small font-monospace">
+                        <div class="col-md-4">
+                            <ul class="list-unstyled text-secondary">
+                                <li>• PO / PO Number</li>
+                                <li>• SKU / Item Code</li>
+                                <li>• Qty / Quantity</li>
+                                <li>• Order Date</li>
+                                <li>• Description</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <ul class="list-unstyled text-secondary">
+                                <li>• Original Loading week</li>
+                                <li>• Original Shipping week</li>
+                                <li>• Color / Colour</li>
+                                <li>• DC / Location</li>
+                                <li>• Remark / Notes</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <ul class="list-unstyled text-secondary">
+                                <li>• PRD Completed date</li>
+                                <li>• Load / Loading Date</li>
+                                <li>• Inspection Information</li>
+                                <li>• Ticket Number</li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                <hr class="border-light">
-
-                <div class="row g-4">
-                    <div class="col-md-12">
-                        <div class="d-flex">
-                            <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3 flex-shrink-0" style="width: 50px; height: 50px; display:flex; align-items:center; justify-content:center;">
-                                <i class="fas fa-file-import text-dark"></i>
-                            </div>
-                            <div>
-                                <h6 class="fw-bold text-dark mb-1">3. การนำเข้าไฟล์ (Import Excel)</h6>
-                                <p class="text-secondary small mb-2">ระบบใช้ <b>PO Number + SKU</b> เป็นกุญแจในการตรวจสอบข้อมูล:</p>
-                                <div class="d-flex gap-3 small">
-                                    <div class="d-flex align-items-center text-success">
-                                        <i class="fas fa-check-circle me-2"></i> เจอของเดิม = อัปเดต
-                                    </div>
-                                    <div class="d-flex align-items-center text-primary">
-                                        <i class="fas fa-plus-circle me-2"></i> ไม่เจอ = เพิ่มใหม่
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-star me-2"></i>ฟีเจอร์อื่นๆ</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="fas fa-sort text-muted me-1"></i> Multi-Sort</strong>
+                        <p class="text-muted small mt-1 mb-0">กด <strong>Shift + คลิกหัวตาราง</strong> เพื่อเรียงข้อมูลหลายเงื่อนไขพร้อมกัน</p>
                     </div>
-
-                    <div class="col-md-12">
-                        <div class="alert alert-danger bg-opacity-10 border-0 d-flex align-items-start rounded-3 mb-0">
-                            <i class="fas fa-tag text-danger fs-5 me-3 mt-1"></i>
-                            <div>
-                                <h6 class="fw-bold text-danger mb-1">ทำไมราคาเป็น $0.00 ?</h6>
-                                <p class="small text-secondary mb-0">
-                                    แสดงว่า <b>SKU</b> นี้ยังไม่มีในฐานข้อมูลหลัก ให้ไปเพิ่มที่เมนู <a href="#" class="fw-bold text-danger text-decoration-none">System Settings > Item Master</a> ระบบจะดึงราคามาแสดงอัตโนมัติ
-                                </p>
-                            </div>
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="fas fa-palette text-muted me-1"></i> แถบสีสถานะ</strong>
+                        <div class="d-flex gap-2 mt-1">
+                            <span class="badge bg-danger bg-opacity-75">Late</span>
+                            <span class="badge bg-warning text-dark bg-opacity-75">Warning (3 Days)</span>
+                            <span class="badge bg-success bg-opacity-75">Confirmed</span>
                         </div>
                     </div>
                 </div>
 
             </div>
-            
-            <div class="modal-footer border-0 pt-0 pb-4 px-4 bg-white">
-                <button type="button" class="btn btn-light text-muted w-100 rounded-pill" data-bs-dismiss="modal">เข้าใจแล้ว (Close)</button>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
             </div>
         </div>
     </div>
