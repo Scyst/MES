@@ -71,7 +71,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../storeManagement/storeRequest.php">
                     <i class="fas fa-dolly-flatbed fa-fw me-3"></i>
-                    <span>Store Request & Scrap</span>
+                    <span>Scrap & Replacement</span>
                 </a>
             </li>
 

@@ -215,7 +215,8 @@ async function loadRequests() {
 
             if (filteredData.length === 0) {
                  const empty = '<div class="text-center text-muted py-4">ไม่พบข้อมูลที่ค้นหา</div>';
-                 if (tbody) tbody.innerHTML = `<tr><td colspan="8">${empty}</td></tr>`;
+                 // [FIX] ปรับ colspan เป็น 9 ให้พอดีกับจำนวนหัวตาราง
+                 if (tbody) tbody.innerHTML = `<tr><td colspan="9">${empty}</td></tr>`;
                  if (cardCon) cardCon.innerHTML = empty;
             }
 
@@ -224,8 +225,25 @@ async function loadRequests() {
                 if (reason.includes('Reason: ')) reason = reason.split('Reason: ')[1];
                 else if (reason.includes('Defect: ')) reason = reason.split('Defect: ')[1];
 
-                const badgeClass = `badge-${row.status}`;
-                const statusBadge = `<span class="badge ${badgeClass} rounded-pill fw-normal">${row.status}</span>`;
+                // --- [FIX] แก้ไขสี Badge ให้เป็นพื้นหลังจาง ตัวหนังสือสีเข้ม (Soft Badge) ---
+                let badgeClass = '';
+                let icon = '';
+
+                if (row.status === 'PENDING') {
+                    badgeClass = 'bg-warning bg-opacity-50 text-body fw-bold border border-warning';
+                    icon = '<i class="fas fa-clock me-1"></i>';
+                } else if (row.status === 'COMPLETED') {
+                    badgeClass = 'bg-success bg-opacity-50 text-body fw-bold border border-success';
+                    icon = '<i class="fas fa-check-circle me-1"></i>';
+                } else if (row.status === 'REJECTED') {
+                    badgeClass = 'bg-danger bg-opacity-50 text-body fw-bold border border-danger';
+                    icon = '<i class="fas fa-times-circle me-1"></i>';
+                } else {
+                    badgeClass = 'bg-secondary bg-opacity-10 text-secondary border border-secondary';
+                }
+
+                const statusBadge = `<span class="badge ${badgeClass} rounded-pill fw-normal px-2 py-1">${icon}${row.status}</span>`;
+                // ---------------------------------------------------------------------
 
                 let btnAction = '';
                 if (typeof IS_STORE_ROLE !== 'undefined' && IS_STORE_ROLE && row.status === 'PENDING') {
@@ -234,46 +252,93 @@ async function loadRequests() {
                     <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;" onclick="rejectReq(${row.transfer_id})" title="ปฏิเสธ"><i class="fas fa-times"></i></button>`;
                 }
 
+                const requesterName = row.requester || '-';
+
+                // --- ส่วนแสดงผลแบบตาราง (Desktop) ---
                 if (tbody) {
                     tbody.innerHTML += `
                         <tr>
-                            <td class="text-muted small">${row.created_at ? row.created_at.substring(0, 16) : '-'}</td>
-                            <td><span class="fw-bold text-dark">${row.sap_no}</span></td>
-                            <td><div class="text-dark">${row.part_no}</div></td>
-                            <td class="small text-muted text-truncate" style="max-width:200px;">${row.part_description || '-'}</td>
-                            <td class="fw-bold text-end text-danger">${parseFloat(row.quantity)}</td>
-                            <td class="small text-secondary">${reason}</td>
+                            <td class="text-body small text-nowrap">
+                                ${row.created_at ? row.created_at.substring(0, 16) : '-'}
+                            </td>
+
+                            <td class="fw-bold text-body">${row.sap_no}</td>
+
+                            <td class="text-body">${row.part_no}</td>
+
+                            <td class="small text-body text-truncate" style="max-width: 180px;" title="${row.part_description || ''}">
+                                ${row.part_description || '-'}
+                            </td>
+
+                            <td class="fw-bold text-center text-danger fs-6">
+                                ${parseFloat(row.quantity).toLocaleString()}
+                            </td>
+
+                            <td class="small text-body text-truncate" style="max-width: 150px;" title="${reason}">
+                                ${reason}
+                            </td>
+                            
+                            <td class="small text-body text-nowrap text-center">
+                                ${requesterName}
+                            </td>
+
                             <td class="text-center">${statusBadge}</td>
+
                             <td class="text-center">${btnAction}</td>
                         </tr>`;
                 }
 
+                // --- ส่วนแสดงผลแบบการ์ด (Mobile) ---
                 if (cardCon) {
                     cardCon.innerHTML += `
-                        <div class="card req-card status-${row.status} border-0 shadow-sm">
+                        <div class="card req-card status-${row.status} border-0 shadow-sm mb-3" style="background-color: var(--bs-body-bg);">
                             <div class="card-body p-3">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <div><strong class="text-dark">${row.sap_no}</strong></div>
-                                    ${statusBadge}
+                                
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="text-truncate pe-2">
+                                        <strong class="text-body d-block" style="font-size: 1.1rem;">${row.sap_no}</strong>
+                                        <span class="small text-body opacity-75">${row.part_no}</span>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-2">${statusBadge}</div>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="text-secondary small">${row.part_no}</div>
-                                    <div class="fw-bold fs-5 text-dark">${parseFloat(row.quantity)}</div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded border" style="border-color: var(--bs-border-color) !important;">
+                                    <div class="small text-body text-truncate me-2" style="max-width: 65%;">
+                                        ${row.part_description || '-'}
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold fs-4 text-danger" style="line-height: 1;">
+                                            ${parseFloat(row.quantity).toLocaleString()}
+                                        </div>
+                                        <small class="text-body opacity-75" style="font-size: 0.7rem;">QTY</small>
+                                    </div>
                                 </div>
-                                <div class="bg-light p-2 rounded small text-muted mb-2">
-                                    <i class="fas fa-info-circle me-1"></i> ${reason}
+                                
+                                <div class="mb-2 small">
+                                    <span class="text-body opacity-75" style="font-size: 0.75rem;">Requester:</span>
+                                    <strong class="text-body ms-1">${requesterName}</strong>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                                    <small class="text-muted">${row.created_at ? row.created_at.substring(5, 16) : ''}</small>
+
+                                <div class="mb-3 d-flex align-items-start small text-body">
+                                    <span class="opacity-75 me-1">Note:</span>
+                                    <span>${reason}</span>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2" style="border-color: var(--bs-border-color) !important;">
+                                    <small class="text-body opacity-75">
+                                        ${row.created_at ? row.created_at.substring(0, 16) : '-'}
+                                    </small>
                                     <div>${btnAction}</div>
                                 </div>
+
                             </div>
                         </div>`;
                 }
             });
         } else {
             const empty = '<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-2x mb-2 opacity-50"></i><br>ไม่พบรายการ</div>';
-            if (tbody) tbody.innerHTML = `<tr><td colspan="8">${empty}</td></tr>`;
+            // [FIX] ปรับ colspan เป็น 9 ให้พอดีกับจำนวนหัวตาราง
+            if (tbody) tbody.innerHTML = `<tr><td colspan="9">${empty}</td></tr>`;
             if (cardCon) cardCon.innerHTML = empty;
         }
     } catch (e) { console.error(e); }

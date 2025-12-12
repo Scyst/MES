@@ -4,251 +4,130 @@ if (!isset($_SESSION['user'])) { header("Location: ../../auth/login_form.php"); 
 
 $userRole = $_SESSION['user']['role'];
 $isStore = in_array($userRole, ['admin', 'creator']); 
+
+// 1. [CONFIG] กำหนดตัวแปร Header ตรงนี้ เพื่อให้ Top Header ดึงไปแสดง
+$pageTitle = "Scrap & Replacement"; 
+$pageIcon = "fas fa-sync-alt"; // ไอคอนที่จะโชว์คู่กับชื่อหน้าด้านบน
+$pageHeaderTitle = "Scrap & Replacement"; 
+$pageHeaderSubtitle = "ระบบเบิกทดแทนของเสีย (Scrap Claim)"; 
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Store Request & Scrap</title>
+    <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <style>
-        /* --- General Styles --- */
-        .badge-PENDING { background-color: #ffc107; color: #000; }
-        .badge-COMPLETED { background-color: #198754; color: #fff; }
-        .badge-REJECTED { background-color: #dc3545; color: #fff; }
-
-        /* --- Mobile Card --- */
-        .req-card {
-            border-left: 5px solid #ccc;
-            background-color: #fff;
-            margin-bottom: 0.5rem;
-            transition: transform 0.1s;
-        }
-        .req-card:active { transform: scale(0.98); }
-        .req-card.status-PENDING { border-left-color: #ffc107; }
-        .req-card.status-COMPLETED { border-left-color: #198754; }
-        .req-card.status-REJECTED { border-left-color: #dc3545; }
-
-        /* --- Autocomplete --- */
-        .autocomplete-results {
-            position: absolute; border: 1px solid #d4d4d4; border-top: none; z-index: 2050; 
-            top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto;
-            background-color: #fff; display: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .autocomplete-item {
-            padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;
-        }
-        .autocomplete-item:hover { background-color: #f8f9fa; }
-
-        /* --- FAB Button (Mobile Only) --- */
-        @media (max-width: 991.98px) {
-            .fab-container {
-                position: fixed;
-                bottom: 25px;
-                right: 25px;
-                z-index: 1060;
-            }
-            .fab-btn {
-                border: none;
-                border-radius: 50%;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                transition: transform 0.2s;
-                cursor: pointer;
-            }
-            .fab-btn:active { transform: scale(0.9); }
-            
-            #fab-add-btn {
-                width: 60px; height: 60px; font-size: 1.5rem; background-color: #198754;
-            }
-        } /* <--- ย้ายวงเล็บปิดมาไว้ตรงนี้ครับ (จบส่วน Mobile) */
-
-        /* --- Button Styles (Global - ใช้ได้ทั้ง Mobile และ Desktop) --- */
-        
-        /* สไตล์สำหรับ Grid ของปุ่ม Store */
-        .store-grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
-        }
-
-        /* สไตล์ปุ่มเลือก Store (ถ้ายังใช้อยู่) */
-        .btn-selection {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            color: #495057;
-            padding: 10px 15px;
-            text-align: left;
-            transition: all 0.2s;
-            width: 100%;
-            border-radius: 6px;
-            position: relative;
-            font-size: 0.95rem;
-        }
-        .btn-selection:hover {
-            background-color: #e9ecef;
-            border-color: #adb5bd;
-        }
-        .btn-selection.selected {
-            background-color: #d1e7dd;
-            border-color: #198754;
-            color: #0f5132;
-            font-weight: bold;
-            box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.2);
-        }
-        .btn-selection.selected::after {
-            content: '\f00c';
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        /* สไตล์ปุ่มกดแบบเรียบ Uniform (ใช้ร่วมกันทั้ง Store และ Source) */
-        .btn-custom-select {
-            display: block;
-            width: 100%;
-            padding: 12px 10px; /* เพิ่มความสูงนิดนึงให้กดง่าย */
-            background-color: #fff;
-            border: 1px solid #e0e0e0; /* ขอบสีเทาจางๆ */
-            color: #666; /* ตัวหนังสือสีเทากลาง */
-            border-radius: 8px; /* โค้งมนมากขึ้น */
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); /* Effect นุ่มนวล */
-            font-size: 0.95rem;
-            font-weight: 500;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* เงาบางๆ ให้ดูมีมิติ */
-        }
-
-        .btn-custom-select:hover {
-            background-color: #f8fbff; /* ฟ้าจางมากๆ */
-            border-color: #b3d7ff;     /* ขอบฟ้าอ่อน */
-            color: #0d6efd;            /* ตัวหนังสือเริ่มเป็นสีฟ้า */
-            transform: translateY(-1px); /* ลอยขึ้นนิดนึง */
-        }
-
-        .btn-custom-select.active,
-        .btn-check:checked + .btn-custom-select {
-            background-color: #e7f1ff; /* พื้นหลังฟ้าอ่อน (สบายตา) */
-            border-color: #0d6efd;     /* ขอบน้ำเงินเข้ม (Primary Color) */
-            color: #0d6efd;            /* ตัวหนังสือสีน้ำเงินเข้ม */
-            font-weight: 600;
-            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15); /* เงาสีฟ้าฟุ้งๆ */
-        }
-
-        .store-grid-wrapper {
-            display: grid;
-            /* เทคนิค: ถ้าจอเล็กให้แบ่งตามขนาดขั้นต่ำ, จอใหญ่ให้เฉลี่ยพื้นที่เท่าๆ กันจนเต็มบรรทัด */
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
-            gap: 0.5rem; /* ระยะห่างเท่ากับ g-2 ของ Bootstrap */
-            width: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="css/storeRequest.css?v=<?php echo time(); ?>">
 </head>
-<body class="page-with-table">
-    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#globalMobileMenu">
-        <i class="fas fa-bars"></i>
-    </button>
+
+<body class="layout-top-header">
+
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h5 class="fw-bold text-muted">Processing...</h5>
+    </div>
+
+    <?php include('../components/php/top_header.php'); ?>
+    <?php include('../components/php/mobile_menu.php'); ?>
+    <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">
-        <?php include_once('../components/php/nav_dropdown.php'); ?>
+        <div id="main-content">
+            
+            <div class="dashboard-header-sticky">
+                
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body p-2">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
 
-        <main id="main-content">
-            <?php include_once('../components/php/spinner.php'); ?>
-
-            <div class="container-fluid pt-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Store Request Center</h2>
-                    
-                    <button class="btn btn-outline-secondary d-lg-none rounded-circle shadow-sm" 
-                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
-                            type="button" 
-                            id="mobile-filter-toggle-btn"> 
-                        <i class="fas fa-filter"></i>
-                    </button>
-                </div>
-
-                <ul class="nav nav-tabs">
-                    <li class="nav-item">
-                        <button class="nav-link active" type="button">
-                            <i class="fas fa-history me-1"></i> ประวัติรายการ (Request History)
-                        </button>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="sticky-bar">
-                <div class="container-fluid">
-                    <div class="all-filters-container" id="mobileFilters">
-                        <div class="row my-2 align-items-center">
-                            <div class="col-lg-8">
-                                <div class="filter-controls-wrapper d-flex gap-2 flex-wrap">
-                                    <input type="text" id="filterSearch" class="form-control" placeholder="Search Part No, SAP..." style="max-width: 300px;">
-                                    <select id="filterStatus" class="form-select" style="max-width: 180px;" onchange="loadRequests()">
-                                        <option value="ALL">Status: All</option>
-                                        <option value="PENDING">Status: Pending</option>
-                                        <option value="COMPLETED">Status: Completed</option>
-                                        <option value="REJECTED">Status: Rejected</option>
-                                    </select>
+                            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                <div class="input-group input-group-sm" style="max-width: 300px;">
+                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="filterSearch" class="form-control border-start-0 ps-0" placeholder="Search Part No, SAP...">
                                 </div>
+                                
+                                <select id="filterStatus" class="form-select form-select-sm" style="max-width: 150px;" onchange="loadRequests()">
+                                    <option value="ALL">Status: All</option>
+                                    <option value="PENDING">Status: Pending</option>
+                                    <option value="COMPLETED">Status: Completed</option>
+                                    <option value="REJECTED">Status: Rejected</option>
+                                </select>
                             </div>
-                            
-                            <div class="col-lg-4 text-lg-end mt-2 mt-lg-0 d-none d-lg-block">
-                                <button class="btn btn-success" onclick="openRequestModal()">
-                                    <i class="fas fa-plus-circle me-2"></i> แจ้งของเสีย / เบิก
+
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-light border text-secondary btn-sm d-none d-md-inline-block" onclick="loadRequests()" data-bs-toggle="tooltip" title="Refresh">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                
+                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm d-none d-md-inline-block" onclick="openRequestModal()">
+                                    <i class="fas fa-plus-circle me-1"></i> แจ้งของเสีย / เบิก
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="fab-container d-lg-none">
-                <button class="fab-btn" id="fab-add-btn" onclick="openRequestModal()">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-
-            <div class="content-wrapper">
-                <div class="container-fluid">
-                    <div class="table-responsive mt-2 d-none d-md-block">
-                        <table class="table table-striped table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th style="width: 12%">Date</th>
-                                    <th style="width: 12%">SAP No.</th>
-                                    <th style="width: 15%">Part No.</th>
+            <div class="content-wrapper p-3">
+                <div class="card shadow-sm border-0 d-none d-md-block">
+                    <div class="table-responsive-custom">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="sticky-top bg-light shadow-sm">
+                                <tr class="text-secondary small text-uppercase">
+                                    <th style="width: 10%">Date</th>
+                                    <th style="width: 10%">SAP No.</th>
+                                    <th style="width: 12%">Part No.</th>
                                     <th style="width: 20%">Description</th>
-                                    <th class="text-end" style="width: 8%">Qty</th>
+                                    <th class="text-center" style="width: 8%">Qty</th>
                                     <th style="width: 15%">Reason</th>
+                                    <th class="text-center" style="width: 12%">Requester</th>
                                     <th class="text-center" style="width: 8%">Status</th>
-                                    <th class="text-center" style="width: 10%">Action</th>
+                                    <th class="text-center" style="width: 5%">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="reqTableBody"></tbody>
                         </table>
                     </div>
-                    <div class="d-md-none mt-2" id="reqCardContainer"></div>
                 </div>
+
+                <div class="d-md-none" id="reqCardContainer"></div>
             </div>
-
-            <?php include 'components/requestModal.php'; ?>
-
-            <div id="toast"></div>
-        </main>    
+        </div>
     </div>
 
-    <?php include_once('../components/php/mobile_menu.php'); ?>
+    <div class="fab-container d-md-none">
+        <button class="fab-btn" onclick="openRequestModal()">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+
+    <?php include 'components/requestModal.php'; ?>
+    
+    <div id="toast" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="liveToast" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">Action successful</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_URL = 'api/scrapManage.php'; 
         const IS_STORE_ROLE = <?php echo json_encode($isStore); ?>;
+        
+        function showToast(msg, color) {
+            const toastEl = document.getElementById('liveToast');
+            const toastBody = document.getElementById('toastMessage');
+            if(toastEl && toastBody) {
+                toastBody.innerText = msg;
+                toastEl.className = `toast align-items-center text-white border-0 bg-${color === 'var(--bs-danger)' ? 'danger' : (color === 'var(--bs-warning)' ? 'warning' : 'success')}`;
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            }
+        }
+        function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+        function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
     </script>
     <script src="script/storeRequest.js?v=<?php echo time(); ?>"></script>
 </body>

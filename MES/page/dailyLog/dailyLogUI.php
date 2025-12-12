@@ -143,7 +143,7 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('Store Request', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
+                        renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         
                         ?>
                     </div>

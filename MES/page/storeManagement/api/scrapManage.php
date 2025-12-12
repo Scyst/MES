@@ -99,12 +99,19 @@ try {
             // เพิ่ม TOP 100 เพื่อไม่ให้โหลดหนักเกินไปในอนาคต
             $sql = "SELECT TOP 100 t.*, i.sap_no, i.part_no, i.part_description,
                            loc_from.location_name as from_loc, loc_to.location_name as to_loc,
-                           u.username as requester
+                           
+                           -- [CHANGE] ใช้ชื่อไทย (name_th) ถ้าไม่มีให้ใช้ username แทน
+                           ISNULL(e.name_th, u.username) as requester
+
                     FROM " . TRANSFER_ORDERS_TABLE . " t
                     JOIN " . ITEMS_TABLE . " i ON t.item_id = i.item_id
                     JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
                     JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
                     LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                    
+                    -- [CHANGE] เพิ่มบรรทัดนี้เพื่อดึงชื่อพนักงาน
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " e ON u.emp_id = e.emp_id
+                    
                     $whereClause
                     ORDER BY t.created_at DESC"; 
 

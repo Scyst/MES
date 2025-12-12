@@ -64,7 +64,7 @@
         <li>
             <a class="dropdown-item-icon" href="../storeManagement/storeRequest.php" title="Store Request & Scrap">
                 <i class="fas fa-dolly-flatbed fa-fw"></i>
-                <span>Store Request & Scrap</span>
+                <span>Scrap & Replacement</span>
             </a>
         </li>
         <li>

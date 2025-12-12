@@ -1,38 +1,59 @@
 let globalForkliftData = [];
 let globalBookings = [];
 let dashboardInterval;
-let isFirstLoad = true; // [NEW] เช็คว่าโหลดครั้งแรกไหม
+let isFirstLoad = true; 
 
+// 1. [FIX] ใช้ Event 'pageshow' สำหรับมือถือ
+// Event นี้จะทำงานเสมอเมื่อหน้าเว็บแสดงผล ไม่ว่าจะโหลดใหม่ หรือดึงมาจาก Cache (Back/Forward Cache)
+window.addEventListener('pageshow', (event) => {
+    // event.persisted = true แปลว่าหน้านี้ถูกกู้คืนมาจาก Cache ของ Browser
+    if (event.persisted) {
+        console.log("Resumed from bfcache: Reloading data...");
+        // ให้รีโหลดข้อมูลใหม่ทันที
+        loadDashboard(); 
+        startPolling();
+    }
+});
+
+// 2. Event ปกติเมื่อโหลดหน้าเว็บครั้งแรก
 document.addEventListener('DOMContentLoaded', () => {
+    // เริ่มโหลดข้อมูล
     loadDashboard();
-    startPolling(); // [NEW] เริ่มระบบ Auto Refresh
+    startPolling(); 
 
-    // [NEW] Smart Polling: หยุดโหลดเมื่อพับหน้าจอ/เปลี่ยนแท็บ
+    // [Logic เดิม] Smart Polling: หยุดโหลดเมื่อพับหน้าจอ/เปลี่ยนแท็บ
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
             stopPolling();
         } else {
             // กลับมาดูหน้าจอ -> โหลดข้อมูลล่าสุดทันที แล้วเริ่มนับเวลาใหม่
+            console.log("Tab Active: Reloading data...");
             loadDashboard(); 
             startPolling();
         }
     });
 
-    document.getElementById('book_start_time').addEventListener('change', function() {
-        if(this.value) {
-            let d = new Date(this.value);
-            d.setHours(d.getHours() + 1);
-            let iso = d.toLocaleString('sv').replace(' ', 'T').slice(0, 16);
-            document.getElementById('book_end_time').value = iso;
-        }
-    });
+    // [Logic เดิม] คำนวณเวลาคืนรถอัตโนมัติ (+1 ชม.)
+    const bookStartInput = document.getElementById('book_start_time');
+    if (bookStartInput) {
+        bookStartInput.addEventListener('change', function() {
+            if(this.value) {
+                let d = new Date(this.value);
+                d.setHours(d.getHours() + 1);
+                // จัด Format ให้ลง Input datetime-local ได้ (ตัดวินาทีทิ้ง)
+                let iso = d.toLocaleString('sv').replace(' ', 'T').slice(0, 16);
+                document.getElementById('book_end_time').value = iso;
+            }
+        });
+    }
 });
 
-// [NEW] Helper Functions for Polling
+// [NEW] Helper Functions for Polling (เหมือนเดิมแต่ย้ายตำแหน่งให้ดูง่าย)
 function startPolling() {
-    if (!dashboardInterval) {
-        dashboardInterval = setInterval(loadDashboard, 5000); // 5 วินาที
-    }
+    // เคลียร์อันเก่าก่อนเสมอ เพื่อป้องกันการเปิดซ้อนกัน 2 ตัว
+    if (dashboardInterval) clearInterval(dashboardInterval);
+    
+    dashboardInterval = setInterval(loadDashboard, 5000); // 5 วินาที
 }
 
 function stopPolling() {
@@ -338,13 +359,24 @@ async function checkAction(forkliftId, code, name) {
     const safeCode = flData ? flData.code : (code || '-');
     const currentBatt = flData ? flData.current_battery : 100;
 
-    // 1. คืนรถ
+    // 1. คืนรถ (เราขับเอง) -> อันนี้ทำงานถูกแล้ว
     if (flData.status === 'IN_USE' && flData.current_driver === CURRENT_USER_NAME) {
         openReturnModal(flData.active_booking_id, flData.id, safeCode, currentBatt);
         return; 
     }
-    // 2. คนอื่นใช้
+
+    // 2. คนอื่นใช้ (จุดที่ต้องแก้ไข)
     if (flData.status === 'IN_USE') {
+        // [FIX] เพิ่มการเช็ค IS_ADMIN: ถ้าเป็น Admin ให้กดเข้าไปคืนรถได้ (Force Return)
+        if (typeof IS_ADMIN !== 'undefined' && IS_ADMIN) {
+             // ส่งแจ้งเตือนเล็กน้อยเพื่อให้รู้ว่ากำลังทำ Force Return
+             if(confirm(`⚠️ Admin Action: รถคันนี้ใช้งานโดย "${flData.current_driver}"\nคุณต้องการบังคับคืนรถ (Force Return) ใช่หรือไม่?`)) {
+                 openReturnModal(flData.active_booking_id, flData.id, safeCode, currentBatt);
+             }
+             return;
+        }
+
+        // ถ้าไม่ใช่ Admin ให้แจ้งเตือนเหมือนเดิม
         alert(`รถคันนี้กำลังถูกใช้งานโดย: ${flData.current_driver}`);
         return;
     }

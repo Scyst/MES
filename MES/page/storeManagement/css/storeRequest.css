@@ -1,0 +1,90 @@
+/* --- Sticky Header Section --- */
+.dashboard-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: var(--bs-body-bg);
+    padding: 1rem;
+    padding-bottom: 0.5rem;
+    transition: background-color 0.3s;
+}
+
+/* --- Table Styles --- */
+.table-responsive-custom {
+    /* ความสูงพอดีจอ (หัก Header ออก) */
+    height: calc(100vh - 220px); 
+    overflow: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bs-secondary-bg);
+}
+
+/* Table Header Sticky */
+thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: var(--bs-light);
+}
+
+/* --- Utilities --- */
+.req-card {
+    transition: transform 0.2s;
+}
+.req-card:active { transform: scale(0.98); }
+.req-card.status-PENDING { border-left: 5px solid #ffc107; }
+.req-card.status-COMPLETED { border-left: 5px solid #198754; }
+.req-card.status-REJECTED { border-left: 5px solid #dc3545; }
+
+/* Autocomplete */
+.autocomplete-results {
+    position: absolute; border: 1px solid #d4d4d4; border-top: none; z-index: 2050; 
+    top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto;
+    background-color: #fff; display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.autocomplete-item {
+    padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;
+}
+.autocomplete-item:hover { background-color: #f8f9fa; }
+
+/* Store Selection Grid */
+.store-grid-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+    gap: 0.5rem; 
+    width: 100%;
+}
+.btn-custom-select {
+    display: block; width: 100%; padding: 12px 10px;
+    background-color: #fff; border: 1px solid #e0e0e0;
+    color: #666; border-radius: 8px; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+    font-size: 0.95rem; font-weight: 500;
+}
+.btn-custom-select:hover {
+    background-color: #f8fbff; border-color: #b3d7ff; color: #0d6efd;
+}
+.btn-custom-select.active,
+.btn-check:checked + .btn-custom-select {
+    background-color: #e7f1ff; border-color: #0d6efd; color: #0d6efd; font-weight: 600;
+}
+
+/* --- FAB Button (ถ้าต้องการเอากลับมาใช้) --- */
+@media (max-width: 991.98px) {
+    .fab-container {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        z-index: 1060;
+    }
+    .fab-btn {
+        width: 60px; height: 60px; font-size: 1.5rem; 
+        background-color: #198754; color: white;
+        border: none; border-radius: 50%;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.2s; cursor: pointer;
+    }
+    .fab-btn:active { transform: scale(0.9); }
+}
