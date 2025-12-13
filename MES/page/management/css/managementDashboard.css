@@ -5,27 +5,24 @@
 /* ================================================================= */
 body.layout-top-header {
     background-color: #f5f6f8;
-    overflow: hidden; /* ห้าม Scroll ที่ Body เพื่อให้จัด Layout แบบเต็มจอได้ */
+    overflow-y: auto; /* ✅ ปล่อยให้ Scroll ได้ตามปกติ */
 }
 
 #main-content {
-    /* ใช้ความสูงเต็มจอ หักลบ Top Header (70px) */
-    height: calc(100vh - 70px);
+    min-height: calc(100vh - 70px); /* ความสูงขั้นต่ำเต็มจอ */
+    height: auto; /* ✅ ปล่อยความสูงตามเนื้อหา */
     margin-top: 70px;
-    overflow: hidden; /* ห้าม Scroll ที่ Container นี้ */
     display: flex;
     flex-direction: column;
-    padding-bottom: 0;
+    padding-bottom: 2rem;
 }
 
 /* Content Wrapper: พื้นที่หลัก */
 .content-wrapper {
-    flex: 1; /* ยืดเต็มพื้นที่ที่เหลือ */
-    overflow: hidden; 
-    padding: 1rem 1.5rem; /* ระยะห่างจากขอบ */
+    flex: 1;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* สำคัญ! เพื่อให้ Child elements ย่อตัวได้ */
 }
 
 /* ================================================================= */
@@ -38,28 +35,73 @@ body.layout-top-header {
 }
 
 .planning-section-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* สำคัญ! */
+    gap: 1.5rem;
 }
 
 /* แถวบน: Chart & Calendar */
 .planning-top-row {
-    /* กำหนดสัดส่วนความสูงให้แถวบน (ประมาณ 45%) */
-    flex: 0 0 45%; 
-    min-height: 350px; /* กันไม่ให้ย่อจนเละ */
-    max-height: 500px; 
+    height: 500px; /* ✅ Fix ความสูงส่วนบนไว้ ส่วนล่าง (ตาราง) จะต่อท้ายเอง */
+    flex-shrink: 0;
+}
+
+.kpi-card {
+    background-color: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    height: 100%;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.kpi-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0;
+}
+
+.kpi-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
 }
 
 /* ================================================================= */
 /* 3. Calendar Styling & Fixes (แก้บั๊กปฏิทินหาย/ไม่เต็ม) */
 /* ================================================================= */
-.calendar-card {
+.calendar-card, .chart-card-plan {
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background-color: #fff;
+    border-radius: 0.75rem;
+    border: 1px solid var(--bs-border-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
 /* Header ของปฏิทิน: จัดกึ่งกลางด้วย Grid */
@@ -84,22 +126,16 @@ body.layout-top-header {
 }
 
 /* Body ของการ์ดปฏิทิน */
-.calendar-card .card-body {
-    flex: 1 1 auto;        /* ยืดเต็มพื้นที่ */
-    min-height: 0;         /* สำคัญ! กัน Flexbox ทะลุ */
-    position: relative;    /* เป็นจุดอ้างอิงให้ลูก */
+.calendar-card .card-body, .chart-card-plan .card-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
     padding: 0;
-    overflow: hidden;      /* ห้าม Scroll ที่ Body ให้ไป Scroll ใน Calendar */
-    display: flex;
-    flex-direction: column;
 }
 
 /* ตัว Container ที่หุ้ม Calendar */
 #planningCalendarContainer {
-    flex: 1 1 auto;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
+    height: 100% !important;
 }
 
 /* 🔥 FORCE FIX: บังคับโครงสร้างภายในของ FullCalendar ให้เต็มพื้นที่เสมอ */
@@ -133,30 +169,23 @@ body.layout-top-header {
 /* 4. Table Styling (Sales Dashboard Style) */
 /* ================================================================= */
 .planning-table-wrapper {
-    flex: 1; /* ยืดเต็มพื้นที่ที่เหลือจากด้านบน */
-    min-height: 0;
-    overflow: auto; /* ให้ Scroll ได้เฉพาะตาราง */
+    /* ไม่ต้อง flex: 1 แล้ว เพราะเราปล่อย height auto */
+    min-height: 400px; /* ความสูงขั้นต่ำ */
+    background-color: #fff;
     border: 1px solid var(--bs-border-color);
-    border-radius: 0.5rem;
-    background-color: var(--bs-body-bg);
+    border-radius: 0.75rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    overflow-x: auto;
 }
 
 /* Sticky Header */
 .planning-table-wrapper thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: var(--bs-body-bg) !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    font-weight: 600;
-    font-size: 0.85rem;
+    background-color: #f8f9fa;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--bs-secondary-color);
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-    border-bottom: 2px solid var(--bs-border-color);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6c757d;
+    padding: 1rem;
 }
 
 /* Table Body & Rows */

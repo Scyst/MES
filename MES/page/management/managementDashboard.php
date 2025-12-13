@@ -29,143 +29,193 @@ $pageHelpId = "helpModal";
 </head>
 <body class="layout-top-header">
     
-    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-        <div class="spinner-border text-light mb-3" role="status"></div>
-        <h5 class="fw-bold text-white">Processing...</h5>
-    </div>
-
     <?php include('../components/php/top_header.php'); ?>
     <?php include('../components/php/mobile_menu.php'); ?>
     <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">
-        
         <main id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
-
+            
             <div class="content-wrapper">
-                <div class="planning-view h-100">
-                    <div class="planning-section-content h-100 d-flex flex-column gap-4"> 
-                        
-                        <div class="row g-3 planning-top-row">
-                            <div class="col-lg-8 h-100">
-                                <div class="card shadow-sm chart-card-plan h-100 border-0">
-                                    <div class="card-header bg-body-tertiary bg-opacity-50">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-center">
-                                            <h6 class="fw-bold text-primary mb-0">
-                                                <i class="fas fa-chart-bar me-2"></i>Plan vs Actual
-                                            </h6>
-                                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                <input type="date" id="startDateFilter" class="form-control form-control-sm" style="width: auto;">
-                                                <span class="text-muted">-</span>
-                                                <input type="date" id="endDateFilter" class="form-control form-control-sm" style="width: auto;">
-                                                <div class="vr mx-1"></div>
-                                                <select id="planLineFilter" class="form-select form-select-sm" style="width: auto; min-width: 100px;"> <option value="">All Lines</option> </select>
-                                                <select id="planShiftFilter" class="form-select form-select-sm" style="width: auto;"> <option value="">All Shifts</option> <option value="DAY">Day</option> <option value="NIGHT">Night</option> </select>
-                                            </div>
-                                        </div>
+                <div class="planning-section-content">
+                    
+                    <div class="row g-3">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="kpi-card border-primary border-opacity-25">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="kpi-title">Est. Sales Value</div>
+                                        <h3 class="kpi-value text-primary" id="kpi-sale-value">฿0.00</h3>
                                     </div>
-                                    <div class="card-body p-2 position-relative"> 
-                                        <div class="chart-scroll-container" style="overflow-x: auto; height: 100%; width: 100%;">
-                                            <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
-                                                <canvas id="planVsActualChart"></canvas>
-                                            </div>
-                                        </div>
+                                    <div class="kpi-icon-wrapper bg-primary bg-opacity-10 text-primary">
+                                        <i class="fas fa-coins"></i>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="col-lg-4 h-100">
-                                <div class="card shadow-sm calendar-card h-100 border-0">
-                                    <div class="card-header bg-body-tertiary bg-opacity-50" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0.75rem 1rem;"> 
-                                        
-                                        <div class="d-flex align-items-center gap-1">
-                                            <button id="calendar-prev-button" class="btn btn-sm btn-light border shadow-sm" title="Previous"><i class="bi bi-chevron-left"></i></button>
-                                            <button id="calendar-next-button" class="btn btn-sm btn-light border shadow-sm" title="Next"><i class="bi bi-chevron-right"></i></button>
-                                            <button id="calendar-today-button" class="btn btn-sm btn-light border shadow-sm ms-1">Today</button>
-                                        </div>
-
-                                        <h6 id="calendar-title" class="fw-bold text-primary mb-0" style="justify-self: center; white-space: nowrap;">Calendar</h6>
-
-                                        <div class="d-flex align-items-center gap-2" style="justify-self: end;">
-                                            <div class="btn-group btn-group-sm shadow-sm" role="group">
-                                                <button id="calendar-month-view-button" type="button" class="btn btn-outline-secondary active">M</button>
-                                                <button id="calendar-week-view-button" type="button" class="btn btn-outline-secondary">W</button>
-                                            </div>
-                                            <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary shadow-sm" style="display: none;">Back</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="card-body p-0 position-relative">
-                                        <div id="planningCalendarContainer" class="h-100"></div>
-                                        
-                                        <div id="dlotViewContainer" class="dlot-view-container h-100 p-2" style="display: none;">
-                                            <div class="card shadow-none h-100 border-0" id="dlot-entry-card">
-                                                <div class="card-body p-0 d-flex flex-column">
-                                                    <div class="mb-3">
-                                                        <div class="row g-2">
-                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-light"><small class="d-block text-muted">DL</small><strong id="dl-cost-summary-display" class="text-primary">0</strong></div></div>
-                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-light"><small class="d-block text-muted">OT</small><strong id="ot-cost-summary-display" class="text-danger">0</strong></div></div>
-                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-primary text-white"><small class="d-block text-white-50">Total</small><strong id="total-dlot-summary-display">0</strong></div></div>
-                                                        </div>
-                                                    </div>
-                                                    <form id="dlot-entry-form" class="flex-grow-1 d-flex flex-column gap-2">
-                                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                                            <strong id="dlotDateDisplayEntry"></strong>
-                                                        </div>
-                                                        <input type="hidden" id="dlot-entry-date">
-                                                        <div><label class="small">Headcount</label><input type="number" class="form-control form-control-sm" id="dlot-headcount"></div>
-                                                        <div><label class="small">Direct Labor</label><input type="number" class="form-control form-control-sm" id="dlot-dl-cost"></div>
-                                                        <div><label class="small">Overtime</label><input type="number" class="form-control form-control-sm" id="dlot-ot-cost"></div>
-                                                        <button type="submit" class="btn btn-success btn-sm w-100 mt-auto">Save</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">Based on Plan</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="card border-0 shadow-sm flex-grow-1" style="min-height: 0;">
-                            <div class="card-header bg-white border-bottom-0 py-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="fw-bold text-secondary mb-0"><i class="fas fa-list me-2"></i>Production Plans</h6>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-light text-primary" id="btn-refresh-plan"><i class="fas fa-sync-alt"></i></button>
-                                        <button class="btn btn-sm btn-warning text-dark" id="btnCalculateCarryOver"><i class="fas fa-calculator me-1"></i> Calc C/O</button>
-                                        <button class="btn btn-sm btn-success" id="btnAddPlan"><i class="fas fa-plus me-1"></i> Plan</button>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="kpi-card border-danger border-opacity-25">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="kpi-title">Est. Cost</div>
+                                        <h3 class="kpi-value text-danger" id="kpi-cost-value">฿0.00</h3>
+                                    </div>
+                                    <div class="kpi-icon-wrapper bg-danger bg-opacity-10 text-danger">
+                                        <i class="fas fa-file-invoice-dollar"></i>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="planning-table-wrapper flex-grow-1">
-                                <table class="table table-hover table-sm mb-0 align-middle" id="productionPlanTable">
-                                    <thead class="table-light sticky-top">
-                                        <tr>
-                                            <th style="width: 10%;">Date</th> 
-                                            <th style="width: 8%;">Line</th> 
-                                            <th style="width: 8%;">Shift</th> 
-                                            <th style="width: 25%;">Item / Description</th> 
-                                            <th class="text-center" style="width: 10%;">Plan</th> 
-                                            <th class="text-center" style="width: 10%;">Actual</th> 
-                                            <th class="text-center" style="width: 8%;">C/O</th> 
-                                            <th class="text-center bg-primary bg-opacity-10" style="width: 10%;">Adj. Plan</th>
-                                            <th class="text-start">Note</th> 
-                                        </tr>
-                                    </thead>
-                                    <tbody id="productionPlanTableBody" class="bg-white"></tbody>
-                                </table>
+                                <div class="mt-3">
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Std. Cost</span>
+                                </div>
                             </div>
                         </div>
 
+                        <div class="col-xl-3 col-md-6">
+                            <div class="kpi-card border-success border-opacity-25">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="kpi-title">Gross Profit</div>
+                                        <h3 class="kpi-value text-success" id="kpi-profit-value">฿0.00</h3>
+                                    </div>
+                                    <div class="kpi-icon-wrapper bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Margin Gap</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="kpi-card border-info border-opacity-25">
+                                <div class="d-flex justify-content-between align-items-start w-100">
+                                    <div class="w-100">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="kpi-title">Production Progress</div>
+                                            <div class="kpi-title text-info" id="kpi-progress-percent">0%</div>
+                                        </div>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar bg-info" id="kpi-progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 d-flex align-items-center gap-2">
+                                    <div class="kpi-icon-wrapper bg-info bg-opacity-10 text-info" style="width: 32px; height: 32px; font-size: 1rem;">
+                                        <i class="fas fa-spinner"></i>
+                                    </div>
+                                    <span class="text-muted small">Actual vs Plan</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="row g-3 planning-top-row">
+                        <div class="col-lg-8 h-100">
+                            <div class="card shadow-sm chart-card-plan h-100 border-0">
+                                <div class="card-header bg-white py-3 border-bottom">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                        <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Plan vs Actual Analysis</h6>
+                                        
+                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                            <div class="input-group input-group-sm" style="width: auto;">
+                                                <input type="date" id="startDateFilter" class="form-control">
+                                                <span class="input-group-text bg-light text-muted">-</span>
+                                                <input type="date" id="endDateFilter" class="form-control">
+                                            </div>
+                                            <select id="planLineFilter" class="form-select form-select-sm" style="width: auto; min-width: 120px;"> <option value="">All Lines</option> </select>
+                                            <select id="planShiftFilter" class="form-select form-select-sm" style="width: auto;"> <option value="">All Shifts</option> <option value="DAY">Day</option> <option value="NIGHT">Night</option> </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3"> 
+                                    <div class="chart-scroll-container h-100">
+                                        <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
+                                            <canvas id="planVsActualChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 h-100">
+                            <div class="card shadow-sm calendar-card h-100 border-0">
+                                <div class="card-header bg-white py-3 border-bottom" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;"> 
+                                    <div class="d-flex gap-1">
+                                        <button id="calendar-prev-button" class="btn btn-sm btn-light border" title="Prev"><i class="bi bi-chevron-left"></i></button>
+                                        <button id="calendar-next-button" class="btn btn-sm btn-light border" title="Next"><i class="bi bi-chevron-right"></i></button>
+                                    </div>
+                                    <h6 id="calendar-title" class="fw-bold text-dark mb-0">Calendar</h6>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button id="calendar-today-button" class="btn btn-sm btn-light border me-1">Today</button>
+                                        <div class="btn-group btn-group-sm">
+                                            <button id="calendar-month-view-button" type="button" class="btn btn-outline-secondary active">M</button>
+                                            <button id="calendar-week-view-button" type="button" class="btn btn-outline-secondary">W</button>
+                                        </div>
+                                        <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary" style="display: none;">Back</button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="planningCalendarContainer" class="h-100"></div>
+                                    <div id="dlotViewContainer" class="dlot-view-container h-100 p-3" style="display: none;">
+                                        <?php include 'components/dlot_form_inner.php'; ?> 
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-0 shadow-sm"> <div class="card-header bg-white py-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-table me-2 text-primary"></i>Production Plans</h6>
+                                
+                                <div class="d-flex gap-2">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('importExcelInput').click()"><i class="fas fa-file-import me-1"></i> Import</button>
+                                    </div>
+                                    <input type="file" id="importExcelInput" hidden accept=".xlsx, .xls" onchange="importFromExcel(this)">
+                                    
+                                    <div class="vr mx-1"></div>
+
+                                    <button class="btn btn-sm btn-light text-primary border" id="btn-refresh-plan" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+                                    <button class="btn btn-sm btn-warning text-dark fw-bold" id="btnCalculateCarryOver"><i class="fas fa-calculator me-1"></i> Calc C/O</button>
+                                    <button class="btn btn-sm btn-success fw-bold px-3" id="btnAddPlan"><i class="fas fa-plus me-1"></i> New Plan</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="planning-table-wrapper"> <table class="table table-hover table-sm mb-0 align-middle" id="productionPlanTable">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 10%;">Date</th> 
+                                        <th style="width: 8%;">Line</th> 
+                                        <th style="width: 8%;">Shift</th> 
+                                        <th style="width: 25%;">Item / Description</th> 
+                                        <th class="text-end" style="width: 10%;">Plan</th> 
+                                        <th class="text-end" style="width: 10%;">Actual</th> 
+                                        <th class="text-end" style="width: 8%;">C/O</th> 
+                                        <th class="text-end bg-primary bg-opacity-10" style="width: 10%;">Adj. Plan</th>
+                                        <th class="text-start">Note</th> 
+                                    </tr>
+                                </thead>
+                                <tbody id="productionPlanTableBody" class="bg-white"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
             <div id="toast"></div>
             <?php include_once('../components/php/command_center.php'); ?>
             <?php include_once('components/planModal.php'); ?>
-            <nav class="pagination-footer px-3 py-2 bg-white border-top">
+            
+            <nav class="pagination-footer px-3 py-2 bg-white border-top shadow-sm">
                 <ul class="pagination justify-content-end mb-0" id="planningPagination"></ul>
             </nav>
 

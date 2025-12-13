@@ -100,24 +100,21 @@ try {
                     i.sap_no,
                     i.part_no,
                     i.part_description,
+                    ISNULL(i.StandardPrice, 0) AS std_price,      -- <== เพิ่ม
+                    ISNULL(i.Cost_Total, 0) AS std_cost,          -- <== เพิ่ม
                     ISNULL(p.original_planned_quantity, 0) AS original_planned_quantity,
                     ISNULL(p.carry_over_quantity, 0) AS carry_over_quantity,
                     ISNULL(p.adjusted_planned_quantity, 0) AS adjusted_planned_quantity,
                     p.note,
-                    p.updated_at,
-                    p.updated_by,
                     ISNULL(actual.ActualQty, 0) AS actual_quantity
                 
                 FROM ($actualsSubQuery) AS actual
-                
                 FULL OUTER JOIN $planTable p ON 
                     p.plan_date = actual.ActualDate
                     AND p.line = actual.ActualLine
                     AND p.shift = actual.ActualShift
                     AND p.item_id = actual.ActualItemId
-                
                 JOIN $itemTable i ON i.item_id = ISNULL(p.item_id, actual.ActualItemId)
-                
                 WHERE 1=1 
             ";
 
@@ -378,6 +375,116 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => 'Carry-over calculation triggered successfully from ' . $startDate . ' to ' . $endDate
+            ]);
+            break;
+
+        case 'import_plans_bulk':
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $plans = $data['plans'] ?? [];
+            if (empty($plans)) throw new Exception("No data to import");
+
+            $pdo->beginTransaction();
+            try {
+                // เตรียม Statement เช็ค Item
+                $checkItem = $pdo->prepare("SELECT item_id FROM $itemTable WHERE sap_no = ? OR part_no = ?");
+                
+                // เตรียม Statement บันทึก Plan (ใช้ MERGE เพื่อ Insert หรือ Update ถ้ามีอยู่แล้ว)
+                $sqlMerge = "
+                    MERGE INTO $planTable AS T
+                    USING (VALUES (:plan_date, :line, :shift, :item_id, :qty, :user)) 
+                    AS S (plan_date, line, shift, item_id, qty, user_Update)
+                    ON (T.plan_date = S.plan_date AND T.line = S.line AND T.shift = S.shift AND T.item_id = S.item_id)
+                    WHEN MATCHED THEN
+                        UPDATE SET original_planned_quantity = S.qty, updated_by = S.user_Update, updated_at = GETDATE()
+                    WHEN NOT MATCHED THEN
+                        INSERT (plan_date, line, shift, item_id, original_planned_quantity, updated_by)
+                        VALUES (S.plan_date, S.line, S.shift, S.item_id, S.qty, S.user_Update);
+                ";
+                $stmtMerge = $pdo->prepare($sqlMerge);
+
+                $count = 0;
+                foreach ($plans as $row) {
+                    // 1. หา Item ID จาก SAP หรือ Part No
+                    $checkItem->execute([$row['item_code'], $row['item_code']]);
+                    $itemId = $checkItem->fetchColumn();
+                    
+                    if ($itemId) {
+                        // 2. บันทึกลง DB
+                        $stmtMerge->execute([
+                            ':plan_date' => $row['date'],
+                            ':line' => $row['line'],
+                            ':shift' => $row['shift'],
+                            ':item_id' => $itemId,
+                            ':qty' => floatval($row['qty']),
+                            ':user' => $currentUser
+                        ]);
+                        $count++;
+                    }
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => "Imported $count plans successfully."]);
+            } catch (Exception $ex) {
+                $pdo->rollBack();
+                throw $ex;
+            }
+            break;
+
+        case 'calc_dlot_auto':
+            $entry_date = $data['entry_date'];
+            $line = isset($data['line']) ? $data['line'] : 'ALL';
+
+            if (empty($entry_date)) throw new Exception("Entry date is required.");
+
+            // 1. กำหนดตัวแปรค่าแรง (สมมติ) - ในระบบจริงควรดึงจาก Config หรือ Table Wage
+            $standard_daily_wage = 450; // ค่าแรงขั้นต่ำต่อวัน (8 ชม.)
+            $ot_hourly_rate = 85;       // ค่า OT ต่อชั่วโมง (1.5 เท่า)
+
+            // 2. Query ดึงยอดคนและชั่วโมง OT จากตาราง MANPOWER
+            // (Join ระหว่าง Logs, Employees และ Shifts เพื่อคำนวณเวลา)
+            $sql = "
+                SELECT 
+                    COUNT(DISTINCT l.emp_id) AS total_headcount,
+                    SUM(
+                        CASE 
+                            WHEN l.scan_out_time IS NOT NULL AND s.end_time IS NOT NULL THEN
+                                -- คำนวณ OT: ถ้า Scan Out หลัง Shift End เกิน 30 นาที
+                                CASE 
+                                    WHEN DATEDIFF(MINUTE, CAST(CONCAT(l.log_date, ' ', s.end_time) AS DATETIME), l.scan_out_time) > 30 
+                                    THEN DATEDIFF(MINUTE, CAST(CONCAT(l.log_date, ' ', s.end_time) AS DATETIME), l.scan_out_time) / 60.0
+                                    ELSE 0 
+                                END
+                            ELSE 0
+                        END
+                    ) AS total_ot_hours
+                FROM " . MANPOWER_DAILY_LOGS_TABLE . " l
+                JOIN " . MANPOWER_EMPLOYEES_TABLE . " e ON l.emp_id = e.emp_id
+                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " s ON e.default_shift_id = s.shift_id
+                WHERE l.log_date = :log_date
+                  AND l.status IN ('PRESENT', 'LATE') -- นับเฉพาะคนที่มา
+                  AND (:line = 'ALL' OR e.line = :line)
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':log_date' => $entry_date, ':line' => $line]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $headcount = (int)($result['total_headcount'] ?? 0);
+            $ot_hours = (float)($result['total_ot_hours'] ?? 0);
+
+            // 3. คำนวณเป็นตัวเงิน
+            $dl_cost = $headcount * $standard_daily_wage;
+            $ot_cost = $ot_hours * $ot_hourly_rate;
+
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'headcount' => $headcount,
+                    'dl_cost' => round($dl_cost, 2),
+                    'ot_cost' => round($ot_cost, 2),
+                    'ot_hours' => round($ot_hours, 1) // ส่งกลับไปเผื่อ debug
+                ],
+                'message' => "Calculated from $headcount employees."
             ]);
             break;
 
