@@ -1,4 +1,5 @@
 <?php
+// MES/page/management/managementDashboard.php
 include_once("../../auth/check_auth.php");
 
 if (!hasRole(['admin', 'creator', 'planner'])) {
@@ -7,402 +8,172 @@ if (!hasRole(['admin', 'creator', 'planner'])) {
 }
 
 $currentUserForJS = $_SESSION['user'] ?? null;
+
+// --- 1. ปรับ Header ให้เหลือแค่ Planning ---
+$pageTitle = "Production Planning";
+$pageIcon = "fas fa-calendar-alt"; 
+$pageHeaderTitle = "Production Planning";
+$pageHeaderSubtitle = "Manage Plans, Actuals & DLOT Cost";
+$pageHelpId = "helpModal"; 
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Management Dashboard - Planning</title>
+    <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/css/autoComplete.02.min.css">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
-    <style>
-        /* ============================================== */
-        /* ▼▼▼ CSS แก้ไข Layout (ชุดใหม่) ▼▼▼ */
-        /* ============================================== */
-
-        /* 1. สร้าง "โลกใหม่" ที่มีความสูงคงที่ อิงจากหน้าจอ (vh) */
-        .planning-view {
-            display: flex;
-            flex-direction: column;
-            
-            /* * คำนวณความสูง: 100vh (เต็มจอ)
-             * - 130px (ความสูงโดยประมาณของ Header + Filter bar ด้านบน)
-             * - 3rem   (padding ของ .dashboard-section บน 1.5rem + ล่าง 1.5rem)
-             *
-             * *** คุณอาจต้องปรับค่า 130px นี้เล็กน้อย (เช่น 120px, 140px) ***
-             * *** เพื่อให้มันพอดีกับหน้าจอของคุณที่สุด ***
-             */
-            height: calc(100vh - 120px - 3rem);
-        }
-
-        /* 2. ให้ content-wrapper ยืดเต็ม "โลกใหม่" ของเรา */
-        .planning-section-content {
-            flex-grow: 1; /* <-- ยืดให้เต็ม #planning-view */
-            display: flex;
-            flex-direction: column;
-            min-height: 0; /* <-- สำคัญมาก! อนุญาตให้หดตัวได้ */
-            gap: 2rem;
-        }
-
-        /* 3. แถวบน (กราฟ/ปฏิทิน) - 50% ของพื้นที่ */
-        .planning-top-row {
-            flex-basis: 50%;  /* <-- สัดส่วน 50% */
-            height: 50%;      /* <-- กำหนดความสูง 50% */
-            flex-shrink: 0;   /* <-- ห้ามหด */
-            min-height: 350px;/* <-- ความสูงขั้นต่ำ กันมันแบน */
-        }
-
-        /* 4. แถวล่าง (ตาราง) - ยืดเติมส่วนที่เหลือ */
-        .planning-table-wrapper {
-            flex-grow: 1;     /* <-- เติมพื้นที่ที่เหลือ (อีก 50%) */
-            min-height: 0;    /* <-- สำคัญมาก! ทำให้ overflow-y ทำงาน */
-            overflow-y: auto; /* <-- ทำให้ "เฉพาะตาราง" scroll ได้ */
-            position: relative;
-            border: 1px solid var(--bs-border-color);
-            border-radius: var(--bs-card-border-radius, .375rem);
-        }
-
-        .planning-table-wrapper thead { position: sticky; top: 0; z-index: 1; background-color: var(--bs-tertiary-bg); }
-        [data-bs-theme="dark"] .planning-table-wrapper thead { background-color: var(--bs-secondary-bg); }
-        
-        /* ทำให้ Card ในแถวบนยืดเต็ม 100% ของ .planning-top-row */
-        .chart-card-plan, .calendar-card { 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .chart-card-plan .card-body, .calendar-card .card-body { 
-            position: relative; 
-            flex-grow: 1; 
-            padding: 0.5rem; 
-            min-height: 0; 
-        }
-        
-        #planningCalendarContainer { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%; 
-            height: 100%; 
-        }
-
-        #planningCalendarContainer .fc-daygrid-day-number { font-weight: bold; text-decoration: none; }        
-        #planningCalendarContainer .fc-event { padding: 2px 4px; font-size: 0.75em; cursor: pointer; }
-        
-        /* สไตล์สำหรับ DLOT View ภายในปฏิทิน */
-        .dlot-view-container { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow-y: auto; 
-            flex-direction: column; 
-            gap: 1rem;
-            padding: 0.5rem;
-            display: none;
-        }
-        .dlot-view-container .card { flex-shrink: 0; }
-        .dlot-view-container #dlot-entry-card { flex-grow: 1; min-height: 0; display: flex; flex-direction: column;}
-        .dlot-view-container #dlot-entry-card .card-body { flex-grow: 1; overflow-y: auto; min-height: 0; }
-
-        .dlot-entered .fc-daygrid-day-number {
-            color: var(--bs-success) !important;
-            font-weight: 700;
-            text-decoration: none !important; /* ลบขีดฆ่า ถ้าบังเอิญเป็นอดีต */
-        }
-
-        /* 2. วันที่ผ่านมาแล้ว แต่ "ยังไม่กรอก" DLOT (สีแดง + ขีดฆ่า) */
-        .dlot-missing-past .fc-daygrid-day-number {
-            color: var(--bs-danger) !important;
-            font-weight: 400;
-            text-decoration: line-through;
-            opacity: 0.7;
-        }
-
-        /* 3. วันนี้ หรือ อนาคต ที่ยังไม่กรอก (สีเทา Default) */
-        .dlot-pending .fc-daygrid-day-number {
-            opacity: 0.8; 
-            /* (ใช้สี default ของปฏิทิน) */
-        }
-        
-        .fc-event.dlot-marker-bg {
-            /* ⭐️ ใช้ display: background !important */
-            display: background !important; 
-            background-color: var(--bs-success) !important;
-            opacity: 0.15; /* ⭐️ ทำให้สีจางๆ */
-            z-index: -1; /* ⭐️ ให้อยู่หลังสุด */
-        }
-
-        /* ⭐️ (Optional) ทำให้คลิกทะลุ Background Event ไปยัง "วันที่" ได้ */
-        .fc-bg-event {
-            pointer-events: none;
-        }
-
-        #cost-summary-card-dlot .stat-card-body h4 {
-            font-size: 1rem; /* ลดขนาดตัวเลขลงเล็กน้อย */
-        }
-        #cost-summary-card-dlot .stat-card-header {
-            font-size: 0.75rem; /* ลดขนาดหัวข้อลงเล็กน้อย */
-        }
-        hr {
-            border-color: var(--bs-border-color);
-            opacity: 0.25;
-        }
-
-        /* สไตล์สำหรับช่องที่แก้ไขได้ และความกว้างตาราง */
-        .editable-note, .editable-plan { cursor: pointer; min-width: 80px; display: inline-block; padding: 0.25rem 0.5rem; text-align: right;}
-        .editable-note:hover, .editable-plan:hover { background-color: var(--bs-tertiary-bg); outline: 1px dashed var(--bs-secondary); }
-        .editable-note:focus, .editable-plan:focus { background-color: var(--bs-light); outline: 1px solid var(--bs-primary); cursor: text; }
-        [data-bs-theme="dark"] .editable-note:focus, [data-bs-theme="dark"] .editable-plan:focus { background-color: var(--bs-gray-700); }
-        #productionPlanTable th:nth-child(4), #productionPlanTable td:nth-child(4) { min-width: 200px; }
-        #productionPlanTable th:nth-child(9), #productionPlanTable td:nth-child(9) { min-width: 150px; }
-        #productionPlanTable th:last-child, #productionPlanTable td:last-child { width: 120px; text-align: center; }
-        
-        /* สไตล์ Stat Card ใน DLOT View */
-        .stat-card-header { font-size: 0.8rem; font-weight: 500; padding: 0.5rem 1rem; opacity: 0.9; }
-        .stat-card-body h4 { font-size: 1.75rem; font-weight: 700; }
-        .stat-card-body small { font-size: 0.9rem; font-weight: 500; }
-
-        .dashboard-header-sticky .nav-tabs {
-            border-bottom: none; /* เอาเส้นใต้แท็บใน Header ออก */
-            margin-bottom: -1rem; /* ดึงแท็บลงมาเล็กน้อย (ปรับค่านี้ได้) */
-        }
-        .dashboard-header-sticky .nav-tabs .nav-link {
-            /* (ปรับขนาด Font หรือ Padding ได้ตามชอบ) */
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-        }
-    </style>
+    <link rel="stylesheet" href="css/managementDashboard.css?v=<?php echo time(); ?>">
 </head>
-<body class="dashboard-page">
-    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
-            data-bs-toggle="offcanvas" 
-            data-bs-target="#globalMobileMenu" 
-            aria-controls="globalMobileMenu">
-        <i class="fas fa-bars"></i>
-    </button>
+<body class="layout-top-header">
     
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <div class="spinner-border text-light mb-3" role="status"></div>
+        <h5 class="fw-bold text-white">Processing...</h5>
+    </div>
+
+    <?php include('../components/php/top_header.php'); ?>
+    <?php include('../components/php/mobile_menu.php'); ?>
+    <?php include('../components/php/docking_sidebar.php'); ?>
+
     <div class="page-container">
-        <?php include_once('../components/php/nav_dropdown.php'); ?>
+        
         <main id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
-            
-            <header class="dashboard-header-sticky">
-                
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <h2 class="mb-0">Production Planning</h2>
-                    <div class="text-end"> <p id="date" class="mb-0"></p> <p id="time" class="mb-0"></p> </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-12">
-                        <ul class="nav nav-tabs" id="managementTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="planning-tab" data-bs-toggle="tab" data-bs-target="#planning-pane" type="button" role="tab">
-                                    <i class="fas fa-calendar-alt me-1"></i> Production Planning
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="shipment-tab" data-bs-toggle="tab" data-bs-target="#shipment-pane" type="button" role="tab">
-                                    <i class="fas fa-shipping-fast me-1"></i> Shipment Control
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </header>
-
-            <div class="tab-content" id="managementTabContent">
-
-                <div class="tab-pane fade show active" id="planning-pane" role="tabpanel" aria-labelledby="planning-tab">
-                    <div class="dashboard-container">
-                        <section class="dashboard-section" id="planning-section">
-                            <div class="planning-view">
-                                <div class="planning-section-content">
-                                    
-                                    <div class="row g-3 planning-top-row">
-                                        <div class="col-lg-8 h-100">
-                                            <div class="card shadow-sm chart-card-plan h-100">
-                                                
-                                                <div class="card-header">
-                                                    <div class="d-flex flex-wrap justify-content-between align-items-center">
-                                                        <h6 class="fw-bold text-truncate mb-0 py-1">
-                                                            Plan vs Actual (<span id="chartDateDisplay"></span>)
-                                                        </h6>
-                                                        <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
-                                                            <!--label for="startDateFilter" class="form-label mb-0 small">Start:</label-->
-                                                            <div class="input-group input-group-sm" style="width: fit-content;">
-                                                                <input type="date" id="startDateFilter" class="form-control form-control-sm" style="width: auto;">
-                                                                <span class="input-group-text">-</span>
-                                                                <!--label for="endDateFilter" class="form-label mb-0 small ms-lg-2">End:</label-->
-                                                                <input type="date" id="endDateFilter" class="form-control form-control-sm" style="width: auto;">
-                                                            </div>
-                                                            <!--label for="planLineFilter" class="form-label mb-0 small ms-lg-2">Line:</label-->
-                                                            <select id="planLineFilter" class="form-select form-select-sm" style="width: auto; min-width: 120px;"> <option value="">All Lines</option> </select>
-                                                            <!--label for="planShiftFilter" class="form-label mb-0 small ms-lg-2">Shift:</label-->
-                                                            <select id="planShiftFilter" class="form-select form-select-sm" style="width: auto;"> <option value="">All Shifts</option> <option value="DAY">DAY</option> <option value="NIGHT">NIGHT</option> </select>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="card-body p-0 position-relative"> 
-                                                    <div class="chart-scroll-container" style="overflow-x: auto; height: 100%; width: 100%;">
-                                                        
-                                                        <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
-                                                            <canvas id="planVsActualChart"></canvas>
-                                                        </div>
-
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-4 h-100">
-                                            <div class="card shadow-sm calendar-card h-100">
-                                                <div class="card-header d-flex justify-content-between align-items-center">
-                                                    <div class="d-flex align-items-center gap-1">
-                                                        <button id="calendar-prev-button" class="btn btn-sm btn-outline-secondary" title="Previous month/week">
-                                                            <i class="bi bi-chevron-left"></i>
-                                                        </button>
-                                                        <button id="calendar-next-button" class="btn btn-sm btn-outline-secondary" title="Next month/week">
-                                                            <i class="bi bi-chevron-right"></i>
-                                                        </button>
-                                                        <button id="calendar-today-button" class="btn btn-sm btn-outline-secondary ms-1">Today</button>
-                                                    </div>
-                                                    <span id="calendar-title" class="fw-bold mx-2 text-truncate" style="font-size: 1rem;">Planning Calendar</span>
-                                                    <div class="d-flex align-items-center gap-1">
-                                                        <div class="btn-group btn-group-sm" role="group" aria-label="Calendar View">
-                                                            <button id="calendar-month-view-button" type="button" class="btn btn-outline-primary active">Month</button>
-                                                            <button id="calendar-week-view-button" type="button" class="btn btn-outline-primary">Week</button>
-                                                        </div>
-                                                        <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;"> <i class="fas fa-arrow-left me-1"></i> Back </button>
-                                                    </div>
-                                                </div>
-                                                <div class="card-body p-0">
-                                                    <div id="planningCalendarContainer"> Loading Calendar... </div>
-                                                    <div id="dlotViewContainer" class="dlot-view-container">
-                                                        <div class="card shadow-sm flex-grow-1" id="dlot-entry-card">                                 
-                                                            <div class="card-body p-2 d-flex flex-column">
-                                                                <div class="mb-2">
-                                                                    <div class="row g-2">
-                                                                        <div class="col-4">
-                                                                            <div class="card text-center text-bg-secondary text-white h-100"> <div class="stat-card-header py-0 px-2 small">Direct Labor (DL)</div>
-                                                                                <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="dl-cost-summary-display" style="font-size: 1rem;">0.00</h4></div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="col-4">
-                                                                            <div class="card text-center text-bg-secondary text-white h-100"> <div class="stat-card-header py-0 px-2 small">Overtime (OT)</div>
-                                                                                <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="ot-cost-summary-display" style="font-size: 1rem;">0.00</h4></div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="col-4">
-                                                                            <div class="card text-center text-bg-primary h-100" id="total-dlot-summary-card"> <div class="stat-card-header py-0 px-2 small">Total DLOT</div>
-                                                                                <div class="card-body stat-card-body py-1"><h4 class="card-title mb-0" id="total-dlot-summary-display" style="font-size: 1rem;">0.00</h4></div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <form id="dlot-entry-form" class="flex-grow-1 d-flex flex-column">
-                                                                    <span id="dlotDateDisplayEntry" class="visually-hidden"></span>
-                                                                    <input type="hidden" id="dlot-entry-date">
-                                                                    <div class="row g-2 mb-2">
-                                                                        <div class="col-md-4">
-                                                                            <label for="dlot-headcount" class="form-label small mb-0">Headcount:</label>
-                                                                            <input type="number" class="form-control form-control-sm" id="dlot-headcount" placeholder="0" min="0" step="1">
-                                                                        </div>
-                                                                        <div class="col-md-4">
-                                                                            <label for="dlot-dl-cost" class="form-label small mb-0">Direct Labor (DL):</label>
-                                                                            <input type="number" class="form-control form-control-sm" id="dlot-dl-cost" placeholder="0.00" min="0" step="0.01">
-                                                                        </div>
-                                                                        <div class="col-md-4">
-                                                                            <label for="dlot-ot-cost" class="form-label small mb-0">Overtime (OT):</label>
-                                                                            <input type="number" class="form-control form-control-sm" id="dlot-ot-cost" placeholder="0.00" min="0" step="0.01">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mt-auto pt-1">
-                                                                        <button type="submit" class="btn btn-success btn-sm w-100" id="btn-save-dlot"><i class="fas fa-save me-1"></i> Save</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+            <div class="content-wrapper">
+                <div class="planning-view h-100">
+                    <div class="planning-section-content h-100 d-flex flex-column gap-4"> 
+                        
+                        <div class="row g-3 planning-top-row">
+                            <div class="col-lg-8 h-100">
+                                <div class="card shadow-sm chart-card-plan h-100 border-0">
+                                    <div class="card-header bg-body-tertiary bg-opacity-50">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center">
+                                            <h6 class="fw-bold text-primary mb-0">
+                                                <i class="fas fa-chart-bar me-2"></i>Plan vs Actual
+                                            </h6>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                <input type="date" id="startDateFilter" class="form-control form-control-sm" style="width: auto;">
+                                                <span class="text-muted">-</span>
+                                                <input type="date" id="endDateFilter" class="form-control form-control-sm" style="width: auto;">
+                                                <div class="vr mx-1"></div>
+                                                <select id="planLineFilter" class="form-select form-select-sm" style="width: auto; min-width: 100px;"> <option value="">All Lines</option> </select>
+                                                <select id="planShiftFilter" class="form-select form-select-sm" style="width: auto;"> <option value="">All Shifts</option> <option value="DAY">Day</option> <option value="NIGHT">Night</option> </select>
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <div class="card border-1 shadow-sm d-flex flex-column flex-grow-1" style="min-height: 0;">
-                                        <div class="card-header">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="fw-bold text-truncate mb-0">
-                                                    Production Plan Details
-                                                </h6>
-                                                <div class="d-flex justify-content-end gap-2">
-                                                    <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btn-refresh-plan" title="Refresh Plans"><i class="fas fa-sync-alt"></i> Refresh </button>
-                                                    <button class="btn btn-sm btn-warning py-1 px-2" id="btnCalculateCarryOver" title="Calculate missing carry-over values up to today"> <i class="fas fa-calculator me-1"></i> Calc C/O </button>
-                                                    <button class="btn btn-sm btn-success" id="btnAddPlan"> <i class="fas fa-plus me-1"></i> Add Plan </button>
-                                                </div>
+                                    <div class="card-body p-2 position-relative"> 
+                                        <div class="chart-scroll-container" style="overflow-x: auto; height: 100%; width: 100%;">
+                                            <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
+                                                <canvas id="planVsActualChart"></canvas>
                                             </div>
                                         </div>
-                                        <div class="planning-table-wrapper">
-                                            <table class="table table-striped table-hover table-sm" id="productionPlanTable">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th style="width: 10%;">Date</th> <th style="width: 10%;">Line</th> <th style="width: 8%;">Shift</th> <th>Item (SAP / Part No)</th>
-                                                        <th style="width: 10%;" class="text-center">Plan Qty</th> <th style="width: 10%;" class="text-center">Actual Qty</th> <th style="width: 10%;" class="text-center">Carry Over</th> <th style="width: 10%;" class="text-center">Adjusted Plan</th>
-                                                        <th class="text-center">Note</th> <th class="text-center">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="productionPlanTableBody"> 
-                                                    <tr><td colspan="10" class="text-center">Loading plans...</td></tr> 
-                                                </tbody>
-                                            </table>
-                                        </div>
                                     </div>
-
                                 </div>
                             </div>
-                        </section>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="shipment-pane" role="tabpanel" aria-labelledby="shipment-tab">
-                    <div class="dashboard-container">
-                        <section class="dashboard-section" id="shipment-section">
                             
-                            <div class="planning-view"> <div class="planning-section-content">
-                                    <?php include_once('components/shipmentUI.php'); ?>
+                            <div class="col-lg-4 h-100">
+                                <div class="card shadow-sm calendar-card h-100 border-0">
+                                    <div class="card-header bg-body-tertiary bg-opacity-50" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0.75rem 1rem;"> 
+                                        
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button id="calendar-prev-button" class="btn btn-sm btn-light border shadow-sm" title="Previous"><i class="bi bi-chevron-left"></i></button>
+                                            <button id="calendar-next-button" class="btn btn-sm btn-light border shadow-sm" title="Next"><i class="bi bi-chevron-right"></i></button>
+                                            <button id="calendar-today-button" class="btn btn-sm btn-light border shadow-sm ms-1">Today</button>
+                                        </div>
+
+                                        <h6 id="calendar-title" class="fw-bold text-primary mb-0" style="justify-self: center; white-space: nowrap;">Calendar</h6>
+
+                                        <div class="d-flex align-items-center gap-2" style="justify-self: end;">
+                                            <div class="btn-group btn-group-sm shadow-sm" role="group">
+                                                <button id="calendar-month-view-button" type="button" class="btn btn-outline-secondary active">M</button>
+                                                <button id="calendar-week-view-button" type="button" class="btn btn-outline-secondary">W</button>
+                                            </div>
+                                            <button id="backToCalendarBtn" class="btn btn-sm btn-outline-secondary shadow-sm" style="display: none;">Back</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card-body p-0 position-relative">
+                                        <div id="planningCalendarContainer" class="h-100"></div>
+                                        
+                                        <div id="dlotViewContainer" class="dlot-view-container h-100 p-2" style="display: none;">
+                                            <div class="card shadow-none h-100 border-0" id="dlot-entry-card">
+                                                <div class="card-body p-0 d-flex flex-column">
+                                                    <div class="mb-3">
+                                                        <div class="row g-2">
+                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-light"><small class="d-block text-muted">DL</small><strong id="dl-cost-summary-display" class="text-primary">0</strong></div></div>
+                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-light"><small class="d-block text-muted">OT</small><strong id="ot-cost-summary-display" class="text-danger">0</strong></div></div>
+                                                            <div class="col-4"><div class="p-2 border rounded text-center bg-primary text-white"><small class="d-block text-white-50">Total</small><strong id="total-dlot-summary-display">0</strong></div></div>
+                                                        </div>
+                                                    </div>
+                                                    <form id="dlot-entry-form" class="flex-grow-1 d-flex flex-column gap-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <strong id="dlotDateDisplayEntry"></strong>
+                                                        </div>
+                                                        <input type="hidden" id="dlot-entry-date">
+                                                        <div><label class="small">Headcount</label><input type="number" class="form-control form-control-sm" id="dlot-headcount"></div>
+                                                        <div><label class="small">Direct Labor</label><input type="number" class="form-control form-control-sm" id="dlot-dl-cost"></div>
+                                                        <div><label class="small">Overtime</label><input type="number" class="form-control form-control-sm" id="dlot-ot-cost"></div>
+                                                        <button type="submit" class="btn btn-success btn-sm w-100 mt-auto">Save</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div class="card border-0 shadow-sm flex-grow-1" style="min-height: 0;">
+                            <div class="card-header bg-white border-bottom-0 py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold text-secondary mb-0"><i class="fas fa-list me-2"></i>Production Plans</h6>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-light text-primary" id="btn-refresh-plan"><i class="fas fa-sync-alt"></i></button>
+                                        <button class="btn btn-sm btn-warning text-dark" id="btnCalculateCarryOver"><i class="fas fa-calculator me-1"></i> Calc C/O</button>
+                                        <button class="btn btn-sm btn-success" id="btnAddPlan"><i class="fas fa-plus me-1"></i> Plan</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="planning-table-wrapper flex-grow-1">
+                                <table class="table table-hover table-sm mb-0 align-middle" id="productionPlanTable">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 10%;">Date</th> 
+                                            <th style="width: 8%;">Line</th> 
+                                            <th style="width: 8%;">Shift</th> 
+                                            <th style="width: 25%;">Item / Description</th> 
+                                            <th class="text-center" style="width: 10%;">Plan</th> 
+                                            <th class="text-center" style="width: 10%;">Actual</th> 
+                                            <th class="text-center" style="width: 8%;">C/O</th> 
+                                            <th class="text-center bg-primary bg-opacity-10" style="width: 10%;">Adj. Plan</th>
+                                            <th class="text-start">Note</th> 
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productionPlanTableBody" class="bg-white"></tbody>
+                                </table>
+                            </div>
+                        </div>
 
-                        </section>
                     </div>
                 </div>
             </div>
 
             <div id="toast"></div>
             <?php include_once('../components/php/command_center.php'); ?>
-            <?php include_once('../components/php/docking_sidebar.php'); ?>
             <?php include_once('components/planModal.php'); ?>
-            <?php include_once('components/rejectReasonModal.php'); ?>
-            <?php include_once('../components/php/mobile_menu.php'); ?>
+            <nav class="pagination-footer px-3 py-2 bg-white border-top">
+                <ul class="pagination justify-content-end mb-0" id="planningPagination"></ul>
+            </nav>
 
-            <nav class="pagination-footer" data-tab-target="#planning-pane" style="display: block;">
-                <ul class="pagination justify-content-center" id="planningPagination"></ul>
-            </nav>
-            
-            <nav class="pagination-footer" data-tab-target="#shipment-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="shipmentPagination"></ul>
-            </nav>
         </main>
     </div>
     
     <script>
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
-        const SHIPMENT_API = 'api/shipment.php';
         const DLOT_API = 'api/dlot_manual_manage.php';
         const FILTERS_API = '../OEE_Dashboard/api/get_dashboard_filters.php';
         const PLAN_API = 'api/planManage.php';
@@ -412,6 +183,5 @@ $currentUserForJS = $_SESSION['user'] ?? null;
     <script src="../components/js/sendRequest.js?v=<?php echo filemtime('../components/js/sendRequest.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/managementDashboard.js?v=<?php echo filemtime('script/managementDashboard.js'); ?>"></script>
-    
 </body>
 </html>

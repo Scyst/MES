@@ -11,17 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPlanItem = null;
     let planVsActualChartInstance = null;
     let fullCalendarInstance = null;
-    let dlotDateSet = new Set();
     let planNoteEditDebounceTimer;
     let planCarryOverEditDebounceTimer;
-    let debounceTimerAutocomplete;
-    let shipmentCurrentPage = 1;
-    let shipmentDebounceTimer;
 
     // --- DOM Element References ---
-    const mainContent = document.getElementById('main-content');
-    const planModalElement = document.getElementById('planModal');
-    const planModal = new bootstrap.Modal(planModalElement);
+    // (Filters & Buttons)
     const startDateFilter = document.getElementById('startDateFilter');
     const endDateFilter = document.getElementById('endDateFilter');
     const planLineFilter = document.getElementById('planLineFilter');
@@ -30,10 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddPlan = document.getElementById('btnAddPlan');
     const btnCalculateCarryOver = document.getElementById('btnCalculateCarryOver');
     
+    // (Chart & Table)
     const chartDateDisplay = document.getElementById('chartDateDisplay');
     const planVsActualChartCanvas = document.getElementById('planVsActualChart');
     const productionPlanTableBody = document.getElementById('productionPlanTableBody');
     
+    // (Calendar & DLOT)
     const calendarTitle = document.getElementById('calendar-title');
     const backToCalendarBtn = document.getElementById('backToCalendarBtn');
     const planningCalendarContainer = document.getElementById('planningCalendarContainer');
@@ -45,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dlotDlCostInput = document.getElementById('dlot-dl-cost');
     const dlotOtCostInput = document.getElementById('dlot-ot-cost');
     
+    // (Modal Elements)
+    const planModalElement = document.getElementById('planModal');
+    const planModal = new bootstrap.Modal(planModalElement);
     const planModalLabel = document.getElementById('planModalLabel');
     const planForm = document.getElementById('planForm');
     const planModalPlanId = document.getElementById('planModalPlanId');
@@ -60,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const planModalNote = document.getElementById('planModalNote');
     const savePlanButton = document.getElementById('savePlanButton');
     const deletePlanButton = document.getElementById('deletePlanButton');
-    const shipmentFilterGroup = document.getElementById('shipment-filter-group');
 
     // =================================================================
     // SECTION 2: CORE UTILITY FUNCTIONS
@@ -76,50 +74,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${year}-${month}-${day}`;
     }
 
-    function getCssVarAsRgba(varName, alpha = 1.0) {
-        try {
-            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            if (!colorValue) throw new Error(`CSS var ${varName} not found.`);
-            let hex = colorValue.replace('#', '');
-            if (hex.length === 3) {
-                hex = hex.split('').map(char => char + char).join('');
-            }
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        } catch (error) {
-            // Fallback colors
-            if (varName.includes('danger')) return `rgba(220, 53, 69, ${alpha})`;
-            if (varName.includes('success')) return `rgba(25, 135, 84, ${alpha})`;
-            if (varName.includes('warning')) return `rgba(255, 193, 7, ${alpha})`;
-            return `rgba(13, 110, 253, ${alpha})`;
-        }
-    }
-
-    function showCorrectPagination(activeTabTarget) {
-    // ซ่อน Pagination Footers ทั้งหมด
-    document.querySelectorAll('.pagination-footer[data-tab-target]').forEach(p => {
-        p.style.display = 'none';
-    });
-    
-    // แสดงเฉพาะอันที่ตรงกับแท็บ
-    const activePagination = document.querySelector(`.pagination-footer[data-tab-target="${activeTabTarget}"]`);
-    if (activePagination) {
-        activePagination.style.display = 'block';
-    }
-}
     // =================================================================
-    // SECTION 3: PLANNING TAB FUNCTIONS
+    // SECTION 3: DATA FETCHING & UI SETUP
     // =================================================================
 
     function setAllDefaultDates() {
         const today = new Date();
         const todayFormatted = formatDateForInput(today);
-
+        
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(today.getDate() - 7);
-        const sevenDaysAgoFormatted = formatDateForInput(sevenDaysAgo);
+        
+        // --- เพิ่มบรรทัดนี้ครับ ---
+        const sevenDaysAgoFormatted = formatDateForInput(sevenDaysAgo); 
 
         if (startDateFilter && !startDateFilter.value) startDateFilter.value = sevenDaysAgoFormatted;
         if (endDateFilter && !endDateFilter.value) endDateFilter.value = todayFormatted;
@@ -132,11 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lines = result.data.lines;
                 [planLineFilter, planModalLine].forEach(select => { 
                     if (select) {
-                        const valueToKeep = (select.id === 'planLineFilter' || select.id === 'planModalLine') ? "" : "";
+                        const valueToKeep = "";
                         select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
-                        lines.forEach(line => {
-                            select.appendChild(new Option(line, line));
-                        });
+                        lines.forEach(line => select.appendChild(new Option(line, line)));
                     }
                 });
                 if (planModalLine && !planModalLine.querySelector('option[value=""]')) {
@@ -144,8 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     opt.disabled = true;
                     planModalLine.prepend(opt);
                 }
-            } else {
-                showToast('Could not retrieve lines.', 'var(--bs-warning)');
             }
         } catch (error) {
             showToast('Failed load lines.', 'var(--bs-danger)');
@@ -159,8 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success && result.data) {
                 allPlanningItems = result.data;
                 setupPlanItemAutocomplete();
-            } else {
-                showToast('Error loading items.', 'var(--bs-danger)');
             }
         } catch (error) {
             showToast('Failed to load items.', 'var(--bs-danger)');
@@ -174,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hidden = planModalItemId;
         const error = itemSearchError;
               
-        if (!input || !results || !display || !hidden || !error) return;
+        if (!input || !results) return;
 
         input.addEventListener('input', () => {
             const val = input.value.toLowerCase().trim();
@@ -192,9 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const items = allPlanningItems.filter(i =>
-                i.sap_no?.toLowerCase().includes(val) ||
-                i.part_no?.toLowerCase().includes(val) ||
-                i.part_description?.toLowerCase().includes(val)
+                (i.sap_no || '').toLowerCase().includes(val) ||
+                (i.part_no || '').toLowerCase().includes(val) ||
+                (i.part_description || '').toLowerCase().includes(val)
             ).slice(0, 10);
 
             if (items.length > 0) {
@@ -203,28 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     div.classList.add('autocomplete-item', 'dropdown-item');
                     div.style.cursor = 'pointer';
                     div.innerHTML = `<span class="fw-bold">${item.sap_no||'N/A'}</span>/<small>${item.part_no||'N/A'}</small><small class="d-block text-muted">${item.part_description||''}</small>`;
-                    div.dataset.itemId = item.item_id;
-                    div.dataset.itemText = `${item.sap_no||''} / ${item.part_no||''}`;
-                    div.dataset.itemDetail = `${item.sap_no||'N/A'} - ${item.part_description||''}`;
                     div.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        input.value = div.dataset.itemText;
-                        hidden.value = div.dataset.itemId;
-                        display.textContent = div.dataset.itemDetail;
+                        input.value = `${item.sap_no||''} / ${item.part_no||''}`;
+                        hidden.value = item.item_id;
+                        display.textContent = `${item.sap_no||'N/A'} - ${item.part_description||''}`;
                         selectedPlanItem = item;
-                        results.innerHTML = '';
                         results.style.display = 'none';
-                        error.style.display = 'none';
-                        input.classList.remove('is-invalid');
                     });
                     results.appendChild(div);
                 });
                 results.style.display = 'block';
-                display.textContent = 'Select...';
             } else {
                 results.innerHTML = '<div class="disabled dropdown-item text-muted">No items found.</div>';
                 results.style.display = 'block';
-                display.textContent = 'No items';
             }
         });
 
@@ -233,17 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 results.style.display = 'none';
             }
         });
-
-        input.addEventListener('change', () => {
-            if (input.value.trim() === '') {
-                hidden.value = '';
-                selectedPlanItem = null;
-                display.textContent = 'No Item';
-                error.style.display = 'none';
-                input.classList.remove('is-invalid');
-            }
-        });
     }
+
+    // =================================================================
+    // SECTION 4: PLANNING LOGIC
+    // =================================================================
 
     async function fetchPlans() {
         showSpinner();
@@ -260,12 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPlanTable(result.data);
                 renderPlanVsActualChart(result.data);
             } else {
-                productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">${result.message || 'Failed.'}</td></tr>`;
+                productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">No data.</td></tr>`;
                 renderPlanVsActualChart([]);
             }
         } catch (error) {
             productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error loading plans.</td></tr>`;
-            renderPlanVsActualChart([]);
         } finally {
             hideSpinner();
         }
@@ -274,37 +220,68 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPlanTable(data) {
         productionPlanTableBody.innerHTML = '';
         if (!data || data.length === 0) {
-            productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">No plans found.</td></tr>`;
+            productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No plans found.</td></tr>`; // ลด colspan เหลือ 9
             return;
         }
+        
         data.forEach(plan => {
             const tr = document.createElement('tr');
             tr.dataset.planId = plan.plan_id;
-            tr.dataset.planData = JSON.stringify(plan);
+            tr.dataset.planData = JSON.stringify(plan); // เก็บข้อมูลไว้เปิด Modal
+            
             const originalPlan = parseFloat(plan.original_planned_quantity || 0);
             const carryOver = parseFloat(plan.carry_over_quantity || 0);
             const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
             const actualQty = parseFloat(plan.actual_quantity || 0);
-            let actualClass = actualQty < adjustedPlan ? 'text-danger' : (actualQty >= adjustedPlan && adjustedPlan > 0 ? 'text-success' : '');
             
+            // Logic สี Status
+            let actualClass = '';
+            if(adjustedPlan > 0) {
+                if(actualQty >= adjustedPlan) actualClass = 'text-success fw-bold';
+                else if (actualQty > 0) actualClass = 'text-danger fw-bold';
+            }
+
+            // HTML ตารางใหม่ (เหมือน Sales Dashboard)
             tr.innerHTML = `
-                <td>${plan.plan_date||''}</td>
-                <td>${plan.line||''}</td>
-                <td>${plan.shift||''}</td>
-                <td><span class="fw-bold">${plan.sap_no||'N/A'}</span> / ${plan.part_no||'N/A'}<small class="d-block text-muted">${plan.part_description||''}</small></td>
-                <td class="text-center">${originalPlan.toLocaleString()}</td>
-                <td class="text-center ${actualClass}">${actualQty.toLocaleString()}</td>
-                <td class="text-center ${carryOver > 0 ? 'text-warning' : ''}">
-                    <span class="text-center editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" inputmode="decimal" tabindex="0">${carryOver.toLocaleString()}</span>
+                <td class="text-secondary font-monospace">${plan.plan_date}</td>
+                <td><span class="badge bg-light text-dark border">${plan.line}</span></td>
+                <td><span class="badge ${plan.shift === 'DAY' ? 'bg-warning text-dark' : 'bg-info text-white'} bg-opacity-75">${plan.shift}</span></td>
+                
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-primary font-monospace">${plan.sap_no || '-'} / ${plan.part_no || '-'}</span>
+                        <small class="text-muted text-truncate" style="max-width: 250px;" title="${plan.part_description || ''}">
+                            ${plan.part_description || '<em class="text-secondary opacity-50">No description</em>'}
+                        </small>
+                    </div>
                 </td>
-                <td class="text-center fw-bold" data-field="adjusted_plan">${adjustedPlan.toLocaleString()}</td>
+
+                <td class="text-center font-monospace">${originalPlan.toLocaleString()}</td>
+                
+                <td class="text-center font-monospace ${actualClass}">${actualQty.toLocaleString()}</td>
+                
                 <td class="text-center">
-                    <span class="text-center editable-plan" contenteditable="true" data-id="${plan.plan_id}" data-field="note" tabindex="0">${plan.note || ''}</span>
+                    <span class="editable-plan font-monospace ${carryOver > 0 ? 'text-warning fw-bold' : 'text-muted'}" 
+                          contenteditable="true" 
+                          data-id="${plan.plan_id}" 
+                          data-field="carry_over" 
+                          inputmode="decimal" 
+                          tabindex="0">${carryOver.toLocaleString()}</span>
                 </td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary edit-plan-btn" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger delete-plan-btn ms-1" title="Delete"><i class="fas fa-trash"></i></button>
-                </td>`;
+                
+                <td class="text-center fw-bold fs-6 font-monospace text-primary" data-field="adjusted_plan">${adjustedPlan.toLocaleString()}</td>
+                
+                <td class="text-start">
+                    <span class="editable-plan d-inline-block text-truncate text-secondary" 
+                          style="max-width: 150px;"
+                          contenteditable="true" 
+                          data-id="${plan.plan_id}" 
+                          data-field="note" 
+                          tabindex="0" 
+                          title="${plan.note || 'Click to edit note'}">${plan.note || '<span class="opacity-25 small">...</span>'}</span>
+                </td>
+                
+                `;
             productionPlanTableBody.appendChild(tr);
         });
     }
@@ -312,373 +289,241 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPlanVsActualChart(planData) {
         const chartCanvas = planVsActualChartCanvas;
         const chartWrapper = document.getElementById('planVsActualChartInnerWrapper'); 
-        
         if (!chartCanvas || !chartWrapper) return;
         
         const uniqueItemsCount = new Set(planData.map(p => p.item_id)).size;
-        const minWidthPerBar = 100; 
-        const totalWidth = Math.max(100, uniqueItemsCount * minWidthPerBar);
         
-        chartWrapper.style.width = `${totalWidth}px`;
-        chartWrapper.style.minWidth = '100%'; 
-
-        const ctx = chartCanvas.getContext('2d');
-        
-        if (chartDateDisplay) {
-            if (typeof startDateFilter !== 'undefined' && typeof endDateFilter !== 'undefined') {
-                chartDateDisplay.textContent = `${startDateFilter.value} to ${endDateFilter.value}`;
-            }
+        // [FIX 3] ปรับความกว้างกราฟ: ถ้าข้อมูลน้อยกว่า 5 แท่ง ให้กราฟเต็มจอ (100%) ถ้าเยอะค่อยขยาย Scroll
+        if (uniqueItemsCount < 5) {
+            chartWrapper.style.width = '100%';
+        } else {
+            chartWrapper.style.width = `${uniqueItemsCount * 120}px`; // เพิ่มความกว้างต่อแท่งเป็น 120px
         }
 
+        const ctx = chartCanvas.getContext('2d');
         const aggregatedData = {};
+        
         planData.forEach(p => {
             const itemId = p.item_id;
-            const identifier = p.part_no || p.sap_no || `Item ${itemId}`;
-            const adjustedPlan = parseFloat(p.adjusted_planned_quantity || 0);
-            const actualQty = parseFloat(p.actual_quantity || 0);
-            const originalPlan = parseFloat(p.original_planned_quantity || 0);
-            const carryOver = parseFloat(p.carry_over_quantity || 0);
-
             if (!aggregatedData[itemId]) {
+                // [FIX 1] แก้ไข Label: ใช้ SAP No คู่กับ Part No เพื่อให้ไม่ซ้ำกัน
+                let labelText = p.part_no || 'Unknown';
+                if (p.sap_no) {
+                    labelText = `${p.sap_no} / ${p.part_no}`;
+                }
+                
                 aggregatedData[itemId] = {
-                    label: identifier,
-                    part_no: p.part_no,
-                    part_description: p.part_description,
+                    label: labelText, // <-- ใช้ Label ใหม่ที่สร้างขึ้น
                     totalAdjustedPlan: 0,
                     totalActualQty: 0,
                     totalOriginalPlan: 0,
                     totalCarryOver: 0
                 };
             }
-            aggregatedData[itemId].totalAdjustedPlan += adjustedPlan;
-            aggregatedData[itemId].totalActualQty += actualQty;
-            aggregatedData[itemId].totalOriginalPlan += originalPlan;
-            aggregatedData[itemId].totalCarryOver += carryOver;
+            aggregatedData[itemId].totalAdjustedPlan += parseFloat(p.adjusted_planned_quantity || 0);
+            aggregatedData[itemId].totalActualQty += parseFloat(p.actual_quantity || 0);
+            aggregatedData[itemId].totalOriginalPlan += parseFloat(p.original_planned_quantity || 0);
+            aggregatedData[itemId].totalCarryOver += parseFloat(p.carry_over_quantity || 0);
         });
 
         const aggregatedArray = Object.values(aggregatedData);
         const labels = aggregatedArray.map(agg => agg.label);
-        const totalOriginalPlanData = aggregatedArray.map(agg => agg.totalOriginalPlan);
-        const totalCarryOverData = aggregatedArray.map(agg => agg.totalCarryOver);
-        const totalAdjustedPlanData = aggregatedArray.map(agg => agg.totalAdjustedPlan); 
-        const metPlanData = aggregatedArray.map(agg => {
-            return (agg.totalActualQty >= agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalAdjustedPlan : null;
-        });
-        const shortfallData = aggregatedArray.map(agg => {
-            return (agg.totalActualQty < agg.totalAdjustedPlan && agg.totalAdjustedPlan > 0) ? agg.totalActualQty : null; 
-        });
-        const unplannedData = aggregatedArray.map(agg => {
-            return (agg.totalActualQty > 0) ? Math.max(0, agg.totalActualQty - agg.totalAdjustedPlan) : null;
-        });
-
-        const dataMaxValue = Math.max(0, ...totalAdjustedPlanData, ...aggregatedArray.map(agg => agg.totalActualQty));
-        const suggestedTopValue = dataMaxValue > 0 ? dataMaxValue * 1.15 : 10;
         
         const chartData = {
             labels: labels,
             datasets: [
-                { label: 'Original Plan', data: totalOriginalPlanData, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1, stack: 'plan' },
-                { label: 'Carry Over', data: totalCarryOverData, backgroundColor: 'rgba(255, 159, 64, 0.7)', borderColor: 'rgba(255, 159, 64, 1)', borderWidth: 1, stack: 'plan' },
-                { label: 'Actual (Met Plan)', data: metPlanData, backgroundColor: 'rgba(75, 192, 192, 0.7)', borderColor: 'rgba(75, 192, 192, 1)', borderWidth: 1, stack: 'actual' },
-                { label: 'Actual (Shortfall)', data: shortfallData, backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1, stack: 'actual' },
-                { label: 'Actual (Unplanned)', data: unplannedData, backgroundColor: 'rgba(153, 102, 255, 0.7)', borderColor: 'rgba(153, 102, 255, 1)', borderWidth: 1, stack: 'actual' }
+                { label: 'Original Plan', data: aggregatedArray.map(a => a.totalOriginalPlan), backgroundColor: 'rgba(54, 162, 235, 0.7)', stack: 'plan' },
+                { label: 'Carry Over', data: aggregatedArray.map(a => a.totalCarryOver), backgroundColor: 'rgba(255, 159, 64, 0.7)', stack: 'plan' },
+                { label: 'Actual (Met Plan)', data: aggregatedArray.map(a => (a.totalActualQty >= a.totalAdjustedPlan && a.totalAdjustedPlan > 0) ? a.totalAdjustedPlan : null), backgroundColor: 'rgba(75, 192, 192, 0.7)', stack: 'actual' },
+                { label: 'Actual (Shortfall)', data: aggregatedArray.map(a => (a.totalActualQty < a.totalAdjustedPlan && a.totalAdjustedPlan > 0) ? a.totalActualQty : null), backgroundColor: 'rgba(255, 99, 132, 0.7)', stack: 'actual' },
+                { label: 'Actual (Unplanned)', data: aggregatedArray.map(a => (a.totalActualQty > 0) ? Math.max(0, a.totalActualQty - a.totalAdjustedPlan) : null), backgroundColor: 'rgba(153, 102, 255, 0.7)', stack: 'actual' }
             ]
         };
 
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 20, right: 20, left: 10, bottom: 10 } },
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    title: { display: true, text: 'Total Quantity' }, 
-                    ticks: { callback: v => v.toLocaleString() }, 
-                    suggestedMax: suggestedTopValue, 
-                    stacked: true 
-                },
-                x: { 
-                    ticks: { 
-                        maxRotation: 0,
-                        minRotation: 0,
-                        align: 'center', 
-                        font: { size: 11, weight: 'bold' },
-                        autoSkip: false
-                    }, 
-                    stacked: true, 
-                    offset: true,
-                    grid: {
-                        display: true,
-                        drawOnChartArea: true,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                }
-            },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { 
-                    callbacks: {
-                        title: (tooltipItems) => {
-                            if (!tooltipItems.length) return '';
-                            const dataIndex = tooltipItems[0].dataIndex;
-                            const aggItem = aggregatedArray[dataIndex];
-                            if (!aggItem) return '';
-                            return [aggItem.label, aggItem.part_no || 'N/A', aggItem.part_description || 'No Description'];
-                        },
-                        label: c => (c.parsed.y === null ? null : `${c.dataset.label || ''}: ${c.parsed.y.toLocaleString()}`)
-                    },
-                    mode: 'index',
-                    intersect: false
-                },
-                datalabels: {
-                    formatter: (value, context) => {
-                        const label = context.dataset.label;
-                        const dataIndex = context.dataIndex;
-                        const aggItem = aggregatedArray[dataIndex];
-                        if (!aggItem) return null;
-                        if (label === 'Original Plan') return null;
-                        if (label === 'Carry Over') {
-                            const totalPlan = aggItem.totalAdjustedPlan;
-                            return totalPlan > 0 ? totalPlan.toLocaleString() : '';
-                        }
-                        if (label === 'Actual (Met Plan)' || label === 'Actual (Shortfall)') return null;
-                        if (label === 'Actual (Unplanned)') {
-                            const totalActual = aggItem.totalActualQty;
-                            return totalActual > 0 ? totalActual.toLocaleString() : '';
-                        }
-                        return null;
-                    },
-                    anchor: 'end',
-                    align: 'top',
-                    color: '#444',
-                    font: (context) => (context.dataset.label === 'Carry Over' || context.dataset.label === 'Actual (Unplanned)') ? { size: 10, weight: 'bold' } : { size: 10 },
-                    offset: (context) => (context.dataset.label === 'Carry Over' || context.dataset.label === 'Actual (Unplanned)') ? -5 : 0
-                }
-            },
-        };
-
-        if (planVsActualChartInstance) {
-            planVsActualChartInstance.destroy();
-        }
-        const availablePlugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
-        planVsActualChartInstance = new Chart(ctx, { type: 'bar', data: chartData, options: chartOptions , plugins: availablePlugins });
+        if (planVsActualChartInstance) planVsActualChartInstance.destroy();
+        planVsActualChartInstance = new Chart(ctx, { 
+            type: 'bar', 
+            data: chartData, 
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true }, y: { stacked: true } }
+            }
+        });
     }
 
+    // =================================================================
+    // SECTION 5: CALENDAR & DLOT LOGIC
+    // =================================================================
+
     function initializeCalendar() {
-        if (!planningCalendarContainer) {
-            console.error("Calendar container missing.");
-            return;
-        }
-        
-        const todayString = formatDateForInput(new Date());
+        if (!planningCalendarContainer) return;
 
         planningCalendarContainer.innerHTML = '';
+        
         fullCalendarInstance = new FullCalendar.Calendar(planningCalendarContainer, {
             initialView: 'dayGridMonth',
+            height: '100%', 
+            expandRows: true,
             headerToolbar: false,
-            editable: false,
-            selectable: true,
-            selectMirror: true,
-            dayMaxEvents: 3,
+            dayMaxEvents: 2,
+            
+            // --- [FIX 1] เพิ่มส่วนนี้เพื่อให้ชื่อเดือนแสดงผล ---
+            datesSet: function(dateInfo) {
+                // อัปเดตข้อความใน Header ให้เป็น Title ของปฏิทิน (เช่น "December 2025")
+                if (calendarTitle) {
+                    calendarTitle.textContent = dateInfo.view.title;
+                }
+            },
+            // ---------------------------------------------
+
             eventSources: [
                 {
                     id: 'planEvents',
-                    events: (info, sc, fc) => fetchCalendarEvents(info, sc, fc, todayString)
+                    events: (info, sc, fc) => fetchCalendarEvents(info, sc, fc)
                 },
                 {
                     id: 'dlotMarkers',
                     events: fetchDlotMarkers
                 }
             ],
-            dateClick: handleDateClick,
+            dateClick: (info) => switchToDlotView(info.dateStr),
             eventClick: handleEventClick,
-            themeSystem: 'bootstrap5',
-            buttonIcons: { prev: 'bi-chevron-left', next: 'bi-chevron-right' },
-            datesSet: (dateInfo) => {
-                if (calendarTitle) calendarTitle.textContent = dateInfo.view.title;
+            windowResize: function(arg) {
+                console.log('Calendar resized'); 
             },
-            viewDidMount: (dateInfo) => {
-                 if (calendarTitle) calendarTitle.textContent = dateInfo.view.title;
-            }
+            handleWindowResize: true
         });
         fullCalendarInstance.render();
     }
 
-    async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback, todayString) {
+    async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
         showSpinner();
-        const startDate = fetchInfo.startStr.substring(0, 10);
-        const calendarEndDate = new Date(fetchInfo.endStr);
-        calendarEndDate.setDate(calendarEndDate.getDate() - 1);
-        const endDate = formatDateForInput(calendarEndDate);
-        const planParams = { 
-            startDate: startDate,
-            endDate: endDate,
-            line: planLineFilter.value || null 
-        };
+        const endDate = formatDateForInput(new Date(new Date(fetchInfo.endStr).setDate(new Date(fetchInfo.endStr).getDate() - 1)));
+        const params = { startDate: fetchInfo.startStr.substring(0, 10), endDate: endDate, line: planLineFilter.value || null };
         
         try {
-            const planResult = await sendRequest(PLAN_API, 'get_plans', 'GET', null, planParams);
-            if (planResult.success && planResult.data) {
-                successCallback(transformPlansToEvents(planResult.data, todayString)); // ✅ ส่ง todayString
-            } else {
-                throw new Error(planResult.message || 'Failed load events');
+            const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
+            if (result.success) {
+                const today = formatDateForInput(new Date());
+                const events = result.data.map(plan => ({
+                    id: plan.plan_id,
+                    title: `${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`,
+                    start: plan.plan_date,
+                    backgroundColor: (parseFloat(plan.actual_quantity) >= parseFloat(plan.adjusted_planned_quantity)) ? 'rgba(75, 192, 192, 0.7)' : 'rgba(255, 99, 132, 0.7)',
+                    extendedProps: { planData: plan }
+                }));
+                successCallback(events);
             }
         } catch (error) {
-            showToast('Error loading calendar data.', 'var(--bs-danger)');
             failureCallback(error);
         } finally {
             hideSpinner();
         }
     }
 
-    function transformPlansToEvents(plans, todayString) {
-
-        return plans.map(plan => {
-            const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
-            const actualQty = parseFloat(plan.actual_quantity || 0);
-            const planDate = plan.plan_date;
-            let statusColor = 'rgba(201, 203, 207, 0.7)';
-            let borderStyle = 'solid';
-            if (adjustedPlan > 0 && actualQty >= adjustedPlan) {
-                statusColor = 'rgba(75, 192, 192, 0.7)';
-            } else if (adjustedPlan <= 0 && actualQty > 0) {
-                statusColor = 'rgba(153, 102, 255, 0.7)';
-            } else if (adjustedPlan > 0 && actualQty < adjustedPlan && planDate === todayString) {
-                statusColor = 'rgba(255, 159, 64, 0.7)';
-                borderStyle = 'dashed';
-            } else if (adjustedPlan > 0 && actualQty < adjustedPlan && planDate < todayString) {
-                statusColor = 'rgba(255, 99, 132, 0.7)';
-            } else if (adjustedPlan > 0 && planDate > todayString) {
-                statusColor = 'rgba(201, 203, 207, 0.7)';
+    async function fetchDlotMarkers(fetchInfo, successCallback, failureCallback) {
+        const endDate = formatDateForInput(new Date(new Date(fetchInfo.endStr).setDate(new Date(fetchInfo.endStr).getDate() - 1)));
+        try {
+            const result = await sendRequest(DLOT_API, 'get_dlot_dates', 'GET', null, { 
+                startDate: fetchInfo.startStr.substring(0, 10), 
+                endDate: endDate, 
+                line: planLineFilter.value || 'ALL'
+            });
+            if (result.success) {
+                successCallback(result.data.map(date => ({ start: date, display: 'background', className: 'dlot-marker-bg', extendedProps: { type: 'dlot_marker' } })));
             }
-            const title = `${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`;
-            return {
-                id: plan.plan_id,
-                title: title,
-                start: plan.plan_date,
-                allDay: true,
-                backgroundColor: statusColor,
-                borderColor: statusColor.replace('0.7', '1'),
-                borderStyle: borderStyle,
-                extendedProps: { planData: plan }
-            };
+        } catch (error) { failureCallback(error); }
+    }
+
+    function handleEventClick(info) {
+        if (info.event.extendedProps.planData) openPlanModal(info.event.extendedProps.planData);
+        else if (info.event.extendedProps.type === 'dlot_marker') switchToDlotView(info.event.startStr);
+    }
+
+    function switchToDlotView(dateString) {
+        planningCalendarContainer.style.display = 'none';
+        dlotViewContainer.style.display = 'block';
+        backToCalendarBtn.style.display = 'inline-block';
+        calendarTitle.textContent = `Daily Cost: ${dateString}`;
+        dlotDateDisplayEntry.textContent = dateString;
+        dlotEntryDateInputHidden.value = dateString;
+        
+        loadDlotDataForDate(dateString, planLineFilter.value || 'ALL');
+    }
+
+    function switchToCalendarView() {
+        // 1. สลับหน้า (DOM Manipulation)
+        planningCalendarContainer.style.display = 'block';
+        dlotViewContainer.style.display = 'none';
+        backToCalendarBtn.style.display = 'none';
+        
+        // 2. ทำลาย Instance เก่า (ถ้ามี)
+        if (fullCalendarInstance) {
+            fullCalendarInstance.destroy();
+            fullCalendarInstance = null;
+        }
+
+        // 3. สร้างใหม่ (Re-initialize)
+        // ใช้ requestAnimationFrame แทน setTimeout 50ms เพื่อความแม่นยำกว่าในการรอ Repaint
+        requestAnimationFrame(() => {
+            initializeCalendar();
+            
+            // คืนค่า Title
+            if (calendarTitle) calendarTitle.textContent = "Calendar"; 
         });
     }
 
-    function handleEventClick(eventClickInfo) {
-        const props = eventClickInfo.event.extendedProps;
-        if (props?.planData) {
-            openPlanModal(props.planData);
-        } else if (props?.type === 'dlot_marker') {
-            switchToDlotView(eventClickInfo.event.startStr);
-        }
-    }
-
-    /**
-     * Handles inline editing of the plan note.
-     */
-    async function handlePlanNoteEdit(planId, newNote) {
-        const row = productionPlanTableBody?.querySelector(`tr[data-plan-id="${planId}"]`);
-        if (!row || !row.dataset.planData) return;
-        
+    async function loadDlotDataForDate(date, line) {
+        dlotHeadcountInput.value = ''; dlotDlCostInput.value = ''; dlotOtCostInput.value = '';
         try {
-            const existing = JSON.parse(row.dataset.planData);
-            const body = {
-                action: 'save_plan',
-                plan_id: planId,
-                plan_date: existing.plan_date,
-                line: existing.line,
-                shift: existing.shift,
-                item_id: existing.item_id,
-                original_planned_quantity: existing.original_planned_quantity,
-                note: newNote
-            };
-            const result = await sendRequest(PLAN_API, 'save_plan', 'POST', body);
-            
-            if (!result.success) {
-                showToast(result.message || 'Failed to save note.', 'var(--bs-danger)');
-                const span = row.querySelector('.editable-plan[data-field="note"]');
-                if (span) span.textContent = existing.note || '';
-            } else {
-                existing.note = newNote;
-                row.dataset.planData = JSON.stringify(existing);
-                const span = row.querySelector('.editable-plan[data-field="note"]');
-                if (span) {
-                    span.style.boxShadow = '0 0 0 2px var(--bs-success)';
-                    setTimeout(() => { span.style.boxShadow = ''; }, 1500);
-                }
+            const result = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', { action: 'get_daily_costs', entry_date: date, line: line });
+            if (result.success && result.data) {
+                dlotHeadcountInput.value = result.data.headcount || '';
+                dlotDlCostInput.value = result.data.dl_cost || '';
+                dlotOtCostInput.value = result.data.ot_cost || '';
             }
-        } catch (e) {
-            showToast('Error saving note.', 'var(--bs-danger)');
-        }
+        } catch (e) {} finally { updateDlotSummaryView(); }
     }
 
-    /**
-     * Handles inline editing of the carry-over quantity.
-     */
-    async function handleCarryOverEdit(planId, value, span) {
+    async function handleSaveDlotForm(e) {
+        e.preventDefault();
         showSpinner();
-        const row = span.closest('tr');
-        const original = JSON.parse(row?.dataset.planData || '{}');
-        const originalVal = parseFloat(original.carry_over_quantity || 0);
-        const body = { action: 'update_carry_over', plan_id: planId, carry_over_quantity: value };
-        
         try {
-            const result = await sendRequest(PLAN_API, 'update_carry_over', 'POST', body);
-            if (result.success) {
-                showToast(result.message || 'Updated.', 'var(--bs-success)');
-                original.carry_over_quantity = value;
-                const op = parseFloat(original.original_planned_quantity || 0);
-                const adj = op + value;
-                original.adjusted_planned_quantity = adj;
-                row.dataset.planData = JSON.stringify(original);
-                
-                const adjCell = row.querySelector('td[data-field="adjusted_plan"]');
-                if (adjCell) adjCell.textContent = adj.toLocaleString();
-                span.textContent = value.toLocaleString();
-                span.classList.toggle('text-warning', value > 0);
-                span.style.boxShadow = '0 0 0 2px var(--bs-success)';
-                setTimeout(() => { span.style.boxShadow = ''; }, 1500);
-            } else {
-                showToast(result.message || 'Failed.', 'var(--bs-danger)');
-                span.textContent = originalVal.toLocaleString();
-                span.classList.toggle('text-warning', originalVal > 0);
-            }
-        } catch (e) {
-            showToast('Error.', 'var(--bs-danger)');
-            span.textContent = originalVal.toLocaleString();
-            span.classList.toggle('text-warning', originalVal > 0);
-        } finally {
-            hideSpinner();
-        }
+            const body = {
+                action: 'save_daily_costs',
+                entry_date: dlotEntryDateInputHidden.value,
+                line: planLineFilter.value || 'ALL',
+                headcount: dlotHeadcountInput.value || 0,
+                dl_cost: dlotDlCostInput.value || 0,
+                ot_cost: dlotOtCostInput.value || 0
+            };
+            const result = await sendRequest(DLOT_API, 'save_daily_costs', 'POST', body);
+            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+            if (result.success) fullCalendarInstance?.getEventSourceById('dlotMarkers')?.refetch();
+        } catch (e) { showToast('Error saving DLOT.', 'var(--bs-danger)'); }
+        finally { hideSpinner(); }
     }
 
-    /**
-     * Resets the plan modal to its default state.
-     */
-    function resetPlanModal() {
-        planModalLabel.textContent = 'Add Plan';
-        if (planForm) planForm.reset();
+    function updateDlotSummaryView() {
+        const dl = parseFloat(dlotDlCostInput.value || 0);
+        const ot = parseFloat(dlotOtCostInput.value || 0);
+        document.getElementById('dl-cost-summary-display').textContent = dl.toLocaleString();
+        document.getElementById('ot-cost-summary-display').textContent = ot.toLocaleString();
+        document.getElementById('total-dlot-summary-display').textContent = (dl + ot).toLocaleString();
+    }
+
+    // =================================================================
+    // SECTION 6: PLAN MODAL & CRUD
+    // =================================================================
+
+    function openPlanModal(data = null) {
+        planForm.reset();
         planModalPlanId.value = '0';
         planModalItemId.value = '';
         planModalSelectedItem.textContent = 'No Item';
-        planModalItemSearch.classList.remove('is-invalid');
-        itemSearchError.style.display = 'none';
         deletePlanButton.style.display = 'none';
-        planModalDate.value = endDateFilter.value || startDateFilter.value || formatDateForInput(new Date());
-        planModalLine.value = planLineFilter.value || "";
-        planModalShift.value = planShiftFilter.value || "";
-        if (planModalItemResults) {
-            planModalItemResults.innerHTML = '';
-            planModalItemResults.style.display = 'none';
-        }
-    }
-
-    /**
-     * Opens the plan modal, optionally populating it with data for editing.
-     */
-    function openPlanModal(data = null) {
-        resetPlanModal();
+        
         if (data) {
             planModalLabel.textContent = 'Edit Plan';
             planModalPlanId.value = data.plan_id;
@@ -693,35 +538,16 @@ document.addEventListener('DOMContentLoaded', () => {
             deletePlanButton.style.display = 'inline-block';
         } else {
             planModalLabel.textContent = 'Add Plan';
-            planModalDate.value = endDateFilter.value || startDateFilter.value || formatDateForInput(new Date());
-            planModalLine.value = planLineFilter.value || "";
-            planModalShift.value = planShiftFilter.value || "";
+            planModalDate.value = formatDateForInput(new Date());
         }
         planModal.show();
     }
 
-    /**
-     * Saves a new plan or updates an existing one from the modal.
-     */
     async function savePlan() {
-        if (!planForm || !planForm.checkValidity()) {
-            planForm?.reportValidity();
-            return;
-        }
-        if (!planModalItemId.value) {
-            planModalItemSearch.classList.add('is-invalid');
-            itemSearchError.style.display = 'block';
-            showToast('Select item.', 'var(--bs-warning)');
-            return;
-        } else {
-            planModalItemSearch.classList.remove('is-invalid');
-            itemSearchError.style.display = 'none';
-        }
+        if (!planForm.checkValidity()) { planForm.reportValidity(); return; }
+        if (!planModalItemId.value) { showToast('Select item.', 'var(--bs-warning)'); return; }
         
         showSpinner();
-        savePlanButton.disabled = true;
-        deletePlanButton.disabled = true;
-        
         const body = {
             action: 'save_plan',
             plan_id: planModalPlanId.value || 0,
@@ -732,610 +558,118 @@ document.addEventListener('DOMContentLoaded', () => {
             original_planned_quantity: planModalQuantity.value,
             note: planModalNote.value || null
         };
-        
         try {
             const result = await sendRequest(PLAN_API, 'save_plan', 'POST', body);
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
                 planModal.hide();
                 fetchPlans();
-                if (fullCalendarInstance) {
-                    fullCalendarInstance.getEventSourceById('planEvents')?.refetch();
-                }
+                fullCalendarInstance?.getEventSourceById('planEvents')?.refetch();
             }
-        } catch (e) {
-            showToast('Error saving plan.', 'var(--bs-danger)');
-        } finally {
-            hideSpinner();
-            savePlanButton.disabled = false;
-            deletePlanButton.disabled = false;
-        }
+        } catch (e) { showToast('Error saving plan.', 'var(--bs-danger)'); }
+        finally { hideSpinner(); }
     }
 
-    /**
-     * Deletes a plan (triggered from modal or table).
-     */
     async function deletePlan() {
         const id = planModalPlanId.value;
         if (!id || id === '0') return;
-        
         showSpinner();
-        savePlanButton.disabled = true;
-        deletePlanButton.disabled = true;
-        
-        const body = { action: 'delete_plan', plan_id: id };
-        
         try {
-            const result = await sendRequest(PLAN_API, 'delete_plan', 'POST', body);
+            const result = await sendRequest(PLAN_API, 'delete_plan', 'POST', { action: 'delete_plan', plan_id: id });
             showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
             if (result.success) {
                 planModal.hide();
                 fetchPlans();
-                if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+                fullCalendarInstance?.refetchEvents();
             }
-        } catch (e) {
-            showToast('Error deleting plan.', 'var(--bs-danger)');
-        } finally {
-            hideSpinner();
-            savePlanButton.disabled = false;
-            deletePlanButton.disabled = false;
-        }
+        } catch (e) { showToast('Error deleting.', 'var(--bs-danger)'); }
+        finally { hideSpinner(); }
     }
 
     // =================================================================
-    // SECTION 5: DLOT (DAILY COST) FUNCTIONS
+    // SECTION 7: INITIALIZER
     // =================================================================
 
-    /**
-     * Fetches DLOT (Direct Labor/OT) entry dates for calendar markers.
-     */
-    async function fetchDlotMarkers(fetchInfo, successCallback, failureCallback) {
-        const startDate = fetchInfo.startStr.substring(0, 10);
-        
-        const calendarEndDate = new Date(fetchInfo.endStr);
-        calendarEndDate.setDate(calendarEndDate.getDate() - 1);
-        const endDate = formatDateForInput(calendarEndDate);
-
-        const params = { 
-            startDate: startDate,
-            endDate: endDate,
-            line: planLineFilter.value || 'ALL'
-        };
-
-        try {
-            const result = await sendRequest(DLOT_API, 'get_dlot_dates', 'GET', null, params);
-            
-            if (result.success && Array.isArray(result.data)) {
-                const dlotEvents = result.data.map(dateString => ({
-                    start: dateString,
-                    allDay: true,
-                    display: 'background',
-                    className: 'dlot-marker-bg',
-                    extendedProps: { type: 'dlot_marker' } 
-                }));
-                successCallback(dlotEvents);
-            } else {
-                throw new Error(result.message || 'Failed to load DLOT markers');
-            }
-        } catch (error) {
-            failureCallback(error);
-        }
-    }
-
-    /**
-     * Loads existing DLOT data for a specific date into the form.
-     */
-    async function loadDlotDataForDate(entry_date, line) {
-        if (!entry_date) return;
-        
-        dlotHeadcountInput.value = '';
-        dlotDlCostInput.value = '';
-        dlotOtCostInput.value = '';
-
-        try {
-            const body = { action: 'get_daily_costs', entry_date: entry_date, line: line };
-            const result = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', body);
-            
-            if (result.success && result.data) {
-                dlotHeadcountInput.value = result.data.headcount > 0 ? result.data.headcount : '';
-                dlotDlCostInput.value = result.data.dl_cost > 0 ? result.data.dl_cost : '';
-                dlotOtCostInput.value = result.data.ot_cost > 0 ? result.data.ot_cost : '';
-            }
-        } catch (error) {
-            showToast('Failed load entry data.', 'var(--bs-danger)');
-        } finally {
-            updateDlotSummaryView();
-        }
-    }
-
-    /**
-     * Handles clicks on a calendar date (switches to DLOT view).
-     */
-    function handleDateClick(dateClickInfo) {
-        switchToDlotView(dateClickInfo.dateStr);
-    }
-
-    /**
-     * Switches the UI from Calendar view to DLOT entry view.
-     */
-    function switchToDlotView(dateString) {
-        if (planningCalendarContainer) planningCalendarContainer.style.display = 'none';
-        if (dlotViewContainer) dlotViewContainer.style.display = 'flex';
-        if (backToCalendarBtn) backToCalendarBtn.style.display = 'inline-block';
-        if (calendarTitle) calendarTitle.textContent = `Daily Cost Entry`;
-        if (dlotDateDisplayEntry) dlotDateDisplayEntry.textContent = dateString;
-        dlotEntryDateInputHidden.value = dateString;
-        
-        loadDlotDataForDate(dateString, planLineFilter.value || 'ALL');
-    }
-
-    /**
-     * Switches the UI back to the Calendar view.
-     */
-    function switchToCalendarView() {
-        if (planningCalendarContainer) planningCalendarContainer.style.display = '';
-        if (dlotViewContainer) dlotViewContainer.style.display = 'none';
-        if (backToCalendarBtn) backToCalendarBtn.style.display = 'none';
-        if (calendarTitle) calendarTitle.textContent = `Planning Calendar`;
-
-        setTimeout(() => {
-            if (fullCalendarInstance) {
-                fullCalendarInstance.updateSize();
-            }
-        }, 10);
-    }
-
-    /**
-     * Handles the submission of the DLOT entry form.
-     */
-    async function handleSaveDlotForm(event) {
-        event.preventDefault();
-        showSpinner();
-        try {
-            const body = {
-                action: 'save_daily_costs',
-                entry_date: dlotEntryDateInputHidden.value,
-                line: planLineFilter.value || 'ALL',
-                headcount: dlotHeadcountInput.value || 0,
-                dl_cost: dlotDlCostInput.value || 0,
-                ot_cost: dlotOtCostInput.value || 0
-            };
-            const result = await sendRequest(DLOT_API, 'save_daily_costs', 'POST', body);
-            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-            if (result.success) {
-                if (fullCalendarInstance) {
-                    fullCalendarInstance.getEventSourceById('dlotMarkers')?.refetch();
-                }
-            }
-        } catch (error) {
-            showToast('Error saving DLOT data.', 'var(--bs-danger)');
-        } finally {
-            hideSpinner();
-        }
-    }
-
-    /**
-     * Updates the DLOT summary cards based on form input.
-     */
-    function updateDlotSummaryView() {
-        const dlDisplay = document.getElementById('dl-cost-summary-display');
-        const otDisplay = document.getElementById('ot-cost-summary-display');
-        const totalDisplay = document.getElementById('total-dlot-summary-display');
-        if (!dlDisplay || !otDisplay || !totalDisplay) return;
-
-        const dlValue = parseFloat(dlotDlCostInput.value || 0);
-        const otValue = parseFloat(dlotOtCostInput.value || 0);
-        const totalValue = dlValue + otValue;
-
-        dlDisplay.textContent = dlValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        otDisplay.textContent = otValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        totalDisplay.textContent = totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // =================================================================
-    // SECTION 6: SHIPMENT CONTROL FUNCTIONS
-    // =================================================================
-
-    /**
-     * Initializes all event listeners for the Shipment tab.
-     */
-    function initializeShipmentTab() {
-        const today = new Date();
-        const todayFormatted = formatDateForInput(today);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(today.getDate() - 7);
-        
-        document.getElementById('shipmentStartDate').value = formatDateForInput(sevenDaysAgo);
-        document.getElementById('shipmentEndDate').value = todayFormatted;
-
-        document.getElementById('confirmShipmentBtn')?.addEventListener('click', handleConfirmShipment);
-        document.getElementById('rejectShipmentBtn')?.addEventListener('click', openRejectModal);
-        document.getElementById('confirmRejectBtn')?.addEventListener('click', handleRejectShipment);
-        document.getElementById('selectAllShipmentCheckbox')?.addEventListener('change', (e) => {
-            document.querySelectorAll('#shipmentTableBody .shipment-checkbox').forEach(cb => {
-                cb.checked = e.target.checked;
-            });
-            updateShipmentActionButtons();
+    function initializeApp() {
+        setAllDefaultDates();
+        fetchDashboardLines().then(fetchAllItemsForPlanning).then(() => {
+            initializeCalendar();
+            fetchPlans();
         });
-        document.getElementById('shipmentTableBody')?.addEventListener('change', (e) => {
-            if (e.target.classList.contains('shipment-checkbox')) {
-                updateShipmentActionButtons();
-            }
-        });
-        fetchShipments(1);
-    }
 
-    async function fetchShipments(page = 1) {
-        shipmentCurrentPage = page;
-        showSpinner();
-        const tableBody = document.getElementById('shipmentTableBody');
-        tableBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
-        
-        const params = {
-            page: page,
-            status: document.getElementById('shipmentStatusFilter').value,
-            search_term: document.getElementById('shipmentSearch').value,
-            startDate: document.getElementById('shipmentStartDate').value,
-            endDate: document.getElementById('shipmentEndDate').value,
-        };
-
-        try {
-            const result = await sendRequest(SHIPMENT_API, 'get_shipments', 'GET', null, params);
-            if (result.success) {
-                renderShipmentTable(result.data, result.total, page);
-            } else {
-                throw new Error(result.message || 'Failed to load shipments.');
-            }
-        } catch (error) {
-            tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
-        } finally {
-            hideSpinner();
-            updateShipmentActionButtons();
-        }
-    }
-
-    /**
-     * Renders the Shipment data into the table.
-     */
-    function renderShipmentTable(data, total, page) {
-        const tableBody = document.getElementById('shipmentTableBody');
-        tableBody.innerHTML = '';
-        
-        if (!data || data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No shipments found.</td></tr>';
-            renderPagination('shipmentPagination', 0, 1, 50, fetchShipments); // Using 50 from API
-            return;
-        }
-
-        data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.dataset.transactionId = row.transaction_id;
-            
-            tr.innerHTML = `
-                <td class="text-center">
-                    <input class="form-check-input shipment-checkbox" type="checkbox" value="${row.transaction_id}">
-                </td>
-                <td>${new Date(row.transaction_timestamp).toLocaleString()}</td>
-                <td class="text-center">${row.from_location || 'N/A'}</td>
-                <td class="text-center">${row.to_location || 'N/A'}</td>
-                <td class="text-center">
-                    <span class="fw-bold">${row.sap_no}</span>
-                    <small class="d-block text-muted">${row.part_no || ''}</small>
-                </td>
-                <td class="text-center fw-bold">${parseFloat(row.quantity).toLocaleString()}</td>
-                <td>${row.notes || ''}</td>
-            `;
-            tableBody.appendChild(tr);
-        });
-        const rowsPerPage = 50;
-        renderPagination('shipmentPagination', total, page, rowsPerPage, fetchShipments);
-    }
-
-    /**
-     * Enables/Disables Confirm/Reject buttons based on selection.
-     */
-    function updateShipmentActionButtons() {
-        const selectedCount = document.querySelectorAll('#shipmentTableBody .shipment-checkbox:checked').length;
-        const status = document.getElementById('shipmentStatusFilter').value;
-        
-        const confirmBtn = document.getElementById('confirmShipmentBtn');
-        const rejectBtn = document.getElementById('rejectShipmentBtn');
-
-        const enable = (selectedCount > 0 && status === 'pending');
-        
-        if (confirmBtn) confirmBtn.disabled = !enable;
-        if (rejectBtn) rejectBtn.disabled = !enable;
-        
-        if (selectedCount === 0) {
-            document.getElementById('selectAllShipmentCheckbox').checked = false;
-        }
-    }
-
-    /**
-     * Returns an array of selected shipment transaction IDs.
-     */
-    function getSelectedShipmentIds() {
-        const selectedCheckboxes = document.querySelectorAll('#shipmentTableBody .shipment-checkbox:checked');
-        return Array.from(selectedCheckboxes).map(cb => cb.value);
-    }
-
-    /**
-     * Handles the 'Confirm Shipment' button click.
-     */
-    async function handleConfirmShipment() {
-        const ids = getSelectedShipmentIds();
-        if (ids.length === 0) return;
-        
-        if (!confirm(`Are you sure you want to CONFIRM ${ids.length} shipment(s)?`)) return;
-
-        showSpinner();
-        try {
-            const result = await sendRequest(SHIPMENT_API, 'confirm_shipment', 'POST', { transaction_ids: ids });
-            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-            if (result.success) {
-                await fetchShipments(shipmentCurrentPage);
-            }
-        } catch (error) {
-            console.error("Error confirming shipment:", error);
-        } finally {
-            hideSpinner();
-        }
-    }
-
-    /**
-     * Opens the 'Reject Reason' modal.
-     */
-    function openRejectModal() {
-        const ids = getSelectedShipmentIds();
-        if (ids.length === 0) return;
-        
-        document.getElementById('rejectCountDisplay').textContent = ids.length;
-        document.getElementById('rejectReasonInput').value = '';
-        
-        const modal = new bootstrap.Modal(document.getElementById('rejectReasonModal'));
-        modal.show();
-    }
-
-    /**
-     * Handles the 'Confirm Rejection' button click from the modal.
-     */
-    async function handleRejectShipment(event) {
-        if(event) event.preventDefault();
-        
-        const ids = getSelectedShipmentIds();
-        const reason = document.getElementById('rejectReasonInput').value;
-        
-        if (ids.length === 0) return;
-        if (!reason) {
-            showToast('Please provide a reason for rejection.', 'var(--bs-warning)');
-            return;
-        }
-
-        showSpinner();
-        bootstrap.Modal.getInstance(document.getElementById('rejectReasonModal')).hide();
-        
-        try {
-            const body = { transaction_ids: ids, reason: reason };
-            const result = await sendRequest(SHIPMENT_API, 'reject_shipment', 'POST', body);
-            showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-            if (result.success) {
-                await fetchShipments(shipmentCurrentPage);
-            }
-        } catch (error) {
-            console.error("Error rejecting shipment:", error);
-        } finally {
-            hideSpinner();
-        }
-    }
-
-
-    // =================================================================
-    // SECTION 7: MAIN APPLICATION INITIALIZER
-    // =================================================================
-
-function initializeApp() {
-        const tabLoadedState = {
-            'planning-pane': false,
-            'shipment-pane': false
-        };
-
-        // --- Planning Tab Listeners ---
+        // Event Listeners
         startDateFilter?.addEventListener('change', fetchPlans);
         endDateFilter?.addEventListener('change', fetchPlans);
-        planLineFilter?.addEventListener('change', () => {
-            fetchPlans();
-            if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
-            if (dlotViewContainer.style.display === 'flex') {
-                loadDlotDataForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
-            }
-        });
+        planLineFilter?.addEventListener('change', () => { fetchPlans(); fullCalendarInstance?.refetchEvents(); });
         planShiftFilter?.addEventListener('change', fetchPlans);
-        btnRefreshPlan?.addEventListener('click', () => {
-            fetchPlans();
-            if (fullCalendarInstance) {
-                fullCalendarInstance.getEventSourceById('planEvents')?.refetch();
-                fullCalendarInstance.getEventSourceById('dlotMarkers')?.refetch();
-            }
-            if (dlotViewContainer.style.display === 'flex') {
-                loadDlotDataForDate(dlotEntryDateInputHidden.value, planLineFilter.value || 'ALL');
-            }
+        
+        btnRefreshPlan?.addEventListener('click', () => { 
+            fetchPlans(); 
+            fullCalendarInstance?.refetchEvents();
         });
+        
         btnAddPlan?.addEventListener('click', () => openPlanModal(null));
+        savePlanButton?.addEventListener('click', savePlan);
+        deletePlanButton?.addEventListener('click', () => { if (confirm('Delete?')) deletePlan(); });
+        
         btnCalculateCarryOver?.addEventListener('click', async () => {
-            if (!confirm('Calculate C/O?')) return;
+            if (!confirm('Calculate Carry Over?')) return;
             showSpinner();
-            btnCalculateCarryOver.disabled = true;
             try {
                 const res = await sendRequest(PLAN_API, 'calculate_carry_over', 'GET');
                 showToast(res.message, res.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-                if (res.success) {
-                    await fetchPlans();
-                    if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
-                }
-            } catch (e) {
-                showToast('Error calculating C/O.', 'var(--bs-danger)');
-            } finally {
-                hideSpinner();
-                btnCalculateCarryOver.disabled = false;
-            }
-        });
-        savePlanButton?.addEventListener('click', savePlan);
-        deletePlanButton?.addEventListener('click', () => {
-            const id = planModalPlanId.value;
-            if (!id || id === '0') return;
-            if (confirm(`Delete plan ID: ${id}?`)) {
-                deletePlan();
-            }
+                if (res.success) fetchPlans();
+            } catch (e) {} finally { hideSpinner(); }
         });
 
-        // --- DLOT View Listeners ---
+        // DLOT Listeners
         backToCalendarBtn?.addEventListener('click', switchToCalendarView);
         dlotEntryForm?.addEventListener('submit', handleSaveDlotForm);
         dlotDlCostInput?.addEventListener('input', updateDlotSummaryView);
         dlotOtCostInput?.addEventListener('input', updateDlotSummaryView);
-        
-        // --- Plan Table Listeners ---
+
+        // Calendar Button Listeners
+        const btnMonth = document.getElementById('calendar-month-view-button');
+        const btnWeek = document.getElementById('calendar-week-view-button');
+
+        document.getElementById('calendar-prev-button')?.addEventListener('click', () => fullCalendarInstance?.prev());
+        document.getElementById('calendar-next-button')?.addEventListener('click', () => fullCalendarInstance?.next());
+        document.getElementById('calendar-today-button')?.addEventListener('click', () => fullCalendarInstance?.today());
+
+        btnMonth?.addEventListener('click', () => {
+            if (fullCalendarInstance) {
+                fullCalendarInstance.changeView('dayGridMonth');
+                // สลับสี: ให้ Month เป็น Active, Week เป็นธรรมดา
+                btnMonth.classList.add('active');
+                btnWeek.classList.remove('active');
+            }
+        });
+
+        btnWeek?.addEventListener('click', () => {
+            if (fullCalendarInstance) {
+                fullCalendarInstance.changeView('timeGridWeek');
+                // สลับสี: ให้ Week เป็น Active, Month เป็นธรรมดา
+                btnWeek.classList.add('active');
+                btnMonth.classList.remove('active');
+            }
+        });
+
+        // Table Action Listeners
         productionPlanTableBody?.addEventListener('click', (e) => {
-            const editBtn = e.target.closest('.edit-plan-btn');
-            if (editBtn) {
-                const row = editBtn.closest('tr');
-                if (row?.dataset.planData) {
-                    try { openPlanModal(JSON.parse(row.dataset.planData)); } 
-                    catch (e) { console.error("Failed to parse plan data:", e); }
-                }
+            if (e.target.classList.contains('editable-plan') || e.target.closest('.editable-plan')) {
                 return;
             }
-            const delBtn = e.target.closest('.delete-plan-btn');
-            if (delBtn) {
-                const row = delBtn.closest('tr');
-                const id = row?.dataset.planId;
-                if (id) {
-                    if (confirm(`Delete ID: ${id}?`)) {
-                        planModalPlanId.value = id;
-                        deletePlan();
-                        planModalPlanId.value = '0';
-                    }
-                }
-                return;
-            }
-        });
-        productionPlanTableBody?.addEventListener('blur', (e) => {
-            if (e.target.classList.contains('editable-plan')) {
-                const span = e.target;
-                const id = parseInt(span.dataset.id);
-                const field = span.dataset.field;
-                const newVal = span.textContent.trim();
-                const row = span.closest('tr');
-                if (!row || !id) return;
-                const orig = JSON.parse(row?.dataset.planData || '{}');
-                if (field === 'note') {
-                    const origVal = orig.note || '';
-                    if (newVal !== origVal) {
-                        clearTimeout(planNoteEditDebounceTimer);
-                        planNoteEditDebounceTimer = setTimeout(() => {
-                            handlePlanNoteEdit(id, newVal);
-                        }, 300);
-                    } else {
-                        span.textContent = origVal;
-                    }
-                } else if (field === 'carry_over') {
-                    const origVal = parseFloat(orig.carry_over_quantity || 0);
-                    const numStr = newVal.replace(/,/g, '');
-                    let numVal = parseFloat(numStr);
-                    if (isNaN(numVal) || numVal < 0) {
-                        showToast('Invalid C/O.', 'var(--bs-warning)');
-                        span.textContent = origVal.toLocaleString();
-                        return;
-                    }
-                    numVal = parseFloat(numVal.toFixed(2));
-                    if (numVal !== origVal) {
-                        clearTimeout(planCarryOverEditDebounceTimer);
-                        planCarryOverEditDebounceTimer = setTimeout(() => {
-                            handleCarryOverEdit(id, numVal, span);
-                        }, 200);
-                    } else {
-                        span.textContent = origVal.toLocaleString();
-                    }
-                }
-            }
-        }, true);
-        productionPlanTableBody?.addEventListener('keydown', (e) => {
-            if (e.target.classList.contains('editable-plan')) {
-                const field = e.target.dataset.field;
-                if (field === 'carry_over') {
-                    if (!/[0-9.,]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'].includes(e.key)) {
-                        e.preventDefault();
-                    }
-                    if (e.key === '.' && e.target.textContent.includes('.')) {
-                        e.preventDefault();
-                    }
-                }
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
+            const row = e.target.closest('tr');
+            if (row && row.dataset.planData) {
+                try {
+                    const planData = JSON.parse(row.dataset.planData);
+                    openPlanModal(planData);
+                } catch (err) {
+                    console.error("Error parsing plan data", err);
                 }
             }
         });
-
-        // --- Calendar Button Listeners ---
-        document.getElementById('calendar-prev-button')?.addEventListener('click', () => { fullCalendarInstance?.prev(); });
-        document.getElementById('calendar-next-button')?.addEventListener('click', () => { fullCalendarInstance?.next(); });
-        document.getElementById('calendar-today-button')?.addEventListener('click', () => { fullCalendarInstance?.today(); });
-        document.getElementById('calendar-month-view-button')?.addEventListener('click', () => {
-            fullCalendarInstance?.changeView('dayGridMonth');
-            document.getElementById('calendar-month-view-button')?.classList.add('active');
-            document.getElementById('calendar-week-view-button')?.classList.remove('active');
-        });
-        document.getElementById('calendar-week-view-button')?.addEventListener('click', () => {
-            fullCalendarInstance?.changeView('timeGridWeek');
-            document.getElementById('calendar-month-view-button')?.classList.remove('active');
-            document.getElementById('calendar-week-view-button')?.classList.add('active');
-        });
-
-        // --- Shipment Tab Listeners ---
-        document.getElementById('shipmentRefreshBtn')?.addEventListener('click', () => fetchShipments(1));
-        document.getElementById('shipmentStatusFilter')?.addEventListener('change', () => fetchShipments(1));
-        document.getElementById('shipmentStartDate')?.addEventListener('change', () => fetchShipments(1));
-        document.getElementById('shipmentEndDate')?.addEventListener('change', () => fetchShipments(1));
-        document.getElementById('shipmentSearch')?.addEventListener('input', () => {
-            clearTimeout(shipmentDebounceTimer);
-            shipmentDebounceTimer = setTimeout(() => fetchShipments(1), 500);
-        });
-
-        // --- Main Tab Switching Logic ---
-        document.querySelectorAll('#managementTab button[data-bs-toggle="tab"]').forEach(tab => {
-            tab.addEventListener('shown.bs.tab', (event) => {
-                const targetPaneId = event.target.getAttribute('data-bs-target');
-                
-                if (targetPaneId === '#planning-pane') {
-                    if (shipmentFilterGroup) shipmentFilterGroup.style.display = 'none';
-                } else if (targetPaneId === '#shipment-pane') {
-                    if (shipmentFilterGroup) shipmentFilterGroup.style.display = 'flex';
-                }
-                
-                showCorrectPagination(targetPaneId);
-                const paneId = targetPaneId.substring(1);
-                if (!tabLoadedState[paneId]) {
-                    if (paneId === 'shipment-pane') {
-                        initializeShipmentTab();
-                    }
-                    tabLoadedState[paneId] = true;
-                }
-            });
-        });
-
-        // --- Initial Data Load (for Planning Tab) ---
-        setAllDefaultDates();
-        fetchDashboardLines()
-            .then(fetchAllItemsForPlanning)
-            .then(() => {
-                initializeCalendar(); 
-                fetchPlans(); 
-                tabLoadedState['planning-pane'] = true;
-                showCorrectPagination('#planning-pane');
-            });
     }
 
-    // Run the application
     initializeApp();
 });

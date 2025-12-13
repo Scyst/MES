@@ -41,8 +41,8 @@
                         </div>
                         
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-muted">Photo (Optional)</label>
-                            <input type="file" name="photo_before" class="form-control form-control-sm" accept="image/*">
+                            <label class="form-label small fw-bold text-muted">Photo (ถ่ายให้เห็นปัญหา))</label>
+                            <input type="file" name="photo_before" class="form-control form-control-sm" accept="image/*" required>
                         </div>
                     </div>
                 </form>
