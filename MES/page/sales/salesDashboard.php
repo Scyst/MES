@@ -13,7 +13,8 @@ $pageHelpId = "helpModal";
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>"> 
+    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script> 
 </head>
 <body class="layout-top-header">
 
@@ -33,20 +34,21 @@ $pageHelpId = "helpModal";
                 
                 <div class="row g-2 mb-3">
                     <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card active" onclick="filterData('ALL')" id="card-all">
+                        <div class="card shadow-sm kpi-card active" onclick="filterData('ACTIVE')" id="card-active">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Total Orders</div>
-                                        <h2 class="text-body fw-bold mb-0" id="kpi-total">0</h2>
+                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Active Orders</div>
+                                        <h2 class="text-primary fw-bold mb-0" id="kpi-active">0</h2>
                                     </div>
-                                    <div class="bg-secondary bg-opacity-10 text-secondary p-3 rounded-circle">
-                                        <i class="fas fa-list fa-lg"></i>
+                                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                                        <i class="fas fa-clipboard-list fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-6 col-md-4 col-lg-20-percent">
                         <div class="card shadow-sm kpi-card" onclick="filterData('WAIT_PROD')" id="card-wait-prod">
                             <div class="card-body p-3">
@@ -62,21 +64,23 @@ $pageHelpId = "helpModal";
                             </div>
                         </div>
                     </div>
+
                     <div class="col-6 col-md-4 col-lg-20-percent">
                         <div class="card shadow-sm kpi-card" onclick="filterData('PROD_DONE')" id="card-prod-done">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <div class="text-uppercase text-body-secondary small fw-bold mb-1">Production Done</div>
-                                        <h2 class="text-primary fw-bold mb-0" id="kpi-prod-done">0</h2>
+                                        <h2 class="text-indigo fw-bold mb-0" style="color: #6610f2;" id="kpi-prod-done">0</h2>
                                     </div>
-                                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                                    <div class="p-3 rounded-circle" style="background-color: rgba(102, 16, 242, 0.1); color: #6610f2;">
                                         <i class="fas fa-check-circle fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-6 col-md-4 col-lg-20-percent">
                         <div class="card shadow-sm kpi-card" onclick="filterData('WAIT_LOAD')" id="card-wait-load">
                             <div class="card-body p-3">
@@ -92,16 +96,17 @@ $pageHelpId = "helpModal";
                             </div>
                         </div>
                     </div>
+
                     <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card" onclick="filterData('LOADED')" id="card-loaded">
+                        <div class="card shadow-sm kpi-card" onclick="filterData('ALL')" id="card-all">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Loaded / Shipped</div>
-                                        <h2 class="text-success fw-bold mb-0" id="kpi-loaded">0</h2>
+                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">All History</div>
+                                        <h2 class="text-secondary fw-bold mb-0" id="kpi-total-all">0</h2>
                                     </div>
-                                    <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
-                                        <i class="fas fa-ship fa-lg"></i>
+                                    <div class="bg-secondary bg-opacity-10 text-secondary p-3 rounded-circle">
+                                        <i class="fas fa-history fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
@@ -118,6 +123,11 @@ $pageHelpId = "helpModal";
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                     <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search PO, SKU, Status...">
                                 </div>
+                                <button class="btn btn-outline-secondary btn-sm me-2 d-inline-flex align-items-center justify-content-center" 
+                                    onclick="resetToPlanOrder()" 
+                                    title="Reset Order (กลับสู่การเรียงตามแผน)"
+                                    style="width: 32px; height: 32px;"> <i class="fas fa-sync-alt"></i>
+                                </button>
                             </div>
 
                             <div class="d-flex align-items-center gap-2">
@@ -169,7 +179,10 @@ $pageHelpId = "helpModal";
                         <table class="table table-bordered table-hover align-middle mb-0 text-nowrap">
                             <thead class="sticky-top shadow-sm">
                                 <tr class="text-center align-middle">
-                                    
+                                    <th class="text-center bg-body text-secondary sticky-col start-0" style="width: 60px; z-index: 50;" title="Drag to reorder">
+                                        <i class="fas fa-bars"></i>
+                                    </th>
+                                        
                                     <th class="sticky-col shadow-sm sortable bg-body" data-sort="po_number" 
                                         style="min-width: 120px; position: sticky; left: 0; top: 0; z-index: 40;">
                                         PO Number <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i>
@@ -179,8 +192,6 @@ $pageHelpId = "helpModal";
                                         style="width: 60px; position: sticky; right: 0; top: 0; z-index: 35;">
                                         Conf. <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i>
                                     </th>
-
-                                    <th class="sortable" data-sort="order_date">Order Date <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i></th>
                                     <th class="sortable" data-sort="sku">SKU <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i></th>
                                     <th class="sortable" data-sort="description">Description <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i></th>
                                     <th class="sortable" data-sort="color">Color <i class="sort-icon fas fa-sort text-secondary opacity-50 ms-1"></i></th>

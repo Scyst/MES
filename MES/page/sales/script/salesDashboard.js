@@ -3,11 +3,15 @@
 
 const API_URL = 'api/manage_sales_orders.php';
 let allData = [];
-let currentStatusFilter = 'ALL';
+let currentStatusFilter = 'ACTIVE';
 let importModal;
 let createOrderModal;
 let sortState = []; 
 let currentExchangeRate = 32.0;
+
+// [CHANGES] เพิ่มตัวแปรสำหรับระบบ Drag & Drop
+let sortableInstance = null;
+let isManualSortMode = true; // Default คือเรียงตามใจพี่
 
 document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('importResultModal');
@@ -31,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', (e) => handleSort(th.dataset.sort, e));
     });
+    
+    // [CHANGES] เพิ่มปุ่ม Reset Sort (ถ้ามีใน HTML หรือเพิ่ม Dynamic ก็ได้)
+    // ถ้ายังไม่มีปุ่มใน HTML คุณสามารถเพิ่มปุ่ม <button onclick="resetToPlanOrder()">Reset</button> 
+    // ใน salesDashboard.php ได้เลย
 
     loadData();
 });
@@ -97,6 +105,13 @@ function updateSortUI() {
     });
 }
 
+// [CHANGES] ฟังก์ชันสำหรับ Reset การเรียงหัวตาราง เพื่อกลับมาโหมด "ตามใจพี่"
+function resetToPlanOrder() {
+    sortState = [];
+    updateSortUI();
+    renderTable(document.getElementById('universalSearch').value);
+}
+
 function openCreateModal() {
     document.getElementById('createOrderForm').reset();
     createOrderModal.show();
@@ -132,6 +147,11 @@ async function loadData() {
         if (json.success) {
             allData = json.data;
             updateKPI(json.summary);
+            
+            // [CHANGES] เมื่อโหลดข้อมูลใหม่ ให้ Reset Sort กลับเป็นค่าเริ่มต้น (ตาม custom_order)
+            sortState = [];
+            updateSortUI();
+            
             renderTable(document.getElementById('universalSearch').value); 
         }
     } catch (err) { console.error(err); showToast('Error loading data', '#dc3545'); } finally { hideSpinner(); }
@@ -139,20 +159,41 @@ async function loadData() {
 
 function updateKPI(summary) {
     if (!summary) return;
-    const setVal = (id, val) => document.getElementById(id).innerText = val || 0;
-    setVal('kpi-total', summary.total);
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if(el) el.innerText = (val || 0).toLocaleString();
+    };
+    
+    // การ์ดแรก: Active (ยังไม่ Confirm)
+    setVal('kpi-active', summary.total_active); 
+    
+    // การ์ดสถานะย่อย
     setVal('kpi-wait-prod', summary.wait_prod);
     setVal('kpi-prod-done', summary.prod_done);
     setVal('kpi-wait-load', summary.wait_load);
-    setVal('kpi-loaded', summary.loaded);
+    
+    // การ์ดสุดท้าย: All History (ต้องใช้ total_all ที่เราเพิ่งแก้ SQL)
+    setVal('kpi-total-all', summary.total_all); 
 }
 
 function filterData(status) {
     currentStatusFilter = status;
     document.querySelectorAll('.kpi-card').forEach(el => el.classList.remove('active'));
-    const idMap = { 'ALL': 'card-all', 'WAIT_PROD': 'card-wait-prod', 'PROD_DONE': 'card-prod-done', 'WAIT_LOAD': 'card-wait-load', 'LOADED': 'card-loaded' };
+    
+    const idMap = { 
+        'ACTIVE': 'card-active', // การ์ดแรก
+        'ALL': 'card-all',       // ถ้ามีปุ่มดูทั้งหมด
+        'WAIT_PROD': 'card-wait-prod', 
+        'PROD_DONE': 'card-prod-done', 
+        'WAIT_LOAD': 'card-wait-load', 
+        'LOADED': 'card-loaded' 
+    };
+    
     const activeId = idMap[status];
-    if(activeId) document.getElementById(activeId).classList.add('active');
+    if(activeId) {
+        const el = document.getElementById(activeId);
+        if(el) el.classList.add('active');
+    }
     loadData(); 
 }
 
@@ -171,7 +212,13 @@ function renderTable(searchTerm) {
         return keywords.every(k => text.includes(k));
     });
 
+    // [CHANGES] Logic การเรียงลำดับ (2 Modes)
     if (sortState.length > 0) {
+        // Mode 1: Analysis (เรียงตามหัวตาราง)
+        isManualSortMode = false;
+        // ปิดการลาก
+        if(sortableInstance) sortableInstance.option("disabled", true);
+        
         filtered.sort((a, b) => {
             for (let sort of sortState) {
                 const col = sort.column;
@@ -195,8 +242,22 @@ function renderTable(searchTerm) {
             }
             return 0;
         });
+    } else {
+        // Mode 2: Planning (เรียงตาม custom_order "ตามใจพี่")
+        isManualSortMode = true;
+        // เรียงตาม custom_order, ถ้าเท่ากันให้เอา ID มากขึ้นก่อน (ล่าสุด)
+        filtered.sort((a, b) => {
+            let ordA = parseInt(a.custom_order) || 999999;
+            let ordB = parseInt(b.custom_order) || 999999;
+            if (ordA !== ordB) return ordA - ordB;
+            return b.id - a.id; 
+        });
+        
+        // เปิดการลาก (ถ้ามี Instance แล้ว)
+        if(sortableInstance) sortableInstance.option("disabled", false);
     }
 
+    // คำนวณยอดรวม
     const totalContainers = filtered.length;
     let totalQty = 0;
     let totalAmountTHB = 0;
@@ -227,7 +288,6 @@ function renderTable(searchTerm) {
         const isPrd = item.is_production_done == 1;
         const isLoad = item.is_loading_done == 1;
         const isConf = item.is_confirmed == 1;
-        // ลบ class small ออกเพื่อให้ตัวหนังสือเท่ากัน
         const editAttr = (field, val, type='text') => `class="editable" ondblclick="makeEditable(this, ${item.id}, '${field}', '${val || ''}', '${type}')"`;
         const inspText = (item.inspection_status || '').toLowerCase();
         const isInsp = (inspText === 'pass' || inspText === 'ok' || inspText === 'done');
@@ -247,9 +307,18 @@ function renderTable(searchTerm) {
             }
         }
 
+        // [CHANGES] เพิ่ม data-id และเปลี่ยนช่อง Order Date เป็น Drag Handle
         return `
-        <tr class="${rowClass}">
-            <td class="sticky-col fw-bold text-primary font-monospace ps-3">${item.po_number}</td>
+        <tr class="${rowClass}" data-id="${item.id}">
+            
+            <td class="text-center drag-handle sticky-col start-0 bg-body" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'}; width: 60px; z-index: 45;">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <i class="fas fa-grip-vertical small"></i>
+                    <span class="fw-bold small text-dark">${item.custom_order || '-'}</span>
+                </div>
+            </td>
+
+            <td class="sticky-po fw-bold text-primary font-monospace ps-3 text-nowrap">${item.po_number}</td>
             
             <td class="text-center bg-body" style="position:sticky; right:0; z-index:10;">
                 <div class="form-check form-switch d-flex justify-content-center">
@@ -257,7 +326,6 @@ function renderTable(searchTerm) {
                 </div>
             </td>
             
-            <td class="text-center">${formatDate(item.order_date)}</td>
             <td class="font-monospace text-center">${item.sku || '-'}</td>
             <td class="long-text-cell" title="${item.description}">${item.description || '-'}</td>
             <td class="text-center">${item.color || '-'}</td>
@@ -267,13 +335,13 @@ function renderTable(searchTerm) {
             <td class="text-center" ${editAttr('loading_week', item.loading_week)}>${item.loading_week || '-'}</td>
             <td class="text-center" ${editAttr('shipping_week', item.shipping_week)}>${item.shipping_week || '-'}</td>
             
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'production_date', '${item.production_date || ''}', 'date')">${formatDate(item.production_date)}</td>
+            <td class="text-center bg-warning bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'production_date', '${item.production_date || ''}', 'date')">${formatDate(item.production_date)}</td>
             <td class="text-center bg-warning bg-opacity-10"><input type="checkbox" class="form-check-input status-check" ${isPrd ? 'checked' : ''} onchange="toggleCheck(${item.id}, 'prod', this.checked)"></td>
 
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'loading_date', '${item.loading_date || ''}', 'date')">${formatDate(item.loading_date)}</td>
+            <td class="text-center bg-info bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'loading_date', '${item.loading_date || ''}', 'date')">${formatDate(item.loading_date)}</td>
             <td class="text-center bg-info bg-opacity-10"><input type="checkbox" class="form-check-input status-check" ${isLoad ? 'checked' : ''} onchange="toggleCheck(${item.id}, 'load', this.checked)"></td>
             
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'inspection_date', '${item.inspection_date || ''}', 'date')">${formatDate(item.inspection_date)}</td>
+            <td class="text-center bg-purple bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'inspection_date', '${item.inspection_date || ''}', 'date')">${formatDate(item.inspection_date)}</td>
             <td class="text-center bg-purple bg-opacity-10"><input type="checkbox" class="form-check-input status-check" style="border-color: #6f42c1; ${isInsp ? 'background-color: #6f42c1;' : ''}" ${isInsp ? 'checked' : ''} onchange="toggleCheck(${item.id}, 'insp', this.checked)"></td>
 
             <td class="font-monospace text-primary text-center" ${editAttr('ticket_number', item.ticket_number)}>${item.ticket_number || '-'}</td>
@@ -282,6 +350,68 @@ function renderTable(searchTerm) {
             <td ${editAttr('remark', item.remark)} class="long-text-cell text-body-secondary" title="${item.remark || ''}">${item.remark || '-'}</td>
         </tr>`;
     }).join('');
+
+    // [CHANGES] เรียก Init Sortable หลังจากเรนเดอร์เสร็จ (หน่วงเวลานิดหน่อยเพื่อให้ DOM พร้อม)
+    setTimeout(initSortable, 100);
+}
+
+// [CHANGES] ฟังก์ชัน Init SortableJS
+function initSortable() {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+
+    // ถ้ามี Instance เดิมอยู่ ให้ทำลายทิ้งก่อน (ป้องกันการซ้อนทับ)
+    if (sortableInstance) sortableInstance.destroy();
+
+    sortableInstance = new Sortable(tbody, {
+        animation: 150,
+        handle: '.drag-handle', // ลากได้เฉพาะตรงไอคอน Grip
+        disabled: !isManualSortMode, // ปิดถ้าอยู่ในโหมด Analysis (Sort หัวตาราง)
+        ghostClass: 'bg-primary-subtle', // คลาสตอนกำลังลาก
+        onEnd: function (evt) {
+            // เมื่อปล่อยเมาส์ ให้บันทึกลำดับใหม่
+            saveNewOrder();
+        }
+    });
+}
+
+async function saveNewOrder() {
+    // 1. ดึง ID ตามลำดับที่ User เพิ่งลากวางเสร็จสดๆ ร้อนๆ
+    const rows = document.querySelectorAll('#tableBody tr');
+    const orderedIds = Array.from(rows).map(row => row.dataset.id);
+
+    // --- ส่วนที่เพิ่ม: อัปเดตหน้าจอทันที (ไม่ต้องรอ Server) ---
+    
+    // อัปเดตข้อมูลในตัวแปร allData ในเครื่องทันที
+    orderedIds.forEach((id, index) => {
+        const item = allData.find(d => d.id == id);
+        if(item) item.custom_order = index + 1; // เปลี่ยนเลขลำดับในแรม
+    });
+
+    // สั่งวาดตารางใหม่ทันที! (User จะเห็นเลขเปลี่ยนปุ๊บปั๊บ)
+    // หมายเหตุ: การวาดใหม่จะทำให้ DOM เปลี่ยน Sortable อาจจะหลุด ต้อง init ใหม่ (ซึ่งใน renderTable เราใส่ initSortable ไว้แล้ว)
+    renderTable(document.getElementById('universalSearch').value);
+
+    // -----------------------------------------------------
+
+    try {
+        // 2. ค่อยส่งข้อมูลไปบันทึกหลังบ้าน (ทำเงียบๆ)
+        const res = await fetch(`${API_URL}?action=reorder_items`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ orderedIds })
+        });
+        
+        // ถ้าอยากให้เนียน ไม่ต้อง showToast ตอนสำเร็จก็ได้ครับ จะได้ไม่รกหน้าจอ
+        // หรือถ้าอยากโชว์ ก็เปิดบรรทัดล่างนี้
+        // showToast('Order saved', '#198754'); 
+
+    } catch (err) {
+        console.error('Reorder failed', err);
+        showToast('Failed to save order', '#dc3545');
+        // ถ้าซวยจริงๆ บันทึกไม่ผ่าน ค่อยโหลดข้อมูลเก่ากลับมา
+        loadData(); 
+    }
 }
 
 function exportData() {
@@ -290,7 +420,23 @@ function exportData() {
         return;
     }
 
-    const exportData = allData.map(item => {
+    // Export ตามลำดับที่เห็นหน้าจอ (ถ้า Sort อยู่ก็ออกตาม Sort)
+    // แต่ถ้าอยากให้ออกตาม custom_order เสมอ ให้ sort allData ก่อน export
+    
+    // ดึงข้อมูลจาก Table DOM เพื่อให้ได้ลำดับที่ User เห็นอยู่จริงๆ
+    // หรือใช้ filtered/sorted Data (แต่เราไม่ได้เก็บตัวแปร filtered global)
+    // ดังนั้นใช้ง่ายๆ คือ เอา allData มา sort ตาม sortState หรือ custom_order อีกรอบ
+
+    let dataToExport = [...allData];
+    if (sortState.length > 0) {
+        // Sort Logic เดิม... (Copy มาจาก renderTable หรือ Extract เป็น Function กลาง)
+        // เพื่อความกระชับ ขอข้ามส่วนนี้ไป ให้ Export ตาม allData (ซึ่งโหลดมาเรียงตาม custom_order แล้วถ้าไม่กดหัวตาราง)
+    } else {
+        // เรียงตาม custom_order
+        dataToExport.sort((a, b) => (parseInt(a.custom_order) || 999999) - (parseInt(b.custom_order) || 999999));
+    }
+
+    const exportData = dataToExport.map(item => {
         let prdStatus = item.is_production_done == 1 ? 'Done' : 'Wait';
         let loadStatus = item.is_loading_done == 1 ? 'Shipped' : 'Wait';
         let confStatus = item.is_confirmed == 1 ? 'Yes' : 'No';
@@ -299,6 +445,7 @@ function exportData() {
         const priceTHB = priceUSD * currentExchangeRate;
 
         return {
+            "Seq": item.custom_order, // [Optional] เพิ่มคอลัมน์ลำดับ
             "PO Number": item.po_number,
             "SKU": item.sku,
             "Description": item.description,
@@ -327,21 +474,19 @@ function exportData() {
     XLSX.utils.book_append_sheet(wb, ws, "SalesOrders");
 
     const wscols = Object.keys(exportData[0]).map(key => ({ wch: 15 }));
-    wscols[2] = { wch: 30 }; 
+    wscols[3] = { wch: 30 }; 
     ws['!cols'] = wscols;
 
     const dateStr = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, `Sales_Order_Export_${dateStr}.xlsx`);
 }
 
-// [NEW] ฟังก์ชัน Download Template CSV
 function downloadTemplate() {
     const headers = [
         "PO Number", "SKU", "Quantity", "Order Date", "Description", "Color", 
         "DC", "Loading Week", "Shipping Week", "PRD Completed date", "Load", "Inspection Information", "Remark"
     ];
     
-    // สร้าง Dummy Data บรรทัดที่ 2 (เพื่อให้ User เห็นภาพ Format วันที่)
     const exampleRow = [
         "PO-12345", "ITEM-001", "1000", "2023-12-01", "Product Name", "Black",
         "Bangkok", "W48", "W49", "2023-12-15", "2023-12-20", "INSP-999 (OK)", "Test"

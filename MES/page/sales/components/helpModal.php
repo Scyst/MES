@@ -7,6 +7,37 @@
             </div>
             <div class="modal-body p-4">
                 
+                <div class="alert alert-primary bg-primary bg-opacity-10 border-0 mb-4">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-star me-2"></i>ฟีเจอร์ใหม่! การจัดเรียงและมุมมองข้อมูล</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-white p-2 rounded-circle shadow-sm me-3 text-primary">
+                                    <i class="fas fa-grip-vertical"></i>
+                                </div>
+                                <div>
+                                    <strong>จัดเรียงตามใจ (Drag & Drop)</strong><br>
+                                    <span class="small text-muted">คลิกค้างที่ช่อง <strong># (ซ้ายสุด)</strong> แล้วลากขึ้น-ลงเพื่อสลับลำดับการผลิตได้ทันที ระบบจะบันทึกให้อัตโนมัติ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-white p-2 rounded-circle shadow-sm me-3 text-primary">
+                                    <i class="fas fa-filter"></i>
+                                </div>
+                                <div>
+                                    <strong>Active vs History</strong><br>
+                                    <span class="small text-muted">
+                                        <strong>Active:</strong> แสดงเฉพาะงานที่ยังไม่กด Confirm<br>
+                                        <strong>History:</strong> แสดงประวัติทั้งหมดรวมที่จบไปแล้ว
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-mouse-pointer me-2"></i>การใช้งานพื้นฐาน</h6>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
@@ -14,7 +45,7 @@
                             <span class="badge bg-secondary me-2">1</span>
                             <div>
                                 <strong>แก้ไขข้อมูล (Inline Edit)</strong><br>
-                                <span class="text-muted small">ดับเบิลคลิกช่องข้อมูลเพื่อแก้ไข เมื่อพิมพ์เสร็จกด Enter เพื่อบันทึก</span>
+                                <span class="text-muted small">ดับเบิลคลิกช่องข้อมูลเพื่อแก้ไข -> กด Enter เพื่อบันทึก</span>
                             </div>
                         </div>
                     </div>
@@ -22,8 +53,8 @@
                         <div class="d-flex align-items-start">
                             <span class="badge bg-secondary me-2">2</span>
                             <div>
-                                <strong>เปลี่ยนสถานะ (Quick Toggle)</strong><br>
-                                <span class="text-muted small">คลิก Checkbox ในช่อง Done, Loaded หรือ Pass เพื่ออัปเดตสถานะ</span>
+                                <strong>เปลี่ยนสถานะ (Quick Check)</strong><br>
+                                <span class="text-muted small">ติ๊กช่อง Done/Loaded เพื่อเปลี่ยนสถานะ (ช่อง Confirmed จะซ่อนงานออกจากหน้า Active)</span>
                             </div>
                         </div>
                     </div>
@@ -31,8 +62,8 @@
                         <div class="d-flex align-items-start">
                             <span class="badge bg-secondary me-2">3</span>
                             <div>
-                                <strong>การค้นหา (Smart Search)</strong><br>
-                                <span class="text-muted small">ค้นหาได้ทั้ง PO, SKU, Status หรือคำอื่นๆ ที่ต้องการ</span>
+                                <strong>ปุ่ม "Plan Order"</strong><br>
+                                <span class="text-muted small">หากเผลอไปกด Sort หัวตารางจนลากไม่ได้ ให้กดปุ่มนี้เพื่อรีเซ็ตกลับมาเรียงตามแผนการผลิต</span>
                             </div>
                         </div>
                     </div>
@@ -40,70 +71,41 @@
                         <div class="d-flex align-items-start">
                             <span class="badge bg-secondary me-2">4</span>
                             <div>
-                                <strong>คำนวณเงินบาท</strong><br>
-                                <span class="text-muted small">แก้ไขเรทเงินในช่อง "1$ =" ระบบจะคำนวณยอดรวมให้อัตโนมัติ</span>
+                                <strong>การนำเข้าข้อมูล (Smart Import)</strong><br>
+                                <span class="text-muted small">
+                                    ระบบจะ <strong>อัปเดต</strong> ข้อมูลหากพบรายการเดิม หรือ <strong>เพิ่มใหม่</strong> หากไม่พบ 
+                                    โดยลำดับจะถูกจัดเรียงตามบรรทัดในไฟล์ Excel เสมอ
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-file-import me-2"></i>การนำเข้าข้อมูล (Smart Import)</h6>
-                <div class="alert alert-light border mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted">ระบบรองรับชื่อหัวข้อ (Header) ที่หลากหลาย คุณสามารถใช้ไฟล์จากลูกค้าได้ทันทีหากมีหัวข้อเหล่านี้:</span>
-                        <button class="btn btn-sm btn-outline-primary" onclick="downloadTemplate()">
-                            <i class="fas fa-download me-1"></i> โหลด Template
-                        </button>
-                    </div>
-                    <div class="row g-2 small font-monospace">
-                        <div class="col-md-4">
-                            <ul class="list-unstyled text-secondary">
-                                <li>• PO / PO Number</li>
-                                <li>• SKU / Item Code</li>
-                                <li>• Qty / Quantity</li>
-                                <li>• Order Date</li>
-                                <li>• Description</li>
-                            </ul>
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-palette me-2"></i>ความหมายของแถบสี</h6>
+                <div class="row align-items-center">
+                    <div class="col-12 d-flex flex-wrap gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-danger bg-opacity-75 me-2">Late</span>
+                            <span class="small text-muted">เลยกำหนดโหลดตู้</span>
                         </div>
-                        <div class="col-md-4">
-                            <ul class="list-unstyled text-secondary">
-                                <li>• Original Loading week</li>
-                                <li>• Original Shipping week</li>
-                                <li>• Color / Colour</li>
-                                <li>• DC / Location</li>
-                                <li>• Remark / Notes</li>
-                            </ul>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-warning text-dark bg-opacity-75 me-2">Warning</span>
+                            <span class="small text-muted">เหลือเวลา < 3 วัน</span>
                         </div>
-                        <div class="col-md-4">
-                            <ul class="list-unstyled text-secondary">
-                                <li>• PRD Completed date</li>
-                                <li>• Load / Loading Date</li>
-                                <li>• Inspection Information</li>
-                                <li>• Ticket Number</li>
-                            </ul>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success bg-opacity-75 me-2">Confirmed</span>
+                            <span class="small text-muted">ยืนยันจบงาน (ย้ายไป History)</span>
                         </div>
-                    </div>
-                </div>
-
-                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-star me-2"></i>ฟีเจอร์อื่นๆ</h6>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <strong><i class="fas fa-sort text-muted me-1"></i> Multi-Sort</strong>
-                        <p class="text-muted small mt-1 mb-0">กด <strong>Shift + คลิกหัวตาราง</strong> เพื่อเรียงข้อมูลหลายเงื่อนไขพร้อมกัน</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <strong><i class="fas fa-palette text-muted me-1"></i> แถบสีสถานะ</strong>
-                        <div class="d-flex gap-2 mt-1">
-                            <span class="badge bg-danger bg-opacity-75">Late</span>
-                            <span class="badge bg-warning text-dark bg-opacity-75">Warning (3 Days)</span>
-                            <span class="badge bg-success bg-opacity-75">Confirmed</span>
+                        <div class="d-flex align-items-center">
+                            <span class="badge me-2" style="background-color: #e0cffc; color: #4c2f91; border: 1px solid #bfa1f7;">Inspection</span>
+                            <span class="small text-muted">ขั้นตอนตรวจสอบคุณภาพ</span>
                         </div>
                     </div>
                 </div>
 
             </div>
             <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">รับทราบ</button>
             </div>
         </div>
     </div>

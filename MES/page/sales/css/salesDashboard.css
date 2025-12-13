@@ -142,6 +142,35 @@ th.sortable .sort-icon {
     color: var(--bs-secondary-color);
 }
 
+/* คอลัมน์ที่ 1: ปุ่มลาก (Drag Handle) */
+/* ให้ติดซ้ายสุดที่ตำแหน่ง 0 */
+td.sticky-col.start-0, 
+th.sticky-col.start-0 {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 50 !important;
+    background-color: var(--bs-body-bg) !important;
+    border-right: 1px solid var(--bs-border-color);
+    width: 60px;
+}
+
+/* คอลัมน์ที่ 2: PO Number */
+/* ต้องขยับ Sticky ไปทางขวาเท่ากับความกว้างของคอลัมน์แรก (60px) */
+/* สังเกต class .ps-3 ที่ติดมากับ PO Number ใน JS ให้แก้เป็น class นี้แทน */
+td.sticky-po,
+th.sticky-po {
+    position: sticky !important;
+    left: 60px !important;
+    z-index: 40 !important;
+    background-color: var(--bs-body-bg) !important;
+    border-right: 2px solid var(--bs-border-color);
+}
+
+/* แก้สีพื้นหลังตอน Hover หรือมีสีแถว (Confirmed/Late) ไม่ให้ทะลุ Sticky */
+tr.row-confirmed td.sticky-col, tr.row-confirmed td.sticky-po { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.15); }
+tr.row-late td.sticky-col, tr.row-late td.sticky-po      { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(220, 53, 69, 0.15); }
+tr.row-warning td.sticky-col, tr.row-warning td.sticky-po   { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(255, 193, 7, 0.15); }
+
 /* Table Body */
 table.table tbody td {
     font-size: 0.9rem;
@@ -235,4 +264,35 @@ td.editable:hover {
     background-color: var(--bs-tertiary-bg) !important;
     cursor: text;
     outline: 1px dashed var(--bs-secondary);
+}
+
+/* --- Custom Colors (แก้ไขใหม่: สูตร Pastel สบายตา) --- */
+
+/* นิยามสีม่วงลาเวนเดอร์ (ใช้สีตายตัวเลย ไม่ต้องพึ่ง Opacity แล้ว จะได้สีเป๊ะๆ) */
+.bg-purple, 
+.bg-purple.bg-opacity-10 { /* บังคับทับ class opacity ไปเลย */
+    background-color: #e0cffc !important; /* สีพื้น: ม่วงอ่อนพาสเทล */
+    color: #4c2f91 !important;            /* สีตัวอักษร: ม่วงเข้ม (ให้อ่านง่าย) */
+}
+
+/* นิยามสีตัวอักษรม่วง (เผื่อใช้ที่อื่น) */
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+/* Checkbox ในพื้นที่สีม่วง (ปรับขอบให้เข้าธีม) */
+.bg-purple .form-check-input {
+    border-color: #bfa1f7;
+}
+.bg-purple .form-check-input:checked {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}
+
+/* --- Dark Mode (ปรับให้มืดลง ไม่สว่างจ้าในที่มืด) --- */
+[data-bs-theme="dark"] .bg-purple,
+[data-bs-theme="dark"] .bg-purple.bg-opacity-10 {
+    background-color: rgba(111, 66, 193, 0.2) !important; /* ม่วงโปร่งแสง 20% */
+    color: #e0cffc !important; /* ตัวอักษรสีอ่อน */
+    border-color: rgba(111, 66, 193, 0.3) !important; /* เส้นขอบ */
 }

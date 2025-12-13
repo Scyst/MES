@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 
-if (!in_array($_SESSION['user']['role'], ['admin', 'creator', 'supervisor'])) {
+if (!in_array($_SESSION['user']['role'], ['admin', 'creator'])) {
     header("Location: dailyLogUI.php");
     exit;
 }
