@@ -126,11 +126,18 @@ body.layout-top-header {
 }
 
 /* Body ของการ์ดปฏิทิน */
-.calendar-card .card-body, .chart-card-plan .card-body {
+.calendar-card .card-body {
     flex: 1;
     overflow: hidden;
     position: relative;
     padding: 0;
+}
+
+.chart-card-plan .card-body {
+    flex: 1;
+    min-height: 0; /* สำคัญ: ป้องกัน Flex item ล้น */
+    position: relative;
+    padding: 1rem;
 }
 
 /* ตัว Container ที่หุ้ม Calendar */
@@ -169,23 +176,23 @@ body.layout-top-header {
 /* 4. Table Styling (Sales Dashboard Style) */
 /* ================================================================= */
 .planning-table-wrapper {
-    /* ไม่ต้อง flex: 1 แล้ว เพราะเราปล่อย height auto */
-    min-height: 400px; /* ความสูงขั้นต่ำ */
     background-color: #fff;
     border: 1px solid var(--bs-border-color);
     border-radius: 0.75rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    overflow-y: auto;
     overflow-x: auto;
+    max-height: 600px; /* หรือความสูงที่ต้องการ */
+    position: relative;
 }
 
 /* Sticky Header */
 .planning-table-wrapper thead th {
-    background-color: #f8f9fa;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #6c757d;
-    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10; /* ให้ลอยอยู่เหนือข้อมูล */
+    background-color: #f8f9fa; /* ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 /* Table Body & Rows */
@@ -241,11 +248,11 @@ body.layout-top-header {
     opacity: 0.8;
 }
 
-/* Chart Container */
 .chart-scroll-container {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden; /* ซ่อน Scrollbar ของ Container นอก */
 }
 
 /* Pagination Footer */

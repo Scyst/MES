@@ -9,7 +9,7 @@ if (!hasRole(['admin', 'creator', 'planner'])) {
 
 $currentUserForJS = $_SESSION['user'] ?? null;
 
-// --- 1. ปรับ Header ให้เหลือแค่ Planning ---
+// --- Config Header ---
 $pageTitle = "Production Planning";
 $pageIcon = "fas fa-calendar-alt"; 
 $pageHeaderTitle = "Production Planning";
@@ -22,9 +22,12 @@ $pageHelpId = "helpModal";
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/css/autoComplete.02.min.css">
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
+    
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    
     <link rel="stylesheet" href="css/managementDashboard.css?v=<?php echo time(); ?>">
 </head>
 <body class="layout-top-header">
@@ -39,89 +42,68 @@ $pageHelpId = "helpModal";
             
             <div class="content-wrapper">
                 <div class="planning-section-content">
-                    
-                    <div class="row g-3">
-                        <div class="col-xl-3 col-md-6">
-                            <div class="kpi-card border-primary border-opacity-25">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="kpi-title">Est. Sales Value</div>
-                                        <h3 class="kpi-value text-primary" id="kpi-sale-value">฿0.00</h3>
-                                    </div>
-                                    <div class="kpi-icon-wrapper bg-primary bg-opacity-10 text-primary">
-                                        <i class="fas fa-coins"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">Based on Plan</span>
+    
+                    <div class="row g-2 mb-2">
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-success border-opacity-10 h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-success">Sale</div>
+                                    <h4 class="fw-bold mb-0" id="kpi-sale-value">฿0.00</h4>
+                                    <small class="text-muted" style="font-size: 0.7em;">USD x Rate</small>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="kpi-card border-danger border-opacity-25">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="kpi-title">Est. Cost</div>
-                                        <h3 class="kpi-value text-danger" id="kpi-cost-value">฿0.00</h3>
-                                    </div>
-                                    <div class="kpi-icon-wrapper bg-danger bg-opacity-10 text-danger">
-                                        <i class="fas fa-file-invoice-dollar"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Std. Cost</span>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-secondary border-opacity-10 h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-secondary">Cost</div>
+                                    <h4 class="fw-bold mb-0" id="kpi-cost-value">฿0.00</h4>
+                                    <small class="text-muted" style="font-size: 0.7em;">Total Std Cost</small>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="kpi-card border-success border-opacity-25">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="kpi-title">Gross Profit</div>
-                                        <h3 class="kpi-value text-success" id="kpi-profit-value">฿0.00</h3>
-                                    </div>
-                                    <div class="kpi-icon-wrapper bg-success bg-opacity-10 text-success">
-                                        <i class="fas fa-chart-line"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Margin Gap</span>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-primary border-opacity-10 h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-primary">Gross Profit</div>
+                                    <h4 class="fw-bold mb-0" id="kpi-profit-value">฿0.00</h4>
+                                    <small class="text-muted" style="font-size: 0.7em;">Margin Gap</small>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="kpi-card border-info border-opacity-25">
-                                <div class="d-flex justify-content-between align-items-start w-100">
-                                    <div class="w-100">
-                                        <div class="d-flex justify-content-between">
-                                            <div class="kpi-title">Production Progress</div>
-                                            <div class="kpi-title text-info" id="kpi-progress-percent">0%</div>
-                                        </div>
-                                        <div class="progress mt-2" style="height: 10px;">
-                                            <div class="progress-bar bg-info" id="kpi-progress-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                    </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-0 bg-light h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-muted">RM</div>
+                                    <h5 class="fw-bold mb-0 text-dark" id="kpi-rm-value">฿0.00</h5>
                                 </div>
-                                <div class="mt-3 d-flex align-items-center gap-2">
-                                    <div class="kpi-icon-wrapper bg-info bg-opacity-10 text-info" style="width: 32px; height: 32px; font-size: 1rem;">
-                                        <i class="fas fa-spinner"></i>
-                                    </div>
-                                    <span class="text-muted small">Actual vs Plan</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-0 bg-light h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-primary fw-bold">Actual Labor Cost</div>
+                                    <h5 class="fw-bold mb-0 text-primary" id="kpi-dl-value">฿0.00</h5>
+                                    <small class="text-muted" style="font-size: 0.65em;">From Manpower</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <div class="kpi-card border-0 bg-light h-100">
+                                <div class="text-center">
+                                    <div class="kpi-title text-muted">OH</div>
+                                    <h5 class="fw-bold mb-0 text-dark" id="kpi-oh-value">฿0.00</h5>
                                 </div>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="row g-3 planning-top-row">
                         <div class="col-lg-8 h-100">
                             <div class="card shadow-sm chart-card-plan h-100 border-0">
                                 <div class="card-header bg-white py-3 border-bottom">
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                         <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-bar me-2 text-primary"></i>Plan vs Actual Analysis</h6>
-                                        
                                         <div class="d-flex flex-wrap gap-2 align-items-center">
                                             <div class="input-group input-group-sm" style="width: auto;">
                                                 <input type="date" id="startDateFilter" class="form-control">
@@ -134,7 +116,7 @@ $pageHelpId = "helpModal";
                                     </div>
                                 </div>
                                 <div class="card-body p-3"> 
-                                    <div class="chart-scroll-container h-100">
+                                    <div class="chart-scroll-container">
                                         <div id="planVsActualChartInnerWrapper" style="position: relative; height: 100%; width: 100%;">
                                             <canvas id="planVsActualChart"></canvas>
                                         </div>
@@ -170,7 +152,8 @@ $pageHelpId = "helpModal";
                         </div>
                     </div>
                     
-                    <div class="card border-0 shadow-sm"> <div class="card-header bg-white py-3 border-bottom">
+                    <div class="card border-0 shadow-sm"> 
+                        <div class="card-header bg-white py-3 border-bottom">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-table me-2 text-primary"></i>Production Plans</h6>
                                 
@@ -180,16 +163,15 @@ $pageHelpId = "helpModal";
                                         <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('importExcelInput').click()"><i class="fas fa-file-import me-1"></i> Import</button>
                                     </div>
                                     <input type="file" id="importExcelInput" hidden accept=".xlsx, .xls" onchange="importFromExcel(this)">
-                                    
                                     <div class="vr mx-1"></div>
-
                                     <button class="btn btn-sm btn-light text-primary border" id="btn-refresh-plan" title="Refresh"><i class="fas fa-sync-alt"></i></button>
                                     <button class="btn btn-sm btn-warning text-dark fw-bold" id="btnCalculateCarryOver"><i class="fas fa-calculator me-1"></i> Calc C/O</button>
                                     <button class="btn btn-sm btn-success fw-bold px-3" id="btnAddPlan"><i class="fas fa-plus me-1"></i> New Plan</button>
                                 </div>
                             </div>
                         </div>
-                        <div class="planning-table-wrapper"> <table class="table table-hover table-sm mb-0 align-middle" id="productionPlanTable">
+                        <div class="planning-table-wrapper"> 
+                            <table class="table table-hover table-sm mb-0 align-middle" id="productionPlanTable">
                                 <thead class="table-light sticky-top">
                                     <tr>
                                         <th style="width: 10%;">Date</th> 
@@ -231,7 +213,7 @@ $pageHelpId = "helpModal";
     </script>
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="../components/js/sendRequest.js?v=<?php echo filemtime('../components/js/sendRequest.js'); ?>"></script>
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="script/managementDashboard.js?v=<?php echo filemtime('script/managementDashboard.js'); ?>"></script>
 </body>
 </html>

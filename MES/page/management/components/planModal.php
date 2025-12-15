@@ -1,71 +1,67 @@
-<?php
-// ไฟล์: MES/page/management/components/planModal.php
-// Modal นี้จะถูก include เข้าไปใน managementDashboard.php
-?>
-
-<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="planModalLabel">Add/Edit Production Plan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title fw-bold" id="planModalLabel">
+                    <i class="fas fa-calendar-plus me-2"></i> Production Plan
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="planModalBody">
+            <div class="modal-body p-4">
                 <form id="planForm">
-                    <input type="hidden" id="planModalPlanId" value="0">
-
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="planModalDate" class="form-label">Plan Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="planModalDate" required>
+                    <input type="hidden" id="planId" name="plan_id" value="0">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="planDate" class="form-label small text-muted fw-bold">Plan Date</label>
+                            <input type="date" class="form-control form-control-sm" id="planDate" name="plan_date" required>
                         </div>
-
-                        <div class="col-md-4">
-                            <label for="planModalLine" class="form-label">Production Line <span class="text-danger">*</span></label>
-                            <select id="planModalLine" class="form-select" required>
+                        <div class="col-6">
+                            <label for="planLine" class="form-label small text-muted fw-bold">Line</label>
+                            <select class="form-select form-select-sm" id="planLine" name="line" required>
                                 <option value="" disabled selected>Select Line...</option>
-                            </select>
+                                </select>
                         </div>
+                    </div>
 
-                        <div class="col-md-4">
-                            <label for="planModalShift" class="form-label">Shift <span class="text-danger">*</span></label>
-                            <select id="planModalShift" class="form-select" required>
-                                <option value="" disabled selected>Select Shift...</option>
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <label for="planShift" class="form-label small text-muted fw-bold">Shift</label>
+                            <select class="form-select form-select-sm" id="planShift" name="shift" required>
                                 <option value="DAY">DAY</option>
                                 <option value="NIGHT">NIGHT</option>
                             </select>
                         </div>
-
-                        <div class="col-12">
-                            <label for="planModalItemSearch" class="form-label">Item (Search SAP/Part No) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="planModalItemSearch" placeholder="Start typing SAP or Part No..." required autocomplete="off">
-                                <span class="input-group-text" id="planModalSelectedItem" style="min-width: 150px; display: inline-block; text-align: left; background-color: var(--bs-tertiary-bg);">No Item Selected</span>
+                        <div class="col-8">
+                            <label for="planItemSearch" class="form-label small text-muted fw-bold">Item (SAP / Part No)</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control form-control-sm" id="planItemSearch" placeholder="Type to search..." autocomplete="off" required>
+                                <input type="hidden" id="planItemId" name="item_id">
+                                <div id="planItemDropdown" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050; display: none; max-height: 200px; overflow-y: auto;"></div>
                             </div>
-                            <input type="hidden" id="planModalItemId" value="">
-                            <div id="planModalItemResultsContainer" style="position: relative;">
-                                <div class="autocomplete-results" id="planModalItemResults" style="display: none; top: 100%; left: 0; right: 0;"></div>
-                            </div>
-                             <div id="item-search-error" class="text-danger small mt-1" style="display: none;">Please select a valid item from the list.</div>
                         </div>
+                    </div>
 
-                        <div class="col-md-6">
-                            <label for="planModalQuantity" class="form-label">Planned Quantity <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="planModalQuantity" placeholder="0.00" min="0" step="0.01" required>
+                    <div class="mb-3">
+                        <label for="planQty" class="form-label small text-muted fw-bold">Planned Quantity</label>
+                        <input type="number" class="form-control form-control-lg font-monospace text-end border-primary" id="planQty" name="original_planned_quantity" placeholder="0" min="0" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="planNote" class="form-label small text-muted fw-bold">Note (Optional)</label>
+                        <textarea class="form-control form-control-sm" id="planNote" name="note" rows="2" placeholder="Remark..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <button type="button" class="btn btn-link text-danger text-decoration-none p-0" id="btnDeletePlan" style="display: none;">
+                            <i class="fas fa-trash-alt me-1"></i> Delete
+                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold" id="btnSavePlan">Save Plan</button>
                         </div>
-
-                        <div class="col-md-6">
-                            <label for="planModalNote" class="form-label">Note</label>
-                            <input type="text" class="form-control" id="planModalNote" maxlength="255">
-                        </div>
-
                     </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="savePlanButton">Save Plan</button>
-                <button type="button" class="btn btn-danger" id="deletePlanButton" style="display: none;">Delete Plan</button>
             </div>
         </div>
     </div>

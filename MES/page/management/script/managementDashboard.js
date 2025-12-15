@@ -3,19 +3,19 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // =================================================================
-    // SECTION 1: GLOBAL VARIABLES & DOM ELEMENTS
+    // SECTION 1: GLOBAL VARIABLES & DOM ELEMENTS (FIXED IDs)
     // =================================================================
 
     // --- State Variables ---
     let allPlanningItems = [];
     let selectedPlanItem = null;
     let planVsActualChartInstance = null;
-    let fullCalendarInstance = null;
-    let planNoteEditDebounceTimer;
-    let planCarryOverEditDebounceTimer;
+    let fullCalendarInstance = null; 
+    let currentExchangeRate = 32.0;
+    let currentPage = 1;
+    const itemsPerPage = 20;
 
     // --- DOM Element References ---
-    // (Filters & Buttons)
     const startDateFilter = document.getElementById('startDateFilter');
     const endDateFilter = document.getElementById('endDateFilter');
     const planLineFilter = document.getElementById('planLineFilter');
@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCalculateCarryOver = document.getElementById('btnCalculateCarryOver');
     
     // (Chart & Table)
-    const chartDateDisplay = document.getElementById('chartDateDisplay');
     const planVsActualChartCanvas = document.getElementById('planVsActualChart');
     const productionPlanTableBody = document.getElementById('productionPlanTableBody');
     
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToCalendarBtn = document.getElementById('backToCalendarBtn');
     const planningCalendarContainer = document.getElementById('planningCalendarContainer');
     const dlotViewContainer = document.getElementById('dlotViewContainer');
-    const dlotDateDisplayEntry = document.getElementById('dlotDateDisplayEntry');
     const dlotEntryForm = document.getElementById('dlot-entry-form');
     const dlotEntryDateInputHidden = document.getElementById('dlot-entry-date');
     const dlotHeadcountInput = document.getElementById('dlot-headcount');
@@ -46,19 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const planModal = new bootstrap.Modal(planModalElement);
     const planModalLabel = document.getElementById('planModalLabel');
     const planForm = document.getElementById('planForm');
-    const planModalPlanId = document.getElementById('planModalPlanId');
-    const planModalDate = document.getElementById('planModalDate');
-    const planModalLine = document.getElementById('planModalLine');
-    const planModalShift = document.getElementById('planModalShift');
-    const planModalItemSearch = document.getElementById('planModalItemSearch');
-    const planModalSelectedItem = document.getElementById('planModalSelectedItem');
-    const planModalItemId = document.getElementById('planModalItemId');
-    const planModalItemResults = document.getElementById('planModalItemResults');
-    const itemSearchError = document.getElementById('item-search-error');
-    const planModalQuantity = document.getElementById('planModalQuantity');
-    const planModalNote = document.getElementById('planModalNote');
-    const savePlanButton = document.getElementById('savePlanButton');
-    const deletePlanButton = document.getElementById('deletePlanButton');
+    
+    // Mapping IDs ให้ถูกต้องตาม planModal.php
+    const planModalPlanId = document.getElementById('planId');
+    const planModalDate = document.getElementById('planDate');
+    const planModalLine = document.getElementById('planLine');
+    const planModalShift = document.getElementById('planShift');
+    const planModalItemSearch = document.getElementById('planItemSearch');
+    const planModalItemId = document.getElementById('planItemId');
+    const planModalItemResults = document.getElementById('planItemDropdown');
+    const planModalQuantity = document.getElementById('planQty');
+    const planModalNote = document.getElementById('planNote');
+    const savePlanButton = document.getElementById('btnSavePlan');
+    const deletePlanButton = document.getElementById('btnDeletePlan');
 
     // =================================================================
     // SECTION 2: CORE UTILITY FUNCTIONS
@@ -74,6 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${year}-${month}-${day}`;
     }
 
+    function formatCurrency(value) {
+        const num = parseFloat(value);
+        if (isNaN(num)) return '฿0.00';
+        if (num >= 1000000) return '฿' + (num / 1000000).toFixed(2) + 'M';
+        if (num >= 1000) return '฿' + (num / 1000).toFixed(2) + 'K';
+        return '฿' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     // =================================================================
     // SECTION 3: DATA FETCHING & UI SETUP
     // =================================================================
@@ -84,8 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(today.getDate() - 7);
-        
-        // --- เพิ่มบรรทัดนี้ครับ ---
         const sevenDaysAgoFormatted = formatDateForInput(sevenDaysAgo); 
 
         if (startDateFilter && !startDateFilter.value) startDateFilter.value = sevenDaysAgoFormatted;
@@ -128,12 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // [FIXED] ฟังก์ชันนี้แก้ไขแล้ว ตัดการเรียกใช้ตัวแปร null ออก
     function setupPlanItemAutocomplete() {
         const input = planModalItemSearch;
         const results = planModalItemResults;
-        const display = planModalSelectedItem;
         const hidden = planModalItemId;
-        const error = itemSearchError;
               
         if (!input || !results) return;
 
@@ -142,13 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
             results.innerHTML = '';
             hidden.value = '';
             selectedPlanItem = null;
-            display.textContent = 'Searching...';
-            error.style.display = 'none';
+            
             input.classList.remove('is-invalid');
 
             if (val.length < 2) {
                 results.style.display = 'none';
-                display.textContent = 'Type min 2 chars';
                 return;
             }
 
@@ -168,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         e.stopPropagation();
                         input.value = `${item.sap_no||''} / ${item.part_no||''}`;
                         hidden.value = item.item_id;
-                        display.textContent = `${item.sap_no||'N/A'} - ${item.part_description||''}`;
                         selectedPlanItem = item;
                         results.style.display = 'none';
                     });
@@ -188,93 +188,206 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function fetchExchangeRate() {
+        try {
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await res.json();
+            if (data && data.rates && data.rates.THB) {
+                currentExchangeRate = data.rates.THB;
+                console.log("Exchange Rate (USD->THB):", currentExchangeRate);
+            }
+        } catch (e) {
+            console.warn("Failed to fetch rate, using default:", currentExchangeRate);
+        }
+    }
+
     // =================================================================
     // SECTION 4: PLANNING LOGIC
     // =================================================================
 
-    async function fetchPlans() {
+    async function fetchPlans(page = 1) { // รับ parameter page
         showSpinner();
-        productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center">Loading...</td></tr>`;
-        const params = { 
-            startDate: startDateFilter.value, 
-            endDate: endDateFilter.value, 
-            line: planLineFilter.value || null, 
-            shift: planShiftFilter.value || null 
-        };
+        currentPage = page; // อัปเดตตัวแปร Global
+        
+        productionPlanTableBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading plans...</td></tr>';
+        
+        // เรียกยอดรวม Actual DLOT (เรียกครั้งเดียวพอ ไม่ต้องตาม Page ก็ได้ หรือจะเรียกทุกครั้งก็ได้)
+        fetchDlotActualSummary();
+
         try {
-            const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
-            if (result.success && result.data) {
-                renderPlanTable(result.data);
-                renderPlanVsActualChart(result.data);
+            const params = new URLSearchParams({
+                action: 'get_plans',
+                startDate: startDateFilter.value,
+                endDate: endDateFilter.value,
+                line: planLineFilter.value || '',
+                shift: planShiftFilter.value || '',
+                page: currentPage,       // [NEW] ส่งเลขหน้า
+                limit: itemsPerPage      // [NEW] ส่งจำนวนต่อหน้า
+            });
+
+            const response = await fetch(`${PLAN_API}?${params.toString()}`);
+            const res = await response.json();
+
+            if (res.success) {
+                renderPlanTable(res.data);
+                
+                // [NEW] สร้างปุ่มเปลี่ยนหน้า
+                renderPagination(res.pagination);
+
+                // กราฟ: ปกติกราฟควรแสดงภาพรวมทั้งหมด (ไม่ควรโดนตัดตามหน้า) 
+                // แต่ถ้า API เราตัดมาแล้ว กราฟก็จะแสดงแค่ 20 แท่ง
+                // *Tip: ถ้าอยากให้กราฟโชว์ทั้งหมดแต่ตารางแบ่งหน้า ต้องทำ API แยก หรือไม่ก็ยอมให้กราฟโชว์แค่ข้อมูลหน้าปัจจุบัน
+                // ในที่นี้กราฟจะโชว์ตามข้อมูลที่ได้มา (20 รายการล่าสุด) ซึ่งก็ดูไม่รกดีครับ
+                if (res.data && res.data.length > 0) {
+                    renderPlanVsActualChart(res.data);
+                } else {
+                    if (planVsActualChartInstance) {
+                        planVsActualChartInstance.destroy();
+                        planVsActualChartInstance = null;
+                    }
+                }
             } else {
-                productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">No data.</td></tr>`;
-                renderPlanVsActualChart([]);
+                throw new Error(res.message || 'Unknown error');
             }
-        } catch (error) {
-            productionPlanTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error loading plans.</td></tr>`;
+        } catch (err) {
+            console.error(err);
+            productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+            document.getElementById('planningPagination').innerHTML = ''; // ล้างปุ่ม
+            showToast(err.message, 'var(--bs-danger)');
         } finally {
             hideSpinner();
         }
     }
 
-    // ฟังก์ชันแปลงตัวเลขเป็นหน่วยย่อ (เช่น 1,200,000 => 1.2M)
-    function formatCurrencyShort(value) {
-        if (value >= 1000000) return '฿' + (value / 1000000).toFixed(2) + 'M';
-        if (value >= 1000) return '฿' + (value / 1000).toFixed(2) + 'K';
-        return '฿' + value.toLocaleString();
+    function renderPagination(paginationData) {
+        const paginationEl = document.getElementById('planningPagination');
+        if (!paginationEl) return;
+        
+        paginationEl.innerHTML = '';
+        
+        if (!paginationData || paginationData.total_pages <= 1) return;
+
+        const totalPages = paginationData.total_pages;
+        const current = parseInt(paginationData.current_page);
+
+        // Helper สร้างปุ่ม
+        const createPageItem = (text, page, isActive = false, isDisabled = false) => {
+            const li = document.createElement('li');
+            li.className = `page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`;
+            
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.innerHTML = text;
+            
+            if (!isDisabled && !isActive) {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    fetchPlans(page);
+                });
+            }
+            
+            li.appendChild(a);
+            return li;
+        };
+
+        // ปุ่ม Previous
+        paginationEl.appendChild(createPageItem('&laquo;', current - 1, false, current === 1));
+
+        // Logic ย่อเลขหน้า (เช่น 1 ... 4 5 6 ... 10)
+        let startPage = Math.max(1, current - 2);
+        let endPage = Math.min(totalPages, current + 2);
+
+        if (startPage > 1) {
+             paginationEl.appendChild(createPageItem('1', 1));
+             if (startPage > 2) paginationEl.appendChild(createPageItem('...', 0, false, true));
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            paginationEl.appendChild(createPageItem(i, i, i === current));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) paginationEl.appendChild(createPageItem('...', 0, false, true));
+            paginationEl.appendChild(createPageItem(totalPages, totalPages));
+        }
+
+        // ปุ่ม Next
+        paginationEl.appendChild(createPageItem('&raquo;', current + 1, false, current === totalPages));
+        
+        // ข้อมูลสรุป (เช่น Showing 1-20 of 100)
+        const summary = document.createElement('li');
+        summary.className = 'page-item disabled ms-2';
+        summary.innerHTML = `<span class="page-link border-0 text-muted small">Total ${paginationData.total_records}</span>`;
+        paginationEl.appendChild(summary);
     }
 
     function renderPlanTable(data) {
         productionPlanTableBody.innerHTML = '';
         
-        // ตัวแปรสำหรับคำนวณ Summary Card
-        let totalSale = 0, totalCost = 0, totalPlanQty = 0, totalActualQty = 0;
+        if (!data || !Array.isArray(data)) {
+            data = [];
+        }
 
-        if (!data || data.length === 0) {
-            productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><i class="fas fa-box-open fa-2x mb-3 opacity-25"></i><br>No production plans found for this criteria.</td></tr>`;
-            updateSummaryCards(0, 0, 0, 0); 
+        let sumSale = 0, sumCost = 0, sumProfit = 0;
+        let sumRM = 0, sumDL = 0, sumOH = 0;
+
+        if (data.length === 0) {
+            productionPlanTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><i class="fas fa-box-open fa-2x mb-3 opacity-25"></i><br>No production plans found.</td></tr>`;
+            updateSummaryCards(0, 0, 0, 0, 0, 0); 
             return;
         }
         
         data.forEach(plan => {
-            // Parse Values
+            const adjPlan = parseFloat(plan.adjusted_planned_quantity || 0);
+            const actualQty = parseFloat(plan.actual_quantity || 0);
             const originalPlan = parseFloat(plan.original_planned_quantity || 0);
             const carryOver = parseFloat(plan.carry_over_quantity || 0);
-            const adjustedPlan = parseFloat(plan.adjusted_planned_quantity || 0);
-            const actualQty = parseFloat(plan.actual_quantity || 0);
-            const price = parseFloat(plan.std_price || 0);
-            const cost = parseFloat(plan.std_cost || 0);
 
-            // Accumulate Totals
-            totalSale += (adjustedPlan * price);
-            totalCost += (adjustedPlan * cost);
-            totalPlanQty += adjustedPlan;
-            totalActualQty += actualQty;
+            // คำนวณเงิน
+            const priceUSD = parseFloat(plan.price_usd || 0);
+            const saleTHB = adjPlan * priceUSD * (currentExchangeRate || 34.0); 
+            
+            const costTotalUnit = parseFloat(plan.cost_total || 0);
+            const costTotal = adjPlan * costTotalUnit;
+
+            const costRMUnit = parseFloat(plan.cost_rm || 0);
+            const costDLUnit = parseFloat(plan.cost_dl || 0);
+            const costOHUnit = parseFloat(plan.cost_oh || 0);
+
+            sumSale += saleTHB;
+            sumCost += costTotal;
+            sumRM += (adjPlan * costRMUnit);
+            sumDL += (adjPlan * costDLUnit);
+            sumOH += (adjPlan * costOHUnit);
 
             // Progress Logic
             let progressPercent = 0;
             let progressColor = 'bg-secondary';
-            if (adjustedPlan > 0) {
-                progressPercent = (actualQty / adjustedPlan) * 100;
-                if (progressPercent >= 100) progressColor = 'bg-success'; // เขียว (ครบแล้ว)
-                else if (progressPercent >= 80) progressColor = 'bg-info'; // ฟ้า (เกือบครบ)
-                else if (progressPercent >= 50) progressColor = 'bg-warning'; // เหลือง (ครึ่งทาง)
-                else progressColor = 'bg-danger'; // แดง (เพิ่งเริ่ม/ยังน้อย)
+            if (adjPlan > 0) {
+                progressPercent = (actualQty / adjPlan) * 100;
+                if (progressPercent >= 100) progressColor = 'bg-success';
+                else if (progressPercent >= 80) progressColor = 'bg-info';
+                else if (progressPercent >= 50) progressColor = 'bg-warning';
+                else progressColor = 'bg-danger';
             } else if (actualQty > 0) {
-                progressPercent = 100; progressColor = 'bg-secondary'; // Unplanned
+                progressPercent = 100; progressColor = 'bg-secondary';
             }
 
             const tr = document.createElement('tr');
             tr.dataset.planId = plan.plan_id;
             tr.dataset.planData = JSON.stringify(plan);
 
-            // --- HTML Row Design ---
+            // [FIXED] แยก Column Line และ Shift และปรับ C/O เป็น Readonly
             tr.innerHTML = `
                 <td class="text-secondary small font-monospace align-middle">${plan.plan_date}</td>
                 
                 <td class="align-middle">
-                    <span class="badge bg-light text-dark border me-1">${plan.line}</span>
-                    <span class="badge ${plan.shift === 'DAY' ? 'bg-warning text-dark' : 'bg-dark text-white'} border border-opacity-25">${plan.shift.substring(0,1)}</span>
+                    <span class="badge bg-light text-dark border">${plan.line}</span>
+                </td>
+                
+                <td class="align-middle">
+                    <span class="badge ${plan.shift === 'DAY' ? 'bg-warning text-dark' : 'bg-dark text-white'} border border-opacity-25">${(plan.shift || '-').substring(0,1)}</span>
                 </td>
                 
                 <td class="align-middle">
@@ -283,95 +396,75 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="fw-bold text-primary me-2">${plan.sap_no || '-'}</span>
                             ${plan.part_no ? `<span class="badge bg-secondary bg-opacity-10 text-secondary small">${plan.part_no}</span>` : ''}
                         </div>
-                        <small class="text-muted text-truncate" style="max-width: 220px;" title="${plan.part_description || ''}">
-                            ${plan.part_description || '-'}
-                        </small>
+                        <small class="text-muted text-truncate" style="max-width: 220px;" title="${plan.part_description || ''}">${plan.part_description || '-'}</small>
                     </div>
                 </td>
-
-                <td class="text-end align-middle text-muted font-monospace" style="font-size: 0.9rem;">
-                    ${originalPlan > 0 ? originalPlan.toLocaleString() : '-'}
+                <td class="text-end align-middle text-muted font-monospace">${originalPlan.toLocaleString()}</td>
+                <td class="text-end align-middle">
+                    <div class="d-flex flex-column align-items-end">
+                        <span class="fw-bold font-monospace ${actualQty >= adjPlan && adjPlan > 0 ? 'text-success' : 'text-dark'}">${actualQty.toLocaleString()}</span>
+                        ${adjPlan > 0 ? `<div class="progress mt-1" style="height: 3px; width: 60px; background-color: #e9ecef;"><div class="progress-bar ${progressColor}" role="progressbar" style="width: ${Math.min(100, progressPercent)}%"></div></div>` : ''}
+                    </div>
                 </td>
                 
                 <td class="text-end align-middle">
-                    <div class="d-flex flex-column align-items-end">
-                        <span class="fw-bold font-monospace ${actualQty >= adjustedPlan && adjustedPlan > 0 ? 'text-success' : 'text-dark'}" style="font-size: 1rem;">
-                            ${actualQty.toLocaleString()}
-                        </span>
-                        ${adjustedPlan > 0 ? `
-                        <div class="progress mt-1" style="height: 3px; width: 60px; background-color: #e9ecef;">
-                            <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${Math.min(100, progressPercent)}%"></div>
-                        </div>` : ''}
-                    </div>
-                </td>
-
-                <td class="text-end align-middle">
-                    <span class="editable-plan font-monospace ${carryOver !== 0 ? 'text-warning fw-bold' : 'text-muted opacity-50'}" 
-                          contenteditable="true" 
-                          data-id="${plan.plan_id}" 
-                          data-field="carry_over" 
-                          inputmode="decimal" 
-                          tabindex="0">${carryOver.toLocaleString()}</span>
+                    <span class="font-monospace ${carryOver !== 0 ? 'text-warning fw-bold' : 'text-muted opacity-50'}" data-id="${plan.plan_id}" data-field="carry_over">${carryOver.toLocaleString()}</span>
                 </td>
                 
                 <td class="text-end align-middle bg-primary bg-opacity-10">
-                    <span class="fw-bold text-primary font-monospace fs-6">${adjustedPlan.toLocaleString()}</span>
+                    <span class="fw-bold text-primary font-monospace fs-6">${adjPlan.toLocaleString()}</span>
                 </td>
                 
                 <td class="text-start align-middle">
-                    <span class="editable-plan d-inline-block text-truncate text-secondary small" 
-                          style="max-width: 120px;"
-                          contenteditable="true" 
-                          data-id="${plan.plan_id}" 
-                          data-field="note" 
-                          tabindex="0" 
-                          title="${plan.note || 'Edit note'}">${plan.note || '<span class="opacity-25">...</span>'}</span>
+                    <span class="editable-plan d-inline-block text-truncate text-secondary small" style="max-width: 120px;" contenteditable="true" data-id="${plan.plan_id}" data-field="note" tabindex="0">${plan.note || '<span class="opacity-25">...</span>'}</span>
                 </td>
             `;
             productionPlanTableBody.appendChild(tr);
         });
 
-        updateSummaryCards(totalSale, totalCost, totalPlanQty, totalActualQty);
+        sumProfit = sumSale - sumCost;
+        // ส่ง null ไปที่ช่อง DL เพื่อไม่ให้ทับค่า Actual ที่เราดึงมา
+        updateSummaryCards(sumSale, sumCost, sumProfit, sumRM, null, sumOH);
     }
 
-    // แก้ไข function นี้ให้แสดงตัวเลขเต็ม
-    function updateSummaryCards(sale, cost, planQty, actualQty) {
-        const profit = sale - cost;
-        const progress = planQty > 0 ? (actualQty / planQty) * 100 : 0;
+    function updateSummaryCards(sale, cost, profit, rm, dl, oh) {
+        const elSale = document.getElementById('kpi-sale-value');
+        const elCost = document.getElementById('kpi-cost-value');
+        const elProfit = document.getElementById('kpi-profit-value');
+        const elRM = document.getElementById('kpi-rm-value');
+        const elDL = document.getElementById('kpi-dl-value');
+        const elOH = document.getElementById('kpi-oh-value');
 
-        // ฟังก์ชัน Helper สำหรับ Format เงิน
-        const fmt = (val) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        document.getElementById('kpi-sale-value').textContent = `฿${fmt(sale)}`;
-        document.getElementById('kpi-cost-value').textContent = `฿${fmt(cost)}`;
-        document.getElementById('kpi-profit-value').textContent = `฿${fmt(profit)}`;
+        if(elSale) elSale.textContent = formatCurrency(sale);
+        if(elCost) elCost.textContent = formatCurrency(cost);
         
-        document.getElementById('kpi-progress-percent').textContent = `${progress.toFixed(1)}%`;
-        
-        const progressBar = document.getElementById('kpi-progress-bar');
-        if(progressBar) {
-            progressBar.style.width = `${Math.min(100, progress)}%`;
-            if(progress >= 100) progressBar.className = 'progress-bar bg-success';
-            else if(progress >= 80) progressBar.className = 'progress-bar bg-info';
-            else progressBar.className = 'progress-bar bg-warning';
+        if(elProfit) {
+            elProfit.textContent = formatCurrency(profit);
+            elProfit.className = (parseFloat(profit) >= 0) ? 'fw-bold mb-0 text-success' : 'fw-bold mb-0 text-danger';
         }
+
+        if(elRM) elRM.textContent = formatCurrency(rm);
         
-        const profitEl = document.getElementById('kpi-profit-value');
-        if(profitEl) profitEl.className = profit >= 0 ? 'kpi-value text-success' : 'kpi-value text-danger';
+        // เช็คก่อนอัปเดตช่อง DL
+        if(dl !== null && elDL) {
+             elDL.textContent = formatCurrency(dl);
+        }
+
+        if(elOH) elOH.textContent = formatCurrency(oh);
     }
 
     function renderPlanVsActualChart(planData) {
-        const chartCanvas = planVsActualChartCanvas;
+        const chartCanvas = document.getElementById('planVsActualChart'); 
         const chartWrapper = document.getElementById('planVsActualChartInnerWrapper'); 
+        
         if (!chartCanvas || !chartWrapper) return;
         
         const uniqueItemsCount = new Set(planData.map(p => p.item_id)).size;
         
-        // [FIX 3] ปรับความกว้างกราฟ: ถ้าข้อมูลน้อยกว่า 5 แท่ง ให้กราฟเต็มจอ (100%) ถ้าเยอะค่อยขยาย Scroll
         if (uniqueItemsCount < 5) {
             chartWrapper.style.width = '100%';
         } else {
-            chartWrapper.style.width = `${uniqueItemsCount * 120}px`; // เพิ่มความกว้างต่อแท่งเป็น 120px
+            chartWrapper.style.width = `${uniqueItemsCount * 150}px`; 
         }
 
         const ctx = chartCanvas.getContext('2d');
@@ -380,14 +473,13 @@ document.addEventListener('DOMContentLoaded', () => {
         planData.forEach(p => {
             const itemId = p.item_id;
             if (!aggregatedData[itemId]) {
-                // [FIX 1] แก้ไข Label: ใช้ SAP No คู่กับ Part No เพื่อให้ไม่ซ้ำกัน
                 let labelText = p.part_no || 'Unknown';
                 if (p.sap_no) {
                     labelText = `${p.sap_no} / ${p.part_no}`;
                 }
                 
                 aggregatedData[itemId] = {
-                    label: labelText, // <-- ใช้ Label ใหม่ที่สร้างขึ้น
+                    label: labelText,
                     totalAdjustedPlan: 0,
                     totalActualQty: 0,
                     totalOriginalPlan: 0,
@@ -406,24 +498,104 @@ document.addEventListener('DOMContentLoaded', () => {
         const chartData = {
             labels: labels,
             datasets: [
-                { label: 'Original Plan', data: aggregatedArray.map(a => a.totalOriginalPlan), backgroundColor: 'rgba(54, 162, 235, 0.7)', stack: 'plan' },
-                { label: 'Carry Over', data: aggregatedArray.map(a => a.totalCarryOver), backgroundColor: 'rgba(255, 159, 64, 0.7)', stack: 'plan' },
-                { label: 'Actual (Met Plan)', data: aggregatedArray.map(a => (a.totalActualQty >= a.totalAdjustedPlan && a.totalAdjustedPlan > 0) ? a.totalAdjustedPlan : null), backgroundColor: 'rgba(75, 192, 192, 0.7)', stack: 'actual' },
-                { label: 'Actual (Shortfall)', data: aggregatedArray.map(a => (a.totalActualQty < a.totalAdjustedPlan && a.totalAdjustedPlan > 0) ? a.totalActualQty : null), backgroundColor: 'rgba(255, 99, 132, 0.7)', stack: 'actual' },
-                { label: 'Actual (Unplanned)', data: aggregatedArray.map(a => (a.totalActualQty > 0) ? Math.max(0, a.totalActualQty - a.totalAdjustedPlan) : null), backgroundColor: 'rgba(153, 102, 255, 0.7)', stack: 'actual' }
+                { 
+                    label: 'Original Plan', 
+                    data: aggregatedArray.map(a => a.totalOriginalPlan), 
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', 
+                    stack: 'plan' 
+                },
+                { 
+                    label: 'Carry Over', 
+                    data: aggregatedArray.map(a => a.totalCarryOver), 
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)', 
+                    stack: 'plan' 
+                },
+                { 
+                    label: 'Actual (Met Plan)', 
+                    data: aggregatedArray.map(a => (a.totalActualQty >= a.totalAdjustedPlan && a.totalAdjustedPlan > 0) ? a.totalAdjustedPlan : (a.totalActualQty > 0 ? a.totalActualQty : 0)), 
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)', 
+                    stack: 'actual' 
+                },
+                { 
+                    label: 'Gap (Shortfall)', 
+                    data: aggregatedArray.map(a => (a.totalActualQty < a.totalAdjustedPlan) ? (a.totalAdjustedPlan - a.totalActualQty) : 0), 
+                    backgroundColor: 'rgba(255, 99, 132, 0.3)', 
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    stack: 'actual' 
+                },
+                { 
+                    label: 'Over Production', 
+                    data: aggregatedArray.map(a => (a.totalActualQty > a.totalAdjustedPlan) ? (a.totalActualQty - a.totalAdjustedPlan) : 0), 
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)', 
+                    stack: 'actual' 
+                }
             ]
         };
 
-        if (planVsActualChartInstance) planVsActualChartInstance.destroy();
+        if (planVsActualChartInstance) {
+            planVsActualChartInstance.destroy();
+        }
+
         planVsActualChartInstance = new Chart(ctx, { 
             type: 'bar', 
             data: chartData, 
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { stacked: true }, y: { stacked: true } }
+                scales: { 
+                    x: { 
+                        stacked: true,
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    }, 
+                    y: { 
+                        stacked: true,
+                        beginAtZero: true
+                    } 
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
             }
         });
+    }
+
+    // [NEW] ฟังก์ชันดึงยอดรวมค่าแรงจริง (Actual DLOT) ตาม Filter
+    async function fetchDlotActualSummary() {
+        const dlCardValue = document.getElementById('kpi-dl-value');
+        if(dlCardValue) dlCardValue.innerHTML = '<span class="spinner-border spinner-border-sm text-muted"></span>';
+
+        try {
+            const params = new URLSearchParams({
+                action: 'get_dlot_summary_range',
+                startDate: startDateFilter.value,
+                endDate: endDateFilter.value,
+                line: planLineFilter.value || 'ALL'
+            });
+
+            const res = await fetch(`${DLOT_API}?${params.toString()}`);
+            const json = await res.json();
+
+            if (json.success && json.data) {
+                const totalLabor = parseFloat(json.data.total_labor || 0);
+                
+                if(dlCardValue) {
+                    dlCardValue.textContent = formatCurrency(totalLabor);
+                    dlCardValue.classList.remove('text-muted');
+                    dlCardValue.classList.add('text-primary', 'fw-bold'); 
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load DLOT summary", e);
+            if(dlCardValue) dlCardValue.textContent = "Err";
+        }
     }
 
     // =================================================================
@@ -431,25 +603,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
 
     function initializeCalendar() {
-        if (!planningCalendarContainer) return;
+        const calendarEl = document.getElementById('planningCalendarContainer');
+        if (!calendarEl) return;
 
-        planningCalendarContainer.innerHTML = '';
-        
-        fullCalendarInstance = new FullCalendar.Calendar(planningCalendarContainer, {
+        fullCalendarInstance = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             height: '100%', 
             expandRows: true,
             headerToolbar: false,
             dayMaxEvents: 2,
             
-            // --- [FIX 1] เพิ่มส่วนนี้เพื่อให้ชื่อเดือนแสดงผล ---
             datesSet: function(dateInfo) {
-                // อัปเดตข้อความใน Header ให้เป็น Title ของปฏิทิน (เช่น "December 2025")
                 if (calendarTitle) {
                     calendarTitle.textContent = dateInfo.view.title;
                 }
             },
-            // ---------------------------------------------
 
             eventSources: [
                 {
@@ -463,9 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
             dateClick: (info) => switchToDlotView(info.dateStr),
             eventClick: handleEventClick,
-            windowResize: function(arg) {
-                console.log('Calendar resized'); 
-            },
+            windowResize: function(arg) {},
             handleWindowResize: true
         });
         fullCalendarInstance.render();
@@ -474,12 +640,18 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
         showSpinner();
         const endDate = formatDateForInput(new Date(new Date(fetchInfo.endStr).setDate(new Date(fetchInfo.endStr).getDate() - 1)));
-        const params = { startDate: fetchInfo.startStr.substring(0, 10), endDate: endDate, line: planLineFilter.value || null };
+        
+        // [FIX] เพิ่ม limit: -1 เพื่อบอก API ว่าขอข้อมูลทั้งหมดในช่วงวันที่นี้
+        const params = { 
+            startDate: fetchInfo.startStr.substring(0, 10), 
+            endDate: endDate, 
+            line: planLineFilter.value || null,
+            limit: -1  // <--- กุญแจสำคัญอยู่ตรงนี้!
+        };
         
         try {
             const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
             if (result.success) {
-                const today = formatDateForInput(new Date());
                 const events = result.data.map(plan => ({
                     id: plan.plan_id,
                     title: `${plan.line} (${plan.shift.substring(0,1)}): ${plan.sap_no || plan.part_no}`,
@@ -515,50 +687,131 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (info.event.extendedProps.type === 'dlot_marker') switchToDlotView(info.event.startStr);
     }
 
-    function switchToDlotView(dateString) {
-        planningCalendarContainer.style.display = 'none';
-        dlotViewContainer.style.display = 'block';
-        backToCalendarBtn.style.display = 'inline-block';
-        calendarTitle.textContent = `Daily Cost: ${dateString}`;
-        dlotDateDisplayEntry.textContent = dateString;
-        dlotEntryDateInputHidden.value = dateString;
-        
-        loadDlotDataForDate(dateString, planLineFilter.value || 'ALL');
+    window.switchToDlotView = function(dateStr) {
+        const calendarContainer = document.getElementById('planningCalendarContainer');
+        const dlotContainer = document.getElementById('dlotViewContainer');
+        const dateInput = document.getElementById('dlot-entry-date'); 
+
+        if (calendarContainer && dlotContainer) {
+            calendarContainer.style.display = 'none';
+            dlotContainer.style.display = 'block';
+            
+            if (dateInput) {
+                dateInput.value = dateStr; 
+            }
+            
+            fetchDailyDlot(dateStr);
+        }
+    };
+
+    async function fetchDailyDlot(dateStr) {
+        document.getElementById('dlot-headcount').value = '';
+        document.getElementById('dlot-dl-cost').value = '';
+        document.getElementById('dlot-ot-cost').value = '';
+
+        const line = planLineFilter.value || 'ALL'; 
+
+        try {
+            const res = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', {
+                action: 'get_daily_costs',
+                entry_date: dateStr,
+                line: line
+            });
+
+            let hasExistingData = false;
+
+            if (res.success && res.data) {
+                const d = res.data;
+                if (d.headcount > 0 || d.dl_cost > 0 || d.ot_cost > 0) {
+                    hasExistingData = true;
+                    document.getElementById('dlot-headcount').value = d.headcount;
+                    document.getElementById('dlot-dl-cost').value = d.dl_cost;
+                    document.getElementById('dlot-ot-cost').value = d.ot_cost;
+                    updateDlotSummaryView();
+                }
+            }
+
+            if (!hasExistingData) {
+                await window.autoCalculateDlotFromManpower(true); 
+            }
+
+        } catch (error) {
+            console.warn("Error fetching DLOT, trying auto-calc:", error);
+            await window.autoCalculateDlotFromManpower(true);
+        }
     }
 
-    function switchToCalendarView() {
-        // 1. สลับหน้า (DOM Manipulation)
-        planningCalendarContainer.style.display = 'block';
-        dlotViewContainer.style.display = 'none';
-        backToCalendarBtn.style.display = 'none';
+    window.switchToCalendarView = function() {
+        const calendarContainer = document.getElementById('planningCalendarContainer');
+        const dlotContainer = document.getElementById('dlotViewContainer');
         
-        // 2. ทำลาย Instance เก่า (ถ้ามี)
-        if (fullCalendarInstance) {
-            fullCalendarInstance.destroy();
-            fullCalendarInstance = null;
+        if (calendarContainer && dlotContainer) {
+            dlotContainer.style.display = 'none';
+            calendarContainer.style.display = 'block';
+
+            if (typeof fullCalendarInstance !== 'undefined' && fullCalendarInstance) {
+                setTimeout(() => {
+                    fullCalendarInstance.updateSize();
+                }, 10);
+            }
+        }
+    };
+
+    window.autoCalculateDlotFromManpower = async function(isSilent = false) {
+        const dateInput = document.getElementById('dlot-entry-date');
+        
+        if (!dateInput || !dateInput.value) return;
+
+        const date = dateInput.value;
+        const line = planLineFilter.value || 'ALL';
+        
+        if (!isSilent) {
+            if(!confirm(`Connect to Manpower System?\nDate: ${date}\nLine: ${line}`)) return;
         }
 
-        // 3. สร้างใหม่ (Re-initialize)
-        // ใช้ requestAnimationFrame แทน setTimeout 50ms เพื่อความแม่นยำกว่าในการรอ Repaint
-        requestAnimationFrame(() => {
-            initializeCalendar();
-            
-            // คืนค่า Title
-            if (calendarTitle) calendarTitle.textContent = "Calendar"; 
-        });
-    }
+        if (!isSilent) showSpinner();
 
-    async function loadDlotDataForDate(date, line) {
-        dlotHeadcountInput.value = ''; dlotDlCostInput.value = ''; dlotOtCostInput.value = '';
         try {
-            const result = await sendRequest(DLOT_API, 'get_daily_costs', 'POST', { action: 'get_daily_costs', entry_date: date, line: line });
-            if (result.success && result.data) {
-                dlotHeadcountInput.value = result.data.headcount || '';
-                dlotDlCostInput.value = result.data.dl_cost || '';
-                dlotOtCostInput.value = result.data.ot_cost || '';
+            const res = await sendRequest(DLOT_API, 'calc_dlot_auto', 'POST', { 
+                action: 'calc_dlot_auto', 
+                entry_date: date, 
+                line: line 
+            });
+            
+            if (res.success && res.data) {
+                const hcInput = document.getElementById('dlot-headcount');
+                const dlInput = document.getElementById('dlot-dl-cost');
+                const otInput = document.getElementById('dlot-ot-cost');
+
+                if(hcInput) hcInput.value = res.data.headcount;
+                if(dlInput) dlInput.value = res.data.dl_cost;
+                if(otInput) otInput.value = res.data.ot_cost;
+                
+                updateDlotSummaryView(); 
+
+                if (!isSilent) {
+                    showToast(`Calculated: ${res.data.headcount} persons`, 'var(--bs-success)');
+                    setTimeout(async () => {
+                        if (confirm(`Data Retrieved.\nSave this data now?`)) {
+                             const mockEvent = { preventDefault: () => {} };
+                             await handleSaveDlotForm(mockEvent);
+                        }
+                    }, 100);
+                } else {
+                    console.log(`Auto-filled Manpower data for ${date}`);
+                    showToast('Auto-filled data from Manpower', 'var(--bs-info)');
+                }
+
+            } else {
+                if (!isSilent) showToast(res.message || 'No Manpower data found.', 'var(--bs-warning)');
             }
-        } catch (e) {} finally { updateDlotSummaryView(); }
-    }
+        } catch (err) {
+            console.error(err);
+            if (!isSilent) showToast('Calculation failed: ' + err.message, 'var(--bs-danger)');
+        } finally {
+            if (!isSilent) hideSpinner();
+        }
+    };
 
     async function handleSaveDlotForm(e) {
         e.preventDefault();
@@ -580,22 +833,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDlotSummaryView() {
-        const dl = parseFloat(dlotDlCostInput.value || 0);
-        const ot = parseFloat(dlotOtCostInput.value || 0);
-        document.getElementById('dl-cost-summary-display').textContent = dl.toLocaleString();
-        document.getElementById('ot-cost-summary-display').textContent = ot.toLocaleString();
-        document.getElementById('total-dlot-summary-display').textContent = (dl + ot).toLocaleString();
     }
 
     // =================================================================
     // SECTION 6: PLAN MODAL & CRUD
     // =================================================================
 
+    // [FIXED] ฟังก์ชันนี้แก้ไขแล้ว ตัดการเรียกใช้ตัวแปร null ออก
     function openPlanModal(data = null) {
         planForm.reset();
         planModalPlanId.value = '0';
         planModalItemId.value = '';
-        planModalSelectedItem.textContent = 'No Item';
+        
+        // เอา display text ออก หรือใช้ logic อื่นถ้าต้องการโชว์
+        // if(planModalSelectedItem) planModalSelectedItem.textContent = 'No Item';
+        
         deletePlanButton.style.display = 'none';
         
         if (data) {
@@ -608,7 +860,10 @@ document.addEventListener('DOMContentLoaded', () => {
             planModalNote.value = data.note || '';
             planModalItemId.value = data.item_id;
             planModalItemSearch.value = `${data.sap_no||''} / ${data.part_no||''}`;
-            planModalSelectedItem.textContent = `${data.sap_no||'N/A'} - ${data.part_description||''}`;
+            
+            // เอา display text ออก
+            // if(planModalSelectedItem) planModalSelectedItem.textContent = ...
+            
             deletePlanButton.style.display = 'inline-block';
         } else {
             planModalLabel.textContent = 'Add Plan';
@@ -660,25 +915,112 @@ document.addEventListener('DOMContentLoaded', () => {
         finally { hideSpinner(); }
     }
 
+    function setupInlineEditing() {
+        productionPlanTableBody.addEventListener('focusout', handleInlineSave);
+        productionPlanTableBody.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur(); 
+            }
+        });
+    }
+
+    async function handleInlineSave(e) {
+        const cell = e.target;
+        
+        if (!cell.classList.contains('editable-plan')) return;
+
+        const row = cell.closest('tr');
+        if (!row || !row.dataset.planData) return;
+
+        let originalData;
+        try {
+            originalData = JSON.parse(row.dataset.planData);
+        } catch (err) { return; }
+
+        const field = cell.dataset.field; 
+        const newValue = cell.textContent.trim();
+        
+        let oldValue = field === 'carry_over' ? parseFloat(originalData.carry_over_quantity) : originalData.note;
+        if (field === 'carry_over') {
+            if (parseFloat(newValue) === oldValue) return;
+        } else {
+            if (newValue === (oldValue || '')) return;
+        }
+
+        const updatedData = { ...originalData };
+        
+        if (field === 'carry_over') {
+            updatedData.carry_over_quantity = parseFloat(newValue) || 0;
+            updatedData.adjusted_planned_quantity = parseFloat(updatedData.original_planned_quantity) + updatedData.carry_over_quantity;
+        } else if (field === 'note') {
+            updatedData.note = newValue;
+        }
+
+        const originalColor = cell.style.color;
+        cell.style.color = '#0d6efd'; 
+
+        try {
+            const body = {
+                action: 'save_plan',
+                plan_id: updatedData.plan_id,
+                plan_date: updatedData.plan_date,
+                line: updatedData.line,
+                shift: updatedData.shift,
+                item_id: updatedData.item_id,
+                original_planned_quantity: updatedData.original_planned_quantity,
+                note: updatedData.note
+            };
+
+            if (field === 'note') {
+                const res = await sendRequest(PLAN_API, 'save_plan', 'POST', body);
+                if (res.success) {
+                    showToast('Note updated.', 'var(--bs-success)');
+                    cell.style.color = originalColor; 
+                    row.dataset.planData = JSON.stringify(updatedData);
+                } else {
+                    throw new Error(res.message);
+                }
+            } 
+            else if (field === 'carry_over') {
+                 showToast('Manual C/O update not supported via inline yet. Use "Calc C/O" button.', 'var(--bs-warning)');
+                 cell.textContent = oldValue; 
+            }
+
+        } catch (err) {
+            console.error(err);
+            showToast('Update failed.', 'var(--bs-danger)');
+            cell.textContent = oldValue; 
+            cell.style.color = 'red';
+        }
+    }
+
     // =================================================================
     // SECTION 7: INITIALIZER
     // =================================================================
 
     function initializeApp() {
         setAllDefaultDates();
-        fetchDashboardLines().then(fetchAllItemsForPlanning).then(() => {
-            initializeCalendar();
-            fetchPlans();
-        });
+        setupInlineEditing();
+        fetchDashboardLines()
+            .then(fetchAllItemsForPlanning)
+            .then(() => fetchExchangeRate())
+            .then(() => {
+                initializeCalendar();
+                fetchPlans();
+            });
 
         // Event Listeners
-        startDateFilter?.addEventListener('change', fetchPlans);
-        endDateFilter?.addEventListener('change', fetchPlans);
-        planLineFilter?.addEventListener('change', () => { fetchPlans(); fullCalendarInstance?.refetchEvents(); });
-        planShiftFilter?.addEventListener('change', fetchPlans);
+        startDateFilter?.addEventListener('change', () => fetchPlans(1)); // กลับไปหน้า 1
+        endDateFilter?.addEventListener('change', () => fetchPlans(1));   // กลับไปหน้า 1
+        planLineFilter?.addEventListener('change', () => { 
+            fetchPlans(1); // กลับไปหน้า 1
+            fullCalendarInstance?.refetchEvents(); 
+        });
+        planShiftFilter?.addEventListener('change', () => fetchPlans(1)); // กลับไปหน้า 1
         
         btnRefreshPlan?.addEventListener('click', () => { 
-            fetchPlans(); 
+            fetchPlans(currentPage); // รีเฟรชหน้าปัจจุบัน (หรือหน้า 1 แล้วแต่ชอบ)
             fullCalendarInstance?.refetchEvents();
         });
         
@@ -713,7 +1055,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnMonth?.addEventListener('click', () => {
             if (fullCalendarInstance) {
                 fullCalendarInstance.changeView('dayGridMonth');
-                // สลับสี: ให้ Month เป็น Active, Week เป็นธรรมดา
                 btnMonth.classList.add('active');
                 btnWeek.classList.remove('active');
             }
@@ -722,7 +1063,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnWeek?.addEventListener('click', () => {
             if (fullCalendarInstance) {
                 fullCalendarInstance.changeView('timeGridWeek');
-                // สลับสี: ให้ Week เป็น Active, Month เป็นธรรมดา
                 btnWeek.classList.add('active');
                 btnMonth.classList.remove('active');
             }
@@ -749,17 +1089,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =================================================================
-    // SECTION 8: EXCEL IMPORT / EXPORT FUNCTIONS
-    // =================================================================
+// SECTION 8: EXCEL IMPORT / EXPORT FUNCTIONS
+// =================================================================
 
     // 1. Export Function
     window.exportToExcel = function() {
-        // ใช้ข้อมูลชุดเดียวกับที่แสดงในตาราง (สามารถดึงจาก API หรือตัวแปร global ที่เก็บ data ไว้ก็ได้)
-        // สมมติว่าเก็บ data ไว้ใน global variable `currentPlanData` (ต้องไปประกาศเพิ่ม)
-        // หรือดึงจาก DOM ก็ได้แต่ง่ายกว่าคือดึงจาก response ของ fetchPlans
-        
         const wb = XLSX.utils.book_new();
-        // สร้าง Table Element ชั่วคราว หรือใช้ json_to_sheet ถ้ามี data object
         const table = document.getElementById('productionPlanTable');
         const ws = XLSX.utils.table_to_sheet(table);
         XLSX.utils.book_append_sheet(wb, ws, "ProductionPlans");
@@ -783,10 +1118,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // แปลงข้อมูลให้ตรงกับ Format ที่ API ต้องการ
-            // คาดหวัง Column: Date, Line, Shift, Item Code, Qty
             const plansToUpload = jsonData.map(row => ({
-                date: formatDateForInput(row['Date'] ? new Date((row['Date'] - (25567 + 2)) * 86400 * 1000) : new Date()), // แก้เรื่อง Date Serial ของ Excel
+                date: formatDateForInput(row['Date'] ? new Date((row['Date'] - (25567 + 2)) * 86400 * 1000) : new Date()), 
                 line: row['Line'] || '',
                 shift: row['Shift'] || 'DAY',
                 item_code: row['Item Code'] || row['Item'] || '',
@@ -802,52 +1135,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     showToast(res.message, res.success ? 'var(--bs-success)' : 'var(--bs-danger)');
                     if (res.success) {
-                        fetchPlans(); // รีโหลดข้อมูล
+                        fetchPlans(); 
                     }
                 } catch(err) {
                     showToast('Upload failed: ' + err.message, 'var(--bs-danger)');
                 } finally {
                     hideSpinner();
-                    input.value = ''; // Reset input
+                    input.value = ''; 
                 }
             }
         };
         reader.readAsArrayBuffer(file);
     };
 
-    // =================================================================
-    // SECTION 9: MANPOWER INTEGRATION (CONCEPT)
-    // =================================================================
-    
-    // เพิ่มฟังก์ชันนี้ลงใน global scope หรือเชื่อมกับปุ่มใน DLOT Form
-    window.autoCalculateDlotFromManpower = async function() {
-        const date = document.getElementById('dlot-entry-date').value;
-        const line = planLineFilter.value || 'ALL';
-        
-        if(!confirm(`Auto-calculate labor cost for ${date} (Line: ${line}) from Manpower system?`)) return;
-
-        showSpinner();
-        try {
-            // เรียก API ใหม่ (ต้องไปสร้าง case 'calc_dlot_auto' ใน dlot_manual_manage.php)
-            const res = await sendRequest(DLOT_API, 'calc_dlot_auto', 'POST', { 
-                action: 'calc_dlot_auto', 
-                entry_date: date, 
-                line: line 
-            });
-            
-            if (res.success && res.data) {
-                // เติมค่าลงฟอร์ม
-                document.getElementById('dlot-headcount').value = res.data.headcount;
-                document.getElementById('dlot-dl-cost').value = res.data.dl_cost;
-                document.getElementById('dlot-ot-cost').value = res.data.ot_cost;
-                updateDlotSummaryView(); // อัปเดตตัวเลขรวมทันที
-                showToast('Calculated from Manpower data!', 'var(--bs-success)');
-            } else {
-                showToast('No Manpower data found for this date.', 'var(--bs-warning)');
-            }
-        } catch (err) {
-            showToast('Calculation failed.', 'var(--bs-danger)');
-        } finally {
-            hideSpinner();
+    // Helper (Duplicate but safe to keep outside just in case)
+    function formatDateForInput(date) {
+        if (!(date instanceof Date) || isNaN(date)) {
+            return new Date().toISOString().split('T')[0];
         }
-    };
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
