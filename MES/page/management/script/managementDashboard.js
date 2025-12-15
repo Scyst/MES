@@ -205,10 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // SECTION 4: PLANNING LOGIC
     // =================================================================
 
-    async function fetchPlans(page = 1) { // รับ parameter page
+    async function fetchPlans(page = 1) {
         showSpinner();
-        currentPage = page; // อัปเดตตัวแปร Global
-        
+        currentPage = page;
         productionPlanTableBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading plans...</td></tr>';
         
         // เรียกยอดรวม Actual DLOT (เรียกครั้งเดียวพอ ไม่ต้องตาม Page ก็ได้ หรือจะเรียกทุกครั้งก็ได้)
@@ -221,8 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 endDate: endDateFilter.value,
                 line: planLineFilter.value || '',
                 shift: planShiftFilter.value || '',
-                page: currentPage,       // [NEW] ส่งเลขหน้า
-                limit: itemsPerPage      // [NEW] ส่งจำนวนต่อหน้า
+                page: currentPage,
+                limit: itemsPerPage
             });
 
             const response = await fetch(`${PLAN_API}?${params.toString()}`);
@@ -231,13 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.success) {
                 renderPlanTable(res.data);
                 
-                // [NEW] สร้างปุ่มเปลี่ยนหน้า
-                renderPagination(res.pagination);
+                // [UPDATED] ส่ง pagination object ที่ได้จาก PHP ไปให้ฟังก์ชัน render
+                if (res.pagination) {
+                    renderPagination(res.pagination);
+                }
 
-                // กราฟ: ปกติกราฟควรแสดงภาพรวมทั้งหมด (ไม่ควรโดนตัดตามหน้า) 
-                // แต่ถ้า API เราตัดมาแล้ว กราฟก็จะแสดงแค่ 20 แท่ง
-                // *Tip: ถ้าอยากให้กราฟโชว์ทั้งหมดแต่ตารางแบ่งหน้า ต้องทำ API แยก หรือไม่ก็ยอมให้กราฟโชว์แค่ข้อมูลหน้าปัจจุบัน
-                // ในที่นี้กราฟจะโชว์ตามข้อมูลที่ได้มา (20 รายการล่าสุด) ซึ่งก็ดูไม่รกดีครับ
+                // [UPDATED] กราฟ: ส่งข้อมูล 20 รายการ (ตามหน้า) ไปพลอตกราฟ
+                // ถ้าอยากได้กราฟรวมทั้งหมด อาจต้องทำ API แยก หรือส่งข้อมูลกราฟแยกมาใน JSON
                 if (res.data && res.data.length > 0) {
                     renderPlanVsActualChart(res.data);
                 } else {

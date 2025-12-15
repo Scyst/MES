@@ -1,0 +1,99 @@
+.exec-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.exec-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    height: 100%;
+}
+.metric-box {
+    padding: 1rem;
+    text-align: center;
+    border-right: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.metric-box:nth-child(3n) {
+    border-right: none;
+}
+.metric-box:nth-last-child(-n+3) {
+    border-bottom: none;
+}
+
+/* Mini Card Styles */
+.mini-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+.mini-stat {
+    text-align: center;
+}
+.mini-stat-label {
+    font-size: 0.7em;
+    color: #aaa;
+    text-transform: uppercase;
+}
+.mini-stat-val {
+    font-weight: 600;
+}
+
+/* ปรับแต่ง Filter Bar ให้สวยงาม */
+.dashboard-toolbar {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    display: flex;
+    align-items: stretch; /* ให้ทุก element สูงเท่ากัน */
+    gap: 8px;
+    height: 42px; /* Fixed Height */
+}
+
+.dashboard-toolbar .form-control, 
+.dashboard-toolbar .input-group-text,
+.dashboard-toolbar .btn {
+    height: 100%; /* เต็มความสูง */
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.info-btn {
+    cursor: pointer;
+    color: #adb5bd;
+    transition: color 0.2s;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.info-btn:hover { color: var(--bs-primary); }
+
+.last-update-badge {
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+.cursor-pointer {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.cursor-pointer:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+    border-color: rgba(0,0,0,0.2) !important;
+}

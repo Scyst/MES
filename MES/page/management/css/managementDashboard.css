@@ -260,3 +260,29 @@ body.layout-top-header {
     flex-shrink: 0;
     z-index: 1030;
 }
+
+/* เพิ่มความชัดเจนให้ Column Plan vs Actual */
+#productionPlanTable td:nth-child(5) { /* Column Original Plan */
+    background-color: rgba(248, 249, 250, 0.5);
+    border-right: 1px dashed var(--bs-border-color);
+}
+#productionPlanTable td:nth-child(6) { /* Column Actual */
+    font-weight: 500;
+}
+#productionPlanTable td:nth-child(8) { /* Column Adj Plan */
+    background-color: var(--bs-primary-bg-subtle);
+    font-weight: bold;
+    color: var(--bs-primary);
+}
+/* Pagination Style */
+.pagination-footer .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+.pagination-footer .page-link {
+    color: var(--bs-secondary);
+    border: none;
+    margin: 0 2px;
+    border-radius: 4px;
+}

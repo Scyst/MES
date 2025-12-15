@@ -34,12 +34,18 @@ $itemTable = ITEMS_TABLE;
 try {
     switch ($action) {
         case 'get_plans':
+            // 1. รับค่า Pagination Params
+            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+            $offset = ($page - 1) * $limit;
+
             $startDate = $_GET['startDate'] ?? date('Y-m-d');
             $endDate = $_GET['endDate'] ?? date('Y-m-d');
             $line = $_GET['line'] ?? null;
             $shift = $_GET['shift'] ?? null;
 
             $params = [];
+            // Base Where Clause
             $whereClause = " AND (p.plan_date BETWEEN :start AND :end OR actual.ActualDate BETWEEN :start2 AND :end2)";
             $params[':start'] = $startDate;
             $params[':end'] = $endDate;
@@ -57,7 +63,30 @@ try {
                 $params[':shift2'] = $shift;
             }
 
-            $sql = "
+            // 2. Base Query (ใช้ร่วมกันทั้ง Count และ Data)
+            // หมายเหตุ: ใช้ CTE หรือ Subquery เพื่อความ Clean ในการนับและดึงข้อมูล
+            $baseQuery = "
+                FROM ($actualsSubQuery) AS actual
+                FULL OUTER JOIN $planTable p ON 
+                    p.plan_date = actual.ActualDate
+                    AND p.line = actual.ActualLine
+                    AND p.shift = actual.ActualShift
+                    AND p.item_id = actual.ActualItemId
+                JOIN $itemTable i ON i.item_id = ISNULL(p.item_id, actual.ActualItemId)
+                WHERE 1=1 $whereClause
+            ";
+
+            // 3. Count Query (นับจำนวนทั้งหมดก่อน)
+            $countSql = "SELECT COUNT(*) " . $baseQuery;
+            $stmtCount = $pdo->prepare($countSql);
+            $stmtCount->execute($params);
+            $totalRecords = $stmtCount->fetchColumn();
+            
+            // คำนวณจำนวนหน้า
+            $totalPages = ($limit > 0) ? ceil($totalRecords / $limit) : 1;
+
+            // 4. Data Query (ดึงข้อมูลจริงพร้อม Pagination)
+            $dataSql = "
                 SELECT
                     ISNULL(p.plan_id, 0) AS plan_id,
                     CONVERT(varchar, ISNULL(p.plan_date, actual.ActualDate), 23) as plan_date,
@@ -78,22 +107,40 @@ try {
                     ISNULL(p.adjusted_planned_quantity, 0) AS adjusted_planned_quantity,
                     p.note,
                     ISNULL(actual.ActualQty, 0) AS actual_quantity
-                FROM ($actualsSubQuery) AS actual
-                FULL OUTER JOIN $planTable p ON 
-                    p.plan_date = actual.ActualDate
-                    AND p.line = actual.ActualLine
-                    AND p.shift = actual.ActualShift
-                    AND p.item_id = actual.ActualItemId
-                JOIN $itemTable i ON i.item_id = ISNULL(p.item_id, actual.ActualItemId)
-                WHERE 1=1 $whereClause
+                " . $baseQuery . "
                 ORDER BY plan_date DESC, line, shift
             ";
 
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            // เพิ่ม Pagination Logic (เฉพาะเมื่อ limit ไม่ใช่ -1)
+            if ($limit > 0) {
+                $dataSql .= " OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY";
+                $params[':offset'] = $offset;
+                $params[':limit'] = $limit;
+            }
+
+            $stmt = $pdo->prepare($dataSql);
+            // Bind Params ที่อาจเพิ่มขึ้นมา (offset, limit ต้อง bind เป็น INT)
+            foreach ($params as $key => $val) {
+                if ($key === ':offset' || $key === ':limit') {
+                    $stmt->bindValue($key, $val, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($key, $val);
+                }
+            }
+            $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $result]);
+            // 5. ส่งคืนผลลัพธ์พร้อม Pagination Metadata
+            echo json_encode([
+                'success' => true, 
+                'data' => $result,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'total_records' => $totalRecords,
+                    'limit' => $limit
+                ]
+            ]);
             break;
 
         case 'save_plan':
