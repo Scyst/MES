@@ -63,8 +63,33 @@ try {
                 $params[':shift2'] = $shift;
             }
 
+            // 1. [NEW] Summary Query (คำนวณยอดรวมของ Plan ทั้งหมดในช่วงที่เลือก)
+            // เราจะคำนวณจากแผน (Plan) เป็นหลัก เพื่อดู Budget ของแผน
+            $summarySql = "
+                SELECT 
+                    SUM(ISNULL(p.adjusted_planned_quantity, 0) * ISNULL(i.Cost_Total, 0)) as total_plan_cost,
+                    SUM(ISNULL(p.adjusted_planned_quantity, 0) * ISNULL(i.Price_USD, 0)) as total_plan_sale_usd,
+                    SUM(ISNULL(p.adjusted_planned_quantity, 0) * ISNULL(i.StandardPrice, 0)) as total_plan_sale_thb
+                FROM $planTable p
+                JOIN $itemTable i ON p.item_id = i.item_id
+                WHERE p.plan_date BETWEEN :start AND :end
+            ";
+            
+            $summaryParams = [':start' => $startDate, ':end' => $endDate];
+            if ($line) {
+                $summarySql .= " AND p.line = :line";
+                $summaryParams[':line'] = $line;
+            }
+            if ($shift) {
+                $summarySql .= " AND p.shift = :shift";
+                $summaryParams[':shift'] = $shift;
+            }
+
+            $stmtSum = $pdo->prepare($summarySql);
+            $stmtSum->execute($summaryParams);
+            $summaryData = $stmtSum->fetch(PDO::FETCH_ASSOC);
+
             // 2. Base Query (ใช้ร่วมกันทั้ง Count และ Data)
-            // หมายเหตุ: ใช้ CTE หรือ Subquery เพื่อความ Clean ในการนับและดึงข้อมูล
             $baseQuery = "
                 FROM ($actualsSubQuery) AS actual
                 FULL OUTER JOIN $planTable p ON 
@@ -85,7 +110,7 @@ try {
             // คำนวณจำนวนหน้า
             $totalPages = ($limit > 0) ? ceil($totalRecords / $limit) : 1;
 
-            // 4. Data Query (ดึงข้อมูลจริงพร้อม Pagination)
+            // 4. Data Query (เพิ่ม standard_price)
             $dataSql = "
                 SELECT
                     ISNULL(p.plan_id, 0) AS plan_id,
@@ -97,6 +122,7 @@ try {
                     i.part_no,
                     i.part_description,
                     ISNULL(i.Price_USD, 0) AS price_usd,
+                    ISNULL(i.StandardPrice, 0) AS standard_price, -- [NEW] เพิ่มราคาขาย (บาท)
                     ISNULL(i.Cost_Total, 0) AS cost_total,
                     (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0)) AS cost_rm,
                     ISNULL(i.Cost_DL, 0) AS cost_dl,
@@ -130,10 +156,11 @@ try {
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 5. ส่งคืนผลลัพธ์พร้อม Pagination Metadata
+            // 5. ส่งคืนผลลัพธ์พร้อม Pagination Metadata และ Summary
             echo json_encode([
                 'success' => true, 
                 'data' => $result,
+                'summary' => $summaryData, // [NEW] ส่งค่า Summary กลับไป
                 'pagination' => [
                     'current_page' => $page,
                     'total_pages' => $totalPages,
@@ -156,13 +183,46 @@ try {
             $currentUser = $_SESSION['user']['username'] ?? 'System';
 
             if ($plan_id != 0) {
-                $sql = "UPDATE $planTable SET original_planned_quantity = :qty, note = :note, updated_by = :user, updated_at = GETDATE() WHERE plan_id = :id";
+                // Update Logic
+                $sql = "UPDATE $planTable SET 
+                            original_planned_quantity = :qty, 
+                            adjusted_planned_quantity = :adj_qty + ISNULL(carry_over_quantity, 0),
+                            note = :note, 
+                            updated_by = :user, 
+                            updated_at = GETDATE() 
+                        WHERE plan_id = :id";
+                
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([':qty' => $qty, ':note' => $note, ':user' => $currentUser, ':id' => $plan_id]);
+                $stmt->execute([
+                    ':qty' => $qty, 
+                    ':adj_qty' => $qty, // ส่งค่าเดิมไปอีกครั้งในชื่อใหม่
+                    ':note' => $note, 
+                    ':user' => $currentUser, 
+                    ':id' => $plan_id
+                ]);
             } else {
-                $sql = "INSERT INTO $planTable (plan_date, line, shift, item_id, original_planned_quantity, note, created_by) VALUES (:date, :line, :shift, :item, :qty, :note, :user)";
+                // Insert Logic [FIXED: แยกชื่อตัวแปร :qty และ :adj_qty ไม่ให้ซ้ำกัน]
+                $sql = "INSERT INTO $planTable (
+                            plan_date, line, shift, item_id, 
+                            original_planned_quantity, carry_over_quantity, adjusted_planned_quantity, 
+                            note, updated_by
+                        ) VALUES (
+                            :date, :line, :shift, :item, 
+                            :qty, 0, :adj_qty, 
+                            :note, :user
+                        )";
+                
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([':date' => $plan_date, ':line' => $line, ':shift' => $shift, ':item' => $item_id, ':qty' => $qty, ':note' => $note, ':user' => $currentUser]);
+                $stmt->execute([
+                    ':date' => $plan_date, 
+                    ':line' => $line, 
+                    ':shift' => $shift, 
+                    ':item' => $item_id, 
+                    ':qty' => $qty, 
+                    ':adj_qty' => $qty, // ส่งค่าเดิมไปอีกครั้งในชื่อใหม่
+                    ':note' => $note, 
+                    ':user' => $currentUser
+                ]);
             }
             echo json_encode(['success' => true, 'message' => 'Plan saved successfully']);
             break;

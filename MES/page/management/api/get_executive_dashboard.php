@@ -1,5 +1,6 @@
 <?php
 // MES/page/management/api/get_executive_dashboard.php
+
 include_once("../../../auth/check_auth.php");
 include_once("../../db.php");
 include_once("../../../config/config.php");
@@ -35,7 +36,6 @@ try {
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
         JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
         WHERE t.transaction_type = 'PRODUCTION_FG'
-          -- [FIXED] ตัดรอบ 8 โมงเช้า
           AND CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) BETWEEN :start AND :end
           AND l.production_line IS NOT NULL
     ";
@@ -45,7 +45,7 @@ try {
     
     $stmtProd = $pdo->prepare($sqlProd);
     $stmtProd->execute($paramsProd);
-    $prodData = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
+    $rawProdData = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
 
     // --- 2. Scrap ---
     $sqlScrap = "
@@ -56,7 +56,6 @@ try {
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
         LEFT JOIN " . LOCATIONS_TABLE . " l ON t.from_location_id = l.location_id
         WHERE t.transaction_type = 'PRODUCTION_SCRAP'
-          -- [FIXED] ตัดรอบ 8 โมงเช้า
           AND CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) BETWEEN :start AND :end
           AND l.production_line IS NOT NULL
     ";
@@ -65,7 +64,7 @@ try {
     $sqlScrap .= " GROUP BY l.production_line";
     $stmtScrap = $pdo->prepare($sqlScrap);
     $stmtScrap->execute($paramsScrap);
-    $scrapData = $stmtScrap->fetchAll(PDO::FETCH_KEY_PAIR);
+    $rawScrapData = $stmtScrap->fetchAll(PDO::FETCH_ASSOC);
 
     // --- 3. Manpower (Headcount) ---
     $sqlPeople = "
@@ -82,10 +81,9 @@ try {
     $sqlPeople .= " GROUP BY e.line";
     $stmtPeople = $pdo->prepare($sqlPeople);
     $stmtPeople->execute($paramsPeople);
-    $peopleData = $stmtPeople->fetchAll(PDO::FETCH_KEY_PAIR);
+    $rawPeopleData = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 4. Actual Labor Cost (DLOT) [FIXED SOLUTION] ---
-    // ใช้ FETCH_ASSOC แทน KEY_PAIR เพื่อป้องกันปัญหา Driver
+    // --- 4. Actual Labor Cost (DLOT) [ROBUST FETCH] ---
     $sqlLabor = "
         SELECT 
             line,
@@ -100,35 +98,54 @@ try {
 
     $stmtLabor = $pdo->prepare($sqlLabor);
     $stmtLabor->execute($paramsLabor);
-    $rawLabor = $stmtLabor->fetchAll(PDO::FETCH_ASSOC);
+    $rawLaborData = $stmtLabor->fetchAll(PDO::FETCH_ASSOC);
     
-    // [FIXED] แปลง Key เป็น Uppercase และ Trim เพื่อให้ Matching แม่นยำ
-    $laborData = [];
-    foreach ($rawLabor as $r) {
-        $cleanKey = strtoupper(trim($r['line'])); // ทำให้เป็นตัวใหญ่และตัดช่องว่าง
-        $laborData[$cleanKey] = (float)$r['actual_labor_cost'];
+    // --- Helper: Normalize Data Map (แก้ปัญหา Case Sensitive) ---
+    function normalizeMap($rawData, $keyField, $valField) {
+        $map = [];
+        foreach ($rawData as $row) {
+            // แปลง Key ของ Array ผลลัพธ์ให้เป็นตัวเล็กทั้งหมดก่อนดึง (แก้ปัญหา LINE vs line)
+            $row = array_change_key_case($row, CASE_LOWER);
+            
+            // สร้าง Key สำหรับ Map (Trim + Uppercase)
+            $cleanKey = isset($row[$keyField]) ? strtoupper(trim($row[$keyField])) : 'UNKNOWN';
+            
+            // ดึงค่า
+            $val = isset($row[$valField]) ? (float)$row[$valField] : 0;
+            
+            $map[$cleanKey] = $val;
+        }
+        return $map;
+    }
+
+    // สร้าง Map ข้อมูลแต่ละส่วน
+    // หมายเหตุ: เราใช้ 'line' เป็นตัวเชื่อม แต่ใน array_change_key_case มันจะเป็น 'line' เสมอ
+    $laborMap = normalizeMap($rawLaborData, 'line', 'actual_labor_cost');
+    $scrapMap = normalizeMap($rawScrapData, 'line', 'scrap_cost');
+    $peopleMap = normalizeMap($rawPeopleData, 'line', 'headcount');
+    
+    // Production ต้อง Map หลาย field, ทำ Manual
+    $prodMap = [];
+    foreach ($rawProdData as $row) {
+        $row = array_change_key_case($row, CASE_LOWER);
+        $cleanKey = strtoupper(trim($row['line']));
+        $prodMap[$cleanKey] = $row;
     }
 
     // --- CONSOLIDATION ---
     $allActiveLines = array_unique(array_merge(
-        array_column($prodData, 'line'),
-        array_keys($scrapData),
-        array_keys($peopleData),
-        array_keys($laborData) // Key ในนี้เป็น Uppercase แล้ว
+        array_keys($prodMap),
+        array_keys($scrapMap),
+        array_keys($peopleMap),
+        array_keys($laborMap)
     ));
-    $allActiveLines = array_filter($allActiveLines, function($v) { return !empty($v) && $v !== 'ALL'; });
+    $allActiveLines = array_filter($allActiveLines, function($v) { return !empty($v) && $v !== 'ALL' && $v !== 'UNKNOWN'; });
     sort($allActiveLines);
 
     $summary = ['sale' => 0, 'cost' => 0, 'gp' => 0, 'rm' => 0, 'dlot' => 0, 'oh' => 0, 'scrap' => 0, 'total_units' => 0, 'headcount' => 0, 'active_lines' => 0];
     $lines = [];
-    $prodMap = [];
-    foreach ($prodData as $row) $prodMap[$row['line']] = $row; // Key ตรงนี้มักจะเป็น Uppercase จาก DB
 
-    foreach ($allActiveLines as $lineName) {
-        $cleanLineName = strtoupper(trim($lineName)); // ใช้ชื่อกลางที่เป็น Uppercase
-        
-        // ใช้ชื่อเดิม (Original) ในการดึงจาก Source อื่น (เผื่อ Case Sensitive ในบางจุด)
-        // แต่สำหรับ Labor เราใช้ Key ที่ Clean แล้ว
+    foreach ($allActiveLines as $lineName) { // $lineName is already Upper & Trimmed
         
         $p = $prodMap[$lineName] ?? ['total_units' => 0, 'sale_usd' => 0, 'sale_thb_std' => 0, 'cost_rm' => 0, 'cost_oh' => 0];
 
@@ -136,11 +153,10 @@ try {
         $rmCost = $p['cost_rm'];
         $ohCost = $p['cost_oh'];
         
-        // [FIXED] ดึงค่าแรงด้วย Key ที่ Clean แล้ว
-        $laborCost = $laborData[$cleanLineName] ?? 0;
-        
-        $scrapVal = $scrapData[$lineName] ?? 0;
-        $headCount = $peopleData[$lineName] ?? 0;
+        // ดึงข้อมูลจาก Map ที่ทำความสะอาดแล้ว
+        $laborCost = $laborMap[$lineName] ?? 0;
+        $scrapVal = $scrapMap[$lineName] ?? 0;
+        $headCount = $peopleMap[$lineName] ?? 0;
 
         $totalCost = $rmCost + $laborCost + $ohCost + $scrapVal;
 
@@ -151,7 +167,7 @@ try {
             'gp' => $saleVal - $totalCost,
             'gp_percent' => ($saleVal > 0) ? (($saleVal - $totalCost) / $saleVal * 100) : 0,
             'rm' => $rmCost,
-            'dlot' => $laborCost, // ค่าแรงควรจะมาแล้ว
+            'dlot' => $laborCost,
             'oh' => $ohCost,
             'scrap' => $scrapVal,
             'units' => $p['total_units'],
@@ -168,13 +184,17 @@ try {
         $summary['headcount'] += $headCount;
     }
 
-    if (isset($laborData['ALL'])) {
-        $summary['dlot'] += $laborData['ALL'];
-        $summary['cost'] += $laborData['ALL'];
+    // รวมค่าแรงกองกลาง (ALL)
+    if (isset($laborMap['ALL'])) {
+        $summary['dlot'] += $laborMap['ALL'];
+        $summary['cost'] += $laborMap['ALL'];
     }
 
     $summary['gp'] = $summary['sale'] - $summary['cost'];
     $summary['active_lines'] = count($lines);
+
+    // [DEBUGGING INFO] - ถ้าอยากเห็นว่ามีไลน์ไหนบ้างใน Labor Map ให้เปิดดูใน Network Tab
+    // $summary['_debug_labor_keys'] = array_keys($laborMap);
 
     echo json_encode(['success' => true, 'summary' => $summary, 'lines' => array_values($lines)]);
 

@@ -1,288 +1,168 @@
 /* MES/page/management/css/managementDashboard.css */
 
 /* ================================================================= */
-/* 1. Global Layout Fix (Top-Header Layout) */
+/* 1. Global Layout Fixes */
 /* ================================================================= */
 body.layout-top-header {
     background-color: #f5f6f8;
-    overflow-y: auto; /* ✅ ปล่อยให้ Scroll ได้ตามปกติ */
+    overflow-y: auto;
 }
 
 #main-content {
-    min-height: calc(100vh - 70px); /* ความสูงขั้นต่ำเต็มจอ */
-    height: auto; /* ✅ ปล่อยความสูงตามเนื้อหา */
+    min-height: calc(100vh - 70px);
+    height: auto;
     margin-top: 70px;
     display: flex;
     flex-direction: column;
-    padding-bottom: 2rem;
 }
 
-/* Content Wrapper: พื้นที่หลัก */
 .content-wrapper {
-    flex: 1;
-    padding: 1.5rem;
+    padding: 15px;
+    height: calc(100vh - 60px);
     display: flex;
     flex-direction: column;
 }
 
 /* ================================================================= */
-/* 2. Planning View Layout Structure */
+/* 2. Planning View Layout (Split Screen) */
 /* ================================================================= */
 .planning-view {
-    height: 100%;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .planning-section-content {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    min-height: 0; /* Important for flex child scrolling */
+    gap: 15px;
 }
 
-/* แถวบน: Chart & Calendar */
+/* Row 1: Chart & Calendar (Fixed Height ~45-50%) */
 .planning-top-row {
-    height: 500px; /* ✅ Fix ความสูงส่วนบนไว้ ส่วนล่าง (ตาราง) จะต่อท้ายเอง */
+    flex-basis: 45%; 
+    height: 45%;
     flex-shrink: 0;
+    min-height: 300px;
 }
 
-.kpi-card {
-    background-color: #fff;
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    padding: 1.25rem;
-    height: 100%;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+/* Card Styles */
+.chart-card-plan, .calendar-card { 
+    height: 100%; 
+    display: flex; 
+    flex-direction: column; 
 }
-
-.kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.kpi-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-}
-
-.kpi-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 0;
-}
-
-.kpi-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+.chart-card-plan .card-body, .calendar-card .card-body { 
+    position: relative; 
+    flex-grow: 1; 
+    min-height: 0; 
 }
 
 /* ================================================================= */
-/* 3. Calendar Styling & Fixes (แก้บั๊กปฏิทินหาย/ไม่เต็ม) */
-/* ================================================================= */
-.calendar-card, .chart-card-plan {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background-color: #fff;
-    border-radius: 0.75rem;
-    border: 1px solid var(--bs-border-color);
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-/* Header ของปฏิทิน: จัดกึ่งกลางด้วย Grid */
-.calendar-card .card-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr; /* ซ้าย-กลาง-ขวา */
-    align-items: center;
-    padding: 0.75rem 1rem;
-}
-
-/* บังคับปุ่มฝั่งขวาให้ชิดขวา */
-.calendar-card .card-header > :last-child {
-    justify-self: end;
-}
-
-/* Title ตรงกลาง */
-#calendar-title {
-    justify-self: center;
-    font-size: 1.1rem;
-    white-space: nowrap;
-    margin: 0 !important;
-}
-
-/* Body ของการ์ดปฏิทิน */
-.calendar-card .card-body {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    padding: 0;
-}
-
-.chart-card-plan .card-body {
-    flex: 1;
-    min-height: 0; /* สำคัญ: ป้องกัน Flex item ล้น */
-    position: relative;
-    padding: 1rem;
-}
-
-/* ตัว Container ที่หุ้ม Calendar */
-#planningCalendarContainer {
-    height: 100% !important;
-}
-
-/* 🔥 FORCE FIX: บังคับโครงสร้างภายในของ FullCalendar ให้เต็มพื้นที่เสมอ */
-#planningCalendarContainer .fc {
-    height: 100% !important;
-    width: 100% !important;
-}
-
-#planningCalendarContainer .fc-view-harness {
-    height: 100% !important; /* บังคับ Viewport ของปฏิทินให้เต็ม */
-    background-color: #fff;
-}
-
-#planningCalendarContainer .fc-scroller {
-    overflow-y: auto !important; /* บังคับให้ Scrollbar ทำงาน */
-}
-
-/* ปรับแต่ง Font ปฏิทิน */
-.fc {
-    font-size: 0.8rem; 
-}
-.fc-toolbar {
-    margin-bottom: 0.5em !important;
-}
-.fc-event {
-    cursor: pointer;
-    font-size: 0.75rem;
-}
-
-/* ================================================================= */
-/* 4. Table Styling (Sales Dashboard Style) */
+/* 3. Table Wrapper (Fill remaining space) */
 /* ================================================================= */
 .planning-table-wrapper {
-    background-color: #fff;
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    flex-grow: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: auto;
-    max-height: 600px; /* หรือความสูงที่ต้องการ */
     position: relative;
+    border-top: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
 }
 
 /* Sticky Header */
-.planning-table-wrapper thead th {
+#productionPlanTable thead th {
+    background-color: #f8f9fa;
     position: sticky;
     top: 0;
-    z-index: 10; /* ให้ลอยอยู่เหนือข้อมูล */
-    background-color: #f8f9fa; /* ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
+    z-index: 10;
+    vertical-align: middle;
+    font-weight: 600;
+    color: #495057;
     box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
 }
 
-/* Table Body & Rows */
-#productionPlanTable tbody tr {
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
-}
-
+/* Table Cells */
 #productionPlanTable tbody td {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem;
     vertical-align: middle;
     font-size: 0.9rem;
     border-bottom: 1px solid var(--bs-border-color);
     color: var(--bs-body-color);
 }
 
-/* Hover Effect */
-#productionPlanTable tbody tr:hover td {
-    background-color: var(--bs-tertiary-bg);
-    color: var(--bs-primary);
-}
+/* Custom Scrollbar */
+.planning-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+.planning-table-wrapper::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+.planning-table-wrapper::-webkit-scrollbar-track { background-color: #f1f1f1; }
 
 /* ================================================================= */
-/* 5. Editable Cells & Components */
+/* 4. Footer & Pagination */
 /* ================================================================= */
+.planning-footer {
+    background: #f8f9fa;
+    padding: 8px 20px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end; /* Summary ชิดขวา */
+    align-items: center;
+    gap: 20px;
+    font-size: 0.9rem;
+    height: 50px;
+    position: relative;
+}
+
+.pagination-wrapper {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.pagination-wrapper .page-link {
+    color: var(--bs-secondary);
+    border: 1px solid #dee2e6;
+    margin: 0 2px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+}
+.pagination-wrapper .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+/* Summary Items */
+.footer-item { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.footer-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; font-weight: bold; }
+.footer-value { font-weight: 700; font-size: 1rem; color: #212529; }
+
+/* ================================================================= */
+/* 5. Calendar & Chart Components */
+/* ================================================================= */
+/* Calendar Overrides */
+#planningCalendarContainer .fc-daygrid-day-number { font-weight: bold; text-decoration: none; color: inherit; }        
+#planningCalendarContainer .fc-event { padding: 1px 3px; font-size: 0.7em; cursor: pointer; border-radius: 2px; }
+#planningCalendarContainer .fc-toolbar { margin-bottom: 0.5em !important; }
+#planningCalendarContainer .fc-button { padding: 0.15rem 0.4rem !important; font-size: 0.8rem !important; }
+
+/* DLOT Status Colors */
+.dlot-entered .fc-daygrid-day-number { color: var(--bs-success) !important; font-weight: 800; }
+.dlot-missing-past .fc-daygrid-day-number { color: var(--bs-danger) !important; text-decoration: line-through; opacity: 0.6; }
+
+/* Editable Cells */
 .editable-plan {
+    display: inline-block;
     cursor: text;
     padding: 2px 6px;
     border-radius: 4px;
     transition: all 0.2s;
     border-bottom: 1px dashed var(--bs-secondary);
+    min-width: 20px;
 }
-.editable-plan:hover {
-    background-color: #fff3cd; /* สีเหลืองอ่อน */
-    color: #856404;
-    border-bottom-style: solid;
-}
-.editable-plan:focus {
-    background-color: #fff;
-    outline: 2px solid var(--bs-primary);
-    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
-    color: var(--bs-body-color);
-}
-
-/* DLOT View & Stat Cards */
-.dlot-view-container {
-    background-color: #fff;
-}
-.stat-card-header {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    opacity: 0.8;
-}
-
-.chart-scroll-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden; /* ซ่อน Scrollbar ของ Container นอก */
-}
-
-/* Pagination Footer */
-.pagination-footer {
-    flex-shrink: 0;
-    z-index: 1030;
-}
-
-/* เพิ่มความชัดเจนให้ Column Plan vs Actual */
-#productionPlanTable td:nth-child(5) { /* Column Original Plan */
-    background-color: rgba(248, 249, 250, 0.5);
-    border-right: 1px dashed var(--bs-border-color);
-}
-#productionPlanTable td:nth-child(6) { /* Column Actual */
-    font-weight: 500;
-}
-#productionPlanTable td:nth-child(8) { /* Column Adj Plan */
-    background-color: var(--bs-primary-bg-subtle);
-    font-weight: bold;
-    color: var(--bs-primary);
-}
-/* Pagination Style */
-.pagination-footer .page-item.active .page-link {
-    background-color: var(--bs-primary);
-    border-color: var(--bs-primary);
-    color: white;
-}
-.pagination-footer .page-link {
-    color: var(--bs-secondary);
-    border: none;
-    margin: 0 2px;
-    border-radius: 4px;
-}
+.editable-plan:hover { background-color: #f8f9fa; outline: 1px dashed #ced4da; }
+.editable-plan:focus { background-color: #fff; outline: 2px solid #0d6efd; border-bottom: none; }
