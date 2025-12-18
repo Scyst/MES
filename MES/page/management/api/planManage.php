@@ -122,7 +122,7 @@ try {
                     i.part_no,
                     i.part_description,
                     ISNULL(i.Price_USD, 0) AS price_usd,
-                    ISNULL(i.StandardPrice, 0) AS standard_price, -- [NEW] เพิ่มราคาขาย (บาท)
+                    ISNULL(i.StandardPrice, 0) AS standard_price, 
                     ISNULL(i.Cost_Total, 0) AS cost_total,
                     (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0)) AS cost_rm,
                     ISNULL(i.Cost_DL, 0) AS cost_dl,
@@ -132,6 +132,10 @@ try {
                     ISNULL(p.carry_over_quantity, 0) AS carry_over_quantity,
                     ISNULL(p.adjusted_planned_quantity, 0) AS adjusted_planned_quantity,
                     p.note,
+                    ISNULL(p.manpower_num, 0) AS manpower_num,
+                    ISNULL(p.ot_hours, 0) AS ot_hours,
+                    ISNULL(p.total_labor_cost, 0) AS total_labor_cost,
+                    p.updated_at,
                     ISNULL(actual.ActualQty, 0) AS actual_quantity
                 " . $baseQuery . "
                 ORDER BY plan_date DESC, line, shift
@@ -181,12 +185,12 @@ try {
             $qty = $data['original_planned_quantity'];
             $note = $data['note'] ?? null;
             $currentUser = $_SESSION['user']['username'] ?? 'System';
+            $carry_over = isset($data['carry_over_quantity']) ? floatval($data['carry_over_quantity']) : 0;
 
             if ($plan_id != 0) {
-                // Update Logic
+                // --- UPDATE Logic (เหมือนเดิม) ---
                 $sql = "UPDATE $planTable SET 
                             original_planned_quantity = :qty, 
-                            adjusted_planned_quantity = :adj_qty + ISNULL(carry_over_quantity, 0),
                             note = :note, 
                             updated_by = :user, 
                             updated_at = GETDATE() 
@@ -195,20 +199,21 @@ try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':qty' => $qty, 
-                    ':adj_qty' => $qty, // ส่งค่าเดิมไปอีกครั้งในชื่อใหม่
                     ':note' => $note, 
                     ':user' => $currentUser, 
                     ':id' => $plan_id
                 ]);
             } else {
-                // Insert Logic [FIXED: แยกชื่อตัวแปร :qty และ :adj_qty ไม่ให้ซ้ำกัน]
+                // --- INSERT Logic (แก้ใหม่ให้บันทึก Carry Over ได้) ---
                 $sql = "INSERT INTO $planTable (
                             plan_date, line, shift, item_id, 
-                            original_planned_quantity, carry_over_quantity, adjusted_planned_quantity, 
+                            original_planned_quantity, 
+                            carry_over_quantity, /* ★ เพิ่ม Column นี้ */
                             note, updated_by
                         ) VALUES (
                             :date, :line, :shift, :item, 
-                            :qty, 0, :adj_qty, 
+                            :qty, 
+                            :co, /* ★ เพิ่ม Value นี้ */
                             :note, :user
                         )";
                 
@@ -219,7 +224,7 @@ try {
                     ':shift' => $shift, 
                     ':item' => $item_id, 
                     ':qty' => $qty, 
-                    ':adj_qty' => $qty, // ส่งค่าเดิมไปอีกครั้งในชื่อใหม่
+                    ':co' => $carry_over, // ★ ส่งค่า C/O ไปบันทึก
                     ':note' => $note, 
                     ':user' => $currentUser
                 ]);
@@ -308,6 +313,34 @@ try {
                 $pdo->rollBack();
                 throw $ex;
             }
+            break;
+
+        case 'update_carry_over':
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $plan_id = $data['plan_id'] ?? null;
+            // รับค่า C/O ที่ส่งมา (แปลงเป็น float เพื่อความชัวร์)
+            $carry_over = isset($data['carry_over_quantity']) ? floatval($data['carry_over_quantity']) : 0;
+            $currentUser = $_SESSION['user']['username'] ?? 'System';
+
+            if (!$plan_id) throw new Exception("Plan ID is required");
+
+            $sql = "UPDATE $planTable SET 
+                        carry_over_quantity = :co,
+                        /* ลบบรรทัด adjusted_planned_quantity ทิ้ง */
+                        updated_by = :user,
+                        updated_at = GETDATE()
+                    WHERE plan_id = :id";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':co' => $carry_over,
+                /* ลบ :co_calc ออก */
+                ':user' => $currentUser,
+                ':id' => $plan_id
+            ]);
+            
+            echo json_encode(['success' => true, 'message' => 'Carry over updated successfully']);
             break;
 
         default:

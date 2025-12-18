@@ -1,168 +1,201 @@
-/* MES/page/management/css/managementDashboard.css */
+/* css/managementDashboard.css (Final Fixed) */
 
 /* ================================================================= */
-/* 1. Global Layout Fixes */
-/* ================================================================= */
-body.layout-top-header {
-    background-color: #f5f6f8;
-    overflow-y: auto;
-}
-
-#main-content {
-    min-height: calc(100vh - 70px);
-    height: auto;
-    margin-top: 70px;
-    display: flex;
-    flex-direction: column;
-}
-
-.content-wrapper {
-    padding: 15px;
-    height: calc(100vh - 60px);
-    display: flex;
-    flex-direction: column;
-}
-
-/* ================================================================= */
-/* 2. Planning View Layout (Split Screen) */
+/* 1. Planning View Layout (โครงสร้างหลัก) */
 /* ================================================================= */
 .planning-view {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    /* ความสูงเต็มจอ ลบ Header 70px */
+    height: calc(100vh - 70px); 
+    padding: 1rem;
+    overflow: hidden; /* ห้าม Scroll ที่ Container นอกสุด */
 }
 
 .planning-section-content {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* Important for flex child scrolling */
-    gap: 15px;
+    min-height: 0;
+    gap: 1.5rem; /* ระยะห่างระหว่างแถวบน-ล่าง */
 }
 
-/* Row 1: Chart & Calendar (Fixed Height ~45-50%) */
+/* --- แถวบน: กราฟ และ ปฏิทิน --- */
 .planning-top-row {
-    flex-basis: 45%; 
-    height: 45%;
-    flex-shrink: 0;
+    flex: 0 0 50%;      /* บังคับความสูง 50% */
+    height: 50%;        
     min-height: 300px;
 }
 
-/* Card Styles */
-.chart-card-plan, .calendar-card { 
-    height: 100%; 
-    display: flex; 
-    flex-direction: column; 
+/* ================================================================= */
+/* 2. Card Styling (ปรับให้เข้ากับ Layout) */
+/* ================================================================= */
+
+/* ใช้ Class นี้คุม Card ทั้งหมดในหน้า Planning */
+.planning-view .card {
+    height: 100%;       /* ยืดเต็มความสูงของ Column แม่ */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--bs-border-color) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    border-radius: 0.5rem !important;
+    margin-bottom: 0 !important; /* ลบ Margin ของ Bootstrap */
+    background-color: #fff;
+    overflow: hidden;   /* ★★★ สำคัญ: ตัดส่วนเกินทิ้ง ไม่ให้ล้นไปทับตาราง ★★★ */
 }
-.chart-card-plan .card-body, .calendar-card .card-body { 
-    position: relative; 
-    flex-grow: 1; 
-    min-height: 0; 
+
+.planning-view .card-header {
+    background-color: #fff;
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 0.5rem 1rem;
+    flex-shrink: 0;     /* ห้ามหด */
+}
+
+.planning-view .card-body {
+    flex-grow: 1;
+    position: relative; /* เป็นจุดอ้างอิงให้ลูก (Absolute) */
+    padding: 0;         /* ปฏิทินและกราฟจะชิดขอบ */
+    overflow: hidden;   /* ★★★ สำคัญ: ขังปฏิทินไว้ในนี้ ★★★ */
+    min-height: 0;
 }
 
 /* ================================================================= */
-/* 3. Table Wrapper (Fill remaining space) */
+/* 3. Calendar & Chart Components */
+/* ================================================================= */
+
+/* --- Calendar Container --- */
+#planningCalendarContainer {
+    position: absolute; /* ลอยเต็มพื้นที่ Card Body */
+    top: 0; left: 0; right: 0; bottom: 0;
+    padding: 0.5rem;
+    z-index: 1;
+}
+
+/* ปรับแต่ง FullCalendar */
+#planningCalendarContainer .fc-header-toolbar { margin-bottom: 0.5rem !important; }
+#planningCalendarContainer .fc-button { padding: 0.15rem 0.5rem; font-size: 0.85rem; }
+#planningCalendarContainer .fc-daygrid-day-number { padding: 4px; text-decoration: none; color: inherit; }
+
+/* --- Chart Container --- */
+.chart-scroll-container {
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;   /* เลื่อนแนวนอนได้ */
+    overflow-y: hidden;
+    padding: 0.5rem;
+}
+
+#planVsActualChartInnerWrapper {
+    height: 100%;
+    position: relative;
+}
+
+/* ================================================================= */
+/* 4. Table Layout (แถวล่าง) */
 /* ================================================================= */
 .planning-table-wrapper {
-    flex-grow: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: auto;
-    position: relative;
+    flex-grow: 1;       /* ยืดเต็มพื้นที่ที่เหลือ */
+    overflow-y: auto;   /* Scroll แนวตั้งได้ */
     border-top: 1px solid var(--bs-border-color);
-    border-bottom: 1px solid var(--bs-border-color);
 }
 
 /* Sticky Header */
-#productionPlanTable thead th {
-    background-color: #f8f9fa;
-    position: sticky;
-    top: 0;
+.planning-table-wrapper thead th { 
+    position: sticky; 
+    top: 0; 
     z-index: 10;
-    vertical-align: middle;
-    font-weight: 600;
-    color: #495057;
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
+    background-color: var(--bs-tertiary-bg);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Table Cells */
-#productionPlanTable tbody td {
-    padding: 0.5rem 0.75rem;
-    vertical-align: middle;
-    font-size: 0.9rem;
-    border-bottom: 1px solid var(--bs-border-color);
-    color: var(--bs-body-color);
+/* Zebra Striping (ใช้ Box-Shadow เพื่อไม่ให้บังสี Cell) */
+#productionPlanTableBody tr:nth-child(even) > td {
+    box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.02);
+    background-color: transparent;
+}
+#productionPlanTableBody tr:hover > td {
+    box-shadow: inset 0 0 0 9999px rgba(var(--bs-primary-rgb), 0.1) !important;
 }
 
-/* Custom Scrollbar */
-.planning-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
-.planning-table-wrapper::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
-.planning-table-wrapper::-webkit-scrollbar-track { background-color: #f1f1f1; }
+/* ================================================================= */
+/* 5. Utility Styles */
+/* ================================================================= */
 
-/* ================================================================= */
-/* 4. Footer & Pagination */
-/* ================================================================= */
+/* Editable Fields (เส้นประ) */
+.editable-plan { 
+    cursor: pointer; 
+    min-width: 40px; 
+    display: inline-block; 
+    padding: 0 2px;
+    border-bottom: 1px dashed #adb5bd;
+}
+.editable-plan:focus { 
+    outline: 2px solid var(--bs-primary); 
+    background-color: var(--bs-body-bg);
+    border-bottom: none;
+}
+
+/* Footer Summary */
 .planning-footer {
-    background: #f8f9fa;
-    padding: 8px 20px;
-    flex-shrink: 0;
     display: flex;
-    justify-content: flex-end; /* Summary ชิดขวา */
+    justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    font-size: 0.9rem;
-    height: 50px;
-    position: relative;
+    padding: 0.5rem 1rem;
+    background-color: var(--bs-body-bg);
+    border-top: 1px solid var(--bs-border-color);
+    flex-shrink: 0;
 }
 
-.pagination-wrapper {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.pagination-wrapper .page-link {
-    color: var(--bs-secondary);
-    border: 1px solid #dee2e6;
-    margin: 0 2px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    padding: 4px 10px;
-}
-.pagination-wrapper .page-item.active .page-link {
-    background-color: var(--bs-primary);
-    border-color: var(--bs-primary);
-    color: white;
-}
-
-/* Summary Items */
-.footer-item { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
 .footer-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; font-weight: bold; }
-.footer-value { font-weight: 700; font-size: 1rem; color: #212529; }
+.footer-value { font-weight: 700; font-size: 1rem; }
 
 /* ================================================================= */
-/* 5. Calendar & Chart Components */
+/* 6. MODAL STYLES (Standard Bootstrap - Clean) */
 /* ================================================================= */
-/* Calendar Overrides */
-#planningCalendarContainer .fc-daygrid-day-number { font-weight: bold; text-decoration: none; color: inherit; }        
-#planningCalendarContainer .fc-event { padding: 1px 3px; font-size: 0.7em; cursor: pointer; border-radius: 2px; }
-#planningCalendarContainer .fc-toolbar { margin-bottom: 0.5em !important; }
-#planningCalendarContainer .fc-button { padding: 0.15rem 0.4rem !important; font-size: 0.8rem !important; }
 
-/* DLOT Status Colors */
-.dlot-entered .fc-daygrid-day-number { color: var(--bs-success) !important; font-weight: 800; }
-.dlot-missing-past .fc-daygrid-day-number { color: var(--bs-danger) !important; text-decoration: line-through; opacity: 0.6; }
-
-/* Editable Cells */
-.editable-plan {
-    display: inline-block;
-    cursor: text;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    border-bottom: 1px dashed var(--bs-secondary);
-    min-width: 20px;
+/* Autocomplete Dropdown */
+.autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    max-height: 200px;
+    overflow-y: auto;
 }
-.editable-plan:hover { background-color: #f8f9fa; outline: 1px dashed #ced4da; }
-.editable-plan:focus { background-color: #fff; outline: 2px solid #0d6efd; border-bottom: none; }
+
+.autocomplete-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #e9ecef;
+}
+.autocomplete-item:hover {
+    background-color: #e9ecef;
+    color: var(--bs-primary);
+}
+
+/* Item Display Box inside Modal */
+.selected-item-display {
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Shift Radio Buttons Style */
+.btn-check:checked + .btn-outline-secondary {
+    background-color: #6c757d;
+    color: #fff;
+    border-color: #6c757d;
+}

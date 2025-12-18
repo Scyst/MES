@@ -185,10 +185,11 @@ try {
     }
 
     // รวมค่าแรงกองกลาง (ALL)
-    if (isset($laborMap['ALL'])) {
+    /* if (isset($laborMap['ALL'])) {
         $summary['dlot'] += $laborMap['ALL'];
         $summary['cost'] += $laborMap['ALL'];
     }
+    */
 
     $summary['gp'] = $summary['sale'] - $summary['cost'];
     $summary['active_lines'] = count($lines);

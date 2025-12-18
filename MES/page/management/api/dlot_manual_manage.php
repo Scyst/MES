@@ -41,7 +41,6 @@ try {
             $syncCount = 0;
 
             try {
-                // เตรียม SQL สำหรับบันทึก (Upsert: ถ้ามี Update, ถ้าไม่มี Insert)
                 $sqlMerge = "
                     MERGE INTO $table AS T 
                     USING (VALUES (:date, :line, :cat, :type, :val, :unit, :user)) 
@@ -87,6 +86,40 @@ try {
                     $syncCount++;
                     $currentDate = strtotime('+1 day', $currentDate);
                 }
+
+                $planTable = PRODUCTION_PLANS_TABLE; 
+                $costTable = MANUAL_COSTS_TABLE;
+
+                $updatePlanSql = "
+                    UPDATE p
+                    SET 
+                        p.manpower_num = CAST(ISNULL(hc.cost_value, 0) AS INT),
+                        p.total_labor_cost = (ISNULL(dl.cost_value, 0) + ISNULL(ot_cost.cost_value, 0)),
+                        p.ot_hours = ISNULL(ot_hrs.cost_value, 0), -- (ถ้ามี OT_HOURS)
+                        p.updated_at = GETDATE()
+                    FROM $planTable p
+                    LEFT JOIN $costTable hc 
+                        ON p.plan_date = hc.entry_date 
+                        AND p.line = hc.line 
+                        AND hc.cost_type = 'HEAD_COUNT'
+                    LEFT JOIN $costTable dl 
+                        ON p.plan_date = dl.entry_date 
+                        AND p.line = dl.line 
+                        AND dl.cost_type = 'DIRECT_LABOR'
+                    LEFT JOIN $costTable ot_cost 
+                        ON p.plan_date = ot_cost.entry_date 
+                        AND p.line = ot_cost.line 
+                        AND ot_cost.cost_type = 'OVERTIME'
+                    LEFT JOIN $costTable ot_hrs 
+                        ON p.plan_date = ot_hrs.entry_date 
+                        AND p.line = ot_hrs.line 
+                        AND ot_hrs.cost_type = 'OT_HOURS'
+                    
+                    WHERE p.plan_date BETWEEN :start AND :end
+                ";
+
+                $stmtUpdatePlan = $pdo->prepare($updatePlanSql);
+                $stmtUpdatePlan->execute([':start' => $startDate, ':end' => $endDate]);
 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "Synced $syncCount days successfully."]);
@@ -161,34 +194,43 @@ try {
 // CORE LOGIC: ฟังก์ชันคำนวณเงิน (แยกออกมาเพื่อให้เรียกใช้ซ้ำได้ง่าย)
 // ==================================================================================
 function calculateLaborByLine($pdo, $date) {
-    // 1. ตรวจสอบประเภทวัน (อาทิตย์ / นักขัตฤกษ์)
+    // 1. Logic วันหยุด (เหมือนเดิม)
     $dayOfWeek = date('w', strtotime($date));
     $isSunday = ($dayOfWeek == 0);
-    $isHoliday = false; // TODO: เชื่อม Table Holiday ในอนาคต
+    $isHoliday = false; 
 
-    // 2. ดึงข้อมูลพนักงานทั้งหมดที่มาทำงานในวันนั้น (Scan In)
+    // 2. แก้ SQL ตรงนี้! ใช้ GROUP BY เพื่อยุบรวมแถวซ้ำ
     $sql = "
         SELECT 
-            l.emp_id, l.scan_in_time, l.scan_out_time,
-            e.position, e.line, e.default_shift_id,
-            s.shift_name, s.start_time AS shift_start, s.end_time AS shift_end
+            e.emp_id, 
+            e.position, 
+            e.line, 
+            e.default_shift_id,
+            s.shift_name, 
+            s.start_time AS shift_start, 
+            s.end_time AS shift_end,
+            -- เอาเวลาเข้าที่เร็วที่สุด และออกที่ช้าที่สุด มาใช้แค่คู่เดียว
+            MIN(l.scan_in_time) as scan_in_time, 
+            MAX(l.scan_out_time) as scan_out_time
         FROM " . MANPOWER_DAILY_LOGS_TABLE . " l
         JOIN " . MANPOWER_EMPLOYEES_TABLE . " e ON l.emp_id = e.emp_id
         LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " s ON e.default_shift_id = s.shift_id
         WHERE l.log_date = :log_date
           AND l.status IN ('PRESENT', 'LATE')
+        GROUP BY 
+            e.emp_id, e.position, e.line, e.default_shift_id,
+            s.shift_name, s.start_time, s.end_time
     ";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':log_date' => $date]);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // เตรียมตัวแปรเก็บผลลัพธ์แยกตาม Line
-    // Structure: ['ASSEMBLY' => ['headcount'=>0, 'dl_cost'=>0, 'ot_cost'=>0], ...]
+    // เตรียมตัวแปรเก็บผลลัพธ์
     $resultsByLine = [];
 
     foreach ($logs as $emp) {
-        // Normalize Line Name (แปลงเป็นตัวพิมพ์ใหญ่ ตัดช่องว่าง)
+        // Normalize Line Name
         $line = strtoupper(trim($emp['line']));
         if (empty($line)) $line = 'UNKNOWN';
 
@@ -196,19 +238,20 @@ function calculateLaborByLine($pdo, $date) {
             $resultsByLine[$line] = ['headcount' => 0, 'dl_cost' => 0, 'ot_cost' => 0];
         }
 
+        // นับหัว (ตอนนี้ 1 คนจะมี 1 row แน่นอน ไม่นับซ้ำแล้ว)
         $resultsByLine[$line]['headcount']++;
 
-        // --- Logic การคำนวณเงิน (ตามที่คุยกันล่าสุด) ---
+        // --- Logic การคำนวณเงิน ---
         $pos = trim($emp['position']);
         $dailyWage = 0;
         $isMonthly = false;
-        $hasOT = true; // Default ทุกคนมี OT
+        $hasOT = true; 
 
-        // A. กำหนดเรทค่าจ้าง & สิทธิ์ OT
+        // A. กำหนดเรทค่าจ้าง (Logic เดิมของคุณถูกต้องแล้ว)
         if (preg_match('/Mini MD/i', $pos) && stripos($pos, 'Acting') === false) {
             $dailyWage = 80000 / 30; 
             $isMonthly = true;
-            $hasOT = false; // Mini MD ไม่มี OT
+            $hasOT = false; 
         } elseif (stripos($pos, 'Acting Mini MD') !== false) {
             $dailyWage = 40000 / 30; 
             $isMonthly = true;
@@ -232,17 +275,16 @@ function calculateLaborByLine($pdo, $date) {
 
         // B. คำนวณค่าแรงปกติ (DL)
         if ($isHoliday) {
-            // วันหยุดนักขัตฤกษ์: ได้ 3 แรง ทั้งรายวันและรายเดือน
             $resultsByLine[$line]['dl_cost'] += ($dailyWage * 3); 
         } elseif ($isSunday) {
-            // วันอาทิตย์: รายวัน x2, รายเดือน x1
+            // วันอาทิตย์: รายวัน x2, รายเดือน x1 (ตาม Cost Allocation)
             $resultsByLine[$line]['dl_cost'] += ($isMonthly ? $dailyWage : ($dailyWage * 2)); 
         } else {
-            // วันธรรมดา: x1
+            // วันธรรมดา
             $resultsByLine[$line]['dl_cost'] += $dailyWage; 
         }
 
-        // C. คำนวณ OT
+        // C. คำนวณ OT (ใช้ scan_out_time ที่เป็น MAX แล้ว แม่นยำขึ้น)
         if ($hasOT && !empty($emp['scan_out_time']) && !empty($emp['shift_end'])) {
             $shiftStartStr = $date . ' ' . $emp['shift_start'];
             $shiftEndStr   = $date . ' ' . $emp['shift_end'];
@@ -250,32 +292,33 @@ function calculateLaborByLine($pdo, $date) {
             $shiftStartObj = new DateTime($shiftStartStr);
             $shiftEndObj   = new DateTime($shiftEndStr);
             
-            // กะดึกข้ามวัน (Start > End) -> End ต้อง +1 วัน
+            // กะดึกข้ามวัน
             if ($shiftStartObj > $shiftEndObj) {
                 $shiftEndObj->modify('+1 day');
             }
 
             $scanOutObj = new DateTime($emp['scan_out_time']);
             
-            // OT เริ่มนับหลังเลิกงาน 30 นาที (Break Time)
+            // OT เริ่มหลังเลิกงาน 30 นาที
             $otStartObj = clone $shiftEndObj;
             $otStartObj->modify('+30 minutes'); 
 
             if ($scanOutObj > $otStartObj) {
+                // คำนวณนาที OT
                 $otMinutes = ($scanOutObj->getTimestamp() - $otStartObj->getTimestamp()) / 60;
                 
-                if ($otMinutes >= 60) { // ทำอย่างน้อย 1 ชม.
+                if ($otMinutes >= 60) {
                     $otTotalHours = floor($otMinutes / 60 * 2) / 2; // ปัดเศษ 0.5
                     
-                    // หาจุดตัด Ghost Shift (00:00 สำหรับกะเช้า, 12:00 สำหรับกะดึก)
+                    // Logic ตัด Ghost Shift (เที่ยงคืน หรือ เที่ยงวัน)
                     $ghostLineObj = clone $shiftEndObj;
                     $shiftName = strtoupper($emp['shift_name'] ?? '');
                     
                     if (strpos($shiftName, 'NIGHT') !== false) {
-                        $ghostLineObj->setTime(12, 0, 0); // เที่ยงวันของวันเลิกงาน
+                        $ghostLineObj->setTime(12, 0, 0); 
                     } else {
                         $ghostLineObj->setTime(0, 0, 0);
-                        $ghostLineObj->modify('+1 day'); // เที่ยงคืน
+                        $ghostLineObj->modify('+1 day'); 
                     }
 
                     $otHoursNormal = 0;
@@ -289,9 +332,8 @@ function calculateLaborByLine($pdo, $date) {
                         $otHoursNormal = $otTotalHours;
                     }
 
-                    // ตัวคูณ OT
                     $multiplierNormal = ($isSunday || $isHoliday) ? 3 : 1.5; 
-                    $multiplierGhost  = 3; // Ghost Shift 3 แรงเสมอ
+                    $multiplierGhost  = 3; 
 
                     $otCost = ($otHoursNormal * $hourlyRate * $multiplierNormal) + 
                               ($otHoursGhost  * $hourlyRate * $multiplierGhost);
@@ -300,7 +342,7 @@ function calculateLaborByLine($pdo, $date) {
                 }
             }
         }
-    } // End Employee Loop
+    } 
 
     return $resultsByLine;
 }
