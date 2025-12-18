@@ -68,6 +68,10 @@ $pageHelpId = "execHelpModal";
                             <i class="fas fa-users-cog"></i>
                         </button>
 
+                        <button class="btn btn-outline-info btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" id="btnAIForecast" onclick="toggleAIForecast()" title="AI Prediction: Forecast end-of-period result" style="height: 30px;">
+                            <i class="fas fa-robot me-1"></i> AI Forecast
+                        </button>
+
                         <button class="btn btn-primary btn-sm fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="loadDashboardData()" style="height: 30px;">
                             <i class="fas fa-sync-alt"></i>
                         </button>

@@ -1,4 +1,4 @@
-/* script/executiveDashboard.js */
+/* script/executiveDashboard.js (Final Version) */
 
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let costPieChart = null;
     let lineHourlyChart = null;
     let trendChart = null;
+    let isAIEnabled = false; // สถานะ AI
+
+    // Global Data Cache
+    window.lastTrendData = [];
 
     // ==========================================
     // 2. EVENT LISTENERS
@@ -59,11 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (json.success) {
                 renderKPIs(json.summary);
-                renderCharts(json.summary);     // <-- แก้ไขฟังก์ชันนี้ด้านล่าง
+                renderCharts(json.summary);
                 renderLineCards(json.lines);
                 
                 if (json.trend) {
-                    renderTrendChart(json.trend); // <-- แก้ไขฟังก์ชันนี้ด้านล่าง
+                    renderTrendChart(json.trend); // เรียกใช้ฟังก์ชันกราฟเส้น
                 }
             } else {
                 console.error(json.message);
@@ -79,41 +83,77 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 4. TIMERS & INIT
+    // 4. AI & MATH LOGIC
     // ==========================================
-    function updateLiveClock() {
-        if (liveClockEl) {
-            const now = new Date();
-            liveClockEl.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    // Toggle ปุ่ม AI
+    window.toggleAIForecast = function() {
+        isAIEnabled = !isAIEnabled;
+        const btn = document.getElementById('btnAIForecast');
+        
+        if(isAIEnabled) {
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add('btn-info', 'text-white');
+            if(typeof showToast === 'function') showToast('AI Prediction Activated 🤖', 'var(--bs-info)');
+        } else {
+            btn.classList.remove('btn-info', 'text-white');
+            btn.classList.add('btn-outline-info');
         }
+
+        // โหลดกราฟใหม่โดยใช้ข้อมูลเดิมจาก Memory
+        if (window.lastTrendData && window.lastTrendData.length > 0) {
+            renderTrendChart(window.lastTrendData);
+        }
+    };
+
+    // คำนวณ Linear Regression
+    function calculateTrendLine(valuesY) {
+        const n = valuesY.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+
+        for (let i = 0; i < n; i++) {
+            const y = parseFloat(valuesY[i]) || 0; 
+            const x = i;
+            sumX += x;
+            sumY += y;
+            sumXY += (x * y);
+            sumXX += (x * x);
+        }
+
+        const denominator = (n * sumXX - sumX * sumX);
+        if (denominator === 0) return { slope: 0, intercept: 0 };
+
+        const slope = (n * sumXY - sumX * sumY) / denominator;
+        const intercept = (sumY - slope * sumX) / n;
+
+        return { slope, intercept };
     }
-    setInterval(updateLiveClock, 1000);
-    updateLiveClock(); 
 
-    setInterval(() => { loadDashboardData(true); }, 60000);
-
-    async function initSystem() {
-        const savedRate = localStorage.getItem('lastExchangeRate');
-        if (savedRate && exchangeRateInput) exchangeRateInput.value = savedRate;
-
-        try {
-            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-            const data = await res.json();
-            if (data && data.rates && data.rates.THB) {
-                const currentRate = data.rates.THB.toFixed(2);
-                if (exchangeRateInput) {
-                    exchangeRateInput.value = currentRate;
-                    localStorage.setItem('lastExchangeRate', currentRate);
-                    console.log(`Updated Rate: ${currentRate}`);
-                }
-            }
-        } catch (e) { console.warn("Using default/cached exchange rate"); }
-
-        loadDashboardData();
+    // Helper Config สำหรับเส้น AI (ใช้ใน renderTrendChart)
+    function getAIDatasetConfig(data) {
+        return {
+            label: 'AI Forecast',
+            data: data,
+            borderColor: '#0dcaf0', // สีฟ้า Neon
+            backgroundColor: 'rgba(13, 202, 240, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],     // เส้นประ
+            tension: 0.4,
+            pointRadius: (ctx) => {
+                const index = ctx.dataIndex;
+                const val = ctx.dataset.data[index];
+                // จุดขึ้นเฉพาะค่าที่มีข้อมูลและเป็นส่วน Forecast
+                const actualLen = window.lastTrendData ? window.lastTrendData.length : 0;
+                return (val !== null && index >= actualLen) ? 4 : 0;
+            },
+            pointStyle: 'rectRot',
+            fill: false,
+            order: 0
+        };
     }
 
     // ==========================================
-    // 5. RENDERERS (FIXED BLINKING)
+    // 5. RENDERERS
     // ==========================================
 
     function formatMoney(amount) {
@@ -142,32 +182,22 @@ document.addEventListener('DOMContentLoaded', () => {
         safeSetText('kpi-rm', formatMoney(data.rm));
         safeSetText('kpi-dlot', formatMoney(data.dlot));
         safeSetText('kpi-oh', formatMoney(data.oh));
-
-        safeSetText('metric-units', data.total_units.toLocaleString());
+        
+        // Metrics
+        safeSetText('metric-units', data.total_units ? data.total_units.toLocaleString() : '0');
         safeSetText('metric-headcount', data.headcount);
         safeSetText('metric-lines', data.active_lines);
-
-        const units = data.total_units || 1;
-        safeSetText('metric-sale-unit', (data.sale / units).toFixed(2));
-        safeSetText('metric-cost-unit', (data.cost / units).toFixed(2));
-        safeSetText('metric-gp-unit', (data.gp / units).toFixed(2));
-        safeSetText('metric-rm-unit', (data.rm / units).toFixed(2));
-        safeSetText('metric-dlot-unit', (data.dlot / units).toFixed(2));
-        safeSetText('metric-oh-unit', (data.oh / units).toFixed(2));
     }
 
-    // ★★★ [FIXED] อัปเดตข้อมูลกราฟแทนการสร้างใหม่ (ลดการกระพริบ) ★★★
     function renderCharts(data) {
         // 1. Sale vs Cost Pie
         const ctx1 = document.getElementById('saleCostPieChart');
         if (ctx1) {
             const newData = [Math.max(0, data.gp), data.cost];
             if (salePieChart) {
-                // Update
                 salePieChart.data.datasets[0].data = newData;
                 salePieChart.update();
             } else {
-                // Create
                 salePieChart = new Chart(ctx1.getContext('2d'), {
                     type: 'doughnut',
                     data: {
@@ -187,11 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ctx2) {
             const newData = [data.rm, data.dlot, data.oh, data.scrap];
             if (costPieChart) {
-                // Update
                 costPieChart.data.datasets[0].data = newData;
                 costPieChart.update();
             } else {
-                // Create
                 costPieChart = new Chart(ctx2.getContext('2d'), {
                     type: 'pie',
                     data: {
@@ -207,8 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ★★★ [FIXED] อัปเดตกราฟ Trend แบบสมูท ★★★
+    // ★★★ MAIN TREND CHART (With AI & Fixes) ★★★
     function renderTrendChart(dailyData) {
+        window.lastTrendData = dailyData; // Cache Data
+
         const placeholder = document.getElementById('trend-placeholder');
         if (placeholder) placeholder.style.display = 'none';
 
@@ -216,37 +246,74 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ctxEl) return;
         const ctx = ctxEl.getContext('2d');
 
-        const labels = dailyData.map(d => {
+        // 1. Base Data
+        let salesData = dailyData.map(d => parseFloat(d.sale || 0));
+        let costsData = dailyData.map(d => parseFloat(d.cost || 0));
+        
+        let labels = dailyData.map(d => {
             const date = new Date(d.date);
             return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         });
-        const sales = dailyData.map(d => d.sale);
-        const costs = dailyData.map(d => d.cost);
-        // Profit สำหรับ Tooltip ไม่ต้องใส่ใน dataset หลักก็ได้
-        
+
+        // Prepare Forecast Data
+        let forecastData = new Array(salesData.length).fill(null);
+
+        // 2. AI Calculation
+        if (isAIEnabled && salesData.length >= 2) {
+            const lastIndex = salesData.length - 1;
+            forecastData[lastIndex] = salesData[lastIndex]; // Anchor point
+
+            // Calculate Trend
+            const { slope, intercept } = calculateTrendLine(salesData);
+            console.log(`AI Slope: ${slope}, Intercept: ${intercept}`);
+
+            // Predict next 7 days
+            const lastDateStr = dailyData[dailyData.length - 1].date;
+            let lastDateObj = new Date(lastDateStr);
+
+            for (let i = 1; i <= 7; i++) {
+                lastDateObj.setDate(lastDateObj.getDate() + 1);
+                labels.push(lastDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' (Pred)');
+
+                let nextX = salesData.length + i - 1;
+                let predictedVal = Math.max(0, (slope * nextX) + intercept);
+
+                salesData.push(null);
+                costsData.push(null);
+                forecastData.push(predictedVal);
+            }
+        }
+
+        // 3. Render
         if (trendChart) {
-            // Update Existing Chart
             trendChart.data.labels = labels;
-            trendChart.data.datasets[0].data = sales;
-            trendChart.data.datasets[1].data = costs;
+            trendChart.data.datasets[0].data = salesData;
+            trendChart.data.datasets[1].data = costsData;
+
+            const aiIndex = trendChart.data.datasets.findIndex(ds => ds.label === 'AI Forecast');
+            if (aiIndex === -1) {
+                trendChart.data.datasets.push(getAIDatasetConfig(forecastData));
+            } else {
+                trendChart.data.datasets[aiIndex].data = forecastData;
+            }
             trendChart.update();
         } else {
-            // Create New Chart
             trendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Revenue', data: sales,
+                            label: 'Revenue', data: salesData,
                             borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)',
                             borderWidth: 2, tension: 0.3, fill: true, pointRadius: 2, order: 2
                         },
                         {
-                            label: 'Total Cost', data: costs,
+                            label: 'Total Cost', data: costsData,
                             borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.05)',
-                            borderWidth: 2, borderDash: [5, 5], tension: 0.3, fill: false, pointRadius: 0, order: 1
-                        }
+                            borderWidth: 2, borderDash: [2, 2], tension: 0.3, fill: false, pointRadius: 0, order: 1
+                        },
+                        getAIDatasetConfig(forecastData)
                     ]
                 },
                 options: {
@@ -260,14 +327,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } }
                     },
                     plugins: {
-                        legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } },
+                        legend: { position: 'top', align: 'end' },
                         tooltip: {
                             callbacks: {
                                 label: (c) => (c.dataset.label || '') + ': ' + formatMoney(c.raw),
                                 afterBody: (items) => {
                                     const idx = items[0].dataIndex;
-                                    const profit = dailyData[idx].profit;
-                                    return `Net Profit: ${formatMoney(profit)}`;
+                                    // Safety Check
+                                    if (window.lastTrendData && idx < window.lastTrendData.length) {
+                                        return `Net Profit: ${formatMoney(window.lastTrendData[idx].profit)}`;
+                                    }
+                                    return `(AI Prediction)`;
                                 }
                             }
                         }
@@ -278,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderLineCards(lines) {
-        // Line cards เป็น HTML DOM ต้องสร้างใหม่เสมอ (ไม่มีวิธี update ที่คุ้มค่ากว่านี้)
         const container = document.getElementById('line-cards-container');
         if (!container) return;
         container.innerHTML = '';
@@ -334,13 +403,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ==========================================
+    // 6. MODALS
+    // ==========================================
+    
+    window.openExplainerModal = function(metric) {
+        const modalEl = document.getElementById('explainerModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        const titleEl = document.getElementById('explainerTitle');
+        const formulaEl = document.getElementById('explainerFormula');
+        const descEl = document.getElementById('explainerDesc');
+        const sourcesEl = document.getElementById('explainerSources');
+
+        const contentMap = {
+            'sale': { title: 'Total Sales Revenue', formula: 'SUM(FG_Qty × Price)', desc: 'ยอดขายคำนวณจากยอดผลิตจริง คูณด้วยราคาขาย (รวม Exchange Rate)', sources: ['Table: PRODUCTION_FG', 'Table: ITEMS'] },
+            'cost': { title: 'Total Cost', formula: 'RM + Labor + OH + Scrap', desc: 'ต้นทุนการผลิตรวมทั้งหมด', sources: ['Calculated'] },
+            'gp': { title: 'Gross Profit', formula: 'Sale - Cost', desc: 'กำไรขั้นต้นจากการผลิต', sources: ['Calculated'] },
+            'rm': { title: 'Raw Material', formula: 'SUM(FG × BOM Cost)', desc: 'ต้นทุนวัตถุดิบทางทฤษฎี', sources: ['Table: ITEMS'] },
+            'labor': { title: 'Labor Cost', formula: 'Actual DL + OT', desc: 'ค่าแรงจริงจากระบบ Manpower (Sync)', sources: ['Table: MANUAL_COSTS'] },
+            'oh': { title: 'Overhead', formula: 'SUM(FG × OH Rate)', desc: 'ค่าโสหุ้ยการผลิต (จัดสรร)', sources: ['Table: ITEMS'] },
+            'scrap': { title: 'Scrap Loss', formula: 'SUM(Scrap Qty × Cost)', desc: 'มูลค่าความเสียหายจากงานเสีย', sources: ['Table: PRODUCTION_SCRAP'] },
+            'chart-sale-cost': { title: 'Sale vs Cost', formula: 'Chart', desc: 'เปรียบเทียบยอดขายและต้นทุน', sources: ['Summary'] },
+            'chart-cost-breakdown': { title: 'Cost Structure', formula: 'Chart', desc: 'สัดส่วนโครงสร้างต้นทุน', sources: ['Summary'] }
+        };
+
+        const content = contentMap[metric];
+        if (content) {
+            titleEl.textContent = content.title;
+            formulaEl.textContent = content.formula;
+            descEl.textContent = content.desc;
+            sourcesEl.innerHTML = content.sources.map(s => `<li class="list-group-item px-0 py-1 border-0 bg-transparent"><i class="fas fa-caret-right me-2 text-secondary"></i>${s}</li>`).join('');
+            modal.show();
+        }
+    };
+
     window.openLineDetailModal = async function(lineName) {
         const date = endDateInput.value; 
         const modal = new bootstrap.Modal(document.getElementById('lineDetailModal'));
         document.getElementById('lineDetailTitle').textContent = lineName;
         document.getElementById('lineDetailSubtitle').textContent = `Details for ${date}`;
         
-        // Reset Tabs
         const tabEl = document.querySelector('#lineTabs button[data-bs-target="#tabTrend"]');
         if(tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
 
@@ -350,7 +453,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const json = await res.json();
             if (json.success) {
                 renderHourlyChart(json.hourly);
-                // (Tables logic ... kept short for brevity, assumed same as previous)
                 const buildRows = (arr, mapFn, emptyMsg) => arr.length ? arr.map(mapFn).join('') : `<tr><td colspan="4" class="text-center text-muted py-3 small">${emptyMsg}</td></tr>`;
                 
                 document.getElementById('tblDowntimeBody').innerHTML = buildRows(json.downtime, d => `<tr><td><span class="badge bg-light text-dark border">${d.start_time}-${d.end_time}</span></td><td class="fw-bold text-secondary">${d.machine}</td><td class="text-danger">${d.cause}</td><td class="text-end fw-bold">${d.duration}</td></tr>`, 'No downtime');
@@ -365,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHourlyChart(data) {
         const ctxEl = document.getElementById('lineHourlyChart');
         if (!ctxEl) return;
-        // Modal chart destroyed/created is fine because modal is hidden/shown
         if (lineHourlyChart) lineHourlyChart.destroy();
         
         const dataMap = {};
@@ -386,216 +487,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.openExplainerModal = function(metric) {
-        const modalEl = document.getElementById('explainerModal');
-        const modal = new bootstrap.Modal(modalEl);
-        
-        const titleEl = document.getElementById('explainerTitle');
-        const formulaEl = document.getElementById('explainerFormula');
-        const descEl = document.getElementById('explainerDesc');
-        const sourcesEl = document.getElementById('explainerSources');
-
-        // --- Dictionary เก็บคำอธิบาย ---
-        const contentMap = {
-            'sale': {
-                title: 'Total Sales Revenue (ยอดขายรวม)',
-                formula: 'SUM ( FG_Qty × Unit_Price )',
-                desc: 'คำนวณจากยอดผลิต FG ที่บันทึกผ่านระบบ คูณด้วยราคาขายต่อหน่วย (ถ้ามีราคา USD จะแปลงเป็น THB ตาม Rate ที่ระบุ)',
-                sources: ['Table: TRANSACTIONS (Type: PRODUCTION_FG)', 'Table: ITEMS (Price_USD, StandardPrice)', 'Input: Exchange Rate']
-            },
-            'cost': {
-                title: 'Total Production Cost (ต้นทุนผลิตรวม)',
-                formula: 'RM + Labor + Overhead + Scrap',
-                desc: 'ต้นทุนการผลิตทั้งหมดที่เกิดขึ้นจริงและประมาณการ ประกอบด้วย ค่าวัตถุดิบ, ค่าแรง, ค่าโสหุ้ย และงานเสีย',
-                sources: ['Calculated from Sub-components']
-            },
-            'gp': {
-                title: 'Gross Profit (กำไรขั้นต้น)',
-                formula: 'Total Sales - Total Production Cost',
-                desc: 'กำไรขั้นต้นจากการผลิต (ยังไม่หัก SG&A หรือ Tax)',
-                sources: ['Calculation']
-            },
-            'rm': {
-                title: 'Raw Material Cost (ค่าวัตถุดิบ)',
-                formula: 'SUM ( FG_Qty × BOM_Cost )',
-                desc: 'ต้นทุนวัตถุดิบทางทฤษฎี (Standard Cost) ตามยอดที่ผลิตได้ ประกอบด้วย RM, Packaging, และ Sub-material',
-                sources: ['Table: ITEMS (Cost_RM, Cost_PKG, Cost_SUB)']
-            },
-            'labor': {
-                title: 'Actual Labor Cost (ค่าแรงทางตรง)',
-                formula: 'Total Daily Wage + Overtime',
-                desc: 'ค่าแรงจริงที่จ่ายให้พนักงานรายวันและรายเดือนในไลน์ผลิต (คำนวณจากระบบสแกนนิ้ว Manpower)',
-                sources: ['Table: MANPOWER_DAILY_LOGS', 'Table: MANUAL_COSTS (Synced Data)']
-            },
-            'oh': {
-                title: 'Overhead Cost (ค่าโสหุ้ยการผลิต)',
-                formula: 'SUM ( FG_Qty × Std_OH_Rate )',
-                desc: 'ค่าใช้จ่ายการผลิตทางอ้อม (Allocated) เช่น ค่าไฟ, ค่าเสื่อมเครื่องจักร, วัสดุสิ้นเปลือง',
-                sources: ['Table: ITEMS (Cost_OH_Machine, Cost_OH_Utilities, etc.)']
-            },
-            'scrap': {
-                title: 'Scrap Cost (มูลค่างานเสีย)',
-                formula: 'SUM ( Scrap_Qty × Unit_Cost )',
-                desc: 'มูลค่าความเสียหายจากงานเสียที่เกิดขึ้นในกระบวนการ',
-                sources: ['Table: TRANSACTIONS (Type: PRODUCTION_SCRAP)', 'Table: ITEMS (Cost_Total)']
-            },
-            'chart-sale-cost': {
-                title: 'Revenue vs Cost Chart',
-                formula: 'Visual Comparison',
-                desc: 'กราฟเปรียบเทียบสัดส่วนระหว่าง รายได้ (สีเขียว) และ ต้นทุน (สีแดง) เพื่อดู Margin ภาพรวม',
-                sources: ['Dashboard Summary Data']
-            },
-            'chart-cost-breakdown': {
-                title: 'Cost Structure Chart',
-                formula: 'Proportion %',
-                desc: 'กราฟวงกลมแสดงโครงสร้างต้นทุนว่าหนักไปที่ส่วนไหน (RM, Labor, OH, Scrap)',
-                sources: ['Dashboard Summary Data']
-            }
-        };
-
-        const content = contentMap[metric];
-
-        if (content) {
-            titleEl.innerHTML = `<i class="fas fa-info-circle me-2 text-primary"></i>${content.title}`;
-            formulaEl.textContent = content.formula;
-            descEl.textContent = content.desc;
-            
-            // Generate List
-            sourcesEl.innerHTML = content.sources.map(s => 
-                `<li class="list-group-item px-0 py-1 border-0 bg-transparent">
-                    <i class="fas fa-caret-right me-2 text-secondary"></i>${s}
-                 </li>`
-            ).join('');
-
-            modal.show();
-        } else {
-            console.warn('No explanation found for:', metric);
-        }
-    };
-
     // ==========================================
-    // 7. RENDER TREND CHART (Sale vs Cost)
+    // 7. SYSTEM START
     // ==========================================
-    function renderTrendChart(dailyData) {
-        const placeholder = document.getElementById('trend-placeholder');
-        if (placeholder) placeholder.style.display = 'none';
-
-        const ctxEl = document.getElementById('financialTrendChart');
-        if (!ctxEl) return;
-        const ctx = ctxEl.getContext('2d');
-
-        // เตรียมข้อมูลใหม่
-        const labels = dailyData.map(d => {
-            const date = new Date(d.date);
-            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        });
-        const sales = dailyData.map(d => d.sale);
-        const costs = dailyData.map(d => d.cost);
-        
-        // เช็คว่ามีกราฟอยู่แล้วหรือยัง?
-        if (trendChart) {
-            // [CASE UPDATE] อัดข้อมูลใหม่ใส่เข้าไป แล้วสั่ง update()
-            trendChart.data.labels = labels;
-            trendChart.data.datasets[0].data = sales;
-            trendChart.data.datasets[1].data = costs;
-            trendChart.update(); // อัปเดตแบบ Default animation
-        } else {
-            // [CASE CREATE] สร้างใหม่ครั้งแรก
-            trendChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Revenue', data: sales,
-                            borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                            borderWidth: 2, tension: 0.3, fill: true, pointRadius: 2, order: 2
-                        },
-                        {
-                            label: 'Total Cost', data: costs,
-                            borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.05)',
-                            borderWidth: 2, borderDash: [5, 5], tension: 0.3, fill: false, pointRadius: 0, order: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: {
-                            beginAtZero: true, grid: { borderDash: [2, 2], color: '#f0f0f0' },
-                            ticks: { callback: function(val) { return val >= 1000000 ? '฿' + (val/1000000).toFixed(1) + 'M' : val; } }
-                        },
-                        x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } }
-                    },
-                    plugins: {
-                        legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } },
-                        tooltip: {
-                            callbacks: {
-                                label: (c) => (c.dataset.label || '') + ': ' + formatMoney(c.raw),
-                                afterBody: (items) => {
-                                    const idx = items[0].dataIndex;
-                                    const profit = dailyData[idx].profit;
-                                    return `Net Profit: ${formatMoney(profit)}`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+    
+    function updateLiveClock() {
+        if (liveClockEl) {
+            const now = new Date();
+            liveClockEl.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
     }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock(); 
+    setInterval(() => { loadDashboardData(true); }, 60000);
 
-    // ==========================================
-    // 8. ADMIN ACTION: SYNC LABOR COST
-    // ==========================================
+    async function initSystem() {
+        const savedRate = localStorage.getItem('lastExchangeRate');
+        if (savedRate && exchangeRateInput) exchangeRateInput.value = savedRate;
+        loadDashboardData();
+    }
+    
+    // Admin Sync Action (Moved to end)
     window.syncLaborCost = async function() {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-
-        if(!confirm(`Start Sync Actual Labor Cost from Manpower System?\n\nDate Range: ${start} to ${end}\n\n(This calculates actual DL/OT cost for Executive Report)`)) return;
-        showSpinner(); 
-
+        const start = startDateInput.value;
+        const end = endDateInput.value;
+        if(!confirm(`Sync Labor Cost?\n${start} to ${end}`)) return;
+        showSpinner();
         try {
-            const res = await fetch('api/dlot_manual_manage.php', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'sync_dlot_batch',
-                    startDate: start,
-                    endDate: end
-                })
-            });
-
-            const text = await res.text();
-            let json;
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                console.error("Server Error:", text);
-                throw new Error("Invalid server response");
-            }
-
-            if (json.success) {
-                if (typeof showToast === 'function') {
-                    showToast('Sync Completed Successfully!', 'var(--bs-success)');
-                } else {
-                    alert('Sync Completed Successfully!');
-                }
-                loadDashboardData(); 
-            } else {
-                alert('Sync Failed: ' + (json.message || 'Unknown error'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error connecting to server. Check console for details.');
-        } finally {
-            hideSpinner();
-        }
+            const res = await fetch('api/dlot_manual_manage.php', { method: 'POST', body: JSON.stringify({ action: 'sync_dlot_batch', startDate: start, endDate: end }) });
+            const json = await res.json();
+            if(json.success) { showToast('Synced!', 'var(--bs-success)'); loadDashboardData(); }
+            else alert(json.message);
+        } catch(e) { console.error(e); } finally { hideSpinner(); }
     };
 
-    // ==========================================
-    // 9. START SYSTEM
-    // ==========================================
     initSystem();
 });
