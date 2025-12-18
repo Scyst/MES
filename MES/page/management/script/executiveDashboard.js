@@ -386,54 +386,91 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ★★★ [UPDATED] เพิ่มคำอธิบายกราฟใน Modal ★★★
     window.openExplainerModal = function(metric) {
-        const modal = new bootstrap.Modal(document.getElementById('explainerModal'));
-        const title = document.getElementById('explainerTitle');
-        const formula = document.getElementById('explainerFormula');
-        const sources = document.getElementById('explainerSources');
+        const modalEl = document.getElementById('explainerModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        const titleEl = document.getElementById('explainerTitle');
+        const formulaEl = document.getElementById('explainerFormula');
+        const descEl = document.getElementById('explainerDesc');
+        const sourcesEl = document.getElementById('explainerSources');
 
-        let content = { title: '', formula: '', sources: [] };
+        // --- Dictionary เก็บคำอธิบาย ---
+        const contentMap = {
+            'sale': {
+                title: 'Total Sales Revenue (ยอดขายรวม)',
+                formula: 'SUM ( FG_Qty × Unit_Price )',
+                desc: 'คำนวณจากยอดผลิต FG ที่บันทึกผ่านระบบ คูณด้วยราคาขายต่อหน่วย (ถ้ามีราคา USD จะแปลงเป็น THB ตาม Rate ที่ระบุ)',
+                sources: ['Table: TRANSACTIONS (Type: PRODUCTION_FG)', 'Table: ITEMS (Price_USD, StandardPrice)', 'Input: Exchange Rate']
+            },
+            'cost': {
+                title: 'Total Production Cost (ต้นทุนผลิตรวม)',
+                formula: 'RM + Labor + Overhead + Scrap',
+                desc: 'ต้นทุนการผลิตทั้งหมดที่เกิดขึ้นจริงและประมาณการ ประกอบด้วย ค่าวัตถุดิบ, ค่าแรง, ค่าโสหุ้ย และงานเสีย',
+                sources: ['Calculated from Sub-components']
+            },
+            'gp': {
+                title: 'Gross Profit (กำไรขั้นต้น)',
+                formula: 'Total Sales - Total Production Cost',
+                desc: 'กำไรขั้นต้นจากการผลิต (ยังไม่หัก SG&A หรือ Tax)',
+                sources: ['Calculation']
+            },
+            'rm': {
+                title: 'Raw Material Cost (ค่าวัตถุดิบ)',
+                formula: 'SUM ( FG_Qty × BOM_Cost )',
+                desc: 'ต้นทุนวัตถุดิบทางทฤษฎี (Standard Cost) ตามยอดที่ผลิตได้ ประกอบด้วย RM, Packaging, และ Sub-material',
+                sources: ['Table: ITEMS (Cost_RM, Cost_PKG, Cost_SUB)']
+            },
+            'labor': {
+                title: 'Actual Labor Cost (ค่าแรงทางตรง)',
+                formula: 'Total Daily Wage + Overtime',
+                desc: 'ค่าแรงจริงที่จ่ายให้พนักงานรายวันและรายเดือนในไลน์ผลิต (คำนวณจากระบบสแกนนิ้ว Manpower)',
+                sources: ['Table: MANPOWER_DAILY_LOGS', 'Table: MANUAL_COSTS (Synced Data)']
+            },
+            'oh': {
+                title: 'Overhead Cost (ค่าโสหุ้ยการผลิต)',
+                formula: 'SUM ( FG_Qty × Std_OH_Rate )',
+                desc: 'ค่าใช้จ่ายการผลิตทางอ้อม (Allocated) เช่น ค่าไฟ, ค่าเสื่อมเครื่องจักร, วัสดุสิ้นเปลือง',
+                sources: ['Table: ITEMS (Cost_OH_Machine, Cost_OH_Utilities, etc.)']
+            },
+            'scrap': {
+                title: 'Scrap Cost (มูลค่างานเสีย)',
+                formula: 'SUM ( Scrap_Qty × Unit_Cost )',
+                desc: 'มูลค่าความเสียหายจากงานเสียที่เกิดขึ้นในกระบวนการ',
+                sources: ['Table: TRANSACTIONS (Type: PRODUCTION_SCRAP)', 'Table: ITEMS (Cost_Total)']
+            },
+            'chart-sale-cost': {
+                title: 'Revenue vs Cost Chart',
+                formula: 'Visual Comparison',
+                desc: 'กราฟเปรียบเทียบสัดส่วนระหว่าง รายได้ (สีเขียว) และ ต้นทุน (สีแดง) เพื่อดู Margin ภาพรวม',
+                sources: ['Dashboard Summary Data']
+            },
+            'chart-cost-breakdown': {
+                title: 'Cost Structure Chart',
+                formula: 'Proportion %',
+                desc: 'กราฟวงกลมแสดงโครงสร้างต้นทุนว่าหนักไปที่ส่วนไหน (RM, Labor, OH, Scrap)',
+                sources: ['Dashboard Summary Data']
+            }
+        };
 
-        if (metric === 'sale') {
-            content.title = 'Total Sales Revenue (Actual)';
-            content.formula = 'SUM ( FG_Qty × Price_USD × ExchangeRate )';
-            content.sources = ['STOCK_TRANSACTIONS (Type: FG)', 'ITEMS (Price USD)', 'Input: Exchange Rate'];
-        } else if (metric === 'cost') {
-            content.title = 'Total Production Cost';
-            content.formula = 'RM + Labor(Actual) + OH + Scrap';
-            content.sources = ['Standard Cost (RM, OH)', 'Manual/Auto Labor Cost', 'Scrap Cost'];
-        } else if (metric === 'gp') {
-            content.title = 'Gross Profit';
-            content.formula = 'Sales - Total Cost';
-            content.sources = ['Calculation'];
-        } else if (metric === 'chart-sale-cost') {
-            content.title = 'Revenue vs Cost Analysis';
-            content.formula = 'Comparison of Total Revenue and Total Cost';
-            content.sources = ['Snapshot of current period data'];
-        } else if (metric === 'chart-cost-breakdown') {
-            content.title = 'Cost Structure Breakdown';
-            content.formula = 'Proportion of RM, Labor, OH, and Scrap';
-            content.sources = ['RM: Material Cost', 'Labor: DL+OT', 'OH: Overhead Allocation', 'Scrap: Waste Value'];
-        } else if (metric === 'rm') {
-            content.title = 'Raw Material Cost';
-            content.formula = 'SUM ( Actual_Qty × (Cost_RM + Pkg + Sub) )';
-            content.sources = ['Table: ITEMS'];
-        } else if (metric === 'dlot') {
-            content.title = 'Direct Labor & Overtime';
-            content.formula = 'SUM ( Actual Paid Amount )';
-            content.sources = ['Table: MES_MANUAL_DAILY_COSTS', 'Source: Manpower System'];
-        } else if (metric === 'oh') {
-            content.title = 'Overhead Cost';
-            content.formula = 'SUM ( Actual_Qty × OH_Allocation )';
-            content.sources = ['Table: ITEMS'];
+        const content = contentMap[metric];
+
+        if (content) {
+            titleEl.innerHTML = `<i class="fas fa-info-circle me-2 text-primary"></i>${content.title}`;
+            formulaEl.textContent = content.formula;
+            descEl.textContent = content.desc;
+            
+            // Generate List
+            sourcesEl.innerHTML = content.sources.map(s => 
+                `<li class="list-group-item px-0 py-1 border-0 bg-transparent">
+                    <i class="fas fa-caret-right me-2 text-secondary"></i>${s}
+                 </li>`
+            ).join('');
+
+            modal.show();
+        } else {
+            console.warn('No explanation found for:', metric);
         }
-
-        if (title) title.textContent = content.title;
-        if (formula) formula.textContent = content.formula;
-        if (sources) sources.innerHTML = content.sources.map(s => `<li class="list-group-item px-0 py-1 border-0"><i class="fas fa-caret-right me-2 text-secondary"></i>${s}</li>`).join('');
-
-        modal.show();
     };
 
     // ==========================================
@@ -510,7 +547,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 8. START SYSTEM
+    // 8. ADMIN ACTION: SYNC LABOR COST
+    // ==========================================
+    window.syncLaborCost = async function() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+
+        if(!confirm(`Start Sync Actual Labor Cost from Manpower System?\n\nDate Range: ${start} to ${end}\n\n(This calculates actual DL/OT cost for Executive Report)`)) return;
+        showSpinner(); 
+
+        try {
+            const res = await fetch('api/dlot_manual_manage.php', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'sync_dlot_batch',
+                    startDate: start,
+                    endDate: end
+                })
+            });
+
+            const text = await res.text();
+            let json;
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                console.error("Server Error:", text);
+                throw new Error("Invalid server response");
+            }
+
+            if (json.success) {
+                if (typeof showToast === 'function') {
+                    showToast('Sync Completed Successfully!', 'var(--bs-success)');
+                } else {
+                    alert('Sync Completed Successfully!');
+                }
+                loadDashboardData(); 
+            } else {
+                alert('Sync Failed: ' + (json.message || 'Unknown error'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error connecting to server. Check console for details.');
+        } finally {
+            hideSpinner();
+        }
+    };
+
+    // ==========================================
+    // 9. START SYSTEM
     // ==========================================
     initSystem();
 });

@@ -927,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             usePointStyle: true, boxWidth: 8, font: { size: 11 },
                             generateLabels: (chart) => [
                                 { text: 'Target Trend', strokeStyle: 'rgb(54, 162, 235)', lineWidth: 2, borderDash: [5, 5], fillStyle: 'transparent' },
-                                { text: 'Actual Trend', strokeStyle: 'rgb(111, 66, 193)', lineWidth: 2, fillStyle: 'transparent' },
+                                { text: 'Actual Trend', strokeStyle: 'rgb(75, 192, 192)', lineWidth: 2, fillStyle: 'transparent' },
                                 { text: 'Target Rev.', fillStyle: 'rgba(255, 205, 86, 0.2)', strokeStyle: 'rgba(255, 205, 86, 0.6)', lineWidth: 1 },
                                 { text: 'Actual (Hit)', fillStyle: 'rgba(75, 192, 192, 1)', strokeStyle: 'rgba(75, 192, 192, 1)', lineWidth: 0 },
                                 { text: 'Actual (Miss)', fillStyle: 'rgba(255, 99, 132, 1)', strokeStyle: 'rgba(255, 99, 132, 1)', lineWidth: 0 }

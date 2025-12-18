@@ -14,8 +14,8 @@ if (!hasRole(['admin', 'creator', 'planner'])) {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
+$action = $_GET['action'] ?? $_POST['action'] ?? $input['action'] ?? '';
 
 // รวม Input จาก GET/POST/JSON ให้เรียกใช้ง่ายๆ
 $data = array_merge($_GET, $_POST, $input);
