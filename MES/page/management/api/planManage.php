@@ -269,6 +269,8 @@ try {
             $pdo->beginTransaction();
             try {
                 $checkItem = $pdo->prepare("SELECT TOP 1 item_id FROM $itemTable WHERE sap_no = ? OR part_no = ?");
+                
+                // ★★★ แก้ไข SQL ตรงนี้ (เพิ่ม carry_over_quantity = 0) ★★★
                 $sqlMerge = "
                     MERGE INTO $planTable AS T
                     USING (VALUES (:plan_date, :line, :shift, :item_id, :qty, :user)) 
@@ -277,15 +279,18 @@ try {
                     WHEN MATCHED THEN
                         UPDATE SET original_planned_quantity = S.qty, updated_by = S.user_Update, updated_at = GETDATE()
                     WHEN NOT MATCHED THEN
-                        INSERT (plan_date, line, shift, item_id, original_planned_quantity, updated_by)
-                        VALUES (S.plan_date, S.line, S.shift, S.item_id, S.qty, S.user_Update);
+                        INSERT (plan_date, line, shift, item_id, original_planned_quantity, carry_over_quantity, updated_by)
+                        VALUES (S.plan_date, S.line, S.shift, S.item_id, S.qty, 0, S.user_Update);
                 ";
+                // ★★★ จบการแก้ไข (เพิ่ม 0 ใน VALUES ตัวรองสุดท้าย) ★★★
+
                 $stmtMerge = $pdo->prepare($sqlMerge);
                 $currentUser = $_SESSION['user']['username'] ?? 'System';
 
                 $count = 0;
                 $errors = [];
                 foreach ($plans as $index => $row) {
+                    // ... (โค้ดใน Loop เหมือนเดิม ไม่ต้องแก้) ...
                     $itemCode = trim($row['item_code']);
                     $checkItem->execute([$itemCode, $itemCode]);
                     $itemId = $checkItem->fetchColumn();

@@ -37,117 +37,133 @@ $pageHelpId = "execHelpModal"; // ID ของ Modal คู่มือที่
             
             <div class="content-wrapper">
                 
-                <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
-                    <div>
-                        <h4 class="fw-bold text-dark mb-0">Executive Overview</h4>
-                        <div class="d-flex align-items-center gap-2 text-muted small">
-                            <span>Financial & Operational Performance</span>
-                            <span class="text-secondary opacity-50">|</span>
-                            <span id="last-update-time" class="badge bg-success bg-opacity-10 text-success fw-normal">
-                                <i class="fas fa-circle me-1" style="font-size: 6px;"></i>Live
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        
+                    <div class="d-flex align-items-center">
+                        <div id="last-update-time" class="d-flex align-items-center gap-2 text-secondary bg-white px-3 py-2 rounded shadow-sm border" style="font-size: 0.9rem;">
+                            <span class="position-relative d-flex h-2 w-2">
+                            <span class="position-absolute top-0 start-0 h-100 w-100 rounded-circle bg-success opacity-75 animate-ping"></span>
+                            <span class="position-relative d-inline-flex rounded-circle h-2 w-2 bg-success" style="width: 8px; height: 8px;"></span>
                             </span>
+                            <span class="fw-bold">Live System</span>
+                            <span class="text-muted small border-start ps-2 ms-1" id="live-clock">--:--</span>
                         </div>
                     </div>
-                    
-                    <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border" style="height: 42px;">
+
+                    <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                         
-                        <div class="input-group input-group-sm h-100" style="width: 130px;">
-                            <span class="input-group-text bg-light border-0 fw-bold text-secondary">USD</span>
-                            <input type="number" id="exchangeRate" class="form-control border-0 bg-light text-primary fw-bold text-end" value="34.0" step="0.1">
+                        <div class="input-group input-group-sm border-end pe-2" style="width: 140px;">
+                            <span class="input-group-text bg-transparent border-0 text-muted small text-uppercase fw-bold">USD</span>
+                            <input type="number" id="exchangeRate" class="form-control border-0 bg-light text-primary fw-bold text-end rounded-end" value="34.0" step="0.1">
                         </div>
                         
-                        <div class="vr mx-2 text-muted opacity-25"></div>
-                        
-                        <div class="input-group input-group-sm h-100" style="width: auto;">
-                            <input type="date" id="startDate" class="form-control border-0">
-                            <span class="input-group-text bg-white border-0 text-muted"><i class="fas fa-arrow-right small"></i></span>
-                            <input type="date" id="endDate" class="form-control border-0">
+                        <div class="d-flex align-items-center px-2">
+                            <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent text-dark fw-bold" style="width: 110px; cursor: pointer;">
+                            <span class="text-muted mx-1"><i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></span>
+                            <input type="date" id="endDate" class="form-control form-control-sm border-0 bg-transparent text-dark fw-bold" style="width: 110px; cursor: pointer;">
                         </div>
 
-                        <div class="vr mx-2 text-muted opacity-25"></div>
+                        <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
-                        <button class="btn btn-primary btn-sm fw-bold px-3 h-100 rounded" onclick="loadDashboardData()" style="min-width: 90px;">
-                            <i class="fas fa-sync-alt me-1"></i> Update
+                        <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="loadDashboardData()" style="height: 34px;">
+                            <i class="fas fa-sync-alt me-1"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 border-start border-4 border-success position-relative cursor-pointer" onclick="openExplainerModal('sale')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">Sale</div>
-                                <h4 class="fw-bolder text-dark mb-0" id="kpi-sale">-</h4>
-                                <small class="text-success" id="kpi-sale-unit">THB</small>
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-4 col-xl-2">
+                        <div class="exec-card border-start border-4 border-success p-3 cursor-pointer" onclick="openExplainerModal('sale')">
+                            <div class="kpi-card-content">
+                                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Total Revenue</small>
+                                <h4 class="fw-bold text-dark mb-0 mt-1" id="kpi-sale">-</h4>
+                                <small class="text-success mt-1"><i class="fas fa-arrow-up small me-1"></i>Actual</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 border-start border-4 border-danger position-relative cursor-pointer" onclick="openExplainerModal('cost')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">Cost</div>
-                                <h4 class="fw-bolder text-dark mb-0" id="kpi-cost">-</h4>
-                                <small class="text-danger">Total Cost</small>
+                    
+                    <div class="col-6 col-md-4 col-xl-2">
+                        <div class="exec-card border-start border-4 border-danger p-3 cursor-pointer" onclick="openExplainerModal('cost')">
+                            <div class="kpi-card-content">
+                                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Total Cost</small>
+                                <h4 class="fw-bold text-dark mb-0 mt-1" id="kpi-cost">-</h4>
+                                <small class="text-danger mt-1">Actual</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 border-start border-4 border-primary position-relative cursor-pointer" onclick="openExplainerModal('gp')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">Gross Profit</div>
-                                <h4 class="fw-bolder text-dark mb-0" id="kpi-gp">-</h4>
-                                <small class="text-muted" id="kpi-gp-percent">0%</small>
+
+                    <div class="col-12 col-md-4 col-xl-2">
+                        <div class="exec-card border-start border-4 border-primary bg-primary bg-opacity-10 p-3 cursor-pointer" onclick="openExplainerModal('gp')" style="border-color: var(--bs-primary) !important;">
+                            <div class="kpi-card-content">
+                                <small class="text-uppercase text-primary fw-bold" style="font-size: 0.7rem;">Gross Profit</small>
+                                <h4 class="fw-bold text-primary mb-0 mt-1" id="kpi-gp">-</h4>
+                                <span id="kpi-gp-percent" class="badge bg-primary text-white mt-2 align-self-start">0%</span>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 bg-white border position-relative cursor-pointer" onclick="openExplainerModal('rm')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">RM</div>
-                                <h5 class="fw-bold text-secondary mb-0" id="kpi-rm">-</h5>
-                            </div>
+
+                    <div class="col-4 col-md-4 col-xl-2">
+                        <div class="exec-card p-3 text-center bg-light border-0">
+                            <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Material (RM)</small>
+                            <h6 class="fw-bold text-secondary mb-0" id="kpi-rm">-</h6>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 bg-white border position-relative cursor-pointer" onclick="openExplainerModal('dlot')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">DLOT</div>
-                                <h5 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h5>
-                                <small class="text-muted" style="font-size: 0.7em;">Actual Labor</small>
-                            </div>
+                    <div class="col-4 col-md-4 col-xl-2">
+                        <div class="exec-card p-3 text-center bg-light border-0">
+                            <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Labor (DL+OT)</small>
+                            <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h6>
                         </div>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <div class="exec-card h-100 bg-white border position-relative cursor-pointer" onclick="openExplainerModal('oh')">
-                            <i class="fas fa-info-circle position-absolute top-0 end-0 m-2 text-muted opacity-25"></i>
-                            <div class="card-body p-3 text-center">
-                                <div class="text-uppercase text-muted small fw-bold mb-1">OH</div>
-                                <h5 class="fw-bold text-secondary mb-0" id="kpi-oh">-</h5>
+                    <div class="col-4 col-md-4 col-xl-2">
+                        <div class="exec-card p-3 text-center bg-light border-0">
+                            <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Overhead (OH)</small>
+                            <h6 class="fw-bold text-secondary mb-0" id="kpi-oh">-</h6>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="exec-card p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-chart-line me-2 text-primary"></i>Revenue & Cost Trend
+                                </h6>
+                                </div>
+                            <div id="trend-chart-container">
+                                <canvas id="financialTrendChart"></canvas> 
+                                <div id="trend-placeholder" class="position-absolute top-50 start-50 translate-middle text-center text-muted">
+                                    <i class="fas fa-chart-area fa-2x mb-2 opacity-25"></i>
+                                    <p class="small m-0">Waiting for daily data feed...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-3">
                     <div class="col-lg-8">
-                        <div class="exec-card h-100 p-3">
-                            <div class="row h-100 align-items-center">
-                                <div class="col-md-6 text-center border-end">
-                                    <h6 class="fw-bold text-muted mb-3">Sale vs Cost</h6>
+                        <div class="exec-card p-3">
+                            <h6 class="fw-bold text-muted mb-3 small text-uppercase">Cost Structure Analysis</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6 border-end">
+                                    <div class="d-flex justify-content-center align-items-center mb-2">
+                                        <span class="fw-bold text-dark small">Sale vs Cost</span>
+                                        <i class="fas fa-info-circle text-muted opacity-25 ms-2 cursor-pointer" onclick="openExplainerModal('chart-sale-cost')" title="Click for details"></i>
+                                    </div>
+                                    
                                     <div style="height: 200px; position: relative;">
                                         <canvas id="saleCostPieChart"></canvas>
                                     </div>
-                                    <div class="mt-2 small text-muted">
-                                        Margin: <span id="chart-gp-percent" class="fw-bold text-success">0%</span>
-                                    </div>
                                 </div>
-                                <div class="col-md-6 text-center">
-                                    <h6 class="fw-bold text-muted mb-3">Cost Breakdown</h6>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-center align-items-center mb-2">
+                                        <span class="fw-bold text-dark small">Cost Breakdown</span>
+                                        <i class="fas fa-info-circle text-muted opacity-25 ms-2 cursor-pointer" onclick="openExplainerModal('chart-cost-breakdown')" title="Click for details"></i>
+                                    </div>
+
                                     <div style="height: 200px; position: relative;">
                                         <canvas id="costBreakdownPieChart"></canvas>
                                     </div>
@@ -155,55 +171,30 @@ $pageHelpId = "execHelpModal"; // ID ของ Modal คู่มือที่
                             </div>
                         </div>
                     </div>
-
                     <div class="col-lg-4">
-                        <div class="exec-card h-100 p-0 overflow-hidden">
+                        <div class="exec-card p-0 overflow-hidden">
                             <div class="metric-grid">
                                 <div class="metric-box">
                                     <h3 class="mb-0 fw-bold text-primary" id="metric-units">-</h3>
-                                    <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Total Units</small>
+                                    <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Total Units</small>
                                 </div>
                                 <div class="metric-box">
                                     <h3 class="mb-0 fw-bold text-info" id="metric-headcount">-</h3>
-                                    <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Employees</small>
+                                    <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Employees</small>
                                 </div>
                                 <div class="metric-box">
                                     <h3 class="mb-0 fw-bold text-warning" id="metric-lines">-</h3>
-                                    <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Active Lines</small>
+                                    <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Active Lines</small>
                                 </div>
-                                <div class="metric-box bg-light">
-                                    <h5 class="mb-0 fw-bold" id="metric-sale-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Sale / Unit</small>
                                 </div>
-                                <div class="metric-box bg-light">
-                                    <h5 class="mb-0 fw-bold" id="metric-cost-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Cost / Unit</small>
-                                </div>
-                                <div class="metric-box bg-light">
-                                    <h5 class="mb-0 fw-bold text-success" id="metric-gp-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">GP / Unit</small>
-                                </div>
-                                <div class="metric-box">
-                                    <h5 class="mb-0 fw-bold text-secondary" id="metric-rm-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">RM / Unit</small>
-                                </div>
-                                <div class="metric-box">
-                                    <h5 class="mb-0 fw-bold text-secondary" id="metric-dlot-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Labor / Unit</small>
-                                </div>
-                                <div class="metric-box">
-                                    <h5 class="mb-0 fw-bold text-secondary" id="metric-oh-unit">-</h5>
-                                    <small class="text-muted" style="font-size: 0.7rem;">OH / Unit</small>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="d-flex align-items-center mb-3">
-                    <h6 class="fw-bold text-dark mb-0"><i class="fas fa-layer-group me-2 text-primary"></i>Line Performance</h6>
-                    <hr class="flex-grow-1 ms-3 my-0 border-secondary opacity-25">
-                </div>
+                    <h6 class="fw-bold text-dark mb-0"><i class="fas fa-industry me-2 text-secondary"></i>Line Performance</h6>
+                    <hr class="flex-grow-1 ms-3 my-0 border-secondary opacity-10">
+                    </div>
                 <div class="row g-3" id="line-cards-container"></div>
 
             </div> <div class="modal fade" id="explainerModal" tabindex="-1">
