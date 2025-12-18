@@ -18,7 +18,11 @@ try {
     
     if (empty($line)) throw new Exception("Line name is required");
 
-    // 1. Hourly Production (ตัดรอบ 8 โมง)
+    // เตรียมช่วงเวลาสำหรับ Index Seek (SARGable)
+    $startDT = $date . ' 08:00:00';
+    $endDT = date('Y-m-d', strtotime($date . ' +1 day')) . ' 08:00:00';
+
+    // 1. Hourly Production (ยอดผลิตรายชั่วโมง)
     $sqlHourly = "
         SELECT 
             DATEPART(HOUR, transaction_timestamp) as hr,
@@ -27,52 +31,39 @@ try {
         JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
         WHERE l.production_line = :line
           AND t.transaction_type = 'PRODUCTION_FG'
-          -- [FIXED] ใช้ DATEADD -8 ชั่วโมง เพื่อเช็ควันที่ตามกะผลิต
-          AND CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) = :date
+          AND t.transaction_timestamp >= :start AND t.transaction_timestamp < :end
         GROUP BY DATEPART(HOUR, transaction_timestamp)
         ORDER BY hr
     ";
     $stmt = $pdo->prepare($sqlHourly);
-    $stmt->execute([':line' => $line, ':date' => $date]);
+    $stmt->execute([':line' => $line, ':start' => $startDT, ':end' => $endDT]);
     $hourlyData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Machine Downtime (ตัดรอบ 8 โมง)
-    $sqlStop = "
-        SELECT machine, cause, duration, 
-               CONVERT(varchar(5), stop_begin, 108) as start_time,
-               CONVERT(varchar(5), stop_end, 108) as end_time
-        FROM " . STOP_CAUSES_TABLE . "
-        WHERE line = :line 
-          -- [FIXED] ใช้ DATEADD -8 ชั่วโมง
-          AND CAST(DATEADD(HOUR, -8, stop_begin) AS DATE) = :date
-        ORDER BY stop_begin DESC
-    ";
-    $stmt = $pdo->prepare($sqlStop);
-    $stmt->execute([':line' => $line, ':date' => $date]);
-    $stopData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // 2. Downtime (เวลาเครื่องจักรหยุด)
+    // หมายเหตุ: ตรงนี้ถ้าคุณมีตาราง DOWNTIME_LOGS ให้ใช้โครงสร้างคล้ายกัน
+    $downtimeData = []; 
 
-    // 3. Scrap Analysis (ตัดรอบ 8 โมง)
+    // 3. Scrap Details (รายละเอียดงานเสีย)
     $sqlScrap = "
-        SELECT i.part_no, i.part_description, 
-               SUM(t.quantity) as qty,
-               SUM(t.quantity * i.Cost_Total) as lost_val
+        SELECT 
+            i.part_no, 
+            i.part_description,
+            SUM(t.quantity) as qty,
+            SUM(t.quantity * ISNULL(i.Cost_Total, 0)) as lost_val
         FROM " . TRANSACTIONS_TABLE . " t
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-        JOIN " . LOCATIONS_TABLE . " l ON t.from_location_id = l.location_id
+        LEFT JOIN " . LOCATIONS_TABLE . " l ON t.from_location_id = l.location_id
         WHERE l.production_line = :line
           AND t.transaction_type = 'PRODUCTION_SCRAP'
-          -- [FIXED] ใช้ DATEADD -8 ชั่วโมง
-          AND CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = :date
+          AND t.transaction_timestamp >= :start AND t.transaction_timestamp < :end
         GROUP BY i.part_no, i.part_description
         ORDER BY lost_val DESC
     ";
     $stmt = $pdo->prepare($sqlScrap);
-    $stmt->execute([':line' => $line, ':date' => $date]);
+    $stmt->execute([':line' => $line, ':start' => $startDT, ':end' => $endDT]);
     $scrapData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 4. Manpower List
-    // (Manpower มักลง LogDate ตรงวันอยู่แล้ว แต่ถ้าต้องการตัดรอบจาก ScanTime ก็แก้ได้ครับ 
-    //  ในที่นี้อิงตาม LogDate ที่ระบบ Manpower ส่งมา)
+    // 4. Manpower (รายชื่อพนักงานที่เข้าทำงาน)
     $sqlMan = "
         SELECT e.emp_id, e.name_th, e.position, 
                CONVERT(varchar(5), l.scan_in_time, 108) as check_in
@@ -81,7 +72,7 @@ try {
         WHERE e.line = :line
           AND l.log_date = :date 
           AND l.status IN ('PRESENT', 'LATE')
-        ORDER BY e.position, l.scan_in_time
+        ORDER BY l.scan_in_time
     ";
     $stmt = $pdo->prepare($sqlMan);
     $stmt->execute([':line' => $line, ':date' => $date]);
@@ -90,7 +81,7 @@ try {
     echo json_encode([
         'success' => true,
         'hourly' => $hourlyData,
-        'downtime' => $stopData,
+        'downtime' => $downtimeData,
         'scrap' => $scrapData,
         'manpower' => $manpowerData
     ]);

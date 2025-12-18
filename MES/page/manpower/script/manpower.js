@@ -347,96 +347,83 @@ window.changePage = function(page) {
 async function syncApiData(manual = false, overrideStart = null, overrideEnd = null) {
     let start = overrideStart || document.getElementById('startDate').value;
     let end = overrideEnd || document.getElementById('endDate').value;
-    
-    // [NEW LOGIC] ถ้าช่วงเวลาที่เลือกคือ "วันนี้" (Start = End = Today)
-    // ให้ขยาย Start ย้อนหลังไป 1 วันอัตโนมัติ
+
+    if (!start || !end) {
+        alert("กรุณาเลือกวันที่ให้ครบถ้วน");
+        return;
+    }
+
+    // 1. Logic พิเศษ: ถ้าเลือกแค่วันนี้วันเดียว ให้ดึงข้อมูลย้อนหลังไปถึงเมื่อวานด้วยอัตโนมัติ
+    // เพื่อเก็บยอดพนักงานกะดึกที่เลิกงานเช้าวันนี้
     const todayStr = getLocalTodayStr();
     if (start === end && start === todayStr) {
-        // คำนวณวันที่เมื่อวาน
         const d = new Date(start);
         d.setDate(d.getDate() - 1);
-        const yYear = d.getFullYear();
-        const yMonth = String(d.getMonth() + 1).padStart(2, '0');
-        const yDay = String(d.getDate()).padStart(2, '0');
-        
-        start = `${yYear}-${yMonth}-${yDay}`; // เปลี่ยน Start เป็นเมื่อวาน
+        start = d.toISOString().split('T')[0];
         console.log(`Auto-expanding sync range to include yesterday: ${start} to ${end}`);
     }
 
+    // 2. ยืนยันการทำงานถ้าเป็นการกดด้วยมือ (Manual)
     if (manual) {
-        // แสดง Alert ยืนยัน (User จะเห็นว่าวันที่ Start เปลี่ยนเป็นเมื่อวาน)
-        if (!confirm(`ยืนยันการดึงข้อมูลจาก Scanner?\nช่วงเวลา: ${start} ถึง ${end}`)) return;
-        
-        // ใช้ Toast แทน Spinner เพื่อไม่บล็อกจอ
-        showToast("กำลังดึงข้อมูล... กรุณารอสักครู่", "#0dcaf0");
-    } 
-    
-    startBackgroundSyncUI();
+        if (!confirm(`ยืนยันการดึงข้อมูลจาก Scanner และคำนวณต้นทุนค่าแรง?\nช่วงเวลา: ${start} ถึง ${end}`)) return;
+    }
 
-    try {
-        const response = await fetch(`${API_SYNC_URL}?startDate=${start}&endDate=${end}`);
-        const result = await response.json();
+    // 3. เตรียมรายการวันที่ต้องประมวลผล (Array of dates)
+    const dateList = [];
+    let tempDate = new Date(start);
+    const stopDate = new Date(end);
+    while (tempDate <= stopDate) {
+        dateList.push(tempDate.toISOString().split('T')[0]);
+        tempDate.setDate(tempDate.getDate() + 1);
+    }
+
+    // 4. แสดง UI Loading Overlay (ต้องมี HTML syncLoader ในหน้า PHP)
+    const loader = document.getElementById('syncLoader');
+    const statusText = document.getElementById('syncStatusText');
+    const detailText = document.getElementById('syncProgressDetailText');
+    
+    if (loader) loader.style.display = 'block';
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // 5. Loop ประมวลผลทีละวัน (หัวใจของระบบใหม่)
+    for (let i = 0; i < dateList.length; i++) {
+        const targetDate = dateList[i];
         
-        if (result.success) {
-            const msg = manual ? result.message : 'ข้อมูลอัปเดตเรียบร้อยแล้ว';
-            showToast(msg, '#198754');
-            loadManpowerData(false); // Reload Data
-        } else {
-            showToast(result.message, '#dc3545');
+        // UI Update
+        if (statusText) statusText.innerText = `กำลังประมวลผล (${i + 1}/${dateList.length})`;
+        if (detailText) detailText.innerText = `ดึงข้อมูลและคำนวณค่าแรงวันที่: ${targetDate}`;
+
+        try {
+            // เรียก API โดยส่งช่วงวันที่แค่วันเดียวในแต่ละรอบ
+            const response = await fetch(`${API_SYNC_URL}?startDate=${targetDate}&endDate=${targetDate}`);
+            const result = await response.json();
+
+            if (result.success) {
+                successCount++;
+            } else {
+                console.error(`Error at ${targetDate}:`, result.message);
+                errorCount++;
+            }
+        } catch (err) {
+            console.error(`Network Error at ${targetDate}:`, err);
+            errorCount++;
         }
-    } catch (err) {
-        console.error(err);
-        showToast('Connection Error', '#dc3545');
-    } finally {
-        stopBackgroundSyncUI();
+    }
+
+    // 6. ปิดหน้าจอ Loading และสรุปผล
+    if (loader) loader.style.display = 'none';
+    
+    if (manual) {
+        if (errorCount === 0) {
+            showToast(`สำเร็จ! อัปเดตข้อมูลพนักงานและค่าแรง ${successCount} วันเรียบร้อยแล้ว`, '#198754');
+        } else {
+            showToast(`เสร็จสิ้น: สำเร็จ ${successCount} วัน, ล้มเหลว ${errorCount} วัน`, '#ffc107');
+        }
+        loadManpowerData(false); // รีโหลดตารางข้อมูล
     }
 }
-
-// --- Background UI Simulation ---
-function startBackgroundSyncUI() {
-    const updateLabel = document.getElementById('lastUpdateLabel');
-    if (!updateLabel) return;
-
-    let progress = 0;
-    let startTime = Date.now();
-
-    if (syncTimerInterval) clearInterval(syncTimerInterval);
-
-    updateLabel.innerHTML = `<span class="text-primary fw-bold">
-        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-        Syncing... 0%
-    </span>`;
-
-    syncTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        let increment = 0;
-
-        // Two-Stage Rocket Logic
-        if (progress < 60) {
-            increment = Math.random() * 2 + 1; 
-        } else {
-            const remaining = 99 - progress;
-            increment = remaining / 20; 
-            if (increment < 0.01) increment = 0.005; 
-        }
-        
-        progress += increment;
-        if (progress > 99.9) progress = 99.9;
-        
-        let displayProgress = progress < 90 ? Math.floor(progress) : progress.toFixed(1);
-
-        updateLabel.innerHTML = `<span class="text-primary fw-bold">
-            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-            Syncing... ${displayProgress}% <small class="text-muted ms-1">(${elapsed}s)</small>
-        </span>`;
-    }, 800); 
-}
-
-function stopBackgroundSyncUI() {
-    if (syncTimerInterval) clearInterval(syncTimerInterval);
-}
-
-// --- Helpers ---
 
 // ฟังก์ชันหาวันที่ปัจจุบัน (Local Timezone)
 function getLocalTodayStr() {

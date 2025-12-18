@@ -7,8 +7,7 @@ include_once("../../../config/config.php");
 
 header('Content-Type: application/json');
 
-// ปิด Error Report ใน Production เพื่อไม่ให้ JSON พัง
-error_reporting(0); 
+error_reporting(E_ALL); 
 ini_set('display_errors', 0);
 
 if (!hasRole(['admin', 'creator', 'planner', 'viewer', 'supervisor'])) {
@@ -20,30 +19,18 @@ if (!hasRole(['admin', 'creator', 'planner', 'viewer', 'supervisor'])) {
 try {
     $startDate = $_GET['startDate'] ?? date('Y-m-d');
     $endDate = $_GET['endDate'] ?? date('Y-m-d');
-    $exchangeRate = isset($_GET['exchangeRate']) ? floatval($_GET['exchangeRate']) : 34.0;
+    $exchangeRate = isset($_GET['exchangeRate']) ? floatval($_GET['exchangeRate']) : 32.0;
     $userLine = ($_SESSION['user']['role'] === 'supervisor') ? $_SESSION['user']['line'] : null;
 
-    // =================================================================================
-    // ★★★ OPTIMIZATION: Prepare Date Range for Index Seek ★★★
-    // แทนที่จะใช้ CAST(DATEADD(...) AS DATE) เราจะแปลงช่วงเวลาจากฝั่ง PHP ส่งไปแทน
-    // เพื่อให้ SQL Server ใช้ Index ของ transaction_timestamp ได้ (SARGable)
-    // =================================================================================
-    
-    // Start: วันที่เริ่ม 08:00:00
     $queryStart = $startDate . ' 08:00:00';
-    
-    // End: วันที่สิ้นสุด + 1 วัน ที่เวลา 08:00:00 (เพื่อให้ครอบคลุมกะดึกของวันสุดท้าย)
     $queryEnd = date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 08:00:00';
 
-    // --- 1. Production (FG/Sales/Cost) ---
-    // เปลี่ยน WHERE clause ให้ใช้ Range แทน Function
     $sqlProd = "
         SELECT 
             l.production_line AS line,
             SUM(t.quantity) as total_units,
             SUM(t.quantity * ISNULL(i.Price_USD, 0)) as sale_usd,
             SUM(t.quantity * ISNULL(i.StandardPrice, 0)) as sale_thb_std, 
-            SUM(t.quantity * ISNULL(i.Cost_Total, 0)) as total_std_cost,
             SUM(t.quantity * (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0))) as cost_rm,
             SUM(t.quantity * (
                 ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + 
@@ -57,6 +44,7 @@ try {
           AND t.transaction_timestamp < :qEnd
           AND l.production_line IS NOT NULL
     ";
+    
     $paramsProd = [':qStart' => $queryStart, ':qEnd' => $queryEnd];
     if ($userLine) { $sqlProd .= " AND l.production_line = :line"; $paramsProd[':line'] = $userLine; }
     $sqlProd .= " GROUP BY l.production_line";
@@ -65,7 +53,6 @@ try {
     $stmtProd->execute($paramsProd);
     $rawProdData = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 2. Scrap ---
     $sqlScrap = "
         SELECT 
             l.production_line AS line,
@@ -85,8 +72,6 @@ try {
     $stmtScrap->execute($paramsScrap);
     $rawScrapData = $stmtScrap->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 3. Manpower (Headcount) ---
-    // Manpower ใช้ Log Date ตรงๆ ได้เลย ไม่ต้องแปลงเวลา
     $sqlPeople = "
         SELECT 
             e.line,
@@ -103,7 +88,6 @@ try {
     $stmtPeople->execute($paramsPeople);
     $rawPeopleData = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 4. Actual Labor Cost (DLOT) ---
     $sqlLabor = "
         SELECT 
             line,
@@ -120,7 +104,6 @@ try {
     $stmtLabor->execute($paramsLabor);
     $rawLaborData = $stmtLabor->fetchAll(PDO::FETCH_ASSOC);
     
-    // --- Helper: Normalize Data Map ---
     function normalizeMap($rawData, $keyField, $valField) {
         $map = [];
         foreach ($rawData as $row) {
@@ -143,7 +126,6 @@ try {
         $prodMap[$cleanKey] = $row;
     }
 
-    // --- CONSOLIDATION ---
     $allActiveLines = array_unique(array_merge(
         array_keys($prodMap),
         array_keys($scrapMap),
@@ -195,11 +177,6 @@ try {
     $summary['gp'] = $summary['sale'] - $summary['cost'];
     $summary['active_lines'] = count($lines);
 
-    // ======================================================
-    // ★★★ 5. DAILY TREND ANALYSIS (Optimized) ★★★
-    // ======================================================
-    
-    // 5.1 เตรียม Array วันที่
     $trendData = [];
     $period = new DatePeriod(
         new DateTime($startDate),
@@ -208,53 +185,49 @@ try {
     );
     foreach ($period as $dt) {
         $dateKey = $dt->format('Y-m-d');
-        $trendData[$dateKey] = [
-            'date' => $dateKey,
-            'sale' => 0,
-            'cost' => 0,
-            'profit' => 0
-        ];
+        $trendData[$dateKey] = ['date' => $dateKey, 'sale' => 0, 'cost' => 0, 'profit' => 0];
     }
 
-    // 5.2 Query Daily Production (Optimized WHERE)
     $sqlDailyProd = "
         SELECT 
             CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) as log_date,
             SUM(t.quantity * ISNULL(i.Price_USD, 0)) as sale_usd,
             SUM(t.quantity * ISNULL(i.StandardPrice, 0)) as sale_thb_std,
-            SUM(t.quantity * ISNULL(i.Cost_Total, 0)) as cost_production
+            SUM(t.quantity * (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0) + 
+                ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + 
+                ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0))) as cost_prod_no_dl
         FROM " . TRANSACTIONS_TABLE . " t
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
         JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
         WHERE t.transaction_type = 'PRODUCTION_FG'
           AND t.transaction_timestamp >= :qStart 
           AND t.transaction_timestamp < :qEnd
+          AND l.production_line IS NOT NULL
           " . ($userLine ? "AND l.production_line = :line" : "") . "
         GROUP BY CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)
     ";
-    // หมายเหตุ: แม้ GROUP BY ยังต้องใช้ Function แต่ WHERE ที่กรอง Range เวลาไปแล้วจะช่วยลด Load ได้มหาศาล
     $stmtDaily = $pdo->prepare($sqlDailyProd);
-    $stmtDaily->execute($paramsProd); // paramsProd ใช้ :qStart, :qEnd เหมือนกัน
+    $stmtDaily->execute($paramsProd);
     while ($row = $stmtDaily->fetch(PDO::FETCH_ASSOC)) {
         $d = $row['log_date'];
         if (isset($trendData[$d])) {
             $sale = ($row['sale_usd'] > 0) ? ($row['sale_usd'] * $exchangeRate) : $row['sale_thb_std'];
             $trendData[$d]['sale'] += $sale;
-            $trendData[$d]['cost'] += $row['cost_production']; 
+            $trendData[$d]['cost'] += $row['cost_prod_no_dl']; 
         }
     }
 
-    // 5.3 Query Daily Labor
     $sqlDailyLabor = "
         SELECT entry_date, SUM(cost_value) as labor_val 
         FROM " . MANUAL_COSTS_TABLE . "
         WHERE entry_date BETWEEN :start AND :end
           AND cost_type IN ('DIRECT_LABOR', 'OVERTIME')
+          AND line IS NOT NULL AND line NOT IN ('UNKNOWN', 'ALL')
           " . ($userLine ? "AND line = :line" : "") . "
         GROUP BY entry_date
     ";
     $stmtDL = $pdo->prepare($sqlDailyLabor);
-    $stmtDL->execute($paramsLabor); // paramsLabor ใช้ :start, :end
+    $stmtDL->execute($paramsLabor);
     while ($row = $stmtDL->fetch(PDO::FETCH_ASSOC)) {
         $d = $row['entry_date'];
         if (isset($trendData[$d])) {
@@ -262,7 +235,6 @@ try {
         }
     }
 
-    // 5.4 Query Daily Scrap (Optimized WHERE)
     $sqlDailyScrap = "
         SELECT 
             CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) as log_date,
@@ -273,11 +245,12 @@ try {
         WHERE t.transaction_type = 'PRODUCTION_SCRAP'
           AND t.transaction_timestamp >= :qStart 
           AND t.transaction_timestamp < :qEnd
+          AND l.production_line IS NOT NULL
           " . ($userLine ? "AND l.production_line = :line" : "") . "
         GROUP BY CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)
     ";
     $stmtScrapDaily = $pdo->prepare($sqlDailyScrap);
-    $stmtScrapDaily->execute($paramsScrap); // paramsScrap ใช้ :qStart, :qEnd
+    $stmtScrapDaily->execute($paramsScrap);
     while ($row = $stmtScrapDaily->fetch(PDO::FETCH_ASSOC)) {
         $d = $row['log_date'];
         if (isset($trendData[$d])) {

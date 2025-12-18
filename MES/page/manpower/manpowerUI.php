@@ -221,6 +221,20 @@ $pageHelpId = ""; // ถ้ามี Modal คู่มือ ใส่ ID ต�
     <?php include_once('components/shiftChangeModal.php'); ?>
     <?php include_once('components/editEmployeeModal.php'); ?>
     <?php include_once('components/syncConfirmModal.php'); ?>
+
+    <div id="syncLoader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; color:white; backdrop-filter: blur(8px);">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; max-width: 400px;">
+            <div class="spinner-border text-success" role="status" style="width: 4rem; height: 4rem; border-width: 0.25em;"></div>
+            
+            <h3 style="margin-top:25px; font-weight: 700; letter-spacing: 1px;" id="syncStatusText">กำลังประมวลผล...</h3>
+            
+            <div class="mt-3 p-3 rounded" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                <p id="syncProgressDetailText" class="mb-0" style="font-size: 0.95rem; color: #adffad;">กำลังดึงข้อมูลและคำนวณค่าแรง...</p>
+            </div>
+            
+            <p class="mt-4 text-muted small"><i class="fas fa-exclamation-triangle me-2"></i>กรุณาอย่าปิดหน้าต่างนี้จนกว่าระบบจะทำงานเสร็จสิ้น</p>
+        </div>
+    </div>
     
     <script>
         // Override Spinner Functions (เผื่อ JS เดิมเรียกใช้)

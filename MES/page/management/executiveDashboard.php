@@ -68,6 +68,10 @@ $pageHelpId = "execHelpModal";
                             <i class="fas fa-users-cog"></i>
                         </button>
 
+                        <button class="btn btn-outline-warning btn-sm fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="quickSyncLabor()" title="Quick Sync: Yesterday & Today only" style="height: 30px;">
+                            <i class="fas fa-bolt text-warning"></i>
+                        </button>
+
                         <button class="btn btn-outline-info btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" id="btnAIForecast" onclick="toggleAIForecast()" title="AI Prediction: Forecast end-of-period result" style="height: 30px;">
                             <i class="fas fa-robot me-1"></i> AI Forecast
                         </button>
@@ -127,7 +131,11 @@ $pageHelpId = "execHelpModal";
                     <div class="col-4 col-md-4 col-xl-2">
                         <div class="exec-card p-3 text-center bg-light border-0 h-100 cursor-pointer" onclick="openExplainerModal('labor')">
                             <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Labor (DL+OT)</small>
-                            <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h6>
+                            <div class="d-flex align-items-center justify-content-center">
+                                <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h6>
+                                <i id="dlot-est-icon" class="fas fa-clock-rotate-left ms-1 text-warning d-none" 
+                                style="font-size: 0.7rem;" title="Estimated: Base Wage Included"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="col-4 col-md-4 col-xl-2">
@@ -270,32 +278,74 @@ $pageHelpId = "execHelpModal";
 
             <div class="modal fade" id="execHelpModal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
+                    <div class="modal-content border-0 shadow-lg">
                         <div class="modal-header">
                             <h5 class="modal-title fw-bold"><i class="fas fa-info-circle me-2 text-primary"></i>Executive Dashboard Help</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body text-secondary">
-                            <p class="mb-2"><strong>หน้าจอสรุปผลการดำเนินงาน (Actual Performance)</strong></p>
-                            <ul class="small mb-0">
-                                <li><strong>Sale:</strong> ยอดขายคำนวณจาก (ยอดผลิตจริง FG x ราคา USD x Rate)</li>
-                                <li><strong>Cost:</strong> ต้นทุนรวม (RM + Labor + OH + Scrap)</li>
-                                <li><strong>Gross Profit:</strong> กำไรขั้นต้น (Sale - Cost)</li>
-                                <li><strong>DLOT:</strong> ค่าแรงและโอทีที่จ่ายจริง (Actual) จากระบบ Manpower</li>
+                            <h6 class="fw-bold text-dark border-bottom pb-2"><i class="fas fa-chart-line me-2 text-primary"></i>สรุปผลการดำเนินงาน</h6>
+                            <ul class="small mb-3">
+                                <li><strong>Sale:</strong> รายได้จากการผลิตจริง (FG Qty x Price x Ex. Rate)</li>
+                                <li><strong>Cost:</strong> ต้นทุนรวม (Material + Labor + OH + Scrap)</li>
+                                <li><strong>Gross Profit:</strong> กำไรขั้นต้น (ยังไม่หักภาษีและค่าบริหาร)</li>
                             </ul>
-                            <div class="alert alert-info small mt-3 mb-0">
-                                <i class="fas fa-lightbulb me-1"></i>
-                                ข้อมูลหน้านี้เป็น <strong>Actual Data</strong> อาจไม่เท่ากับหน้า Planning ที่เป็นยอด Target
+
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mt-4"><i class="fas fa-tools me-2 text-warning"></i>ฟังก์ชันพิเศษ (Admin & AI)</h6>
+                            <div class="small">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-warning text-dark me-2"><i class="fas fa-users-cog"></i> Sync Labor</span>
+                                        <strong>ระบบคำนวณต้นทุนค่าแรงจริง</strong>
+                                    </div>
+                                    <p class="text-muted ms-4 mb-2">ใช้สำหรับดึงข้อมูล Headcount และค่าแรง (DL/OT) จากระบบสแกนนิ้ว Manpower</p>
+                                    
+                                    <div class="alert alert-warning border-0 shadow-sm p-3 ms-4 mb-0" style="font-size: 0.8rem; border-left: 4px solid #ffc107 !important;">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <strong>Working Date Logic:</strong> 
+                                        <ul class="mb-2 mt-1 ps-3">
+                                            <li>คำนวณยอดตาม <strong>"วันที่เริ่มงาน"</strong> (กะดึกที่เลิกงานตอนเช้าจะถูกนับเป็นยอดของเมื่อวาน)</li>
+                                            <li>ระหว่างวัน: ระบบจะนำจำนวนคนที่สแกนเข้า (Check-in) คูณกับค่าแรงพื้นฐานเพื่อแสดงยอด <strong>"ประมาณการ"</strong> ทันที</li>
+                                            <li>ยอดสมบูรณ์: จะเกิดขึ้นหลังพนักงานสแกนออก (Check-out) และมีการกดปุ่ม Sync หลังจบกะ</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-info text-white me-2"><i class="fas fa-robot"></i> AI Forecast</span>
+                                        <strong>ระบบทำนายยอดล่วงหน้า</strong>
+                                    </div>
+                                    <p class="text-muted ms-4 mb-0">ใช้ระบบ <strong>Hybrid Regression AI</strong> วิเคราะห์แนวโน้มจากข้อมูลย้อนหลัง 30 วัน ร่วมกับโมเมนตัมปัจจุบัน เพื่อพยากรณ์ยอดขายล่วงหน้า 7 วัน</p>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info small mt-4 mb-0 border-0 bg-light">
+                                <i class="fas fa-lightbulb me-1 text-primary"></i>
+                                <strong>Tip:</strong> หากต้องการทราบสูตรคำนวณเชิงลึก ให้คลิกที่ไอคอน <i class="fas fa-info-circle mx-1"></i> บนหัวการ์ดแต่ละใบ
                             </div>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer bg-light border-0">
                             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>
             </div>
-
         </main>
+    </div>
+
+    <div id="syncLoader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; color:white; backdrop-filter: blur(8px);">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; max-width: 400px;">
+            <div class="spinner-border text-warning" role="status" style="width: 4rem; height: 4rem; border-width: 0.25em;"></div>
+            
+            <h3 style="margin-top:25px; font-weight: 700; letter-spacing: 1px;" id="syncStatusText">กำลังเริ่มต้น...</h3>
+            
+            <div class="mt-3 p-3 rounded" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                <p id="syncProgressDetailText" class="mb-0" style="font-size: 0.95rem; color: #ffe082;">ระบบกำลังคำนวณต้นทุนค่าแรงจริงจาก Manpower...</p>
+            </div>
+            
+            <p class="mt-4 text-muted small"><i class="fas fa-exclamation-triangle me-2"></i>กรุณาอย่าปิดหน้าต่างนี้จนกว่าระบบจะประมวลผลเสร็จ</p>
+        </div>
     </div>
 
     <script src="script/executiveDashboard.js?v=<?php echo time(); ?>"></script>
