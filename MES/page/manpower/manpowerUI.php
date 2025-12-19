@@ -280,11 +280,7 @@
         </div>
     </div>
 
-    <?php include_once('components/editLogModal.php'); ?>
-    <?php include_once('components/shiftChangeModal.php'); ?>
-    <?php include_once('components/editEmployeeModal.php'); ?>
-    <?php include_once('components/syncConfirmModal.php'); ?>
-    <?php include_once('components/mappingModal.php'); ?>
+    <?php include_once('components/manpower_modals_bundle.php'); ?>
 
     <div id="syncLoader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; color:white; backdrop-filter: blur(8px);">
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; max-width: 400px;">

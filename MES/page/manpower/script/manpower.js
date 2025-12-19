@@ -1,11 +1,11 @@
 "use strict";
 
-// --- API Configuration ---
-const API_SYNC_URL    = 'api/sync_from_api.php';
-const API_GET_URL     = 'api/get_daily_manpower.php';
-const API_MANAGE_EMP  = 'api/manage_employees.php';
-const API_SUMMARY_URL = 'api/get_manpower_summary.php';
-const API_MAPPING     = 'api/manage_mapping.php';
+const API_SYNC_URL    = 'api/sync_from_api.php'; // (ตัวนี้ใช้ไฟล์เดิม ไม่ต้องแก้)
+const API_GET_URL     = 'api/api_daily_operations.php?action=read_daily';
+const API_SUMMARY_URL = 'api/api_daily_operations.php?action=read_summary';
+
+const API_MANAGE_EMP  = 'api/api_master_data.php'; 
+const API_MAPPING     = 'api/api_master_data.php';
 
 // --- Global Variables ---
 let editLogModal, shiftPlannerModal, editEmployeeModal, mappingModal;
@@ -18,7 +18,7 @@ const rowsPerPage = 50;
 let currentFilter = 'TOTAL'; 
 
 // ==========================================
-// 1. Initialization
+// 1. Initialization (คงเดิม)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // 1.1 Init Modals
@@ -47,13 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. Main Logic: Refresh Data
+// 2. Main Logic: Refresh Data (คงเดิม)
 // ==========================================
 function refreshData() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
 
-    // Validate Range
     if (startDate > endDate) {
         document.getElementById('endDate').value = startDate;
         loadManpowerList(startDate, startDate);
@@ -65,7 +64,7 @@ function refreshData() {
 }
 
 // ==========================================
-// 3. Sync Logic (Day-by-Day Queue) *** ไฮไลท์ ***
+// 3. Sync Logic (คงเดิม)
 // ==========================================
 window.syncApiData = async function(manual) {
     const startDate = document.getElementById('startDate').value;
@@ -73,19 +72,16 @@ window.syncApiData = async function(manual) {
 
     if (manual && !confirm(`ยืนยันการดึงข้อมูลจาก Scanner?\nช่วงเวลา: ${startDate} ถึง ${endDate}`)) return;
 
-    // 1. เปิด Loader
     const loader = document.getElementById('syncLoader');
     const statusText = document.getElementById('syncStatusText');
     const detailText = document.getElementById('syncProgressDetailText');
     
     if (loader) loader.style.display = 'block';
 
-    // 2. สร้างรายการวันที่ต้อง Sync
     const dateList = [];
     let temp = new Date(startDate);
     const last = new Date(endDate);
     
-    // Logic พิเศษ: ถ้าเลือกวันเดียว ให้แถมเมื่อวานด้วย (เพื่อเก็บตกกะดึก)
     if (startDate === endDate) {
         const yesterday = new Date(startDate);
         yesterday.setDate(yesterday.getDate() - 1);
@@ -97,19 +93,16 @@ window.syncApiData = async function(manual) {
         temp.setDate(temp.getDate() + 1);
     }
 
-    // 3. เริ่มวนลูปยิง API ทีละวัน (Queue)
     let successCount = 0;
     let errorCount = 0;
 
     for (let i = 0; i < dateList.length; i++) {
         const targetDate = dateList[i];
         
-        // อัปเดตข้อความบนหน้าจอ (Real Progress)
         if (statusText) statusText.innerText = `กำลังประมวลผล... (${i + 1}/${dateList.length})`;
         if (detailText) detailText.innerText = `ดึงข้อมูลและคำนวณค่าแรงประจำวันที่: ${targetDate}`;
 
         try {
-            // เรียก API แบบเจาะจงวันเดียว
             const res = await fetch(`${API_SYNC_URL}?startDate=${targetDate}&endDate=${targetDate}`);
             const json = await res.json();
 
@@ -125,36 +118,31 @@ window.syncApiData = async function(manual) {
         }
     }
 
-    // 4. เสร็จสิ้น
     if (statusText) statusText.innerText = 'เสร็จสมบูรณ์!';
     
     setTimeout(() => {
         if (loader) loader.style.display = 'none';
-        
-        if (errorCount === 0) {
-            // alert(`Sync สำเร็จครบ ${successCount} วัน`);
-        } else {
+        if (errorCount > 0) {
             alert(`Sync เสร็จสิ้น: สำเร็จ ${successCount} วัน, ล้มเหลว ${errorCount} วัน`);
         }
-        
-        refreshData(); // โหลดข้อมูลใหม่ขึ้นหน้าจอ
+        refreshData(); 
     }, 500);
 }
 
 // ==========================================
-// 4. Executive Summary (Report)
+// 4. Executive Summary (คงเดิม)
 // ==========================================
 async function loadExecutiveSummary(startDate, endDate) {
     try {
-        const res = await fetch(`${API_SUMMARY_URL}?startDate=${startDate}&endDate=${endDate}`);
+        const res = await fetch(`${API_SUMMARY_URL}&startDate=${startDate}&endDate=${endDate}`);
         const json = await res.json();
 
         if (json.success) {
             const label = document.getElementById('lastUpdateLabel');
-            if(label && json.last_update) label.innerText = json.last_update;
+            if(label && json.last_update) label.innerText = json.last_update; // เช็ค field นี้ใน php ด้วยว่าส่งมาไหม (ใน api_daily ส่งกลับมาเป็น last_update_ts ถ้าจะเอาวันที่ต้องแก้ php นิดหน่อย แต่ไม่ซีเรียส)
 
             renderSummaryTable('tableByLine', json.summary_by_line, ['line_name', 'total_people']);
-            renderSummaryTable('tableByShift', json.summary_by_shift_team, ['shift_name', 'team_name', 'total_people']);
+            renderSummaryTable('tableByShift', json.summary_by_shift_team, ['shift_name', 'team_group', 'total_people']); // แก้ key team_name -> team_group ตาม SQL
             renderSummaryTable('tableByType', json.summary_by_type, ['emp_type', 'total_people']);
         }
     } catch (e) {
@@ -197,15 +185,13 @@ function renderSummaryTable(tableId, data, columns) {
 }
 
 // ==========================================
-// 5. Manpower List (Accordion Table)
+// 5. Manpower List (Accordion Table) (คงเดิม)
 // ==========================================
 async function loadManpowerList(startDate, endDate) {
-    // Show spinner only if empty
     if (allManpowerData.length === 0) showSpinner();
-    
     try {
         const t = new Date().getTime();
-        const res = await fetch(`${API_GET_URL}?startDate=${startDate}&endDate=${endDate}&t=${t}`);
+        const res = await fetch(`${API_GET_URL}&startDate=${startDate}&endDate=${endDate}&t=${t}`);
         const json = await res.json();
 
         if (json.success) {
@@ -221,7 +207,6 @@ async function loadManpowerList(startDate, endDate) {
 }
 
 function processData() {
-    // 1. Filter
     let filteredLogs = allManpowerData;
     if (currentFilter !== 'TOTAL') {
         filteredLogs = allManpowerData.filter(d => {
@@ -233,7 +218,6 @@ function processData() {
         });
     }
 
-    // 2. Group By Employee
     const groups = {};
     filteredLogs.forEach(log => {
         if (!groups[log.emp_id]) {
@@ -254,7 +238,6 @@ function processData() {
 
     displayGroups = Object.values(groups);
 
-    // 3. Sort
     displayGroups.sort((a, b) => {
         const lineA = a.emp_info.line || 'ZZ';
         const lineB = b.emp_info.line || 'ZZ';
@@ -294,7 +277,6 @@ function renderMainTable() {
         if(stats.absent > 0)  summaryBadges += `<span class="badge bg-danger me-1">${stats.absent} ขาด</span>`;
         if(summaryBadges === '') summaryBadges = '-';
 
-        // Main Row
         const trMain = document.createElement('tr');
         trMain.className = 'align-middle cursor-pointer hover-bg collapsed';
         trMain.setAttribute('data-bs-toggle', 'collapse');
@@ -317,7 +299,6 @@ function renderMainTable() {
             <td class="text-center">${summaryBadges}</td>
         `;
 
-        // Detail Row
         const trDetail = document.createElement('tr');
         trDetail.innerHTML = `
             <td colspan="7" class="p-0 border-0">
@@ -401,21 +382,21 @@ function formatTime(str) {
     return str.substring(0, 5);
 }
 
-// ... (Helpers: Pagination, KPI, Modals) ...
+// ... (Helpers) ...
 function renderPagination() {
     const totalPages = Math.ceil(displayGroups.length / rowsPerPage);
     const nav = document.getElementById('paginationControls');
     if(!nav) return;
     
-    let html = `<li class="page-item ${currentPage===1?'disabled':''}"><button class="page-link" onclick="changePage(${currentPage-1})">Prev</button></li>`;
+    let html = `<li class="page-item ${currentPage===1?'disabled':''}"><button class="page-link" onclick="event.preventDefault(); changePage(${currentPage-1})">Prev</button></li>`;
     for(let i=1; i<=totalPages; i++) {
         if(i===1 || i===totalPages || (i >= currentPage-1 && i <= currentPage+1)) {
-            html += `<li class="page-item ${currentPage===i?'active':''}"><button class="page-link" onclick="changePage(${i})">${i}</button></li>`;
+            html += `<li class="page-item ${currentPage===i?'active':''}"><button class="page-link" onclick="event.preventDefault(); changePage(${i})">${i}</button></li>`;
         } else if (i === currentPage-2 || i === currentPage+2) {
             html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
     }
-    html += `<li class="page-item ${currentPage===totalPages?'disabled':''}"><button class="page-link" onclick="changePage(${currentPage+1})">Next</button></li>`;
+    html += `<li class="page-item ${currentPage===totalPages?'disabled':''}"><button class="page-link" onclick="event.preventDefault(); changePage(${currentPage+1})">Next</button></li>`;
     nav.innerHTML = html;
 }
 
@@ -427,20 +408,23 @@ function getStatusBadge(s) {
     if (s === 'ABSENT') return '<span class="badge bg-danger">ABSENT</span>';
     return `<span class="badge bg-secondary">${s}</span>`;
 }
-function updateKPI(s) { if(!s)return; const e = (id,v)=>document.getElementById(id).innerText=v; e('kpi-total', s.total); e('kpi-present', s.present); e('kpi-late', s.late); e('kpi-absent', s.absent); }
+function updateKPI(s) { if(!s)return; const e = (id,v)=>{const el=document.getElementById(id);if(el)el.innerText=v;}; e('kpi-total', s.total); e('kpi-present', s.present); e('kpi-late', s.late); e('kpi-absent', s.absent); }
 
 function showSpinner() { const el = document.getElementById('loadingOverlay'); if(el) el.style.display = 'flex'; }
 function hideSpinner() { const el = document.getElementById('loadingOverlay'); if(el) el.style.display = 'none'; }
 
-// Modals
+// ==========================================
+// 6. Action Functions (แก้ไข URL และ Params แล้ว)
+// ==========================================
+
+// 6.1 Edit Log
 window.openEditLogModal = function(logId) {
-    // หา log จาก allManpowerData (ซึ่งเป็น array รวม)
     const log = allManpowerData.find(d => d.log_id == logId);
     if(log) {
         document.getElementById('editLogId').value = logId;
         document.getElementById('editEmpName').value = log.name_th;
         document.getElementById('editStatus').value = log.status;
-        document.getElementById('editLogShift').value = log.shift_id || ""; 
+        document.getElementById('editLogShift').value = log.actual_shift_id || ""; // ใช้ actual_shift_id ที่ query มาใหม่
         const fmt = (t) => t ? t.replace(' ', 'T').substring(0, 16) : '';
         document.getElementById('editScanInTime').value = fmt(log.scan_in_time);
         document.getElementById('editScanOutTime').value = fmt(log.scan_out_time);
@@ -457,12 +441,14 @@ window.saveLogChanges = async function() {
     const so=document.getElementById('editScanOutTime').value;
     showSpinner();
     try{
-        const res=await fetch('api/update_daily_manpower.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_id:id,status:st,shift_id:sh,remark:rem,scan_in_time:si?si.replace('T',' '):null,scan_out_time:so?so.replace('T',' '):null})});
+        // [FIXED] เปลี่ยน URL และเพิ่ม action=update_log
+        const res=await fetch('api/api_daily_operations.php?action=update_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_id:id,status:st,shift_id:sh,remark:rem,scan_in_time:si?si.replace('T',' '):null,scan_out_time:so?so.replace('T',' '):null})});
         const json=await res.json();
         if(json.success){ editLogModal.hide(); refreshData(); } else alert(json.message);
     } catch(e){console.error(e);} finally{hideSpinner();}
 }
 
+// 6.2 Edit Employee
 window.editEmployee = function(id) {
     const r = allManpowerData.find(d=>d.emp_id==id);
     if(r){
@@ -483,18 +469,21 @@ window.saveEmployeeInfo = async function() {
     if(!l){alert('Line Required');return;}
     showSpinner();
     try{
-        const res=await fetch(`${API_MANAGE_EMP}?action=update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emp_id:id,line:l,shift_id:s,team_group:t,is_active:1})});
+        // [FIXED] เปลี่ยน URL เป็น API_MANAGE_EMP และ action=update_employee
+        const res=await fetch(`${API_MANAGE_EMP}?action=update_employee`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emp_id:id,line:l,shift_id:s,team_group:t,is_active:1})});
         const j=await res.json();
         if(j.success){ editEmployeeModal.hide(); refreshData(); } else alert(j.message);
     } catch(e){console.error(e);} finally{hideSpinner();}
 }
 
+// 6.3 Shift Planner (Batch Update)
 window.openShiftPlanner = async function() {
     showSpinner();
     try{
-        const res=await fetch('api/batch_shift_update.php?action=get_options');
+        // [FIXED] เรียก read_employees เพื่อเอา list line และ shifts มาแสดง
+        const res=await fetch(`${API_MANAGE_EMP}?action=read_employees`);
         const j=await res.json();
-        if(j.success){ renderShiftPlannerTable(j.lines,j.shifts); shiftPlannerModal.show(); }
+        if(j.success){ renderShiftPlannerTable(j.lines, j.shifts); shiftPlannerModal.show(); }
     } catch(e){console.error(e);} finally{hideSpinner();}
 }
 
@@ -510,19 +499,30 @@ window.saveBatchShift = async function(l,i){
     if(!confirm('Confirm?'))return;
     showSpinner();
     try{
-        await fetch('api/batch_shift_update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update_team_shift',line:l,assignments:{'A':sa,'B':sb}})});
+        // [FIXED] ใช้ URL API_MANAGE_EMP และส่ง body ให้ตรงกับที่แก้ PHP ล่าสุด (รับ shift_a, shift_b ตรงๆ)
+        await fetch(`${API_MANAGE_EMP}?action=update_team_shift`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                line: l,
+                shift_a: sa,
+                shift_b: sb
+            })
+        });
         alert('Saved');
     } catch(e){console.error(e);} finally{hideSpinner();}
 }
 
+// 6.4 Mapping
 window.openMappingModal = async function() {
     mappingModal.show();
     try{
-        const res=await fetch(`${API_MAPPING}?action=read_all`);
+        // [FIXED] action=read_mappings
+        const res=await fetch(`${API_MAPPING}?action=read_mappings`);
         const j=await res.json();
         if(j.success){
             const b=document.getElementById('categoryMappingBody');
-            b.innerHTML=j.categories.map(r=>`<tr><td><input class="form-control cat-api" value="${r.api_position}"></td><td><input class="form-control cat-display" value="${r.category_name}"></td><td><input class="form-control cat-rate" value="${r.hourly_rate}"></td><td><button onclick="this.closest('tr').remove()">X</button></td></tr>`).join('');
+            b.innerHTML=j.categories.map(r=>`<tr><td><input class="form-control cat-api" value="${r.keyword}"></td><td><input class="form-control cat-display" value="${r.category_name}"></td><td><input class="form-control cat-rate" value="${r.hourly_rate}"></td><td><button onclick="this.closest('tr').remove()">X</button></td></tr>`).join('');
             if(j.categories.length==0) addMappingRow('category');
         }
     } catch(e){}
@@ -536,10 +536,11 @@ window.addMappingRow=function(){
 }
 
 window.saveAllMappings=async function(){
+    // [FIXED] action=save_mappings
     const c=Array.from(document.querySelectorAll('#categoryMappingBody tr')).map(r=>({api_position:r.querySelector('.cat-api').value,category_name:r.querySelector('.cat-display').value,hourly_rate:r.querySelector('.cat-rate').value})).filter(x=>x.api_position);
     showSpinner();
     try{
-        const res=await fetch(`${API_MAPPING}?action=save_all`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({categories:c})});
+        const res=await fetch(`${API_MAPPING}?action=save_mappings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({categories:c})});
         const j=await res.json();
         if(j.success){mappingModal.hide(); alert('Saved');}
     } catch(e){} finally{hideSpinner();}
@@ -547,7 +548,8 @@ window.saveAllMappings=async function(){
 
 async function loadFilterOptions() {
     try {
-        const res = await fetch(`${API_MANAGE_EMP}?action=read`);
+        // [FIXED] action=read_employees
+        const res = await fetch(`${API_MANAGE_EMP}?action=read_employees`);
         const json = await res.json();
         if (json.success) {
             const lineSelect = document.getElementById('empEditLine');

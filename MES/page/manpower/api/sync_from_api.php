@@ -1,7 +1,7 @@
 <?php
-// page/manpower/api/sync_from_api.php
+// MES/page/manpower/api/sync_from_api.php
 ignore_user_abort(true); 
-set_time_limit(600); 
+set_time_limit(600); // 10 Minutes timeout
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
@@ -20,7 +20,7 @@ session_write_close();
 $startDate = $_GET['startDate'] ?? date('Y-m-d');
 $endDate   = $_GET['endDate']   ?? date('Y-m-d');
 
-// ขยายเวลาเพื่อดึงกะดึก (-1 วัน ถึง +1 วัน)
+// ขยายเวลาเพื่อดึงกะดึก (-1 วัน ถึง +1 วัน) เพื่อให้ครอบคลุมการเข้างานข้ามคืน
 $apiStartDate = date('Y-m-d', strtotime('-1 day', strtotime($startDate)));
 $apiEndDate   = date('Y-m-d', strtotime('+1 day', strtotime($endDate)));
 
@@ -35,28 +35,38 @@ try {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $apiResponse = curl_exec($ch);
+    
+    if (curl_errno($ch)) {
+        throw new Exception('Curl Error: ' . curl_error($ch));
+    }
     curl_close($ch);
 
-    if (!$apiResponse) throw new Exception("API Connection Failed");
+    if (!$apiResponse) throw new Exception("API Connection Failed or Empty Response");
     $rawList = json_decode($apiResponse, true);
     if (!is_array($rawList)) $rawList = [];
 
-    // โหลด Config กะงานจาก DB
+    // --------------------------------------------------------
+    // 2. เตรียมข้อมูล Config (Shift & Filter)
+    // --------------------------------------------------------
+    $pdo->beginTransaction();
+
+    // 2.1 โหลด Config กะงานจาก DB
     $shiftConfig = [];
     $stmtShifts = $pdo->query("SELECT shift_id, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE);
     while ($row = $stmtShifts->fetch(PDO::FETCH_ASSOC)) { 
         $shiftConfig[$row['shift_id']] = $row; 
     }
-    // หา Default Shift (กะเช้า)
+    
+    // หา Default Shift (กะเช้า 08:00)
     $defaultShiftId = 1; 
     foreach ($shiftConfig as $id => $s) {
         if (strpos($s['start_time'], '08:') === 0) { $defaultShiftId = $id; break; }
     }
 
-    // จัดกลุ่มข้อมูลดิบตาม EMPID
+    // 2.2 จัดกลุ่มข้อมูลดิบตาม EMPID
     $groupedData = []; 
     foreach ($rawList as $row) {
-        // กรองแผนกแบบหยาบๆ (เพื่อไม่ให้ดึงคนทั้งโรงงานที่ไม่เกี่ยวเข้ามา)
+        // กรองแผนก (Business Logic เดิม: เอาเฉพาะ Toolbox, B9, B10)
         $dept = $row['DEPARTMENT'] ?? '';
         if (stripos($dept, 'Toolbox') === false && stripos($dept, 'B9') === false && stripos($dept, 'B10') === false) {
             continue; 
@@ -73,14 +83,13 @@ try {
         }
     }
 
-    $pdo->beginTransaction();
-
     // --------------------------------------------------------
-    // 2. อัปเดตข้อมูลพนักงาน (Master Data) - *จุดสำคัญ*
+    // 3. อัปเดตข้อมูลพนักงาน (Master Data)
+    // *จุดสำคัญ: รักษา Line เดิมที่ Admin ตั้งไว้*
     // --------------------------------------------------------
     $stats = ['new' => 0, 'updated' => 0, 'log_processed' => 0];
 
-    // ดึงข้อมูลคนที่มีอยู่แล้ว เพื่อดูว่าใครมี Line อยู่แล้ว
+    // ดึงข้อมูลคนที่มีอยู่แล้ว
     $existingEmployees = [];
     $stmtCheckIds = $pdo->query("SELECT emp_id, line, default_shift_id FROM " . MANPOWER_EMPLOYEES_TABLE);
     while ($row = $stmtCheckIds->fetch(PDO::FETCH_ASSOC)) { 
@@ -94,8 +103,7 @@ try {
         $info = $data['info'];
         
         if (isset($existingEmployees[$apiEmpId])) {
-            // [กรณีคนเก่า]: อัปเดตแค่ ชื่อตำแหน่ง กับ แผนก API (เอาไว้ดูเล่น) 
-            // *** ห้ามแตะต้อง Line หรือ Shift ที่ Admin ตั้งไว้ ***
+            // [คนเก่า]: อัปเดตแค่ ชื่อตำแหน่ง กับ แผนก API (ไม่แตะ Line/Shift)
             $stmtUpdateEmp->execute([
                 $info['POSITION'] ?? '-', 
                 $info['DEPARTMENT'] ?? '-', 
@@ -103,7 +111,7 @@ try {
             ]);
             $stats['updated']++;
         } else {
-            // [กรณีคนใหม่]: ยัดลง 'TOOLBOX_POOL' เพื่อให้ Admin ไปย้ายเอง
+            // [คนใหม่]: ใส่ลง 'TOOLBOX_POOL' ให้ Admin ไปย้ายเอง
             $stmtInsertEmp->execute([
                 $apiEmpId, 
                 $info['NAME'] ?? '-', 
@@ -111,7 +119,8 @@ try {
                 $info['DEPARTMENT'] ?? '-', 
                 $defaultShiftId
             ]);
-            // เพิ่มเข้า Array ใน Memory เพื่อให้ Loop ข้างล่างมองเห็น
+            
+            // เพิ่มเข้า Array ใน Memory ทันทีเพื่อให้ Loop ด้านล่างมองเห็น
             $existingEmployees[$apiEmpId] = [
                 'emp_id' => $apiEmpId, 
                 'line' => 'TOOLBOX_POOL', 
@@ -122,7 +131,7 @@ try {
     }
 
     // --------------------------------------------------------
-    // 3. บันทึกเวลาเข้างาน (Attendance Log)
+    // 4. บันทึกเวลาเข้างาน (Attendance Log)
     // --------------------------------------------------------
     $stmtCheckLog = $pdo->prepare("SELECT log_id, is_verified, shift_id FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date = ?");
     $stmtUpdateLog = $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " SET scan_in_time = ?, scan_out_time = ?, status = ?, shift_id = ?, updated_at = GETDATE() WHERE log_id = ? AND is_verified = 0");
@@ -133,22 +142,22 @@ try {
         $procDate = date('Y-m-d', $currTs);
         
         foreach ($existingEmployees as $empId => $empData) {
-            // เช็คว่ามี Log ของวันนี้หรือยัง
+            // 4.1 เช็คว่ามี Log ของวันนี้หรือยัง
             $stmtCheckLog->execute([$empId, $procDate]);
             $logExist = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
             
-            // หากะที่จะใช้ (ถ้าเคยลง Log แล้วให้ใช้กะเดิมใน Log, ถ้ายังไม่เคยให้ใช้ Default ของพนักงาน)
-            // นี่คือจุดสำคัญที่ทำให้กะไม่เพี้ยนเวลากด Sync ซ้ำ
+            // 4.2 หากะที่จะใช้ (Priority: Log เดิม > Shift ของพนักงาน > Default)
             $targetShiftId = $logExist['shift_id'] ?? $empData['default_shift_id'] ?? $defaultShiftId;
             
-            // คำนวณช่วงเวลา (Window) ของกะนี้
+            // 4.3 คำนวณ Window ของกะนี้
             $sTime = $shiftConfig[$targetShiftId]['start_time'] ?? '08:00:00';
-            $isNight = ((int)substr($sTime, 0, 2) >= 15);
+            $isNight = ((int)substr($sTime, 0, 2) >= 15); // ถ้าเริ่มหลังบ่าย 3 ถือเป็นกะดึก/เย็น
             
+            // Window: เริ่มก่อนเวลาเข้างาน 3 ชม. จนถึงเช้าอีกวัน
             $wStart = strtotime($isNight ? "$procDate 15:00:00" : "$procDate 05:00:00");
             $wEnd   = strtotime($isNight ? "$procDate 12:00:00 +1 day" : "$procDate 02:00:00 +1 day");
 
-            // หาเวลาสแกนที่ตกอยู่ในช่วงเวลานี้
+            // 4.4 หา Scan ที่อยู่ใน Window นี้
             $validScans = [];
             if (isset($groupedData[$empId])) {
                 foreach ($groupedData[$empId]['timestamps'] as $t) {
@@ -169,7 +178,7 @@ try {
                     $logDate = date('Y-m-d', strtotime("-1 day", $inTs));
                 }
 
-                // เช็คสาย (ให้เวลา 10 นาที)
+                // เช็คสาย (ให้เวลา 10 นาที = 600 วินาที)
                 $shiftStartTs = strtotime("$logDate $sTime");
                 $status = ($inTs > ($shiftStartTs + 600)) ? 'LATE' : 'PRESENT';
 
@@ -186,17 +195,19 @@ try {
                     $stmtInsertLog->execute([$logDate, $empId, $inTimeStr, $outTimeStr, $status, $targetShiftId]);
                 }
             } else {
-                // ถ้าไม่มีสแกน ไม่ต้องทำอะไร (หรือจะ Mark Absent ก็ได้ถ้าต้องการ)
+                // ถ้าไม่มีสแกน ไม่ต้องทำอะไร
             }
             $stats['log_processed']++;
         }
         $currTs = strtotime('+1 day', $currTs);
     }
 
-    // หมายเหตุ: ตัดส่วนคำนวณเงินออกชั่วคราวตามคำขอ เพื่อโฟกัสที่ข้อมูลคนก่อน
-    
     $pdo->commit();
-    echo json_encode(['success' => true, 'message' => 'Sync Completed. Employee Lines Preserved.', 'stats' => $stats]);
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Sync Completed. Existing Lines Preserved.', 
+        'stats' => $stats
+    ]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
