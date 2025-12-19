@@ -4,112 +4,73 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../../config/config.php';
 
+// อนุญาตเฉพาะ Admin/Supervisor/Creator
 if (!hasRole(['admin', 'creator', 'supervisor'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit;
 }
 
-session_write_close(); 
-
-// ชื่อตาราง Mapping
-$mappingTable = defined('MANPOWER_DEPARTMENT_MAPPING_TABLE') ? MANPOWER_DEPARTMENT_MAPPING_TABLE : (IS_DEVELOPMENT ? 'MANPOWER_DEPARTMENT_MAPPING_TEST' : 'MANPOWER_DEPARTMENT_MAPPING');
-
 $action = $_REQUEST['action'] ?? 'read';
 
 try {
     if ($action === 'read') {
-        // --- 1. ดึงรายชื่อพนักงาน ---
-        // ★ [FIX] เพิ่ม WITH (NOLOCK) ให้สามารถอ่านข้อมูลได้แม้ Sync กำลังทำงาน
+        // 1. ดึงรายชื่อพนักงานทั้งหมดจาก DB ของเรา
+        // เรียงตาม Line เพื่อให้ดูง่ายว่าใครอยู่ไหน
         $sql = "SELECT 
                     E.id, E.emp_id, E.name_th, E.position, E.line, E.department_api, E.is_active,
                     E.default_shift_id, E.team_group,
                     S.shift_name
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
-                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S WITH (NOLOCK) ON E.default_shift_id = S.shift_id
-                ORDER BY 
-                    CASE WHEN E.line LIKE '%POOL%' THEN 0 ELSE 1 END, 
-                    E.line ASC, E.team_group ASC, E.emp_id ASC";
+                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
+                ORDER BY CASE WHEN E.line = 'TOOLBOX_POOL' THEN 0 ELSE 1 END, E.line, E.emp_id";
         
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
+        $stmt = $pdo->query($sql);
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- 2. ดึงข้อมูลกะ ---
-        $stmtShift = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WITH (NOLOCK) WHERE is_active = 1");
-        $shifts = $stmtShift->fetchAll(PDO::FETCH_ASSOC);
+        // 2. ดึงตัวเลือกกะ (Shift Options)
+        $shifts = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- 3. ดึงรายชื่อ Line ---
-        $productionLines = []; // เก็บไลน์ผลิตจากระบบ
-        
-        // 3.1 ดึงจากตาราง Routes
-        try {
-            $sqlRoutes = "SELECT DISTINCT line FROM " . ROUTES_TABLE . " WHERE line IS NOT NULL AND line != ''";
-            $stmtRoutes = $pdo->query($sqlRoutes);
-            while ($row = $stmtRoutes->fetch(PDO::FETCH_COLUMN)) { $productionLines[] = trim($row); }
-        } catch (Exception $e) {}
-
-        // 3.2 ดึงจากตาราง Mapping
-        try {
-            $sqlMap = "SELECT DISTINCT target_line FROM " . $mappingTable . " WHERE is_active = 1";
-            $stmtMap = $pdo->query($sqlMap);
-            while ($row = $stmtMap->fetch(PDO::FETCH_COLUMN)) { $productionLines[] = trim($row); }
-        } catch (Exception $e) {}
-
-        // 3.3 กำหนดทีมซัพพอร์ต (Support Sections)
-        // เรียงลำดับตามที่คุณต้องการให้แสดง
-        $supportSections = [
-            'ST/WH',
-            'QA/QC',
-            'MT/PE',
-            'OFFICE',
-            'TOOLBOX_POOL'
+        // 3. ส่งรายชื่อ Line ที่มีอยู่จริงกลับไป (เพื่อให้ Dropdown หน้าเว็บถูกต้อง)
+        // Hardcode ไว้ตามที่คุณให้มาใน JSON เพื่อความชัวร์ หรือจะดึง DISTINCT จาก DB ก็ได้
+        $lines = [
+            "ASSEMBLY", "BEND", "PAINT", "PRESS", "SPOT", "ST/WH", "QA/QC", "MT/PE", "OFFICE", "TOOLBOX_POOL"
         ];
-
-        // 3.4 จัดระเบียบข้อมูล (Sorting Logic)
-        
-        // กรองเอาชื่อทีมซัพพอร์ต "ออกจาก" ไลน์ผลิต (ถ้ามันบังเอิญมีใน DB)
-        // เพื่อไม่ให้มันไปโผล่ข้างบน ให้มันมากองรวมกันข้างล่างทีเดียว
-        $productionLines = array_diff($productionLines, $supportSections);
-        
-        // ลบตัวซ้ำในไลน์ผลิต และเรียงตามตัวอักษร (A-Z)
-        $productionLines = array_unique($productionLines);
-        sort($productionLines);
-
-        // รวมร่าง: เอาผลิตไว้บน + เอาซัพพอร์ตต่อท้าย
-        $finalLines = array_merge($productionLines, $supportSections);
 
         echo json_encode([
             'success' => true,
             'data' => $employees,
             'shifts' => $shifts,
-            'lines' => array_values($finalLines) // ส่งค่าที่จัดแล้วกลับไป
+            'lines' => $lines
         ]);
 
     } elseif ($action === 'update') {
+        // --- ส่วนอัปเดตข้อมูล (Admin เป็นคนทำ) ---
         $input = json_decode(file_get_contents('php://input'), true);
+        
         $empId = $input['emp_id'] ?? '';
-        $line = $input['line'] ?? null;
-        $shiftId = $input['shift_id'] ?? null;
-        $teamGroup = $input['team_group'] ?? null; // [NEW] รับค่า Team
-        $isActive = $input['is_active'] ?? 1;
+        $line  = $input['line'] ?? null;
+        $shift = $input['shift_id'] ?? null;
+        $team  = $input['team_group'] ?? null;
+        $active = $input['is_active'] ?? 1;
 
         if (empty($empId)) throw new Exception("Employee ID is required.");
-        
-        // [NEW] เพิ่ม team_group ในการ Update
+        if (empty($line)) throw new Exception("Line is required.");
+
+        // อัปเดตข้อมูลลงฐานข้อมูลโดยตรง
         $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                SET line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE()
+                SET line = ?, 
+                    default_shift_id = ?, 
+                    team_group = ?, 
+                    is_active = ?,
+                    last_sync_at = GETDATE()
                 WHERE emp_id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$line, $shiftId, $teamGroup, $isActive, $empId]);
+        $stmt->execute([$line, $shift, $team, $active, $empId]);
 
-        // อัปเดต User Table ด้วย (เฉพาะ Line)
-        if ($line) {
-            $sqlUser = "UPDATE " . USERS_TABLE . " SET line = ? WHERE emp_id = ?";
-            $pdo->prepare($sqlUser)->execute([$line, $empId]);
-        }
-        echo json_encode(['success' => true, 'message' => 'Employee updated successfully.']);
+        echo json_encode(['success' => true, 'message' => 'Employee updated successfully']);
     }
 
 } catch (Exception $e) {

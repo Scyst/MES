@@ -29,6 +29,14 @@
                                 <option value="OTHER">OTHER (อื่นๆ)</option>
                             </select>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label">Shift (กะการทำงานของวันนี้)</label>
+                            <select class="form-select" id="editLogShift">
+                                <option value="">-- อิงตามกะปัจจุบัน --</option>
+                                <option value="1">DAY SHIFT (08:00 - 20:00)</option>
+                                <option value="2">NIGHT SHIFT (20:00 - 08:00)</option>
+                            </select>
+                        </div>
                         <div class="col-6">
                             <label class="form-label">Scan In</label>
                             <input type="datetime-local" class="form-control" id="editScanInTime"> 

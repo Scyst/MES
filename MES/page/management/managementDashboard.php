@@ -254,7 +254,6 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
         
         // API Endpoints Configuration
-        const DLOT_API = 'api/dlot_manual_manage.php';
         const FILTERS_API = '../OEE_Dashboard/api/get_dashboard_filters.php';
         const PLAN_API = 'api/planManage.php';
         const ITEM_SEARCH_API = '../inventorySettings/api/itemMasterManage.php';

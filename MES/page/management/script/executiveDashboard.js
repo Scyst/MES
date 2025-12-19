@@ -42,25 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 3. CORE: Load Dashboard Data
+    // 3. CORE: Load Dashboard Data (Optimized & Clean)
     // ==========================================
-    let isFirstLoad = true;
-
-    // 2. แก้ไขฟังก์ชัน loadDashboardData
     window.loadDashboardData = async (isSilent = false) => {
-        let start = startDateInput.value;
-        let end = endDateInput.value;
+        const start = startDateInput.value;
+        const end = endDateInput.value;
         const rate = exchangeRateInput.value;
 
-        // [LOGIC ใหม่] ถ้าเป็นการ Auto Refresh (isSilent=true) 
-        // และไม่ใช่การโหลดครั้งแรก ให้โหลดเฉพาะข้อมูลของ "วันนี้"
-        if (isSilent && !isFirstLoad) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            start = todayStr;
-            end = todayStr;
-            console.log("Auto-refreshing only TODAY's data to save resources...");
-        }
-
+        // แสดง Spinner เฉพาะตอนที่ไม่ได้เป็นการ Auto Refresh (isSilent = false)
         if (!isSilent) showSpinner();
 
         try {
@@ -68,21 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const json = await res.json();
 
             if (json.success) {
-                // ถ้าเป็นการโหลดเฉพาะวันนี้ (Silent) เราจะอัปเดตแค่ KPI บางตัว
-                // แต่ถ้าเป็นการโหลดปกติ (Full Range) เราจะวาดกราฟใหม่ทั้งหมด
-                if (isSilent && !isFirstLoad) {
-                    updateTodayKPIsOnly(json.summary);
-                } else {
-                    renderKPIs(json.summary);
-                    renderCharts(json.summary);
-                    renderLineCards(json.lines);
-                    if (json.trend) {
-                        window.lastTrendData = json.trend;
-                        renderTrendChart(json.trend);
-                    }
+                // รันการวาด UI ใหม่ทั้งหมดทุกครั้ง มั่นใจว่าข้อมูลสอดคล้องกันแน่นอน
+                renderKPIs(json.summary);
+                renderCharts(json.summary);
+                renderLineCards(json.lines);
+                
+                if (json.trend) {
+                    window.lastTrendData = json.trend;
+                    renderTrendChart(json.trend);
                 }
                 
-                isFirstLoad = false;
+                console.log(`Dashboard updated in ${isSilent ? 'Background' : 'Foreground'}.`);
+            } else if (!isSilent && typeof showToast === 'function') {
+                showToast(json.message, 'var(--bs-danger)');
             }
         } catch (e) {
             console.error("Error loading dashboard data:", e);
@@ -90,11 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isSilent) hideSpinner();
         }
     };
-
-    function updateTodayKPIsOnly(todayData) {
-        // ตรงนี้อาจจะเขียน Logic เพื่อเอาค่า Today ไปบวก/แทนที่ใน UI เดิม 
-        // หรือสั่งโหลดเต็มรูปแบบเฉพาะถ้าวันที่ End เป็น "วันนี้" ก็ได้ครับ
-    }
 
     // ==========================================
     // 4. AI & MATH LOGIC

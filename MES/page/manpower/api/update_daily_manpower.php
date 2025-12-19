@@ -14,7 +14,10 @@ $input = json_decode(file_get_contents('php://input'), true);
 $logId = $input['log_id'] ?? null;
 $status = $input['status'] ?? null;
 $remark = trim($input['remark'] ?? '');
-// [NEW] รับค่าเวลาออกด้วย
+
+// [ADDED] รับค่า shift_id จาก Modal ที่ส่งมา
+$shiftId = !empty($input['shift_id']) ? intval($input['shift_id']) : null;
+
 $scanInTime = !empty($input['scan_in_time']) ? $input['scan_in_time'] : null;
 $scanOutTime = !empty($input['scan_out_time']) ? $input['scan_out_time'] : null;
 
@@ -42,13 +45,21 @@ try {
         throw new Exception("Locked record.");
     }
 
-    // 2. Update (เพิ่ม scan_out_time)
+    // 2. Update (เพิ่มการบันทึก shift_id ลงไปในประวัติรายวัน)
+    // [EDITED] เพิ่ม shift_id ในคำสั่ง UPDATE
     $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
-            SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, updated_by = ?, updated_at = GETDATE()
+            SET status = ?, 
+                remark = ?, 
+                scan_in_time = ?, 
+                scan_out_time = ?, 
+                shift_id = ?, 
+                updated_by = ?, 
+                updated_at = GETDATE()
             WHERE log_id = ?";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$status, $remark, $scanInTime, $scanOutTime, $updatedBy, $logId]);
+    // [EDITED] ส่งค่า $shiftId เข้าไปใน Execute array
+    $stmt->execute([$status, $remark, $scanInTime, $scanOutTime, $shiftId, $updatedBy, $logId]);
 
     echo json_encode(['success' => true, 'message' => 'Record updated successfully.']);
 
