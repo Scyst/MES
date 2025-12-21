@@ -175,10 +175,11 @@
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light sticky-top">
                                     <tr>
-                                        <th>ตำแหน่งจาก API (Keyword)</th>
-                                        <th>ชื่อกลุ่มที่จะโชว์</th>
-                                        <th style="width: 100px;">Rate/Hr</th>
-                                        <th style="width:50px;"></th>
+                                        <th style="width: 30%;">Keyword ตำแหน่ง (จาก API)</th>
+                                        <th style="width: 25%;">ชื่อกลุ่ม (Display)</th>
+                                        <th style="width: 20%;">ประเภท (Type)</th>
+                                        <th style="width: 20%;">จำนวนเงิน (Rate)</th>
+                                        <th style="width: 5%;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="categoryMappingBody"></tbody>

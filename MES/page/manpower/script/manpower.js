@@ -517,32 +517,71 @@ window.saveBatchShift = async function(l,i){
 window.openMappingModal = async function() {
     mappingModal.show();
     try{
-        // [FIXED] action=read_mappings
-        const res=await fetch(`${API_MAPPING}?action=read_mappings`);
+        const res=await fetch(`${API_MAPPING}?action=read_mappings`); 
         const j=await res.json();
         if(j.success){
             const b=document.getElementById('categoryMappingBody');
-            b.innerHTML=j.categories.map(r=>`<tr><td><input class="form-control cat-api" value="${r.keyword}"></td><td><input class="form-control cat-display" value="${r.category_name}"></td><td><input class="form-control cat-rate" value="${r.hourly_rate}"></td><td><button onclick="this.closest('tr').remove()">X</button></td></tr>`).join('');
-            if(j.categories.length==0) addMappingRow('category');
+            
+            // [UPDATED] เพิ่ม Dropdown เลือก Type (รวมถึงตัวเลือก No OT)
+            b.innerHTML=j.categories.map(r=>`
+                <tr>
+                    <td><input class="form-control cat-api" value="${r.keyword}"></td>
+                    <td><input class="form-control cat-display" value="${r.category_name}"></td>
+                    <td>
+                        <select class="form-select cat-type">
+                            <option value="HOURLY" ${r.rate_type === 'HOURLY' ? 'selected' : ''}>รายชั่วโมง (Hr)</option>
+                            <option value="DAILY"  ${r.rate_type === 'DAILY'  ? 'selected' : ''}>รายวัน (Day)</option> 
+                            <option value="MONTHLY" ${r.rate_type === 'MONTHLY' ? 'selected' : ''}>รายเดือน (Mth)</option>
+                            <option value="MONTHLY_NO_OT" ${r.rate_type === 'MONTHLY_NO_OT' ? 'selected' : ''}>รายเดือน (No OT)</option>
+                        </select>
+                    </td>
+                    <td><input type="number" class="form-control cat-rate" value="${r.hourly_rate}"></td>
+                    <td><button class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>
+                </tr>
+            `).join('');
+            
+            if(j.categories.length==0) addMappingRow();
         }
     } catch(e){}
 }
 
-window.addMappingRow=function(){
-    const b=document.getElementById('categoryMappingBody');
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><input class="form-control cat-api"></td><td><input class="form-control cat-display"></td><td><input class="form-control cat-rate" value="0"></td><td><button onclick="this.closest('tr').remove()">X</button></td>`;
+window.addMappingRow = function() {
+    const b = document.getElementById('categoryMappingBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input class="form-control cat-api" placeholder="เช่น Manager"></td>
+        <td><input class="form-control cat-display" placeholder="Manager"></td>
+        <td>
+            <select class="form-select cat-type">
+                <option value="HOURLY">รายชั่วโมง (Hr)</option>
+                <option value="DAILY">รายวัน (Day)</option>
+                <option value="MONTHLY">รายเดือน (Mth)</option>
+                <option value="MONTHLY_NO_OT">รายเดือน (No OT)</option>
+            </select>
+        </td>
+        <td><input type="number" class="form-control cat-rate" value="0"></td>
+        <td><button class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>
+    `;
     b.appendChild(tr);
 }
 
 window.saveAllMappings=async function(){
-    // [FIXED] action=save_mappings
-    const c=Array.from(document.querySelectorAll('#categoryMappingBody tr')).map(r=>({api_position:r.querySelector('.cat-api').value,category_name:r.querySelector('.cat-display').value,hourly_rate:r.querySelector('.cat-rate').value})).filter(x=>x.api_position);
+    const c=Array.from(document.querySelectorAll('#categoryMappingBody tr')).map(r=>({
+        api_position: r.querySelector('.cat-api').value,
+        category_name: r.querySelector('.cat-display').value,
+        rate_type: r.querySelector('.cat-type').value, // [NEW] รับค่า Type
+        hourly_rate: r.querySelector('.cat-rate').value
+    })).filter(x=>x.api_position);
+
     showSpinner();
     try{
-        const res=await fetch(`${API_MAPPING}?action=save_mappings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({categories:c})});
+        const res=await fetch(`${API_MAPPING}?action=save_mappings`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({categories:c})
+        });
         const j=await res.json();
-        if(j.success){mappingModal.hide(); alert('Saved');}
+        if(j.success){mappingModal.hide(); alert('บันทึกการตั้งค่าเรียบร้อย');}
     } catch(e){} finally{hideSpinner();}
 }
 
