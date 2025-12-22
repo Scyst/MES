@@ -528,9 +528,9 @@ async function handleItemFormSubmit(event) {
         Cost_OH_Staff: form.querySelector('#Cost_OH_Staff').value,
         Cost_OH_Accessory: form.querySelector('#Cost_OH_Accessory').value,
         Cost_OH_Others: form.querySelector('#Cost_OH_Others').value,
-        Cost_Total: form.querySelector('#Cost_Total').value,
+        //Cost_Total: form.querySelector('#Cost_Total').value,
         StandardPrice: form.querySelector('#StandardPrice').value,
-        StandardGP: form.querySelector('#StandardGP').value,
+        //StandardGP: form.querySelector('#StandardGP').value,
         Price_USD: form.querySelector('#Price_USD').value
     };
 
