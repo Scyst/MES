@@ -130,58 +130,261 @@ window.syncApiData = async function(manual) {
 }
 
 // ==========================================
-// 4. Executive Summary (คงเดิม)
+// 4. Executive Summary Logic
 // ==========================================
 async function loadExecutiveSummary(startDate, endDate) {
     try {
-        const res = await fetch(`${API_SUMMARY_URL}&startDate=${startDate}&endDate=${endDate}`);
+        const res = await fetch(`${API_SUMMARY_URL}&date=${startDate}`);
         const json = await res.json();
 
         if (json.success) {
             const label = document.getElementById('lastUpdateLabel');
-            if(label && json.last_update) label.innerText = json.last_update; // เช็ค field นี้ใน php ด้วยว่าส่งมาไหม (ใน api_daily ส่งกลับมาเป็น last_update_ts ถ้าจะเอาวันที่ต้องแก้ php นิดหน่อย แต่ไม่ซีเรียส)
+            if(label && json.last_update) label.innerText = json.last_update;
 
-            renderSummaryTable('tableByLine', json.summary_by_line, ['line_name', 'total_people']);
-            renderSummaryTable('tableByShift', json.summary_by_shift_team, ['shift_name', 'team_group', 'total_people']); // แก้ key team_name -> team_group ตาม SQL
-            renderSummaryTable('tableByType', json.summary_by_type, ['emp_type', 'total_people']);
+            // 1. Render Table 1 (Drill Down)
+            renderDrillDownLineTable(json.summary_drilldown);
+
+            // 2. Render Table 2 (Shift) - โชว์ Plan, Absent, Actual
+            renderDetailedTable('tableByShift', json.summary_shift_team, ['shift_name', 'team_group']);
+
+            // 3. Render Table 3 (Type) - โชว์ Plan, Absent, Actual
+            renderDetailedTable('tableByType', json.summary_by_type, ['emp_type']);
         }
     } catch (e) {
         console.error("Summary Error:", e);
     }
 }
 
-function renderSummaryTable(tableId, data, columns) {
-    const tbody = document.querySelector(`#${tableId} tbody`);
+function renderDrillDownLineTable(data) {
+    const tbody = document.querySelector('#tableByLine tbody');
+    const thead = document.querySelector('#tableByLine thead tr');
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    // [New] อัปเดตหัวตาราง เพิ่มคอลัมน์ Total HC
+    thead.innerHTML = `
+        <th class="ps-3">Line</th>
+        <th class="text-center text-primary border-end">Total HC</th> <th class="text-center">Plan</th>
+        <th class="text-center text-success">Pres.</th>
+        <th class="text-center text-danger">Abs.</th>
+        <th class="text-center text-warning">Late</th>
+        <th class="text-center bg-light border-start">Act.</th>
+    `;
+
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${columns.length}" class="text-center text-muted small py-3">No Data</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No Data</td></tr>';
         return;
     }
 
-    let grandTotal = 0;
+    const grouped = {};
+    let grandTotal = { total_hc:0, plan:0, present:0, late:0, absent:0, actual:0 };
+
     data.forEach(row => {
-        let tr = '<tr>';
-        columns.forEach((col, index) => {
-            const val = row[col] !== null ? row[col] : '-';
-            if (index === columns.length - 1) {
-                tr += `<td class="text-end fw-bold">${val}</td>`;
-                grandTotal += parseInt(val) || 0;
-            } else {
-                tr += `<td>${val}</td>`;
-            }
+        const line = row.line_name;
+        const shiftKey = `${row.shift_name}::${row.team_group}`;
+
+        if (!grouped[line]) {
+            grouped[line] = {
+                name: line,
+                total_hc: 0, plan: 0, present: 0, late: 0, absent: 0, actual: 0,
+                shifts: {}
+            };
+        }
+
+        if (!grouped[line].shifts[shiftKey]) {
+            grouped[line].shifts[shiftKey] = {
+                name: row.shift_name,
+                team: row.team_group,
+                plan: 0, present: 0, late: 0, absent: 0, actual: 0,
+                types: []
+            };
+        }
+
+        const r_total_hc = parseInt(row.total_hc)||0; // ยอด Master HC (ค่าเท่ากันทุกแถวในไลน์เดียวกัน)
+        const r_plan = parseInt(row.plan)||0;
+        const r_pre = parseInt(row.present)||0;
+        const r_late = parseInt(row.late)||0;
+        const r_abs = parseInt(row.absent)||0;
+        const r_act = parseInt(row.actual)||0;
+
+        const s = grouped[line].shifts[shiftKey];
+        s.plan += r_plan; s.present += r_pre; s.late += r_late; s.absent += r_abs; s.actual += r_act;
+        s.types.push({ name: row.category_name, plan: r_plan, present: r_pre, late: r_late, absent: r_abs, actual: r_act });
+
+        const l = grouped[line];
+        // *** Trick: Total HC ต้องไม่บวกทบซ้ำๆ ต้องเอาค่า Max ของไลน์นั้นๆ ***
+        // แต่วิธีง่ายสุดคือใช้ค่าล่าสุดที่ Loop มา เพราะ Query เรา Group มาแล้ว
+        l.total_hc = r_total_hc; // Update ค่า HC ให้เป็นค่าของไลน์นี้
+        l.plan += r_plan; l.present += r_pre; l.late += r_late; l.absent += r_abs; l.actual += r_act;
+    });
+
+    // Loop อีกรอบเพื่อหา Grand Total (เพราะ Total HC เราเพิ่งได้ค่าที่นิ่ง)
+    Object.values(grouped).forEach(g => {
+        grandTotal.total_hc += g.total_hc;
+        grandTotal.plan += g.plan;
+        grandTotal.present += g.present;
+        grandTotal.late += g.late;
+        grandTotal.absent += g.absent;
+        grandTotal.actual += g.actual;
+    });
+
+    Object.values(grouped).forEach((group, index) => {
+        const lineId = `L-${index}`;
+        
+        const trLine = document.createElement('tr');
+        trLine.className = 'fw-bold cursor-pointer bg-white border-bottom';
+        trLine.setAttribute('data-bs-toggle', 'collapse');
+        trLine.setAttribute('data-bs-target', `.${lineId}`);
+        trLine.innerHTML = `
+            <td class="text-primary text-truncate" title="${group.name}"><i class="fas fa-caret-right me-2 transition-icon"></i>${group.name}</td>
+            <td class="text-center text-primary border-end bg-light-subtle">${group.total_hc}</td>
+            <td class="text-center text-muted">${group.plan}</td>
+            <td class="text-center text-success">${group.present}</td>
+            <td class="text-center text-danger">${group.absent||'-'}</td>
+            <td class="text-center text-warning">${group.late||'-'}</td>
+            <td class="text-center bg-light border-start border-end text-dark">${group.actual}</td>
+        `;
+        trLine.addEventListener('click', function() { this.querySelector('.fa-caret-right').classList.toggle('fa-rotate-90'); });
+        tbody.appendChild(trLine);
+
+        Object.values(group.shifts).forEach((shift, sIndex) => {
+            const shiftId = `${lineId}-S-${sIndex}`;
+            const trShift = document.createElement('tr');
+            trShift.className = `collapse ${lineId} cursor-pointer`;
+            trShift.style.backgroundColor = '#f8f9fa';
+            trShift.style.fontSize = '0.85rem';
+            trShift.setAttribute('data-bs-toggle', 'collapse');
+            trShift.setAttribute('data-bs-target', `.${shiftId}`);
+
+            let shiftMeta = `<span class="badge bg-white text-dark border border-secondary me-1">${shift.name}</span>`;
+            if(shift.team && shift.team!=='-') shiftMeta += `<span class="badge bg-info text-dark">${shift.team}</span>`;
+
+            trShift.innerHTML = `
+                <td class="ps-4 border-start border-3 border-primary"><div class="d-flex align-items-center"><i class="fas fa-angle-right me-2 text-muted transition-icon" style="font-size:0.8em"></i>${shiftMeta}</div></td>
+                <td class="text-center border-end text-muted">-</td> <td class="text-center text-muted">${shift.plan}</td>
+                <td class="text-center text-success">${shift.present}</td>
+                <td class="text-center text-danger">${shift.absent||'-'}</td>
+                <td class="text-center text-warning">${shift.late||'-'}</td>
+                <td class="text-center fw-bold border-start border-end">${shift.actual}</td>
+            `;
+            trShift.addEventListener('click', function() { this.querySelector('.fa-angle-right').classList.toggle('fa-rotate-90'); });
+            tbody.appendChild(trShift);
+
+            shift.types.forEach(type => {
+                const trType = document.createElement('tr');
+                trType.className = `collapse ${shiftId} bg-white`;
+                trType.style.fontSize = '0.8rem';
+                trType.innerHTML = `
+                    <td class="ps-5 border-start border-3 border-info"><span class="text-muted"><i class="fas fa-circle me-2" style="font-size:0.4em;"></i>${type.name}</span></td>
+                    <td class="text-center border-end text-muted">-</td>
+                    <td class="text-center text-muted small">${type.plan}</td>
+                    <td class="text-center text-success small">${type.present}</td>
+                    <td class="text-center text-danger small">${type.absent||'-'}</td>
+                    <td class="text-center text-warning small">${type.late||'-'}</td>
+                    <td class="text-center border-start border-end small">${type.actual}</td>
+                `;
+                tbody.appendChild(trType);
+            });
         });
+    });
+
+    tbody.innerHTML += `
+        <tr class="table-dark fw-bold" style="font-size: 0.9rem;">
+            <td class="ps-3">TOTAL</td>
+            <td class="text-center text-info">${grandTotal.total_hc}</td>
+            <td class="text-center text-white">${grandTotal.plan}</td>
+            <td class="text-center text-success">${grandTotal.present}</td>
+            <td class="text-center text-danger">${grandTotal.absent}</td>
+            <td class="text-center text-warning">${grandTotal.late}</td>
+            <td class="text-center bg-secondary border-start text-white">${grandTotal.actual}</td>
+        </tr>`;
+}
+
+// ==========================================
+// ฟังก์ชันสำหรับตารางที่ 2 และ 3 (รับค่าแค่ 3 ตัว)
+// ==========================================
+function renderDetailedTable(tableId, data, labelCols) {
+    // เลือก Element ตาราง
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    const thead = document.querySelector(`#${tableId} thead tr`);
+    
+    // กัน Error ถ้าหาตารางไม่เจอ
+    if (!tbody || !thead) return;
+    
+    tbody.innerHTML = '';
+
+    // 1. สร้างหัวตาราง (Fixed Columns)
+    // เช็คว่าตารางไหน เพื่อเปลี่ยนชื่อหัวคอลัมน์แรก
+    const firstColName = labelCols.includes('shift_name') ? 'Shift' : 'Type';
+    
+    thead.innerHTML = `
+        <th class="ps-3">${firstColName}</th>
+        <th class="text-center text-primary border-end">Total</th>
+        <th class="text-center">Plan</th>
+        <th class="text-center">Abs.</th>
+        <th class="text-center bg-light border-start">Act.</th>
+    `;
+
+    // 2. เช็คข้อมูลว่าง
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No Data</td></tr>`;
+        return;
+    }
+
+    // 3. ตัวแปรเก็บยอดรวม (Grand Total)
+    let totals = { total_hc: 0, plan: 0, absent: 0, actual: 0 };
+
+    // 4. วนลูปสร้างแถว
+    data.forEach(row => {
+        // 4.1 สร้าง Label (เช่น "Day - Team A" หรือ "พนักงานประจำ")
+        let labelHtml = '';
+        labelCols.forEach((col, idx) => {
+            const val = row[col] || '-';
+            if (col === 'shift_name') labelHtml += `<span class="fw-bold me-1">${val}</span>`;
+            else if (col === 'team_group' && val !== '-') labelHtml += `<span class="badge bg-light text-dark border">${val}</span>`;
+            else labelHtml += `<span>${val}</span>`;
+            
+            if (idx < labelCols.length - 1) labelHtml += ' ';
+        });
+
+        let tr = `<tr><td class="ps-3 text-truncate" style="max-width: 150px;">${labelHtml}</td>`;
+        
+        // 4.2 วนลูปค่าตัวเลข (Fixed Columns: Total, Plan, Absent, Actual)
+        ['total_hc', 'plan', 'absent', 'actual'].forEach(col => {
+            const val = parseInt(row[col]) || 0;
+            totals[col] += val; // บวกยอดรวม
+            
+            // จัดสีตัวเลข
+            let colorClass = '';
+            if (col === 'total_hc') colorClass = 'text-primary fw-bold border-end bg-light-subtle';
+            else if (col === 'absent' && val > 0) colorClass = 'text-danger fw-bold';
+            else if (col === 'actual') colorClass = 'fw-bold bg-light border-start';
+            else if (col === 'plan') colorClass = 'text-muted';
+            
+            // ถ้าเป็น 0 ให้แสดง - (ยกเว้น Plan กับ Actual ให้โชว์ 0 ได้)
+            const displayVal = (val === 0 && col !== 'plan' && col !== 'actual' && col !== 'total_hc') ? '-' : val;
+            
+            tr += `<td class="text-center ${colorClass}">${displayVal}</td>`;
+        });
+        
         tr += '</tr>';
         tbody.innerHTML += tr;
     });
 
-    const colspan = columns.length - 1;
-    tbody.innerHTML += `
-        <tr class="table-light fw-bold" style="border-top: 2px solid #dee2e6;">
-            <td colspan="${colspan}">TOTAL</td>
-            <td class="text-end text-primary">${grandTotal}</td>
-        </tr>`;
+    // 5. สร้างแถว Total Row ด้านล่างสุด
+    let totalTr = `<tr class="table-secondary fw-bold" style="border-top: 2px solid #aaa;"><td>TOTAL</td>`;
+    ['total_hc', 'plan', 'absent', 'actual'].forEach(col => {
+        let txtColor = col === 'actual' ? 'text-dark' : '';
+        totalTr += `<td class="text-center ${txtColor}">${totals[col]}</td>`;
+    });
+    totalTr += `</tr>`;
+    tbody.innerHTML += totalTr;
+}
+
+function getDiffHtml(diff) {
+    if(diff > 0) return `<span class="text-success">+${diff}</span>`;
+    if(diff < 0) return `<span class="text-danger">${diff}</span>`;
+    return `<span class="text-muted">-</span>`;
 }
 
 // ==========================================

@@ -82,6 +82,31 @@
         /* Transition สำหรับ Icon Expand */
         .expand-icon { transition: transform 0.3s ease; }
         tr[aria-expanded="true"] { background-color: var(--bs-primary-bg-subtle) !important; }
+
+        .cursor-pointer { cursor: pointer; }
+        
+        .transition-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        /* หมุนลูกศรเมื่อกดเปิด */
+        .fa-rotate-90 {
+            transform: rotate(90deg);
+        }
+
+        /* Animation ตอนแถวลูกโผล่ออกมา */
+        .collapse.show {
+            display: table-row;
+            animation: fadeInRow 0.3s ease-in;
+        }
+        
+        @keyframes fadeInRow {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* เส้นขอบสีฟ้าด้านซ้ายของแถวลูก */
+        .border-start-3 { border-left-width: 3px !important; }
     </style>
 </head>
 
@@ -146,7 +171,7 @@
                             <button class="btn btn-sm btn-outline-warning text-dark fw-bold" onclick="openShiftPlanner()">
                                 <i class="fas fa-exchange-alt me-2"></i>Rotation
                             </button>
-                            <button class="btn btn-sm btn-outline-dark fw-bold" onclick="openMappingModal()">
+                            <button class="btn btn-sm btn-outline-dark fw-bold d-none" onclick="openMappingModal()">
                                 <i class="fas fa-sitemap me-1"></i> Mapping
                             </button>
                             <button class="btn btn-sm btn-success fw-bold px-3" onclick="syncApiData(true)">
@@ -187,42 +212,68 @@
             <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
                 <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-chart-pie me-2"></i>Executive Summary (รายงานสรุป)</h6>
             </div>
-            
-            <div class="row g-4 mb-4" id="summarySection">
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm summary-card-height">
-                        <div class="card-header bg-white py-2 border-bottom fw-bold text-primary">
-                            <i class="fas fa-industry me-2"></i>1. จำนวนคนแยกตาม Line
+
+            <div class="row g-3 mb-4" id="summarySection">
+                
+                <div class="col-12 col-xl-5"> <div class="card h-100 border-0 shadow-sm summary-card-height">
+                        <div class="card-header bg-white py-2 border-bottom fw-bold text-primary d-flex justify-content-between">
+                            <span><i class="fas fa-industry me-2"></i>1. สรุปรายไลน์ (Drill Down)</span>
+                            <small class="text-muted fw-normal" style="font-size: 0.7rem;">(คลิกเพื่อดูย่อย)</small>
                         </div>
                         <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0 table-summary" id="tableByLine">
-                                <thead><tr><th class="ps-3">Line</th><th class="text-end pe-3">Count</th></tr></thead>
+                            <table class="table table-sm table-hover mb-0" id="tableByLine" style="font-size: 0.85rem;">
+                                <thead class="table-light sticky-top" style="z-index: 5;">
+                                    <tr>
+                                        <th class="ps-3">Line</th>
+                                        <th class="text-center">Plan</th>
+                                        <th class="text-center text-success">Pres.</th>
+                                        <th class="text-center text-danger">Abs.</th>
+                                        <th class="text-center text-warning">Late</th>
+                                        <th class="text-center bg-light border-start">Act.</th>
+                                    </tr>
+                                </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="card h-100 border-0 shadow-sm summary-card-height">
                         <div class="card-header bg-white py-2 border-bottom fw-bold text-info">
-                            <i class="fas fa-clock me-2"></i>2. สรุปกะ (Shift & Team)
+                            <i class="fas fa-clock me-2"></i>2. สรุปกะและทีม (รวม)
                         </div>
                         <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0 table-summary" id="tableByShift">
-                                <thead><tr><th class="ps-3">Shift</th><th>Team</th><th class="text-end pe-3">Count</th></tr></thead>
+                            <table class="table table-sm table-hover mb-0" id="tableByShift" style="font-size: 0.85rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="ps-3">Shift</th>
+                                        <th class="text-center">Plan</th>
+                                        <th class="text-center">Abs.</th>
+                                        <th class="text-center bg-light border-start">Act.</th>
+                                    </tr>
+                                </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+
+                <div class="col-12 col-md-6 col-xl-4">
                     <div class="card h-100 border-0 shadow-sm summary-card-height">
                         <div class="card-header bg-white py-2 border-bottom fw-bold text-success">
-                            <i class="fas fa-id-badge me-2"></i>3. ประเภทพนักงาน
+                            <i class="fas fa-id-badge me-2"></i>3. ประเภทพนักงาน (รวม)
                         </div>
                         <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0 table-summary" id="tableByType">
-                                <thead><tr><th class="ps-3">Type</th><th class="text-end pe-3">Count</th></tr></thead>
+                            <table class="table table-sm table-hover mb-0" id="tableByType" style="font-size: 0.85rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="ps-3">Type</th>
+                                        <th class="text-center">Plan</th>
+                                        <th class="text-center">Abs.</th>
+                                        <th class="text-center bg-light border-start">Act.</th>
+                                    </tr>
+                                </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
