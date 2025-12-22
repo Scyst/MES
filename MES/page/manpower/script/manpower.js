@@ -1,6 +1,7 @@
+// page/manpower/script/manpower.js
 "use strict";
 
-const API_SYNC_URL    = 'api/sync_from_api.php'; // (ตัวนี้ใช้ไฟล์เดิม ไม่ต้องแก้)
+const API_SYNC_URL    = 'api/sync_from_api.php'; 
 const API_GET_URL     = 'api/api_daily_operations.php?action=read_daily';
 const API_SUMMARY_URL = 'api/api_daily_operations.php?action=read_summary';
 
@@ -18,7 +19,7 @@ const rowsPerPage = 50;
 let currentFilter = 'TOTAL'; 
 
 // ==========================================
-// 1. Initialization (คงเดิม)
+// 1. Initialization
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // 1.1 Init Modals
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. Main Logic: Refresh Data (คงเดิม)
+// 2. Main Logic: Refresh Data
 // ==========================================
 function refreshData() {
     const startDate = document.getElementById('startDate').value;
@@ -64,7 +65,7 @@ function refreshData() {
 }
 
 // ==========================================
-// 3. Sync Logic (คงเดิม)
+// 3. Sync Logic
 // ==========================================
 window.syncApiData = async function(manual) {
     const startDate = document.getElementById('startDate').value;
@@ -130,10 +131,11 @@ window.syncApiData = async function(manual) {
 }
 
 // ==========================================
-// 4. Executive Summary Logic
+// 4. Executive Summary Logic (UPDATED)
 // ==========================================
 async function loadExecutiveSummary(startDate, endDate) {
     try {
+        // เรียก API ใหม่ที่ใช้ Function (เร็วขึ้น)
         const res = await fetch(`${API_SUMMARY_URL}&date=${startDate}`);
         const json = await res.json();
 
@@ -141,43 +143,46 @@ async function loadExecutiveSummary(startDate, endDate) {
             const label = document.getElementById('lastUpdateLabel');
             if(label && json.last_update) label.innerText = json.last_update;
 
-            // 1. Render Table 1 (Drill Down)
+            // 1. Render Table 1 (Line Drill Down)
             renderDrillDownLineTable(json.summary_drilldown);
 
-            // 2. Render Table 2 (Shift) - โชว์ Plan, Absent, Actual
-            renderDetailedTable('tableByShift', json.summary_shift_team, ['shift_name', 'team_group']);
+            // 2. Render Table 2 (Shift Summary) [UPDATED: ใช้ฟังก์ชันแยก]
+            renderShiftTeamTable(json.summary_shift_team);
 
-            // 3. Render Table 3 (Type) - โชว์ Plan, Absent, Actual
-            renderDetailedTable('tableByType', json.summary_by_type, ['emp_type']);
+            // 3. Render Table 3 (Type Summary) [UPDATED: ใช้ฟังก์ชันแยก]
+            renderEmployeeTypeTable(json.summary_by_type);
         }
     } catch (e) {
         console.error("Summary Error:", e);
     }
 }
 
+// 4.1 ตารางที่ 1: Line Drill Down (มี Diff)
 function renderDrillDownLineTable(data) {
     const tbody = document.querySelector('#tableByLine tbody');
     const thead = document.querySelector('#tableByLine thead tr');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // [New] อัปเดตหัวตาราง เพิ่มคอลัมน์ Total HC
+    // หัวตาราง
     thead.innerHTML = `
         <th class="ps-3">Line</th>
-        <th class="text-center text-primary border-end">Total HC</th> <th class="text-center">Plan</th>
+        <th class="text-center text-primary border-end">Total HC</th> 
+        <th class="text-center">Plan</th>
         <th class="text-center text-success">Pres.</th>
+        <th class="text-center text-info">Leave</th>
         <th class="text-center text-danger">Abs.</th>
         <th class="text-center text-warning">Late</th>
-        <th class="text-center bg-light border-start">Act.</th>
-    `;
+        <th class="text-center bg-light border-start border-end text-dark">Act.</th>
+        <th class="text-center fw-bold">Diff</th>`; // ช่อง Diff
 
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No Data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No Data</td></tr>';
         return;
     }
 
     const grouped = {};
-    let grandTotal = { total_hc:0, plan:0, present:0, late:0, absent:0, actual:0 };
+    let grandTotal = { total_hc:0, plan:0, present:0, late:0, absent:0, leave:0, actual:0, diff:0 };
 
     data.forEach(row => {
         const line = row.line_name;
@@ -186,7 +191,7 @@ function renderDrillDownLineTable(data) {
         if (!grouped[line]) {
             grouped[line] = {
                 name: line,
-                total_hc: 0, plan: 0, present: 0, late: 0, absent: 0, actual: 0,
+                total_hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0,
                 shifts: {}
             };
         }
@@ -195,39 +200,45 @@ function renderDrillDownLineTable(data) {
             grouped[line].shifts[shiftKey] = {
                 name: row.shift_name,
                 team: row.team_group,
-                plan: 0, present: 0, late: 0, absent: 0, actual: 0,
+                plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0,
                 types: []
             };
         }
 
-        const r_total_hc = parseInt(row.total_hc)||0; // ยอด Master HC (ค่าเท่ากันทุกแถวในไลน์เดียวกัน)
+        const r_total_hc = parseInt(row.total_hc)||0;
         const r_plan = parseInt(row.plan)||0;
         const r_pre = parseInt(row.present)||0;
         const r_late = parseInt(row.late)||0;
         const r_abs = parseInt(row.absent)||0;
+        const r_leave = parseInt(row.leave)||0;
         const r_act = parseInt(row.actual)||0;
+        const r_diff = parseInt(row.diff)||0;
 
         const s = grouped[line].shifts[shiftKey];
-        s.plan += r_plan; s.present += r_pre; s.late += r_late; s.absent += r_abs; s.actual += r_act;
-        s.types.push({ name: row.category_name, plan: r_plan, present: r_pre, late: r_late, absent: r_abs, actual: r_act });
+        s.plan += r_plan; s.present += r_pre; s.late += r_late; s.absent += r_abs; s.leave += r_leave; s.actual += r_act; s.diff += r_diff;
+        s.types.push({ 
+            name: row.category_name, 
+            plan: r_plan, present: r_pre, late: r_late, absent: r_abs, leave: r_leave, actual: r_act, diff: r_diff 
+        });
 
         const l = grouped[line];
-        // *** Trick: Total HC ต้องไม่บวกทบซ้ำๆ ต้องเอาค่า Max ของไลน์นั้นๆ ***
-        // แต่วิธีง่ายสุดคือใช้ค่าล่าสุดที่ Loop มา เพราะ Query เรา Group มาแล้ว
-        l.total_hc = r_total_hc; // Update ค่า HC ให้เป็นค่าของไลน์นี้
-        l.plan += r_plan; l.present += r_pre; l.late += r_late; l.absent += r_abs; l.actual += r_act;
+        l.total_hc = r_total_hc; 
+        l.plan += r_plan; l.present += r_pre; l.late += r_late; l.absent += r_abs; l.leave += r_leave; l.actual += r_act; l.diff += r_diff;
     });
 
-    // Loop อีกรอบเพื่อหา Grand Total (เพราะ Total HC เราเพิ่งได้ค่าที่นิ่ง)
+    // Loop Grand Total
     Object.values(grouped).forEach(g => {
         grandTotal.total_hc += g.total_hc;
         grandTotal.plan += g.plan;
         grandTotal.present += g.present;
         grandTotal.late += g.late;
         grandTotal.absent += g.absent;
+        grandTotal.leave += g.leave;
         grandTotal.actual += g.actual;
+        grandTotal.diff += g.diff;
     });
 
+    // Render Logic
     Object.values(grouped).forEach((group, index) => {
         const lineId = `L-${index}`;
         
@@ -235,15 +246,17 @@ function renderDrillDownLineTable(data) {
         trLine.className = 'fw-bold cursor-pointer bg-white border-bottom';
         trLine.setAttribute('data-bs-toggle', 'collapse');
         trLine.setAttribute('data-bs-target', `.${lineId}`);
+        
         trLine.innerHTML = `
             <td class="text-primary text-truncate" title="${group.name}"><i class="fas fa-caret-right me-2 transition-icon"></i>${group.name}</td>
             <td class="text-center text-primary border-end bg-light-subtle">${group.total_hc}</td>
             <td class="text-center text-muted">${group.plan}</td>
             <td class="text-center text-success">${group.present}</td>
+            <td class="text-center text-info">${group.leave||'-'}</td>
             <td class="text-center text-danger">${group.absent||'-'}</td>
             <td class="text-center text-warning">${group.late||'-'}</td>
             <td class="text-center bg-light border-start border-end text-dark">${group.actual}</td>
-        `;
+            <td class="text-center bg-light-subtle">${getDiffHtml(group.diff)}</td>`;
         trLine.addEventListener('click', function() { this.querySelector('.fa-caret-right').classList.toggle('fa-rotate-90'); });
         tbody.appendChild(trLine);
 
@@ -263,9 +276,11 @@ function renderDrillDownLineTable(data) {
                 <td class="ps-4 border-start border-3 border-primary"><div class="d-flex align-items-center"><i class="fas fa-angle-right me-2 text-muted transition-icon" style="font-size:0.8em"></i>${shiftMeta}</div></td>
                 <td class="text-center border-end text-muted">-</td> <td class="text-center text-muted">${shift.plan}</td>
                 <td class="text-center text-success">${shift.present}</td>
+                <td class="text-center text-info">${shift.leave||'-'}</td>
                 <td class="text-center text-danger">${shift.absent||'-'}</td>
                 <td class="text-center text-warning">${shift.late||'-'}</td>
                 <td class="text-center fw-bold border-start border-end">${shift.actual}</td>
+                <td class="text-center">${getDiffHtml(shift.diff)}</td>
             `;
             trShift.addEventListener('click', function() { this.querySelector('.fa-angle-right').classList.toggle('fa-rotate-90'); });
             tbody.appendChild(trShift);
@@ -279,116 +294,117 @@ function renderDrillDownLineTable(data) {
                     <td class="text-center border-end text-muted">-</td>
                     <td class="text-center text-muted small">${type.plan}</td>
                     <td class="text-center text-success small">${type.present}</td>
+                    <td class="text-center text-info small">${type.leave||'-'}</td>
                     <td class="text-center text-danger small">${type.absent||'-'}</td>
                     <td class="text-center text-warning small">${type.late||'-'}</td>
                     <td class="text-center border-start border-end small">${type.actual}</td>
+                    <td class="text-center small">${getDiffHtml(type.diff)}</td>
                 `;
                 tbody.appendChild(trType);
             });
         });
     });
 
+    // Grand Total Row
     tbody.innerHTML += `
         <tr class="table-dark fw-bold" style="font-size: 0.9rem;">
             <td class="ps-3">TOTAL</td>
             <td class="text-center text-info">${grandTotal.total_hc}</td>
             <td class="text-center text-white">${grandTotal.plan}</td>
             <td class="text-center text-success">${grandTotal.present}</td>
+            <td class="text-center text-info">${grandTotal.leave}</td>
             <td class="text-center text-danger">${grandTotal.absent}</td>
             <td class="text-center text-warning">${grandTotal.late}</td>
             <td class="text-center bg-secondary border-start text-white">${grandTotal.actual}</td>
+            <td class="text-center border-start text-white">${getDiffHtml(grandTotal.diff)}</td>
         </tr>`;
 }
 
-// ==========================================
-// ฟังก์ชันสำหรับตารางที่ 2 และ 3 (รับค่าแค่ 3 ตัว)
-// ==========================================
-function renderDetailedTable(tableId, data, labelCols) {
-    // เลือก Element ตาราง
-    const tbody = document.querySelector(`#${tableId} tbody`);
-    const thead = document.querySelector(`#${tableId} thead tr`);
-    
-    // กัน Error ถ้าหาตารางไม่เจอ
-    if (!tbody || !thead) return;
-    
+// 4.2 ตารางที่ 2: Shift / Team Summary (มี Diff)
+function renderShiftTeamTable(data) {
+    const tbody = document.querySelector('#tableByShift tbody'); // แก้ ID เป็น tableByShift (จากหน้า UI)
+    const thead = document.querySelector('#tableByShift thead tr');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. สร้างหัวตาราง (Fixed Columns)
-    // เช็คว่าตารางไหน เพื่อเปลี่ยนชื่อหัวคอลัมน์แรก
-    const firstColName = labelCols.includes('shift_name') ? 'Shift' : 'Type';
-    
     thead.innerHTML = `
-        <th class="ps-3">${firstColName}</th>
-        <th class="text-center text-primary border-end">Total</th>
+        <th class="ps-3">Shift / Team</th>
+        <th class="text-center text-primary border-end">Total HC</th>
         <th class="text-center">Plan</th>
-        <th class="text-center">Abs.</th>
-        <th class="text-center bg-light border-start">Act.</th>
-    `;
+        <th class="text-center text-danger">Absent</th>
+        <th class="text-center bg-light border-start border-end fw-bold">Actual</th>
+        <th class="text-center fw-bold">Diff</th>`;
 
-    // 2. เช็คข้อมูลว่าง
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No Data</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No Data</td></tr>';
         return;
     }
 
-    // 3. ตัวแปรเก็บยอดรวม (Grand Total)
-    let totals = { total_hc: 0, plan: 0, absent: 0, actual: 0 };
-
-    // 4. วนลูปสร้างแถว
     data.forEach(row => {
-        // 4.1 สร้าง Label (เช่น "Day - Team A" หรือ "พนักงานประจำ")
-        let labelHtml = '';
-        labelCols.forEach((col, idx) => {
-            const val = row[col] || '-';
-            if (col === 'shift_name') labelHtml += `<span class="fw-bold me-1">${val}</span>`;
-            else if (col === 'team_group' && val !== '-') labelHtml += `<span class="badge bg-light text-dark border">${val}</span>`;
-            else labelHtml += `<span>${val}</span>`;
-            
-            if (idx < labelCols.length - 1) labelHtml += ' ';
-        });
+        let shiftMeta = `<span class="badge bg-white text-dark border border-secondary me-1">${row.shift_name}</span>`;
+        if (row.team_group && row.team_group !== '-') {
+            shiftMeta += `<span class="badge bg-info text-dark">${row.team_group}</span>`;
+        }
 
-        let tr = `<tr><td class="ps-3 text-truncate" style="max-width: 150px;">${labelHtml}</td>`;
-        
-        // 4.2 วนลูปค่าตัวเลข (Fixed Columns: Total, Plan, Absent, Actual)
-        ['total_hc', 'plan', 'absent', 'actual'].forEach(col => {
-            const val = parseInt(row[col]) || 0;
-            totals[col] += val; // บวกยอดรวม
-            
-            // จัดสีตัวเลข
-            let colorClass = '';
-            if (col === 'total_hc') colorClass = 'text-primary fw-bold border-end bg-light-subtle';
-            else if (col === 'absent' && val > 0) colorClass = 'text-danger fw-bold';
-            else if (col === 'actual') colorClass = 'fw-bold bg-light border-start';
-            else if (col === 'plan') colorClass = 'text-muted';
-            
-            // ถ้าเป็น 0 ให้แสดง - (ยกเว้น Plan กับ Actual ให้โชว์ 0 ได้)
-            const displayVal = (val === 0 && col !== 'plan' && col !== 'actual' && col !== 'total_hc') ? '-' : val;
-            
-            tr += `<td class="text-center ${colorClass}">${displayVal}</td>`;
-        });
-        
-        tr += '</tr>';
-        tbody.innerHTML += tr;
+        const tr = document.createElement('tr');
+        tr.style.fontSize = '0.9rem';
+        tr.innerHTML = `
+            <td class="ps-3 border-start border-3 border-warning">${shiftMeta}</td>
+            <td class="text-center text-primary border-end bg-light-subtle">${row.total_hc}</td>
+            <td class="text-center text-muted">${row.plan}</td>
+            <td class="text-center text-danger">${row.absent}</td>
+            <td class="text-center fw-bold bg-light border-start border-end text-dark">${row.actual}</td>
+            <td class="text-center bg-light-subtle">${getDiffHtml(row.diff)}</td>
+        `;
+        tbody.appendChild(tr);
     });
-
-    // 5. สร้างแถว Total Row ด้านล่างสุด
-    let totalTr = `<tr class="table-secondary fw-bold" style="border-top: 2px solid #aaa;"><td>TOTAL</td>`;
-    ['total_hc', 'plan', 'absent', 'actual'].forEach(col => {
-        let txtColor = col === 'actual' ? 'text-dark' : '';
-        totalTr += `<td class="text-center ${txtColor}">${totals[col]}</td>`;
-    });
-    totalTr += `</tr>`;
-    tbody.innerHTML += totalTr;
 }
 
-function getDiffHtml(diff) {
-    if(diff > 0) return `<span class="text-success">+${diff}</span>`;
-    if(diff < 0) return `<span class="text-danger">${diff}</span>`;
-    return `<span class="text-muted">-</span>`;
+// 4.3 ตารางที่ 3: Employee Type Summary (มี Diff)
+function renderEmployeeTypeTable(data) {
+    const tbody = document.querySelector('#tableByType tbody'); // แก้ ID เป็น tableByType
+    const thead = document.querySelector('#tableByType thead tr');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    thead.innerHTML = `
+        <th class="ps-3">Employee Type</th>
+        <th class="text-center text-primary border-end">Total HC</th>
+        <th class="text-center">Plan</th>
+        <th class="text-center text-danger">Absent</th>
+        <th class="text-center bg-light border-start border-end fw-bold">Actual</th>
+        <th class="text-center fw-bold">Diff</th>`;
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No Data</td></tr>';
+        return;
+    }
+
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.style.fontSize = '0.9rem';
+        tr.innerHTML = `
+            <td class="ps-3 border-start border-3 border-info fw-bold text-muted">${row.emp_type}</td>
+            <td class="text-center text-primary border-end bg-light-subtle">${row.total_hc}</td>
+            <td class="text-center text-muted">${row.plan}</td>
+            <td class="text-center text-danger">${row.absent}</td>
+            <td class="text-center fw-bold bg-light border-start border-end text-dark">${row.actual}</td>
+            <td class="text-center bg-light-subtle">${getDiffHtml(row.diff)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Helper สร้างสี Diff
+function getDiffHtml(val) {
+    val = parseInt(val) || 0;
+    if (val > 0) return `<span class="text-primary fw-bold">+${val}</span>`;
+    if (val < 0) return `<span class="text-danger fw-bold">${val}</span>`;
+    return `<span class="text-muted text-opacity-25">-</span>`;
 }
 
 // ==========================================
-// 5. Manpower List (Accordion Table) (คงเดิม)
+// 5. Manpower List (Accordion Table)
 // ==========================================
 async function loadManpowerList(startDate, endDate) {
     if (allManpowerData.length === 0) showSpinner();
@@ -617,7 +633,7 @@ function showSpinner() { const el = document.getElementById('loadingOverlay'); i
 function hideSpinner() { const el = document.getElementById('loadingOverlay'); if(el) el.style.display = 'none'; }
 
 // ==========================================
-// 6. Action Functions (แก้ไข URL และ Params แล้ว)
+// 6. Action Functions
 // ==========================================
 
 // 6.1 Edit Log
@@ -627,7 +643,7 @@ window.openEditLogModal = function(logId) {
         document.getElementById('editLogId').value = logId;
         document.getElementById('editEmpName').value = log.name_th;
         document.getElementById('editStatus').value = log.status;
-        document.getElementById('editLogShift').value = log.actual_shift_id || ""; // ใช้ actual_shift_id ที่ query มาใหม่
+        document.getElementById('editLogShift').value = log.actual_shift_id || ""; 
         const fmt = (t) => t ? t.replace(' ', 'T').substring(0, 16) : '';
         document.getElementById('editScanInTime').value = fmt(log.scan_in_time);
         document.getElementById('editScanOutTime').value = fmt(log.scan_out_time);
@@ -644,7 +660,6 @@ window.saveLogChanges = async function() {
     const so=document.getElementById('editScanOutTime').value;
     showSpinner();
     try{
-        // [FIXED] เปลี่ยน URL และเพิ่ม action=update_log
         const res=await fetch('api/api_daily_operations.php?action=update_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_id:id,status:st,shift_id:sh,remark:rem,scan_in_time:si?si.replace('T',' '):null,scan_out_time:so?so.replace('T',' '):null})});
         const json=await res.json();
         if(json.success){ editLogModal.hide(); refreshData(); } else alert(json.message);
@@ -672,7 +687,6 @@ window.saveEmployeeInfo = async function() {
     if(!l){alert('Line Required');return;}
     showSpinner();
     try{
-        // [FIXED] เปลี่ยน URL เป็น API_MANAGE_EMP และ action=update_employee
         const res=await fetch(`${API_MANAGE_EMP}?action=update_employee`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emp_id:id,line:l,shift_id:s,team_group:t,is_active:1})});
         const j=await res.json();
         if(j.success){ editEmployeeModal.hide(); refreshData(); } else alert(j.message);
@@ -683,7 +697,6 @@ window.saveEmployeeInfo = async function() {
 window.openShiftPlanner = async function() {
     showSpinner();
     try{
-        // [FIXED] เรียก read_employees เพื่อเอา list line และ shifts มาแสดง
         const res=await fetch(`${API_MANAGE_EMP}?action=read_employees`);
         const j=await res.json();
         if(j.success){ renderShiftPlannerTable(j.lines, j.shifts); shiftPlannerModal.show(); }
@@ -702,7 +715,6 @@ window.saveBatchShift = async function(l,i){
     if(!confirm('Confirm?'))return;
     showSpinner();
     try{
-        // [FIXED] ใช้ URL API_MANAGE_EMP และส่ง body ให้ตรงกับที่แก้ PHP ล่าสุด (รับ shift_a, shift_b ตรงๆ)
         await fetch(`${API_MANAGE_EMP}?action=update_team_shift`, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -725,7 +737,6 @@ window.openMappingModal = async function() {
         if(j.success){
             const b=document.getElementById('categoryMappingBody');
             
-            // [UPDATED] เพิ่ม Dropdown เลือก Type (รวมถึงตัวเลือก No OT)
             b.innerHTML=j.categories.map(r=>`
                 <tr>
                     <td><input class="form-control cat-api" value="${r.keyword}"></td>
@@ -772,7 +783,7 @@ window.saveAllMappings=async function(){
     const c=Array.from(document.querySelectorAll('#categoryMappingBody tr')).map(r=>({
         api_position: r.querySelector('.cat-api').value,
         category_name: r.querySelector('.cat-display').value,
-        rate_type: r.querySelector('.cat-type').value, // [NEW] รับค่า Type
+        rate_type: r.querySelector('.cat-type').value, 
         hourly_rate: r.querySelector('.cat-rate').value
     })).filter(x=>x.api_position);
 
@@ -790,7 +801,6 @@ window.saveAllMappings=async function(){
 
 async function loadFilterOptions() {
     try {
-        // [FIXED] action=read_employees
         const res = await fetch(`${API_MANAGE_EMP}?action=read_employees`);
         const json = await res.json();
         if (json.success) {

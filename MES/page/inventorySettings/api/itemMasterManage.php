@@ -248,58 +248,99 @@ try {
             $costingData = $input; 
             if (empty($costingData)) throw new Exception("No costing data received to import.");
 
+            function sanitize_cost($val) {
+                if (is_null($val) || trim((string)$val) === '') return 0.0; // ✅ เช็ค trim ว่าว่างจริงไหม
+                $clean = str_replace(',', '', (string)$val);
+                if (!is_numeric($clean)) return 0.0;
+                return (float)$clean;
+            }
+
             $pdo->beginTransaction();
             try {
                 $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                            Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
-                            Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
-                            Cost_Total = ?, StandardPrice = ?, StandardGP = ?, Price_USD = ?
-                        WHERE sap_no = ?"; 
-                $stmt = $pdo->prepare($sql);
+                        Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
+                        Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, 
+                        Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
+                        StandardPrice = ?, Price_USD = ?
+                    WHERE sap_no = ?";
+                
+                // เตรียม SQL เช็คว่ามี Item อยู่จริงไหม (เพื่อแยก Not Found กับ Unchanged)
+                $checkExistSql = "SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?";
+                $checkStmt = $pdo->prepare($checkExistSql);
 
                 $updatedCount = 0;
-                $notFoundCount = 0;
-                $skippedCount = 0;
+                
+                // สร้าง Array เก็บรายชื่อเพื่อส่งกลับไปรายงาน
+                $notFoundList = [];
+                $unchangedList = [];
+                $skippedList = [];
 
-                foreach ($costingData as $itemCost) {
+                foreach ($costingData as $index => $itemCost) {
+                    $rowNum = $index + 2; // +2 เพราะ index เริ่ม 0 และมี Header 1 บรรทัด
                     $sap_no = trim($itemCost['sap_no'] ?? '');
-                    if (empty($sap_no)) { $skippedCount++; continue; }
+                    
+                    // Skip Header หรือแถวว่าง
+                    if (empty($sap_no) || strtolower($sap_no) === 'material' || strtolower($sap_no) === 'sap_no') { 
+                        // ไม่ต้องนับ Header เป็น Error
+                        continue; 
+                    }
 
-                    $success = $stmt->execute([
-                        $itemCost['Cost_RM'] ?? 0,
-                        $itemCost['Cost_PKG'] ?? 0,
-                        $itemCost['Cost_SUB'] ?? 0,
-                        $itemCost['Cost_DL'] ?? 0,
-                        $itemCost['Cost_OH_Machine'] ?? 0,
-                        $itemCost['Cost_OH_Utilities'] ?? 0,
-                        $itemCost['Cost_OH_Indirect'] ?? 0,
-                        $itemCost['Cost_OH_Staff'] ?? 0,
-                        $itemCost['Cost_OH_Accessory'] ?? 0,
-                        $itemCost['Cost_OH_Others'] ?? 0,
-                        $itemCost['Cost_Total'] ?? 0,
-                        $itemCost['StandardPrice'] ?? 0,
-                        $itemCost['StandardGP'] ?? 0,
-                        $itemCost['Price_USD'] ?? 0,
+                    $params = [
+                        (float)sanitize_cost($itemCost['Cost_RM'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_PKG'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_SUB'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_DL'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Machine'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Utilities'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Indirect'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Staff'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Accessory'] ?? 0),
+                        (float)sanitize_cost($itemCost['Cost_OH_Others'] ?? 0),
+                        (float)sanitize_cost($itemCost['StandardPrice'] ?? 0),
+                        (float)sanitize_cost($itemCost['Price_USD'] ?? 0),
                         $sap_no
-                    ]);
+                    ];
 
-                    if ($success) {
-                        if ($stmt->rowCount() > 0) $updatedCount++;
-                        else $notFoundCount++;
-                    } else {
-                        $skippedCount++; 
+                    try {
+                        $success = $stmt->execute($params);
+                        
+                        if ($success && $stmt->rowCount() > 0) {
+                            $updatedCount++;
+                        } else {
+                            // อัปเดตไม่สำเร็จ (0 rows affected) เป็นได้ 2 กรณี:
+                            // 1. หา SAP ไม่เจอ
+                            // 2. ข้อมูลเหมือนเดิมเป๊ะ
+                            $checkStmt->execute([$sap_no]);
+                            if ($checkStmt->fetch()) {
+                                $unchangedList[] = $sap_no; // เจอ Item แต่ค่าเดิม
+                            } else {
+                                $notFoundList[] = $sap_no; // ไม่เจอ Item นี้เลย
+                            }
+                        }
+                    } catch (Exception $rowEx) {
+                        $skippedList[] = "Row $rowNum ($sap_no): " . $rowEx->getMessage();
                     }
                 }
 
                 $pdo->commit();
-                $message = "Costing import complete. Updated: {$updatedCount}. SAP No. not found: {$notFoundCount}. Skipped rows: {$skippedCount}.";
-                logAction($pdo, $currentUser['username'], 'IMPORT COSTING', null, $message);
-                echo json_encode(['success' => true, 'message' => $message]);
+                
+                $message = "Import complete. Updated: {$updatedCount}.";
+                if (!empty($notFoundList)) $message .= " Not Found: " . count($notFoundList) . ".";
+                if (!empty($skippedList)) $message .= " Errors: " . count($skippedList) . ".";
+
+                echo json_encode([
+                    'success' => true, 
+                    'message' => $message,
+                    'report' => [ // ส่งรายละเอียดกลับไปด้วย
+                        'not_found' => $notFoundList,
+                        'unchanged_count' => count($unchangedList),
+                        'skipped' => $skippedList
+                    ]
+                ]);
 
             } catch (Exception $e) {
                 $pdo->rollBack();
-                error_log("Costing Import Error: " . $e->getMessage()); 
-                throw new Exception("An error occurred during the costing import process. Please check the server logs."); 
+                throw new Exception("System Error: " . $e->getMessage()); 
             }
             break;
 
@@ -369,18 +410,18 @@ try {
                 $Cost_OH_Staff = !empty($item_details['Cost_OH_Staff']) ? $item_details['Cost_OH_Staff'] : 0;
                 $Cost_OH_Accessory = !empty($item_details['Cost_OH_Accessory']) ? $item_details['Cost_OH_Accessory'] : 0;
                 $Cost_OH_Others = !empty($item_details['Cost_OH_Others']) ? $item_details['Cost_OH_Others'] : 0;
-                $Cost_Total = !empty($item_details['Cost_Total']) ? $item_details['Cost_Total'] : 0;
+                //$Cost_Total = !empty($item_details['Cost_Total']) ? $item_details['Cost_Total'] : 0;
                 $StandardPrice = !empty($item_details['StandardPrice']) ? $item_details['StandardPrice'] : 0;
-                $StandardGP = !empty($item_details['StandardGP']) ? $item_details['StandardGP'] : 0;
+                //$StandardGP = !empty($item_details['StandardGP']) ? $item_details['StandardGP'] : 0;
                 $Price_USD = !empty($item_details['Price_USD']) ? $item_details['Price_USD'] : 0;
 
                 if ($item_id > 0) {
-                    // [UPDATED] เพิ่ม sku ใน UPDATE Statement
+                    // [UPDATED] เพิ่ม sku ใน UPDATE Statement Cost_Total = ?,, StandardGP = ?
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
                                 sap_no = ?, part_no = ?, sku = ?, part_description = ?, min_stock = ?, max_stock = ?, is_tracking = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
-                                Cost_Total = ?, StandardPrice = ?, StandardGP = ?, Price_USD = ?
+                                StandardPrice = ?, Price_USD = ?
                             WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
@@ -393,17 +434,17 @@ try {
                         (bool)($item_details['is_tracking'] ?? false),
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
-                        $Cost_Total, $StandardPrice, $StandardGP, $Price_USD,
+                        $StandardPrice, $Price_USD,
                         $item_id
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 } else {
-                    // [UPDATED] เพิ่ม sku ใน INSERT Statement
+                    // [UPDATED] เพิ่ม sku ใน INSERT Statement Cost_Total,, StandardGP
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
                                 sap_no, part_no, sku, part_description, created_at, min_stock, max_stock, is_tracking,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
-                                Cost_Total, StandardPrice, StandardGP, Price_USD
+                                StandardPrice, Price_USD
                             ) VALUES (
                                 ?, ?, ?, ?, GETDATE(), ?, ?, ?,
                                 ?, ?, ?, ?, 
@@ -421,7 +462,7 @@ try {
                         (bool)($item_details['is_tracking'] ?? false),
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
-                        $Cost_Total, $StandardPrice, $StandardGP, $Price_USD
+                        $StandardPrice, $Price_USD
                     ]);
                     $item_id = $pdo->lastInsertId();
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");

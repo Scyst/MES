@@ -97,7 +97,7 @@
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label for="Cost_Total" class="form-label">Total Cost</label>
-                            <input type="number" step="any" class="form-control" id="Cost_Total" name="Cost_Total" placeholder="0.000000">
+                            <input type="number" step="any" class="form-control bg-light" id="Cost_Total" name="Cost_Total" placeholder="0.000000" readonly>
                         </div>
                         <div class="col-md-3">
                             <label for="StandardPrice" class="form-label">Standard Price</label>
@@ -105,7 +105,7 @@
                         </div>
                         <div class="col-md-3">
                             <label for="StandardGP" class="form-label">Standard GP</label>
-                            <input type="number" step="any" class="form-control" id="StandardGP" name="StandardGP" placeholder="0.000000">
+                            <input type="number" step="any" class="form-control bg-light" id="StandardGP" name="StandardGP" placeholder="0.000000" readonly>
                         </div>
                         <div class="col-md-3">
                             <label for="Price_USD" class="form-label">Price (USD)</label>

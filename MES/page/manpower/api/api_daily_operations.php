@@ -25,7 +25,7 @@ session_write_close();
 
 try {
     // ==================================================================================
-    // 1. ACTION: read_daily (ดูข้อมูลรายวัน)
+    // 1. ACTION: read_daily (ดูข้อมูลรายวัน - ส่วนนี้เหมือนเดิม)
     // ==================================================================================
     if ($action === 'read_daily') {
         $startDate = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
@@ -95,156 +95,87 @@ try {
         ]);
 
     // ==================================================================================
-    // 2. ACTION: read_summary (Logic ใหม่ + Fix Syntax Error 'plan')
+    // 2. ACTION: read_summary (แก้ไขใหม่ ใช้ SQL Function)
     // ==================================================================================
     } elseif ($action === 'read_summary') {
         $date = $_GET['date'] ?? date('Y-m-d');
         
-        // กำหนดชื่อตารางและ View ตามโหมด
-        $viewName   = IS_DEVELOPMENT ? 'vw_Manpower_Executive_Summary_TEST' : 'vw_Manpower_Executive_Summary';
-        $tableEmp   = MANPOWER_EMPLOYEES_TABLE;
-        $tableShift = MANPOWER_SHIFTS_TABLE;
-        $tableCat   = MANPOWER_CATEGORY_MAPPING_TABLE;
+        // [UPDATED] ใช้ Function แทน View
+        $funcName = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
 
-        try {
-            // -----------------------------------------------------------------------
-            // 2.1 ตารางที่ 1: Line Breakdown
-            // -----------------------------------------------------------------------
-            // ใส่ [] ครอบ Alias เพื่อความปลอดภัย
-            $sumFields = "MAX(Master_Headcount) as [total_hc], 
-                          SUM(Total_Registered) as [plan], 
-                          SUM(Count_Present) as [present], 
-                          SUM(Count_Late) as [late], 
-                          SUM(Count_Absent) as [absent], 
-                          SUM(Count_Leave) as [leave], 
-                          SUM(Count_Actual) as [actual]";
+        // -----------------------------------------------------------------------
+        // 2.1 ตารางที่ 1: Line Breakdown (เพิ่ม [diff])
+        // -----------------------------------------------------------------------
+        $sumFields = "MAX(Master_Headcount) as [total_hc], 
+                      SUM(Total_Registered) as [plan], 
+                      SUM(Count_Present) as [present], 
+                      SUM(Count_Late) as [late], 
+                      SUM(Count_Absent) as [absent], 
+                      SUM(Count_Leave) as [leave], 
+                      SUM(Count_Actual) as [actual],
+                      (SUM(Count_Actual) - SUM(Total_Registered)) as [diff]"; /* <== เพิ่มตรงนี้ */
 
-            $sqlLine = "SELECT 
-                            display_section AS line_name,
-                            shift_name,
-                            team_group,
-                            category_name,
-                            $sumFields
-                        FROM $viewName
-                        WHERE log_date = :date
-                        GROUP BY display_section, section_id, shift_name, team_group, category_name
-                        ORDER BY section_id, display_section, shift_name";
-            $stmtLine = $pdo->prepare($sqlLine);
-            $stmtLine->execute([':date' => $date]);
-            $rawLineData = $stmtLine->fetchAll(PDO::FETCH_ASSOC);
+        $sqlLine = "SELECT 
+                        display_section AS line_name,
+                        shift_name,
+                        team_group,
+                        category_name,
+                        $sumFields
+                    FROM $funcName(:date)
+                    GROUP BY display_section, section_id, shift_name, team_group, category_name
+                    ORDER BY section_id, display_section, shift_name";
 
-            // -----------------------------------------------------------------------
-            // 2.2 ตารางที่ 2: สรุปกะและทีม (Fix syntax error)
-            // -----------------------------------------------------------------------
-            $sqlShift = "SELECT 
-                            COALESCE(M.shift_name, D.shift_name) as shift_name,
-                            COALESCE(M.team_group, D.team_group) as team_group,
-                            ISNULL(M.master_hc, 0) as [total_hc],
-                            ISNULL(D.[plan], 0) as [plan],
-                            ISNULL(D.[absent], 0) as [absent],
-                            ISNULL(D.[actual], 0) as [actual]
-                        FROM 
-                        (
-                            -- Part M: Master Count
-                            SELECT 
-                                S.shift_name,
-                                ISNULL(E.team_group, '-') as team_group,
-                                COUNT(E.emp_id) as master_hc
-                            FROM $tableEmp E
-                            -- [FIXED] เปลี่ยน E.shift_id เป็น E.default_shift_id
-                            LEFT JOIN $tableShift S ON E.default_shift_id = S.shift_id 
-                            WHERE E.is_active = 1
-                            GROUP BY S.shift_name, E.team_group
-                        ) M
-                        FULL OUTER JOIN 
-                        (
-                            -- Part D: Daily View
-                            SELECT 
-                                shift_name,
-                                team_group,
-                                SUM(Total_Registered) as [plan],
-                                SUM(Count_Absent) as [absent],
-                                SUM(Count_Actual) as [actual]
-                            FROM $viewName
-                            WHERE log_date = :date
-                            GROUP BY shift_name, team_group
-                        ) D ON M.shift_name = D.shift_name AND M.team_group = D.team_group
-                        ORDER BY shift_name, team_group";
-            
-            $stmtShift = $pdo->prepare($sqlShift);
-            $stmtShift->execute([':date' => $date]);
-            $tableByShiftTeam = $stmtShift->fetchAll(PDO::FETCH_ASSOC);
+        $stmtLine = $pdo->prepare($sqlLine);
+        $stmtLine->execute([':date' => $date]);
+        $rawLineData = $stmtLine->fetchAll(PDO::FETCH_ASSOC);
 
-            // -----------------------------------------------------------------------
-            // 2.3 ตารางที่ 3: ประเภทพนักงาน (Fix syntax error)
-            // -----------------------------------------------------------------------
-            $sqlType = "SELECT 
-                            COALESCE(M.category_name, D.category_name) as emp_type,
-                            ISNULL(M.master_hc, 0) as [total_hc],
-                            ISNULL(D.[plan], 0) as [plan],   -- [FIX] ใส่ [] ตรงเรียกใช้ D.[plan]
-                            ISNULL(D.[absent], 0) as [absent],
-                            ISNULL(D.[actual], 0) as [actual]
-                        FROM 
-                        (
-                            -- Part M: Master Count
-                            SELECT 
-                                ISNULL(CM.category_name, 'Other') as category_name,
-                                COUNT(E.emp_id) as master_hc
-                            FROM $tableEmp E
-                            LEFT JOIN $tableCat CM ON E.position = CM.keyword
-                            WHERE E.is_active = 1
-                            GROUP BY ISNULL(CM.category_name, 'Other')
-                        ) M
-                        FULL OUTER JOIN 
-                        (
-                            -- Part D: Daily View
-                            SELECT 
-                                category_name,
-                                SUM(Total_Registered) as [plan], -- [FIX] ใส่ [] ตอนตั้งชื่อ
-                                SUM(Count_Absent) as [absent],
-                                SUM(Count_Actual) as [actual]
-                            FROM $viewName
-                            WHERE log_date = :date
-                            GROUP BY category_name
-                        ) D ON M.category_name = D.category_name
-                        ORDER BY [total_hc] DESC";
-
-            $stmtType = $pdo->prepare($sqlType);
-            $stmtType->execute([':date' => $date]);
-            $tableByType = $stmtType->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode([
-                'success' => true,
-                'summary_drilldown' => $rawLineData,
-                'summary_shift_team' => $tableByShiftTeam,
-                'summary_by_type' => $tableByType,
-                'last_update' => date('d/m/Y H:i:s')
-            ]);
-
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-        }
-
-    // ==================================================================================
-    // 3. ACTION: get_summary (สำหรับ Drill Down Table ใหม่)
-    // ==================================================================================
-    } elseif ($action === 'get_summary') {
-        $date = $_GET['date'] ?? date('Y-m-d');
+        // -----------------------------------------------------------------------
+        // 2.2 ตารางที่ 2: สรุปกะและทีม (Fix: เพิ่ม total_hc)
+        // -----------------------------------------------------------------------
+        $sqlShift = "SELECT 
+                        shift_name,
+                        team_group,
+                        SUM(Total_Registered) as [total_hc],
+                        SUM(Total_Registered) as [plan],
+                        SUM(Count_Absent) as [absent],
+                        SUM(Count_Actual) as [actual],
+                        (SUM(Count_Actual) - SUM(Total_Registered)) as [diff] /* <== เพิ่มตรงนี้ */
+                     FROM $funcName(:date)
+                     GROUP BY shift_name, team_group
+                     ORDER BY shift_name, team_group";
         
-        $viewName = IS_DEVELOPMENT ? 'vw_Manpower_Executive_Summary_TEST' : 'vw_Manpower_Executive_Summary';
+        $stmtShift = $pdo->prepare($sqlShift);
+        $stmtShift->execute([':date' => $date]);
+        $tableByShiftTeam = $stmtShift->fetchAll(PDO::FETCH_ASSOC);
 
-        $sql = "SELECT * FROM $viewName 
-                WHERE log_date = :log_date 
-                ORDER BY display_section, shift_name, category_name";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':log_date' => $date]);
-        $raw_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // -----------------------------------------------------------------------
+        // 2.3 ตารางที่ 3: ประเภทพนักงาน (Fix: เพิ่ม total_hc)
+        // -----------------------------------------------------------------------
+        $sqlType = "SELECT 
+                        category_name as emp_type,
+                        SUM(Total_Registered) as [total_hc],
+                        SUM(Total_Registered) as [plan],
+                        SUM(Count_Absent) as [absent],
+                        SUM(Count_Actual) as [actual],
+                        (SUM(Count_Actual) - SUM(Total_Registered)) as [diff] /* <== เพิ่มตรงนี้ */
+                    FROM $funcName(:date)
+                    GROUP BY category_name
+                    ORDER BY [plan] DESC";
 
-        echo json_encode($raw_data);
+        $stmtType = $pdo->prepare($sqlType);
+        $stmtType->execute([':date' => $date]);
+        $tableByType = $stmtType->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'summary_drilldown' => $rawLineData,
+            'summary_shift_team' => $tableByShiftTeam,
+            'summary_by_type' => $tableByType,
+            'last_update' => date('d/m/Y H:i:s')
+        ]);
 
     // ==================================================================================
-    // 4. ACTION: update_log (แก้ไขสถานะรายคน)
+    // 3. ACTION: update_log (แก้ไขสถานะรายคน - เหมือนเดิม)
     // ==================================================================================
     } elseif ($action === 'update_log') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -265,13 +196,11 @@ try {
 
         if (!$log) throw new Exception("Log not found.");
         
-        // Supervisor แก้ได้เฉพาะ Line ตัวเอง
         if (hasRole('supervisor')) {
             $userLine = $currentUser['line'] ?? '';
             if ($log['line'] !== $userLine) throw new Exception("Permission Denied (Wrong Line).");
         }
 
-        // เช็คการล็อกข้อมูล
         if ($log['is_verified'] == 1 && !hasRole(['admin', 'creator'])) {
             throw new Exception("Record is locked (Verified).");
         }
@@ -283,7 +212,6 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$status, $remark, $scanIn, $scanOut, $shiftId, $updatedBy, $logId]);
 
-        // บันทึก Log การกระทำ
         $detail = "Manpower Update LogID:$logId Status:$status Shift:$shiftId";
         $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_EDIT', ?, GETDATE())");
         $stmtLog->execute([$updatedBy, $detail]);
@@ -291,7 +219,7 @@ try {
         echo json_encode(['success' => true, 'message' => 'Update successful']);
 
     // ==================================================================================
-    // 5. ACTION: clear_day (ลบข้อมูลทั้งวัน)
+    // 4. ACTION: clear_day (ลบข้อมูลทั้งวัน - เหมือนเดิม)
     // ==================================================================================
     } elseif ($action === 'clear_day') {
         if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized to clear data.");
@@ -308,7 +236,6 @@ try {
         $sqlDeleteCost = "DELETE FROM " . MANUAL_COSTS_TABLE . " WHERE entry_date = ?";
 
         if (!empty($line) && $line !== 'ALL') {
-            // ลบเฉพาะ Line
             $sqlDeleteLog = "DELETE L FROM " . MANPOWER_DAILY_LOGS_TABLE . " L
                              INNER JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id
                              WHERE L.log_date = ? AND E.line = ?";
@@ -321,7 +248,6 @@ try {
         $stmt->execute($params);
         $deletedCount = $stmt->rowCount();
 
-        // ลบ Cost ด้วย
         $stmtCost = $pdo->prepare($sqlDeleteCost);
         $stmtCost->execute($params);
 

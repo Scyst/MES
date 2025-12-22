@@ -1390,15 +1390,43 @@ async function handleCostingImport(event) {
             }
 
             if (costingPayload.length > 0) {
-                if (confirm(`Import costing data for ${costingPayload.length} items? (Skipped ${skippedRows} rows)`)) {
+                if (confirm(`Import costing data for ${costingPayload.length} items?`)) {
                     const result = await sendRequest(ITEM_MASTER_API, 'import_costing_json', 'POST', costingPayload);
-                    showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
+                    
                     if (result.success) {
+                        // --- ส่วนที่เพิ่มใหม่: สร้างข้อความรายงานผล ---
+                        let reportMsg = "✅ " + result.message + "\n\n";
+                        
+                        if (result.report) {
+                            // 1. แสดงรายการที่หาไม่เจอ (สำคัญมาก)
+                            if (result.report.not_found && result.report.not_found.length > 0) {
+                                reportMsg += "❌ Items Not Found (SAP No):\n";
+                                reportMsg += result.report.not_found.slice(0, 15).join(", "); // โชว์แค่ 15 ตัวแรกกันรก
+                                if (result.report.not_found.length > 15) {
+                                    reportMsg += `\n...and ${result.report.not_found.length - 15} more.`;
+                                }
+                                reportMsg += "\n\n";
+                            }
+                            
+                            // 2. แสดง Error (ถ้ามี)
+                            if (result.report.skipped && result.report.skipped.length > 0) {
+                                reportMsg += "⚠️ Errors:\n" + result.report.skipped.join("\n") + "\n\n";
+                            }
+
+                            // 3. แสดง Unchanged
+                            if (result.report.unchanged_count > 0) {
+                                reportMsg += "ℹ️ Unchanged (Data identical): " + result.report.unchanged_count + " items";
+                            }
+                        }
+
+                        alert(reportMsg); // ใช้ Alert แสดงผลเพื่อให้คุณอ่านได้ทันที
                         await fetchItems(1);
+                    } else {
+                        showToast(result.message, 'var(--bs-danger)');
                     }
                 }
             } else {
-                 showToast(`No valid costing data found to import. Skipped ${skippedRows} rows.`, 'var(--bs-warning)');
+                 showToast(`No valid costing data found.`, 'var(--bs-warning)');
             }
 
         } catch (error) {
@@ -1416,33 +1444,83 @@ async function handleCostingImport(event) {
 // SECTION 4: DOMCONTENTLOADED (ตัวควบคุมหลัก)
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- State & Core Functions ---
+
+    // --- 4.1 Internal State & Tab Management ---
     const tabLoadedState = {};
+
     function loadTabData(targetTabId) {
         if (!targetTabId || tabLoadedState[targetTabId]) return;
-        
+
         switch (targetTabId) {
-            case '#locations-pane': loadLocations(); break;
-            
-            // 🔴 ลบ 2 case นี้ 🔴
-            // case '#transfer-pane': populateTransferInitialData(); fetchTransferHistory(1); break;
-            // case '#opening-balance-pane': populateOpeningBalanceLocations(); break;
-            
-            case '#item-master-pane': fetchItems(1); break;
-            case '#bom-manager-pane': initializeBomManager(); initializeCreateBomModal(); break;
-            case '#lineSchedulesPane': if (canManage) loadSchedules(); break;
-            case '#healthCheckPane': if (canManage) loadHealthCheckData(); break;
+            case '#locations-pane': 
+                loadLocations(); 
+                break;
+            case '#item-master-pane': 
+                fetchItems(1); 
+                break;
+            case '#bom-manager-pane': 
+                initializeBomManager(); 
+                initializeCreateBomModal(); 
+                break;
+            case '#lineSchedulesPane': 
+                if (typeof canManage !== 'undefined' && canManage) loadSchedules(); 
+                break;
+            case '#healthCheckPane': 
+                if (typeof canManage !== 'undefined' && canManage) loadHealthCheckData(); 
+                break;
         }
         tabLoadedState[targetTabId] = true;
     }
+
     function showCorrectPagination(activeTabId) {
         document.querySelectorAll('.pagination-footer[data-tab-target]').forEach(p => {
             p.style.display = p.dataset.tabTarget === activeTabId ? 'block' : 'none';
         });
     }
 
-    // --- Tab Event Listener ---
+    // --- 4.2 Auto Calculation Logic (Standard Costing) ---
+    const costInputIds = [
+        'Cost_RM', 'Cost_PKG', 'Cost_SUB', 'Cost_DL',
+        'Cost_OH_Machine', 'Cost_OH_Utilities', 'Cost_OH_Indirect',
+        'Cost_OH_Staff', 'Cost_OH_Accessory', 'Cost_OH_Others'
+    ];
+
+    function calculateItemCosts() {
+        let totalCost = 0;
+        costInputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) totalCost += parseFloat(el.value) || 0;
+        });
+
+        // แสดงผลในช่อง Total Cost
+        const totalCostEl = document.getElementById('Cost_Total');
+        if (totalCostEl) {
+            totalCostEl.value = totalCost.toFixed(6);
+        }
+
+        // คำนวณ GP (Gross Profit) อัตโนมัติ
+        const priceEl = document.getElementById('StandardPrice');
+        const gpEl = document.getElementById('StandardGP');
+        
+        if (priceEl && gpEl) {
+            const price = parseFloat(priceEl.value) || 0;
+            if (price > 0) {
+                const gpPercentage = ((price - totalCost) / price) * 100;
+                gpEl.value = gpPercentage.toFixed(2);
+            } else {
+                gpEl.value = "0.00";
+            }
+        }
+    }
+
+    // ผูก Event Listener ให้ช่องที่เกี่ยวข้องกับการคำนวณทั้งหมด
+    costInputIds.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calculateItemCosts);
+    });
+    document.getElementById('StandardPrice')?.addEventListener('input', calculateItemCosts);
+
+
+    // --- 4.3 Tab Event Listeners ---
     document.querySelectorAll('#settingsTab button[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', event => {
             const targetPaneId = event.target.getAttribute('data-bs-target');
@@ -1450,104 +1528,66 @@ document.addEventListener('DOMContentLoaded', () => {
             showCorrectPagination(targetPaneId);
         });
     });
+
+
+    // --- 4.4 Item Master & Route Events ---
+    document.getElementById('addNewItemBtn')?.addEventListener('click', () => {
+        openItemModal();
+        calculateItemCosts(); // รีเซ็ตตัวเลขเป็น 0 ตอนเพิ่มใหม่
+    });
     
-    // --- General Event Listeners Setup ---
-    document.getElementById('addLocationBtn')?.addEventListener('click', () => openLocationModal());
-    document.getElementById('locationForm')?.addEventListener('submit', handleLocationFormSubmit);
-    
-    // 🔴 ลบ 2 บรรทัดนี้ 🔴
-    // document.getElementById('addTransferBtn')?.addEventListener('click', openTransferModal);
-    // document.getElementById('transferForm')?.addEventListener('submit', handleTransferFormSubmit);
-    
-    document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
     document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
+    
     document.getElementById('itemAndRoutesForm')?.addEventListener('submit', handleItemFormSubmit);
+    
     document.getElementById('addNewRouteBtn')?.addEventListener('click', () => openRouteModal());
+    
     document.getElementById('routeForm')?.addEventListener('submit', handleRouteFormSubmit);
+    
     document.getElementById('modalAddNewRouteBtn')?.addEventListener('click', () => {
         addRouteRow();
     });
-    document.getElementById('addScheduleForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
-        const result = await sendRequest(ITEM_MASTER_API, 'save_schedule', 'POST', payload);
-        
-        if (result.success) {
-            closeModal('addScheduleModal');
-            await loadSchedules();
-        }
-    });
-    document.getElementById('editScheduleForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
-        const result = await sendRequest(ITEM_MASTER_API, 'save_schedule', 'POST', payload);
-        
-        if (result.success) {
-            closeModal('editScheduleModal');
-            await loadSchedules();
-        }
-    });
 
     document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {
-        event.currentTarget.classList.toggle('active'); // สลับสถานะ active
-        fetchItems(1); // โหลดข้อมูลใหม่ทันที
+        event.currentTarget.classList.toggle('active');
+        fetchItems(1);
     });
 
     document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
 
-    const importBtn = document.getElementById('importItemsBtn');
-    const importFileInput = document.getElementById('itemImportFile');
-
-    importBtn?.addEventListener('click', () => {
-        importFileInput.click(); // ...ให้ไปกระตุ้นการทำงานของ input file ที่ซ่อนอยู่
-    });
-
-    // และเมื่อเลือกไฟล์ใน input file ที่ซ่อนอยู่แล้ว...
-    importFileInput?.addEventListener('change', handleItemImport); // ...ให้เรียกใช้ฟังก์ชันนำเข้าข้อมูล
+    // --- 4.5 Import Actions ---
+    const importItemsBtn = document.getElementById('importItemsBtn');
+    const itemImportFile = document.getElementById('itemImportFile');
+    importItemsBtn?.addEventListener('click', () => itemImportFile.click());
+    itemImportFile?.addEventListener('change', handleItemImport);
 
     const importCostingBtn = document.getElementById('importCostingBtn');
-    const costImportFileInput = document.getElementById('costImportFile');
+    const costImportFile = document.getElementById('costImportFile');
+    importCostingBtn?.addEventListener('click', () => costImportFile.click());
+    costImportFile?.addEventListener('change', handleCostingImport);
 
-    importCostingBtn?.addEventListener('click', () => {
-        costImportFileInput.click(); // Trigger the hidden file input
-    });
 
-    costImportFileInput?.addEventListener('change', handleCostingImport); // Call the new handler
-    // END MES Additions
-
-    // --- BOM Manager Tab ---
-    // ( ... โค้ดส่วน BOM ทั้งหมดเหมือนเดิม ... )
-    // 1. ปุ่ม Create New BOM
+    // --- 4.6 BOM Manager Events ---
     document.getElementById('createNewBomBtn')?.addEventListener('click', () => {
         openModal('createBomModal');
     });
 
-    // 2. ปุ่ม Export
     document.getElementById('exportAllConsolidatedBtn')?.addEventListener('click', exportAllBoms);
-    document.getElementById('exportSelectedDetailedBtn')?.addEventListener('click', (e) => {
-        if(!e.currentTarget.classList.contains('disabled')) {
-            exportSelectedBoms();
-        }
-    });
 
-    // 3. ปุ่ม Import (Update - Multi-Sheet)
     document.getElementById('importUpdateBomsBtn')?.addEventListener('click', () => {
         document.getElementById('bulkUpdateImportFile').click();
     });
     document.getElementById('bulkUpdateImportFile')?.addEventListener('change', handleBulkBomImport);
 
-    // 4. ปุ่ม Import (Initial Create - Single-Sheet)
     document.getElementById('importCreateBomsBtn')?.addEventListener('click', () => {
         document.getElementById('initialCreateImportFile').click();
     });
     document.getElementById('initialCreateImportFile')?.addEventListener('change', handleInitialBomImport);
 
-    // 5. ปุ่มยืนยันในหน้า Preview ของ Bulk Import
     document.getElementById('confirmBulkImportBtn')?.addEventListener('click', executeBulkBomImport);
 
-    // 6. จัดการ Checkbox และปุ่ม Delete Selected / Export Selected
+
+    // --- 4.7 BOM Table Selection & Bulk Actions ---
     const selectAllBomCheckbox = document.getElementById('selectAllBomCheckbox');
     const bomFgListTableBody = document.getElementById('bomFgListTableBody');
     const deleteSelectedBomBtn = document.getElementById('deleteSelectedBomBtn');
@@ -1556,11 +1596,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateBomBulkActionButtons() {
         const selectedCount = document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox:checked').length;
         if (selectedCount > 0) {
-            deleteSelectedBomBtn.classList.remove('d-none');
-            exportSelectedBtn.classList.remove('disabled');
+            deleteSelectedBomBtn?.classList.remove('d-none');
+            exportSelectedBtn?.classList.remove('disabled');
         } else {
-            deleteSelectedBomBtn.classList.add('d-none');
-            exportSelectedBtn.classList.add('disabled');
+            deleteSelectedBomBtn?.classList.add('d-none');
+            exportSelectedBtn?.classList.add('disabled');
         }
     }
 
@@ -1593,78 +1633,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 🔴 ลบ 2 บรรทัดนี้ 🔴
-    // document.getElementById('locationSelect')?.addEventListener('change', loadItemsForLocation);
-    // document.getElementById('saveStockBtn')?.addEventListener('click', saveStockTake);
-
-    document.getElementById('exportAllConsolidatedBtn')?.addEventListener('click', async () => {
-        showSpinner();
-        try {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'export_all_boms', 'GET');
-            if (result.success && result.data.length > 0) {
-                const worksheet = XLSX.utils.json_to_sheet(result.data);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "All_BOMs");
-                XLSX.writeFile(workbook, `BOM_Export_All_${new Date().toISOString().split('T')[0]}.xlsx`);
-            } else {
-                showToast(result.message || 'No BOMs found to export.', 'var(--bs-warning)');
-            }
-        } finally {
-            hideSpinner();
-        }
-    });
-
-    document.getElementById('exportSelectedDetailedBtn')?.addEventListener('click', async (e) => {
+    exportSelectedBtn?.addEventListener('click', async (e) => {
         if (e.currentTarget.classList.contains('disabled')) return;
+        exportSelectedBoms();
+    });
 
-        const selectedCheckboxes = document.querySelectorAll('#bomFgListTableBody .bom-row-checkbox:checked');
-        const bomsToExport = Array.from(selectedCheckboxes).map(cb => JSON.parse(cb.value));
 
-        if (bomsToExport.length === 0) {
-            showToast('Please select at least one BOM to export.', 'var(--bs-warning)');
-            return;
-        }
-
-        showSpinner();
-        try {
-            const result = await sendRequest(BOM_API_ENDPOINT, 'export_selected_boms', 'POST', { boms: bomsToExport });
-            if (result.success && Object.keys(result.data).length > 0) {
-                const wb = XLSX.utils.book_new();
-                for (const fgSapNo in result.data) {
-                    const sheetData = result.data[fgSapNo].map(row => ({
-                        COMPONENT_SAP_NO: row.COMPONENT_SAP_NO,
-                        QUANTITY_REQUIRED: row.QUANTITY_REQUIRED
-                    }));
-                    const ws = XLSX.utils.json_to_sheet(sheetData);
-                    const safeSheetName = fgSapNo.replace(/[\*:\/\\?\[\]]/g, "_").substring(0, 31);
-                    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
-                }
-                const fileName = `BOM_Export_Selected_${new Date().toISOString().split('T')[0]}.xlsx`;
-                XLSX.writeFile(wb, fileName);
-            } else {
-                showToast(result.message || 'Could not export selected BOMs.', 'var(--bs-warning)');
-            }
-        } finally {
-            hideSpinner();
+    // --- 4.8 Schedule Form Events ---
+    document.getElementById('addScheduleForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
+        const result = await sendRequest(ITEM_MASTER_API, 'save_schedule', 'POST', payload);
+        if (result.success) {
+            closeModal('addScheduleModal');
+            await loadSchedules();
         }
     });
-    
+
+    document.getElementById('editScheduleForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        payload.is_active = e.target.querySelector('[name="is_active"]').checked ? 1 : 0;
+        const result = await sendRequest(ITEM_MASTER_API, 'save_schedule', 'POST', payload);
+        if (result.success) {
+            closeModal('editScheduleModal');
+            await loadSchedules();
+        }
+    });
+
+
+    // --- 4.9 Initial Core Autocompletes & Listeners ---
     setupItemMasterAutocomplete();
     setupModelFilterAutocomplete();
     setupBomComponentAutocomplete();
-    
-    // 🔴 ลบ 1 บรรทัดนี้ 🔴
-    // setupStockAdjustmentAutocomplete();
-    
-    initializeManageBomModalListeners(); 
+    initializeManageBomModalListeners();
 
-    // --- Initial Page Load ---
+
+    // --- 4.10 Final Initialization ---
+    // จัดการเปิด Tab ตาม URL หรือโหลด Tab แรกที่ Active
     const urlParams = new URLSearchParams(window.location.search);
     const tabToOpen = urlParams.get('tab');
     if (tabToOpen) {
         const tabElement = document.querySelector(`#settingsTab button[data-bs-target="#${tabToOpen}-pane"]`);
         if (tabElement) new bootstrap.Tab(tabElement).show();
     }
+    
     const activeTab = document.querySelector('#settingsTab button.active');
     if (activeTab) {
         const activePaneId = activeTab.getAttribute('data-bs-target');
