@@ -268,9 +268,27 @@ try {
 
             $pdo->beginTransaction();
             try {
-                $checkItem = $pdo->prepare("SELECT TOP 1 item_id FROM $itemTable WHERE sap_no = ? OR part_no = ?");
+                // 1. เตรียม Query ค้นหา
+                // Logic A: หาจาก SAP No. (แม่นยำ 100% เพราะไม่ซ้ำ)
+                $sqlFindSAP = "SELECT TOP 1 item_id FROM $itemTable WHERE sap_no = :code";
+                $stmtFindSAP = $pdo->prepare($sqlFindSAP);
+
+                // Logic B: หาจาก Part No. + Line (กรองเฉพาะ Process ของ Line นี้)
+                // ต้อง Join กับ Manufacturing Routes เพื่อดูว่าสินค้านี้ผลิตที่ Line ไหน
+                $routesTable = ROUTES_TABLE; // ดึงชื่อตารางจาก config (MANUFACTURING_ROUTES)
+                $sqlFindPart = "
+                    SELECT TOP 1 i.item_id 
+                    FROM $itemTable i
+                    JOIN $routesTable r ON i.item_id = r.item_id
+                    WHERE i.part_no = :code AND r.line = :line
+                ";
+                $stmtFindPart = $pdo->prepare($sqlFindPart);
                 
-                // ★★★ แก้ไข SQL ตรงนี้ (เพิ่ม carry_over_quantity = 0) ★★★
+                // Logic C: (สำรอง) ถ้าไม่มี Route ให้หา Part No. เฉยๆ (เสี่ยงหน่อยแต่ดีกว่าไม่เจอ)
+                $sqlFindPartFallback = "SELECT TOP 1 item_id FROM $itemTable WHERE part_no = :code";
+                $stmtFindPartFallback = $pdo->prepare($sqlFindPartFallback);
+
+                // SQL Merge (เหมือนเดิม)
                 $sqlMerge = "
                     MERGE INTO $planTable AS T
                     USING (VALUES (:plan_date, :line, :shift, :item_id, :qty, :user)) 
@@ -282,23 +300,37 @@ try {
                         INSERT (plan_date, line, shift, item_id, original_planned_quantity, carry_over_quantity, updated_by)
                         VALUES (S.plan_date, S.line, S.shift, S.item_id, S.qty, 0, S.user_Update);
                 ";
-                // ★★★ จบการแก้ไข (เพิ่ม 0 ใน VALUES ตัวรองสุดท้าย) ★★★
-
                 $stmtMerge = $pdo->prepare($sqlMerge);
+                
                 $currentUser = $_SESSION['user']['username'] ?? 'System';
-
                 $count = 0;
                 $errors = [];
+
                 foreach ($plans as $index => $row) {
-                    // ... (โค้ดใน Loop เหมือนเดิม ไม่ต้องแก้) ...
                     $itemCode = trim($row['item_code']);
-                    $checkItem->execute([$itemCode, $itemCode]);
-                    $itemId = $checkItem->fetchColumn();
+                    $targetLine = $row['line']; // Line ที่ user เลือกมา
+                    $itemId = null;
+
+                    // Step 1: ลองหาด้วย SAP No.
+                    $stmtFindSAP->execute([':code' => $itemCode]);
+                    $itemId = $stmtFindSAP->fetchColumn();
+
+                    // Step 2: ถ้าไม่เจอ SAP ให้หาด้วย Part No. + Line
+                    if (!$itemId) {
+                        $stmtFindPart->execute([':code' => $itemCode, ':line' => $targetLine]);
+                        $itemId = $stmtFindPart->fetchColumn();
+                    }
+
+                    // Step 3: ถ้ายังไม่เจออีก ลองหา Part No. เพียวๆ (กรณี Master Data ยังไม่ทำ Route)
+                    if (!$itemId) {
+                         $stmtFindPartFallback->execute([':code' => $itemCode]);
+                         $itemId = $stmtFindPartFallback->fetchColumn();
+                    }
                     
                     if ($itemId) {
                         $stmtMerge->execute([
                             ':plan_date' => $row['date'],
-                            ':line' => $row['line'],
+                            ':line' => $targetLine,
                             ':shift' => strtoupper($row['shift']),
                             ':item_id' => $itemId,
                             ':qty' => floatval($row['qty']),
@@ -306,7 +338,8 @@ try {
                         ]);
                         $count++;
                     } else {
-                        $errors[] = "Row " . ($index+1) . ": Item '$itemCode' not found.";
+                        // แจ้ง Error ชัดเจนว่าหาไม่เจอใน Line นี้
+                        $errors[] = "Row " . ($index+1) . ": Item '$itemCode' not found for line '$targetLine'.";
                     }
                 }
                 $pdo->commit();
@@ -314,6 +347,7 @@ try {
                 $msg = "Imported $count plans successfully.";
                 if(count($errors) > 0) $msg .= " (Skipped " . count($errors) . " rows)";
                 echo json_encode(['success' => true, 'message' => $msg, 'errors' => $errors]);
+
             } catch (Exception $ex) {
                 $pdo->rollBack();
                 throw $ex;

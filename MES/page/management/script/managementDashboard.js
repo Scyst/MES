@@ -58,6 +58,125 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnImportPlan = document.getElementById('btnImportPlan');
     const importPlanInput = document.getElementById('importPlanInput');
 
+    // =================================================================
+    // SECTION: UTILITY FOR THAI DATES
+    // =================================================================
+    const THAI_MONTHS = {
+        "ม.ค.": 0, "ก.พ.": 1, "มี.ค.": 2, "เม.ย.": 3, "พ.ค.": 4, "มิ.ย.": 5,
+        "ก.ค.": 6, "ส.ค.": 7, "ก.ย.": 8, "ต.ค.": 9, "พ.ย.": 10, "ธ.ค.": 11
+    };
+
+    const UNIVERSAL_MONTHS = {
+        // --- ภาษาไทย (ตัวย่อ) ---
+        "ม.ค.": 0, "ก.พ.": 1, "มี.ค.": 2, "เม.ย.": 3, "พ.ค.": 4, "มิ.ย.": 5,
+        "ก.ค.": 6, "ส.ค.": 7, "ก.ย.": 8, "ต.ค.": 9, "พ.ย.": 10, "ธ.ค.": 11,
+        // --- ภาษาไทย (ตัวเต็ม - เผื่อหลุดมา) ---
+        "มกราคม": 0, "กุมภาพันธ์": 1, "มีนาคม": 2, "เมษายน": 3, "พฤษภาคม": 4, "มิถุนายน": 5,
+        "กรกฎาคม": 6, "สิงหาคม": 7, "กันยายน": 8, "ตุลาคม": 9, "พฤศจิกายน": 10, "ธันวาคม": 11,
+        // --- English (Short) ---
+        "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+        "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11,
+        // --- English (Full) ---
+        "january": 0, "february": 1, "march": 2, "april": 3, "june": 5,
+        "july": 6, "august": 7, "september": 8, "october": 9, "november": 10, "december": 11
+    };
+
+    function parseThaiDateHeader(headerStr, baseYear) {
+        // Input ex: "1-ธ.ค." or "01-ธ.ค."
+        try {
+            const parts = headerStr.split('-');
+            if (parts.length !== 2) return null;
+            
+            const day = parseInt(parts[0], 10);
+            const monthStr = parts[1].trim();
+            const monthIndex = THAI_MONTHS[monthStr];
+            
+            if (isNaN(day) || monthIndex === undefined) return null;
+
+            // คำนวณปี: ถ้าเดือนเป็น ม.ค. (0) แต่ base month เป็น ธ.ค. (11) แสดงว่าข้ามปีแล้ว
+            let year = baseYear;
+            // Logic ง่ายๆ: ถ้าเดือนที่อ่านได้ น้อยกว่าเดือนปัจจุบันมากๆ อาจจะเป็นปีหน้า
+            // แต่เพื่อความแม่นยำ ควรใช้ปีจาก Filter หน้าเว็บเป็นตัวตั้งต้น
+            
+            const d = new Date(year, monthIndex, day);
+            // ปรับ timezone offset ให้เป็น Local date string แบบ YYYY-MM-DD
+            const yearStr = d.getFullYear();
+            const mStr = String(d.getMonth() + 1).padStart(2, '0');
+            const dStr = String(d.getDate()).padStart(2, '0');
+            return `${yearStr}-${mStr}-${dStr}`;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function parseFlexibleDateHeader(input, baseYear) {
+        if (input === null || input === undefined || input === '') return null;
+
+        // 1. Excel Serial Date check
+        if (typeof input === 'number' && input > 20000) {
+            const dateInfo = new Date((input - (25567 + 2)) * 86400 * 1000); 
+            const y = dateInfo.getFullYear();
+            const m = String(dateInfo.getMonth() + 1).padStart(2, '0');
+            const d = String(dateInfo.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        let cleanStr = String(input).trim();
+
+        // 2. ISO Date check (2025-12-19)
+        if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(cleanStr)) {
+            try {
+                const d = new Date(cleanStr);
+                if (!isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        // 3. Text Month Logic (Fixed for Thai Dots)
+        try {
+            cleanStr = cleanStr.toLowerCase();
+            
+            // ★ แก้ไขตรงนี้: ลองตัดด้วย ขีด(-), ทับ(/), หรือ เว้นวรรค ก่อน (เก็บจุด . ไว้)
+            // เพื่อให้ "พ.ย." ยังอยู่ครบเป็นก้อนเดียว
+            let parts = cleanStr.split(/[-/\s]+/); 
+
+            // กรณีเจอรูปแบบ 01.12.2025 (ใช้จุดคั่น) Array จะยาวแค่ 1 ก้อน -> ให้ลองตัดด้วยจุดเพิ่ม
+            if (parts.length < 2) {
+                parts = cleanStr.split(/[-/.\s]+/);
+            }
+
+            if (parts.length < 2) return null;
+
+            const day = parseInt(parts[0], 10);
+            let monthStr = parts[1];
+            
+            // ตรวจสอบในพจนานุกรม
+            let monthIndex = UNIVERSAL_MONTHS[monthStr]; 
+            
+            // ถ้าไม่เจอ ลองลบจุดออก (เผื่อ Dec. -> Dec)
+            if (monthIndex === undefined && monthStr.endsWith('.')) {
+                monthIndex = UNIVERSAL_MONTHS[monthStr.replace('.', '')];
+            }
+            // ถ้าไม่เจออีก ลองมองเป็นตัวเลข (เผื่อ 01/12)
+            if (monthIndex === undefined && !isNaN(monthStr)) {
+                monthIndex = parseInt(monthStr) - 1;
+            }
+
+            if (isNaN(day) || monthIndex === undefined) return null;
+
+            const d = new Date(baseYear, monthIndex, day);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${dayStr}`;
+        } catch (e) {
+            return null;
+        }
+    }
 
     // =================================================================
     // SECTION 2: UTILITY FUNCTIONS
@@ -74,127 +193,288 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount);
     }
 
+    /* script/managementDashboard.js (Updated: Export with Description) */
+
     window.exportToExcel = function() {
         if (!currentPlanData || currentPlanData.length === 0) {
             showToast('No data to export', 'var(--bs-warning)');
             return;
         }
-        
-        // Map ข้อมูลให้ตรงกับ Header ที่เราตกลงกัน
-        const exportData = currentPlanData.map(p => ({
-            'Date': p.plan_date,           // ตรงกับหน้าเว็บ
-            'Line': p.line,
-            'Shift': p.shift,
-            'SAP_No': p.sap_no || '',      // สำคัญ: ใช้สำหรับ Import กลับ
-            'Part_No': p.part_no || '',    // สำรอง: ใช้สำหรับ Import กลับ
-            'Part_Name': p.part_description || '',
-            'Original_Plan': parseFloat(p.original_planned_quantity || 0), // ค่าที่ต้องการแก้ไข
-            'Note': p.note || ''
-        }));
 
-        const ws = XLSX.utils.json_to_sheet(exportData);
+        const startDate = new Date(startDateFilter.value);
+        const endDate = new Date(endDateFilter.value);
+        const dateList = [];
         
-        // ปรับความกว้างคอลัมน์นิดหน่อยให้สวยงาม (Optional)
-        const wscols = [
-            {wch: 12}, // Date
-            {wch: 15}, // Line
-            {wch: 8},  // Shift
-            {wch: 15}, // SAP
-            {wch: 15}, // Part
-            {wch: 30}, // Name
-            {wch: 15}, // Plan
-            {wch: 20}  // Note
-        ];
-        ws['!cols'] = wscols;
+        let curr = new Date(startDate);
+        while (curr <= endDate) {
+            dateList.push(new Date(curr));
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        const thaiMonthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        
+        // ★ แก้ไข 1: เพิ่ม Header "Description"
+        const headerRow = ['Item Code', 'Description']; 
+        const dateKeys = []; 
+
+        dateList.forEach(d => {
+            const day = d.getDate();
+            const monthName = thaiMonthNames[d.getMonth()];
+            headerRow.push(`${day}-${monthName}`); 
+            
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const da = String(d.getDate()).padStart(2, '0');
+            dateKeys.push(`${y}-${m}-${da}`);
+        });
+
+        // Group by Line
+        const linesMap = {};
+        currentPlanData.forEach(p => {
+            const lineName = p.line || 'Unknown Line';
+            if (!linesMap[lineName]) linesMap[lineName] = [];
+            linesMap[lineName].push(p);
+        });
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "ProductionPlan");
-        
-        // ตั้งชื่อไฟล์ให้สื่อความหมาย
+
+        Object.keys(linesMap).forEach(lineName => {
+            const plans = linesMap[lineName];
+            const itemMap = {}; 
+            
+            plans.forEach(p => {
+                const itemKey = p.sap_no ? p.sap_no : p.part_no; 
+                if (!itemKey) return;
+
+                if (!itemMap[itemKey]) {
+                    itemMap[itemKey] = {
+                        code: itemKey,
+                        // ★ แก้ไข 2: เก็บชื่อสินค้า (ใช้ part_name หรือ description)
+                        desc: p.part_name || p.part_description || '', 
+                        quantities: {}
+                    };
+                }
+                
+                const dateKey = p.plan_date; 
+                const qty = parseFloat(p.original_planned_quantity || 0);
+                
+                if (!itemMap[itemKey].quantities[dateKey]) itemMap[itemKey].quantities[dateKey] = 0;
+                itemMap[itemKey].quantities[dateKey] += qty;
+            });
+
+            const dataRows = [];
+            
+            Object.keys(itemMap).sort().forEach(key => {
+                const item = itemMap[key];
+                // ★ แก้ไข 3: ใส่ Description ในคอลัมน์ที่ 2
+                const row = [item.code, item.desc]; 
+                
+                dateKeys.forEach(dateKey => {
+                    const qty = item.quantities[dateKey];
+                    row.push(qty ? qty : ''); 
+                });
+                
+                dataRows.push(row);
+            });
+
+            const wsData = [headerRow, ...dataRows];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            let safeSheetName = lineName.replace(/[\\/?*[\]]/g, ' ').substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+        });
+
         const filename = `Production_Plan_${startDateFilter.value}_to_${endDateFilter.value}.xlsx`;
         XLSX.writeFile(wb, filename);
     };
 
-    // ฟังก์ชันสำหรับ Import ไฟล์ Excel
+    // =================================================================
+    // SECTION: IMPORT FUNCTION (Final Fix for CSV & Mixed Dates)
+    // =================================================================
     async function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
+        event.target.value = ''; 
 
-        // Reset input เพื่อให้เลือกไฟล์เดิมซ้ำได้ถ้าต้องการ
-        event.target.value = '';
+        const defaultShift = 'DAY'; 
 
         const reader = new FileReader();
-        
         reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
                 
-                // แปลง Excel เป็น JSON
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                const allMappedPlans = [];
+                const processedLines = [];
 
-                if (jsonData.length === 0) {
-                    showToast('File is empty', 'var(--bs-warning)');
-                    return;
-                }
+                // Helper: ตรวจสอบว่าเป็นบรรทัด Header วันที่หรือไม่
+                const isDateHeader = (row) => {
+                    if (!Array.isArray(row)) return false;
+                    return row.some(cell => {
+                        // Check 1: Excel Serial Number (e.g., 45645)
+                        if (typeof cell === 'number' && cell > 35000) return true;
+                        
+                        if (typeof cell === 'string') {
+                            const val = cell.trim();
+                            // Check 2: Text Month (1-ธ.ค.) or ISO (2025-...)
+                            return /\d+[-/\s.]+[a-zA-Zก-๙]+/.test(val) || /^\d{4}[-/.]\d{1,2}/.test(val);
+                        }
+                        return false;
+                    });
+                };
 
-                // ★★★ MAGIC MAPPING: แปลงชื่อคอลัมน์ Excel -> API Parameters ★★★
-                const mappedPlans = jsonData.map(row => {
-                    // พยายามหา Item Code จาก SAP_No ก่อน ถ้าไม่มีเอา Part_No
-                    // (รองรับทั้ง Case เล็ก/ใหญ่ เผื่อ User พิมพ์แก้หัวตารางเอง)
-                    const itemCode = row['SAP_No'] || row['sap_no'] || row['Part_No'] || row['part_no'] || '';
+                workbook.SheetNames.forEach(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    // header:1 จะคืนค่าเป็น Raw data (ถ้าเป็น xlsx วันที่จะเป็น Number)
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (rows.length < 2) return; 
+
+                    // --- 1. กำหนดชื่อ Line ---
+                    let currentLine = sheetName.replace(/Plan\s+/i, '').trim();
+                    const isGenericSheet = currentLine.toLowerCase().startsWith('sheet') || currentLine.toLowerCase() === 'csv';
+
+                    if (isGenericSheet) {
+                        const fileName = file.name; 
+                        // ตัดนามสกุลไฟล์ออก (.csv, .xlsx)
+                        const cleanName = fileName.replace(/\.(csv|xlsx|xls)$/i, '');
+                        
+                        let potentialLine = '';
+
+                        // ★★★ Logic ใหม่: แกะชื่อจากวงเล็บ (ASSEMBLY) ★★★
+                        // Regex: มองหา (...) ที่อยู่ท้ายชื่อไฟล์
+                        const parenMatch = cleanName.match(/\(([^)]+)\)$/);
+                        
+                        // ถ้าเจอวงเล็บ และข้างในไม่ใช่ตัวเลขล้วน (ป้องกันพวก (1), (2) ที่เป็นเลข version ไฟล์)
+                        if (parenMatch && isNaN(parenMatch[1])) {
+                            potentialLine = parenMatch[1].trim();
+                        } else {
+                            // Fallback: ถ้าไม่เจอวงเล็บ ให้ใช้ขีด (-) เหมือนเดิม
+                            const parts = cleanName.split('-');
+                            potentialLine = parts[parts.length - 1].trim();
+                        }
+                        
+                        // กรองความยาวและตัวเลข (เหมือนเดิม)
+                        if (potentialLine.length > 2 && !/^\d+$/.test(potentialLine)) { 
+                            currentLine = potentialLine;
+                        } else if (planLineFilter.value) {
+                            currentLine = planLineFilter.value;
+                        }
+                    }
+
+                    // --- 2. หา Header วันที่ ---
+                    let dateHeaderRowIndex = -1;
+                    const validDateMap = {}; 
+                    const filterYear = new Date(startDateFilter.value).getFullYear(); 
+                    let currentYear = filterYear;
+                    let lastMonthIndex = -1;
+
+                    for(let r=0; r<Math.min(rows.length, 10); r++) {
+                        if (isDateHeader(rows[r])) {
+                            dateHeaderRowIndex = r;
+                            break;
+                        }
+                    }
+
+                    if (dateHeaderRowIndex === -1) return; 
+
+                    // --- Parse Date Headers ---
+                    const dateHeaders = rows[dateHeaderRowIndex];
+                    dateHeaders.forEach((cell, index) => {
+                        // ส่ง Raw Cell ไปให้ parseFlexibleDateHeader จัดการ (มันฉลาดพอที่จะรู้ว่าเป็น Number หรือ String)
+                        const parsedDate = parseFlexibleDateHeader(cell, currentYear);
+                        
+                        if (parsedDate) {
+                            // ถ้าเจอวันที่แบบ ISO หรือ Serial ที่แปลงแล้วมีปีครบถ้วน -> อัปเดตปีปัจจุบัน
+                            if (/^\d{4}-/.test(parsedDate)) {
+                                validDateMap[index] = parsedDate;
+                                currentYear = parseInt(parsedDate.split('-')[0]);
+                            } else {
+                                // Logic เดือนไทย (คำนวณข้ามปี)
+                                const mStr = parsedDate.split('-')[1];
+                                const mIndex = parseInt(mStr) - 1;
+                                
+                                if (lastMonthIndex === 11 && mIndex === 0) {
+                                    currentYear++;
+                                    validDateMap[index] = parseFlexibleDateHeader(cell, currentYear);
+                                } else {
+                                    validDateMap[index] = parsedDate;
+                                }
+                                lastMonthIndex = mIndex;
+                            }
+                        }
+                    });
+
+                    // --- 3. Loop อ่านข้อมูลสินค้า ---
+                    let countInSheet = 0;
+                    for (let i = dateHeaderRowIndex + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+
+                        const firstCol = row[0]; 
+                        // ต้องเป็น String หรือ Number (เผื่อ Item Code เป็นตัวเลขล้วน)
+                        if (firstCol === undefined || firstCol === null) continue;
+                        
+                        const itemCodeStr = String(firstCol).trim();
+                        if (itemCodeStr === 'Date' || itemCodeStr.toLowerCase().includes('plan') || itemCodeStr === 'Item Code') continue;
+
+                        Object.keys(validDateMap).forEach(colIndex => {
+                            const qty = row[colIndex];
+                            if (qty && !isNaN(qty) && parseFloat(qty) > 0) {
+                                allMappedPlans.push({
+                                    date: validDateMap[colIndex],
+                                    line: currentLine,   
+                                    shift: defaultShift,
+                                    item_code: itemCodeStr,
+                                    qty: parseFloat(qty),
+                                    note: `Imported File`
+                                });
+                                countInSheet++;
+                            }
+                        });
+                    }
                     
-                    // ต้องมีข้อมูลสำคัญครบ ถึงจะส่งไป
-                    if (!row['Date'] && !row['date']) return null; 
+                    if (countInSheet > 0) {
+                        processedLines.push(currentLine);
+                    }
+                });
 
-                    return {
-                        date: row['Date'] || row['date'] || row['plan_date'],
-                        line: row['Line'] || row['line'],
-                        shift: row['Shift'] || row['shift'] || 'DAY', // Default DAY
-                        item_code: itemCode,
-                        qty: row['Original_Plan'] || row['original_plan'] || row['qty'] || 0,
-                        note: row['Note'] || row['note'] || ''
-                    };
-                }).filter(item => item !== null && item.item_code !== ''); // กรองแถวเสียทิ้ง
-
-                if (mappedPlans.length === 0) {
-                    showToast('No valid data found in file. Check column headers.', 'var(--bs-danger)');
+                if (allMappedPlans.length === 0) {
+                    showToast('ไม่พบข้อมูลแผนผลิต (ตรวจสอบรูปแบบวันที่ในไฟล์)', 'var(--bs-warning)');
                     return;
                 }
 
-                // ส่งไปให้ API (ใช้ confirm ก่อนเพื่อความปลอดภัย)
-                if(!confirm(`Ready to import ${mappedPlans.length} items? \n(Existing plans will be updated)`)) return;
+                const uniqueLines = [...new Set(processedLines)].join(', ');
+                const confirmMsg = `
+                    พบข้อมูลแผนผลิต: ${allMappedPlans.length} รายการ
+                    ----------------------------
+                    Lines Detected: ${uniqueLines}
+                    Shift: ${defaultShift} (Auto)
+                    ----------------------------
+                    ยืนยันการนำเข้า?
+                `;
+
+                if(!confirm(confirmMsg)) return;
 
                 showSpinner();
-                const res = await sendRequest(PLAN_API, 'import_plans_bulk', 'POST', { plans: mappedPlans });
+                const res = await sendRequest(PLAN_API, 'import_plans_bulk', 'POST', { plans: allMappedPlans });
                 
                 if (res.success) {
                     showToast(res.message, 'var(--bs-success)');
-                    // โหลดข้อมูลใหม่ทันที
-                    fetchPlans();
+                    fetchPlans(); 
                     if(fullCalendarInstance) fullCalendarInstance.refetchEvents();
                 } else {
-                    // กรณีมี Error บางบรรทัด
-                    let errMsg = res.message;
-                    if (res.errors && res.errors.length > 0) {
-                        errMsg += '\n' + res.errors.slice(0, 3).join('\n') + (res.errors.length > 3 ? '\n...' : '');
-                    }
-                    alert("Import Completed with issues:\n" + errMsg);
-                    fetchPlans(); // โหลดส่วนที่ผ่าน
+                    alert("Import Error:\n" + res.message);
                 }
 
             } catch (err) {
                 console.error(err);
-                showToast('Error reading file. Please check format.', 'var(--bs-danger)');
+                showToast('Error processing file: ' + err.message, 'var(--bs-danger)');
             } finally {
                 hideSpinner();
             }
         };
-
         reader.readAsArrayBuffer(file);
-    }   
+    }
 
     // =================================================================
     // SECTION 3: INITIALIZATION & AUTOCOMPLETE

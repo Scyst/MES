@@ -174,7 +174,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                             </button>
                                         </div>
 
-                                        <input type="file" id="importPlanInput" hidden accept=".xlsx, .xls">
+                                        <input type="file" id="importPlanInput" hidden accept=".xlsx, .xls, .csv">
                                         
                                         <div class="vr mx-1 opacity-25"></div>
                                         
