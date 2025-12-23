@@ -1,7 +1,24 @@
+<?php
+// page/manpower/manpowerUI.php
+require_once("../../auth/check_auth.php");
+
+// ตรวจสอบสิทธิ์
+if (!isset($_SESSION['user'])) {
+    header("Location: ../../login.php");
+    exit;
+}
+
+// 1. ตั้งค่า Header Variable (สำหรับ top_header.php)
+$currentUser = $_SESSION['user'];
+$pageTitle = "Manpower Management";
+$pageHeaderTitle = "Manpower Management";
+$pageHeaderSubtitle = "ติดตามสถานะพนักงานและการเข้ากะ (All Lines)";
+?>
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <title>Manpower Management</title>
+    <title><?php echo $pageTitle; ?></title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     
@@ -15,63 +32,84 @@
 
     <script src="../components/js/sidebar.js" defer></script>
     <script src="../components/js/theme-switcher.js" defer></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Sarabun', sans-serif; }
 
-        /* KPI Cards */
-        .kpi-card {
-            background: var(--bs-secondary-bg);
-            border: 1px solid var(--bs-border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.2s ease;
-            position: relative; overflow: hidden; height: 100%;
-            cursor: pointer;
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
         }
-        .kpi-card:hover, .kpi-card.active { 
-            transform: translateY(-3px); 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.08) !important;
-            border-color: var(--bs-primary);
-        }
-        .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
-        .kpi-primary::before { background-color: #0d6efd; }
-        .kpi-success::before { background-color: #198754; }
-        .kpi-warning::before { background-color: #ffc107; }
-        .kpi-danger::before { background-color: #dc3545; }
-
-        .kpi-icon-box {
-            width: 50px; height: 50px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
+        /* =========================================
+        1. TABLE STYLING (THEME AWARE)
+        ========================================= */
+        .table-summary th { 
+            position: sticky; 
+            top: 0; 
+            /* ใช้สีพื้นหลังจาก Theme Variable (รองรับ Dark Mode อัตโนมัติ) */
+            background-color: var(--bs-tertiary-bg); 
+            color: var(--bs-body-color);
+            z-index: 10; /* ให้ Header ลอยเหนือข้อมูล */
+            font-size: 0.85rem; 
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 0 var(--bs-border-color); /* เส้นขอบล่างแบบ Sticky */
+            vertical-align: middle;
         }
 
-        /* [NEW] Style สำหรับตารางสรุป 3 ช่อง */
-        .summary-card-height {
-            height: 380px;
-            display: flex; flex-direction: column;
+        .table-summary td { 
+            font-size: 0.9rem; 
+            padding: 0.6rem 1rem !important; 
+            vertical-align: middle;
+            border-color: var(--bs-border-color); /* ใช้สีเส้นขอบตามธีม */
         }
-        .summary-table-scroll {
-            flex: 1; overflow-y: auto; overflow-x: hidden;
+
+        /* เส้นแบ่งคอลัมน์สำคัญ (Actual) */
+        .border-start-custom {
+            border-left: 2px solid var(--bs-border-color) !important;
         }
-        .summary-table-scroll::-webkit-scrollbar { width: 6px; }
-        .summary-table-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .summary-table-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .border-end-custom {
+            border-right: 2px solid var(--bs-border-color) !important;
+        }
+
+        /* แถวที่ถูกเลือก (Active Filter) */
+        .table-warning {
+            /* เปลี่ยนจากสีเหลือง เป็นสี Primary (สีเดียวกับปุ่ม/ธีมหลัก) แบบจางๆ */
+            background-color: rgba(var(--bs-primary-rgb), 0.1) !important; 
+            
+            /* เพิ่มลูกเล่น: เส้นขอบซ้ายสีเข้ม เพื่อให้รู้ชัดเจนว่าแถวนี้ถูกเลือกอยู่ */
+            box-shadow: inset 4px 0 0 var(--bs-primary) !important;
+        }
+
+        [data-bs-theme="dark"] .table-warning {
+            /* Dark Mode: เพิ่มความเข้มเล็กน้อยให้อ่านง่ายบนพื้นดำ */
+            background-color: rgba(var(--bs-primary-rgb), 0.25) !important;
+            
+            /* ปรับสีตัวอักษรให้สว่างขึ้นเพื่อให้ตัดกับพื้นหลัง (เผื่อกรณีสีเดิมจม) */
+            color: var(--bs-primary-text-emphasis) !important; 
+        }
         
-        .table-summary th { position: sticky; top: 0; background: #f8f9fa; z-index: 5; font-size: 0.85rem; }
-        .table-summary td { font-size: 0.9rem; padding: 0.5rem 1rem !important; }
+        /* เสริม: ถ้าใน Dark Mode ตัวเลขในแถวที่เลือกมองยาก ให้ปรับสีพวก text-* ให้สว่างขึ้น */
+        [data-bs-theme="dark"] .table-warning td {
+            color: #e0e0e0;
+        }
 
-        /* Loading Overlay */
+        /* =========================================
+        2. UTILITIES & ANIMATIONS
+        ========================================= */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); z-index: 9999;
             display: none; flex-direction: column; align-items: center; justify-content: center;
             backdrop-filter: blur(5px);
         }
+        [data-bs-theme="dark"] #loadingOverlay { background: rgba(0, 0, 0, 0.8); }
+
         .spinner-custom {
             width: 3rem; height: 3rem;
             border: 4px solid var(--bs-border-color); border-top-color: var(--bs-primary);
@@ -79,34 +117,45 @@
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Transition สำหรับ Icon Expand */
-        .expand-icon { transition: transform 0.3s ease; }
-        tr[aria-expanded="true"] { background-color: var(--bs-primary-bg-subtle) !important; }
-
         .cursor-pointer { cursor: pointer; }
-        
-        .transition-icon {
-            transition: transform 0.3s ease;
-        }
-        
-        /* หมุนลูกศรเมื่อกดเปิด */
-        .fa-rotate-90 {
-            transform: rotate(90deg);
+        .transition-icon { transition: transform 0.2s ease; }
+        .fa-rotate-90 { transform: rotate(90deg); }
+
+        /* 1. สำหรับแถวตาราง (Summary Table) ต้องเป็น table-row เท่านั้น */
+        tr.collapse.show {
+            display: table-row !important;
         }
 
-        /* Animation ตอนแถวลูกโผล่ออกมา */
-        .collapse.show {
-            display: table-row;
-            animation: fadeInRow 0.3s ease-in;
+        /* 2. สำหรับกล่องรายละเอียด (Employee List) ต้องเป็น block */
+        div.collapse.show {
+            display: block !important;
         }
-        
+
+        /* 3. ลบ Animation ที่ทำให้กระพริบทิ้ง */
+        tr.collapse {
+            transition: background-color 0.3s ease;
+        }
+
         @keyframes fadeInRow {
             from { opacity: 0; transform: translateY(-5px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* เส้นขอบสีฟ้าด้านซ้ายของแถวลูก */
-        .border-start-3 { border-left-width: 3px !important; }
+        /* Tabs Custom Style */
+        .nav-tabs .nav-link { 
+            border: none; 
+            color: var(--bs-secondary); 
+            font-weight: 500; 
+            border-bottom: 3px solid transparent; 
+            transition: all 0.2s;
+        }
+        .nav-tabs .nav-link:hover { color: var(--bs-body-color); }
+        .nav-tabs .nav-link.active { 
+            color: var(--bs-primary); 
+            background: transparent; 
+            border-bottom-color: var(--bs-primary); 
+            font-weight: 700;
+        }
     </style>
 </head>
 
@@ -117,36 +166,7 @@
         <h5 class="fw-bold text-muted">กำลังโหลดข้อมูล...</h5>
     </div>
 
-    <header class="portal-top-header">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-link text-secondary d-xl-none p-0 me-2" id="sidebar-toggle-mobile-top">
-                <i class="fas fa-bars fa-lg"></i>
-            </button>
-            <div class="header-logo-box bg-primary bg-opacity-10 text-primary">
-                <i class="fas fa-users-cog fa-lg"></i>
-            </div>
-            <div class="d-flex flex-column justify-content-center">
-                <h5 class="fw-bold mb-0 text-body" style="line-height: 1.2;">Manpower Management</h5>
-                <small class="text-muted" style="font-size: 0.75rem;">ติดตามสถานะพนักงานและการเข้ากะ (All Lines)</small>
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <span class="d-none d-lg-inline text-muted small me-3">
-                <i class="far fa-clock me-1"></i> <?php echo date('j F Y'); ?>
-            </span>
-            <nav class="sidebar" id="sidebar">
-                <div class="sidebar-header">
-                    <button class="dropdown-toggle-btn" id="sidebar-toggle-btn">
-                        <i class="fas fa-bars fa-fw" style="font-size: 1.5rem;"></i>
-                    </button>
-                </div>
-                <ul class="custom-dropdown">
-                    <?php include('../components/php/nav_dropdown.php'); ?>
-                </ul>
-            </nav>
-        </div>
-    </header>
+    <?php include('../components/php/top_header.php'); ?>
 
     <main id="main-content">
         <div class="container-fluid p-3" style="max-width: 1600px;">
@@ -154,23 +174,45 @@
             <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
                 <div class="card-body py-3">
                     <div class="row align-items-end g-3">
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">ตั้งแต่วันที่</label>
-                            <input type="date" id="startDate" class="form-control form-control-sm fw-bold border-primary" value="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">ถึงวันที่</label>
-                            <input type="date" id="endDate" class="form-control form-control-sm fw-bold border-primary" value="<?php echo date('Y-m-d'); ?>">
+                        <div class="col-auto">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input cursor-pointer" type="checkbox" id="dateRangeToggle">
+                                <label class="form-check-label small text-muted cursor-pointer" for="dateRangeToggle">เลือกช่วงเวลา (Range)</label>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <div>
+                                    <input type="date" id="startDate" class="form-control form-control-sm fw-bold border-primary" value="<?php echo date('Y-m-d'); ?>">
+                                </div>
+                                <div id="endDateWrapper" class="d-none"> <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small">ถึง</span>
+                                        <input type="date" id="endDate" class="form-control form-control-sm fw-bold border-primary" value="<?php echo date('Y-m-d'); ?>">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="col-md-8 d-flex gap-2 align-items-end justify-content-end flex-wrap">
+                        <div class="col d-flex gap-2 align-items-end justify-content-end flex-wrap">
                             <div class="text-end me-3 d-none d-lg-block">
                                 <small class="text-muted d-block" style="font-size: 0.7rem;">Last Updated:</small>
                                 <small class="fw-bold text-primary" id="lastUpdateLabel">-</small>
                             </div>
-                            <button class="btn btn-sm btn-outline-warning text-dark fw-bold" onclick="openShiftPlanner()">
-                                <i class="fas fa-exchange-alt me-2"></i>Rotation
-                            </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-primary fw-bold px-3 dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-export me-2"></i>Export
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    <li>
+                                        <button class="dropdown-item py-2" onclick="exportPivotExcel()">
+                                            <i class="fas fa-file-excel me-2 text-success"></i>Executive Summary (Pivot)
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item py-2" onclick="exportDetailsCSV()">
+                                            <i class="fas fa-users me-2 text-success"></i>Employee List
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                             <button class="btn btn-sm btn-outline-dark fw-bold d-none" onclick="openMappingModal()">
                                 <i class="fas fa-sitemap me-1"></i> Mapping
                             </button>
@@ -182,112 +224,66 @@
                 </div>
             </div>
 
-            <div class="row mb-3 g-3">
-                <div class="col-6 col-lg-3">
-                    <div class="kpi-card kpi-primary active" id="card-total" onclick="setFilter('TOTAL')">
-                        <div><h6 class="text-muted mb-1 text-uppercase small fw-bold">Total</h6><h2 class="mb-0 fw-bold text-primary" id="kpi-total">0</h2></div>
-                        <div class="kpi-icon-box bg-primary bg-opacity-10 text-primary"><i class="fas fa-users fa-lg"></i></div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="kpi-card kpi-success" id="card-present" onclick="setFilter('PRESENT')">
-                        <div><h6 class="text-muted mb-1 text-uppercase small fw-bold">Present</h6><h2 class="mb-0 fw-bold text-success" id="kpi-present">0</h2></div>
-                        <div class="kpi-icon-box bg-success bg-opacity-10 text-success"><i class="fas fa-user-check fa-lg"></i></div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="kpi-card kpi-warning" id="card-late" onclick="setFilter('LATE')">
-                        <div><h6 class="text-muted mb-1 text-uppercase small fw-bold">Late</h6><h2 class="mb-0 fw-bold text-warning" id="kpi-late">0</h2></div>
-                        <div class="kpi-icon-box bg-warning bg-opacity-10 text-warning"><i class="fas fa-user-clock fa-lg"></i></div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="kpi-card kpi-danger" id="card-absent" onclick="setFilter('ABSENT')">
-                        <div><h6 class="text-muted mb-1 text-uppercase small fw-bold">Absent</h6><h2 class="mb-0 fw-bold text-danger" id="kpi-absent">0</h2></div>
-                        <div class="kpi-icon-box bg-danger bg-opacity-10 text-danger"><i class="fas fa-user-times fa-lg"></i></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
                 <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-chart-pie me-2"></i>Executive Summary (รายงานสรุป)</h6>
+                <div id="summaryViewControls"></div>
             </div>
 
-            <div class="row g-3 mb-4" id="summarySection">
-                
-                <div class="col-12 col-xl-5"> <div class="card h-100 border-0 shadow-sm summary-card-height">
-                        <div class="card-header bg-white py-2 border-bottom fw-bold text-primary d-flex justify-content-between">
-                            <span><i class="fas fa-industry me-2"></i>1. สรุปรายไลน์ (Drill Down)</span>
-                            <small class="text-muted fw-normal" style="font-size: 0.7rem;">(คลิกเพื่อดูย่อย)</small>
-                        </div>
-                        <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0" id="tableByLine" style="font-size: 0.85rem;">
-                                <thead class="table-light sticky-top" style="z-index: 5;">
-                                    <tr>
-                                        <th class="ps-3">Line</th>
-                                        <th class="text-center">Plan</th>
-                                        <th class="text-center text-success">Pres.</th>
-                                        <th class="text-center text-danger">Abs.</th>
-                                        <th class="text-center text-warning">Late</th>
-                                        <th class="text-center bg-light border-start">Act.</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card h-100 border-0 shadow-sm summary-card-height">
-                        <div class="card-header bg-white py-2 border-bottom fw-bold text-info">
-                            <i class="fas fa-clock me-2"></i>2. สรุปกะและทีม (รวม)
-                        </div>
-                        <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0" id="tableByShift" style="font-size: 0.85rem;">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th class="ps-3">Shift</th>
-                                        <th class="text-center">Plan</th>
-                                        <th class="text-center">Abs.</th>
-                                        <th class="text-center bg-light border-start">Act.</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-xl-4">
-                    <div class="card h-100 border-0 shadow-sm summary-card-height">
-                        <div class="card-header bg-white py-2 border-bottom fw-bold text-success">
-                            <i class="fas fa-id-badge me-2"></i>3. ประเภทพนักงาน (รวม)
-                        </div>
-                        <div class="card-body p-0 summary-table-scroll">
-                            <table class="table table-sm table-hover mb-0" id="tableByType" style="font-size: 0.85rem;">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th class="ps-3">Type</th>
-                                        <th class="text-center">Plan</th>
-                                        <th class="text-center">Abs.</th>
-                                        <th class="text-center bg-light border-start">Act.</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="mainSummaryTable">
+                            <thead class="table-summary"></thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <h5 class="fw-bold text-body m-0"><i class="fas fa-users me-2"></i>Employee List</h5>
+                
+                <span id="activeFilterBadge" class="badge bg-warning text-body d-none align-items-center shadow-sm px-3 py-2 cursor-pointer" onclick="resetTableFilter()" title="Click to clear filter" style="font-size: 0.85rem;">
+                    <i class="fas fa-filter me-2"></i> 
+                    <span id="activeFilterText">Filtered</span>
+                    <i class="fas fa-times ms-2 opacity-50"></i>
+                </span>
+            </div>
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0"><i class="fas fa-list-ul me-2"></i>Employee Status List</h6>
+            <div class="d-flex justify-content-between align-items-end mb-2 mt-4">
+                <ul class="nav nav-tabs mb-0 border-bottom-0" id="statusTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" onclick="setFilter('TOTAL'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+                            TOTAL
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link text-success" onclick="setFilter('PRESENT'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+                            PRESENT
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link text-warning" onclick="setFilter('LATE'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+                            LATE
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link text-danger" onclick="setFilter('ABSENT'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+                            ABSENT
+                        </button>
+                    </li>
+                </ul>
+                <div class="col d-flex gap-2 align-items-end justify-content-end flex-wrap">
+                    <button class="btn btn-sm btn-outline-warning text-body fw-bold" onclick="openShiftPlanner()">
+                        <i class="fas fa-exchange-alt me-2"></i>Rotation
+                    </button>
                     <a href="employeeListUI.php" class="btn btn-sm btn-outline-primary fw-bold px-3 shadow-sm">
                         <i class="fas fa-users-cog me-1"></i> Manage Employees
                     </a>
                 </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
                 <div class="card-body p-0">
                     <div class="table-responsive" style="min-height: 400px;">
                         <table class="table table-hover align-middle mb-0">
@@ -298,13 +294,14 @@
                                     <th class="py-3 text-center">Line</th>
                                     <th class="py-3 text-center">Team</th>
                                     <th class="py-3 text-center">Shift</th>
-                                    <th class="py-3 text-center">Summary</th> </tr>
+                                    <th class="py-3 text-center">Summary</th> 
+                                </tr>
                             </thead>
                             <tbody id="manpowerTableBody" class="border-top-0"></tbody>
                         </table>
                     </div>
                 </div>
-                <div class="card-footer bg-white border-top py-3">
+                <div class="card-footer bg-body border-top py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted" id="pageInfo">Showing 0 entries</small>
                         <nav>
@@ -317,20 +314,8 @@
         </div>
     </main>
 
-    <div class="docking-sidebar" id="docking-sidebar"></div>
-    
-    <div class="offcanvas offcanvas-start" tabindex="-1" id="globalMobileMenu">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title"><i class="fas fa-user-alt fa-fw me-2"></i> Menu</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-            <ul class="list-group list-group-flush" style="margin-top: 5px;">
-                <?php include('../components/php/nav_dropdown.php'); ?>
-            </ul>
-        </div>
-    </div>
-
+    <?php include_once('../components/php/docking_sidebar.php'); ?>
+    <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php include_once('components/manpower_modals_bundle.php'); ?>
 
     <div id="syncLoader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; color:white; backdrop-filter: blur(8px);">
@@ -349,6 +334,6 @@
         function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
     </script>
     
-    <script src="script/manpower.js?v=<?php echo time(); ?>"></script>
+    <script src="script/manpower.js?v=<?php echo time(); ?>"></script>ฃ
 </body>
 </html>

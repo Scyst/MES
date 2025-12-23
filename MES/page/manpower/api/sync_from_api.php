@@ -178,9 +178,9 @@ try {
                     $logDate = date('Y-m-d', strtotime("-1 day", $inTs));
                 }
 
-                // เช็คสาย (ให้เวลา 10 นาที = 600 วินาที)
+                // เช็คสาย
                 $shiftStartTs = strtotime("$logDate $sTime");
-                $status = ($inTs > ($shiftStartTs + 600)) ? 'LATE' : 'PRESENT';
+                $status = ($inTs > ($shiftStartTs)) ? 'LATE' : 'PRESENT';
 
                 // Save ลง DB
                 $stmtCheckLog->execute([$empId, $logDate]); // เช็คอีกทีด้วยวันที่ที่ปรับแล้ว
