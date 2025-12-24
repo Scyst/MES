@@ -1,3 +1,8 @@
+<?php 
+// MES/page/manpower/components/manpower_modals_bundle.php 
+// แก้ไข: รวม editEmpModal (ตัวที่มี Active) เข้ามาแทนที่ editEmployeeModal เดิม และปรับ ID ให้ตรงกับ JS
+?>
+
 <div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -63,41 +68,30 @@
     </div>
 </div>
 
-<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-cog me-2"></i>Edit Employee Info
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title fw-bold"><i class="fas fa-user-edit me-2"></i>Edit Employee Info</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="editEmployeeForm">
-                    <input type="hidden" id="empEditId">
-                    
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">Employee Name</label>
-                        <input type="text" class="form-control form-control-plaintext fw-bold" id="empEditName" readonly>
+                    <input type="hidden" id="empEditId"> <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Employee Name</label>
+                        <input type="text" class="form-control form-control-lg fw-bold px-2 bg-light border-0" id="empEditName" readonly>
                     </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <label class="form-label">Line / Section</label>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-8">
+                            <label class="form-label small fw-bold">Line / Section</label>
                             <select class="form-select" id="empEditLine">
-                                <option value="">-- Select Line --</option>
-                                </select>
+                                <option value="">Loading lines...</option>
+                            </select>
                         </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Main Shift</label>
-                            <select class="form-select" id="empEditShift">
-                                </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Team Group</label>
-                            <select class="form-select" id="empEditTeam">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-primary">Team</label>
+                            <select class="form-select fw-bold text-primary" id="empEditTeam">
                                 <option value="">-</option>
                                 <option value="A">Team A</option>
                                 <option value="B">Team B</option>
@@ -106,12 +100,27 @@
                             </select>
                         </div>
                     </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Default Shift</label>
+                        <select class="form-select" id="empEditShift">
+                            <option value="">-- Select Shift --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch p-3 bg-light rounded border d-flex align-items-center">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" id="empEditActive" checked style="width: 2.5em; height: 1.25em;">
+                        <div>
+                            <label class="form-check-label fw-bold d-block cursor-pointer" for="empEditActive">Active Status</label>
+                            <small class="text-muted" style="font-size: 0.75rem;">ปิดการใช้งานหากพนักงานลาออก (Inactive)</small>
+                        </div>
+                    </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="saveEmployeeInfo()">
-                    <i class="fas fa-save me-1"></i> Save Changes
+            <div class="modal-footer bg-light border-0 py-2">
+                <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold px-3" onclick="saveEmployeeInfo()">
+                    <i class="fas fa-save me-2"></i> Save Changes
                 </button>
             </div>
         </div>
@@ -139,8 +148,7 @@
                                 <th class="text-center pe-4">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="shiftPlannerBody">
-                            </tbody>
+                        <tbody id="shiftPlannerBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -163,8 +171,7 @@
                     <li class="nav-item">
                         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#categoryTab">ประเภทพนักงาน (Categories)</button>
                     </li>
-                    </ul>
-                
+                </ul>
                 <div class="tab-content">
                     <div class="tab-pane fade show active" id="categoryTab">
                         <div class="d-flex justify-content-between mb-2">
@@ -224,69 +231,4 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="modal fade" id="editEmpModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header bg-primary text-white py-2">
-                <h6 class="modal-title fw-bold"><i class="fas fa-user-edit me-2"></i>Edit Employee Info</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="editEmpForm">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold text-uppercase">Employee Name</label>
-                        <input type="text" class="form-control form-control-lg fw-bold px-2 bg-light border-0" id="modalEmpName" readonly>
-                        <input type="hidden" id="modalEmpId">
-                    </div>
-                    
-                    <div class="row g-3 mb-3">
-                        <div class="col-8">
-                            <label class="form-label small fw-bold">Line / Section</label>
-                            <select class="form-select" id="modalLine">
-                                <option value="">Loading lines...</option>
-                            </select>
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label small fw-bold text-primary">Team</label>
-                            <select class="form-select fw-bold text-primary" id="modalTeam">
-                                <option value="">-</option>
-                                <option value="A">Team A</option>
-                                <option value="B">Team B</option>
-                                <option value="C">Team C</option>
-                                <option value="D">Team D</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold">Default Shift</label>
-                        <select class="form-select" id="modalShift">
-                            <option value="">-- Select Shift --</option>
-                        </select>
-                    </div>
-
-                    <div class="form-check form-switch p-3 bg-light rounded border d-flex align-items-center">
-                        <input class="form-check-input ms-0 me-3" type="checkbox" id="modalActive" checked style="width: 2.5em; height: 1.25em;">
-                        <div>
-                            <label class="form-check-label fw-bold d-block" for="modalActive">Active Status</label>
-                            <small class="text-muted" style="font-size: 0.75rem;">ปิดการใช้งานหากพนักงานลาออก</small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light border-0 py-2">
-                <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-sm btn-primary fw-bold px-3" onclick="saveEmployee()">
-                    <i class="fas fa-save me-2"></i> Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column;">
-    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    <div class="mt-2 text-muted fw-bold">Processing...</div>
 </div>
