@@ -37,8 +37,8 @@ try {
 
         $sql = "SELECT 
                     ISNULL(L.log_id, 0) as log_id,
-                    '$startDate' as log_date,
-                    CONVERT(VARCHAR(19), L.scan_in_time, 120) as scan_in_time, 
+                    ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), '$startDate') as log_date,
+                    CONVERT(VARCHAR(19), L.scan_in_time, 120) as scan_in_time,
                     CONVERT(VARCHAR(19), L.scan_out_time, 120) as scan_out_time,
                     CASE 
                         WHEN L.status IS NOT NULL THEN L.status
@@ -163,43 +163,75 @@ try {
     } elseif ($action === 'update_log') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
 
-        $logId  = $input['log_id'] ?? null;
+        // รับค่า (ยอมรับ 0 ได้ โดยใช้ isset เช็คแทน)
+        $logId  = isset($input['log_id']) ? $input['log_id'] : null;
         $status = $input['status'] ?? null;
         $remark = trim($input['remark'] ?? '');
         $shiftId = !empty($input['shift_id']) ? intval($input['shift_id']) : null;
         $scanIn  = !empty($input['scan_in_time']) ? $input['scan_in_time'] : null;
         $scanOut = !empty($input['scan_out_time']) ? $input['scan_out_time'] : null;
-
-        if (!$logId || !$status) throw new Exception("Missing required fields.");
-
-        // ตรวจสอบข้อมูลก่อนแก้
-        $stmtCheck = $pdo->prepare("SELECT L.is_verified, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
-        $stmtCheck->execute([$logId]);
-        $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-        if (!$log) throw new Exception("Log not found.");
         
-        if (hasRole('supervisor')) {
-            $userLine = $currentUser['line'] ?? '';
-            if ($log['line'] !== $userLine) throw new Exception("Permission Denied (Wrong Line).");
-        }
+        // รับค่าเพิ่มสำหรับกรณีสร้างใหม่ (log_id = 0)
+        $empId   = $input['emp_id'] ?? null;
+        $logDate = $input['log_date'] ?? null;
 
-        if ($log['is_verified'] == 1 && !hasRole(['admin', 'creator'])) {
-            throw new Exception("Record is locked (Verified).");
-        }
+        // แก้ไขเงื่อนไข validation: เช็คว่า logId เป็น null หรือไม่ (ยอมรับ 0)
+        if ($logId === null || !$status) throw new Exception("Missing required fields.");
 
-        $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
-                SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, 
-                    shift_id = ?, updated_by = ?, updated_at = GETDATE()
-                WHERE log_id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$status, $remark, $scanIn, $scanOut, $shiftId, $updatedBy, $logId]);
+        // กรณีที่มี Log อยู่แล้ว (Update)
+        if ($logId != 0) {
+            // ตรวจสอบข้อมูลก่อนแก้
+            $stmtCheck = $pdo->prepare("SELECT L.is_verified, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
+            $stmtCheck->execute([$logId]);
+            $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if (!$log) throw new Exception("Log not found.");
+            
+            if (hasRole('supervisor')) {
+                $userLine = $currentUser['line'] ?? '';
+                if ($log['line'] !== $userLine) throw new Exception("Permission Denied (Wrong Line).");
+            }
+            if ($log['is_verified'] == 1 && !hasRole(['admin', 'creator'])) {
+                throw new Exception("Record is locked (Verified).");
+            }
+
+            $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
+                    SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, 
+                        shift_id = ?, updated_by = ?, updated_at = GETDATE(),
+                        is_verified = 1
+                    WHERE log_id = ?";
+            
+            $stmt = $pdo->prepare($sql);
+            // execute ไม่ต้องส่งตัวแปร verified เข้าไป เพราะ hardcode ใน sql แล้ว
+            $stmt->execute([$status, $remark, $scanIn, $scanOut, $shiftId, $updatedBy, $logId]);
+            
+            $msg = "Update successful (Verified)";
+
+        // กรณีที่ยังไม่มี Log (Insert ใหม่)
+        } else {
+            if (!$empId || !$logDate) throw new Exception("New record requires Emp ID and Date.");
+
+            // ตรวจสอบว่ามีอยู่จริงไหม (กันข้อมูลซ้ำ)
+            $stmtCheckDup = $pdo->prepare("SELECT log_id FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date = ?");
+            $stmtCheckDup->execute([$empId, $logDate]);
+            if ($stmtCheckDup->fetch()) throw new Exception("Log already exists. Please refresh.");
+
+            $sql = "INSERT INTO " . MANPOWER_DAILY_LOGS_TABLE . " 
+                    (log_date, emp_id, status, remark, scan_in_time, scan_out_time, shift_id, updated_by, updated_at, is_verified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 1)";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$logDate, $empId, $status, $remark, $scanIn, $scanOut, $shiftId, $updatedBy]);
+            
+            $logId = $pdo->lastInsertId(); // เก็บ ID ไว้ลง Log
+            $msg = "Created new record";
+        }
 
         $detail = "Manpower Update LogID:$logId Status:$status Shift:$shiftId";
         $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_EDIT', ?, GETDATE())");
         $stmtLog->execute([$updatedBy, $detail]);
 
-        echo json_encode(['success' => true, 'message' => 'Update successful']);
+        echo json_encode(['success' => true, 'message' => $msg]);
 
     // ==================================================================================
     // 4. ACTION: clear_day (ลบข้อมูลทั้งวัน)

@@ -153,9 +153,20 @@ try {
             $sTime = $shiftConfig[$targetShiftId]['start_time'] ?? '08:00:00';
             $isNight = ((int)substr($sTime, 0, 2) >= 15); // ถ้าเริ่มหลังบ่าย 3 ถือเป็นกะดึก/เย็น
             
-            // Window: เริ่มก่อนเวลาเข้างาน 3 ชม. จนถึงเช้าอีกวัน
-            $wStart = strtotime($isNight ? "$procDate 15:00:00" : "$procDate 05:00:00");
-            $wEnd   = strtotime($isNight ? "$procDate 12:00:00 +1 day" : "$procDate 02:00:00 +1 day");
+            // [แก้ไขใหม่] ขยายเวลาค้นหา (Window)
+            if ($isNight) {
+                // --- กะดึก (Night Shift) ---
+                // เริ่มหาตั้งแต่ 14:00 น. (เผื่อมาเตรียมตัวก่อนเข้างาน)
+                // ไปจนถึง 12:00 น. ของอีกวัน (เผื่อทำ OT ไหลยาวถึงเที่ยง)
+                $wStart = strtotime("$procDate 14:00:00");
+                $wEnd   = strtotime("$procDate 12:00:00 +1 day");
+            } else {
+                // --- กะเช้า (Day Shift) ---
+                // เริ่มหาตั้งแต่ 04:00 น. (เผื่อคนมาเช้ามาก)
+                // [จุดสำคัญที่แก้] ไปจนถึง 04:00 น. ของอีกวัน (เดิมแค่ 02:00 ทำให้คนเลิกตี 3 เวลาหาย)
+                $wStart = strtotime("$procDate 04:00:00");
+                $wEnd   = strtotime("$procDate 04:00:00 +1 day");
+            }
 
             // 4.4 หา Scan ที่อยู่ใน Window นี้
             $validScans = [];

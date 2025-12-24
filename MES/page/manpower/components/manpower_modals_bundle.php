@@ -15,6 +15,8 @@
             <div class="modal-body">
                 <form id="editLogForm">
                     <input type="hidden" id="editLogId">
+                    <input type="hidden" id="editEmpIdHidden">
+                    <input type="hidden" id="editLogDateHidden">
                     
                     <div class="mb-3">
                         <label class="form-label text-muted small">Employee</label>

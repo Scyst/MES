@@ -494,7 +494,9 @@ function processData() {
             const s = d.status || 'WAITING';
             if (currentStatusFilter === 'PRESENT') return s === 'PRESENT';
             if (currentStatusFilter === 'LATE') return s === 'LATE';
-            if (currentStatusFilter === 'ABSENT') return ['ABSENT', 'WAITING'].includes(s) || s.includes('LEAVE');
+            if (currentStatusFilter === 'LEAVE') return ['SICK_LEAVE', 'BUSINESS_LEAVE', 'VACATION', 'OTHER'].includes(s) || s.includes('LEAVE');
+            if (currentStatusFilter === 'ABSENT') return ['ABSENT', 'WAITING'].includes(s);
+            
             return true;
         });
     }
@@ -532,15 +534,32 @@ function processData() {
             groups[log.emp_id] = {
                 emp_info: log,
                 logs: [],
-                stats: { present: 0, late: 0, absent: 0, other: 0 }
+                // [แก้ไข] แยกตัวแปรนับประเภทการลาออกจากกัน
+                stats: { 
+                    present: 0, 
+                    late: 0, 
+                    absent: 0, 
+                    sick: 0,      // ลาป่วย
+                    business: 0,  // ลากิจ
+                    vacation: 0,  // พักร้อน
+                    other: 0 
+                } 
             };
         }
         groups[log.emp_id].logs.push(log);
         
         const s = (log.status || '').toUpperCase();
+        
+        // [แก้ไข] Logic การนับแยกประเภท
         if (s === 'PRESENT') groups[log.emp_id].stats.present++;
         else if (s === 'LATE') groups[log.emp_id].stats.late++;
-        else if (s === 'ABSENT') groups[log.emp_id].stats.absent++;
+        else if (['ABSENT', 'WAITING'].includes(s)) groups[log.emp_id].stats.absent++;
+        
+        // แยกเคสการลา
+        else if (s === 'SICK_LEAVE') groups[log.emp_id].stats.sick++;
+        else if (s === 'BUSINESS_LEAVE') groups[log.emp_id].stats.business++;
+        else if (s === 'VACATION') groups[log.emp_id].stats.vacation++;
+        
         else groups[log.emp_id].stats.other++;
     });
 
@@ -593,9 +612,24 @@ function renderMainTable() {
         }
 
         let summaryBadges = '';
+        
+        // 1. มา (เขียว)
         if(stats.present > 0) summaryBadges += `<span class="badge bg-success bg-opacity-10 text-success border border-success me-1">${stats.present} มา</span>`;
+        
+        // 2. สาย (เหลือง)
         if(stats.late > 0)    summaryBadges += `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning me-1">${stats.late} สาย</span>`;
+        
+        // 3. กลุ่มการลา (ฟ้า) - [แก้ไข] แยกแสดงผล
+        if(stats.sick > 0)     summaryBadges += `<span class="badge bg-info bg-opacity-10 text-primary border border-info me-1">${stats.sick} ป่วย</span>`;
+        if(stats.business > 0) summaryBadges += `<span class="badge bg-info bg-opacity-10 text-primary border border-info me-1">${stats.business} กิจ</span>`;
+        if(stats.vacation > 0) summaryBadges += `<span class="badge bg-info bg-opacity-10 text-primary border border-info me-1">${stats.vacation} พักร้อน</span>`;
+        
+        // 4. ขาด (แดง)
         if(stats.absent > 0)  summaryBadges += `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger me-1">${stats.absent} ขาด</span>`;
+        
+        // 5. อื่นๆ (เทา)
+        if(stats.other > 0)   summaryBadges += `<span class="badge bg-secondary bg-opacity-25 text-body border me-1">${stats.other} อื่นๆ</span>`;
+        
         if(summaryBadges === '') summaryBadges = '-';
 
         const trMain = document.createElement('tr');
@@ -696,7 +730,8 @@ function generateDetailRows(logs) {
                 <td>${statusBadge}</td>
                 <td><small class="text-muted">${log.remark || ''}</small></td>
                 <td class="text-center">
-                    <button class="btn btn-xs btn-link text-primary" onclick="openEditLogModal('${log.log_id}')">
+                    <button class="btn btn-xs btn-link text-primary" 
+                        onclick="openEditLogModal('${log.emp_id}', '${log.log_date}', '${log.log_id}')">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
@@ -730,47 +765,117 @@ function renderPagination() {
 
 window.changePage = function(p) { if(p < 1) return; currentPage = p; renderMainTable(); }
 window.setFilter = function(f) { currentStatusFilter = f; processData(); }
+// ไฟล์: manpower.js
+
+// ไฟล์: manpower.js (ค้นหา function getStatusBadge)
+
 function getStatusBadge(s) {
     if (!s || s === 'WAITING') return '<span class="badge bg-light text-secondary border">WAITING</span>';
+    
     if (s === 'PRESENT') return '<span class="badge bg-success bg-opacity-75">PRESENT</span>';
     if (s === 'LATE') return '<span class="badge bg-warning text-dark bg-opacity-75">LATE</span>';
     if (s === 'ABSENT') return '<span class="badge bg-danger bg-opacity-75">ABSENT</span>';
-    if (s.includes('LEAVE')) return `<span class="badge bg-info text-dark bg-opacity-75">${s}</span>`;
+    
+    // [แก้ไข] เปลี่ยนกลับเป็นสีฟ้า (bg-info) ตามที่ต้องการ
+    // ใช้ bg-info text-dark เพื่อให้เป็นสีฟ้าอ่อน ตัวหนังสือดำ อ่านง่ายแบบเดิม
+    if (s === 'SICK_LEAVE') return '<span class="badge bg-info text-dark bg-opacity-75">SICK LEAVE</span>';
+    if (s === 'BUSINESS_LEAVE') return '<span class="badge bg-info text-dark bg-opacity-75">BUSINESS LEAVE</span>';
+    if (s === 'VACATION') return '<span class="badge bg-info text-dark bg-opacity-75">VACATION</span>';
+    
+    if (s === 'OTHER') return '<span class="badge bg-secondary">OTHER</span>';
+
+    // Fallback
     return `<span class="badge bg-secondary">${s}</span>`;
 }
 
 function showSpinner() { const el = document.getElementById('loadingOverlay'); if(el) el.style.display = 'flex'; }
 function hideSpinner() { const el = document.getElementById('loadingOverlay'); if(el) el.style.display = 'none'; }
 
-// ... (Functions 6. Modal Actions - ยังคงเดิม) ...
 // 6.1 Edit Log
-window.openEditLogModal = function(logId) {
-    const log = allManpowerData.find(d => d.log_id == logId);
-    if(log) {
-        document.getElementById('editLogId').value = logId;
-        document.getElementById('editEmpName').value = log.name_th;
-        document.getElementById('editStatus').value = log.status;
-        document.getElementById('editLogShift').value = log.actual_shift_id || ""; 
+// ไฟล์: manpower.js
+
+// [แก้ตรงนี้] รับ parameter เพิ่ม
+window.openEditLogModal = function(empId, dateStr, logId) {
+    
+    // [LOGIC สำคัญ] ค้นหาจาก emp_id และ log_date เพื่อความแม่นยำ 100%
+    const log = allManpowerData.find(d => d.emp_id == empId && d.log_date == dateStr);
+    
+    // ถ้าหาไม่เจอ (เผื่อไว้) ให้ลองหาจาก log_id สำหรับเคสที่มี ID แล้ว
+    const fallbackLog = log || allManpowerData.find(d => d.log_id == logId && logId != 0);
+    
+    const target = log || fallbackLog;
+
+    if(target) {
+        document.getElementById('editLogId').value = target.log_id || 0;
+        
+        // เซ็ตค่าลง Hidden Fields ที่เราเพิ่มไปเมื่อกี้
+        document.getElementById('editEmpIdHidden').value = target.emp_id;
+        document.getElementById('editLogDateHidden').value = target.log_date;
+
+        document.getElementById('editEmpName').value = target.name_th;
+        
+        // ถ้าสถานะเป็น WAITING ให้ Default เป็น PRESENT เพื่อความสะดวก
+        let statusToShow = target.status;
+        if(statusToShow === 'WAITING' || !statusToShow) statusToShow = 'PRESENT';
+        
+        document.getElementById('editStatus').value = statusToShow;
+        document.getElementById('editLogShift').value = target.actual_shift_id || ""; 
+        
         const fmt = (t) => t ? t.replace(' ', 'T').substring(0, 16) : '';
-        document.getElementById('editScanInTime').value = fmt(log.scan_in_time);
-        document.getElementById('editScanOutTime').value = fmt(log.scan_out_time);
+        document.getElementById('editScanInTime').value = fmt(target.scan_in_time);
+        document.getElementById('editScanOutTime').value = fmt(target.scan_out_time);
+        
+        // [เพิ่ม] ถ้าเป็น New Record (WAITING) ให้เปิดให้แก้วันที่ได้เผื่อ User อยากเปลี่ยนวัน
+        // แต่ถ้าเป็นรายการเดิม ให้ล็อกวันที่ไว้
+        
         editLogModal.show();
+    } else {
+        console.error("Data row not found for:", empId, dateStr);
+        alert("ไม่พบข้อมูลแถวที่เลือก กรุณา Refresh หน้าจอ");
     }
 }
 
 window.saveLogChanges = async function() {
-    const id=document.getElementById('editLogId').value;
-    const st=document.getElementById('editStatus').value;
-    const sh=document.getElementById('editLogShift').value;
-    const rem=document.getElementById('editRemark').value;
-    const si=document.getElementById('editScanInTime').value;
-    const so=document.getElementById('editScanOutTime').value;
+    const id = document.getElementById('editLogId').value;
+    const empId = document.getElementById('editEmpIdHidden').value;
+    const logDate = document.getElementById('editLogDateHidden').value;
+
+    const st = document.getElementById('editStatus').value;
+    const sh = document.getElementById('editLogShift').value;
+    const rem = document.getElementById('editRemark').value;
+    const si = document.getElementById('editScanInTime').value;
+    const so = document.getElementById('editScanOutTime').value;
+    
     showSpinner();
-    try{
-        const res=await fetch('api/api_daily_operations.php?action=update_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_id:id,status:st,shift_id:sh,remark:rem,scan_in_time:si?si.replace('T',' '):null,scan_out_time:so?so.replace('T',' '):null})});
-        const json=await res.json();
-        if(json.success){ editLogModal.hide(); refreshData(); } else alert(json.message);
-    } catch(e){console.error(e);} finally{hideSpinner();}
+    try {
+        const res = await fetch('api/api_daily_operations.php?action=update_log', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                log_id: id,
+                emp_id: empId,   // [ส่งค่าเพิ่ม]
+                log_date: logDate, // [ส่งค่าเพิ่ม]
+                status: st,
+                shift_id: sh,
+                remark: rem,
+                scan_in_time: si ? si.replace('T', ' ') : null,
+                scan_out_time: so ? so.replace('T', ' ') : null
+            })
+        });
+        const json = await res.json();
+        if(json.success){ 
+            editLogModal.hide(); 
+            refreshData();
+            if(typeof showToast === 'function') showToast(json.message, '#198754');
+        } else {
+            alert(json.message);
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Error updating data");
+    } finally {
+        hideSpinner();
+    }
 }
 
 // 6.2 Edit Employee

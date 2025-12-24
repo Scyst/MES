@@ -253,6 +253,11 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         </button>
                     </li>
                     <li class="nav-item">
+                        <button class="nav-link text-info" onclick="setFilter('LEAVE'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+                            LEAVE
+                        </button>
+                    </li>
+                    <li class="nav-item">
                         <button class="nav-link text-warning" onclick="setFilter('LATE'); document.querySelectorAll('#statusTabs .nav-link').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
                             LATE
                         </button>
