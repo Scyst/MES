@@ -3,31 +3,36 @@
 document.addEventListener('DOMContentLoaded', () => {
     
     // ============================================================
-    // PART 1: Desktop Sidebar Logic (จัดการการยืด/หดของ Sidebar หลัก)
+    // PART 1: Desktop Sidebar Logic
     // ============================================================
     const sidebar = document.getElementById('sidebar');
-    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn'); // ตัวนี้อาจจะหาไม่เจอ (null) เพราะเราลบออกแล้ว
     const storageKey = 'sidebarState';
 
-    if (sidebar && sidebarToggleBtn) {
+    if (sidebar) {
         // ฟังก์ชันสำหรับตั้งค่าสถานะ (หุบ/ขยาย)
         const setSidebarState = (state) => {
             sidebar.setAttribute('data-state', state);
             localStorage.setItem(storageKey, state);
         };
 
-        // โหลดสถานะที่บันทึกไว้ หรือใช้ 'collapsed' เป็นค่าเริ่มต้น
-        const initialState = localStorage.getItem(storageKey) || 'collapsed';
-        setSidebarState(initialState);
+        // ถ้ามีปุ่ม (แบบเดิม) ให้โหลดสถานะล่าสุดจาก LocalStorage
+        if (sidebarToggleBtn) {
+            const initialState = localStorage.getItem(storageKey) || 'collapsed';
+            setSidebarState(initialState);
 
-        // เมื่อกดปุ่ม "แฮมเบอร์เกอร์" (Desktop)
-        sidebarToggleBtn.addEventListener('click', () => {
-            const currentState = sidebar.getAttribute('data-state');
-            const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
-            setSidebarState(newState);
-        });
+            sidebarToggleBtn.addEventListener('click', () => {
+                const currentState = sidebar.getAttribute('data-state');
+                const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
+                setSidebarState(newState);
+            });
+        } else {
+            // ★ ถ้าไม่มีปุ่ม (แบบใหม่) ให้บังคับเป็น 'collapsed' เสมอ เพื่อให้ Hover ทำงานได้
+            // และป้องกันกรณี LocalStorage จำค่า 'expanded' ไว้จน Sidebar กางค้างปิดไม่ได้
+            setSidebarState('collapsed');
+        }
 
-        // ขยายชั่วคราวเมื่อ Hover (เฉพาะตอนที่หุบอยู่)
+        // ขยายชั่วคราวเมื่อ Hover (ทำงานได้เสมอไม่ว่าจะมีปุ่มหรือไม่)
         sidebar.addEventListener('mouseenter', () => {
             if (sidebar.getAttribute('data-state') === 'collapsed') {
                 sidebar.classList.add('hover-expand');

@@ -1,23 +1,16 @@
-<nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <button class="dropdown-toggle-btn" id="sidebar-toggle-btn">
-            <i class="fas fa-bars fa-fw" style="font-size: 1.5rem;"></i>
-        </button>
-    </div>
-
+<nav class="sidebar" id="sidebar" data-state="collapsed">
+    <?php if (isset($_SESSION['user']) && is_array($_SESSION['user'])): ?>
+      <div class="dropdown-username" title="User" style="width: 100%; flex-shrink: 0; cursor: default;">
+        <i class="fas fa-user-alt fa-fw" style="margin-right: 24px;"></i>
+        <div>
+            <?= htmlspecialchars($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']) ?>
+            <small style="display:block; font-size: 0.75rem; color: #aaa;">
+                <?= htmlspecialchars($_SESSION['user']['role'] ?? 'operator') ?>
+            </small>
+        </div>
+      </div>
+    <?php endif; ?>
     <ul class="custom-dropdown">
-        <?php if (isset($_SESSION['user']) && is_array($_SESSION['user'])): ?>
-          <li class="dropdown-username" title="User">
-            <i class="fas fa-user-alt fa-fw" style="margin-right: 24px;"></i>
-            <div>
-                <?= htmlspecialchars($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']) ?>
-                <small style="display:block; font-size: 0.75rem; color: #aaa;">
-                    <?= htmlspecialchars($_SESSION['user']['role'] ?? 'operator') ?>
-                </small>
-            </div>
-          </li>
-        <?php endif; ?>
-
         <li>
             <a class="dropdown-item-icon" href="../dailyLog/dailyLogUI.php" title="SNC ONE WAY (Home)">
                 <i class="fas fa-home fa-fw"></i><span>MES TOOLBOX</span>
@@ -31,20 +24,17 @@
         </li>
 
         <?php 
-          // กำหนดตัวแปร role ถ้ายังไม่มี
           $userRole = $_SESSION['user']['role'] ?? null; 
-          // เพิ่มเมนู Daily Command Center (เฉพาะ Admin, Creator, Planner, Supervisor)
           if ($userRole && in_array($userRole, ['admin', 'creator', 'planner', 'supervisor'])): 
         ?>
         <li>
-            <a class="dropdown-item-icon" href="../planning/daily_meeting.php" title="Daily Command Center">
+            <a class="dropdown-item-icon" href="../planning/daily_meeting_v2.php" title="Daily Command Center">
                 <i class="fas fa-layer-group fa-fw"></i><span>Daily Command Center</span>
             </a>
         </li>
         <?php endif; ?>
 
         <?php
-          $userRole = $_SESSION['user']['role'] ?? null;
           if ($userRole && in_array($userRole, ['admin', 'creator'])):
         ?>
         <li>

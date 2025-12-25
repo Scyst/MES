@@ -159,17 +159,23 @@ body {
     transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
 }
 
-.sidebar .dropdown-item-icon i {
+.sidebar .dropdown-item-icon i,
+.sidebar .dropdown-username i {
     width: 24px;
     height: 24px;
-    margin-right: 24px;
-    color: inherit;
+    margin-right: 24px !important; /* บังคับระยะห่าง */
     text-align: center;
     font-size: 18px;
     line-height: 24px;
+    flex-shrink: 0; /* ★ สำคัญ: ห้ามโดนบีบจนเบี้ยว */
+    display: inline-block;
 }
 
 .sidebar[data-state="collapsed"] { width: 70px; }
+.sidebar[data-state="collapsed"]:not(:hover) .custom-dropdown::-webkit-scrollbar {
+    width: 0px;
+    display: none;
+}
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
 .sidebar[data-state="expanded"] + #main-content .pagination-footer {
@@ -1199,4 +1205,32 @@ body.layout-top-header > .mobile-hamburger-btn {
     align-items: center;
     justify-content: center;
     border-radius: 10px;
+}
+
+/* --- Sidebar Scrollbar Styling --- */
+
+/* 1. กำหนดโครงสร้าง Scrollbar */
+.sidebar .custom-dropdown::-webkit-scrollbar {
+    width: 6px; /* กำหนดความกว้างไว้เลย เนื้อหาจะได้ไม่ขยับ */
+}
+
+.sidebar .custom-dropdown::-webkit-scrollbar-track {
+    background: transparent; /* พื้นหลังรางเลื่อนโปร่งใส */
+}
+
+/* 2. สถานะปกติ: ซ่อนตัวเลื่อน (ให้สีใส) */
+.sidebar .custom-dropdown::-webkit-scrollbar-thumb {
+    background-color: transparent; 
+    border-radius: 10px;
+    transition: background-color 0.3s; /* เพิ่ม Transition ให้นุ่มนวล */
+}
+
+/* 3. สถานะ Hover: แสดงตัวเลื่อน */
+.sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2); /* สีเทาจางๆ */
+}
+
+/* 4. รองรับ Dark Theme (ถ้ามี) */
+[data-bs-theme="dark"] .sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2); /* สีขาวจางๆ */
 }
