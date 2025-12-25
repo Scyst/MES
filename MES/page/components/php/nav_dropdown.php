@@ -30,6 +30,19 @@
             </a>
         </li>
 
+        <?php 
+          // กำหนดตัวแปร role ถ้ายังไม่มี
+          $userRole = $_SESSION['user']['role'] ?? null; 
+          // เพิ่มเมนู Daily Command Center (เฉพาะ Admin, Creator, Planner, Supervisor)
+          if ($userRole && in_array($userRole, ['admin', 'creator', 'planner', 'supervisor'])): 
+        ?>
+        <li>
+            <a class="dropdown-item-icon" href="../planning/daily_meeting.php" title="Daily Command Center">
+                <i class="fas fa-layer-group fa-fw"></i><span>Daily Command Center</span>
+            </a>
+        </li>
+        <?php endif; ?>
+
         <?php
           $userRole = $_SESSION['user']['role'] ?? null;
           if ($userRole && in_array($userRole, ['admin', 'creator'])):

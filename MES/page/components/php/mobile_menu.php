@@ -31,6 +31,15 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 </a>
             </li>
 
+            <?php if ($userRole && in_array($userRole, ['admin', 'creator', 'planner', 'supervisor'])): ?>
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../planning/daily_meeting.php">
+                    <i class="fas fa-layer-group fa-fw me-3"></i>
+                    <span>Daily Command Center</span>
+                </a>
+            </li>
+            <?php endif; ?>
+
             <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
             <li class="list-group-item list-group-item-action disabled">
                 <a class="text-decoration-none text-body d-block" href="../management/managementDashboard.php" tabindex="-1" aria-disabled="true">
