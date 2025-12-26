@@ -1,6 +1,6 @@
 <?php
 // page/manpower/manpowerUI.php
-require_once("../../auth/check_auth.php");
+require_once __DIR__ . '/../components/init.php';
 
 // ตรวจสอบสิทธิ์
 if (!isset($_SESSION['user'])) {

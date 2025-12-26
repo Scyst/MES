@@ -6,19 +6,24 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. ตรวจสอบการล็อกอิน: หากยังไม่ได้ล็อกอิน ให้ Redirect ไปยังหน้า login
+// 2. ตรวจสอบการล็อกอิน
 if (!isset($_SESSION['user'])) {
-    // เก็บ URL หน้าปัจจุบันที่ผู้ใช้พยายามจะเข้า (เช่น พยายามเข้าหน้า Store Request)
-    // เพื่อให้หลังจาก Login เสร็จ ระบบจะส่งกลับมาหน้านี้ได้ถูกต้อง
     $current_url = $_SERVER['REQUEST_URI'];
     
-    // ส่งไปหน้า Login Form พร้อมแนบ Link หน้าเดิมไปด้วย (Redirect Back)
-    // หมายเหตุ: Path ../../auth/login_form.php อ้างอิงจากตำแหน่งไฟล์ที่เรียกใช้ check_auth (ส่วนใหญ่จะอยู่ใน page/xyz/)
-    header("Location: ../../auth/login_form.php?redirect=" . urlencode($current_url));
-    exit;
+    // [FIXED] ใช้ BASE_URL เพื่อระบุตำแหน่งที่แน่นอน (Absolute Path)
+    // config.php ถูกโหลดมาแล้วผ่าน init.php ดังนั้น BASE_URL ต้องมีค่าเสมอ
+    if (defined('BASE_URL')) {
+        $loginUrl = BASE_URL . '/auth/login_form.php';
+    } else {
+        // Fallback: กรณีฉุกเฉินถ้าหา BASE_URL ไม่เจอ (ไม่ควรเกิดขึ้น)
+        $loginUrl = '../../auth/login_form.php'; 
+    }
+    
+    header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
+    exit; // สำคัญมาก! ต้องหยุดการทำงานทันทีเพื่อป้องกันการหลุด
 }
 
-// 3. สร้าง CSRF Token หากยังไม่มี (เพื่อป้องกันการโจมตีแบบ Cross-Site Request Forgery)
+// 3. สร้าง CSRF Token
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
 }
@@ -42,7 +47,7 @@ function hasRole($roles): bool {
 /**
  * ฟังก์ชันสำหรับตรวจสอบว่าผู้ใช้ปัจจุบันมีสิทธิ์ในไลน์การผลิตที่ระบุหรือไม่
  * @param string $requiredLine - ไลน์ที่ต้องการตรวจสอบ
- * @return bool - คืนค่า true หากมีสิทธิ์, false หากไม่มี
+ * @return bool
  */
 function checkLinePermission($requiredLine): bool {
     // Admin และ Creator เข้าถึงได้ทุกไลน์
@@ -58,8 +63,7 @@ function checkLinePermission($requiredLine): bool {
 }
 
 /**
- * ฟังก์ชันสำหรับบังคับใช้สิทธิ์ของไลน์ หากไม่มีสิทธิ์จะหยุดการทำงานและแจ้ง Error 403
- * @param string $requiredLine - ไลน์ที่ต้องการบังคับใช้สิทธิ์
+ * ฟังก์ชันสำหรับบังคับใช้สิทธิ์ของไลน์
  */
 function enforceLinePermission($requiredLine) {
     if (!checkLinePermission($requiredLine)) {
@@ -70,12 +74,6 @@ function enforceLinePermission($requiredLine) {
 
 /**
  * ฟังก์ชันกลางสำหรับบังคับใช้สิทธิ์ในข้อมูลระดับแถว (Record-Level Permission)
- * ใช้สำหรับตรวจสอบว่า User เป็นเจ้าของข้อมูลนั้นๆ หรือไม่
- * * @param PDO $pdo - Object การเชื่อมต่อฐานข้อมูล
- * @param string $tableName - ชื่อตาราง (e.g., 'PARTS_TEST')
- * @param int $recordId - ID ของข้อมูลที่ต้องการตรวจสอบ
- * @param string $idColumn - ชื่อคอลัมน์ Primary Key (e.g., 'id', 'entry_id')
- * @param string $ownerColumn - ชื่อคอลัมน์ที่เก็บข้อมูลผู้สร้าง (e.g., 'operator_id', 'operator')
  */
 function enforceRecordPermission($pdo, $tableName, $recordId, $idColumn, $ownerColumn) {
     $currentUser = $_SESSION['user'];

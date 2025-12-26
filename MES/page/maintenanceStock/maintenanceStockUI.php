@@ -1,14 +1,15 @@
 <?php 
-    require_once __DIR__ . '/../../auth/check_auth.php';
-    // กำหนดสิทธิ์การเข้าถึงหน้านี้
-    if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
-        header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
-        exit;
-    }
-    // กำหนดตัวแปรสำหรับใช้ซ่อน/แสดงปุ่มต่างๆ
-    $canManage = hasRole(['admin', 'creator', 'supervisor']); // สิทธิ์ในการจัดการข้อมูลหลัก
-    $canTransact = hasRole(['admin', 'creator', 'supervisor', 'operator']); // สิทธิ์ในการทำรายการเบิกจ่าย
-    $currentUser = $_SESSION['user'];
+// MES/page/maintenanceStock/maintenanceStockUI.php
+require_once __DIR__ . '/../components/init.php';
+// กำหนดสิทธิ์การเข้าถึงหน้านี้
+if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
+    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    exit;
+}
+// กำหนดตัวแปรสำหรับใช้ซ่อน/แสดงปุ่มต่างๆ
+$canManage = hasRole(['admin', 'creator', 'supervisor']); // สิทธิ์ในการจัดการข้อมูลหลัก
+$canTransact = hasRole(['admin', 'creator', 'supervisor', 'operator']); // สิทธิ์ในการทำรายการเบิกจ่าย
+$currentUser = $_SESSION['user'];
 ?>
 <!DOCTYPE html>
 <html lang="en">

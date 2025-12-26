@@ -1,15 +1,16 @@
 <?php 
-    include_once("../../auth/check_auth.php"); 
-    
-    if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
-        header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
-        exit;
-    }
+// MES/page/production/productionUI.php
+require_once __DIR__ . '/../components/init.php';
 
-    $canManage = hasRole(['supervisor', 'admin', 'creator']);
-    $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
-    $currentUserForJS = $_SESSION['user'] ?? null;
-    
+if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
+    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    exit;
+}
+
+$canManage = hasRole(['supervisor', 'admin', 'creator']);
+$canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
+$currentUserForJS = $_SESSION['user'] ?? null;
+
 ?>
 
 <!DOCTYPE html>

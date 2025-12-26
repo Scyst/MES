@@ -1,11 +1,14 @@
 <?php 
-    require_once __DIR__ . '/../../auth/check_auth.php';
-    if (!hasRole(['admin', 'creator', 'supervisor'])) {
-        header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
-        exit;
-    }
-    $canManage = hasRole(['admin', 'creator', 'supervisor']);
-    $currentUser = $_SESSION['user'];
+// MES/page/inventorySettings/inventorySettings.php
+require_once __DIR__ . '/../components/init.php';
+
+if (!hasRole(['admin', 'creator', 'supervisor'])) {
+    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    exit;
+}
+
+$canManage = hasRole(['admin', 'creator', 'supervisor']);
+$currentUser = $_SESSION['user'];
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -1,6 +1,6 @@
 <?php
-// userManageUI.php (เวอร์ชันปรับปรุงสไตล์ฟิลเตอร์)
-include_once("../../auth/check_auth.php");
+// MES/page/userManage/userManageUI.php
+require_once __DIR__ . '/../components/init.php';
 
 if (!hasRole(['admin', 'creator'])) {
     header("Location: ../OEE_Dashboard/OEE_Dashboard.php");

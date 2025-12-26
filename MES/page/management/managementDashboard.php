@@ -1,8 +1,6 @@
 <?php
 // MES/page/management/managementDashboard.php
-
-// 1. Authentication & Configuration
-include_once("../../auth/check_auth.php");
+require_once __DIR__ . '/../components/init.php';
 
 // ตรวจสอบสิทธิ์ (Admin, Creator, Planner)
 if (!hasRole(['admin', 'creator', 'planner'])) {

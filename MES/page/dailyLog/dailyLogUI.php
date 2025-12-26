@@ -1,10 +1,6 @@
 <?php
 // MES/page/dailyLog/dailyLogUI.php
-require_once __DIR__ . '/../../config/config.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../components/init.php';
 
 $isLoggedIn = isset($_SESSION['user']);
 $user = $isLoggedIn ? $_SESSION['user'] : null;

@@ -28,7 +28,7 @@
           if ($userRole && in_array($userRole, ['admin', 'creator', 'planner', 'supervisor'])): 
         ?>
         <li>
-            <a class="dropdown-item-icon" href="../planning/daily_meeting_v2.php" title="Daily Command Center">
+            <a class="dropdown-item-icon" href="../planning/daily_meeting.php" title="Daily Command Center">
                 <i class="fas fa-layer-group fa-fw"></i><span>Daily Command Center</span>
             </a>
         </li>

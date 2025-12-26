@@ -1,6 +1,6 @@
 <?php
 // FILE: MES/page/planning/daily_meeting.php
-require_once __DIR__ . '/../../auth/check_auth.php';
+require_once __DIR__ . '/../components/init.php';
 
 // --- HEADER CONFIGURATION ---
 $pageTitle = "Daily Command Center";

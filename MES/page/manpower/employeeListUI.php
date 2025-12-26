@@ -1,6 +1,6 @@
 <?php
 // page/manpower/employeeListUI.php
-require_once("../../auth/check_auth.php");
+require_once __DIR__ . '/../components/init.php';
 
 // ตรวจสอบสิทธิ์
 if (!hasRole(['admin', 'creator', 'supervisor'])) {

@@ -1,12 +1,12 @@
 <?php
-    require_once __DIR__ . '/../../auth/check_auth.php';
-    if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
-        header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
-        exit;
-    }
+require_once __DIR__ . '/../components/init.php';
+if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
+    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    exit;
+}
 
-    $canManage = hasRole(['admin', 'creator']);
-    $currentUser = $_SESSION['user'];
+$canManage = hasRole(['admin', 'creator']);
+$currentUser = $_SESSION['user'];
 ?>
 
 <!DOCTYPE html>

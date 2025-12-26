@@ -1,6 +1,6 @@
 <?php
 // page/sales/salesDashboard.php
-require_once("../../auth/check_auth.php");
+require_once __DIR__ . '/../components/init.php';
 
 $pageTitle = "Sales Order Dashboard";
 $pageIcon = "fas fa-shipping-fast"; 

@@ -1,6 +1,6 @@
 <?php
 // MES/page/management/executiveDashboard.php
-include_once("../../auth/check_auth.php");
+require_once __DIR__ . '/../components/init.php';
 
 // Permission check
 if (!hasRole(['admin', 'creator', 'planner', 'viewer'])) {

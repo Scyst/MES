@@ -1,6 +1,6 @@
 <?php 
     // MES/page/Stop_Cause/Stop_Cause.php
-    include_once("../../auth/check_auth.php"); 
+    require_once __DIR__ . '/../components/init.php';
     
     if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
         header("Location: ../OEE_Dashboard/OEE_Dashboard.php");

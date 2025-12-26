@@ -1,7 +1,6 @@
 <?php
-// page/QMS/index.php
-require_once '../../config/config.php';
-require_once '../../auth/check_auth.php';
+// page/QMS/qmsDashboard.php
+require_once __DIR__ . '/../components/init.php';
 
 $pageTitle = "ระบบจัดการคุณภาพ (iQMS)";
 $pageHeaderTitle = "Integrated Quality Management System";

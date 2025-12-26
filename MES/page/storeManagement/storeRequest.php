@@ -1,5 +1,7 @@
 <?php
-require_once __DIR__ . '/../../auth/check_auth.php';
+// MES/page/storeManagement/storeRequest.php
+require_once __DIR__ . '/../components/init.php';
+
 if (!isset($_SESSION['user'])) { header("Location: ../../auth/login_form.php"); exit; }
 
 $userRole = $_SESSION['user']['role'];
