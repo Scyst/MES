@@ -1,11 +1,6 @@
 <?php
-// MES/page/components/php/top_header.php
+// MES/page/components/php/top_header.
 
-if (function_exists('renderDevBanner')) { 
-    renderDevBanner(); 
-} 
-
-// ฟังก์ชันแสดงวันที่ไทย (ถ้ายังไม่มีไฟล์ Helper กลาง ก็ใส่ไว้ตรงนี้ก่อนได้ครับ)
 if (!function_exists('getThaiDateHeader')) {
     function getThaiDateHeader() {
         $thai_months = [
