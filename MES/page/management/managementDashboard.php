@@ -38,6 +38,20 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
 
 <body class="layout-top-header">
     
+    <?php 
+        if (function_exists('renderDevBanner') && defined('IS_DEVELOPMENT') && IS_DEVELOPMENT) {
+            // เราต้องคำนวณ URL อีกรอบ หรือดึงจาก Global Variable
+            // เพื่อความง่าย ให้ Logic ใน Function จัดการ หรือส่งค่าเข้าไป
+            // ในที่นี้ผมแนะนำให้แก้ check_dev_mode.php ให้รับค่า productionUrl หรือคำนวณใหม่ข้างใน
+            // แต่เพื่อความรวดเร็ว ใช้แบบนี้ครับ:
+            
+            $currentUri = $_SERVER['REQUEST_URI'];
+            $productionPath = str_replace('/Clone/MES/', '/MES/MES/', $currentUri);
+            $prodUrl = "https://oem.sncformer.com" . $productionPath;
+            
+            renderDevBanner($prodUrl); 
+        } 
+    ?>
     <?php include('../components/php/top_header.php'); ?>
     <?php include('../components/php/mobile_menu.php'); ?>
     <?php include('../components/php/docking_sidebar.php'); ?>

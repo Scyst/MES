@@ -58,9 +58,9 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
             border: 1px solid var(--bs-border-color);
             border-radius: 16px;
             padding: 1.5rem;
-            margin-bottom: 1.5rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            height: 100%;
+            /*height: 100%;
+            margin-bottom: 1.5rem;*/
         }
 
         /* Loading Overlay */

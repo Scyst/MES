@@ -10,7 +10,6 @@ if (defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === true) {
 
     // 2. คำนวณหา URL ของหน้า Production แบบอัตโนมัติ
     $currentUri = $_SERVER['REQUEST_URI'];
-    // เปลี่ยน path จาก /Clone/MES/ เป็น /MES/MES/ (ปรับตาม path จริงของคุณ)
     $productionPath = str_replace('/Clone/MES/', '/MES/MES/', $currentUri); 
     $productionUrl = "https://oem.sncformer.com" . $productionPath;
 
@@ -68,7 +67,6 @@ if (defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === true) {
                             clearInterval(timerInterval);
                         }
                     }).then((result) => {
-                        // เมื่อหมดเวลา หรือปิด Modal ให้ย้ายทันที
                         window.location.href = '<?php echo $productionUrl; ?>';
                     });
                 });
@@ -76,67 +74,64 @@ if (defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === true) {
         </body>
         </html>
         <?php
-        exit; // หยุดการทำงานทันที
+        exit;
     } 
     
     // =========================================================
-    // CASE 2: Admin / Creator (แจ้งเตือน + ย่อเก็บได้)
+    // CASE 2: Admin / Creator (Overlay แท้จริง ไม่ดัน Layout)
     // =========================================================
     else {
-        echo '
-        <div id="devModeBanner" class="alert alert-danger text-center shadow-sm m-0 rounded-0 fixed-top d-flex justify-content-between align-items-center px-3 py-2" 
-             style="z-index: 9999; border-bottom: 3px solid #dc3545;">
-            
-            <div class="flex-grow-1 text-center">
-                <i class="fas fa-tools me-2"></i> 
-                <strong>SYSTEM IN TEST MODE (DEV)</strong> 
-                <span class="d-none d-md-inline ms-2">| ข้อมูลจะบันทึกลงตาราง <code class="text-dark fw-bold">_TEST</code></span>
+        if (!function_exists('renderDevBanner')) {
+            function renderDevBanner() { // เอา Argument ออก ให้มันคำนวณเอง
                 
-                <a href="'.$productionUrl.'" class="btn btn-sm btn-light text-danger fw-bold border-danger ms-3" style="font-size: 0.8rem;">
-                    <i class="fas fa-external-link-alt me-1"></i> ไปหน้าจริง
-                </a>
-            </div>
+                // 1. คำนวณ URL ภายในฟังก์ชันเลย
+                $currentUri = $_SERVER['REQUEST_URI'];
+                $productionPath = str_replace('/Clone/MES/', '/MES/MES/', $currentUri);
+                // ป้องกัน URL ซ้ำซ้อนกรณีอยู่นอก Clone (เผื่อไว้)
+                if ($productionPath === $currentUri && strpos($currentUri, '/Clone/') === false) {
+                    $productionUrl = "https://oem.sncformer.com" . $currentUri; 
+                } else {
+                    $productionUrl = "https://oem.sncformer.com" . $productionPath;
+                }
 
-            <button type="button" class="btn-close" aria-label="Close" onclick="minimizeDevMode()"></button>
-        </div>
+                // 2. แสดงผล HTML
+                echo '
+                <div id="devModeBanner" class="alert alert-danger text-center shadow m-0 rounded-0 d-flex justify-content-between align-items-center px-3 py-2" 
+                    style="position: fixed; top: 0; left: 0; width: 100%; z-index: 999999; border-bottom: 3px solid #dc3545; height: 60px;">
+                    
+                    <div class="flex-grow-1 text-center">
+                        <i class="fas fa-tools me-2"></i> 
+                        <strong>SYSTEM IN TEST MODE (DEV)</strong> 
+                        <span class="d-none d-md-inline ms-2">| ข้อมูลจะบันทึกลงตาราง <code class="text-dark fw-bold">_TEST</code></span>
+                        
+                        <a href="'.$productionUrl.'" class="btn btn-sm btn-light text-danger fw-bold border-danger ms-3" style="font-size: 0.8rem;">
+                            <i class="fas fa-external-link-alt me-1"></i> ไปหน้าจริง
+                        </a>
+                    </div>
 
-        <div id="devModeBadge" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 10000;">
-            <button class="btn btn-danger shadow rounded-pill px-3 py-2 fw-bold border border-white" onclick="restoreDevMode()" title="คลิกเพื่อแสดงแถบแจ้งเตือน">
-                <i class="fas fa-tools me-2"></i> TEST MODE
-            </button>
-        </div>
+                    <button type="button" class="btn-close" aria-label="Close" onclick="minimizeDevMode()"></button>
+                </div>
 
-        <style>
-            /* ดันเนื้อหาลงมาเมื่อ Banner แสดงอยู่ */
-            body.dev-mode-active { margin-top: 60px !important; }
-            body.dev-mode-active .report-header, 
-            body.dev-mode-active .navbar, 
-            body.dev-mode-active header { top: 60px !important; transition: top 0.3s; }
-        </style>
+                <div id="devModeBadge" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 999999;">
+                    <button class="btn btn-danger shadow rounded-pill px-3 py-2 fw-bold border border-white" onclick="restoreDevMode()" title="คลิกเพื่อแสดงแถบแจ้งเตือน">
+                        <i class="fas fa-tools me-2"></i> TEST MODE
+                    </button>
+                </div>
 
-        <script>
-            // เพิ่ม class ให้ body ทันทีที่โหลด
-            document.body.classList.add("dev-mode-active");
+                <script>
+                    function minimizeDevMode() {
+                        document.getElementById("devModeBanner").style.setProperty("display", "none", "important");
+                        document.getElementById("devModeBadge").style.display = "block";
+                    }
 
-            function minimizeDevMode() {
-                // ซ่อน Banner
-                document.getElementById("devModeBanner").style.setProperty("display", "none", "important");
-                // แสดง Badge
-                document.getElementById("devModeBadge").style.display = "block";
-                // คืนค่า margin ของ body
-                document.body.classList.remove("dev-mode-active");
+                    function restoreDevMode() {
+                        document.getElementById("devModeBanner").style.setProperty("display", "flex", "important");
+                        document.getElementById("devModeBadge").style.display = "none";
+                    }
+                </script>
+                ';
             }
-
-            function restoreDevMode() {
-                // แสดง Banner
-                document.getElementById("devModeBanner").style.setProperty("display", "flex", "important");
-                // ซ่อน Badge
-                document.getElementById("devModeBadge").style.display = "none";
-                // ดัน margin ของ body ลงมาใหม่
-                document.body.classList.add("dev-mode-active");
-            }
-        </script>
-        ';
+        }
     }
 }
 ?>
