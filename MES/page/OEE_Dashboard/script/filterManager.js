@@ -42,7 +42,12 @@ async function fetchAndRenderCostSummary() {
         matCost: document.getElementById('prodCostMat'),
         matPercent: document.getElementById('prodCostPercentRM'),
         dlCost: document.getElementById('prodCostDL'),
-        dlPercent: document.getElementById('prodCostPercentDL'),
+        
+        // [แก้ไข] เปลี่ยนจาก dlPercent เป็นตัวแปรใหม่ 2 ตัว
+        // dlPercent: document.getElementById('prodCostPercentDL'), <--- ลบหรือคอมเมนต์บรรทัดนี้
+        valDL: document.getElementById('valDL'), // เพิ่ม
+        valOT: document.getElementById('valOT'), // เพิ่ม
+
         ohCost: document.getElementById('prodCostOH'),
         ohPercent: document.getElementById('prodCostPercentOH'),
         totalCost: document.getElementById('prodCostTotal'),
@@ -54,9 +59,13 @@ async function fetchAndRenderCostSummary() {
     const resetElements = () => {
         const loadingHtml = '<span class="loading-indicator">Loading...</span>';
         const percentPlaceholder = '-- %';
-        Object.values(elements).forEach(el => {
+        const dashPlaceholder = '--'; // สำหรับ DL/OT
+
+        Object.entries(elements).forEach(([key, el]) => {
             if (el) {
-                if (el.classList.contains('percentage')) {
+                if (key === 'valDL' || key === 'valOT') {
+                    el.textContent = dashPlaceholder;
+                } else if (el.classList.contains('percentage')) {
                     el.textContent = percentPlaceholder;
                 } else {
                     el.innerHTML = loadingHtml;
@@ -78,8 +87,14 @@ async function fetchAndRenderCostSummary() {
 
             if (elements.matCost) elements.matCost.textContent = formatNumber(data.TotalMatCost, false, 2);
             if (elements.matPercent) elements.matPercent.textContent = formatNumber(data.PercentRM, true, 1);
+            
+            // [แก้ไข] ส่วนแสดงผล DLOT
             if (elements.dlCost) elements.dlCost.textContent = formatNumber(data.TotalDLCost, false, 2);
-            if (elements.dlPercent) elements.dlPercent.textContent = formatNumber(data.PercentDL, true, 1);
+            
+            // เช็คว่ามีค่า Actual แยกมาไหม ถ้าไม่มี (เป็น Standard) ให้แสดง 0 หรือซ่อน
+            if (elements.valDL) elements.valDL.textContent = formatNumber(data.TotalActualDL || 0, false, 0);
+            if (elements.valOT) elements.valOT.textContent = formatNumber(data.TotalActualOT || 0, false, 0);
+
             if (elements.ohCost) elements.ohCost.textContent = formatNumber(data.TotalOHCost, false, 2);
             if (elements.ohPercent) elements.ohPercent.textContent = formatNumber(data.PercentOH, true, 1);
             if (elements.totalCost) elements.totalCost.textContent = formatNumber(data.TotalStdCost, false, 2);

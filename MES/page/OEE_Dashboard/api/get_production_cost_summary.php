@@ -62,10 +62,16 @@ try {
 
         $isActualCostUsed = false; 
 
+        // [แก้ไข] ดึงข้อมูล DL และ OT แยกกัน
         if ($actualResult && isset($actualResult['TotalActualDLOT']) && is_numeric($actualResult['TotalActualDLOT'])) {
             $actualDLOT = floatval($actualResult['TotalActualDLOT']);
 
             $standardResult['TotalDLCost'] = $actualDLOT;
+            
+            // เพิ่ม 2 บรรทัดนี้เพื่อส่งค่าแยก
+            $standardResult['TotalActualDL'] = floatval($actualResult['TotalActualDL'] ?? 0);
+            $standardResult['TotalActualOT'] = floatval($actualResult['TotalActualOT'] ?? 0);
+            
             $isActualCostUsed = true; 
 
             $totalRevenue = $standardResult['TotalStdRevenue'] ?? 0;

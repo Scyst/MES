@@ -239,7 +239,7 @@ async function fetchAndRenderHourlySparklines() {
 
     let records = []; // Default to empty array
     try {
-        const response = await fetch(`api/get_oee_hourly_sparklines.php?${params.toString()}`);
+        const response = await fetch(`api/get_oee_hourly_sparklines.php?${params.toString()}&t=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Hourly Sparkline API: Network response was not ok`);
         
         const result = await response.json();
@@ -442,7 +442,7 @@ async function fetchAndRenderPieCharts() {
             model: filterModel
         });
         
-        const response = await fetch(`api/get_oee_piechart.php?${pieParams.toString()}`); 
+        const response = await fetch(`api/get_oee_piechart.php?${pieParams.toString()}&_=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
 
         const data = await response.json(); 

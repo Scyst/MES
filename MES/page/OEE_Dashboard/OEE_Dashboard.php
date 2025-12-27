@@ -184,7 +184,12 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             <div class="col-12 col-md-4 mb-2">
                                 <h5><i class="fas fa-hard-hat"></i> Total DLOT</h5>
                                 <span class="value" id="prodCostDL"><span class="loading-indicator">Loading...</span></span>
-                                <span class="percentage" id="prodCostPercentDL">-- %</span>
+                                
+                                <div class="mt-1 d-flex justify-content-center gap-2" style="font-size: 0.85rem; color: #6c757d;">
+                                    <span>DL: <b id="valDL">--</b></span>
+                                    <span style="border-left: 1px solid #ccc;"></span>
+                                    <span>OT: <b id="valOT">--</b></span>
+                                </div>
                             </div>
                         </div>
 
