@@ -1,26 +1,19 @@
 <?php
 // page/sales/shipping_loading.php
-
-// 1. เรียก init (ถอย 1 ชั้น)
 require_once __DIR__ . '/../components/init.php';
 
-// 2. ตั้งค่าหน้าเว็บ
 $pageTitle = "Shipping Schedule Control";
 $pageIcon = "fas fa-truck-loading"; 
 $pageHeaderTitle = "Shipping Schedule";
 $pageHeaderSubtitle = "ตารางแผนการโหลดตู้และสถานะขนส่ง";
-$pageHelpId = "helpModal"; 
 
-// 3. ตรวจสอบสิทธิ์ (ลูกค้าดูได้อย่างเดียว)
 $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'CUSTOMER');
-// $isCustomer = true; // ปลดคอมเมนต์เพื่อเทสโหมดลูกค้า
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?> 
-    
     <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
     
     <style>
@@ -29,6 +22,8 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
             overflow: auto;
             position: relative; 
         }
+        
+        /* Input Styling */
         .editable-input {
             border: 1px solid transparent; width: 100%;
             background: transparent; text-align: center; font-size: 0.85rem;
@@ -37,16 +32,30 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         .editable-input:not([readonly]):hover { border: 1px solid #ced4da; background: #fff; }
         .editable-input:not([readonly]):focus { border: 1px solid #86b7fe; background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(13,110,253,.25); }
 
-        .status-badge { font-size: 0.7rem; width: 100%; padding: 4px; border-radius: 12px; border:none; font-weight: bold; text-transform: uppercase; }
+        /* Badges */
+        .status-badge { font-size: 0.7rem; width: 100%; padding: 4px; border-radius: 12px; border:none; font-weight: bold; text-transform: uppercase; cursor: pointer; }
         .bg-pending { background-color: #eee; color: #555; border: 1px solid #ccc; }
         .bg-success-custom { background-color: #198754; color: #fff; }
+
+        /* Sticky Columns Override */
+        th.sticky-col-left-1, td.sticky-col-left-1 { left: 0; z-index: 10; position: sticky; background-color: inherit; }
+        th.sticky-col-left-2, td.sticky-col-left-2 { left: 60px; z-index: 10; position: sticky; background-color: inherit; }
+        th.sticky-col-left-3, td.sticky-col-left-3 { left: 120px; z-index: 10; position: sticky; background-color: inherit; border-right: 2px solid #dee2e6; }
+        
+        th.sticky-col-right-2, td.sticky-col-right-2 { right: 80px; z-index: 10; position: sticky; background-color: inherit; border-left: 2px solid #dee2e6; }
+        th.sticky-col-right-1, td.sticky-col-right-1 { right: 0; z-index: 10; position: sticky; background-color: inherit; }
+
+        /* Header z-index fix */
+        thead th { position: sticky; top: 0; z-index: 20; background-color: #f8f9fa; }
+        thead th.sticky-col-left-1, thead th.sticky-col-left-2, thead th.sticky-col-left-3,
+        thead th.sticky-col-right-1, thead th.sticky-col-right-2 { z-index: 30; }
     </style>
 </head>
 <body class="layout-top-header">
 
-    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
         <div class="spinner-border text-light mb-3" role="status"></div>
-        <h5 class="fw-bold text-white">Processing...</h5>
+        <h5 class="text-white">Updating...</h5>
     </div>
 
     <?php include('../components/php/top_header.php'); ?>
@@ -55,7 +64,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
     <div class="page-container">
         <div id="main-content">
-            
             <div class="content-wrapper pt-3">
                 
                 <div class="card shadow-sm border-0 mb-3">
@@ -77,13 +85,12 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                                 <form id="importForm" class="d-inline">
                                     <input type="file" name="csv_file" id="csv_file" accept=".csv, .xlsx, .xls" style="display:none;" onchange="uploadFile()">
                                     <button type="button" class="btn btn-light border-secondary-subtle text-primary fw-bold btn-sm shadow-sm" onclick="document.getElementById('csv_file').click()">
-                                        <i class="fas fa-file-import me-1"></i> Import Excel/CSV
+                                        <i class="fas fa-file-import me-1"></i> Import
                                     </button>
                                 </form>
                                 <?php endif; ?>
-
                                 <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportToCSV()">
-                                    <i class="fas fa-file-excel me-1"></i> Export CSV
+                                    <i class="fas fa-file-excel me-1"></i> Export
                                 </button>
                             </div>
                         </div>
@@ -95,8 +102,8 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                         <table class="table table-bordered table-hover mb-0 text-nowrap align-middle">
                             <thead class="bg-light sticky-top">
                                 <tr class="text-center">
-                                    <th class="sticky-col-left-1">Load Status</th>
-                                    <th class="sticky-col-left-2">Prod Status</th>
+                                    <th class="sticky-col-left-1" style="min-width: 60px;">Load</th>
+                                    <th class="sticky-col-left-2" style="min-width: 60px;">Prod</th>
                                     <th class="sticky-col-left-3">PO Number</th>
                                     <th>Week</th>
                                     <th>Status</th>
@@ -138,7 +145,7 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
 
     <script>
     const isCustomer = <?php echo json_encode($isCustomer); ?>;
@@ -165,7 +172,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
     function loadData() {
         showLoading(true);
-        // [FIXED] ใช้ path สั้นๆ
         $.ajax({
             url: 'api/manage_shipping.php?action=read',
             method: 'GET', dataType: 'json',
@@ -199,18 +205,18 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
             let prodTxt = row.is_production_done == 1 ? 'DONE' : 'WAIT';
             
             let loadBtn = isCustomer ? `<span class="status-badge ${loadClass}">${loadTxt}</span>` 
-                : `<button class="status-badge ${loadClass}" onclick="toggleStatus(${row.id}, 'loading', '${loadTxt}')">${loadTxt}</button>`;
+                : `<button class="status-badge ${loadClass}" onclick="toggleStatus(${row.id}, 'loading', ${row.is_loading_done})">${loadTxt}</button>`;
             
             let prodBtn = isCustomer ? `<span class="status-badge ${prodClass}">${prodTxt}</span>` 
-                : `<button class="status-badge ${prodClass}" onclick="toggleStatus(${row.id}, 'production', '${prodTxt}')">${prodTxt}</button>`;
+                : `<button class="status-badge ${prodClass}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})">${prodTxt}</button>`;
             
             let ro = isCustomer ? 'readonly' : '';
-            let fnDate = (d) => (d && d != '0000-00-00') ? d.substring(0,10) : '';
+            let fnDate = (d) => (d && d != '0000-00-00' && d.length >= 10) ? d.substring(0,10) : '';
 
             html += `<tr>
-                <td class="sticky-col-left-1 text-center">${loadBtn}</td>
-                <td class="sticky-col-left-2 text-center">${prodBtn}</td>
-                <td class="sticky-col-left-3 fw-bold text-primary">${row.po_number || '-'}</td>
+                <td class="sticky-col-left-1 text-center bg-white">${loadBtn}</td>
+                <td class="sticky-col-left-2 text-center bg-white">${prodBtn}</td>
+                <td class="sticky-col-left-3 fw-bold text-primary bg-white">${row.po_number || '-'}</td>
 
                 <td class="text-center">${row.shipping_week||''}</td>
                 <td><input class="editable-input" value="${row.shipping_customer_status||''}" onchange="upd(${row.id}, 'shipping_customer_status', this.value)" ${ro}></td>
@@ -222,7 +228,7 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                 <td>${row.sku||''}</td>
                 <td><input class="editable-input" value="${row.booking_no||''}" onchange="upd(${row.id}, 'booking_no', this.value)" ${ro}></td>
                 <td><input class="editable-input" value="${row.invoice_no||''}" onchange="upd(${row.id}, 'invoice_no', this.value)" ${ro}></td>
-                <td><input class="editable-input" value="${row.description||''}" onchange="upd(${row.id}, 'description', this.value)" ${ro}></td>
+                <td title="${row.description||''}"><div class="text-truncate" style="max-width:150px;">${row.description||''}</div></td>
                 <td class="text-center">${row.quantity ? parseInt(row.quantity).toLocaleString() : 0}</td>
                 <td><input class="editable-input" value="${row.ctn_size||''}" onchange="upd(${row.id}, 'ctn_size', this.value)" ${ro}></td>
                 <td><input class="editable-input fw-bold text-primary" value="${row.container_no||''}" onchange="upd(${row.id}, 'container_no', this.value)" ${ro}></td>
@@ -239,8 +245,8 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                 <td><input type="date" class="editable-input" value="${fnDate(row.return_date)}" onchange="upd(${row.id}, 'return_date', this.value)" ${ro}></td>
                 <td><input class="editable-input" value="${row.remark||''}" onchange="upd(${row.id}, 'remark', this.value)" ${ro}></td>
 
-                <td class="sticky-col-right-2"><input type="date" class="editable-input text-danger fw-bold" value="${fnDate(row.cutoff_date)}" onchange="upd(${row.id}, 'cutoff_date', this.value)" ${ro}></td>
-                <td class="sticky-col-right-1"><input class="editable-input text-danger" value="${row.cutoff_time||''}" placeholder="HH:mm" onchange="upd(${row.id}, 'cutoff_time', this.value)" ${ro}></td>
+                <td class="sticky-col-right-2 bg-white"><input type="date" class="editable-input text-danger fw-bold" value="${fnDate(row.cutoff_date)}" onchange="upd(${row.id}, 'cutoff_date', this.value)" ${ro}></td>
+                <td class="sticky-col-right-1 bg-white"><input class="editable-input text-danger" value="${row.cutoff_time ? row.cutoff_time.substring(0,5) : ''}" placeholder="HH:mm" onchange="upd(${row.id}, 'cutoff_time', this.value)" ${ro}></td>
             </tr>`;
         });
         $('#tableBody').html(html);
@@ -251,24 +257,39 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         $.post('api/manage_shipping.php', {action:'update_cell', id:id, field:field, value:val});
     }
 
-    function toggleStatus(id, type, curr) {
+    function toggleStatus(id, type, currentVal) {
         if(isCustomer) return;
-        let val = (curr === 'DONE') ? 0 : 1;
-        let field = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
         
+        // 1. กำหนดชื่อฟิลด์ให้ตรงกับที่ PHP 'update_check' อนุญาต
+        let fieldName = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
+        
+        // 2. สลับค่า 0 เป็น 1 หรือ 1 เป็น 0
+        let newVal = (currentVal == 1) ? 0 : 1;
+
         showLoading(true);
-        $.post('api/manage_shipping.php', {action:'update_cell', id:id, field:field, value:val}, function(){
-            loadData();
+        
+        // 3. ส่งข้อมูลไปที่ action 'update_check' (ไม่ใช่ update_cell)
+        $.post('api/manage_shipping.php', {
+            action: 'update_check', // ต้องเป็นตัวนี้เท่านั้นสำหรับสเตตัส
+            id: id, 
+            field: fieldName, 
+            checked: newVal // PHP รอรับตัวแปรชื่อ 'checked'
+        }, function(res){
+            showLoading(false);
+            if(res.success) {
+                loadData(); // อัปเดตตารางใหม่เมื่อสำเร็จ
+            } else {
+                alert('Update Failed: ' + res.message);
+            }
+        }, 'json').fail(function() {
+            showLoading(false);
+            alert('Connection Error');
         });
     }
 
     async function uploadFile() {
         const fileInput = document.getElementById('csv_file'); 
-        
-        if (!fileInput || !fileInput.files[0]) {
-            alert("กรุณาเลือกไฟล์ก่อนครับ");
-            return;
-        }
+        if (!fileInput || !fileInput.files[0]) return;
 
         const file = fileInput.files[0];
         let formData = new FormData();
@@ -279,19 +300,16 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                 const data = await file.arrayBuffer();
                 const workbook = XLSX.read(data);
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-
-                const csvOutput = XLSX.utils.sheet_to_csv(firstSheet, { 
-                    dateNF: 'dd/mm/yyyy', 
-                    defval: '' 
-                });
-
+                // แปลงเป็น JSON ตรงๆ ตาม Logic ใหม่ (หรือจะแปลง CSV ก็ได้)
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+                
+                // ใช้ Logic เดิมคือส่ง CSV หรือ JSON ก็ได้ แต่ในที่นี้ขอแปลงเป็น CSV Blob ส่งไปตาม Code เก่า
+                const csvOutput = XLSX.utils.sheet_to_csv(firstSheet);
                 const csvBlob = new Blob([csvOutput], { type: 'text/csv' });
-                formData.append('csv_file', csvBlob, 'converted_from_excel.csv');
-
+                formData.append('csv_file', csvBlob, 'converted.csv');
             } catch (e) {
                 showLoading(false);
-                console.error(e);
-                alert("เกิดข้อผิดพลาดในการอ่านไฟล์ Excel: " + e.message);
+                alert("Excel Error: " + e.message);
                 return;
             }
         } else {
@@ -300,25 +318,21 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
         formData.append('action', 'import'); 
 
-        fetch('api/manage_shipping.php', { 
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(result => {
+        fetch('api/manage_shipping.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(res => {
             showLoading(false);
-            if (result.success) {
-                alert(result.message);
+            if (res.success) {
+                alert(res.message);
                 loadData(); 
                 fileInput.value = '';
             } else {
-                alert('Error: ' + result.message);
+                alert('Error: ' + res.message);
             }
         })
-        .catch(error => {
+        .catch(err => {
             showLoading(false);
-            console.error('Error:', error);
-            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ Server');
+            alert('Server Error');
         });
     }
     
