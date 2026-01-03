@@ -270,7 +270,7 @@ $pageHelpId = "helpModal";
         include 'components/helpModal.php';
     ?>
 
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/salesDashboard.js?v=<?php echo time(); ?>"></script>
     
 </body>

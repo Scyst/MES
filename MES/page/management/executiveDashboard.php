@@ -24,7 +24,7 @@ $pageHelpId = "execHelpModal";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
 </head>
 <body class="layout-top-header">
     
@@ -128,13 +128,25 @@ $pageHelpId = "execHelpModal";
                             <h6 class="fw-bold text-secondary mb-0" id="kpi-rm">-</h6>
                         </div>
                     </div>
+                    
                     <div class="col-4 col-md-4 col-xl-2">
                         <div class="exec-card p-3 text-center bg-light border-0 h-100 cursor-pointer" onclick="openExplainerModal('labor')">
                             <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Labor (DL+OT)</small>
-                            <div class="d-flex align-items-center justify-content-center">
+                            <div class="d-flex align-items-center justify-content-center mb-1">
                                 <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h6>
                                 <i id="dlot-est-icon" class="fas fa-clock-rotate-left ms-1 text-warning d-none" 
                                 style="font-size: 0.7rem;" title="Estimated: Base Wage Included"></i>
+                            </div>
+                            
+                            <div class="border-top pt-1 mt-1" style="font-size: 0.65rem;">
+                                <div class="d-flex justify-content-between text-muted px-1">
+                                    <span>Std:</span>
+                                    <span id="kpi-dl-std" class="fw-semibold">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between px-1">
+                                    <span>Diff:</span>
+                                    <span id="kpi-dl-diff" class="fw-bold">-</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -169,25 +181,36 @@ $pageHelpId = "execHelpModal";
                     <div class="col-lg-8">
                         <div class="exec-card p-3 h-100">
                             <h6 class="fw-bold text-muted mb-3 small text-uppercase">Cost Structure Analysis</h6>
-                            <div class="row">
-                                <div class="col-md-6 border-end">
+                            
+                            <div class="row g-2"> 
+                                
+                                <div class="col-md-4 border-end">
                                     <div class="d-flex justify-content-center align-items-center mb-2">
                                         <span class="fw-bold text-dark small">Sale vs Cost</span>
-                                        <i class="fas fa-info-circle text-muted opacity-25 ms-2 cursor-pointer" onclick="openExplainerModal('chart-sale-cost')" title="Details"></i>
                                     </div>
-                                    <div style="height: 200px; position: relative;">
+                                    <div style="height: 180px; position: relative;">
                                         <canvas id="saleCostPieChart"></canvas>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+
+                                <div class="col-md-4 border-end">
                                     <div class="d-flex justify-content-center align-items-center mb-2">
                                         <span class="fw-bold text-dark small">Cost Breakdown</span>
-                                        <i class="fas fa-info-circle text-muted opacity-25 ms-2 cursor-pointer" onclick="openExplainerModal('chart-cost-breakdown')" title="Details"></i>
                                     </div>
-                                    <div style="height: 200px; position: relative;">
+                                    <div style="height: 180px; position: relative;">
                                         <canvas id="costBreakdownPieChart"></canvas>
                                     </div>
                                 </div>
+
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-center align-items-center mb-2">
+                                        <span class="fw-bold text-dark small">Labor (Std vs Act)</span>
+                                    </div>
+                                    <div style="height: 180px; position: relative;">
+                                        <canvas id="laborComparisonChart"></canvas>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -217,7 +240,9 @@ $pageHelpId = "execHelpModal";
                 </div>
                 <div class="row g-3" id="line-cards-container"></div>
 
-            </div> <div class="modal fade" id="explainerModal" tabindex="-1" aria-hidden="true">
+            </div> 
+            
+            <div class="modal fade" id="explainerModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow-lg">
                         <div class="modal-header bg-light border-bottom-0">

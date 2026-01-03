@@ -1,298 +1,283 @@
-/* page/sales/css/salesDashboard.css */
+/* page/sales/css/salesDashboard.css - FULL VERSION FIX */
 
-/* --- Default Mobile First (มือถือเลื่อนจอได้ปกติ) --- */
-#main-content {
-    height: auto; /* ปล่อยความสูงตามเนื้อหา */
-    min-height: 100vh;
-    overflow-y: auto; /* ให้เลื่อนลงได้ */
-    overflow-x: hidden;
+/* ==========================================================================
+   1. RESET & MAIN LAYOUT (แก้ปัญหาทะลุจอ)
+   ========================================================================== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important; /* ล็อคหน้าจอหลักห้ามเลื่อน */
+    font-family: 'Prompt', sans-serif;
+}
+
+.page-container {
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    padding-bottom: 2rem; /* เผื่อที่ด้านล่างนิดหน่อย */
+    overflow: hidden;
 }
 
+#main-content {
+    flex: 1; /* ยืดเต็มพื้นที่ที่เหลือจาก Header */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Wrapper ที่หุ้มการ์ดค้นหา และ การ์ดตาราง */
 .content-wrapper {
-    padding: 1rem;
     flex: 1;
+    display: flex;
+    flex-direction: column; /* เรียงบนลงล่าง */
+    overflow: hidden; /* ห้าม Scroll ที่นี่ */
+    padding: 1rem !important;
+    height: 100%; 
+    min-height: 0; /* สำคัญ! ป้องกัน Flex item ดันทะลุ */
 }
 
+/* ==========================================================================
+   2. CARDS LAYOUT (จัดระเบียบการ์ด)
+   ========================================================================== */
+
+/* การ์ดค้นหา (ใบระบน) */
+.card.mb-3 {
+    flex: 0 0 auto; /* ให้สูงเท่าเนื้อหา ไม่ยืด */
+    margin-bottom: 1rem !important;
+}
+
+/* การ์ดตาราง (ใบล่าง - ตัวปัญหา h-100) */
+.card.table-card {
+    flex: 1; /* ยืดกินพื้นที่ที่เหลือทั้งหมด */
+    min-height: 0; /* ยอมหดตัวได้ */
+    height: auto !important; /* ยกเลิก h-100 เดิมของ Bootstrap เพื่อไม่ให้ทะลุ */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+/* ==========================================================================
+   3. TABLE CONTAINER (พระเอก - พื้นที่ Scroll)
+   ========================================================================== */
 .table-responsive-custom {
-    /* บนมือถือ ให้ตารางมีความสูงระดับหนึ่งเพื่อให้เลื่อนแนวนอนได้ง่าย */
-    min-height: 400px; 
-    overflow-x: auto;
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.5rem;
-    background-color: var(--bs-body-bg);
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    position: relative; /* ให้ Sticky Header อิงกับกล่องนี้ */
+    background-color: #fff;
+    padding-bottom: 5px; /* กัน Scrollbar ทับบรรทัดล่างสุด */
 }
 
-/* --- Desktop Layout (จอใหญ่กว่า 992px ล็อคหน้าจอ) --- */
-@media (min-width: 992px) {
-    #main-content {
-        /* บังคับเต็มจอ หัก Header ออก */
-        height: calc(100vh - 70px); 
-        overflow: hidden !important; /* ห้าม Scroll หน้าหลัก */
-    }
+/* สั่งให้ตารางขยายกว้างตามเนื้อหาจริง (แก้ปัญหา Scrollbar แนวนอนไม่ขึ้น) */
+.table-responsive-custom table {
+    width: max-content !important; 
+    min-width: 100%;
+    border-collapse: separate; /* จำเป็นสำหรับ Sticky */
+    border-spacing: 0;
+}
 
-    .content-wrapper {
-        /* ให้ Wrapper ยืดเต็มพื้นที่ที่เหลือ */
-        flex: 1;
-        overflow: hidden; 
-        padding: 1rem !important;
-        display: flex;
-        flex-direction: column;
-    }
+/* ==========================================================================
+   4. STICKY HEADERS & COLUMNS (FIXED WIDTH & POSITIONS)
+   ========================================================================== */
 
-    .card.table-card {
-        /* การ์ดตารางยืดเต็ม */
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        margin-bottom: 0 !important;
-    }
+/* --- 1. Reset Bootstrap Default --- */
+thead.sticky-top {
+    position: static !important;
+    z-index: auto !important;
+}
 
-    .table-responsive-custom {
-        /* ตารางยืดเต็มการ์ด และ Scroll ภายใน */
-        flex: 1;
-        height: 100% !important;
-        overflow: auto;
-    }
+/* --- 2. General Sticky Logic (Header & Columns) --- */
+/* กฏ: ทุกเซลล์ที่ Sticky ต้องทึบและมีขอบ */
+thead.sticky-top th, 
+tbody td.sticky-col-left-1,
+tbody td.sticky-col-left-2,
+tbody td.sticky-col-left-3,
+tbody td.sticky-col-right-1,
+tbody td.sticky-col-right-2 {
+    background-color: #fff; /* สีพื้นหลังต้องทึบ ห้ามใส */
+    background-clip: padding-box;
+    position: sticky !important;
+    z-index: 100; /* ระดับความสูงพื้นฐานของตัวล็อค */
+}
+
+/* Header ต้องอยู่สูงกว่า Column เสมอ */
+thead.sticky-top th {
+    top: 0 !important;
+    z-index: 500 !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* --- 3. FIX LEFT COLUMNS (คำนวณความกว้างเป๊ะๆ) --- */
+
+/* [คอลัมน์ 1] Load Status */
+.sticky-col-left-1 {
+    left: 0 !important;
+    width: 130px !important;      
+    min-width: 130px !important;
+    max-width: 130px !important;
+    border-right: 1px solid #dee2e6;
+}
+
+/* [คอลัมน์ 2] Prod Status */
+.sticky-col-left-2 {
+    left: 130px !important;
+    width: 130px !important;      
+    min-width: 130px !important;
+    max-width: 130px !important;
+    border-right: 1px solid #dee2e6;
+}
+
+/* [คอลัมน์ 3] PO Number */
+.sticky-col-left-3 {
+    left: 260px !important;       
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+    border-right: 2px solid #dee2e6; 
+    box-shadow: 4px 0 5px -2px rgba(0,0,0,0.1); 
+}
+
+/* --- 4. FIX RIGHT COLUMNS --- */
+
+/* [ขวา 1] Cutoff Time (ริมสุด) */
+.sticky-col-right-1 {
+    right: 0 !important;
+    width: 100px !important;
+    min-width: 100px !important;
+    border-left: 1px solid #dee2e6;
+}
+
+/* [ขวา 2] Cutoff Date (ถัดเข้ามา) */
+.sticky-col-right-2 {
+    right: 105px !important;      /* เท่ากับความกว้าง Right 1 */
+    width: 110px !important;
+    min-width: 110px !important;
+    border-left: 2px solid #dee2e6;
     
-    /* บังคับ 5 ใบแถวเดียวเฉพาะ Desktop */
+    /* เงาด้านซ้าย */
+    box-shadow: -4px 0 5px -2px rgba(0,0,0,0.1); 
+}
+
+/* --- 5. THE CORNER FIX (จุดตัดหัวมุมบนสุด) --- */
+/* ต้องอยู่สูงที่สุด (Z-Index 1000) และตำแหน่งต้องตรงกับ Column ด้านล่าง */
+
+/* มุมซ้ายบน 1 */
+thead.sticky-top th.sticky-col-left-1 { 
+    z-index: 1000 !important; 
+    left: 0 !important; 
+}
+/* มุมซ้ายบน 2 */
+thead.sticky-top th.sticky-col-left-2 { 
+    z-index: 1000 !important; 
+    left: 130px !important; 
+}
+/* มุมซ้ายบน 3 */
+thead.sticky-top th.sticky-col-left-3 { 
+    z-index: 1000 !important; 
+    left: 260px !important; 
+    box-shadow: 4px 2px 5px -2px rgba(0,0,0,0.1); 
+}
+
+/* มุมขวาบน 1 */
+thead.sticky-top th.sticky-col-right-1 { 
+    z-index: 1000 !important; 
+    right: 0 !important; 
+}
+/* มุมขวาบน 2 */
+thead.sticky-top th.sticky-col-right-2 { 
+    z-index: 1000 !important; 
+    right: 105px !important; 
+    box-shadow: -4px 2px 5px -2px rgba(0,0,0,0.1); 
+}
+
+/* --- 6. Hover & Colors --- */
+/* แก้ให้สีพื้นหลังเปลี่ยนตามแถว */
+tr:hover td.sticky-col-left-1, 
+tr:hover td.sticky-col-left-2, 
+tr:hover td.sticky-col-left-3,
+tr:hover td.sticky-col-right-1, 
+tr:hover td.sticky-col-right-2 {
+    background-color: var(--bs-tertiary-bg) !important;
+}
+
+/* แก้ให้สีพื้นหลังเปลี่ยนตามสถานะ (ถ้ามี class) */
+tr.row-confirmed td.sticky-col-left-1, 
+tr.row-confirmed td.sticky-col-left-2, 
+tr.row-confirmed td.sticky-col-left-3 {
+    background-color: #d1e7dd !important; 
+}
+
+/* ==========================================================================
+   5. CUSTOM SCROLLBAR (ปรับให้สวยและกดง่าย)
+   ========================================================================== */
+.table-responsive-custom::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.table-responsive-custom::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 4px 4px;
+}
+
+.table-responsive-custom::-webkit-scrollbar-thumb {
+    background-color: #adb5bd;
+    border: 3px solid #f1f1f1; /* ขอบขาวเพื่อให้ดูโค้งมน */
+    border-radius: 10px;
+}
+
+.table-responsive-custom::-webkit-scrollbar-thumb:hover {
+    background-color: #6c757d;
+    cursor: pointer;
+}
+
+.table-responsive-custom::-webkit-scrollbar-corner {
+    background: #f1f1f1;
+}
+
+/* ==========================================================================
+   6. UTILITIES & INPUTS
+   ========================================================================== */
+.editable-input {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.editable-input:focus, .editable-input:hover {
+    border-color: #ced4da;
+    background-color: #fff;
+    outline: none;
+}
+
+.status-badge {
+    border: none;
+    border-radius: 50px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.status-badge.bg-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* KPI Column Helper */
+@media (min-width: 992px) {
     .col-lg-20-percent {
         flex: 0 0 auto;
         width: 20%;
     }
-}
-
-/* --- Dark Theme Support & Consistency --- */
-
-/* Sticky Header */
-.dashboard-header-sticky {
-    background-color: var(--bs-body-bg);
-    border-bottom: 1px solid var(--bs-border-color);
-    padding: 1rem;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-/* Table Header & Sticky Column */
-thead.sticky-top {
-    position: static !important; /* ไม้ตายที่ 1 */
-    z-index: auto !important;
-}
-
-thead.sticky-top th {
-    position: sticky !important; /* ไม้ตายที่ 2 */
-    top: 0 !important;           /* บังคับติดบน */
-    z-index: 20;                 /* ชั้นล่าง */
-}
-
-/* Sticky Column (PO Number) */
-.sticky-col {
-    position: sticky;
-    left: 0;
-    z-index: 30 !important;
-    background-color: var(--bs-body-bg) !important;
-    color: var(--bs-body-color);
-    border-right: 2px solid var(--bs-border-color) !important;
-}
-
-thead.sticky-top th.sticky-col {
-    position: sticky !important;
-    left: 0 !important;          /* ติดซ้าย */
-    top: 0 !important;           /* ติดบน (สำคัญ!) */
-    z-index: 40 !important;      /* ชั้นบนสุด */
-    background-color: var(--bs-body-bg) !important; /* กันสีพื้นหลังทะลุ */
-}
-
-thead.sticky-top th[data-sort="is_confirmed"] {
-    position: sticky !important;
-    right: 0 !important;
-    top: 0 !important;
-    z-index: 35 !important;
-    background-color: var(--bs-body-bg) !important;
-}
-
-thead.sticky-top th.ps-3.border-start {
-    position: sticky;
-    right: 0;
-    top: 0;
-    z-index: 35 !important;
-    background-color: var(--bs-body-bg) !important;
-}
-
-/* Sorting Icons */
-th.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-}
-th.sortable:hover {
-    background-color: var(--bs-border-color) !important; /* Hover effect */
-}
-th.sortable.active-sort .sort-icon {
-    color: var(--bs-primary);
-}
-th.sortable .sort-icon {
-    margin-left: 5px;
-    font-size: 0.8em;
-    color: var(--bs-secondary-color);
-}
-
-/* คอลัมน์ที่ 1: ปุ่มลาก (Drag Handle) */
-/* ให้ติดซ้ายสุดที่ตำแหน่ง 0 */
-td.sticky-col.start-0, 
-th.sticky-col.start-0 {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 50 !important;
-    background-color: var(--bs-body-bg) !important;
-    border-right: 1px solid var(--bs-border-color);
-    width: 60px;
-}
-
-/* คอลัมน์ที่ 2: PO Number */
-/* ต้องขยับ Sticky ไปทางขวาเท่ากับความกว้างของคอลัมน์แรก (60px) */
-/* สังเกต class .ps-3 ที่ติดมากับ PO Number ใน JS ให้แก้เป็น class นี้แทน */
-td.sticky-po,
-th.sticky-po {
-    position: sticky !important;
-    left: 60px !important;
-    z-index: 40 !important;
-    background-color: var(--bs-body-bg) !important;
-    border-right: 2px solid var(--bs-border-color);
-}
-
-/* แก้สีพื้นหลังตอน Hover หรือมีสีแถว (Confirmed/Late) ไม่ให้ทะลุ Sticky */
-tr.row-confirmed td.sticky-col, tr.row-confirmed td.sticky-po { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.15); }
-tr.row-late td.sticky-col, tr.row-late td.sticky-po      { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(220, 53, 69, 0.15); }
-tr.row-warning td.sticky-col, tr.row-warning td.sticky-po   { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(255, 193, 7, 0.15); }
-
-/* Table Body */
-table.table tbody td {
-    font-size: 0.9rem;
-    vertical-align: middle;
-}
-
-/* Row Hover Effect (Dark Mode Compatible) */
-.table-hover > tbody > tr:hover > * {
-    --bs-table-accent-bg: var(--bs-tertiary-bg);
-    color: var(--bs-body-color);
-}
-
-/* Input Fields (Dark Mode Compatible) */
-input.form-control, input.form-control-sm {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
-    border-color: var(--bs-border-color);
-}
-input.form-control:focus {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
-    box-shadow: none;
-    border-color: var(--bs-primary);
-}
-
-/* KPI Cards */
-.kpi-card {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid var(--bs-border-color);
-    background-color: var(--bs-body-bg); /* พื้นหลังเปลี่ยนตามธีม */
-    height: 100%;
-}
-.kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-}
-.kpi-card.active {
-    background-color: rgba(13, 110, 253, 0.1) !important; /* สีฟ้าจางๆ โปร่งแสง */
-    border: 2px solid #0d6efd;
-}
-/* ให้ตัวเลขในการ์ดเปลี่ยนสีตามธีม */
-.kpi-card h2, .kpi-card .text-body-secondary {
-    color: var(--bs-body-color); 
-}
-
-/* --- Status Colors (ใช้ rgba เพื่อให้เห็นพื้นหลังใน Dark Mode) --- */
-
-/* 1. Confirmed (Green) */
-tr.row-confirmed td {
-    background-color: rgba(25, 135, 84, 0.15) !important;
-    color: #0f5132 !important;
-}
-[data-bs-theme="dark"] tr.row-confirmed td {
-    color: #75b798 !important; /* สีเขียวอ่อนสำหรับ Dark Mode */
-}
-
-/* 2. Late (Red) */
-tr.row-late td {
-    background-color: rgba(220, 53, 69, 0.15) !important;
-    color: #842029 !important;
-}
-[data-bs-theme="dark"] tr.row-late td {
-    color: #ea868f !important; /* สีแดงอ่อนสำหรับ Dark Mode */
-}
-
-/* 3. Warning (Yellow) */
-tr.row-warning td {
-    background-color: rgba(255, 193, 7, 0.15) !important;
-    color: #664d03 !important;
-}
-[data-bs-theme="dark"] tr.row-warning td {
-    color: #ffda6a !important; /* สีเหลืองอ่อนสำหรับ Dark Mode */
-}
-
-/* Fix Sticky Column Background for Colored Rows */
-/* ต้องใช้ box-shadow ทับสีพื้นหลัง เพราะ td sticky ต้องมี background ทึบ */
-tr.row-confirmed .sticky-col { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(25, 135, 84, 0.15); }
-tr.row-late .sticky-col      { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(220, 53, 69, 0.15); }
-tr.row-warning .sticky-col   { background-color: var(--bs-body-bg) !important; box-shadow: inset 0 0 0 9999px rgba(255, 193, 7, 0.15); }
-
-/* Utilities */
-.long-text-cell {
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-td.editable:hover {
-    background-color: var(--bs-tertiary-bg) !important;
-    cursor: text;
-    outline: 1px dashed var(--bs-secondary);
-}
-
-/* --- Custom Colors (แก้ไขใหม่: สูตร Pastel สบายตา) --- */
-
-/* นิยามสีม่วงลาเวนเดอร์ (ใช้สีตายตัวเลย ไม่ต้องพึ่ง Opacity แล้ว จะได้สีเป๊ะๆ) */
-.bg-purple, 
-.bg-purple.bg-opacity-10 { /* บังคับทับ class opacity ไปเลย */
-    background-color: #e0cffc !important; /* สีพื้น: ม่วงอ่อนพาสเทล */
-    color: #4c2f91 !important;            /* สีตัวอักษร: ม่วงเข้ม (ให้อ่านง่าย) */
-}
-
-/* นิยามสีตัวอักษรม่วง (เผื่อใช้ที่อื่น) */
-.text-purple {
-    color: #6f42c1 !important;
-}
-
-/* Checkbox ในพื้นที่สีม่วง (ปรับขอบให้เข้าธีม) */
-.bg-purple .form-check-input {
-    border-color: #bfa1f7;
-}
-.bg-purple .form-check-input:checked {
-    background-color: #6f42c1;
-    border-color: #6f42c1;
-}
-
-/* --- Dark Mode (ปรับให้มืดลง ไม่สว่างจ้าในที่มืด) --- */
-[data-bs-theme="dark"] .bg-purple,
-[data-bs-theme="dark"] .bg-purple.bg-opacity-10 {
-    background-color: rgba(111, 66, 193, 0.2) !important; /* ม่วงโปร่งแสง 20% */
-    color: #e0cffc !important; /* ตัวอักษรสีอ่อน */
-    border-color: rgba(111, 66, 193, 0.3) !important; /* เส้นขอบ */
 }

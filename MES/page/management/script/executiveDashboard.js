@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lineHourlyChart = null;
     let trendChart = null;
     let isAIEnabled = false;
+    let laborComparisonChart = null;
 
     window.lastTrendData = [];
 
@@ -159,6 +160,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         safeSetText('kpi-rm', formatMoney(data.rm));
         safeSetText('kpi-dlot', formatMoney(data.dlot));
+        safeSetText('kpi-dl-std', formatMoney(data.std_dl)); 
+
+        const diff = data.std_dl - data.dlot; // Std - Actual
+        const diffPercent = (data.std_dl > 0) ? (diff / data.std_dl) * 100 : 0;
+        const diffEl = document.getElementById('kpi-dl-diff');
+
+        if (diffEl) {
+            const sign = diff > 0 ? '+' : '';
+            // ถ้าเป็นบวก (Save) สีเขียว, ติดลบ (Over) สีแดง
+            diffEl.className = diff >= 0 ? 'fw-bold text-success' : 'fw-bold text-danger';
+            diffEl.textContent = `${sign}${formatMoney(diff)} (${diffPercent.toFixed(1)}%)`;
+        }
         safeSetText('kpi-oh', formatMoney(data.oh));
         
         safeSetText('metric-units', data.total_units ? data.total_units.toLocaleString() : '0');
@@ -202,6 +215,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
+        renderLaborComparisonChart(data);
+    }
+
+    function renderLaborComparisonChart(data) {
+        const ctxEl = document.getElementById('laborComparisonChart');
+        if (!ctxEl) return;
+
+        if (laborComparisonChart) {
+            laborComparisonChart.destroy();
+        }
+
+        const actualColor = (data.dlot > data.std_dl) ? '#dc3545' : '#198754'; 
+
+        laborComparisonChart = new Chart(ctxEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Std', 'Act'], 
+                datasets: [{
+                    data: [data.std_dl, data.dlot],
+                    backgroundColor: ['#0d6efd', actualColor],
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    
+                    // ★ 1. ปรับตรงนี้: เพิ่มความอ้วนคืนมานิดนึง (เพราะเราจะบีบกราฟให้แคบลง)
+                    barPercentage: 0.6,      
+                    categoryPercentage: 0.8, 
+                }]
+            },
+            options: {
+                indexAxis: 'x', 
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (c) => formatMoney(c.raw) } },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        offset: -4, 
+                        formatter: (val) => (val >= 1000000) ? (val/1000000).toFixed(1) + 'M' : (val/1000).toFixed(0) + 'k',
+                        font: { size: 10, weight: 'bold' },
+                        color: '#666'
+                    }
+                },
+                
+                // ★ 2. เพิ่มส่วนนี้: เทคนิค "บีบกราฟ" เข้ามาตรงกลาง
+                layout: {
+                    padding: {
+                        left: 45,   // บีบซ้ายเข้ามา
+                        right: 45,  // บีบขวาเข้ามา
+                        top: 20
+                    }
+                },
+
+                scales: {
+                    x: { 
+                        grid: { display: false },
+                        ticks: { font: { size: 11, weight: 'bold' } }
+                    },
+                    y: { display: false, grid: { display: false }, beginAtZero: true } 
+                }
+            },
+            plugins: [ChartDataLabels] 
+        });
     }
 
     function renderTrendChart(dailyData) {

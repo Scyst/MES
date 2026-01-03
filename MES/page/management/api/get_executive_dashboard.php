@@ -7,6 +7,7 @@ include_once("../../../config/config.php");
 
 header('Content-Type: application/json');
 
+// ปิด Error Report หน้าบ้าน (แต่ยัง log หลังบ้านได้) เพื่อกัน JSON พัง
 error_reporting(E_ALL); 
 ini_set('display_errors', 0);
 
@@ -25,7 +26,7 @@ try {
     $queryStart = $startDate . ' 08:00:00';
     $queryEnd = date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 08:00:00';
 
-    // 1. ดึงยอดผลิตและต้นทุนมาตรฐาน
+    // 1. ดึงยอดผลิตและต้นทุนมาตรฐาน (เพิ่ม cost_std_dl)
     $sqlProd = "
         SELECT 
             l.production_line AS line,
@@ -33,6 +34,7 @@ try {
             SUM(t.quantity * ISNULL(i.Price_USD, 0)) as sale_usd,
             SUM(t.quantity * ISNULL(i.StandardPrice, 0)) as sale_thb_std, 
             SUM(t.quantity * (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0))) as cost_rm,
+            SUM(t.quantity * ISNULL(i.Cost_DL, 0)) as cost_std_dl, -- ★ เพิ่มบรรทัดนี้: Standard DL
             SUM(t.quantity * (
                 ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + 
                 ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)
@@ -74,7 +76,7 @@ try {
     $stmtScrap->execute($paramsScrap);
     $rawScrapData = $stmtScrap->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3. [UPDATED] ดึง Headcount แบบค่าเฉลี่ยรายวัน (Average Daily HC)
+    // 3. ดึง Headcount
     $sqlPeople = "
         SELECT 
             line,
@@ -130,7 +132,7 @@ try {
 
     $laborMap  = normalizeMap($rawLaborData, 'line', 'actual_labor_cost');
     $scrapMap  = normalizeMap($rawScrapData, 'line', 'scrap_cost');
-    $peopleMap = normalizeMap($rawPeopleData, 'line', 'avg_headcount'); // ใช้ค่าเฉลี่ย
+    $peopleMap = normalizeMap($rawPeopleData, 'line', 'avg_headcount');
     
     $prodMap = [];
     foreach ($rawProdData as $row) {
@@ -149,16 +151,22 @@ try {
     sort($allActiveLines);
 
     // --- Final Calculation Loop ---
-    $summary = ['sale' => 0, 'cost' => 0, 'gp' => 0, 'rm' => 0, 'dlot' => 0, 'oh' => 0, 'scrap' => 0, 'total_units' => 0, 'headcount' => 0, 'active_lines' => 0];
+    $summary = [
+        'sale' => 0, 'cost' => 0, 'gp' => 0, 
+        'rm' => 0, 'dlot' => 0, 'std_dl' => 0, // ★ เพิ่ม std_dl ใน summary
+        'oh' => 0, 'scrap' => 0, 
+        'total_units' => 0, 'headcount' => 0, 'active_lines' => 0
+    ];
     $lines = [];
 
     foreach ($allActiveLines as $lineName) {
-        $p = $prodMap[$lineName] ?? ['total_units' => 0, 'sale_usd' => 0, 'sale_thb_std' => 0, 'cost_rm' => 0, 'cost_oh' => 0];
+        $p = $prodMap[$lineName] ?? ['total_units' => 0, 'sale_usd' => 0, 'sale_thb_std' => 0, 'cost_rm' => 0, 'cost_std_dl' => 0, 'cost_oh' => 0];
 
         $saleVal   = ($p['sale_usd'] > 0) ? ($p['sale_usd'] * $exchangeRate) : $p['sale_thb_std'];
         $rmCost    = $p['cost_rm'];
         $ohCost    = $p['cost_oh'];
-        $laborCost = $laborMap[$lineName] ?? 0;
+        $stdDLCost = $p['cost_std_dl']; // Standard DL
+        $laborCost = $laborMap[$lineName] ?? 0; // Actual DL+OT
         $scrapVal  = $scrapMap[$lineName] ?? 0;
         $avgHC     = $peopleMap[$lineName] ?? 0;
 
@@ -172,33 +180,32 @@ try {
             'gp_percent' => ($saleVal > 0) ? (($saleVal - $totalCost) / $saleVal * 100) : 0,
             'rm'    => $rmCost,
             'dlot'  => $laborCost,
+            'std_dl' => $stdDLCost, // ส่งค่า Standard DL ไปด้วย
             'oh'    => $ohCost,
             'scrap' => $scrapVal,
             'units' => $p['total_units'],
-            'headcount' => round($avgHC, 1) // แสดงทศนิยม 1 ตำแหน่งสำหรับค่าเฉลี่ยรายไลน์
+            'headcount' => round($avgHC, 1)
         ];
 
         $summary['sale']        += $saleVal;
         $summary['cost']        += $totalCost;
         $summary['rm']          += $rmCost;
-        $summary['dlot']        += $laborCost;
+        $summary['dlot']        += $laborCost; // Actual Sum
+        $summary['std_dl']      += $stdDLCost; // ★ Standard Sum
         $summary['oh']          += $ohCost;
         $summary['scrap']       += $scrapVal;
         $summary['total_units'] += $p['total_units'];
-        $summary['headcount']   += $avgHC; // สะสมค่าเฉลี่ย
+        $summary['headcount']   += $avgHC;
     }
 
     $summary['gp']           = $summary['sale'] - $summary['cost'];
     $summary['active_lines'] = count($lines);
-    $summary['headcount']    = round($summary['headcount'], 0); // ยอดรวมคนปัดเศษจำนวนเต็ม
+    $summary['headcount']    = round($summary['headcount'], 0);
 
     // --- Trend Data Processing ---
+    // (ส่วน Trend Code คงเดิม ไม่ต้องแก้ เพราะเน้นยอดรวม Actual)
     $trendData = [];
-    $period = new DatePeriod(
-        new DateTime($startDate),
-        new DateInterval('P1D'),
-        (new DateTime($endDate))->modify('+1 day')
-    );
+    $period = new DatePeriod(new DateTime($startDate), new DateInterval('P1D'), (new DateTime($endDate))->modify('+1 day'));
     foreach ($period as $dt) {
         $dateKey = $dt->format('Y-m-d');
         $trendData[$dateKey] = ['date' => $dateKey, 'sale' => 0, 'cost' => 0, 'profit' => 0];
@@ -234,7 +241,7 @@ try {
         }
     }
 
-    // Daily Labor Trend
+    // [Daily Labor]
     $sqlDailyLabor = "
         SELECT entry_date, SUM(cost_value) as labor_val 
         FROM " . MANUAL_COSTS_TABLE . "
@@ -253,7 +260,7 @@ try {
         }
     }
 
-    // Daily Scrap Trend
+    // [Daily Scrap]
     $sqlDailyScrap = "
         SELECT 
             CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) as log_date,
