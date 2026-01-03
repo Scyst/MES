@@ -1,10 +1,12 @@
 <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow">
+            
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold"><i class="far fa-question-circle me-2"></i>คู่มือการใช้งาน Sales Dashboard</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
+
             <div class="modal-body p-4">
                 
                 <div class="alert alert-primary bg-primary bg-opacity-10 border-0 mb-4">
@@ -81,6 +83,44 @@
                     </div>
                 </div>
 
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-file-excel me-2"></i>วิธีการเตรียมไฟล์ Excel (Import Logic)</h6>
+                <div class="alert alert-info border-0 bg-info bg-opacity-10 py-2 mb-3">
+                    <small><i class="fas fa-info-circle me-1"></i> ระบบแยก <strong>"วันที่"</strong> และ <strong>"สถานะ"</strong> ออกจากกัน เพื่อความยืดหยุ่นในการวางแผน</small>
+                </div>
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered table-sm text-center small mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40%;">สิ่งที่คุณกรอกใน Excel</th>
+                                <th style="width: 30%;">ผลลัพธ์ (ช่องวันที่)</th>
+                                <th style="width: 30%;">ผลลัพธ์ (การติ๊กถูก)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-start">ใส่วันที่ <span class="badge bg-light text-dark border">25/12/2026</span> <span class="text-muted">(อย่างเดียว)</span></td>
+                                <td><i class="fas fa-check text-success"></i> บันทึกวันที่</td>
+                                <td><span class="badge bg-secondary">Wait (ยังไม่ติ๊ก)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-start">ใส่คำว่า <span class="badge bg-success">Yes</span>, <span class="badge bg-success">Done</span>, <span class="badge bg-success">Shipped</span></td>
+                                <td>-</td>
+                                <td><span class="badge bg-success">Done (ติ๊กถูก)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-start">ใส่ทั้ง <span class="badge bg-light text-dark border">วันที่</span> และ <span class="badge bg-success">Yes</span></td>
+                                <td><i class="fas fa-check text-success"></i> บันทึกวันที่</td>
+                                <td><span class="badge bg-success">Done (ติ๊กถูก)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-start">ใส่คำว่า <span class="badge bg-danger">No</span>, <span class="badge bg-secondary">Wait</span></td>
+                                <td>-</td>
+                                <td><span class="badge bg-secondary">Wait (ไม่ติ๊ก)</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
                 <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fas fa-palette me-2"></i>ความหมายของแถบสี</h6>
                 <div class="row align-items-center">
                     <div class="col-12 d-flex flex-wrap gap-3">
@@ -104,6 +144,7 @@
                 </div>
 
             </div>
+            
             <div class="modal-footer bg-light border-0">
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">รับทราบ</button>
             </div>

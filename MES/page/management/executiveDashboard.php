@@ -98,13 +98,33 @@ $pageHelpId = "execHelpModal";
                     
                     <div class="col-6 col-md-4 col-xl-2">
                         <div class="exec-card border-start border-4 border-danger p-3 cursor-pointer h-100" onclick="openExplainerModal('cost')">
-                            <div class="kpi-card-content position-relative">
-                                <div class="d-flex justify-content-between">
-                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Total Cost</small>
-                                    <i class="fas fa-info-circle text-muted opacity-25" style="font-size: 0.8rem;"></i>
+                            <div class="kpi-card-content position-relative d-flex flex-column justify-content-between h-100">
+                                
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Total Cost</small>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill" style="font-size: 0.6rem;">Act</span>
+                                    </div>
+                                    
+                                    <h4 class="fw-bold text-dark mb-0" id="kpi-cost">-</h4>
                                 </div>
-                                <h4 class="fw-bold text-dark mb-0 mt-1" id="kpi-cost">-</h4>
-                                <small class="text-danger mt-1">Actual</small>
+
+                                <div class="border-top pt-2 mt-2" style="font-size: 0.7rem;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        
+                                        <div class="text-muted lh-1">
+                                            <span class="d-block" style="font-size: 0.6rem;">Std (BOM)</span>
+                                            <span id="kpi-cost-std" class="fw-semibold">-</span>
+                                        </div>
+
+                                        <div class="text-end lh-1">
+                                            <span class="d-block text-muted" style="font-size: 0.6rem;">Diff</span>
+                                            <span id="kpi-cost-diff" class="fw-bold">-</span>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -130,26 +150,34 @@ $pageHelpId = "execHelpModal";
                     </div>
                     
                     <div class="col-4 col-md-4 col-xl-2">
-                        <div class="exec-card p-3 text-center bg-light border-0 h-100 cursor-pointer" onclick="openExplainerModal('labor')">
-                            <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Labor (DL+OT)</small>
-                            <div class="d-flex align-items-center justify-content-center mb-1">
-                                <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot">-</h6>
-                                <i id="dlot-est-icon" class="fas fa-clock-rotate-left ms-1 text-warning d-none" 
-                                style="font-size: 0.7rem;" title="Estimated: Base Wage Included"></i>
-                            </div>
-                            
-                            <div class="border-top pt-1 mt-1" style="font-size: 0.65rem;">
-                                <div class="d-flex justify-content-between text-muted px-1">
-                                    <span>Std:</span>
-                                    <span id="kpi-dl-std" class="fw-semibold">-</span>
+                        <div class="exec-card p-3 bg-light border-0 h-100 cursor-pointer" onclick="openExplainerModal('labor')">
+                            <div class="d-flex flex-column justify-content-between h-100">
+                                
+                                <div class="text-center">
+                                    <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Labor (DL+OT)</small>
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <h6 class="fw-bold text-secondary mb-0" id="kpi-dlot" style="font-size: 1.1rem;">-</h6>
+                                        <i id="dlot-est-icon" class="fas fa-clock-rotate-left ms-1 text-warning d-none" 
+                                        style="font-size: 0.7rem;" title="Estimated"></i>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between px-1">
-                                    <span>Diff:</span>
-                                    <span id="kpi-dl-diff" class="fw-bold">-</span>
+
+                                <div class="border-top pt-2 mt-2" style="font-size: 0.65rem;">
+                                    <div class="d-flex justify-content-between align-items-end">
+                                        <div class="text-start">
+                                            <span class="text-muted d-block" style="font-size: 0.6rem;">Std</span>
+                                            <span id="kpi-dl-std" class="fw-semibold text-dark">-</span>
+                                        </div>
+                                        <div class="text-end">
+                                            <span id="kpi-dl-diff" class="fw-bold">-</span>
+                                        </div>
+                                    </div>
                                 </div>
+
                             </div>
                         </div>
                     </div>
+                    
                     <div class="col-4 col-md-4 col-xl-2">
                         <div class="exec-card p-3 text-center bg-light border-0 h-100 cursor-pointer" onclick="openExplainerModal('oh')">
                             <small class="text-muted text-uppercase d-block mb-1" style="font-size: 0.65rem;">Overhead (OH)</small>

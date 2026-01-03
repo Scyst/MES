@@ -155,7 +155,7 @@ thead.sticky-top th {
 
 /* [ขวา 2] Cutoff Date (ถัดเข้ามา) */
 .sticky-col-right-2 {
-    right: 105px !important;      /* เท่ากับความกว้าง Right 1 */
+    right: 108px !important;      /* เท่ากับความกว้าง Right 1 */
     width: 110px !important;
     min-width: 110px !important;
     border-left: 2px solid #dee2e6;
@@ -192,7 +192,7 @@ thead.sticky-top th.sticky-col-right-1 {
 /* มุมขวาบน 2 */
 thead.sticky-top th.sticky-col-right-2 { 
     z-index: 1000 !important; 
-    right: 105px !important; 
+    right: 108px !important; 
     box-shadow: -4px 2px 5px -2px rgba(0,0,0,0.1); 
 }
 

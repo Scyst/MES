@@ -202,21 +202,28 @@ function renderTable(searchTerm) {
     const keywords = searchTerm ? searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0) : [];
 
     let filtered = allData.filter(item => {
+        // [FIX] แปลงสถานะเป็นคำว่า Yes/No เพื่อให้ User ค้นหาด้วยคำพวกนี้ได้
+        const prdText = item.is_production_done == 1 ? 'yes done' : 'no wait';
+        const loadText = item.is_loading_done == 1 ? 'yes shipped' : 'no wait';
+        const confText = item.is_confirmed == 1 ? 'yes confirmed' : 'no';
+        
+        // แปลง Inspection เป็น Yes/No ด้วย
+        const inspRaw = (item.inspection_status || '').toLowerCase();
+        const inspText = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes') ? 'yes pass' : 'no fail';
+
         const text = `
             ${item.po_number} ${item.sku} ${item.description} ${item.color} 
             ${item.dc_location} ${item.ticket_number} ${item.remark} 
             ${item.loading_week} ${item.shipping_week}
-            ${item.production_status} ${item.loading_status} ${item.inspection_status}
+            ${prdText} ${loadText} ${confText} ${inspText} 
         `.toLowerCase();
+        
         if (keywords.length === 0) return true;
         return keywords.every(k => text.includes(k));
     });
 
-    // [CHANGES] Logic การเรียงลำดับ (2 Modes)
     if (sortState.length > 0) {
-        // Mode 1: Analysis (เรียงตามหัวตาราง)
         isManualSortMode = false;
-        // ปิดการลาก
         if(sortableInstance) sortableInstance.option("disabled", true);
         
         filtered.sort((a, b) => {
@@ -243,9 +250,7 @@ function renderTable(searchTerm) {
             return 0;
         });
     } else {
-        // Mode 2: Planning (เรียงตาม custom_order "ตามใจพี่")
         isManualSortMode = true;
-        // เรียงตาม custom_order, ถ้าเท่ากันให้เอา ID มากขึ้นก่อน (ล่าสุด)
         filtered.sort((a, b) => {
             let ordA = parseInt(a.custom_order) || 999999;
             let ordB = parseInt(b.custom_order) || 999999;
@@ -253,20 +258,19 @@ function renderTable(searchTerm) {
             return b.id - a.id; 
         });
         
-        // เปิดการลาก (ถ้ามี Instance แล้ว)
         if(sortableInstance) sortableInstance.option("disabled", false);
     }
 
-    // คำนวณยอดรวม
+    // คำนวณยอดรวม (สูตรที่ถูกต้อง: ไม่คูณ qty ซ้ำ)
     const totalContainers = filtered.length;
     let totalQty = 0;
     let totalAmountTHB = 0;
 
     filtered.forEach(item => {
         const q = parseInt(item.quantity || 0);
-        const pUSD = parseFloat(item.price || 0);
+        const totalUSD = parseFloat(item.price || 0); // ค่านี้คือราคารวมแล้วจาก SQL
         totalQty += q;
-        totalAmountTHB += (q * pUSD * currentExchangeRate); 
+        totalAmountTHB += (totalUSD * currentExchangeRate); 
     });
 
     document.getElementById('sum-containers').innerText = `${totalContainers} Orders`;
@@ -289,8 +293,11 @@ function renderTable(searchTerm) {
         const isLoad = item.is_loading_done == 1;
         const isConf = item.is_confirmed == 1;
         const editAttr = (field, val, type='text') => `class="editable" ondblclick="makeEditable(this, ${item.id}, '${field}', '${val || ''}', '${type}')"`;
+        
+        // [FIXED] เพิ่ม 'yes' ให้ระบบรู้จัก จะได้ติ๊กถูก
         const inspText = (item.inspection_status || '').toLowerCase();
-        const isInsp = (inspText === 'pass' || inspText === 'ok' || inspText === 'done');
+        const isInsp = (inspText === 'pass' || inspText === 'ok' || inspText === 'done' || inspText === 'yes');
+        
         const priceTHB = (parseFloat(item.price || 0) * currentExchangeRate).toFixed(2);
 
         let rowClass = '';
@@ -307,7 +314,6 @@ function renderTable(searchTerm) {
             }
         }
 
-        // [CHANGES] เพิ่ม data-id และเปลี่ยนช่อง Order Date เป็น Drag Handle
         return `
         <tr class="${rowClass}" data-id="${item.id}">
             
@@ -351,7 +357,6 @@ function renderTable(searchTerm) {
         </tr>`;
     }).join('');
 
-    // [CHANGES] เรียก Init Sortable หลังจากเรนเดอร์เสร็จ (หน่วงเวลานิดหน่อยเพื่อให้ DOM พร้อม)
     setTimeout(initSortable, 100);
 }
 
@@ -420,32 +425,23 @@ function exportData() {
         return;
     }
 
-    // Export ตามลำดับที่เห็นหน้าจอ (ถ้า Sort อยู่ก็ออกตาม Sort)
-    // แต่ถ้าอยากให้ออกตาม custom_order เสมอ ให้ sort allData ก่อน export
-    
-    // ดึงข้อมูลจาก Table DOM เพื่อให้ได้ลำดับที่ User เห็นอยู่จริงๆ
-    // หรือใช้ filtered/sorted Data (แต่เราไม่ได้เก็บตัวแปร filtered global)
-    // ดังนั้นใช้ง่ายๆ คือ เอา allData มา sort ตาม sortState หรือ custom_order อีกรอบ
-
     let dataToExport = [...allData];
-    if (sortState.length > 0) {
-        // Sort Logic เดิม... (Copy มาจาก renderTable หรือ Extract เป็น Function กลาง)
-        // เพื่อความกระชับ ขอข้ามส่วนนี้ไป ให้ Export ตาม allData (ซึ่งโหลดมาเรียงตาม custom_order แล้วถ้าไม่กดหัวตาราง)
-    } else {
-        // เรียงตาม custom_order
+    if (sortState.length === 0) {
         dataToExport.sort((a, b) => (parseInt(a.custom_order) || 999999) - (parseInt(b.custom_order) || 999999));
     }
 
     const exportData = dataToExport.map(item => {
-        let prdStatus = item.is_production_done == 1 ? 'Done' : 'Wait';
-        let loadStatus = item.is_loading_done == 1 ? 'Shipped' : 'Wait';
+        // [FIX] เปลี่ยนเป็น Yes/No ให้หมด (จากเดิมที่เป็น Done/Wait/Shipped)
+        let prdStatus = item.is_production_done == 1 ? 'Yes' : 'No';
+        let loadStatus = item.is_loading_done == 1 ? 'Yes' : 'No';
         let confStatus = item.is_confirmed == 1 ? 'Yes' : 'No';
         
-        const priceUSD = parseFloat(item.price || 0);
+        // *หมายเหตุ: ตรง Price เอาคูณ Qty ออกแล้วนะ ตามที่คุยกันตะกี้*
+        const priceUSD = parseFloat(item.price || 0); 
         const priceTHB = priceUSD * currentExchangeRate;
 
         return {
-            "Seq": item.custom_order, // [Optional] เพิ่มคอลัมน์ลำดับ
+            "Seq": item.custom_order,
             "PO Number": item.po_number,
             "SKU": item.sku,
             "Description": item.description,
@@ -456,15 +452,19 @@ function exportData() {
             "Loading Week": item.loading_week,
             "Shipping Week": item.shipping_week,
             "Production Date": formatDateForExcel(item.production_date),
-            "Production Status": prdStatus,
+            
+            "Production Status": prdStatus, // Yes/No
+            
             "Loading Date": formatDateForExcel(item.loading_date),
-            "Loading Status": loadStatus,
+            
+            "Loading Status": loadStatus,   // Yes/No
+            
             "Inspection Date": formatDateForExcel(item.inspection_date),
             "Inspection Status": item.inspection_status || '',
             "Ticket Number": item.ticket_number,
             "Price (USD)": priceUSD,
             "Price (THB)": priceTHB,
-            "Confirmed": confStatus,
+            "Confirmed": confStatus,        // Yes/No
             "Remark": item.remark
         };
     });
@@ -557,6 +557,7 @@ async function uploadFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
+    
     if (ext === 'xlsx' || ext === 'xls') {
         showToast("Processing Excel...", "#0dcaf0");
         const reader = new FileReader();
@@ -564,7 +565,13 @@ async function uploadFile(e) {
             try {
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
+                
+                // [FIXED] เพิ่ม Option { dateNF: 'dd/mm/yyyy' } เพื่อบังคับวันที่ให้ PHP อ่านรู้เรื่อง
+                const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], {
+                    dateNF: 'dd/mm/yyyy', // บังคับ format วันที่
+                    defval: '' // ช่องว่างให้เป็นว่าง
+                });
+
                 const blob = new Blob([csvOutput], { type: 'text/csv' });
                 const formData = new FormData();
                 formData.append('file', blob, 'converted.csv');

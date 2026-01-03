@@ -214,39 +214,37 @@ try {
     }
 
     // --------------------------------------------------------
-    // 5. [ADJUSTED] คำนวณค่าแรง (Labor Cost Calculation)
-    // เข้ากับตาราง MES_MANUAL_DAILY_COSTS (Vertical Structure)
+    // 5. [FIXED] คำนวณค่าแรง (Labor Cost Calculation)
+    // แยก DL และ OT ออกจากกันอย่างถูกต้อง
     // --------------------------------------------------------
     
     $calcStart = date('Y-m-d', strtotime($startDate));
     $calcEnd   = date('Y-m-d', strtotime($endDate));
 
     // 5.1 ลบข้อมูล Cost เก่า (เฉพาะหมวด LABOR ในช่วงวันที่ Sync)
-    // เพื่อกันข้อมูลซ้ำซ้อนตอน Sync ใหม่
     $stmtDelCost = $pdo->prepare("DELETE FROM " . MANUAL_COSTS_TABLE . " 
                                   WHERE entry_date BETWEEN ? AND ? 
                                   AND cost_category = 'LABOR'");
     $stmtDelCost->execute([$calcStart, $calcEnd]);
 
-    // 5.2 คำนวณและ INSERT ทีละประเภท (Cost & Headcount)
-    $sqlLabor = "INSERT INTO " . MANUAL_COSTS_TABLE . " 
+    // ==================================================================================
+    // 5.2 (A) Insert ค่าแรงปกติ (DIRECT_LABOR) = เงินเดือน + (ชั่วโมงปกติ * เรท * ตัวคูณ)
+    // ==================================================================================
+    $sqlDL = "INSERT INTO " . MANUAL_COSTS_TABLE . " 
                 (entry_date, line, shift, cost_category, cost_type, cost_value, unit, updated_at, updated_by)
                 SELECT 
                     L.log_date,
                     E.line,
                     CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END,
                     'LABOR',
-                    'DIRECT_LABOR',
+                    'DIRECT_LABOR', -- Type: DL
                     SUM(
                         (CASE 
                             WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0)
                             ELSE 0 
                         END)
                         +
-                        (
-                            (Final.Normal_Hrs * Rate.Hourly_Base * Rate.Work_Multiplier) +
-                            (Final.OT_Hrs * Rate.Hourly_Base * Rate.OT_Multiplier)
-                        )
+                        (Final.Normal_Hrs * Rate.Hourly_Base * Rate.Work_Multiplier)
                     ),
                     'THB',
                     GETDATE(),
@@ -269,68 +267,103 @@ try {
                             WHEN Cal.day_type = 'HOLIDAY' THEN 2.0 
                             WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 
                             ELSE 1.0 
-                        END AS Work_Multiplier,
-                        CASE 
-                            WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN 0.0
-                            WHEN Cal.day_type = 'HOLIDAY' THEN 3.0 
-                            ELSE 1.5 
-                        END AS OT_Multiplier
+                        END AS Work_Multiplier
                 ) AS Rate
                 CROSS APPLY (
-                    SELECT 
-                        CAST(CONCAT(L.log_date, ' ', S.start_time) AS DATETIME) AS Shift_Start
+                    SELECT CAST(CONCAT(L.log_date, ' ', S.start_time) AS DATETIME) AS Shift_Start
                 ) AS T0
                 CROSS APPLY (
                     SELECT 
                         CASE 
-                            WHEN L.scan_out_time IS NULL THEN 
-                                DATEADD(HOUR, 9, T0.Shift_Start)
-                            WHEN L.scan_out_time < T0.Shift_Start THEN 
-                                DATEADD(HOUR, 9, T0.Shift_Start)
-                            WHEN DATEDIFF(HOUR, T0.Shift_Start, L.scan_out_time) >= 22 
-                                AND CM.rate_type NOT LIKE 'MONTHLY%' THEN
-                                DATEADD(HOUR, 9, T0.Shift_Start)
-
+                            WHEN L.scan_out_time IS NULL THEN DATEADD(HOUR, 9, T0.Shift_Start)
+                            WHEN L.scan_out_time < T0.Shift_Start THEN DATEADD(HOUR, 9, T0.Shift_Start)
+                            WHEN DATEDIFF(HOUR, T0.Shift_Start, L.scan_out_time) >= 22 AND CM.rate_type NOT LIKE 'MONTHLY%' THEN DATEADD(HOUR, 9, T0.Shift_Start)
                             ELSE L.scan_out_time
                         END AS Calc_End_Time
                 ) AS T1
+                CROSS APPLY ( SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Raw_Minutes ) AS T2
                 CROSS APPLY (
-                    SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Raw_Minutes
-                ) AS T2
-                CROSS APPLY (
-                    SELECT 
-                        FLOOR(
-                            (
-                                T2.Raw_Minutes 
-                                - (CASE WHEN T2.Raw_Minutes >= 300 THEN 60 ELSE 0 END)
-                                - (CASE WHEN T2.Raw_Minutes >= 570 THEN 30 ELSE 0 END)
-                            ) / 30.0
-                        ) * 0.5 AS Net_Hours
+                    SELECT FLOOR((T2.Raw_Minutes - (CASE WHEN T2.Raw_Minutes >= 300 THEN 60 ELSE 0 END) - (CASE WHEN T2.Raw_Minutes >= 570 THEN 30 ELSE 0 END)) / 30.0) * 0.5 AS Net_Hours
                 ) AS T3
-                CROSS APPLY (
-                    SELECT 
-                        CASE WHEN T3.Net_Hours > 8 THEN 8 ELSE T3.Net_Hours END AS Normal_Hrs,
-                        CASE WHEN T3.Net_Hours > 8 THEN (T3.Net_Hours - 8) ELSE 0 END AS OT_Hrs
-                ) AS Final
+                CROSS APPLY ( SELECT CASE WHEN T3.Net_Hours > 8 THEN 8 ELSE T3.Net_Hours END AS Normal_Hrs ) AS Final
                 WHERE L.log_date BETWEEN ? AND ?
                 AND L.status IN ('PRESENT', 'LATE')
                 AND L.scan_in_time IS NOT NULL 
                 AND E.line IS NOT NULL
                 GROUP BY L.log_date, E.line, CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END";
 
-    $stmtCalcLabor = $pdo->prepare($sqlLabor);
-    $stmtCalcLabor->execute([$calcStart, $calcEnd]);
-    $rowsLabor = $stmtCalcLabor->rowCount();
+    $stmtCalcDL = $pdo->prepare($sqlDL);
+    $stmtCalcDL->execute([$calcStart, $calcEnd]);
+    $rowsDL = $stmtCalcDL->rowCount();
 
-    // B. Insert จำนวนคน (HEAD_COUNT)
+    // ==================================================================================
+    // 5.2 (B) Insert ค่าโอที (OVERTIME) = (ชั่วโมง OT * เรท * ตัวคูณ OT)
+    // ==================================================================================
+    $sqlOT = "INSERT INTO " . MANUAL_COSTS_TABLE . " 
+                (entry_date, line, shift, cost_category, cost_type, cost_value, unit, updated_at, updated_by)
+                SELECT 
+                    L.log_date,
+                    E.line,
+                    CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END,
+                    'LABOR',
+                    'OVERTIME', -- Type: OT
+                    SUM(Final.OT_Hrs * Rate.Hourly_Base * Rate.OT_Multiplier),
+                    'THB',
+                    GETDATE(),
+                    'System_Sync'
+                FROM " . MANPOWER_DAILY_LOGS_TABLE . " L
+                JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id
+                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
+                LEFT JOIN " . MANPOWER_CATEGORY_MAPPING_TABLE . " CM ON E.position = CM.keyword
+                LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON L.log_date = Cal.calendar_date
+                CROSS APPLY (
+                    SELECT 
+                        CASE 
+                            WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0) / 30.0 / 8.0
+                            WHEN CM.rate_type = 'DAILY'       THEN COALESCE(CM.hourly_rate, 0) / 8.0
+                            ELSE COALESCE(CM.hourly_rate, 0)
+                        END AS Hourly_Base,
+                        CASE 
+                            WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN 0.0
+                            WHEN Cal.day_type = 'HOLIDAY' THEN 3.0 
+                            ELSE 1.5 
+                        END AS OT_Multiplier
+                ) AS Rate
+                CROSS APPLY ( SELECT CAST(CONCAT(L.log_date, ' ', S.start_time) AS DATETIME) AS Shift_Start ) AS T0
+                CROSS APPLY (
+                    SELECT 
+                        CASE 
+                            WHEN L.scan_out_time IS NULL THEN DATEADD(HOUR, 9, T0.Shift_Start)
+                            WHEN L.scan_out_time < T0.Shift_Start THEN DATEADD(HOUR, 9, T0.Shift_Start)
+                            WHEN DATEDIFF(HOUR, T0.Shift_Start, L.scan_out_time) >= 22 AND CM.rate_type NOT LIKE 'MONTHLY%' THEN DATEADD(HOUR, 9, T0.Shift_Start)
+                            ELSE L.scan_out_time
+                        END AS Calc_End_Time
+                ) AS T1
+                CROSS APPLY ( SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Raw_Minutes ) AS T2
+                CROSS APPLY (
+                    SELECT FLOOR((T2.Raw_Minutes - (CASE WHEN T2.Raw_Minutes >= 300 THEN 60 ELSE 0 END) - (CASE WHEN T2.Raw_Minutes >= 570 THEN 30 ELSE 0 END)) / 30.0) * 0.5 AS Net_Hours
+                ) AS T3
+                CROSS APPLY ( SELECT CASE WHEN T3.Net_Hours > 8 THEN (T3.Net_Hours - 8) ELSE 0 END AS OT_Hrs ) AS Final
+                WHERE L.log_date BETWEEN ? AND ?
+                AND L.status IN ('PRESENT', 'LATE')
+                AND L.scan_in_time IS NOT NULL 
+                AND E.line IS NOT NULL
+                GROUP BY L.log_date, E.line, CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END
+                HAVING SUM(Final.OT_Hrs * Rate.Hourly_Base * Rate.OT_Multiplier) > 0"; // Insert เฉพาะที่มี OT
+
+    $stmtCalcOT = $pdo->prepare($sqlOT);
+    $stmtCalcOT->execute([$calcStart, $calcEnd]);
+    $rowsOT = $stmtCalcOT->rowCount();
+
+    // 5.2 (C) Insert จำนวนคน (HEAD_COUNT) - (เหมือนเดิม)
     $sqlHead = "INSERT INTO " . MANUAL_COSTS_TABLE . " 
                 (entry_date, line, shift, cost_category, cost_type, cost_value, unit, updated_at, updated_by)
                 SELECT 
                     L.log_date,
                     E.line,
-                    CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END as shift_type,
+                    CASE WHEN S.shift_name LIKE '%Night%' THEN 'NIGHT' ELSE 'DAY' END,
                     'LABOR',
-                    'HEAD_COUNT', -- ตรงกับ SP: sp_CalculateActualCostSummary
+                    'HEAD_COUNT',
                     COUNT(DISTINCT L.emp_id),
                     'Person',
                     GETDATE(),
@@ -347,7 +380,7 @@ try {
     $stmtCalcHead->execute([$calcStart, $calcEnd]);
     $rowsHead = $stmtCalcHead->rowCount();
     
-    $stats['cost_entries'] = $rowsLabor + $rowsHead;
+    $stats['cost_entries'] = $rowsDL + $rowsOT + $rowsHead;
 
     $pdo->commit();
     echo json_encode([

@@ -149,6 +149,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         safeSetText('kpi-sale', formatMoney(data.sale));
         safeSetText('kpi-cost', formatMoney(data.cost));
+        
+        // 1. แสดงยอด Standard
+        // ถ้า API ยังไม่ส่ง std_cost มา (เพราะยังไม่ได้แก้ไฟล์ php) ให้คำนวณเองชั่วคราวได้:
+        // const totalStd = data.rm + data.std_dl + data.oh + data.scrap; 
+        const totalStd = data.std_cost || (data.rm + data.std_dl + data.oh + data.scrap);
+        safeSetText('kpi-cost-std', formatMoney(totalStd));
+
+        // 2. คำนวณ Diff (Std - Actual)
+        // ถ้า Std > Actual = ประหยัด (กำไร) -> สีเขียว
+        // ถ้า Std < Actual = จ่ายเกิน (ขาดทุน) -> สีแดง
+        const diffCost = totalStd - data.cost;
+        const diffCostPercent = (totalStd > 0) ? (diffCost / totalStd) * 100 : 0;
+        
+        const diffCostEl = document.getElementById('kpi-cost-diff');
+        if (diffCostEl) {
+            const sign = diffCost > 0 ? '+' : '';
+            // Cost ประหยัด = ดี (เขียว)
+            diffCostEl.className = diffCost >= 0 ? 'fw-bold text-success' : 'fw-bold text-danger';
+            diffCostEl.textContent = `${sign}${formatMoney(diffCost)} (${diffCostPercent.toFixed(1)}%)`;
+        }
         safeSetText('kpi-gp', formatMoney(data.gp));
 
         const gpPercent = data.sale > 0 ? (data.gp / data.sale * 100).toFixed(1) : 0;

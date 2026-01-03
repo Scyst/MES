@@ -1,7 +1,7 @@
 <?php
 // page/sales/shipping_loading.php
 
-// 1. เรียก init
+// 1. เรียก init (ถอย 1 ชั้น)
 require_once __DIR__ . '/../components/init.php';
 
 // 2. ตั้งค่าหน้าเว็บ
@@ -9,7 +9,7 @@ $pageTitle = "Shipping Schedule Control";
 $pageIcon = "fas fa-truck-loading"; 
 $pageHeaderTitle = "Shipping Schedule";
 $pageHeaderSubtitle = "ตารางแผนการโหลดตู้และสถานะขนส่ง";
-$pageHelpId = "helpModal"; // (ถ้ามี)
+$pageHelpId = "helpModal"; 
 
 // 3. ตรวจสอบสิทธิ์ (ลูกค้าดูได้อย่างเดียว)
 $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'CUSTOMER');
@@ -19,18 +19,16 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 <html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
-    <?php include_once '../components/common_head.php'; ?>
+    <?php include_once '../components/common_head.php'; ?> 
     
     <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
     
     <style>
-        /* --- CSS จัดการ Layout และ Scroll --- */
         .table-responsive-custom {
             height: calc(100vh - 200px); 
             overflow: auto;
-            position: relative; /* สำคัญ */
+            position: relative; 
         }
-
         .editable-input {
             border: 1px solid transparent; width: 100%;
             background: transparent; text-align: center; font-size: 0.85rem;
@@ -39,46 +37,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         .editable-input:not([readonly]):hover { border: 1px solid #ced4da; background: #fff; }
         .editable-input:not([readonly]):focus { border: 1px solid #86b7fe; background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(13,110,253,.25); }
 
-        /* --- STICKY COLUMN MAGIC SYSTEM --- */
-        
-        /* 1. Base Styles for Sticky Cells */
-        .sticky-col-left-1, .sticky-col-left-2, .sticky-col-left-3,
-        .sticky-col-right-1, .sticky-col-right-2 {
-            position: sticky !important;
-            z-index: 10; /* อยู่สูงกว่าข้อมูลปกติ (ข้อมูลปกติ z-index: auto) */
-            opacity: 1 !important; /* บังคับไม่ให้โปร่งแสง */
-        }
-
-        /* 2. Fix Header Layers (หัวตารางต้องอยู่บนสุดเสมอ) */
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 20; /* สูงกว่าข้อมูลปกติ */
-            background-color: #f8f9fa; /* สีพื้นหัวตารางปกติ */
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        /* 3. Super Sticky Headers (หัวตารางของคอลัมน์ที่ถูกล็อค ต้องอยู่บนสุดของที่สุด) */
-        thead th.sticky-col-left-1, thead th.sticky-col-left-2, thead th.sticky-col-left-3,
-        thead th.sticky-col-right-1, thead th.sticky-col-right-2 {
-            z-index: 30 !important; /* อยู่บนสุด ทับทุกอย่าง */
-        }
-
-        /* 4. Left Columns Config (สีเทาอ่อนทึบ) */
-        .sticky-col-left-1 { left: 0;      width: 80px;  background-color: #f8f9fa !important; border-right: 1px solid #dee2e6; }
-        .sticky-col-left-2 { left: 80px;   width: 80px;  background-color: #f8f9fa !important; border-right: 1px solid #dee2e6; }
-        .sticky-col-left-3 { left: 160px;  min-width: 120px; background-color: #fff !important;    border-right: 2px solid #dee2e6; 
-            box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* เงาขวา */
-        }
-
-        /* 5. Right Columns Config (สีแดงอ่อนทึบ) */
-        /* ใช้สี #fff0f0 (แดงจางแบบทึบ) แทนการใช้ opacity */
-        .sticky-col-right-2 { right: 80px; width: 110px; background-color: #fff0f0 !important; border-left: 2px solid #dee2e6; 
-            box-shadow: -2px 0 5px rgba(0,0,0,0.05); /* เงาซ้าย */
-        }
-        .sticky-col-right-1 { right: 0;    width: 80px;  background-color: #fff0f0 !important; }
-
-        /* Status Badge */
         .status-badge { font-size: 0.7rem; width: 100%; padding: 4px; border-radius: 12px; border:none; font-weight: bold; text-transform: uppercase; }
         .bg-pending { background-color: #eee; color: #555; border: 1px solid #ccc; }
         .bg-success-custom { background-color: #198754; color: #fff; }
@@ -117,15 +75,15 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                             <div class="d-flex align-items-center gap-2">
                                 <?php if (!$isCustomer): ?>
                                 <form id="importForm" class="d-inline">
-                                    <input type="file" name="csv_file" id="csvFile" accept=".csv" style="display:none;" onchange="uploadFile()">
-                                    <button type="button" class="btn btn-light border-secondary-subtle text-primary fw-bold btn-sm shadow-sm" onclick="document.getElementById('csvFile').click()">
-                                        <i class="fas fa-file-import me-1"></i> Import CSV
+                                    <input type="file" name="csv_file" id="csv_file" accept=".csv, .xlsx, .xls" style="display:none;" onchange="uploadFile()">
+                                    <button type="button" class="btn btn-light border-secondary-subtle text-primary fw-bold btn-sm shadow-sm" onclick="document.getElementById('csv_file').click()">
+                                        <i class="fas fa-file-import me-1"></i> Import Excel/CSV
                                     </button>
                                 </form>
                                 <?php endif; ?>
 
                                 <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportToCSV()">
-                                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                                    <i class="fas fa-file-excel me-1"></i> Export CSV
                                 </button>
                             </div>
                         </div>
@@ -140,7 +98,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                                     <th class="sticky-col-left-1">Load Status</th>
                                     <th class="sticky-col-left-2">Prod Status</th>
                                     <th class="sticky-col-left-3">PO Number</th>
-                                    
                                     <th>Week</th>
                                     <th>Status</th>
                                     <th>Inspect Type</th>
@@ -167,13 +124,11 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                                     <th>Pickup Date</th>
                                     <th>Return Date</th>
                                     <th>Remark</th>
-
                                     <th class="sticky-col-right-2 text-danger" style="background-color: rgb(255 240 240)">Cutoff Date</th>
                                     <th class="sticky-col-right-1 text-danger" style="background-color: rgb(255 240 240)">Cutoff Time</th>
                                 </tr>
                             </thead>
-                            <tbody id="tableBody" class="bg-white">
-                                </tbody>
+                            <tbody id="tableBody" class="bg-white"></tbody>
                         </table>
                     </div>
                 </div>
@@ -182,34 +137,15 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         </div>
     </div>
 
-    <div class="modal fade" id="importResultModal" tabindex="-1">
-         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-body-tertiary">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-file-import me-2"></i>Import Results</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="importSuccessMsg" class="text-center text-success py-3"></div>
-                    <textarea id="importErrorLog" class="form-control form-control-sm font-monospace bg-body-secondary text-danger border-0 d-none" rows="5" readonly></textarea>
-                </div>
-                <div class="modal-footer bg-body-tertiary border-0">
-                    <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">ตกลง (OK)</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
     <script>
-    // Config
     const isCustomer = <?php echo json_encode($isCustomer); ?>;
-    let allData = []; // เก็บข้อมูลดิบไว้ทำ Search Client-side
+    let allData = []; 
 
     $(document).ready(function() {
         loadData();
-        
-        // Search Filter Logic
         $('#universalSearch').on('keyup', function() {
             const val = $(this).val().toLowerCase();
             const filtered = allData.filter(row => {
@@ -222,7 +158,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         });
     });
 
-    // Helper: Show/Hide Overlay
     function showLoading(show) {
         if(show) $('#loadingOverlay').css('display', 'flex');
         else $('#loadingOverlay').hide();
@@ -230,6 +165,7 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
     function loadData() {
         showLoading(true);
+        // [FIXED] ใช้ path สั้นๆ
         $.ajax({
             url: 'api/manage_shipping.php?action=read',
             method: 'GET', dataType: 'json',
@@ -257,7 +193,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
         let html = '';
         data.forEach(row => {
-            // Status Logic
             let loadClass = row.is_loading_done == 1 ? 'bg-success-custom' : 'bg-pending';
             let prodClass = row.is_production_done == 1 ? 'bg-success-custom' : 'bg-pending';
             let loadTxt = row.is_loading_done == 1 ? 'DONE' : 'WAIT';
@@ -270,12 +205,12 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                 : `<button class="status-badge ${prodClass}" onclick="toggleStatus(${row.id}, 'production', '${prodTxt}')">${prodTxt}</button>`;
             
             let ro = isCustomer ? 'readonly' : '';
-            let fnDate = (d) => d ? d.substring(0,10) : '';
+            let fnDate = (d) => (d && d != '0000-00-00') ? d.substring(0,10) : '';
 
             html += `<tr>
                 <td class="sticky-col-left-1 text-center">${loadBtn}</td>
                 <td class="sticky-col-left-2 text-center">${prodBtn}</td>
-                <td class="sticky-col-left-3 fw-bold text-primary">${row.po_number}</td>
+                <td class="sticky-col-left-3 fw-bold text-primary">${row.po_number || '-'}</td>
 
                 <td class="text-center">${row.shipping_week||''}</td>
                 <td><input class="editable-input" value="${row.shipping_customer_status||''}" onchange="upd(${row.id}, 'shipping_customer_status', this.value)" ${ro}></td>
@@ -311,8 +246,6 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         $('#tableBody').html(html);
     }
 
-    // --- Action Functions ---
-
     function upd(id, field, val) {
         if(isCustomer) return;
         $.post('api/manage_shipping.php', {action:'update_cell', id:id, field:field, value:val});
@@ -323,42 +256,69 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         let val = (curr === 'DONE') ? 0 : 1;
         let field = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
         
-        // Optimistic UI Update (เปลี่ยนสีก่อนแล้วค่อยส่ง request)
         showLoading(true);
         $.post('api/manage_shipping.php', {action:'update_cell', id:id, field:field, value:val}, function(){
-            // Reload ข้อมูลจริงเพื่อให้ชัวร์
             loadData();
         });
     }
 
-    function uploadFile() {
-        if(!confirm('ยืนยันการนำเข้าไฟล์ CSV? ข้อมูลเดิมจะถูกอัปเดต')) return;
+    async function uploadFile() {
+        const fileInput = document.getElementById('csv_file'); 
         
-        var fd = new FormData($('#importForm')[0]);
+        if (!fileInput || !fileInput.files[0]) {
+            alert("กรุณาเลือกไฟล์ก่อนครับ");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        let formData = new FormData();
         showLoading(true);
-        
-        $.ajax({
-            url: 'api/manage_shipping.php?action=import', type: 'POST', data: fd, contentType:false, processData:false,
-            success: function(res) {
+
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                const csvOutput = XLSX.utils.sheet_to_csv(firstSheet, { 
+                    dateNF: 'dd/mm/yyyy', 
+                    defval: '' 
+                });
+
+                const csvBlob = new Blob([csvOutput], { type: 'text/csv' });
+                formData.append('csv_file', csvBlob, 'converted_from_excel.csv');
+
+            } catch (e) {
                 showLoading(false);
-                document.getElementById('csvFile').value = '';
-                
-                // Show Result Modal
-                const modal = new bootstrap.Modal(document.getElementById('importResultModal'));
-                $('#importSuccessMsg').html(`<i class="fas fa-check-circle fa-2x mb-2"></i><br>${res.message}`);
-                
-                if(res.errors && res.errors.length > 0) {
-                    $('#importErrorLog').removeClass('d-none').val(res.errors.join('\n'));
-                } else {
-                    $('#importErrorLog').addClass('d-none');
-                }
-                modal.show();
-                loadData();
-            },
-            error: function() {
-                showLoading(false);
-                alert('Import Failed');
+                console.error(e);
+                alert("เกิดข้อผิดพลาดในการอ่านไฟล์ Excel: " + e.message);
+                return;
             }
+        } else {
+            formData.append('csv_file', file);
+        }
+
+        formData.append('action', 'import'); 
+
+        fetch('api/manage_shipping.php', { 
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            showLoading(false);
+            if (result.success) {
+                alert(result.message);
+                loadData(); 
+                fileInput.value = '';
+            } else {
+                alert('Error: ' + result.message);
+            }
+        })
+        .catch(error => {
+            showLoading(false);
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ Server');
         });
     }
     

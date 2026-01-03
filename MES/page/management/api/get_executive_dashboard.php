@@ -170,12 +170,14 @@ try {
         $scrapVal  = $scrapMap[$lineName] ?? 0;
         $avgHC     = $peopleMap[$lineName] ?? 0;
 
-        $totalCost = $rmCost + $laborCost + $ohCost + $scrapVal;
+        $totalCost = $rmCost + $laborCost + $ohCost + $scrapVal;    // Actual (เพราะใช้ laborCost จริง)
+        $totalStd  = $rmCost + $stdDLCost + $ohCost + $scrapVal;    // Standard (ใช้ stdDLCost แทน)
 
         $lines[$lineName] = [
             'name' => $lineName,
             'sale' => $saleVal,
             'cost' => $totalCost,
+            'std_cost' => $totalStd,
             'gp'   => $saleVal - $totalCost,
             'gp_percent' => ($saleVal > 0) ? (($saleVal - $totalCost) / $saleVal * 100) : 0,
             'rm'    => $rmCost,
@@ -188,10 +190,11 @@ try {
         ];
 
         $summary['sale']        += $saleVal;
-        $summary['cost']        += $totalCost;
+        $summary['cost']        += $totalCost; // นี่คือ Actual
+        $summary['std_cost']    += $totalStd; // นี่คือ Standard
         $summary['rm']          += $rmCost;
         $summary['dlot']        += $laborCost; // Actual Sum
-        $summary['std_dl']      += $stdDLCost; // ★ Standard Sum
+        $summary['std_dl']      += $stdDLCost; // Standard Sum
         $summary['oh']          += $ohCost;
         $summary['scrap']       += $scrapVal;
         $summary['total_units'] += $p['total_units'];
