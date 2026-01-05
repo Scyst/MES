@@ -1,6 +1,5 @@
 <?php
 // page/sales/api/manage_shipping.php
-
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -22,12 +21,24 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
+    // ฟังก์ชันจัดการวันที่ให้ฉลาดขึ้น (รองรับ dd/mm/yyyy และ Excel Serial)
     $fnDate = function ($val) {
         if (empty($val)) return null;
         $val = trim($val);
-        $val = str_replace('/', '-', $val);
-        $ts = strtotime($val);
-        return $ts ? date('Y-m-d', $ts) : null;
+        
+        // ถ้าเป็นตัวเลข Serial จาก Excel
+        if (is_numeric($val) && $val > 40000) {
+            return gmdate("Y-m-d", ($val - 25569) * 86400);
+        }
+
+        // ลองแปลงจาก d/m/Y หรือ d-m-Y
+        $cleanVal = str_replace('/', '-', $val);
+        $ts = strtotime($cleanVal);
+        if ($ts) return date('Y-m-d', $ts);
+
+        // Fallback: ถ้า strtotime พลาด ให้ลอง Format ตรงๆ
+        $d = DateTime::createFromFormat('d-m-Y', $cleanVal);
+        return ($d) ? $d->format('Y-m-d') : null;
     };
 
     switch ($action) {
@@ -40,86 +51,107 @@ try {
             break;
 
         case 'import_json':
-            if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized Access");
-            
             $rows = json_decode($_POST['data'] ?? '[]', true);
             if (empty($rows)) throw new Exception("No data received");
 
-            // แก้ไขเฉพาะส่วน $columnMap ในไฟล์ api/manage_shipping.php
+            // Mapping ใหม่: ใช้คำที่ "ล้างแล้ว" (Lowercase + No Special Chars) ให้ตรงกับไฟล์ SNC
             $columnMap = [
-                'Shipping Week' => 'shipping_week', 
+                'shippingweek' => 'shipping_week',
                 'status' => 'shipping_customer_status',
-                'inspect type' => 'inspect_type', 
-                'inspection result' => 'inspection_result',
-                'SNC LOAD DAY' => 'snc_load_day', 
-                'ETD' => 'etd',
-                'DC' => 'dc_location', 
-                'SKU' => 'sku', 
-                'PO' => 'po_number',
-                'Booking No.' => 'booking_no', 
-                'Invoice' => 'invoice_no',
-                'Description' => 'description', 
-                'CTNS  Qty (Pieces)' => 'ctns_qty', // [FIXED] เพิ่มเว้นวรรคให้ตรงกับไฟล์ลูกค้า
-                'CTN Size' => 'ctn_size', 
-                'CONTAINER NO' => 'container_no',
-                'SEAL NO.' => 'seal_no', 
-                'CONTAINER TARE' => 'container_tare',
-                'N.W' => 'net_weight', 
-                'G.W' => 'gross_weight', 
-                'CBM' => 'cbm',
-                'Feeder Vessel' => 'feeder_vessel', 
-                'mother vessel' => 'mother_vessel',
-                'SNC-CI-NO.' => 'snc_ci_no', 
-                'SI/VGM CUT OFF' => 'si_vgm_cut_off',
-                'PICK UP' => 'pickup_date', 
-                'RTN' => 'return_date', 
-                'REMARK' => 'remark'
+                'inspecttype' => 'inspect_type',
+                'inspectionresult' => 'inspection_result',
+                'sncloadday' => 'snc_load_day',
+                'etd' => 'etd',
+                'dc' => 'dc_location',
+                'sku' => 'sku',
+                'po' => 'po_number',
+                'ponumber' => 'po_number',
+                'bookingno' => 'booking_no',
+                'invoice' => 'invoice_no',
+                'description' => 'description',
+                'ctnsqtypieces' => 'quantity',
+                'ctnsize' => 'ctn_size',
+                'containerno' => 'container_no', // แมพกับ 'CONTAINER NO'
+                'sealno' => 'seal_no',           // แมพกับ 'SEAL NO.'
+                'containertare' => 'container_tare',
+                'nw' => 'net_weight',            // แมพกับ 'N.W'
+                'gw' => 'gross_weight',          // แมพกับ 'G.W'
+                'cbm' => 'cbm',
+                'feedervessel' => 'feeder_vessel',
+                'mothervessel' => 'mother_vessel',
+                'snccino' => 'snc_ci_no',
+                'sivgmcutoff' => 'si_vgm_cut_off',
+                'pickup' => 'pickup_date',       // แมพกับ 'PICK UP'
+                'rtn' => 'return_date',          // แมพกับ 'RTN'
+                'remark' => 'remark'
             ];
 
             $dateCols = ['snc_load_day', 'etd', 'si_vgm_cut_off', 'pickup_date', 'return_date'];
-            $numCols = ['ctns_qty', 'container_tare', 'net_weight', 'gross_weight', 'cbm'];
+            $numCols = ['quantity', 'container_tare', 'net_weight', 'gross_weight', 'cbm'];
 
-            $dbFields = array_values($columnMap);
-            // Fix: Exclude po_number from SET clause in UPDATE part properly
-            $updateSet = [];
-            foreach($dbFields as $f) {
-                if($f !== 'po_number') $updateSet[] = "T.$f=S.$f";
-            }
-            $updateSql = implode(', ', $updateSet);
-            
-            $colNames = implode(', ', $dbFields);
-            $placeholders = implode(', ', array_fill(0, count($dbFields), '?'));
-            $sourceCols = implode(', ', array_map(function($f){ return "S.$f"; }, $dbFields));
-
-            $sql = "MERGE INTO $table AS T USING (VALUES ($placeholders)) AS S($colNames)
-                    ON (T.po_number = S.po_number)
-                    WHEN MATCHED THEN UPDATE SET $updateSql, T.updated_at = GETDATE()
-                    WHEN NOT MATCHED THEN INSERT ($colNames, created_at, updated_at) VALUES ($sourceCols, GETDATE(), GETDATE());";
-            
-            $stmt = $pdo->prepare($sql);
+            $pdo->beginTransaction();
             $successCount = 0;
 
             foreach ($rows as $row) {
-                $rowMap = [];
-                foreach($row as $k=>$v) $rowMap[strtolower(trim($k))] = $v;
-                $poVal = null;
-                foreach(['po','po number'] as $k) if(isset($rowMap[$k])) { $poVal = trim($rowMap[$k]); break; }
-                if(empty($poVal)) continue;
-
-                $params = [];
-                foreach ($columnMap as $header => $col) {
-                    $val = $rowMap[strtolower($header)] ?? null;
-                    if ($val !== null) {
-                        $val = trim($val);
-                        if (in_array($col, $dateCols) && $val) $val = $fnDate($val);
-                        if (in_array($col, $numCols) && $val!=='') $val = str_replace(',', '', $val);
-                    }
-                    $params[] = $val;
+                $normalizedRow = [];
+                foreach ($row as $k => $v) {
+                    // ล้างหัวตารางให้เหลือแค่ a-z และ 0-9
+                    $cleanK = strtolower(preg_replace('/[^a-z0-9]/i', '', $k));
+                    $normalizedRow[$cleanK] = $v;
                 }
-                $stmt->execute($params);
+
+                // หา PO Number
+                $poVal = $normalizedRow['po'] ?? $normalizedRow['ponumber'] ?? null;
+                if (empty($poVal)) continue;
+
+                $fieldsToSet = [];
+                foreach ($columnMap as $cleanHeader => $dbCol) {
+                    if (isset($normalizedRow[$cleanHeader])) {
+                        $val = trim($normalizedRow[$cleanHeader]);
+                        
+                        // จัดการตัวเลข (ตัดคอมม่า)
+                        if (in_array($dbCol, $numCols)) {
+                            $val = str_replace(',', '', $val);
+                            $val = (is_numeric($val)) ? (float)$val : null;
+                        } 
+                        // จัดการวันที่
+                        elseif (in_array($dbCol, $dateCols)) {
+                            $val = $fnDate($val);
+                        }
+                        
+                        if ($dbCol !== 'po_number') {
+                            $fieldsToSet[$dbCol] = $val;
+                        }
+                    }
+                }
+
+                if (empty($fieldsToSet)) continue;
+
+                // สร้าง SQL MERGE
+                $colNames = ['po_number'];
+                $valPlaceholders = ['?'];
+                $bindParams = [$poVal];
+                $updatePairs = [];
+
+                foreach ($fieldsToSet as $col => $val) {
+                    $colNames[] = $col;
+                    $valPlaceholders[] = "?";
+                    $bindParams[] = $val;
+                    $updatePairs[] = "T.$col = S.$col";
+                }
+
+                $sql = "MERGE INTO $table AS T 
+                        USING (VALUES (".implode(',', $valPlaceholders).")) AS S(".implode(',', $colNames).")
+                        ON T.po_number = S.po_number
+                        WHEN MATCHED THEN UPDATE SET ".implode(',', $updatePairs).", T.updated_at = GETDATE()
+                        WHEN NOT MATCHED THEN INSERT (".implode(',', $colNames).", created_at, updated_at) 
+                        VALUES (".implode(',', $colNames).", GETDATE(), GETDATE());";
+
+                $pdo->prepare($sql)->execute($bindParams);
                 $successCount++;
             }
-            echo json_encode(['success' => true, 'message' => "Imported $successCount records."]);
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "นำเข้าสำเร็จ $successCount รายการ"]);
             break;
 
         case 'update_cell':
@@ -173,12 +205,12 @@ try {
             } else {
                  echo json_encode(['success' => false, 'message' => 'Invalid Request']);
             }
-            // -----------------------
             break;
              
         default: echo json_encode(['success' => false]);
     }
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

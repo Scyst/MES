@@ -102,9 +102,6 @@ try {
     // ------------------------------------------------------------------
     // 2. IMPORT (แก้ไข Logic Inspection Status)
     // ------------------------------------------------------------------
-    // ------------------------------------------------------------------
-    // IMPORT (ฉบับแก้: วันที่เฉยๆ ไม่นับว่าเสร็จ ต้อง Yes/Done เท่านั้น)
-    // ------------------------------------------------------------------
     if ($action === 'import') {
         if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
         
@@ -150,25 +147,34 @@ try {
         $sql = "MERGE INTO $table AS T 
                 USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
                 AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder)
-                ON T.po_number = S.po AND T.sku = S.sku
+                ON T.po_number = S.po -- ใช้แค่ PO Number เป็นตัวเชื่อมข้อมูล
                 WHEN MATCHED THEN UPDATE SET 
-                    description=S.descr, color=S.color, quantity=S.qty, dc_location=S.dc,
-                    loading_week=S.lweek, shipping_week=S.sweek,
-                    production_date=S.pdate, is_production_done=S.pdone,
-                    loading_date=S.ldate, is_loading_done=S.ldone,
-                    ticket_number=S.ticket, inspection_date=S.idate, inspection_status=S.istat, 
-                    remark=S.rem, is_confirmed=S.iconf,
-                    custom_order=S.corder,
-                    updated_at=GETDATE()
+                    T.sku = S.sku,
+                    T.description = S.descr, 
+                    T.color = S.color, 
+                    T.quantity = S.qty, -- จะใช้ค่า $qty ที่ดัก null/0 ไว้แล้ว
+                    T.dc_location = S.dc,
+                    T.loading_week = S.lweek, 
+                    T.shipping_week = S.sweek,
+                    T.production_date = S.pdate, 
+                    T.is_production_done = S.pdone,
+                    T.loading_date = S.ldate, 
+                    T.is_loading_done = S.ldone,
+                    T.ticket_number = S.ticket, 
+                    T.inspection_date = S.idate, 
+                    T.inspection_status = S.istat, 
+                    T.remark = S.rem, 
+                    T.is_confirmed = S.iconf,
+                    T.updated_at = GETDATE()
                 WHEN NOT MATCHED THEN INSERT 
                     (order_date, description, color, sku, po_number, quantity, dc_location, 
-                     loading_week, shipping_week, production_date, is_production_done, 
-                     loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order)
+                    loading_week, shipping_week, production_date, is_production_done, 
+                    loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order)
                 VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder);";
-        
-        $stmt = $pdo->prepare($sql);
 
+        $stmt = $pdo->prepare($sql);
         $csv->next(); 
+
         while (!$csv->eof()) {
             $row = $csv->current();
             $csv->next();
@@ -176,51 +182,48 @@ try {
 
             $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
             $sku = $getCol($row, ['sku', 'item code', 'material']);
-            
             if (empty($po)) { $skippedCount++; continue; }
 
             try {
                 $currentOrder++; 
 
-                // 1. อ่านค่าจาก Excel
+                // --- [Logic การอ่านค่าและสถานะคงเดิม] ---
                 $rawPrdDate = $getCol($row, ['prd completed date', 'production date', 'pdate']);
                 $rawLoadDate = $getCol($row, ['load', 'loading date', 'ldate']);
                 $rawInspDate = $getCol($row, ['inspection date', 'insp date']);
-
-                $txtPrdStatus = $getCol($row, ['production status', 'prd status', 'production done?', 'is_production_done']);
-                $txtLoadStatus = $getCol($row, ['loading status', 'load status', 'loading done?', 'is_loading_done']);
+                $txtPrdStatus = $getCol($row, ['production status', 'prd status']);
+                $txtLoadStatus = $getCol($row, ['loading status', 'load status']);
                 $txtConfirm = $getCol($row, ['confirmed', 'is_confirmed']);
-                $txtInspStatus = $getCol($row, ['inspection status', 'insp status', 'inspection result']);
+                $txtInspStatus = $getCol($row, ['inspection status', 'inspection result']);
 
-                // 2. Logic ใหม่: ติ๊กถูกเมื่อเจอคำว่า Yes/Done เท่านั้น (วันที่ไม่เกี่ยวแล้ว)
-                // $isYes จะ return false ถ้าเจอคำว่า "No", "Wait" หรือ "วันที่ 25/12/2026"
-                // แต่จะ return true ถ้าเจอ "Yes", "Done", "Shipped", "1"
-                
-                // เช็คทั้งช่อง Status และช่อง Date (เผื่อเผลอพิมพ์ Done ใส่ช่อง Date)
                 $prdStatus = ($isYes($txtPrdStatus) || $isYes($rawPrdDate)) ? 1 : 0;
                 $loadStatus = ($isYes($txtLoadStatus) || $isYes($rawLoadDate)) ? 1 : 0;
                 $isConf = $isYes($txtConfirm) ? 1 : 0;
 
-                // 3. Inspection Logic: เอาตาม Text เท่านั้น
-                // ถ้าใน Excel พิมพ์ Yes -> แปลงเป็น Pass
-                // ถ้าพิมพ์วันที่เฉยๆ -> ปล่อยเป็นค่าเดิม (ไม่บังคับ Pass)
                 $finalInspStatus = $txtInspStatus; 
                 if ($isYes($txtInspStatus)) $finalInspStatus = 'Pass';
 
-                $qty = intval(str_replace(',', '', $getCol($row, ['qty', 'quantity', 'amount'])));
+                // --- [FIXED: ย้ายมาไว้ใน Loop และแก้ Logic Qty] ---
+                $rawQty = $getCol($row, ['qty', 'quantity', 'amount']);
+                $qty = null; 
+                if ($rawQty !== '') {
+                    $cleanQty = str_replace(',', '', $rawQty);
+                    if (is_numeric($cleanQty)) {
+                        $qty = (float)$cleanQty; // เก็บ 0 เป็น 0, เก็บเลขเป็นเลข
+                    }
+                }
+                // --------------------------------------------------
 
                 $stmt->execute([
                     $fnDate($getCol($row, ['order date', 'date', 'odate'])),
                     $getCol($row, ['description', 'desc']),
                     $getCol($row, ['color', 'colour']),
-                    $sku, $po, $qty,
+                    $sku, $po, $qty, // ใช้ $qty ที่ดักแล้ว
                     $getCol($row, ['dc', 'dc location']),
                     $getCol($row, ['original loading week', 'loading week']), 
                     $getCol($row, ['original shipping week', 'shipping week']),
-                    
-                    $fnDate($rawPrdDate), $prdStatus,  // บันทึกวันที่ตามจริง, สถานะตามคำสั่ง Yes/No
+                    $fnDate($rawPrdDate), $prdStatus,
                     $fnDate($rawLoadDate), $loadStatus, 
-                    
                     $getCol($row, ['ticket number', 'ticket']),
                     $fnDate($rawInspDate), 
                     $finalInspStatus, 

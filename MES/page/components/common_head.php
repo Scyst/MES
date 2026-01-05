@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="../components/css/style.css?v=<?php echo filemtime(__DIR__ . '/../components/css/style.css'); ?>">
 <link rel="stylesheet" href="../components/css/mobile.css?v=<?php echo filemtime(__DIR__ . '/../components/css/mobile.css'); ?>">
 <link rel="stylesheet" href="../components/css/fonts.css?v=<?php echo filemtime(__DIR__ . '/../components/css/fonts.css'); ?>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <script src="../components/js/sidebar.js?v=<?php echo filemtime(__DIR__ . '/js/sidebar.js'); ?>" defer></script>
 <script src="../components/js/theme-switcher.js?v=<?php echo filemtime(__DIR__ . '/js/theme-switcher.js'); ?>" defer></script>
@@ -35,4 +36,5 @@
 <script src="../../utils/libs/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>

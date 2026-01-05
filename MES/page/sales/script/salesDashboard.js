@@ -335,7 +335,7 @@ function renderTable(searchTerm) {
             <td class="font-monospace text-center">${item.sku || '-'}</td>
             <td class="long-text-cell" title="${item.description}">${item.description || '-'}</td>
             <td class="text-center">${item.color || '-'}</td>
-            <td class="text-center fw-bold font-monospace editable" ondblclick="makeEditable(this, ${item.id}, 'quantity', '${item.quantity}', 'number')">${item.quantity}</td>
+            <td class="text-center fw-bold font-monospace editable" ondblclick="makeEditable(this, ${item.id}, 'quantity', '${item.quantity ?? 0}', 'number')">${(item.quantity !== null && item.quantity !== undefined) ? parseInt(item.quantity).toLocaleString() : 0}</td>
             
             <td ${editAttr('dc_location', item.dc_location)}>${item.dc_location || '-'}</td>
             <td class="text-center" ${editAttr('loading_week', item.loading_week)}>${item.loading_week || '-'}</td>
