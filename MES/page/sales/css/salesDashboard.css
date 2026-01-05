@@ -280,3 +280,26 @@ tr.row-confirmed td.sticky-col-left-3 {
         width: 20%;
     }
 }
+
+.kpi-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+.kpi-card.active {
+    border-left: 4px solid #0d6efd; /* หรือสีตามสถานะ */
+    background-color: #f8f9fa;
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+.col-lg-20-percent {
+    flex: 0 0 auto;
+    width: 20%;
+}
+@media (max-width: 992px) {
+    .col-lg-20-percent { width: 33.33%; }
+}
+@media (max-width: 576px) {
+    .col-lg-20-percent { width: 50%; }
+}
