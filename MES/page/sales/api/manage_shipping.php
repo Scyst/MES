@@ -1,5 +1,7 @@
 <?php
 // page/sales/api/manage_shipping.php
+// [UPDATED] - Exclude Remark from UPDATE in MERGE statement
+
 define('ALLOW_GUEST_ACCESS', true);
 
 header('Content-Type: application/json');
@@ -19,9 +21,8 @@ $itemsTable = defined('ITEMS_TABLE') ? ITEMS_TABLE : 'ITEMS';
 
 $action = $_REQUEST['action'] ?? 'read';
 
-// ตรวจสอบสิทธิ์ Customer (ห้ามแก้ไข)
 $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'CUSTOMER');
-$restrictedActions = ['update_cell', 'update_check', 'import_json']; // Export & Read อนุญาต
+$restrictedActions = ['update_cell', 'update_check', 'import_json']; 
 
 if ($isCustomer && in_array($action, $restrictedActions)) {
     echo json_encode(['success' => false, 'message' => 'Access Denied (Read Only)']);
@@ -34,23 +35,20 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    // Date Helper (Robust Version)
     $fnDate = function ($val) {
         if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
-        // Excel Serial
-        if (is_numeric($val) && $val > 20000) return gmdate("Y-m-d", ($val - 25569) * 86400);
-        // Standard Formats
         $val = explode(' ', $val)[0]; 
+        if (is_numeric($val) && $val > 20000) return gmdate("Y-m-d", ($val - 25569) * 86400);
+        $ts = strtotime($val);
+        if ($ts !== false) return date('Y-m-d', $ts);
         $cleanVal = str_replace('/', '-', $val);
         $ts = strtotime($cleanVal);
-        return ($ts) ? date('Y-m-d', $ts) : null;
+        if ($ts !== false) return date('Y-m-d', $ts);
+        return null; 
     };
 
     switch ($action) {
-        // ------------------------------------------------------------------
-        // 1. READ
-        // ------------------------------------------------------------------
         case 'read':
             $sql = "SELECT s.*, 
                     (COALESCE(i.Price_USD, i.StandardPrice, 0) * ISNULL(s.quantity, 0)) as price 
@@ -58,24 +56,19 @@ try {
                     LEFT JOIN $itemsTable i ON s.sku = i.sku 
                     WHERE 1=1 
                     ORDER BY s.snc_load_day ASC, s.id DESC";
-            
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ------------------------------------------------------------------
-        // 2. EXPORT TO CSV
-        // ------------------------------------------------------------------
         case 'export':
             header('Content-Type: text/csv; charset=utf-8');
             header('Content-Disposition: attachment; filename=Shipping_Schedule_Export_' . date('Y-m-d') . '.csv');
-            
             $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel Thai
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); 
 
-            // Header Row
+            // Header Row (ตรงนี้เป็นแค่ Export ไม่กระทบหน้าเว็บ)
             fputcsv($output, [
                 'Seq', 'PO Number', 'SKU', 'Description', 'Quantity',
                 'Load Status', 'Prod Status',
@@ -108,17 +101,12 @@ try {
             fclose($output);
             exit;
 
-        // ------------------------------------------------------------------
-        // 3. IMPORT JSON
-        // ------------------------------------------------------------------
         case 'import_json':
-            // (เหมือนเดิมเป๊ะ ใช้โค้ดที่คุณส่งมาล่าสุดได้เลยครับ มันสมบูรณ์แล้ว)
             $rows = json_decode($_POST['data'] ?? '[]', true);
             if (empty($rows)) throw new Exception("ไม่พบข้อมูลที่จะนำเข้า");
 
             $successCount = 0; $skipCount = 0; $errors = [];
 
-            // Mapping (เหมือนเดิม)
             $columnMap = [
                 'shippingweek' => 'shipping_week', 'status' => 'shipping_customer_status',
                 'inspecttype' => 'inspect_type', 'inspectionresult' => 'inspection_result',
@@ -177,7 +165,11 @@ try {
                     foreach ($fieldsToSet as $col => $val) {
                         $colNames[] = $col;
                         $bindParams[] = $val;
-                        $updatePairs[] = "T.$col = S.$col";
+                        
+                        // ★★★ [KEY CHANGE] ไม่ update remark ของเก่า ★★★
+                        if ($col !== 'remark') {
+                            $updatePairs[] = "T.$col = S.$col";
+                        }
                     }
 
                     if (count($colNames) <= 1) continue;
@@ -200,9 +192,6 @@ try {
             echo json_encode(['success' => true, 'success_count' => $successCount, 'skipped_count' => $skipCount, 'errors' => $errors]);
             break;
 
-        // ------------------------------------------------------------------
-        // 4. UPDATE CELL & CHECK
-        // ------------------------------------------------------------------
         case 'update_cell':
             $id = $_POST['id'] ?? null;
             $field = $_POST['field'] ?? null;

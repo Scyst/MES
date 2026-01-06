@@ -24,17 +24,16 @@ try {
     }
 
     $fnDate = function($val) {
-        if (empty($val)) return null;
+        if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
-        if (is_numeric($val)) return gmdate("Y-m-d", ($val - 25569) * 86400);
         $val = explode(' ', $val)[0]; 
-        $d = DateTime::createFromFormat('d/m/Y', $val);
-        if ($d && $d->format('d/m/Y') == $val) return $d->format('Y-m-d');
-        $d = DateTime::createFromFormat('j/n/Y', $val);
-        if ($d) return $d->format('Y-m-d');
-        $valClean = str_replace('/', '-', $val);
-        $ts = strtotime($valClean);
-        return $ts ? date('Y-m-d', $ts) : null;
+        if (is_numeric($val) && $val > 20000) return gmdate("Y-m-d", ($val - 25569) * 86400);
+        $ts = strtotime($val);
+        if ($ts !== false) return date('Y-m-d', $ts);
+        $cleanVal = str_replace('/', '-', $val);
+        $ts = strtotime($cleanVal);
+        if ($ts !== false) return date('Y-m-d', $ts);
+        return null; 
     };
 
     $isYes = function($val) {
@@ -43,9 +42,7 @@ try {
         return in_array($v, ['yes', 'done', 'shipped', 'ok', '1', 'true', 'y', 'pass']);
     };
 
-    // ------------------------------------------------------------------
-    // 1. READ (PIPELINE LOGIC)
-    // ------------------------------------------------------------------
+    // 1. READ
     if ($action === 'read') {
         $filter = $_GET['status'] ?? 'ACTIVE'; 
         
@@ -66,24 +63,10 @@ try {
                 LEFT JOIN $itemsTable i ON s.sku = i.sku 
                 WHERE 1=1";
         
-        // --- [PIPELINE FILTER LOGIC] ---
-        // 1. ACTIVE: งานที่ยังไม่จบ (ยังไม่ Confirm และยังไม่โหลดเสร็จ)
-        if ($filter === 'ACTIVE') {
-            $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
-        }
-        // 2. WAIT_PROD: ยังไม่ผลิต
-        if ($filter === 'WAIT_PROD') {
-            $sql .= " AND ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
-        }
-        // 3. WAIT_LOAD (Ready to Load): ผลิตเสร็จ(1) แต่ยังไม่โหลด(0)
-        if ($filter === 'WAIT_LOAD') {
-            $sql .= " AND is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
-        }
-        // 4. PROD_DONE (เปลี่ยนเป็น SHIPPED/LOADED): โหลดเสร็จแล้ว
-        if ($filter === 'PROD_DONE') {
-            $sql .= " AND is_loading_done = 1"; // ไม่สน Confirmed เพราะส่งไปแล้วถือว่าเป็นผลงาน
-        }
-        // 5. ALL: ทั้งหมด
+        if ($filter === 'ACTIVE') $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
+        if ($filter === 'WAIT_PROD') $sql .= " AND ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+        if ($filter === 'WAIT_LOAD') $sql .= " AND is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+        if ($filter === 'PROD_DONE') $sql .= " AND is_loading_done = 1"; 
         
         $sql .= " ORDER BY ISNULL(custom_order, 999999) ASC, id DESC";
         
@@ -91,22 +74,12 @@ try {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- [PIPELINE SUMMARY LOGIC] ---
         $sumSql = "SELECT 
                    COUNT(*) as total_all,
-                   
-                   -- Active Pipeline: ยังไม่จบกระบวนการ (ยังไม่โหลด & ยังไม่ Confirm)
                    SUM(CASE WHEN ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as total_active,
-                   
-                   -- Stage 1: Wait Production
                    SUM(CASE WHEN ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_prod,
-                   
-                   -- Stage 2: Ready to Load (ผลิตเสร็จแล้ว แต่รอโหลด)
                    SUM(CASE WHEN is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_load,
-                   
-                   -- Stage 3: Shipped / Loaded (จบงานขนส่ง) -> ใช้ตัวแปร prod_done เดิมเพื่อไม่แก้ Frontend
                    SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as prod_done
-                   
                    FROM $table";
                     
         $summary = $pdo->query($sumSql)->fetch(PDO::FETCH_ASSOC);
@@ -115,9 +88,7 @@ try {
         exit;
     }
 
-    // ------------------------------------------------------------------
-    // 2. IMPORT (Fixed Logic: ใช้ Foreach แก้ปัญหาบรรทัดสุดท้ายหาย)
-    // ------------------------------------------------------------------
+    // 2. IMPORT (Fixed Sort Order Logic)
     if ($action === 'import') {
         if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
         
@@ -138,7 +109,6 @@ try {
         $pdo->beginTransaction();
         $count = 0; $skippedCount = 0; $errorLogs = [];
         
-        // [FIXED] ใช้ Loop แบบนี้เพื่อจับ Header ก่อน
         $csv->rewind();
         $headers = $csv->current(); 
         
@@ -158,10 +128,15 @@ try {
             return '';
         };
 
+        // หาเลข Custom Order สูงสุดเพื่อรันต่อ (เผื่อกรณีไฟล์มาไม่ครบ)
         $sqlMax = "SELECT MAX(custom_order) FROM $table";
         $maxOrder = $pdo->query($sqlMax)->fetchColumn();
         $currentOrder = ($maxOrder) ? (int)$maxOrder : 0; 
+        
+        // ถ้าต้องการ Reset ลำดับใหม่หมดตามไฟล์ Excel ให้ Uncomment บรรทัดล่างนี้ครับ
+        // $currentOrder = 0; 
 
+        // [FIXED] เพิ่ม T.custom_order = S.corder ในส่วน UPDATE
         $sql = "MERGE INTO $table AS T 
                 USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
                 AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder)
@@ -183,6 +158,7 @@ try {
                     T.inspection_status = S.istat, 
                     T.remark = S.rem, 
                     T.is_confirmed = S.iconf,
+                    T.custom_order = S.corder, -- [UPDATED] อัปเดตลำดับตามไฟล์ Excel
                     T.updated_at = GETDATE()
                 WHEN NOT MATCHED THEN INSERT 
                     (order_date, description, color, sku, po_number, quantity, dc_location, 
@@ -192,17 +168,14 @@ try {
 
         $stmt = $pdo->prepare($sql);
 
-        // [FIXED] เปลี่ยนเป็น foreach เพื่อแก้ปัญหาบรรทัดสุดท้ายหาย
         foreach ($csv as $index => $row) {
-            if ($index === 0) continue; // ข้าม Header (เพราะเราอ่านไปแล้ว)
-            if (empty($row) || count($row) < 2) continue; // ข้ามบรรทัดว่าง
+            if ($index === 0) continue; 
+            if (empty($row) || count($row) < 2) continue; 
 
             $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
             $sku = $getCol($row, ['sku', 'item code', 'material']);
             
-            // ถ้าไม่มี PO ก็ข้าม
             if (empty($po)) { 
-                // เพิ่มเงื่อนไขเช็คว่าไม่ใช่บรรทัดว่างจริงๆ ถึงจะนับว่า Skip
                 if (implode('', $row) !== '') $skippedCount++; 
                 continue; 
             }
@@ -243,9 +216,9 @@ try {
                     $getCol($row, ['original loading week', 'loading week']), 
                     $getCol($row, ['original shipping week', 'shipping week']),
                     $fnDate($rawPrdDate), $prdStatus,
-                    $fnDate($rawLoadDate), $loadStatus, 
+                    $fnDate($rawLoadDate), $loadStatus,
                     $getCol($row, ['ticket number', 'ticket']),
-                    $fnDate($rawInspDate), 
+                    $fnDate($rawInspDate),
                     $finalInspStatus, 
                     $getCol($row, ['remark', 'comment']),
                     $isConf, $currentOrder
@@ -264,9 +237,7 @@ try {
         exit;
     }
 
-    // ------------------------------------------------------------------
-    // REORDER & UPDATE
-    // ------------------------------------------------------------------
+    // 3. REORDER & UPDATE
     if ($action === 'reorder_items') {
         $in = json_decode(file_get_contents('php://input'), true);
         if (!empty($in['orderedIds'])) {
@@ -289,7 +260,6 @@ try {
         } else {
             $col = ($in['field']=='prod')?'is_production_done':(($in['field']=='load')?'is_loading_done':(($in['field']=='confirm')?'is_confirmed':''));
             if($col) {
-                // Auto Date Logic
                 if ($col === 'is_loading_done' && $val == 1) {
                     $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
                 } else if ($col === 'is_production_done' && $val == 1) {
@@ -327,9 +297,7 @@ try {
         exit;
     }
 
-    // ------------------------------------------------------------------
     // 4. EXPORT
-    // ------------------------------------------------------------------
     if ($action === 'export') {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=Sales_Plan_Export.csv');
@@ -374,13 +342,10 @@ try {
                 $row['po_number'], $row['sku'], $row['description'], $row['color'], $qty, $row['dc_location'],
                 $dt($row['order_date']), $row['loading_week'], $row['shipping_week'],
                 $dt($row['production_date']), $dt($row['loading_date']), $dt($row['inspection_date']),
-                
                 $yn($row['is_production_done']), 
                 $yn($row['is_loading_done']),    
                 $yn($row['is_confirmed']),       
-                
                 $isInspPass($row['inspection_status']), 
-                
                 $row['ticket_number'], 
                 number_format($totalUSD, 2, '.', ''), 
                 number_format($totalTHB, 2, '.', ''), 

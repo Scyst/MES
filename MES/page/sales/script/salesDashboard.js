@@ -57,15 +57,14 @@ function getDateObj(dateStr) {
     return d;
 }
 
-function formatDate(d) {
-    if(!d) return '';
-    const date = new Date(d);
-    // return date.toLocaleDateString('en-GB'); // dd/mm/yyyy
-    // หรือใช้รูปแบบสั้นๆ
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+function formatDate(dateStr) {
+    if (!dateStr || dateStr === '' || dateStr === '0000-00-00') {
+        return '<span class="text-muted fw-light">-</span>'; 
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    
+    return new Intl.DateTimeFormat('en-GB').format(d);
 }
 
 function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
@@ -129,13 +128,14 @@ function updateKPI(summary) {
     setVal('kpi-total-all', summary.total_all); 
 }
 
-// --- Table Rendering (The Core Logic) ---
-
+// -------------------------------------------------------------------------
+// Main Function: Render Table
+// -------------------------------------------------------------------------
 function renderTable(searchTerm) {
     const tbody = document.getElementById('tableBody');
     if (!tbody) return;
 
-    // 1. Filtering
+    // 1. Filtering (เหมือนเดิม)
     const keywords = searchTerm ? searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0) : [];
     let filtered = allData.filter(item => {
         if (keywords.length === 0) return true;
@@ -143,7 +143,7 @@ function renderTable(searchTerm) {
         return keywords.every(k => text.includes(k));
     });
 
-    // 2. Sorting
+    // 2. Sorting (เหมือนเดิม)
     if (sortState.length > 0) {
         isManualSortMode = false;
         if(sortableInstance) sortableInstance.option("disabled", true);
@@ -169,7 +169,6 @@ function renderTable(searchTerm) {
         });
     } else {
         isManualSortMode = true;
-        // Default Sort: custom_order asc, id desc
         filtered.sort((a, b) => {
             let ordA = parseInt(a.custom_order) || 999999;
             let ordB = parseInt(b.custom_order) || 999999;
@@ -179,7 +178,7 @@ function renderTable(searchTerm) {
         if(sortableInstance) sortableInstance.option("disabled", false);
     }
 
-    // 3. Summary Calculation
+    // 3. Summary (เหมือนเดิม)
     const totalContainers = filtered.length;
     let totalQty = 0;
     let totalAmountTHB = 0;
@@ -202,6 +201,13 @@ function renderTable(searchTerm) {
     const todayDate = new Date();
     todayDate.setHours(0,0,0,0);
 
+    // ★ Helper สำหรับแสดงข้อความ: ถ้าว่างให้โชว์ขีด
+    const showTxt = (val) => {
+        return (val && val.toString().trim() !== '') 
+            ? val 
+            : '<span class="text-muted fw-light">-</span>';
+    };
+
     tbody.innerHTML = filtered.map(item => {
         // -- Logic Helper --
         const isPrd = item.is_production_done == 1;
@@ -216,10 +222,9 @@ function renderTable(searchTerm) {
         const loadDateObj = getDateObj(item.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
 
-        // -- Style Classes --
-        const stickyClass = 'bg-white'; // Always white for sticky
+        const stickyClass = 'bg-white';
         
-        // -- PO Number Display (with Delay Alert) --
+        // -- PO Number --
         let poHtml = '';
         if (isDelay) {
             poHtml = `<div class="d-flex align-items-center text-danger" title="Late Delivery">
@@ -230,20 +235,17 @@ function renderTable(searchTerm) {
             poHtml = `<span class="text-primary font-monospace">${item.po_number}</span>`;
         }
 
-        // -- Minimal Icon Buttons --
+        // -- Icon Buttons --
         const btnPrdClass = isPrd ? 'status-done' : 'status-wait';
         const btnPrdIcon = isPrd ? '<i class="fas fa-check"></i>' : '<i class="fas fa-industry"></i>';
-        
         const btnLoadClass = isLoad ? 'status-done' : 'status-wait';
         const btnLoadIcon = isLoad ? '<i class="fas fa-check"></i>' : '<i class="fas fa-truck-loading"></i>';
-
         const btnInspClass = isInsp ? 'status-done' : 'status-wait';
         const btnInspIcon = isInsp ? '<i class="fas fa-check"></i>' : '<i class="fas fa-microscope"></i>';
 
-        // -- Price --
         const priceTHB = (parseFloat(item.price || 0) * currentExchangeRate).toFixed(2);
 
-        // -- Row Construction (Matches SalesDashboard.css columns) --
+        // ★ ใช้ showTxt() ในทุกช่องที่เป็น Text เพื่อใส่ขีด
         return `<tr data-id="${item.id}">
             
             <td class="text-center drag-handle sticky-col-left-1 ${stickyClass}" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'};">
@@ -260,14 +262,14 @@ function renderTable(searchTerm) {
                 </div>
             </td>
 
-            <td class="font-monospace text-center">${item.sku || '-'}</td>
-            <td class="text-start" style="max-width: 200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${item.description}">${item.description || '-'}</td>
-            <td class="text-center">${item.color || '-'}</td>
+            <td class="font-monospace text-center">${showTxt(item.sku)}</td>
+            <td class="text-start" style="max-width: 200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${item.description}">${showTxt(item.description)}</td>
+            <td class="text-center">${showTxt(item.color)}</td>
             <td class="text-center fw-bold font-monospace editable" ondblclick="makeEditable(this, ${item.id}, 'quantity', '${item.quantity}', 'number')">${parseInt(item.quantity||0).toLocaleString()}</td>
             
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'dc_location', '${item.dc_location}')">${item.dc_location || '-'}</td>
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'loading_week', '${item.loading_week}')">${item.loading_week || '-'}</td>
-            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'shipping_week', '${item.shipping_week}')">${item.shipping_week || '-'}</td>
+            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'dc_location', '${item.dc_location}')">${showTxt(item.dc_location)}</td>
+            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'loading_week', '${item.loading_week}')">${showTxt(item.loading_week)}</td>
+            <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'shipping_week', '${item.shipping_week}')">${showTxt(item.shipping_week)}</td>
             
             <td class="text-center bg-warning bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'production_date', '${item.production_date}', 'date')">${formatDate(item.production_date)}</td>
             <td class="text-center bg-warning bg-opacity-10">
@@ -290,9 +292,9 @@ function renderTable(searchTerm) {
                 </button>
             </td>
 
-            <td class="font-monospace text-primary text-center editable" ondblclick="makeEditable(this, ${item.id}, 'ticket_number', '${item.ticket_number}')">${item.ticket_number || '-'}</td>
+            <td class="font-monospace text-primary text-center editable" ondblclick="makeEditable(this, ${item.id}, 'ticket_number', '${item.ticket_number}')">${showTxt(item.ticket_number)}</td>
             <td class="text-end fw-bold text-success font-monospace">฿${parseFloat(priceTHB).toLocaleString()}</td>
-            <td class="text-start text-muted small editable" ondblclick="makeEditable(this, ${item.id}, 'remark', '${item.remark}')">${item.remark || '-'}</td>
+            <td class="text-start text-muted small editable" ondblclick="makeEditable(this, ${item.id}, 'remark', '${item.remark}')">${showTxt(item.remark)}</td>
         </tr>`;
     }).join('');
 

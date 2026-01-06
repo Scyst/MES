@@ -197,10 +197,12 @@ $pageHelpId = "helpModal";
                                     <th class="sticky-col-left-1">Load</th>
                                     <th class="sticky-col-left-2">Prod</th>
                                     <th class="sticky-col-left-3">PO Number</th>
+                                    
+                                    <th>Remark</th> 
+                                    
                                     <th>Week</th>
                                     <th>Status</th>
-                                    <th>Inspect Type</th>
-                                    <th>Inspect Res</th>
+                                    
                                     <th>SNC Load Day / Time</th>
                                     <th>DC</th>
                                     <th>SKU</th>
@@ -222,7 +224,10 @@ $pageHelpId = "helpModal";
                                     <th>Pickup Date</th>
                                     <th>Return Date</th>
                                     <th style="background-color: rgb(255 249 230)">ETD</th>
-                                    <th>Remark</th>
+                                    
+                                    <th>Inspect Type</th>
+                                    <th>Inspect Res</th>
+
                                     <th class="sticky-col-right-2 text-danger">Cutoff Date</th>
                                     <th class="sticky-col-right-1 text-danger">Cutoff Time</th>
                                 </tr>
