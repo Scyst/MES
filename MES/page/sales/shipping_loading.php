@@ -1,39 +1,39 @@
 <?php
 // page/sales/shipping_loading.php
+define('ALLOW_GUEST_ACCESS', true);
 require_once __DIR__ . '/../components/init.php';
+
+// --- Auth Logic ---
+$isStaff = isset($_SESSION['user']) && ($_SESSION['user']['role'] !== 'CUSTOMER');
+$isGuestAuth = isset($_SESSION['guest_access']) && $_SESSION['guest_access'] === true;
+$isLocked = !isset($_SESSION['user']) && !$isGuestAuth; 
+$isCustomer = (!$isStaff); 
 
 $pageTitle = "Shipping Schedule Control";
 $pageIcon = "fas fa-truck-loading"; 
 $pageHeaderTitle = "Shipping Schedule";
 $pageHeaderSubtitle = "ตารางแผนการโหลดตู้และสถานะขนส่ง";
-
-$isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'CUSTOMER');
+$pageHelpId = "helpModal";
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?> 
-    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
     
+    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <?php if ($isLocked): ?>
     <style>
-        /* สไตล์ CSS ของคุณ (คงเดิม) */
-        .table-responsive-custom { height: calc(100vh - 200px); overflow: auto; position: relative; }
-        .editable-input { border: 1px solid transparent; width: 100%; background: transparent; text-align: center; font-size: 0.85rem; padding: 2px; border-radius: 4px; }
-        .editable-input:not([readonly]):hover { border: 1px solid #ced4da; background: #fff; }
-        .editable-input:not([readonly]):focus { border: 1px solid #86b7fe; background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(13,110,253,.25); }
-        .status-badge { font-size: 0.7rem; width: 100%; padding: 4px; border-radius: 12px; border:none; font-weight: bold; text-transform: uppercase; cursor: pointer; }
-        .bg-pending { background-color: #eee; color: #555; border: 1px solid #ccc; }
-        .bg-success-custom { background-color: #198754; color: #fff; }
-        th.sticky-col-left-1, td.sticky-col-left-1 { left: 0; z-index: 10; position: sticky; background-color: inherit; }
-        th.sticky-col-left-2, td.sticky-col-left-2 { left: 60px; z-index: 10; position: sticky; background-color: inherit; }
-        th.sticky-col-left-3, td.sticky-col-left-3 { left: 120px; z-index: 10; position: sticky; background-color: inherit; border-right: 2px solid #dee2e6; }
-        th.sticky-col-right-2, td.sticky-col-right-2 { right: 80px; z-index: 10; position: sticky; background-color: inherit; border-left: 2px solid #dee2e6; }
-        th.sticky-col-right-1, td.sticky-col-right-1 { right: 0; z-index: 10; position: sticky; background-color: inherit; }
-        thead th { position: sticky; top: 0; z-index: 20; background-color: #f8f9fa; }
-        thead th.sticky-col-left-1, thead th.sticky-col-left-2, thead th.sticky-col-left-3,
-        thead th.sticky-col-right-1, thead th.sticky-col-right-2 { z-index: 30; }
+        body { overflow: hidden; }
+        .page-container, header, .mobile-menu, .docking-sidebar { 
+            filter: blur(8px); 
+            pointer-events: none; 
+            user-select: none;
+        }
     </style>
+    <?php endif; ?>
 </head>
 <body class="layout-top-header">
 
@@ -42,6 +42,39 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         <h5 class="fw-bold text-white">Processing...</h5>
     </div>
 
+    <?php if ($isLocked): ?>
+    <div class="modal fade show" id="gatekeeperModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true" style="display: block; background-color: #f8f9fa; z-index: 10000;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-5 text-center">
+                    <div class="mb-4">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="fas fa-lock fa-3x"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-2">Restricted Access</h3>
+                    <p class="text-muted mb-4">กรุณากรอกรหัสผ่านเพื่อเข้าดูตาราง Shipping</p>
+                    
+                    <form onsubmit="event.preventDefault(); verifyPasscode();">
+                        <div class="mb-3">
+                            <input type="password" id="guestPasscode" class="form-control form-control-lg text-center" placeholder="Enter Passcode" required autofocus>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold shadow-sm">
+                            เข้าสู่ระบบ <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </form>
+                    <div id="passcodeError" class="text-danger mt-3 small" style="display:none;">
+                        <i class="fas fa-exclamation-circle me-1"></i> รหัสผ่านไม่ถูกต้อง
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center bg-light border-0">
+                    <a href="../../auth/login_form.php" class="small text-decoration-none text-muted">สำหรับพนักงาน (Staff Login)</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php include('../components/php/top_header.php'); ?>
     <?php include('../components/php/mobile_menu.php'); ?>
     <?php include('../components/php/docking_sidebar.php'); ?>
@@ -49,82 +82,74 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
     <div class="page-container">
         <div id="main-content">
             <div class="content-wrapper pt-3">
+                
                 <div class="row g-2 mb-3">
                     <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card active" onclick="filterByStatus('ACTIVE')" id="card-active" style="cursor:pointer;">
+                        <div class="card shadow-sm kpi-card border-danger h-100" id="defaultCard" onclick="filterTable('TODAY')" style="cursor:pointer;">
+                            <div class="card-body p-3" style="background: linear-gradient(to bottom, #ffffff 80%, #fbecec 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-danger small fw-bold mb-1"><i class="fas fa-exclamation-circle me-1"></i>Today & Backlog</div>
+                                        <h2 class="text-danger fw-bold mb-0" id="kpi-today">0</h2>
+                                        <div class="small text-danger fw-bold mt-1" id="kpi-backlog-sub" style="font-size: 0.75rem;">Inc. 0 Delays</div>
+                                    </div>
+                                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle"><i class="fas fa-calendar-day fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-20-percent">
+                        <div class="card shadow-sm kpi-card border-info h-100" onclick="filterTable('7DAYS')" style="cursor:pointer;">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Active (Wait Load)</div>
+                                        <div class="text-uppercase text-info small fw-bold mb-1">Next 7 Days</div>
+                                        <h2 class="text-info fw-bold mb-0" id="kpi-7days">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">Upcoming Plan</div>
+                                    </div>
+                                    <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle"><i class="fas fa-calendar-week fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-20-percent">
+                        <div class="card shadow-sm kpi-card border-warning h-100" onclick="filterTable('WAIT_LOADING')" style="cursor:pointer;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-warning small fw-bold mb-1">Wait Loading</div>
+                                        <h2 class="text-warning fw-bold mb-0" id="kpi-wait-load">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">Ready at Dock</div>
+                                    </div>
+                                    <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle"><i class="fas fa-dolly fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-20-percent">
+                        <div class="card shadow-sm kpi-card border-primary h-100" onclick="filterTable('ACTIVE')" style="cursor:pointer;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-primary small fw-bold mb-1">Total Active</div>
                                         <h2 class="text-primary fw-bold mb-0" id="kpi-active">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">In Progress</div>
                                     </div>
-                                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
-                                        <i class="fas fa-clipboard-list fa-lg"></i>
-                                    </div>
+                                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle"><i class="fas fa-clipboard-list fa-lg"></i></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
                     <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card" onclick="filterByStatus('WAIT_PROD')" id="card-wait-prod" style="cursor:pointer;">
+                        <div class="card shadow-sm kpi-card border-secondary h-100" onclick="filterTable('ALL')" style="cursor:pointer;">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Wait Production</div>
-                                        <h2 class="text-warning fw-bold mb-0" id="kpi-wait-prod">0</h2>
+                                        <div class="text-uppercase text-secondary small fw-bold mb-1">All Orders</div>
+                                        <h2 class="text-secondary fw-bold mb-0" id="kpi-total">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">History</div>
                                     </div>
-                                    <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
-                                        <i class="fas fa-industry fa-lg"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card" onclick="filterByStatus('PROD_DONE')" id="card-prod-done" style="cursor:pointer;">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Production Done</div>
-                                        <h2 class="fw-bold mb-0" style="color: #6610f2;" id="kpi-prod-done">0</h2>
-                                    </div>
-                                    <div class="p-3 rounded-circle" style="background-color: rgba(102, 16, 242, 0.1); color: #6610f2;">
-                                        <i class="fas fa-check-circle fa-lg"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card" onclick="filterByStatus('LOAD_DONE')" id="card-load-done" style="cursor:pointer;">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">Loading Done</div>
-                                        <h2 class="text-success fw-bold mb-0" id="kpi-load-done">0</h2>
-                                    </div>
-                                    <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
-                                        <i class="fas fa-truck-loading fa-lg"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6 col-md-4 col-lg-20-percent">
-                        <div class="card shadow-sm kpi-card" onclick="filterByStatus('ALL')" id="card-all" style="cursor:pointer;">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="text-uppercase text-body-secondary small fw-bold mb-1">All Orders</div>
-                                        <h2 class="text-secondary fw-bold mb-0" id="kpi-total-all">0</h2>
-                                    </div>
-                                    <div class="bg-secondary bg-opacity-10 text-secondary p-3 rounded-circle">
-                                        <i class="fas fa-history fa-lg"></i>
-                                    </div>
+                                    <div class="bg-secondary bg-opacity-10 text-secondary p-3 rounded-circle"><i class="fas fa-history fa-lg"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -139,14 +164,26 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                     <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search PO, SKU, Container...">
                                 </div>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="loadData()"><i class="fas fa-sync-alt"></i></button>
+                                
+                                <?php if (!$isCustomer): ?>
+                                <a href="salesDashboard.php" class="btn btn-outline-secondary btn-sm fw-bold shadow-sm d-flex align-items-center me-2" title="กลับไปหน้า Sales Dashboard">
+                                    <i class="fas fa-clipboard-list me-2"></i> Sales Dashboard
+                                </a>
+                                <?php endif; ?>
+                                
+                                <button class="btn btn-outline-secondary btn-sm" onclick="loadData()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <?php if (!$isCustomer): ?>
                                 <input type="file" id="csv_file" style="display:none;" onchange="uploadFile()">
-                                <button class="btn btn-light btn-sm shadow-sm" onclick="document.getElementById('csv_file').click()">Import</button>
+                                <button class="btn btn-light btn-sm shadow-sm" onclick="document.getElementById('csv_file').click()"><i class="fas fa-file-import me-1"></i> Import</button>
                                 <?php endif; ?>
-                                <button class="btn btn-success btn-sm shadow-sm" onclick="exportToCSV()">Export</button>
+                                <button class="btn btn-success btn-sm shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                                <?php if ($isCustomer): ?>
+                                <button class="btn btn-warning btn-sm shadow-sm text-dark fw-bold" onclick="guestLogout()" title="ออกจากระบบ / ล็อคหน้าจอ">
+                                    <i class="fas fa-lock me-1"></i> Lock
+                                </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -154,7 +191,7 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
 
                 <div class="card shadow-sm border-0 table-card h-100">
                     <div class="table-responsive-custom">
-                        <table class="table table-bordered table-hover mb-0 text-nowrap align-middle">
+                        <table class="table table-bordered table-hover mb-0 text-nowrap align-middle shipping-table">
                             <thead class="bg-light sticky-top">
                                 <tr class="text-center">
                                     <th class="sticky-col-left-1">Load</th>
@@ -164,7 +201,7 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
                                     <th>Status</th>
                                     <th>Inspect Type</th>
                                     <th>Inspect Res</th>
-                                    <th>SNC Load Day</th>
+                                    <th>SNC Load Day / Time</th>
                                     <th>DC</th>
                                     <th>SKU</th>
                                     <th>Booking No.</th>
@@ -224,11 +261,14 @@ $isCustomer = (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] ===
         </div>
     </div>
 
+    <?php include 'components/helpModalShipping.php'; ?>
+
     <script>
         const isCustomer = <?php echo json_encode($isCustomer); ?>;
     </script>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/shipping_loading.js?v=<?php echo time(); ?>"></script>
 </body>

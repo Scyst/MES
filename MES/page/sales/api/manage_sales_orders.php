@@ -1,7 +1,6 @@
 <?php
 // page/sales/api/manage_sales_orders.php
 header('Content-Type: application/json');
-
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
@@ -24,25 +23,20 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    // Helper: แปลงวันที่
     $fnDate = function($val) {
         if (empty($val)) return null;
         $val = trim($val);
         if (is_numeric($val)) return gmdate("Y-m-d", ($val - 25569) * 86400);
-        
         $val = explode(' ', $val)[0]; 
         $d = DateTime::createFromFormat('d/m/Y', $val);
         if ($d && $d->format('d/m/Y') == $val) return $d->format('Y-m-d');
-        
         $d = DateTime::createFromFormat('j/n/Y', $val);
         if ($d) return $d->format('Y-m-d');
-
         $valClean = str_replace('/', '-', $val);
         $ts = strtotime($valClean);
         return $ts ? date('Y-m-d', $ts) : null;
     };
 
-    // Helper: เช็คว่าเป็น Yes/Done หรือไม่
     $isYes = function($val) {
         if (empty($val)) return false;
         $v = strtolower(trim($val));
@@ -50,7 +44,7 @@ try {
     };
 
     // ------------------------------------------------------------------
-    // 1. READ
+    // 1. READ (PIPELINE LOGIC)
     // ------------------------------------------------------------------
     if ($action === 'read') {
         $filter = $_GET['status'] ?? 'ACTIVE'; 
@@ -63,7 +57,7 @@ try {
             s.is_loading_done, s.is_production_done, 
             s.is_confirmed, s.custom_order, s.created_at,
             s.production_date, s.loading_date, s.inspection_date,
-            s.inspection_status
+            s.inspection_status, s.ticket_number
         ";
 
         $sql = "SELECT $columns, 
@@ -72,11 +66,24 @@ try {
                 LEFT JOIN $itemsTable i ON s.sku = i.sku 
                 WHERE 1=1";
         
-        if ($filter === 'ACTIVE')    $sql .= " AND (is_confirmed = 0 OR is_confirmed IS NULL)";
-        if ($filter === 'WAIT_PROD') $sql .= " AND is_production_done = 0 AND is_confirmed = 0";
-        if ($filter === 'PROD_DONE') $sql .= " AND is_production_done = 1 AND is_confirmed = 0";
-        if ($filter === 'WAIT_LOAD') $sql .= " AND is_production_done = 1 AND is_loading_done = 0 AND is_confirmed = 0";
-        if ($filter === 'LOADED')    $sql .= " AND is_loading_done = 1";
+        // --- [PIPELINE FILTER LOGIC] ---
+        // 1. ACTIVE: งานที่ยังไม่จบ (ยังไม่ Confirm และยังไม่โหลดเสร็จ)
+        if ($filter === 'ACTIVE') {
+            $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
+        }
+        // 2. WAIT_PROD: ยังไม่ผลิต
+        if ($filter === 'WAIT_PROD') {
+            $sql .= " AND ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+        }
+        // 3. WAIT_LOAD (Ready to Load): ผลิตเสร็จ(1) แต่ยังไม่โหลด(0)
+        if ($filter === 'WAIT_LOAD') {
+            $sql .= " AND is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+        }
+        // 4. PROD_DONE (เปลี่ยนเป็น SHIPPED/LOADED): โหลดเสร็จแล้ว
+        if ($filter === 'PROD_DONE') {
+            $sql .= " AND is_loading_done = 1"; // ไม่สน Confirmed เพราะส่งไปแล้วถือว่าเป็นผลงาน
+        }
+        // 5. ALL: ทั้งหมด
         
         $sql .= " ORDER BY ISNULL(custom_order, 999999) ASC, id DESC";
         
@@ -84,13 +91,22 @@ try {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // --- [PIPELINE SUMMARY LOGIC] ---
         $sumSql = "SELECT 
                    COUNT(*) as total_all,
-                   SUM(CASE WHEN is_confirmed = 0 OR is_confirmed IS NULL THEN 1 ELSE 0 END) as total_active,
-                   SUM(CASE WHEN is_production_done = 0 AND (is_confirmed = 0 OR is_confirmed IS NULL) THEN 1 ELSE 0 END) as wait_prod,
-                   SUM(CASE WHEN is_production_done = 1 AND (is_confirmed = 0 OR is_confirmed IS NULL) THEN 1 ELSE 0 END) as prod_done,
-                   SUM(CASE WHEN is_production_done = 1 AND is_loading_done = 0 AND (is_confirmed = 0 OR is_confirmed IS NULL) THEN 1 ELSE 0 END) as wait_load,
-                   SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as loaded
+                   
+                   -- Active Pipeline: ยังไม่จบกระบวนการ (ยังไม่โหลด & ยังไม่ Confirm)
+                   SUM(CASE WHEN ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as total_active,
+                   
+                   -- Stage 1: Wait Production
+                   SUM(CASE WHEN ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_prod,
+                   
+                   -- Stage 2: Ready to Load (ผลิตเสร็จแล้ว แต่รอโหลด)
+                   SUM(CASE WHEN is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_load,
+                   
+                   -- Stage 3: Shipped / Loaded (จบงานขนส่ง) -> ใช้ตัวแปร prod_done เดิมเพื่อไม่แก้ Frontend
+                   SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as prod_done
+                   
                    FROM $table";
                     
         $summary = $pdo->query($sumSql)->fetch(PDO::FETCH_ASSOC);
@@ -100,7 +116,7 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // 2. IMPORT (แก้ไข Logic Inspection Status)
+    // 2. IMPORT (Fixed Logic: ใช้ Foreach แก้ปัญหาบรรทัดสุดท้ายหาย)
     // ------------------------------------------------------------------
     if ($action === 'import') {
         if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
@@ -122,8 +138,10 @@ try {
         $pdo->beginTransaction();
         $count = 0; $skippedCount = 0; $errorLogs = [];
         
+        // [FIXED] ใช้ Loop แบบนี้เพื่อจับ Header ก่อน
         $csv->rewind();
         $headers = $csv->current(); 
+        
         $headerMap = [];
         if ($headers) {
             foreach ($headers as $index => $colName) {
@@ -147,12 +165,12 @@ try {
         $sql = "MERGE INTO $table AS T 
                 USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
                 AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder)
-                ON T.po_number = S.po -- ใช้แค่ PO Number เป็นตัวเชื่อมข้อมูล
+                ON T.po_number = S.po 
                 WHEN MATCHED THEN UPDATE SET 
                     T.sku = S.sku,
                     T.description = S.descr, 
                     T.color = S.color, 
-                    T.quantity = S.qty, -- จะใช้ค่า $qty ที่ดัก null/0 ไว้แล้ว
+                    T.quantity = S.qty, 
                     T.dc_location = S.dc,
                     T.loading_week = S.lweek, 
                     T.shipping_week = S.sweek,
@@ -173,21 +191,25 @@ try {
                 VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder);";
 
         $stmt = $pdo->prepare($sql);
-        $csv->next(); 
 
-        while (!$csv->eof()) {
-            $row = $csv->current();
-            $csv->next();
-            if (empty($row) || count($row) < 2) continue;
+        // [FIXED] เปลี่ยนเป็น foreach เพื่อแก้ปัญหาบรรทัดสุดท้ายหาย
+        foreach ($csv as $index => $row) {
+            if ($index === 0) continue; // ข้าม Header (เพราะเราอ่านไปแล้ว)
+            if (empty($row) || count($row) < 2) continue; // ข้ามบรรทัดว่าง
 
             $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
             $sku = $getCol($row, ['sku', 'item code', 'material']);
-            if (empty($po)) { $skippedCount++; continue; }
+            
+            // ถ้าไม่มี PO ก็ข้าม
+            if (empty($po)) { 
+                // เพิ่มเงื่อนไขเช็คว่าไม่ใช่บรรทัดว่างจริงๆ ถึงจะนับว่า Skip
+                if (implode('', $row) !== '') $skippedCount++; 
+                continue; 
+            }
 
             try {
                 $currentOrder++; 
 
-                // --- [Logic การอ่านค่าและสถานะคงเดิม] ---
                 $rawPrdDate = $getCol($row, ['prd completed date', 'production date', 'pdate']);
                 $rawLoadDate = $getCol($row, ['load', 'loading date', 'ldate']);
                 $rawInspDate = $getCol($row, ['inspection date', 'insp date']);
@@ -203,22 +225,20 @@ try {
                 $finalInspStatus = $txtInspStatus; 
                 if ($isYes($txtInspStatus)) $finalInspStatus = 'Pass';
 
-                // --- [FIXED: ย้ายมาไว้ใน Loop และแก้ Logic Qty] ---
                 $rawQty = $getCol($row, ['qty', 'quantity', 'amount']);
                 $qty = null; 
                 if ($rawQty !== '') {
                     $cleanQty = str_replace(',', '', $rawQty);
                     if (is_numeric($cleanQty)) {
-                        $qty = (float)$cleanQty; // เก็บ 0 เป็น 0, เก็บเลขเป็นเลข
+                        $qty = (float)$cleanQty; 
                     }
                 }
-                // --------------------------------------------------
 
                 $stmt->execute([
                     $fnDate($getCol($row, ['order date', 'date', 'odate'])),
                     $getCol($row, ['description', 'desc']),
                     $getCol($row, ['color', 'colour']),
-                    $sku, $po, $qty, // ใช้ $qty ที่ดักแล้ว
+                    $sku, $po, $qty, 
                     $getCol($row, ['dc', 'dc location']),
                     $getCol($row, ['original loading week', 'loading week']), 
                     $getCol($row, ['original shipping week', 'shipping week']),
@@ -245,7 +265,7 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // REORDER & UPDATE (แก้ไขให้ติ๊ก Inspection ที่หน้าเว็บได้)
+    // REORDER & UPDATE
     // ------------------------------------------------------------------
     if ($action === 'reorder_items') {
         $in = json_decode(file_get_contents('php://input'), true);
@@ -263,36 +283,37 @@ try {
     if ($action === 'update_check') {
         $in = json_decode(file_get_contents('php://input'), true);
         $val = $in['checked'] ? 1 : 0;
-        
-        // [FIX] เพิ่ม Case สำหรับ 'insp' (Inspection)
         if ($in['field'] == 'insp') {
-            // ถ้าติ๊ก -> Pass, ถ้าเอาออก -> (ว่าง)
             $txtVal = $in['checked'] ? 'Pass' : null;
-            $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")
-                ->execute([$txtVal, $in['id']]);
-            
+            $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")->execute([$txtVal, $in['id']]);
         } else {
-            // Logic เดิมสำหรับ Prod, Load, Confirm
             $col = ($in['field']=='prod')?'is_production_done':(($in['field']=='load')?'is_loading_done':(($in['field']=='confirm')?'is_confirmed':''));
-            if($col) $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+            if($col) {
+                // Auto Date Logic
+                if ($col === 'is_loading_done' && $val == 1) {
+                    $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                } else if ($col === 'is_production_done' && $val == 1) {
+                    $pdo->prepare("UPDATE $table SET is_production_done = 1, production_date = COALESCE(production_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                } else {
+                    $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+                }
+            }
         }
-        
-        echo json_encode(['success'=>true]);
+        echo json_encode(['success'=>true]); 
         exit;
     }
 
     if ($action === 'update_cell') {
         $in = json_decode(file_get_contents('php://input'), true);
-        $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date'];
+        $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date', 'ticket_number'];
         if (in_array($in['field'], $allowed)) {
             $val = $in['value'] ?: null;
             if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);
             $pdo->prepare("UPDATE $table SET {$in['field']} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
             echo json_encode(['success'=>true]);
         } else {
-            echo json_encode(['success'=>false, 'message'=>'Field not allowed']);
-        }
-        exit;
+            echo json_encode(['success'=>false, 'message'=>'Field not allowed']); } 
+            exit;
     }
 
     if ($action === 'create_single') {
@@ -301,16 +322,13 @@ try {
         $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
         $oDate = $fnDate($in['order_date'] ?: null);
         $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
-        $pdo->prepare($sql)->execute([
-            $in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', 
-            $in['quantity']??0, $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder
-        ]);
-        echo json_encode(['success'=>true]);
+        $pdo->prepare($sql)->execute([$in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder]);
+        echo json_encode(['success'=>true]); 
         exit;
     }
 
     // ------------------------------------------------------------------
-    // 4. EXPORT (Standard: Yes/No Only)
+    // 4. EXPORT
     // ------------------------------------------------------------------
     if ($action === 'export') {
         header('Content-Type: text/csv; charset=utf-8');
@@ -333,11 +351,9 @@ try {
         $yn = function($v) { return ($v == 1) ? 'Yes' : 'No'; };
         $dt = function($d) { return ($d) ? date('d/m/Y', strtotime($d)) : ''; };
 
-        // [FIX 1] เพิ่มฟังก์ชันแปลง Inspection (Pass/OK/Done) -> Yes
         $isInspPass = function($v) {
             if (empty($v)) return 'No';
             $v = strtolower(trim($v));
-            // ถ้าเจอคำว่า pass, ok, done, yes ให้ถือว่า Yes นอกนั้น No
             return (in_array($v, ['pass', 'ok', 'done', 'yes', '1', 'true'])) ? 'Yes' : 'No';
         };
 
@@ -363,7 +379,6 @@ try {
                 $yn($row['is_loading_done']),    
                 $yn($row['is_confirmed']),       
                 
-                // [FIX 2] เรียกใช้ฟังก์ชันแปลงค่าตรงนี้ครับ
                 $isInspPass($row['inspection_status']), 
                 
                 $row['ticket_number'], 

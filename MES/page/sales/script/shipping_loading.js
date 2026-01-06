@@ -1,65 +1,422 @@
 /**
- * script/shipping_loading.js
- * จัดการ Logic ทั้งหมดของหน้า Shipping Schedule (ฉบับปรับปรุงคอลัมน์ Quantity)
+ * page/sales/script/shipping_loading.js
+ * COMPLETE VERSION
+ * - Gatekeeper Auth
+ * - Smart KPI & Pipeline Logic
+ * - Read-only view for Customers
+ * - Full Import/Export Functionality
  */
 
+"use strict";
+
+const API_URL = 'api/manage_shipping.php';
 let allData = [];
 let importModal;
 let currentPage = 1;
-let rowsPerPage = 100; // แสดงหน้าละ 50 แถว (ปรับเปลี่ยนได้ตามเหมาะสม)
-let filteredData = []; // เก็บข้อมูลที่ผ่านการค้นหาแล้ว
+let rowsPerPage = 100;
+let filteredData = [];
 let searchTimer;
-let currentStatusFilter = 'ALL'; // เก็บสถานะการกรองจาก Card
+let currentStatusFilter = 'TODAY'; // Default View
+
+// Note: ตัวแปร 'isCustomer' ถูกประกาศไว้ในไฟล์ PHP แล้ว (Global Scope)
 
 $(document).ready(function() {
-    // 1. จัดการ Modal Instance ครั้งเดียวตอนโหลดหน้า
+    // 1. Init Import Modal
     const modalEl = document.getElementById('importResultModal');
     if (modalEl) {
         importModal = new bootstrap.Modal(modalEl);
     }
     
+    // 2. Load Data (ถ้ายังไม่ใส่รหัส จะติด 401 หรือถูกบังด้วย Modal)
     loadData();
 
-    // ระบบค้นหา
+    // 3. Set Default UI State
+    setTimeout(() => {
+        // Highlight การ์ดแรก (TODAY)
+        $('#defaultCard').addClass('ring-2');
+    }, 500);
+
+    // 4. Search Event (Debounce)
     $('#universalSearch').on('keyup', function() {
         clearTimeout(searchTimer);
-        
-        // พิมพ์ปุ๊บ แสดง Spinner ปั๊บ (เพื่อให้ User รู้ว่ากำลังหา)
         showSpinner(); 
-
         searchTimer = setTimeout(function() {
             applyGlobalFilter(); 
         }, 300);
     });
 });
 
-function showLoading(show) {
-    if(show) $('#loadingOverlay').css('display', 'flex');
-    else $('#loadingOverlay').hide();
+// ============================================================
+//  SECTION 1: AUTH & GATEKEEPER
+// ============================================================
+
+async function verifyPasscode() {
+    const code = document.getElementById('guestPasscode').value;
+    const btn = document.querySelector('#gatekeeperModal button');
+    const err = document.getElementById('passcodeError');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+    err.style.display = 'none';
+    
+    try {
+        const res = await fetch('api/auth_guest.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ passcode: code })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            // รหัสถูกต้อง -> รีโหลดหน้าจอเพื่อเข้าสู่ระบบในฐานะ Guest
+            window.location.reload();
+        } else {
+            err.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'เข้าสู่ระบบ <i class="fas fa-arrow-right ms-2"></i>';
+            document.getElementById('guestPasscode').value = '';
+            document.getElementById('guestPasscode').focus();
+        }
+    } catch (e) {
+        console.error(e);
+        alert('System Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = 'เข้าสู่ระบบ <i class="fas fa-arrow-right ms-2"></i>';
+    }
 }
 
+// ============================================================
+//  SECTION 2: DATA LOADING & KPI
+// ============================================================
+
 function loadData() {
-    showSpinner(); // เปลี่ยนจาก showLoading(true)
+    showSpinner();
     $.ajax({
-        url: 'api/manage_shipping.php?action=read',
+        url: `${API_URL}?action=read`,
         method: 'GET', 
         dataType: 'json',
         success: function(res) {
             if(res.success) {
                 allData = res.data;
-                updateKPICards(allData); 
-                applyGlobalFilter(); 
+                calculateKPI(allData);
+                applyGlobalFilter();
+            } else {
+                console.warn(res.message); // กรณี Unauthorized อาจจะไม่ส่งข้อมูลมา
             }
-            hideSpinner(); // เปลี่ยนจาก showLoading(false)
-        },
-        error: function() {
             hideSpinner();
-            alert('Connection Failed');
+        },
+        error: function(xhr) {
+            hideSpinner();
+            // ถ้าเป็น 401 (ยังไม่ login/ใส่รหัส) ไม่ต้องแจ้งเตือน เพราะ Modal บังอยู่แล้ว
+            if (xhr.status !== 401) {
+                console.error('Connection Failed');
+            }
         }
     });
 }
 
-// ฟังก์ชันแปลง YYYY-MM-DD เป็น DD/MM/YYYY สำหรับแสดงผล
+function calculateKPI(data) {
+    let countActive = 0, countTotal = 0, countWaitLoad = 0;
+    let countToday = 0, countBacklog = 0;
+    let count7Days = 0;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const next7Days = new Date(today);
+    next7Days.setDate(today.getDate() + 7);
+
+    data.forEach(row => {
+        countTotal++;
+        
+        const loadDate = getDateObj(row.snc_load_day);
+        
+        // 1 = เสร็จ, ค่าอื่น (0, null) = ยังไม่เสร็จ
+        const isLoadDone = (row.is_loading_done == 1);
+        const isProdDone = (row.is_production_done == 1);
+        
+        // Active = งานที่ยังไม่จบ (ยังไม่โหลด)
+        if (!isLoadDone) countActive++; 
+        
+        // Wait Load = ผลิตเสร็จ(1) แต่ยังไม่โหลด
+        if (isProdDone && !isLoadDone) countWaitLoad++;
+
+        if (loadDate) {
+            // TODAY Card: รวม Backlog (งานเก่าที่ยังไม่เสร็จ) + งานวันนี้
+            if (loadDate < today && !isLoadDone) {
+                countBacklog++;
+                countToday++; 
+            } else if (loadDate.getTime() === today.getTime()) {
+                countToday++;
+            }
+
+            // 7 DAYS Card: งานล่วงหน้า 7 วัน
+            if (loadDate > today && loadDate <= next7Days) {
+                count7Days++;
+            }
+        }
+    });
+
+    // Update KPI Cards UI
+    $('#kpi-today').text(countToday.toLocaleString());
+    
+    if (countBacklog > 0) {
+        $('#kpi-backlog-sub').html(`<i class="fas fa-exclamation-triangle"></i> Inc. ${countBacklog} Delays`);
+        $('#kpi-backlog-sub').removeClass('text-muted').addClass('text-danger fw-bold blink');
+    } else {
+        $('#kpi-backlog-sub').text('No Delays').removeClass('text-danger fw-bold blink').addClass('text-muted');
+    }
+    
+    $('#kpi-7days').text(count7Days.toLocaleString());
+    $('#kpi-wait-load').text(countWaitLoad.toLocaleString());
+    $('#kpi-active').text(countActive.toLocaleString());
+    $('#kpi-total').text(countTotal.toLocaleString());
+}
+
+// ============================================================
+//  SECTION 3: FILTERING & SEARCH
+// ============================================================
+
+function filterTable(status) {
+    showSpinner();
+    setTimeout(() => {
+        currentStatusFilter = status;
+        currentPage = 1; // Reset หน้าไปหน้าแรก
+
+        // Update UI Active State
+        $('.kpi-card').removeClass('ring-2');
+        if (status === 'TODAY') $('#defaultCard').addClass('ring-2');
+        else if (status === '7DAYS') $('.kpi-card.border-info').addClass('ring-2');
+        else if (status === 'WAIT_LOADING') $('.kpi-card.border-warning').addClass('ring-2');
+        else if (status === 'ACTIVE') $('.kpi-card.border-primary').addClass('ring-2');
+        else if (status === 'ALL') $('.kpi-card.border-secondary').addClass('ring-2');
+
+        applyGlobalFilter();
+    }, 50); 
+}
+
+function applyGlobalFilter() {
+    const term = $('#universalSearch').val().toLowerCase().trim();
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const next7Days = new Date(today);
+    next7Days.setDate(today.getDate() + 7);
+
+    filteredData = allData.filter(row => {
+        // 1. Search Text
+        const txt = Object.values(row).join(' ').toLowerCase();
+        if (term && !txt.includes(term)) return false;
+
+        const isLoadDone = (row.is_loading_done == 1);
+        const isProdDone = (row.is_production_done == 1);
+        const loadDate = getDateObj(row.snc_load_day);
+
+        // 2. Filter by Card Status
+        if (currentStatusFilter === 'ALL') return true;
+        if (currentStatusFilter === 'ACTIVE') return !isLoadDone;
+        if (currentStatusFilter === 'WAIT_LOADING') return isProdDone && !isLoadDone;
+
+        if (currentStatusFilter === 'TODAY') {
+            if (!loadDate) return false; // ไม่มีวันที่ ไม่โชว์ใน Today
+            const isBacklog = loadDate < today && !isLoadDone;
+            const isToday = loadDate.getTime() === today.getTime();
+            return isToday || isBacklog;
+        }
+
+        if (currentStatusFilter === '7DAYS') {
+            if (!loadDate) return false;
+            const isBacklog = loadDate < today && !isLoadDone; // รวม Backlog ให้เห็นด้วยเผื่อตกหล่น
+            const isNext7 = loadDate > today && loadDate <= next7Days;
+            return isBacklog || isNext7; 
+        }
+
+        return true;
+    });
+
+    // 3. Sorting (Priority: Delay > Today > Future > No Date)
+    filteredData.sort((a, b) => {
+        const da = getDateObj(a.snc_load_day);
+        const db = getDateObj(b.snc_load_day);
+
+        if (!da && !db) return 0;
+        if (!da) return 1; // ไม่มีวันที่เอาไปท้ายสุด
+        if (!db) return -1;
+
+        // เช็ค Delay (เพื่อดันงาน Delay ขึ้นบนสุด)
+        const delayA = (da < today && a.is_loading_done != 1) ? 1 : 0;
+        const delayB = (db < today && b.is_loading_done != 1) ? 1 : 0;
+
+        if (delayA !== delayB) return delayB - delayA; // Delay มาก่อน
+
+        return da - db; // วันที่น้อย (ใกล้) มาก่อน
+    });
+
+    renderTable(); 
+    hideSpinner();
+}
+
+// ============================================================
+//  SECTION 4: RENDERING (TABLE & PAGINATION)
+// ============================================================
+
+function renderTable() {
+    const tableBody = $('#tableBody');
+    const todayDate = new Date();
+    todayDate.setHours(0,0,0,0);
+
+    if (filteredData.length === 0) {
+        tableBody.html('<tr><td colspan="31" class="text-center py-5 text-muted">ไม่พบข้อมูลตามเงื่อนไข</td></tr>');
+        $('#paginationContainer').html('');
+        return;
+    }
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+
+    const rowsHtml = paginatedData.map(row => {
+        const isLoad = row.is_loading_done == 1;
+        const isProd = row.is_production_done == 1;
+        
+        // Config สำหรับ Customer (Read Only)
+        const ro = isCustomer ? 'readonly disabled' : ''; 
+        
+        // ปุ่ม Status (ถ้าเป็นลูกค้า แสดงแค่ไอคอนเฉยๆ)
+        const btnLoad = isCustomer 
+            ? `<div class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></div>`
+            : `<button class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'loading', ${row.is_loading_done})"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></button>`;
+
+        const btnProd = isCustomer 
+            ? `<div class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></div>`
+            : `<button class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></button>`;
+
+        // Helper สร้าง Input (ถ้าเป็นลูกค้า แสดงเป็น Text)
+        const inputHTML = (field, val) => {
+            if(isCustomer) return `<span class="text-muted">${val || ''}</span>`;
+            return `<input class="editable-input" value="${val || ''}" onchange="upd(${row.id}, '${field}', this.value, this)">`;
+        };
+
+        // Delay Alert
+        const loadDateObj = getDateObj(row.snc_load_day);
+        const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
+        
+        // PO Number Display
+        let poHtml = isDelay 
+            ? `<div class="d-flex align-items-center justify-content-center text-danger"><i class="fas fa-exclamation-triangle me-1 blink"></i>${row.po_number}</div>`
+            : `<span class="text-primary">${row.po_number}</span>`;
+
+        // Date Display
+        let dateHtml = '';
+        const dateVal = fnDateDisplay(row.snc_load_day);
+        if(isCustomer) {
+            dateHtml = `<span class="${isDelay ? 'text-danger fw-bold' : ''}">${dateVal}</span>`;
+        } else {
+            dateHtml = `<input type="text" class="editable-input datepicker ${isDelay?'text-danger fw-bold':''}" value="${dateVal}" data-field="snc_load_day" data-id="${row.id}" placeholder="dd/mm/yyyy">`;
+        }
+
+        return `<tr>
+            <td class="sticky-col-left-1 bg-white text-center">${btnLoad}</td>
+            <td class="sticky-col-left-2 bg-white text-center">${btnProd}</td>
+            <td class="sticky-col-left-3 bg-white text-center fw-bold">${poHtml}</td>
+            
+            <td class="text-center">${row.shipping_week || ''}</td>
+            <td>${inputHTML('shipping_customer_status', row.shipping_customer_status)}</td>
+            <td>${inputHTML('inspect_type', row.inspect_type)}</td>
+            <td>${inputHTML('inspection_result', row.inspection_result)}</td>
+            
+            <td>
+                <div class="d-flex gap-1 justify-content-center align-items-center">
+                    ${dateHtml}
+                    ${isCustomer 
+                        ? `<span class="small ms-1 text-muted">${row.load_time ? row.load_time.substring(0,5) : ''}</span>`
+                        : `<input type="time" class="editable-input fw-bold text-primary" value="${row.load_time ? row.load_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'load_time', this.value, this)" style="width:60px;">`
+                    }
+                </div>
+            </td>
+
+            <td>${inputHTML('dc_location', row.dc_location)}</td>
+            <td class="font-monospace text-center">${row.sku || ''}</td>
+            <td>${inputHTML('booking_no', row.booking_no)}</td>
+            <td>${inputHTML('invoice_no', row.invoice_no)}</td>
+            <td class="text-start text-truncate" style="max-width:150px;" title="${row.description}">${row.description || ''}</td>
+            <td class="text-center fw-bold">${parseInt(row.quantity||0).toLocaleString()}</td>
+            
+            <td>${inputHTML('ctn_size', row.ctn_size)}</td>
+            <td>${inputHTML('container_no', row.container_no)}</td>
+            <td>${inputHTML('seal_no', row.seal_no)}</td>
+            <td>${inputHTML('container_tare', row.container_tare)}</td>
+            <td>${inputHTML('net_weight', row.net_weight)}</td>
+            <td>${inputHTML('gross_weight', row.gross_weight)}</td>
+            <td>${inputHTML('cbm', row.cbm)}</td>
+            
+            <td>${inputHTML('feeder_vessel', row.feeder_vessel)}</td>
+            <td>${inputHTML('mother_vessel', row.mother_vessel)}</td>
+            <td>${inputHTML('snc_ci_no', row.snc_ci_no)}</td>
+            
+            <td>${isCustomer ? fnDateDisplay(row.si_vgm_cut_off) : `<input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.si_vgm_cut_off)}" data-field="si_vgm_cut_off" data-id="${row.id}">`}</td>
+            <td>${isCustomer ? fnDateDisplay(row.pickup_date) : `<input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.pickup_date)}" data-field="pickup_date" data-id="${row.id}">`}</td>
+            <td>${isCustomer ? fnDateDisplay(row.return_date) : `<input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.return_date)}" data-field="return_date" data-id="${row.id}">`}</td>
+            
+            <td class="bg-warning bg-opacity-10">${isCustomer ? `<strong>${fnDateDisplay(row.etd)}</strong>` : `<input type="text" class="editable-input datepicker fw-bold" value="${fnDateDisplay(row.etd)}" data-field="etd" data-id="${row.id}">`}</td>
+            
+            <td>${inputHTML('remark', row.remark)}</td>
+            
+            <td class="sticky-col-right-2 bg-white text-danger text-center fw-bold">
+                ${isCustomer ? fnDateDisplay(row.cutoff_date) : `<input type="text" class="editable-input datepicker text-danger fw-bold" value="${fnDateDisplay(row.cutoff_date)}" data-field="cutoff_date" data-id="${row.id}">`}
+            </td>
+            <td class="sticky-col-right-1 bg-white text-danger text-center fw-bold">
+                ${isCustomer ? (row.cutoff_time ? row.cutoff_time.substring(0,5) : '') : `<input type="time" class="editable-input text-danger fw-bold" value="${row.cutoff_time ? row.cutoff_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'cutoff_time', this.value, this)">`}
+            </td>
+        </tr>`;
+    }).join('');
+
+    tableBody.html(rowsHtml);
+    renderPagination();
+    
+    // Init Datepicker เฉพาะถ้าไม่ใช่ Customer
+    if(!isCustomer) initDatePickers(); 
+}
+
+function renderPagination() {
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    if (totalPages <= 1) { $('#paginationContainer').html(''); return; }
+    
+    let html = `<nav><ul class="pagination pagination-sm justify-content-center mb-0">`;
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Prev</a></li>`;
+    
+    for(let i=1; i<=totalPages; i++) {
+        if(i==1 || i==totalPages || (i >= currentPage-2 && i <= currentPage+2)) {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a></li>`;
+        } else if(i == currentPage-3 || i == currentPage+3) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a></li></ul></nav>`;
+    $('#paginationContainer').html(html);
+}
+
+function changePage(page) {
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderTable();
+    $('.table-responsive-custom').scrollTop(0);
+}
+
+// ============================================================
+//  SECTION 5: ACTIONS (UPDATE / EXPORT / IMPORT)
+// ============================================================
+
+// Helpers
+function getDateObj(dateStr) {
+    if (!dateStr || dateStr === '0000-00-00') return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
 const fnDateDisplay = (d) => {
     if (!d || d === '0000-00-00' || d === '1900-01-01' || d === 'null') return '';
     const datePart = d.split(' ')[0];
@@ -69,273 +426,87 @@ const fnDateDisplay = (d) => {
     return `${day}/${m}/${y}`;
 };
 
-// --- ฟังก์ชันสำหรับคำนวณตัวเลขบน Card (เรียกใช้ตอนโหลดข้อมูลครั้งแรก) ---
-function updateKPICards(data) {
-    let active = 0;    // ยังโหลดไม่เสร็จ (is_loading_done != 1)
-    let waitProd = 0;  // ผลิตไม่เสร็จ (is_production_done != 1)
-    let prodDone = 0;  // ผลิตเสร็จแล้ว (is_production_done == 1)
-    let loadDone = 0;  // โหลดเสร็จแล้ว (is_loading_done == 1)
+function showSpinner() { $('#loadingOverlay').css('display', 'flex'); }
+function hideSpinner() { $('#loadingOverlay').hide(); }
 
-    data.forEach(row => {
-        if (row.is_loading_done != 1) active++;
-        if (row.is_production_done != 1) waitProd++;
-        if (row.is_production_done == 1 && row.is_loading_done != 1) prodDone++;
-        if (row.is_loading_done == 1) loadDone++;
-    });
-
-    $('#kpi-active').text(active.toLocaleString());
-    $('#kpi-wait-prod').text(waitProd.toLocaleString());
-    $('#kpi-prod-done').text(prodDone.toLocaleString());
-    $('#kpi-load-done').text(loadDone.toLocaleString());
-    $('#kpi-total-all').text(data.length.toLocaleString());
-}
-
-// --- ฟังก์ชันเมื่อกดที่ Card ---
-function filterByStatus(status) {
-    showSpinner(); // 1. สั่งเปิด Spinner ทันทีที่กด
-
-    // ใช้ setTimeout เพื่อให้ Spinner แสดงตัวก่อนเริ่มประมวลผลหนักๆ
-    setTimeout(() => {
-        currentStatusFilter = status;
-        currentPage = 1;
-
-        $('.kpi-card').removeClass('active');
-        if(status === 'ACTIVE') $('#card-active').addClass('active');
-        if(status === 'WAIT_PROD') $('#card-wait-prod').addClass('active');
-        if(status === 'PROD_DONE') $('#card-prod-done').addClass('active');
-        if(status === 'LOAD_DONE') $('#card-load-done').addClass('active');
-        if(status === 'ALL') $('#card-all').addClass('active');
-
-        applyGlobalFilter(); // เรียกตัวกรอง
-        // hideSpinner() จะถูกเรียกท้าย applyGlobalFilter
-    }, 50); 
-}
-
-// --- ฟังก์ชันรวม (ทั้ง Search และ Status Filter) ---
-function applyGlobalFilter() {
-    // กรณีพิมพ์ Search เราเปิด Spinner ไว้ในส่วนของ searchTimer แล้ว
-    // แต่ถ้าเรียกจากที่อื่น เราควรเช็คเพื่อให้แน่ใจว่า Spinner เปิดอยู่
-    showSpinner(); 
-
-    setTimeout(() => {
-        const searchVal = $('#universalSearch').val().toLowerCase();
-        
-        let filtered = allData.filter(row => {
-            const matchesSearch = Object.values(row).some(value => 
-                String(value).toLowerCase().includes(searchVal)
-            );
-
-            let matchesStatus = true;
-            if (currentStatusFilter === 'ACTIVE') matchesStatus = (row.is_loading_done != 1);
-            if (currentStatusFilter === 'WAIT_PROD') matchesStatus = (row.is_production_done != 1);
-            if (currentStatusFilter === 'PROD_DONE') matchesStatus = (row.is_production_done == 1 && row.is_loading_done != 1);
-            if (currentStatusFilter === 'LOAD_DONE') matchesStatus = (row.is_loading_done == 1);
-            
-            return matchesSearch && matchesStatus;
-        });
-
-        renderTable(filtered); // วาดตาราง
-        hideSpinner(); // 2. สั่งปิด Spinner เมื่อวาดเสร็จ
-    }, 50);
-}
-
-function showSpinner() { 
-    document.getElementById('loadingOverlay').style.display = 'flex'; 
-}
-
-function hideSpinner() { 
-    document.getElementById('loadingOverlay').style.display = 'none'; 
-}
-
-function renderTable(data) {
-    filteredData = data;
-    const tableBody = $('#tableBody');
-
-    // 1. คำนวณยอดรวม (Qty, GW, CBM) จากข้อมูลที่กรองแล้ว (เปลี่ยนตามตาราง)
-    let totalQty = 0, totalGW = 0, totalCBM = 0;
-    let containerSet = new Set();
-
-    data.forEach(row => {
-        totalQty += parseFloat(row.quantity || 0);
-        totalGW += parseFloat(row.gross_weight || 0);
-        totalCBM += parseFloat(row.cbm || 0);
-        if (row.container_no) containerSet.add(row.container_no.trim().toUpperCase());
-    });
-
-    $('#kpiTotalQty').text(totalQty.toLocaleString());
-    $('#kpiTotalGW').text(totalGW.toLocaleString(undefined, {minimumFractionDigits: 2}));
-    $('#kpiTotalCBM').text(totalCBM.toLocaleString(undefined, {minimumFractionDigits: 2}));
-    $('#kpiTotalCont').text(containerSet.size);
-    if (data.length === 0) {
-        tableBody.html('<tr><td colspan="31" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>');
-        $('#paginationContainer').html('');
-        return;
-    }
-
-    // 2. เตรียมข้อมูล Pagination
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const paginatedData = data.slice(startIndex, startIndex + rowsPerPage);
-
-    // 3. สร้าง HTML (ใช้ .map() เพื่อประสิทธิภาพที่สูงกว่าในการจัดการ DOM)
-    const rowsHtml = paginatedData.map(row => {
-        const loadClass = row.is_loading_done == 1 ? 'bg-success-custom' : 'bg-pending';
-        const prodClass = row.is_production_done == 1 ? 'bg-success-custom' : 'bg-pending';
-        const loadTxt = row.is_loading_done == 1 ? 'DONE' : 'WAIT';
-        const prodTxt = row.is_production_done == 1 ? 'DONE' : 'WAIT';
-        const ro = isCustomer ? 'readonly' : '';
-        const qtyDisplay = row.quantity ? parseInt(row.quantity).toLocaleString() : 0;
-
-        return `<tr>
-            <td class="sticky-col-left-1 text-center bg-white">
-                ${isCustomer ? `<span class="status-badge ${loadClass}">${loadTxt}</span>` : `<button class="status-badge ${loadClass}" onclick="toggleStatus(${row.id}, 'loading', ${row.is_loading_done})">${loadTxt}</button>`}
-            </td>
-            <td class="sticky-col-left-2 text-center bg-white">
-                ${isCustomer ? `<span class="status-badge ${prodClass}">${prodTxt}</span>` : `<button class="status-badge ${prodClass}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})">${prodTxt}</button>`}
-            </td>
-            <td class="sticky-col-left-3 fw-bold text-primary bg-white">${row.po_number || '-'}</td>
-            <td class="text-center">${row.shipping_week || ''}</td>
-            <td><input class="editable-input" value="${row.shipping_customer_status || ''}" onchange="upd(${row.id}, 'shipping_customer_status', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.inspect_type || ''}" onchange="upd(${row.id}, 'inspect_type', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.inspection_result || ''}" onchange="upd(${row.id}, 'inspection_result', this.value)" ${ro}></td>
-            <td><input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.snc_load_day)}" data-field="snc_load_day" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td><input class="editable-input" value="${row.dc_location || ''}" onchange="upd(${row.id}, 'dc_location', this.value)" ${ro}></td>
-            <td>${row.sku || ''}</td>
-            <td><input class="editable-input" value="${row.booking_no || ''}" onchange="upd(${row.id}, 'booking_no', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.invoice_no || ''}" onchange="upd(${row.id}, 'invoice_no', this.value)" ${ro}></td>
-            <td title="${row.description || ''}"><div class="text-truncate" style="max-width:150px;">${row.description || ''}</div></td>
-            <td class="text-center">${qtyDisplay}</td>
-            <td><input class="editable-input" value="${row.ctn_size || ''}" onchange="upd(${row.id}, 'ctn_size', this.value)" ${ro}></td>
-            <td><input class="editable-input fw-bold text-primary" value="${row.container_no || ''}" onchange="upd(${row.id}, 'container_no', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.seal_no || ''}" onchange="upd(${row.id}, 'seal_no', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.container_tare || ''}" onchange="upd(${row.id}, 'container_tare', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.net_weight || ''}" onchange="upd(${row.id}, 'net_weight', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.gross_weight || ''}" onchange="upd(${row.id}, 'gross_weight', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.cbm || ''}" onchange="upd(${row.id}, 'cbm', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.feeder_vessel || ''}" onchange="upd(${row.id}, 'feeder_vessel', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.mother_vessel || ''}" onchange="upd(${row.id}, 'mother_vessel', this.value)" ${ro}></td>
-            <td><input class="editable-input" value="${row.snc_ci_no || ''}" onchange="upd(${row.id}, 'snc_ci_no', this.value)" ${ro}></td>
-            <td><input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.si_vgm_cut_off)}" data-field="si_vgm_cut_off" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td><input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.pickup_date)}" data-field="pickup_date" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td><input type="text" class="editable-input datepicker" value="${fnDateDisplay(row.return_date)}" data-field="return_date" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td class="bg-warning bg-opacity-10"><input type="text" class="editable-input datepicker fw-bold" value="${fnDateDisplay(row.etd)}" data-field="etd" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td><input class="editable-input" value="${row.remark || ''}" onchange="upd(${row.id}, 'remark', this.value)" ${ro}></td>
-            <td class="sticky-col-right-2 bg-white"><input type="text" class="editable-input datepicker text-danger fw-bold" value="${fnDateDisplay(row.cutoff_date)}" data-field="cutoff_date" data-id="${row.id}" placeholder="dd/mm/yyyy" ${ro}></td>
-            <td class="sticky-col-right-1 bg-white"><input type="time" class="editable-input text-danger fw-bold" value="${row.cutoff_time ? row.cutoff_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'cutoff_time', this.value)" ${ro}></td>
-        </tr>`;
-    }).join('');
-
-    tableBody.html(rowsHtml);
-    renderPagination();
-    initDatePickers(); 
-}
-
-function renderPagination() {
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    let html = '';
-
-    if (totalPages > 1) {
-        html += `<div class="d-flex justify-content-between align-items-center mt-2">
-                    <div class="small text-muted">
-                        Showing <b>${Math.min((currentPage - 1) * rowsPerPage + 1, filteredData.length)}</b> 
-                        to <b>${Math.min(currentPage * rowsPerPage, filteredData.length)}</b> 
-                        of <b>${filteredData.length}</b> entries
-                    </div>
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">`;
-        
-        // ปุ่ม Previous
-        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
-                 </li>`;
-
-        // แสดงเลขหน้าแบบยืดหยุ่น (หน้าแรก, หน้าสุดท้าย, และหน้ารอบข้าง)
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
-                         </li>`;
-            } else if (i === currentPage - 3 || i === currentPage + 3) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-        }
-
-        // ปุ่ม Next
-        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
-                 </li>`;
-        
-        html += `       </ul>
-                    </nav>
-                </div>`;
-    }
-
-    $('#paginationContainer').html(html);
-}
-
-// --- 4. ฟังก์ชันเปลี่ยนหน้า ---
-function changePage(page) {
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    if (page < 1 || page > totalPages) return;
-    
-    currentPage = page;
-    renderTable(filteredData);
-    
-    // เลื่อนตารางกลับไปบนสุดของ Container
-    $('.table-responsive-custom').scrollTop(0); 
-}
-
+// Inline Edit Logic
 function initDatePickers() {
-    flatpickr(".datepicker", {
-        dateFormat: "d/m/Y",
-        allowInput: true,
-        disableMobile: "true",
-        onChange: function(selectedDates, dateStr, instance) {
-            if (!dateStr) return;
-            const id = instance.element.getAttribute('data-id');
-            const field = instance.element.getAttribute('data-field');
-            const [d, m, y] = dateStr.split('/');
-            const apiDate = `${y}-${m}-${d}`;
-            upd(id, field, apiDate);
-        }
-    });
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr(".datepicker", {
+            dateFormat: "d/m/Y", allowInput: true, disableMobile: "true",
+            onChange: function(selectedDates, dateStr, instance) {
+                if (!dateStr) return;
+                const id = instance.element.getAttribute('data-id');
+                const field = instance.element.getAttribute('data-field');
+                // แปลงเป็น YYYY-MM-DD เพื่อส่ง API
+                const [d, m, y] = dateStr.split('/');
+                upd(id, field, `${y}-${m}-${d}`, instance.element);
+            }
+        });
+    }
 }
 
-function upd(id, field, val) {
-    if(isCustomer) return;
-    if (field === 'cutoff_time' && val) {
-        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-        if (!timeRegex.test(val)) return;
-    }
-    $.post('api/manage_shipping.php', {action:'update_cell', id:id, field:field, value:val});
+function upd(id, field, val, inputElement) {
+    if(isCustomer) return; // Protection
+    
+    const $el = $(inputElement);
+    // Visual Feedback: Yellow (Saving)
+    $el.css({'background-color': '#fff3cd', 'border': '1px solid #ffc107'});
+
+    $.post(API_URL, { action: 'update_cell', id, field, value: val })
+    .done(res => {
+        if(res.success) {
+            // Visual Feedback: Green (Success)
+            $el.css({'background-color': '#d1e7dd', 'border-color': '#198754'});
+            setTimeout(() => $el.css({'background-color': 'transparent', 'border-color': 'transparent'}), 1000);
+            
+            // Update Local Data
+            const row = allData.find(d => d.id == id);
+            if(row) row[field] = val;
+        } else {
+            alert('Save failed: ' + res.message);
+            $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
+        }
+    }).fail(() => {
+        alert('Network error');
+        $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
+    });
 }
 
 function toggleStatus(id, type, currentVal) {
     if(isCustomer) return;
-    let fieldName = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
-    let newVal = (currentVal == 1) ? 0 : 1;
+    showSpinner();
+    const field = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
+    const newVal = (currentVal == 1) ? 0 : 1;
     
-    showSpinner(); // เปลี่ยนจาก showLoading(true)
-    
-    $.post('api/manage_shipping.php', {
-        action: 'update_check',
-        id: id, 
-        field: fieldName, 
-        checked: newVal
-    }, function(res){
-        if(res.success) loadData(); // loadData จะไปสั่งปิด Spinner เอง
-        else {
-            hideSpinner(); // ปิดถ้า error
-            alert('Update Failed: ' + res.message);
+    $.post(API_URL, { action: 'update_check', id, field, checked: newVal })
+    .done(res => {
+        if(res.success) {
+            // อัปเดตข้อมูลใน Local เพื่อความรวดเร็ว (หรือจะ Load ใหม่เลยก็ได้)
+            const row = allData.find(d => d.id == id);
+            if(row) row[field] = newVal;
+            
+            calculateKPI(allData); // คำนวณ KPI ใหม่
+            applyGlobalFilter();   // วาดตารางใหม่
+        } else { 
+            hideSpinner(); alert('Failed: ' + res.message); 
         }
-    }, 'json');
+    });
 }
 
+function exportToCSV() {
+    window.location.href = `${API_URL}?action=export`;
+}
+
+// FULL IMPORT LOGIC (Client-side Parse -> Send JSON)
 async function uploadFile() {
     const fileInput = document.getElementById('csv_file'); 
     if (!fileInput || !fileInput.files[0]) return;
 
+    if (isCustomer) { alert('Access Denied'); return; }
+
     const file = fileInput.files[0];
-    showSpinner(); // เรียกตั้งแต่เริ่มอ่านไฟล์เลย
+    showSpinner();
 
     try {
         const data = await file.arrayBuffer();
@@ -343,40 +514,44 @@ async function uploadFile() {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         let rawData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
 
+        // Clean Keys (ลบช่องว่างหัวตาราง)
         let cleanedData = rawData.map(row => {
             let newRow = {};
             for (let key in row) {
-                // ล้างช่องว่างที่หัวตาราง
                 let cleanKey = key.trim().replace(/\s+/g, ' '); 
                 newRow[cleanKey] = row[key];
             }
             return newRow;
         });
 
-        // กรองแถวที่ไม่มี PO (เพิ่มความยืดหยุ่นในการหาหัวข้อ PO)
+        // Filter empty rows
         cleanedData = cleanedData.filter(row => row['PO'] || row['po_number'] || row['PO Number']);
         
-        $.post('api/manage_shipping.php', {
+        $.post(API_URL, {
             action: 'import_json',
             data: JSON.stringify(cleanedData)
         }, function(res) {
-            hideSpinner(); // ปิดเมื่อเสร็จ
+            hideSpinner();
             if (res.success) {
                 showImportResult(res);
-                loadData();
+                loadData(); // Reload ข้อมูลใหม่
+            } else {
+                alert('Import Error: ' + res.message);
             }
         }, 'json').fail(function() {
             hideSpinner();
             alert('Server Connection Error');
         });
     } catch (e) {
-        hideSpinner(); // เปลี่ยนจาก showLoading(false)
+        hideSpinner();
         alert("Error reading file: " + e.message);
     }
+    
+    // Clear Input
+    fileInput.value = '';
 }
 
 function showImportResult(res) {
-    // ใช้ตัวแปร jQuery เพื่อความเร็ว
     $('#importSuccessCount').text(res.success_count || 0);
     const errorSection = $('#importErrorSection');
     const successMsg = $('#importAllSuccess');
@@ -391,8 +566,20 @@ function showImportResult(res) {
         successMsg.removeClass('d-none');
     }
     
-    // เรียกแสดง Modal จากตัวแปรที่เราสร้างไว้ตอนเริ่ม
     if (importModal) importModal.show();
 }
 
-function exportToCSV() { window.location.href = 'api/manage_shipping.php?action=export'; }
+function guestLogout() {
+    if(!confirm('ต้องการล็อคหน้าจอใช่หรือไม่?')) return;
+    
+    // เรียก API เพื่อล้าง Session
+    fetch('api/auth_guest.php?action=logout')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // รีโหลดหน้าจอ -> จะกลับไปเจอ Gatekeeper Modal เพราะไม่มี Session แล้ว
+                window.location.reload();
+            }
+        })
+        .catch(err => console.error(err));
+}

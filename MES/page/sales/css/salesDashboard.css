@@ -1,13 +1,17 @@
-/* page/sales/css/salesDashboard.css - FULL VERSION FIX */
+/* page/sales/css/salesDashboard.css - FULL VERSION (Fixed & Separated) */
 
 /* ==========================================================================
-   1. RESET & MAIN LAYOUT (แก้ปัญหาทะลุจอ)
+   1. RESET & MAIN LAYOUT
    ========================================================================== */
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden !important; /* ล็อคหน้าจอหลักห้ามเลื่อน */
+    overflow: hidden !important; 
+}
+
+body, table {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .page-container {
@@ -18,39 +22,35 @@ html, body {
 }
 
 #main-content {
-    flex: 1; /* ยืดเต็มพื้นที่ที่เหลือจาก Header */
+    flex: 1;
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* Wrapper ที่หุ้มการ์ดค้นหา และ การ์ดตาราง */
 .content-wrapper {
     flex: 1;
     display: flex;
-    flex-direction: column; /* เรียงบนลงล่าง */
-    overflow: hidden; /* ห้าม Scroll ที่นี่ */
+    flex-direction: column; 
+    overflow: hidden; 
     padding: 1rem !important;
     height: 100%; 
-    min-height: 0; /* สำคัญ! ป้องกัน Flex item ดันทะลุ */
+    min-height: 0; 
 }
 
 /* ==========================================================================
-   2. CARDS LAYOUT (จัดระเบียบการ์ด)
+   2. CARDS LAYOUT
    ========================================================================== */
-
-/* การ์ดค้นหา (ใบระบน) */
 .card.mb-3 {
-    flex: 0 0 auto; /* ให้สูงเท่าเนื้อหา ไม่ยืด */
+    flex: 0 0 auto; 
     margin-bottom: 1rem !important;
 }
 
-/* การ์ดตาราง (ใบล่าง - ตัวปัญหา h-100) */
 .card.table-card {
-    flex: 1; /* ยืดกินพื้นที่ที่เหลือทั้งหมด */
-    min-height: 0; /* ยอมหดตัวได้ */
-    height: auto !important; /* ยกเลิก h-100 เดิมของ Bootstrap เพื่อไม่ให้ทะลุ */
+    flex: 1; 
+    min-height: 0; 
+    height: auto !important; 
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -58,7 +58,7 @@ html, body {
 }
 
 /* ==========================================================================
-   3. TABLE CONTAINER (พระเอก - พื้นที่ Scroll)
+   3. TABLE CONTAINER
    ========================================================================== */
 .table-responsive-custom {
     flex: 1;
@@ -66,240 +66,203 @@ html, body {
     height: 100%;
     overflow-x: auto !important;
     overflow-y: auto !important;
-    position: relative; /* ให้ Sticky Header อิงกับกล่องนี้ */
+    position: relative;
     background-color: #fff;
-    padding-bottom: 5px; /* กัน Scrollbar ทับบรรทัดล่างสุด */
+    padding-bottom: 5px;
 }
 
-/* สั่งให้ตารางขยายกว้างตามเนื้อหาจริง (แก้ปัญหา Scrollbar แนวนอนไม่ขึ้น) */
 .table-responsive-custom table {
     width: max-content !important; 
     min-width: 100%;
-    border-collapse: separate; /* จำเป็นสำหรับ Sticky */
+    border-collapse: separate;
     border-spacing: 0;
 }
 
-/* ==========================================================================
-   4. STICKY HEADERS & COLUMNS (FIXED WIDTH & POSITIONS)
-   ========================================================================== */
+/* จัดกึ่งกลางข้อมูลในตารางทั้งหมด */
+.table-responsive-custom table th,
+.table-responsive-custom table td {
+    text-align: center !important;      
+    vertical-align: middle !important;  
+    background-color: #fff; /* พื้นหลังทึบเริ่มต้น */
+}
 
-/* --- 1. Reset Bootstrap Default --- */
+/* ==========================================================================
+   4. STICKY LOGIC (GENERAL)
+   ========================================================================== */
 thead.sticky-top {
     position: static !important;
     z-index: auto !important;
 }
 
-/* --- 2. General Sticky Logic (Header & Columns) --- */
-/* กฏ: ทุกเซลล์ที่ Sticky ต้องทึบและมีขอบ */
-thead.sticky-top th, 
-tbody td.sticky-col-left-1,
-tbody td.sticky-col-left-2,
-tbody td.sticky-col-left-3,
-tbody td.sticky-col-right-1,
-tbody td.sticky-col-right-2 {
-    background-color: #fff; /* สีพื้นหลังต้องทึบ ห้ามใส */
-    background-clip: padding-box;
-    position: sticky !important;
-    z-index: 100; /* ระดับความสูงพื้นฐานของตัวล็อค */
-}
-
-/* Header ต้องอยู่สูงกว่า Column เสมอ */
+/* Header Cells (General) */
 thead.sticky-top th {
+    position: sticky !important;
     top: 0 !important;
-    z-index: 500 !important;
+    z-index: 500 !important; /* Header ปกติ */
     background-color: #f8f9fa !important;
     border-bottom: 2px solid #dee2e6;
     box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* --- 3. FIX LEFT COLUMNS (คำนวณความกว้างเป๊ะๆ) --- */
+/* Sticky Column Cells (Body) */
+tbody td.sticky-col-left-1,
+tbody td.sticky-col-left-2,
+tbody td.sticky-col-left-3,
+tbody td.sticky-col-right-1,
+tbody td.sticky-col-right-2 {
+    position: sticky !important;
+    z-index: 100 !important; /* สูงกว่าข้อมูลปกติ */
+    background-color: #fff;
+    background-clip: padding-box;
+}
 
-/* [คอลัมน์ 1] Load Status */
-.sticky-col-left-1 {
-    left: 0 !important;
-    width: 130px !important;      
-    min-width: 130px !important;
-    max-width: 130px !important;
+/* Sticky Column Cells (Header) - ต้องสูงที่สุด */
+thead.sticky-top th.sticky-col-left-1,
+thead.sticky-top th.sticky-col-left-2,
+thead.sticky-top th.sticky-col-left-3,
+thead.sticky-top th.sticky-col-right-1,
+thead.sticky-top th.sticky-col-right-2 {
+    position: sticky !important;
+    z-index: 2000 !important; /* สูงที่สุด ทับทุกอย่าง */
+    background-color: #f8f9fa !important;
+    top: 0 !important;
+}
+
+/* ==========================================================================
+   5. SPECIFIC LAYOUT: SALES DASHBOARD (.sales-table)
+   [Col 1: Drag(50px)] [Col 2: PO(160px)] [Col 3: Conf(80px)]
+   ========================================================================== */
+
+/* Col 1: Drag Handle */
+.sales-table .sticky-col-left-1 { 
+    left: 0 !important; 
+    width: 50px !important; min-width: 50px !important; max-width: 50px !important;
     border-right: 1px solid #dee2e6;
 }
 
-/* [คอลัมน์ 2] Prod Status */
-.sticky-col-left-2 {
-    left: 130px !important;
-    width: 130px !important;      
-    min-width: 130px !important;
-    max-width: 130px !important;
+/* Col 2: PO Number (Start @ 50px) */
+.sales-table .sticky-col-left-2 { 
+    left: 50px !important; 
+    width: 160px !important; min-width: 160px !important; max-width: 160px !important;
     border-right: 1px solid #dee2e6;
 }
 
-/* [คอลัมน์ 3] PO Number */
-.sticky-col-left-3 {
-    left: 260px !important;       
-    width: 150px !important;
-    min-width: 150px !important;
-    max-width: 150px !important;
+/* Col 3: Confirmed (Start @ 210px) */
+.sales-table .sticky-col-left-3 { 
+    left: 210px !important; 
+    width: 80px !important; min-width: 80px !important; max-width: 80px !important;
+    border-right: 2px solid #dee2e6;
+    box-shadow: 4px 0 5px -2px rgba(0,0,0,0.1); /* เงาจบที่นี่ */
+}
+
+/* Corner Fixes (Shadows for Header) */
+.sales-table thead th.sticky-col-left-3 {
+    box-shadow: 4px 2px 5px -2px rgba(0,0,0,0.1);
+}
+
+/* ==========================================================================
+   6. SPECIFIC LAYOUT: SHIPPING SCHEDULE (Default or .shipping-table)
+   [Col 1: Load(45px)] [Col 2: Prod(45px)] [Col 3: PO(150px)]
+   ========================================================================== */
+
+/* เพื่อความชัวร์ ให้ Shipping ใช้ Default หรือ Class เฉพาะก็ได้ 
+   ถ้าไม่ใส่ class .sales-table จะเข้าเงื่อนไขนี้ (ถ้าเราเขียน selector ให้ดี) 
+   แต่เพื่อความปลอดภัย ผมจะใช้ :not(.sales-table) หรือกำหนด class ใหม่ */
+
+/* Col 1: Load (Minimal) */
+table:not(.sales-table) .sticky-col-left-1 { 
+    left: 0 !important; 
+    width: 45px !important; min-width: 45px !important; max-width: 45px !important;
+    border-right: 1px solid #dee2e6;
+    padding: 4px !important;
+}
+
+/* Col 2: Prod (Minimal) - Start @ 45px */
+table:not(.sales-table) .sticky-col-left-2 { 
+    left: 45px !important; 
+    width: 45px !important; min-width: 45px !important; max-width: 45px !important;
+    border-right: 1px solid #dee2e6;
+    padding: 4px !important;
+}
+
+/* Col 3: PO Number - Start @ 90px */
+table:not(.sales-table) .sticky-col-left-3 { 
+    left: 90px !important; 
+    width: 150px !important; min-width: 150px !important; max-width: 150px !important;
     border-right: 2px solid #dee2e6; 
     box-shadow: 4px 0 5px -2px rgba(0,0,0,0.1); 
 }
 
-/* --- 4. FIX RIGHT COLUMNS --- */
+/* Corner Fixes */
+table:not(.sales-table) thead th.sticky-col-left-3 {
+    box-shadow: 4px 2px 5px -2px rgba(0,0,0,0.1);
+}
 
-/* [ขวา 1] Cutoff Time (ริมสุด) */
+/* --- RIGHT COLUMNS (Shared) --- */
 .sticky-col-right-1 {
     right: 0 !important;
-    width: 100px !important;
-    min-width: 100px !important;
+    width: 100px !important; min-width: 100px !important;
     border-left: 1px solid #dee2e6;
 }
 
-/* [ขวา 2] Cutoff Date (ถัดเข้ามา) */
 .sticky-col-right-2 {
-    right: 108px !important;      /* เท่ากับความกว้าง Right 1 */
-    width: 110px !important;
-    min-width: 110px !important;
+    right: 108px !important; /* 100 + border approx */
+    width: 110px !important; min-width: 110px !important;
     border-left: 2px solid #dee2e6;
-    
-    /* เงาด้านซ้าย */
     box-shadow: -4px 0 5px -2px rgba(0,0,0,0.1); 
 }
 
-/* --- 5. THE CORNER FIX (จุดตัดหัวมุมบนสุด) --- */
-/* ต้องอยู่สูงที่สุด (Z-Index 1000) และตำแหน่งต้องตรงกับ Column ด้านล่าง */
-
-/* มุมซ้ายบน 1 */
-thead.sticky-top th.sticky-col-left-1 { 
-    z-index: 1000 !important; 
-    left: 0 !important; 
-}
-/* มุมซ้ายบน 2 */
-thead.sticky-top th.sticky-col-left-2 { 
-    z-index: 1000 !important; 
-    left: 130px !important; 
-}
-/* มุมซ้ายบน 3 */
-thead.sticky-top th.sticky-col-left-3 { 
-    z-index: 1000 !important; 
-    left: 260px !important; 
-    box-shadow: 4px 2px 5px -2px rgba(0,0,0,0.1); 
-}
-
-/* มุมขวาบน 1 */
-thead.sticky-top th.sticky-col-right-1 { 
-    z-index: 1000 !important; 
-    right: 0 !important; 
-}
-/* มุมขวาบน 2 */
-thead.sticky-top th.sticky-col-right-2 { 
-    z-index: 1000 !important; 
-    right: 108px !important; 
+/* Corner Fixes (Right) */
+thead th.sticky-col-right-2 {
     box-shadow: -4px 2px 5px -2px rgba(0,0,0,0.1); 
 }
 
-/* --- 6. Hover & Colors --- */
-/* แก้ให้สีพื้นหลังเปลี่ยนตามแถว */
-tr:hover td.sticky-col-left-1, 
-tr:hover td.sticky-col-left-2, 
-tr:hover td.sticky-col-left-3,
-tr:hover td.sticky-col-right-1, 
-tr:hover td.sticky-col-right-2 {
+/* ==========================================================================
+   7. HOVER & UTILITIES
+   ========================================================================== */
+tr:hover td {
     background-color: var(--bs-tertiary-bg) !important;
 }
 
-/* แก้ให้สีพื้นหลังเปลี่ยนตามสถานะ (ถ้ามี class) */
-tr.row-confirmed td.sticky-col-left-1, 
-tr.row-confirmed td.sticky-col-left-2, 
-tr.row-confirmed td.sticky-col-left-3 {
-    background-color: #d1e7dd !important; 
-}
+/* Scrollbar */
+.table-responsive-custom::-webkit-scrollbar { width: 16px; height: 16px; }
+.table-responsive-custom::-webkit-scrollbar-track { background: #f1f1f1; border: 1px solid #dee2e6; }
+.table-responsive-custom::-webkit-scrollbar-thumb { background-color: #adb5bd; border: 3px solid #f1f1f1; border-radius: 10px; }
+.table-responsive-custom::-webkit-scrollbar-thumb:hover { background-color: #6c757d; cursor: pointer; }
+.table-responsive-custom::-webkit-scrollbar-corner { background: #f1f1f1; }
 
-/* ==========================================================================
-   5. CUSTOM SCROLLBAR (ปรับให้สวยและกดง่าย)
-   ========================================================================== */
-.table-responsive-custom::-webkit-scrollbar {
-    width: 16px;
-    height: 16px;
-}
-
-.table-responsive-custom::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border: 1px solid #dee2e6;
-    border-radius: 0 0 4px 4px;
-}
-
-.table-responsive-custom::-webkit-scrollbar-thumb {
-    background-color: #adb5bd;
-    border: 3px solid #f1f1f1; /* ขอบขาวเพื่อให้ดูโค้งมน */
-    border-radius: 10px;
-}
-
-.table-responsive-custom::-webkit-scrollbar-thumb:hover {
-    background-color: #6c757d;
-    cursor: pointer;
-}
-
-.table-responsive-custom::-webkit-scrollbar-corner {
-    background: #f1f1f1;
-}
-
-/* ==========================================================================
-   6. UTILITIES & INPUTS
-   ========================================================================== */
+/* Inputs */
 .editable-input {
-    width: 100%;
-    border: 1px solid transparent;
-    background: transparent;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 0.9rem;
+    width: 100%; border: 1px solid transparent; background: transparent;
+    padding: 2px 4px; border-radius: 3px; font-size: 0.9rem; text-align: center;
 }
+.editable-input:focus, .editable-input:hover { border-color: #ced4da; background-color: #fff; outline: none; }
 
-.editable-input:focus, .editable-input:hover {
-    border-color: #ced4da;
-    background-color: #fff;
-    outline: none;
-}
+/* Badges & Icons */
+.status-badge { border: none; border-radius: 50px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.status-badge.bg-pending { background-color: #fff3cd; color: #856404; }
 
-.status-badge {
-    border: none;
-    border-radius: 50px;
-    padding: 4px 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.status-badge.bg-pending {
-    background-color: #fff3cd;
-    color: #856404;
-}
+.kpi-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+.kpi-card:hover { transform: translateY(-3px); }
+.kpi-card.active, .kpi-card.ring-2 { border-width: 2px !important; background-color: #f8f9fa; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; transform: translateY(-2px); }
 
-/* KPI Column Helper */
-@media (min-width: 992px) {
-    .col-lg-20-percent {
-        flex: 0 0 auto;
-        width: 20%;
-    }
-}
+.bg-delay-solid { background-color: #f8d7da !important; color: #842029; }
 
-.kpi-card {
-    transition: all 0.3s ease;
-    border-left: 4px solid transparent;
+/* Minimal Icons */
+.btn-icon-minimal {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent; transition: all 0.2s; margin: 0 auto; font-size: 0.8rem;
 }
-.kpi-card:hover {
-    transform: translateY(-3px);
-}
-.kpi-card.active {
-    border-left: 4px solid #0d6efd; /* หรือสีตามสถานะ */
-    background-color: #f8f9fa;
-    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-}
-.col-lg-20-percent {
-    flex: 0 0 auto;
-    width: 20%;
-}
-@media (max-width: 992px) {
-    .col-lg-20-percent { width: 33.33%; }
-}
-@media (max-width: 576px) {
-    .col-lg-20-percent { width: 50%; }
-}
+.btn-icon-minimal:hover { transform: scale(1.1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.status-wait { background-color: #f8f9fa; border-color: #dee2e6; color: #adb5bd; }
+.status-done { background-color: #d1e7dd; border-color: #198754; color: #198754; }
+
+/* Animation */
+@keyframes blink-animation { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+.blink { animation: blink-animation 1.5s infinite; }
+
+/* Media Queries */
+@media (min-width: 992px) { .col-lg-20-percent { flex: 0 0 auto; width: 20%; } }
+@media (max-width: 992px) { .col-lg-20-percent { width: 33.33%; } }
+@media (max-width: 576px) { .col-lg-20-percent { width: 50%; } }
