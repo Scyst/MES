@@ -55,7 +55,8 @@ try {
                     FROM $table s 
                     LEFT JOIN $itemsTable i ON s.sku = i.sku 
                     WHERE 1=1 
-                    ORDER BY s.snc_load_day ASC, s.id DESC";
+                    ORDER BY s.snc_load_day ASC, s.load_time ASC, s.id DESC"; 
+            
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -65,37 +66,70 @@ try {
         case 'export':
             header('Content-Type: text/csv; charset=utf-8');
             header('Content-Disposition: attachment; filename=Shipping_Schedule_Export_' . date('Y-m-d') . '.csv');
+            
             $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); 
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM สำหรับ Excel ภาษาไทย
 
-            // Header Row (ตรงนี้เป็นแค่ Export ไม่กระทบหน้าเว็บ)
+            // 1. หัวตาราง (ย้าย Remark และ Inspect ตามโครงสร้างหน้าเว็บใหม่)
             fputcsv($output, [
-                'Seq', 'PO Number', 'SKU', 'Description', 'Quantity',
+                'Seq', 'PO Number', 'Remark', 'SKU', 'Description', 'Quantity',
                 'Load Status', 'Prod Status',
                 'SNC Load Day', 'Load Time', 'DC Location',
                 'Booking No', 'Invoice No', 
                 'Container No', 'Seal No', 'Size', 'Tare', 'Net Weight', 'Gross Weight', 'CBM',
                 'Feeder Vessel', 'Mother Vessel', 'SNC CI No',
                 'SI/VGM Cutoff', 'Pickup Date', 'Return Date', 'ETD',
-                'Cutoff Date', 'Cutoff Time', 'Remark'
+                'Inspect Type', 'Inspect Res', // [MOVED] ย้ายมาไว้ท้ายๆ
+                'Cutoff Date', 'Cutoff Time'
             ]);
 
             $dt = function($d) { return ($d && $d != '0000-00-00') ? date('d/m/Y', strtotime($d)) : ''; };
             $tm = function($t) { return ($t) ? date('H:i', strtotime($t)) : ''; };
             $yn = function($v) { return ($v == 1) ? 'Done' : 'Wait'; };
 
-            $stmt = $pdo->query("SELECT * FROM $table ORDER BY ISNULL(custom_order, 999999) ASC, id DESC");
+            // 2. การเรียงลำดับ: วันที่มาก่อน (ASC) แล้วตามด้วยเวลา (ASC)
+            $sql = "SELECT * FROM $table 
+                    ORDER BY 
+                        CASE WHEN snc_load_day IS NULL OR snc_load_day = '' THEN 1 ELSE 0 END, 
+                        snc_load_day ASC, 
+                        load_time ASC, 
+                        id DESC";
+                    
+            $stmt = $pdo->query($sql);
+
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 fputcsv($output, [
-                    $row['custom_order'], $row['po_number'], $row['sku'], $row['description'], $row['quantity'],
-                    $yn($row['is_loading_done']), $yn($row['is_production_done']),
-                    $dt($row['snc_load_day']), $tm($row['load_time']), $row['dc_location'],
-                    $row['booking_no'], $row['invoice_no'],
-                    $row['container_no'], $row['seal_no'], $row['ctn_size'], $row['container_tare'], 
-                    $row['net_weight'], $row['gross_weight'], $row['cbm'],
-                    $row['feeder_vessel'], $row['mother_vessel'], $row['snc_ci_no'],
-                    $dt($row['si_vgm_cut_off']), $dt($row['pickup_date']), $dt($row['return_date']), $dt($row['etd']),
-                    $dt($row['cutoff_date']), $tm($row['cutoff_time']), $row['remark']
+                    $row['custom_order'], 
+                    $row['po_number'], 
+                    $row['remark'],           // [MOVED] Remark มาอยู่นี่
+                    $row['sku'], 
+                    $row['description'], 
+                    $row['quantity'],
+                    $yn($row['is_loading_done']), 
+                    $yn($row['is_production_done']),
+                    $dt($row['snc_load_day']), 
+                    $tm($row['load_time']), 
+                    $row['dc_location'],
+                    $row['booking_no'], 
+                    $row['invoice_no'],
+                    $row['container_no'], 
+                    $row['seal_no'], 
+                    $row['ctn_size'], 
+                    $row['container_tare'], 
+                    $row['net_weight'], 
+                    $row['gross_weight'], 
+                    $row['cbm'],
+                    $row['feeder_vessel'], 
+                    $row['mother_vessel'], 
+                    $row['snc_ci_no'],
+                    $dt($row['si_vgm_cut_off']), 
+                    $dt($row['pickup_date']), 
+                    $dt($row['return_date']), 
+                    $dt($row['etd']),
+                    $row['inspect_type'],      // [MOVED]
+                    $row['inspection_result'], // [MOVED]
+                    $dt($row['cutoff_date']), 
+                    $tm($row['cutoff_time'])
                 ]);
             }
             fclose($output);

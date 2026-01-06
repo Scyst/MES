@@ -341,23 +341,23 @@ function renderTable() {
             <td>${inputHTML('remark', row.remark)}</td>
 
             <td class="text-center">${row.shipping_week || '<span class="text-muted fw-light">-</span>'}</td>
-            <td>${inputHTML('shipping_customer_status', row.shipping_customer_status)}</td>
             
             <td>
                 <div class="d-flex gap-1 justify-content-center align-items-center">
-                    ${dateHtml}
-                    ${isCustomer 
-                        ? (row.load_time ? `<span class="small ms-1 text-muted">${row.load_time.substring(0,5)}</span>` : '')
-                        : `<input type="time" class="editable-input fw-bold text-primary text-center" value="${row.load_time ? row.load_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'load_time', this.value, this)" placeholder="-" style="width:58px; font-size:0.85rem; padding:0;">`
-                    }
+                ${dateHtml}
+                ${isCustomer 
+                    ? (row.load_time ? `<span class="small ms-1 text-muted">${row.load_time.substring(0,5)}</span>` : '')
+                    : `<input type="time" class="editable-input fw-bold text-primary text-center" value="${row.load_time ? row.load_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'load_time', this.value, this)" placeholder="-" style="width:58px; font-size:0.85rem; padding:0;">`
+                }
                 </div>
-            </td>
+                </td>
 
-            <td>${inputHTML('dc_location', row.dc_location)}</td>
-            <td class="font-monospace text-center">${row.sku || '<span class="text-muted fw-light">-</span>'}</td>
-            <td>${inputHTML('booking_no', row.booking_no)}</td>
-            <td>${inputHTML('invoice_no', row.invoice_no)}</td>
-            <td class="text-start text-truncate" style="max-width:150px;" title="${row.description}">${row.description || '<span class="text-muted fw-light">-</span>'}</td>
+                <td>${inputHTML('dc_location', row.dc_location)}</td>
+                <td class="font-monospace text-center">${row.sku || '<span class="text-muted fw-light">-</span>'}</td>
+                <td>${inputHTML('booking_no', row.booking_no)}</td>
+                <td>${inputHTML('snc_ci_no', row.snc_ci_no)}</td>
+                <td>${inputHTML('invoice_no', row.invoice_no)}</td>
+                <td class="text-start text-truncate" title="${row.description}">${row.description || '<span class="text-muted fw-light">-</span>'}</td>
             <td class="text-center fw-bold">${parseInt(row.quantity||0).toLocaleString()}</td>
             
             <td>${inputHTML('ctn_size', row.ctn_size)}</td>
@@ -370,14 +370,13 @@ function renderTable() {
             
             <td>${inputHTML('feeder_vessel', row.feeder_vessel)}</td>
             <td>${inputHTML('mother_vessel', row.mother_vessel)}</td>
-            <td>${inputHTML('snc_ci_no', row.snc_ci_no)}</td>
             
             <td>${isCustomer ? dateDisplay(row.si_vgm_cut_off) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.si_vgm_cut_off)}" data-field="si_vgm_cut_off" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
             <td>${isCustomer ? dateDisplay(row.pickup_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.pickup_date)}" data-field="pickup_date" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
             <td>${isCustomer ? dateDisplay(row.return_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.return_date)}" data-field="return_date" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
             
             <td class="bg-warning bg-opacity-10 text-center">${isCustomer ? `<strong>${dateDisplay(row.etd)}</strong>` : `<input type="text" class="editable-input datepicker fw-bold text-center" value="${fnDateDisplay(row.etd)}" data-field="etd" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
-            
+            <td>${inputHTML('shipping_customer_status', row.shipping_customer_status)}</td>
             <td>${inputHTML('inspect_type', row.inspect_type)}</td>
             <td>${inputHTML('inspection_result', row.inspection_result)}</td>
 

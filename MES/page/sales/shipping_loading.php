@@ -198,35 +198,34 @@ $pageHelpId = "helpModal";
                                     <th class="sticky-col-left-2">Prod</th>
                                     <th class="sticky-col-left-3">PO Number</th>
                                     
-                                    <th>Remark</th> 
+                                    <th style="width: 100px;">Remark</th> 
                                     
                                     <th>Week</th>
-                                    <th>Status</th>
                                     
                                     <th>SNC Load Day / Time</th>
-                                    <th>DC</th>
+                                    <th style="width: 150px;">DC</th>
                                     <th>SKU</th>
                                     <th>Booking No.</th>
-                                    <th>Invoice</th>
-                                    <th>Description</th>
+                                    <th style="width: 150px;">SNC CI No.</th>
+                                    <th style="width: 130px;">Invoice</th>
+                                    <th style="width: 250px;">Description</th>
                                     <th>Q'ty (Pcs)</th>
-                                    <th>CTN Size</th>
-                                    <th>Container No.</th>
-                                    <th>Seal No.</th>
-                                    <th>Tare</th>
-                                    <th>N.W.</th>
-                                    <th>G.W.</th>
-                                    <th>CBM</th>
+                                    <th style="width: 100px;">CTN Size</th>
+                                    <th style="width: 150px;">Container No.</th>
+                                    <th style="width: 150px;">Seal No.</th>
+                                    <th style="width: 150px;">Tare</th>
+                                    <th style="width: 150px;">N.W.</th>
+                                    <th style="width: 150px;">G.W.</th>
+                                    <th style="width: 100px;">CBM</th>
                                     <th>Feeder Vsl</th>
                                     <th>Mother Vsl</th>
-                                    <th>SNC CI No.</th>
                                     <th>SI/VGM Cut</th>
                                     <th>Pickup Date</th>
                                     <th>Return Date</th>
                                     <th style="background-color: rgb(255 249 230)">ETD</th>
-                                    
-                                    <th>Inspect Type</th>
-                                    <th>Inspect Res</th>
+                                    <th style="width: 130px;">Status</th>
+                                    <th style="width: 100px;">Inspect Type</th>
+                                    <th style="width: 100px;">Inspect Res</th>
 
                                     <th class="sticky-col-right-2 text-danger">Cutoff Date</th>
                                     <th class="sticky-col-right-1 text-danger">Cutoff Time</th>

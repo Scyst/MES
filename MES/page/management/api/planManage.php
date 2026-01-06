@@ -241,23 +241,38 @@ try {
             break;
 
         case 'calculate_carry_over':
-            $currentUser = $_SESSION['user']['username'] ?? 'System';
-            $sql = "
-                UPDATE p
-                SET p.carry_over_quantity = ISNULL((
-                    SELECT SUM(ISNULL(prev.adjusted_planned_quantity, 0) - ISNULL(act.ActualQty, 0))
-                    FROM $planTable prev
-                    LEFT JOIN ($actualsSubQuery) act ON prev.plan_date = act.ActualDate AND prev.line = act.ActualLine AND prev.shift = act.ActualShift AND prev.item_id = act.ActualItemId
-                    WHERE prev.plan_date < p.plan_date 
-                    AND prev.line = p.line 
-                    AND prev.item_id = p.item_id
-                    AND (prev.adjusted_planned_quantity - ISNULL(act.ActualQty, 0)) > 0
-                ), 0)
-                FROM $planTable p
-                WHERE p.plan_date >= CAST(GETDATE() AS DATE)
-            ";
-            $pdo->exec($sql);
-            echo json_encode(['success' => true, 'message' => 'Carry over calculated']);
+            try {
+                // กำหนดช่วงเวลา (-30 วัน ถึง +30 วัน)
+                $startDate = date('Y-m-d', strtotime('-7 days'));
+                $endDate   = date('Y-m-d', strtotime('+30 days')); 
+                
+                // ตรวจสอบว่ามี Constant นี้หรือยัง (กันพลาด)
+                if (!defined('SP_UPDATE_CARRYOVER')) {
+                    throw new Exception("Config Error: SP_UPDATE_CARRYOVER is not defined.");
+                }
+
+                $spName = SP_UPDATE_CARRYOVER;
+                
+                // เรียก Stored Procedure
+                $sql = "EXEC $spName @StartDate = :start, @EndDate = :end";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':start' => $startDate,
+                    ':end' => $endDate
+                ]);
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "Carry Over updated successfully (Range: -30 to +30 days)"
+                ]);
+
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Calculation Error: ' . $e->getMessage()
+                ]);
+            }
             break;
 
         case 'import_plans_bulk':
