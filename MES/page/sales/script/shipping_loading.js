@@ -17,6 +17,8 @@ let rowsPerPage = 100;
 let filteredData = [];
 let searchTimer;
 let currentStatusFilter = 'TODAY'; // Default View
+let lastFilterMode = 'ALL';
+let currentFilterMode = 'ALL';
 
 // Note: ตัวแปร 'isCustomer' ถูกประกาศไว้ในไฟล์ PHP แล้ว (Global Scope)
 
@@ -278,7 +280,6 @@ function renderTable() {
         const isLoad = row.is_loading_done == 1;
         const isProd = row.is_production_done == 1;
         
-        // ปุ่มสถานะ (Load/Prod)
         const btnLoad = isCustomer 
             ? `<div class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></div>`
             : `<button class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'loading', ${row.is_loading_done})"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></button>`;
@@ -287,19 +288,15 @@ function renderTable() {
             ? `<div class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></div>`
             : `<button class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></button>`;
 
-        // ★ Helper: สร้างช่องกรอกข้อมูล (Text Input)
-        // - ลูกค้า: ถ้าว่างให้โชว์ขีด (-)
-        // - พนักงาน: ใส่ placeholder="-"
-        const inputHTML = (field, val) => {
+        const inputHTML = (field, val, align = 'center') => {
             if(isCustomer) {
                 return (val && val !== '') 
                     ? `<span class="text-dark">${val}</span>` 
                     : '<span class="text-muted fw-light">-</span>';
             }
-            return `<input class="editable-input" value="${val || ''}" onchange="upd(${row.id}, '${field}', this.value, this)" placeholder="-">`;
+            return `<input class="editable-input text-${align}" value="${val || ''}" onchange="upd(${row.id}, '${field}', this.value, this)" placeholder="-">`;
         };
 
-        // ★ Helper: สร้างการแสดงผลวันที่ (Date Display)
         const dateDisplay = (val) => {
             const d = fnDateDisplay(val);
             if(isCustomer) return d || '<span class="text-muted fw-light">-</span>';
@@ -309,12 +306,12 @@ function renderTable() {
         const loadDateObj = getDateObj(row.snc_load_day);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
         
-        // PO Number
         let poHtml = isDelay 
-            ? `<div class="d-flex align-items-center justify-content-center text-danger"><i class="fas fa-exclamation-triangle me-1 blink"></i>${row.po_number}</div>`
-            : `<span class="text-primary">${row.po_number}</span>`;
+            ? `<div class="d-flex align-items-center justify-content-center text-danger fw-bold" style="font-size: 0.9rem;">
+                <i class="fas fa-exclamation-triangle me-1 blink"></i>${row.po_number}
+            </div>`
+            : `<span class="text-primary fw-bold font-monospace" style="font-size: 0.9rem;">${row.po_number}</span>`;
 
-        // SNC Load Day
         let dateHtml = '';
         const dateVal = fnDateDisplay(row.snc_load_day);
         if(isCustomer) {
@@ -323,7 +320,6 @@ function renderTable() {
             dateHtml = `<input type="text" class="editable-input datepicker text-center ${isDelay?'text-danger fw-bold':''}" value="${dateVal}" data-field="snc_load_day" data-id="${row.id}" placeholder="-" style="width:85px; font-size:0.85rem;">`;
         }
 
-        // Cutoff Date & Time
         const cutDateVal = fnDateDisplay(row.cutoff_date);
         const cutTimeVal = row.cutoff_time ? row.cutoff_time.substring(0,5) : '';
         const htmlCutDate = isCustomer 
@@ -333,65 +329,73 @@ function renderTable() {
             ? (cutTimeVal || '<span class="text-muted fw-light">-</span>') 
             : `<input type="time" class="editable-input text-danger fw-bold text-center" value="${cutTimeVal}" onchange="upd(${row.id}, 'cutoff_time', this.value, this)" placeholder="-" style="width:58px; padding:0;">`;
 
+        // เรียงลำดับ <td> ใหม่ตามหัวข้อที่คุณต้องการ (Load -> Prod -> PO -> Remark -> Day/Time -> Booking -> CI -> Invoice -> Desc -> SKU -> Qty -> Cont -> Seal -> Week -> DC ...)
         return `<tr>
             <td class="sticky-col-left-1 bg-white text-center">${btnLoad}</td>
             <td class="sticky-col-left-2 bg-white text-center">${btnProd}</td>
             <td class="sticky-col-left-3 bg-white text-center fw-bold">${poHtml}</td>
-            
-            <td>${inputHTML('remark', row.remark)}</td>
+            <td class="text-center">${inputHTML('remark', row.remark)}</td>
 
-            <td class="text-center">${row.shipping_week || '<span class="text-muted fw-light">-</span>'}</td>
-            
-            <td>
+            <td class="text-center">
                 <div class="d-flex gap-1 justify-content-center align-items-center">
-                ${dateHtml}
-                ${isCustomer 
-                    ? (row.load_time ? `<span class="small ms-1 text-muted">${row.load_time.substring(0,5)}</span>` : '')
-                    : `<input type="time" class="editable-input fw-bold text-primary text-center" value="${row.load_time ? row.load_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'load_time', this.value, this)" placeholder="-" style="width:58px; font-size:0.85rem; padding:0;">`
-                }
+                    ${dateHtml}
+                    ${isCustomer 
+                        ? (row.load_time ? `<span class="small text-muted">${row.load_time.substring(0,5)}</span>` : '')
+                        : `<input type="time" class="editable-input fw-bold text-primary text-center" value="${row.load_time ? row.load_time.substring(0,5) : ''}" onchange="upd(${row.id}, 'load_time', this.value, this)" style="width:58px; font-size:0.85rem; padding:0;">`
+                    }
                 </div>
-                </td>
+            </td>
 
-                <td>${inputHTML('dc_location', row.dc_location)}</td>
-                <td class="font-monospace text-center">${row.sku || '<span class="text-muted fw-light">-</span>'}</td>
-                <td>${inputHTML('booking_no', row.booking_no)}</td>
-                <td>${inputHTML('snc_ci_no', row.snc_ci_no)}</td>
-                <td>${inputHTML('invoice_no', row.invoice_no)}</td>
-                <td class="text-start text-truncate" title="${row.description}">${row.description || '<span class="text-muted fw-light">-</span>'}</td>
+            <td class="text-center">${inputHTML('booking_no', row.booking_no)}</td>
+            <td class="text-center">${inputHTML('snc_ci_no', row.snc_ci_no)}</td>
+            
+            <td class="text-center" style="min-width:200px;">${row.description || '-'}</td>
+            <td class="font-monospace text-center">${row.sku || '-'}</td>
             <td class="text-center fw-bold">${parseInt(row.quantity||0).toLocaleString()}</td>
-            
-            <td>${inputHTML('ctn_size', row.ctn_size)}</td>
-            <td>${inputHTML('container_no', row.container_no)}</td>
-            <td>${inputHTML('seal_no', row.seal_no)}</td>
-            <td>${inputHTML('container_tare', row.container_tare)}</td>
-            <td>${inputHTML('net_weight', row.net_weight)}</td>
-            <td>${inputHTML('gross_weight', row.gross_weight)}</td>
-            <td>${inputHTML('cbm', row.cbm)}</td>
-            
-            <td>${inputHTML('feeder_vessel', row.feeder_vessel)}</td>
-            <td>${inputHTML('mother_vessel', row.mother_vessel)}</td>
-            
-            <td>${isCustomer ? dateDisplay(row.si_vgm_cut_off) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.si_vgm_cut_off)}" data-field="si_vgm_cut_off" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
-            <td>${isCustomer ? dateDisplay(row.pickup_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.pickup_date)}" data-field="pickup_date" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
-            <td>${isCustomer ? dateDisplay(row.return_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.return_date)}" data-field="return_date" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
-            
-            <td class="bg-warning bg-opacity-10 text-center">${isCustomer ? `<strong>${dateDisplay(row.etd)}</strong>` : `<input type="text" class="editable-input datepicker fw-bold text-center" value="${fnDateDisplay(row.etd)}" data-field="etd" data-id="${row.id}" placeholder="-" style="width:85px;">`}</td>
-            <td>${inputHTML('shipping_customer_status', row.shipping_customer_status)}</td>
-            <td>${inputHTML('inspect_type', row.inspect_type)}</td>
-            <td>${inputHTML('inspection_result', row.inspection_result)}</td>
 
-            <td class="sticky-col-right-2 bg-white text-danger text-center fw-bold">
-                ${htmlCutDate}
+            <td class="text-center">${inputHTML('container_no', row.container_no)}</td>
+            <td class="text-center">${inputHTML('seal_no', row.seal_no)}</td>
+            <td class="text-center">${row.shipping_week || '-'}</td>
+            <td class="text-center">${inputHTML('dc_location', row.dc_location)}</td>
+            
+            <td class="text-center">${inputHTML('ctn_size', row.ctn_size)}</td>
+            <td class="text-center">${inputHTML('container_tare', row.container_tare)}</td>
+            <td class="text-center">${inputHTML('net_weight', row.net_weight)}</td>
+            <td class="text-center">${inputHTML('gross_weight', row.gross_weight)}</td>
+            <td class="text-center">${inputHTML('cbm', row.cbm)}</td>
+            
+            <td class="text-center col-vessel">
+            <div class="editable-div text-center" 
+            ${!isCustomer ? `contenteditable="true" onblur="upd(${row.id}, 'feeder_vessel', this.innerText, this)"` : ''}>
+            ${row.feeder_vessel || '-'}
+            </div>
             </td>
-            <td class="sticky-col-right-1 bg-white text-danger text-center fw-bold">
-                ${htmlCutTime}
+            
+            <td class="text-center col-vessel">
+            <div class="editable-div text-center" 
+            ${!isCustomer ? `contenteditable="true" onblur="upd(${row.id}, 'mother_vessel', this.innerText, this)"` : ''}>
+            ${row.mother_vessel || '-'}
+            </div>
             </td>
+            
+            <td class="text-center">${isCustomer ? dateDisplay(row.si_vgm_cut_off) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.si_vgm_cut_off)}" data-field="si_vgm_cut_off" data-id="${row.id}" style="width:85px;">`}</td>
+            <td class="text-center">${isCustomer ? dateDisplay(row.pickup_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.pickup_date)}" data-field="pickup_date" data-id="${row.id}" style="width:85px;">`}</td>
+            <td class="text-center">${isCustomer ? dateDisplay(row.return_date) : `<input type="text" class="editable-input datepicker text-center" value="${fnDateDisplay(row.return_date)}" data-field="return_date" data-id="${row.id}" style="width:85px;">`}</td>
+            
+            <td class="text-center">${inputHTML('invoice_no', row.invoice_no)}</td>
+            <td class="text-center">${inputHTML('shipping_customer_status', row.shipping_customer_status)}</td>
+            <td class="text-center">${inputHTML('inspect_type', row.inspect_type)}</td>
+            <td class="text-center">${inputHTML('inspection_result', row.inspection_result)}</td>
+            <td class="bg-warning bg-opacity-10 text-center">${isCustomer ? `<strong>${dateDisplay(row.etd)}</strong>` : `<input type="text" class="editable-input datepicker fw-bold text-center" value="${fnDateDisplay(row.etd)}" data-field="etd" data-id="${row.id}" style="width:85px;">`}</td>
+
+            <td class="sticky-col-right-2 bg-white text-danger text-center fw-bold">${htmlCutDate}</td>
+            <td class="sticky-col-right-1 bg-white text-danger text-center fw-bold">${htmlCutTime}</td>
         </tr>`;
     }).join('');
 
     tableBody.html(rowsHtml);
     renderPagination();
-    
+    updateSummary();
     if(!isCustomer) initDatePickers(); 
 }
 
@@ -435,8 +439,19 @@ function getDateObj(dateStr) {
     return d;
 }
 
+// แก้ไขฟังก์ชัน fnDateDisplay ในไฟล์ shipping_loading.js
 const fnDateDisplay = (d) => {
     if (!d || d === '0000-00-00' || d === '1900-01-01' || d === 'null') return '';
+    
+    // ถ้า d เป็น Date Object (เช่น new Date()) ให้แปลงเป็นสตริงก่อน
+    if (d instanceof Date) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${day}/${month}/${year}`;
+    }
+
+    // ถ้าเป็นสตริง (จากฐานข้อมูล) ให้ทำเหมือนเดิม
     const datePart = d.split(' ')[0];
     const parts = datePart.split('-');
     if (parts.length !== 3) return d; 
@@ -465,29 +480,26 @@ function initDatePickers() {
 }
 
 function upd(id, field, val, inputElement) {
-    if(isCustomer) return; // Protection
-    
+    if(isCustomer) return;
     const $el = $(inputElement);
-    // Visual Feedback: Yellow (Saving)
     $el.css({'background-color': '#fff3cd', 'border': '1px solid #ffc107'});
 
     $.post(API_URL, { action: 'update_cell', id, field, value: val })
     .done(res => {
         if(res.success) {
-            // Visual Feedback: Green (Success)
             $el.css({'background-color': '#d1e7dd', 'border-color': '#198754'});
             setTimeout(() => $el.css({'background-color': 'transparent', 'border-color': 'transparent'}), 1000);
             
-            // Update Local Data
+            // อัปเดตข้อมูลในตัวแปรหลัก
             const row = allData.find(d => d.id == id);
             if(row) row[field] = val;
+
+            // --- ส่วนสำคัญ: สั่งคำนวณใหม่ทั้งหมดหน้าจอ ---
+            calculateKPI(allData);  // อัปเดตตัวเลขบน Card (Today, 7Days, etc.)
+            applyGlobalFilter();    // อัปเดตตารางและเรียก updateSummary() อัตโนมัติ
         } else {
             alert('Save failed: ' + res.message);
-            $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
         }
-    }).fail(() => {
-        alert('Network error');
-        $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
     });
 }
 
@@ -503,6 +515,7 @@ function toggleStatus(id, type, currentVal) {
             // อัปเดตข้อมูลใน Local เพื่อความรวดเร็ว (หรือจะ Load ใหม่เลยก็ได้)
             const row = allData.find(d => d.id == id);
             if(row) row[field] = newVal;
+            updateSummary();
             
             calculateKPI(allData); // คำนวณ KPI ใหม่
             applyGlobalFilter();   // วาดตารางใหม่
@@ -600,4 +613,57 @@ function guestLogout() {
             }
         })
         .catch(err => console.error(err));
+}
+
+function updateSummary() {
+    if (!allData || allData.length === 0) return;
+
+    // สร้างวันที่วันนี้แบบ YYYY-MM-DD เพื่อเอาไว้เทียบกับค่าใน Database ตรงๆ
+    const now = new Date();
+    const todayISO = now.toISOString().split('T')[0]; 
+    
+    const targetData = allData.filter(row => {
+        // row.snc_load_day มักจะมาเป็น "YYYY-MM-DD"
+        const rowDate = row.snc_load_day ? row.snc_load_day.split(' ')[0] : '';
+        const rowDateObj = getDateObj(row.snc_load_day);
+        
+        const isTodayJob = (rowDate === todayISO);
+        // งานค้าง: วันที่น้อยกว่าวันนี้ และ ยังโหลดไม่เสร็จ
+        const isBacklog = (rowDateObj && rowDateObj < now && row.is_loading_done == 0);
+        
+        return isTodayJob || isBacklog;
+    });
+
+    // คำนวณ Containers (นับ Unique)
+    const uniqueContainers = [...new Set(targetData
+        .map(row => {
+            // ถ้ามีเลขตู้ (Container No) ให้ใช้เลขตู้เพื่อจัดการตู้ที่รวมหลาย PO
+            if (row.container_no && row.container_no !== '' && row.container_no !== '-') {
+                return row.container_no;
+            }
+            // ถ้าไม่มีเลขตู้ ให้ใช้ PO Number หรือ ID แถวเพื่อให้นับเป็น 1 รายการ
+            return 'PENDING_' + row.id; 
+        })
+    )].length;
+
+    // คำนวณ Pcs
+    const totalPcs = targetData.reduce((sum, row) => sum + (parseInt(row.quantity) || 0), 0);
+
+    // คำนวณ Progress
+    const totalRows = targetData.length;
+    const loadedCount = targetData.filter(row => row.is_loading_done == 1).length;
+    const loadPercent = totalRows > 0 ? Math.round((loadedCount / totalRows) * 100) : 0;
+
+    // อัปเดต UI
+    $('#sumTotalContainers').text(uniqueContainers.toLocaleString());
+    $('#sumTotalPcs').text(totalPcs.toLocaleString());
+    $('#sumLoadProgress').text(`${loadedCount}/${totalRows}`);
+    $('#loadProgressBar').css('width', loadPercent + '%');
+    
+    // เปลี่ยนสีหลอด
+    if (loadPercent === 100 && totalRows > 0) {
+        $('#loadProgressBar').removeClass('bg-primary').addClass('bg-success');
+    } else {
+        $('#loadProgressBar').removeClass('bg-success').addClass('bg-primary');
+    }
 }

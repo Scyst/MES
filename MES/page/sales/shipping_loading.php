@@ -159,28 +159,54 @@ $pageHelpId = "helpModal";
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-body p-2 bg-body-tertiary rounded">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            
                             <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                <div class="input-group input-group-sm" style="max-width: 400px;">
+                                <div class="input-group input-group-sm" style="max-width: 320px;">
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search PO, SKU, Container...">
+                                    <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search PO, SKU, Container, Vessel...">
                                 </div>
                                 
                                 <?php if (!$isCustomer): ?>
-                                <a href="salesDashboard.php" class="btn btn-outline-secondary btn-sm fw-bold shadow-sm d-flex align-items-center me-2" title="กลับไปหน้า Sales Dashboard">
-                                    <i class="fas fa-clipboard-list me-2"></i> Sales Dashboard
+                                <a href="salesDashboard.php" class="btn btn-outline-secondary btn-sm fw-bold shadow-sm d-flex align-items-center" title="กลับไปหน้า Sales Dashboard">
+                                    <i class="fas fa-clipboard-list me-1"></i> Sales
                                 </a>
                                 <?php endif; ?>
                                 
                                 <button class="btn btn-outline-secondary btn-sm" onclick="loadData()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <?php if (!$isCustomer): ?>
-                                <input type="file" id="csv_file" style="display:none;" onchange="uploadFile()">
-                                <button class="btn btn-light btn-sm shadow-sm" onclick="document.getElementById('csv_file').click()"><i class="fas fa-file-import me-1"></i> Import</button>
-                                <?php endif; ?>
-                                <button class="btn btn-success btn-sm shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-1"></i> Export</button>
+
+                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                                
+                                <div class="d-none d-xl-flex align-items-center border border-secondary-subtle rounded px-3 py-1 bg-body shadow-sm h-100" style="min-height: 31px;">
+                                    <span class="badge bg-dark me-1" id="sumTotalContainers">0</span> 
+                                    <span class="small text-muted fw-bold me-3">Containers</span>
+                                    
+                                    <span class="badge bg-info text-dark me-1" id="sumTotalPcs">0</span> 
+                                    <span class="small text-muted fw-bold me-3">Pcs</span>
+                                    
+                                    <div class="vr me-3 opacity-25"></div>
+                                    
+                                    <span class="small text-muted me-2">Progress:</span>
+                                    <span class="fw-bold text-primary font-monospace me-2" id="sumLoadProgress">0/0</span>
+                                    <div class="progress bg-secondary bg-opacity-10 border border-secondary-subtle-light" style="width: 80px; height: 8px; border-radius: 10px;">
+                                        <div id="loadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%; border-radius: 10px;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="btn-group shadow-sm">
+                                    <?php if (!$isCustomer): ?>
+                                    <input type="file" id="csv_file" style="display:none;" onchange="uploadFile()">
+                                    <button class="btn btn-light btn-sm border-secondary-subtle" onclick="document.getElementById('csv_file').click()" title="Import Excel">
+                                        <i class="fas fa-file-import text-secondary"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    <button class="btn btn-light btn-sm border-secondary-subtle" onclick="exportToCSV()" title="Export Excel">
+                                        <i class="fas fa-file-excel text-success"></i>
+                                    </button>
+                                </div>
+
                                 <?php if ($isCustomer): ?>
-                                <button class="btn btn-warning btn-sm shadow-sm text-dark fw-bold" onclick="guestLogout()" title="ออกจากระบบ / ล็อคหน้าจอ">
+                                <button class="btn btn-warning btn-sm shadow-sm text-dark fw-bold px-3" onclick="guestLogout()" title="Lock Screen">
                                     <i class="fas fa-lock me-1"></i> Lock
                                 </button>
                                 <?php endif; ?>
@@ -197,35 +223,38 @@ $pageHelpId = "helpModal";
                                     <th class="sticky-col-left-1">Load</th>
                                     <th class="sticky-col-left-2">Prod</th>
                                     <th class="sticky-col-left-3">PO Number</th>
+                                    <th style="width: 150px;">Remark</th> 
                                     
-                                    <th style="width: 100px;">Remark</th> 
-                                    
-                                    <th>Week</th>
-                                    
-                                    <th>SNC Load Day / Time</th>
-                                    <th style="width: 150px;">DC</th>
-                                    <th>SKU</th>
-                                    <th>Booking No.</th>
+                                    <th class="col-date-time">SNC Load Day / Time</th>
+                                    <th style="width: 150px;">Booking No.</th>
                                     <th style="width: 150px;">SNC CI No.</th>
-                                    <th style="width: 130px;">Invoice</th>
+                                    
                                     <th style="width: 250px;">Description</th>
-                                    <th>Q'ty (Pcs)</th>
-                                    <th style="width: 100px;">CTN Size</th>
-                                    <th style="width: 150px;">Container No.</th>
-                                    <th style="width: 150px;">Seal No.</th>
-                                    <th style="width: 150px;">Tare</th>
-                                    <th style="width: 150px;">N.W.</th>
-                                    <th style="width: 150px;">G.W.</th>
-                                    <th style="width: 100px;">CBM</th>
+                                    <th class="col-sku">SKU</th>
+                                    <th class="col-qty">Q'ty (Pcs)</th>
+                                    
+                                    <th class="col-md">Container No.</th>
+                                    <th class="col-md">Seal No.</th>
+                                    <th class="col-week">Week</th>
+                                    <th style="width: 150px;">DC</th>
+                                    
+                                    <th class="col-sm">CTN Size</th>
+                                    <th class="col-sm">Tare</th>
+                                    <th class="col-sm">N.W.</th>
+                                    <th class="col-sm">G.W.</th>
+                                    <th class="col-sm">CBM</th>
+                                    
                                     <th>Feeder Vsl</th>
                                     <th>Mother Vsl</th>
-                                    <th>SI/VGM Cut</th>
-                                    <th>Pickup Date</th>
-                                    <th>Return Date</th>
-                                    <th style="background-color: rgb(255 249 230)">ETD</th>
+                                    <th class="col-date">SI/VGM Cut</th>
+                                    <th class="col-date">Pickup Date</th>
+                                    <th class="col-date">Return Date</th>
+                                    
+                                    <th style="width: 130px;">Invoice</th>
                                     <th style="width: 130px;">Status</th>
-                                    <th style="width: 100px;">Inspect Type</th>
-                                    <th style="width: 100px;">Inspect Res</th>
+                                    <th class="col-sm">Inspect Type</th>
+                                    <th class="col-sm">Inspect Res</th>
+                                    <th class="col-date" style="background-color: rgb(255 249 230)">ETD</th>
 
                                     <th class="sticky-col-right-2 text-danger">Cutoff Date</th>
                                     <th class="sticky-col-right-1 text-danger">Cutoff Time</th>

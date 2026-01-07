@@ -164,7 +164,7 @@ $pageHelpId = "helpModal";
 
                             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
                                 
-                                <div class="d-none d-xl-flex align-items-center border border-secondary-subtle rounded px-3 py-1 bg-body shadow-sm h-100">
+                                <div class="d-none d-xl-flex align-items-center border border-secondary-subtle rounded px-3 py-0 bg-body shadow-sm h-100">
                                     <span class="badge bg-dark me-2" id="sum-containers">0</span> <span class="small text-muted fw-bold me-3">Orders</span>
                                     <span class="badge bg-info text-dark me-2" id="sum-qty">0</span> <span class="small text-muted fw-bold me-3">Pcs</span>
                                     <div class="vr me-3 opacity-25"></div>
