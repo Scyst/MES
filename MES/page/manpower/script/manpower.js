@@ -305,30 +305,60 @@ function renderByLine(data) {
     tbody.innerHTML = '';
     thead.innerHTML = SUMMARY_TABLE_HEADER.replace('Categories', 'Line Structure');
 
-    if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No Data</td></tr>'; return; }
+    if (!data || data.length === 0) { 
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No Data</td></tr>'; 
+        return; 
+    }
 
     const grouped = {};
-    let grandTotal = { total_hc:0, plan:0, present:0, late:0, absent:0, leave:0, actual:0, diff:0 };
+    let grandTotal = { total_hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0 };
 
     data.forEach(row => {
         const line = row.line_name;
         const shiftKey = `${row.shift_name}::${row.team_group}`;
-
-        if (!grouped[line]) {
-            const lineHC = parseInt(row.total_hc) || 0;
-            grouped[line] = { name: line, total_hc: lineHC, plan:0, present:0, late:0, absent:0, leave:0, actual:0, diff:0, shifts: {} };
-            grandTotal.total_hc += lineHC;
-        }
-        if (!grouped[line].shifts[shiftKey]) {
-            grouped[line].shifts[shiftKey] = { name: row.shift_name, team: row.team_group, total_hc: null, plan:0, present:0, late:0, absent:0, leave:0, actual:0, diff:0, types: [] };
-        }
         const vals = parseRowValues(row);
-        accumulate(grouped[line], vals);
+
+        // --- จัดการระดับ LINE (Parent) ---
+        if (!grouped[line]) {
+            grouped[line] = { 
+                name: line, 
+                total_hc: 0, // เริ่มที่ 0 แล้วค่อยบวกจากแถวย่อย
+                plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, 
+                shifts: {} 
+            };
+        }
+
+        // --- จัดการระดับ SHIFT/TEAM (Child) ---
+        if (!grouped[line].shifts[shiftKey]) {
+            grouped[line].shifts[shiftKey] = { 
+                name: row.shift_name, 
+                team: row.team_group, 
+                total_hc: 0, // สะสมยอดคนในทีมนี้
+                plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, 
+                types: [] 
+            };
+        }
+
+        // สะสมยอดลงในระดับ Shift และ Line
+        const rowHC = parseInt(row.total_hc) || 0;
+        
+        // บวกเข้า Shift
         accumulate(grouped[line].shifts[shiftKey], vals);
-        grouped[line].shifts[shiftKey].types.push({ name: row.emp_type, total_hc: null, ...vals });
+        grouped[line].shifts[shiftKey].total_hc += rowHC;
+
+        // บวกเข้า Line
+        accumulate(grouped[line], vals);
+        grouped[line].total_hc += rowHC;
+
+        // บวกเข้า Grand Total
         accumulate(grandTotal, vals);
+        grandTotal.total_hc += rowHC;
+
+        // เก็บข้อมูลระดับพนักงาน (Type)
+        grouped[line].shifts[shiftKey].types.push({ name: row.emp_type, total_hc: rowHC, ...vals });
     });
 
+    // แสดงผล HTML (ส่วนนี้ใช้ Code เดิมของคุณได้เลย)
     Object.values(grouped).forEach((group, idx) => {
         const id = `L-${idx}`;
         tbody.innerHTML += createRowHtml(id, group.name, group, '', '', true, 0, null, { type: 'LINE', main: group.name });
@@ -434,10 +464,14 @@ function renderByType(data) {
 // --- Helpers ---
 function parseRowValues(row) {
     return {
-        plan: parseInt(row.plan)||0,
-        present: parseInt(row.present)||0, late: parseInt(row.late)||0,
-        absent: parseInt(row.absent)||0, leave: parseInt(row.leave)||0,
-        actual: parseInt(row.actual)||0, diff: parseInt(row.diff)||0
+        // ใช้ Number() หรือ parseInt() เพื่อความชัวร์
+        plan: Number(row.plan) || 0,
+        present: Number(row.present) || 0, 
+        late: Number(row.late) || 0,
+        absent: Number(row.absent) || 0, 
+        leave: Number(row.leave) || 0,
+        actual: Number(row.actual) || 0, 
+        diff: Number(row.diff) || 0
     };
 }
 
@@ -794,7 +828,7 @@ function hideSpinner() { const el = document.getElementById('loadingOverlay'); i
 // 6.1 Edit Log
 // ไฟล์: manpower.js
 
-// [แก้ตรงนี้] รับ parameter เพิ่ม
+// 6.1 Edit Log
 window.openEditLogModal = function(empId, dateStr, logId) {
     
     // [LOGIC สำคัญ] ค้นหาจาก emp_id และ log_date เพื่อความแม่นยำ 100%
@@ -808,11 +842,23 @@ window.openEditLogModal = function(empId, dateStr, logId) {
     if(target) {
         document.getElementById('editLogId').value = target.log_id || 0;
         
-        // เซ็ตค่าลง Hidden Fields ที่เราเพิ่มไปเมื่อกี้
+        // เซ็ตค่าลง Hidden Fields
         document.getElementById('editEmpIdHidden').value = target.emp_id;
         document.getElementById('editLogDateHidden').value = target.log_date;
 
         document.getElementById('editEmpName').value = target.name_th;
+
+        // =========================================================
+        // [เพิ่มใหม่] แสดง Snapshot History (Line & Team)
+        // =========================================================
+        const elSnapLine = document.getElementById('editLogLine');
+        const elSnapTeam = document.getElementById('editLogTeam');
+        
+        // target.line และ target.team_group มาจาก API ที่เราแก้ logic ไปแล้ว
+        // ดังนั้นมันคือค่า Snapshot หรือค่าปัจจุบันที่ถูกต้องที่สุด ณ วันนั้น
+        if (elSnapLine) elSnapLine.value = target.line || '-';
+        if (elSnapTeam) elSnapTeam.value = target.team_group || '-';
+        // =========================================================
         
         // ถ้าสถานะเป็น WAITING ให้ Default เป็น PRESENT เพื่อความสะดวก
         let statusToShow = target.status;
@@ -825,8 +871,8 @@ window.openEditLogModal = function(empId, dateStr, logId) {
         document.getElementById('editScanInTime').value = fmt(target.scan_in_time);
         document.getElementById('editScanOutTime').value = fmt(target.scan_out_time);
         
-        // [เพิ่ม] ถ้าเป็น New Record (WAITING) ให้เปิดให้แก้วันที่ได้เผื่อ User อยากเปลี่ยนวัน
-        // แต่ถ้าเป็นรายการเดิม ให้ล็อกวันที่ไว้
+        // ใส่ Remark เดิมถ้ามี
+        document.getElementById('editRemark').value = target.remark || '';
         
         editLogModal.show();
     } else {

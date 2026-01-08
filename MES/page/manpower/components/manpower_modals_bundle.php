@@ -1,6 +1,6 @@
 <?php 
 // MES/page/manpower/components/manpower_modals_bundle.php 
-// แก้ไข: รวม editEmpModal (ตัวที่มี Active) เข้ามาแทนที่ editEmployeeModal เดิม และปรับ ID ให้ตรงกับ JS
+// แก้ไข: เพิ่มส่วนแสดง Snapshot History (Line/Team ณ วันที่เกิดรายการ) ใน editLogModal
 ?>
 
 <div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true">
@@ -23,6 +23,19 @@
                         <input type="text" class="form-control form-control-plaintext fw-bold" id="editEmpName" readonly>
                     </div>
 
+                    <div class="row g-2 mb-3 bg-light p-2 rounded border border-light mx-0">
+                        <div class="col-12 border-bottom pb-1 mb-1">
+                            <small class="text-muted fw-bold d-block"><i class="fas fa-history me-1"></i>Recorded At (Snapshot)</small>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-secondary mb-0" style="font-size: 0.75rem;">Line / Section</label>
+                            <input type="text" class="form-control form-control-sm bg-transparent border-0 p-0 fw-bold text-dark" id="editLogLine" readonly value="-" style="font-size: 0.9rem;">
+                        </div>
+                        <div class="col-6 border-start ps-3">
+                            <label class="form-label small text-secondary mb-0" style="font-size: 0.75rem;">Team</label>
+                            <input type="text" class="form-control form-control-sm bg-transparent border-0 p-0 fw-bold text-dark" id="editLogTeam" readonly value="-" style="font-size: 0.9rem;">
+                        </div>
+                    </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Status</label>
@@ -79,7 +92,8 @@
             </div>
             <div class="modal-body p-4">
                 <form id="editEmployeeForm">
-                    <input type="hidden" id="empEditId"> <div class="mb-3">
+                    <input type="hidden" id="empEditId"> 
+                    <div class="mb-3">
                         <label class="form-label text-muted small fw-bold text-uppercase">Employee Name</label>
                         <input type="text" class="form-control form-control-lg fw-bold px-2 bg-light border-0" id="empEditName" readonly>
                     </div>

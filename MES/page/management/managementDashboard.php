@@ -230,7 +230,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
 
                                 <div class="summary-wrapper d-flex gap-4 align-items-center">
                                     <div class="footer-item">
-                                        <span class="footer-label">Total Plan (New)</span>
+                                        <span class="footer-label">Total Plan</span>
                                         <span class="footer-value text-primary" id="footer-total-qty">0</span>
                                     </div>
                                     
