@@ -459,9 +459,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await sendRequest(PLAN_API, 'import_plans_bulk', 'POST', { plans: allMappedPlans });
                 
                 if (res.success) {
-                    showToast(res.message, 'var(--bs-success)');
+                    // 1. แจ้งเตือนว่า Import สำเร็จ
+                    showToast(`${res.message} - Recalculating C/O...`, 'var(--bs-success)');
+                    
+                    // 2. ★★★ เพิ่มตรงนี้: สั่งคำนวณ C/O ต่อทันที (Auto Trigger) ★★★
+                    try {
+                        const coRes = await sendRequest(PLAN_API, 'calculate_carry_over', 'GET');
+                        if(coRes.success) {
+                            showToast('Carry Over Updated Automatically!', 'var(--bs-success)');
+                        }
+                    } catch(e) {
+                        console.error("Auto Calc C/O failed", e);
+                        showToast('Import success, but Auto C/O failed. Please press the yellow button.', 'var(--bs-warning)');
+                    }
+
+                    // 3. โหลดข้อมูลใหม่แสดงบนตาราง
                     fetchPlans(); 
                     if(fullCalendarInstance) fullCalendarInstance.refetchEvents();
+
                 } else {
                     alert("Import Error:\n" + res.message);
                 }
@@ -481,11 +496,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function setAllDefaultDates() {
         const today = new Date();
-        const pastDate = new Date();
-        pastDate.setDate(today.getDate() - 30);
+        
+        // วันแรกของเดือน (วันที่ 1)
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        // วันสุดท้ายของเดือน (วันที่ 0 ของเดือนถัดไป)
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-        if(startDateFilter) startDateFilter.value = formatDateForInput(pastDate);
-        if(endDateFilter) endDateFilter.value = formatDateForInput(today);
+        if(startDateFilter) startDateFilter.value = formatDateForInput(firstDay);
+        if(endDateFilter) endDateFilter.value = formatDateForInput(lastDay);
     }
 
     async function fetchDashboardLines() {
@@ -634,36 +653,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ★★★ [FIXED] คำนวณยอดรวมที่ Footer โดยใช้ตรรกะเดียวกับ Table Row ★★★
     function updateFooterSummaryClientSide(data) {
-        let totalQty = 0, totalActual = 0, totalCost = 0, totalSales = 0;
+        let totalOriginal = 0;
+        let totalActual = 0;
+        let totalEstSale = 0; 
+        let totalActualSale = 0; 
+
+        const latestItemStatus = {}; 
 
         data.forEach(p => {
-            // คำนวณ Adjusted Plan เอง ไม่รอ Backend
             const original = parseFloat(p.original_planned_quantity || 0);
-            const carryOver = parseFloat(p.carry_over_quantity || 0);
-            const adj = original + carryOver; // <-- Fix: Force Calculation
-
+            const co = parseFloat(p.carry_over_quantity || 0);
+            const adjusted = original + co; 
             const act = parseFloat(p.actual_quantity || 0);
-            
-            const cost = parseFloat(p.cost_total || 0);
+
             const priceUSD = parseFloat(p.price_usd || 0);
             const priceTHB = parseFloat(p.standard_price || 0);
             let unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
 
-            totalQty += adj;
+            totalOriginal += original;
             totalActual += act;
-            totalCost += (adj * cost);
-            totalSales += (adj * unitPrice);
+            
+            // ใช้ Original Plan คิด Est Sales เพื่อความ Make Sense ของภาพรวมเดือน
+            totalEstSale += (original * unitPrice); 
+            totalActualSale += (act * unitPrice);
+
+            // Logic Backlog
+            if (!latestItemStatus[p.item_id] || p.plan_date >= latestItemStatus[p.item_id].date) {
+                latestItemStatus[p.item_id] = {
+                    date: p.plan_date,
+                    balance: adjusted - act 
+                };
+            }
         });
 
-        document.getElementById('footer-total-qty').innerText = totalQty.toLocaleString();
-        
-        const footerActualEl = document.getElementById('footer-total-actual');
-        if (footerActualEl) footerActualEl.innerText = totalActual.toLocaleString();
+        let totalBacklog = 0;
+        Object.values(latestItemStatus).forEach(status => {
+            totalBacklog += status.balance;
+        });
 
-        document.getElementById('footer-total-cost').innerText = formatCurrency(totalCost);
-        document.getElementById('footer-total-sale').innerText = formatCurrency(totalSales);
+        // แสดงผล
+        document.getElementById('footer-total-qty').innerText = totalOriginal.toLocaleString();
+        document.getElementById('footer-total-actual').innerText = totalActual.toLocaleString();
+        document.getElementById('footer-total-sale').innerText = formatCurrency(totalEstSale);
+        document.getElementById('footer-total-actual-sale').innerText = formatCurrency(totalActualSale);
+
+        const backlogEl = document.getElementById('footer-total-backlog');
+        if(backlogEl) {
+            backlogEl.innerText = totalBacklog.toLocaleString();
+            backlogEl.style.color = totalBacklog > 0 ? '#fd7e14' : '#198754';
+        }
+
+        const totalDiff = totalActualSale - totalEstSale;
+        const diffFooterEl = document.getElementById('footer-total-diff-sale');
+        if (diffFooterEl) {
+            diffFooterEl.innerText = (totalDiff > 0 ? '+' : '') + formatCurrency(totalDiff);
+            diffFooterEl.className = 'footer-value fw-bold ' + (totalDiff >= 0 ? 'text-success' : 'text-danger');
+        }
     }
 
     // =================================================================
@@ -671,65 +717,98 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function renderPlanTable(data) {
         productionPlanTableBody.innerHTML = '';
-        if (!data || data.length === 0) {
-            productionPlanTableBody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-5">No plans found.</td></tr>`;
+
+        // 1. [ใหม่] กรองข้อมูลก่อนเริ่มวาดตาราง
+        // ตัดแถวที่ Original Plan, Carry Over และ Actual เป็น 0 ทั้งหมดออก
+        const filteredData = data ? data.filter(plan => {
+            const op = parseFloat(plan.original_planned_quantity || 0);
+            const co = parseFloat(plan.carry_over_quantity || 0);
+            const aq = parseFloat(plan.actual_quantity || 0);
+            // จะเก็บไว้ก็ต่อเมื่อมีค่าอย่างใดอย่างหนึ่ง (ไม่เป็น 0 พร้อมกันหมด)
+            return (op !== 0 || co !== 0 || aq !== 0);
+        }) : [];
+
+        // 2. เช็คว่าหลังจากกรองแล้ว เหลือข้อมูลไหม
+        if (filteredData.length === 0) {
+            productionPlanTableBody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-5">No active plans found.</td></tr>`;
             return;
         }
-        
-        data.forEach(plan => {
+
+        // 3. วนลูปสร้างตารางจากข้อมูลที่กรองแล้ว (เปลี่ยนจาก data.forEach เป็น filteredData.forEach)
+        filteredData.forEach(plan => {
             const originalPlan = parseFloat(plan.original_planned_quantity || 0);
             const carryOver = parseFloat(plan.carry_over_quantity || 0);
-            
-            // ★★★ [FIXED] คำนวณ Adjusted Plan ทันที ไม่รอค่าจาก DB ★★★
-            const adjPlan = originalPlan + carryOver; 
-            
+            const adjPlan = originalPlan + carryOver;
             const actualQty = parseFloat(plan.actual_quantity || 0);
-            const unitCost = parseFloat(plan.cost_total || 0);
-            
-            // คำนวณยอดเงินจาก adjPlan ที่ถูกต้อง
-            const totalPlanCost = adjPlan * unitCost;
-            
+
             const priceUSD = parseFloat(plan.price_usd || 0);
             const priceTHB = parseFloat(plan.standard_price || 0);
             let unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
+
             const totalPlanSale = adjPlan * unitPrice;
+            const totalActualSale = actualQty * unitPrice;
+            const diffMoney = totalActualSale - totalPlanSale;
 
             const tr = document.createElement('tr');
             tr.dataset.planId = plan.plan_id;
             tr.dataset.planData = JSON.stringify(plan);
 
+            // Logic สี Actual
             let progressClass = 'text-dark';
-            if(adjPlan > 0) {
-                if(actualQty >= adjPlan) progressClass = 'text-success fw-bold';
-                else if(actualQty > 0) progressClass = 'text-primary';
+            if (adjPlan > 0) {
+                if (actualQty >= adjPlan) progressClass = 'text-success fw-bold';
+                else if (actualQty > 0) progressClass = 'text-primary';
+            }
+
+            // Logic สี Diff
+            let diffClass = '';
+            let diffText = '';
+
+            // กรณีที่ 1: แผนเป็น 0 และ ผลิตจริงเป็น 0 (ไม่มี Activity) -> ให้โชว์ขีด "-" สีจางๆ
+            if (adjPlan === 0 && actualQty === 0) {
+                diffClass = 'text-end text-muted opacity-50'; // เพิ่ม opacity ให้จางลงอีกนิด
+                diffText = '-';
+            }
+            // กรณีที่ 2: กำไร หรือ เท่าทุน (>= 0) -> ให้เป็นสีเขียวตามที่ขอ
+            else if (diffMoney >= 0) {
+                diffClass = 'text-end text-success fw-bold';
+                // ถ้ามากกว่า 0 ใส่เครื่องหมาย +, ถ้าเท่ากับ 0 ไม่ต้องใส่
+                diffText = (diffMoney > 0 ? '+' : '') + formatCurrency(diffMoney);
+            }
+            // กรณีที่ 3: ขาดทุน -> สีแดง
+            else {
+                diffClass = 'text-end text-danger fw-bold';
+                diffText = formatCurrency(diffMoney);
             }
 
             tr.innerHTML = `
-                <td style="width: 100px;" class="text-secondary small ">${plan.plan_date}</td>
-                <td style="width: 100px;" class="text-center"><span class="badge bg-light text-dark border">${plan.line}</span></td>
-                <td style="width: 100px;" class="text-center"><span class="badge ${plan.shift === 'DAY' ? 'bg-warning text-dark' : 'bg-dark text-white'} border">${(plan.shift || '-').substring(0,1)}</span></td>
+                <td class="text-secondary">${plan.plan_date}</td>
+                <td class="text-center"><span class="badge bg-light text-dark border">${plan.line}</span></td>
+                <td class="text-center"><span class="badge ${plan.shift === 'DAY' ? 'bg-warning text-dark' : 'bg-dark text-white'} border">${(plan.shift || '-').substring(0, 1)}</span></td>
                 <td>
-                    <span class="fw-bold text-dark ">${plan.sap_no || '-'}</span> 
-                    <span class="text-muted small mx-1">/</span> 
-                    <span class=" text-secondary">${plan.part_no || '-'}</span>
-                    <small class="d-block text-muted text-truncate mt-1" style="max-width: 250px;">${plan.part_description || ''}</small>
+                    <span class="fw-bold text-dark">${plan.sap_no || '-'}</span>
+                    <span class="text-muted mx-1">/</span>
+                    <span class="text-secondary">${plan.part_no || '-'}</span>
+                    <div class="text-muted text-truncate" style="max-width: 250px; font-size: 0.85em;">${plan.part_description || ''}</div>
                 </td>
-                <td style="width: 100px;" class="text-end">
+                <td class="text-end">
                     <span class="editable-plan fw-bold text-dark" contenteditable="true" data-id="${plan.plan_id}" data-field="original_plan" style="cursor: pointer; border-bottom: 1px dashed #ccc; display:inline-block; min-width: 50px;">${originalPlan.toLocaleString()}</span>
                 </td>
-                <td style="width: 100px;" class="text-end">
+                <td class="text-end">
                     <span class="editable-plan ${carryOver !== 0 ? 'text-warning fw-bold' : 'text-muted opacity-50'}" contenteditable="true" data-id="${plan.plan_id}" data-field="carry_over" style="cursor: pointer; border-bottom: 1px dashed #ccc;">${carryOver.toLocaleString()}</span>
                 </td>
-                
-                <td class="text-end fw-bold text-primary " data-field="adjusted_plan">${adjPlan.toLocaleString()}</td>
-                
-                <td class="text-end  ${progressClass}" data-field="actual_quantity">${actualQty.toLocaleString()}</td>
-                
-                <td style="width: 120px; cursor: pointer;" class="text-end text-danger fw-bold small view-cost-detail" title="Click to view Manpower details">${formatCurrency(totalPlanCost)}</td>
-                <td style="width: 120px;" class="text-end text-success fw-bold small">${formatCurrency(totalPlanSale)}</td>
-                
-                <td style="width: 250px;" class="text-center">
-                    <span class="editable-plan d-inline-block text-truncate text-secondary small" style="max-width: 230px; cursor: pointer; border-bottom: 1px dashed #ccc;" contenteditable="true" data-id="${plan.plan_id}" data-field="note">${plan.note || '<span class="opacity-25">...</span>'}</span>
+
+                <td class="text-end fw-bold text-primary" data-field="adjusted_plan">${adjPlan.toLocaleString()}</td>
+                <td class="text-end ${progressClass}" data-field="actual_quantity">${actualQty.toLocaleString()}</td>
+
+                <td class="text-end text-secondary fw-bold">${formatCurrency(totalPlanSale)}</td>
+
+                <td class="text-end text-success fw-bold">${formatCurrency(totalActualSale)}</td>
+
+                <td class="${diffClass}" data-field="diff_money">${diffText}</td>
+
+                <td class="text-center">
+                    <span class="editable-plan d-inline-block text-truncate text-secondary" style="max-width: 180px; cursor: pointer; border-bottom: 1px dashed #ccc;" contenteditable="true" data-id="${plan.plan_id}" data-field="note">${plan.note || '<span class="opacity-25">...</span>'}</span>
                 </td>
             `;
             productionPlanTableBody.appendChild(tr);
@@ -861,8 +940,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let progress = 0;
         if (planSales > 0) {
             progress = (actualSales / planSales) * 100;
-            progress = Math.min(progress, 100);
+        } else if (planSales <= 0 && actualSales > 0) {
+            // ถ้าเป้าเป็น 0 หรือติดลบ (เพราะ C/O ช่วยไว้เยอะ) แต่เรายังขายได้ -> ถือว่าทะลุเป้า 100%
+            progress = 100;
+        } else {
+            // เป้า 0 และไม่ได้ขาย -> 0%
+            progress = 0;
         }
+        progress = Math.min(progress, 100);
         document.getElementById('finProgressText').textContent = progress.toFixed(1) + '%';
         document.getElementById('finProgressBar').style.width = progress + '%';
         
@@ -925,7 +1010,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ★★★ [FIXED] อัปเดต UI ทันทีเมื่อมีการแก้ตัวเลข (Optimistic Update) ★★★
     function updateRowCalculationUI(row, field, newVal) {
         const data = JSON.parse(row.dataset.planData);
         let plan = parseFloat(data.original_planned_quantity || 0);
@@ -935,33 +1019,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (field === 'carry_over') co = newVal;
 
         const newTarget = plan + co;
-        
-        // 1. อัปเดตช่อง Target
-        const targetEl = row.querySelector('[data-field="adjusted_plan"]');
-        if(targetEl) targetEl.innerText = newTarget.toLocaleString();
 
-        // 2. คำนวณและอัปเดตช่อง Cost & Sale ทันที
-        const unitCost = parseFloat(data.cost_total || 0);
-        const newTotalCost = newTarget * unitCost;
-        const costEl = row.querySelector('.view-cost-detail'); // หา class นี้แทน data-field
-        if(costEl) costEl.innerText = formatCurrency(newTotalCost);
+        // 1. อัปเดต Target
+        const targetEl = row.querySelector('[data-field="adjusted_plan"]');
+        if (targetEl) targetEl.innerText = newTarget.toLocaleString();
 
         const priceUSD = parseFloat(data.price_usd || 0);
         const priceTHB = parseFloat(data.standard_price || 0);
         const unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
-        const newTotalSale = newTarget * unitPrice;
-        // ช่อง Sale คือลูกคนที่ 10 (index 9)
-        if(row.children[9]) row.children[9].innerText = formatCurrency(newTotalSale);
 
-        // 3. อัปเดตสี Actual
+        // 2. อัปเดต Est. Sales (ตอนนี้อยู่ Index 8)
+        const newTotalSale = newTarget * unitPrice;
+        if (row.children[8]) row.children[8].innerText = formatCurrency(newTotalSale);
+
+        // 3. อัปเดต Diff Money (คำนวณใหม่ Act - NewTarget)
         const actualQty = parseFloat(data.actual_quantity || 0);
-        const actualEl = row.querySelector('[data-field="actual_quantity"]'); 
+        const actualSale = actualQty * unitPrice;
+        const newDiffMoney = actualSale - newTotalSale;
+
+        const diffEl = row.querySelector('[data-field="diff_money"]'); // Index 10
+        if (diffEl) {
+            // กรณีที่ 1: แผนเป็น 0 และ ผลิตจริงเป็น 0 (ไม่มี Activity) -> ให้โชว์ขีด "-" สีจางๆ
+            if (newTarget === 0 && actualQty === 0) {
+                diffEl.className = 'text-end text-muted';
+                diffEl.innerText = '-';
+            }
+            // กรณีที่ 2: กำไร หรือ เท่าทุน (>= 0) -> ให้เป็นสีเขียว
+            else if (newDiffMoney >= 0) {
+                diffEl.className = 'text-end text-success fw-bold';
+                diffEl.innerText = (newDiffMoney > 0 ? '+' : '') + formatCurrency(newDiffMoney);
+            }
+            // กรณีที่ 3: ขาดทุน -> สีแดง
+            else {
+                diffEl.className = 'text-end text-danger fw-bold';
+                diffEl.innerText = formatCurrency(newDiffMoney);
+            }
+        }
+
+        // 4. อัปเดตสี Actual
+        const actualEl = row.querySelector('[data-field="actual_quantity"]');
         if (actualEl) {
-            actualEl.className = 'text-end '; 
+            actualEl.className = 'text-end';
             if (newTarget > 0) {
                 if (actualQty >= newTarget) actualEl.classList.add('text-success', 'fw-bold');
                 else if (actualQty > 0) actualEl.classList.add('text-primary');
                 else actualEl.classList.add('text-dark');
+            } else {
+                actualEl.classList.add('text-dark');
             }
         }
     }
@@ -1076,6 +1180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = planVsActualChartCanvas.getContext('2d');
         if (!planVsActualChartCanvas || !chartWrapper) return;
 
+        // 1. เตรียมข้อมูล
         const dateMap = {};
         let curr = new Date(startDateFilter.value);
         const end = new Date(endDateFilter.value);
@@ -1092,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const priceTHB = parseFloat(p.standard_price || 0);
                 const unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
                 
-                // ★ คำนวณ Adjusted สดๆ
+                // คำนวณรายได้จาก (Original + C/O)
                 const planQty = parseFloat(p.original_planned_quantity || 0) + parseFloat(p.carry_over_quantity || 0);
                 const actQty = parseFloat(p.actual_quantity || 0);
                 
@@ -1102,9 +1207,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const sortedDates = Object.values(dateMap).sort((a,b) => a.date.localeCompare(b.date));
-        const minWidthPerBar = 50; 
-        const totalWidth = Math.max(chartWrapper.parentElement.clientWidth, sortedDates.length * minWidthPerBar);
-        chartWrapper.style.width = `${totalWidth}px`;
+
+        // CSS: เต็มจอ
+        chartWrapper.style.width = '100%';
+        chartWrapper.style.height = '100%';
 
         const labels = sortedDates.map(d => {
             const dateObj = new Date(d.date);
@@ -1122,47 +1228,36 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: labels,
                 datasets: [
-                    // ★★★ Target Trend (Blue Dashed) ★★★
+                    // --- 1. เส้น Target Trend (ที่หายไป) ---
                     {
                         type: 'line',
                         label: 'Target Trend',
-                        data: planDataArr,
-                        borderColor: 'rgb(54, 162, 235)', 
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        data: planDataArr, // ใช้ข้อมูลเดียวกับแท่ง Target
+                        borderColor: 'rgb(54, 162, 235)', // สีฟ้า
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         borderWidth: 2,
                         borderDash: [5, 5], // เส้นประ
                         tension: 0.4,
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         fill: false,
-                        order: 0,
+                        order: 0, // อยู่บนสุด
                         datalabels: { display: false }
                     },
-                    {
-                        type: 'line',
-                        label: 'Actual Trend',
-                        data: actualDataArr,
-                        borderColor: 'rgb(75, 192, 192)', 
-                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                        borderWidth: 0,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        fill: false,
-                        order: 0,
-                        datalabels: { display: false }
-                    },
+
+                    // --- 2. Target Revenue (Background) ---
                     {
                         label: 'Target Revenue',
                         data: planDataArr,
-                        backgroundColor: 'rgba(255, 205, 86, 0.2)', 
-                        borderColor: 'rgba(255, 205, 86, 0.6)',
-                        borderWidth: 1,
-                        barPercentage: 0.6,
+                        backgroundColor: 'rgba(255, 205, 86, 0.5)', // สีเหลืองทอง
+                        hoverBackgroundColor: 'rgba(255, 205, 86, 0.8)',
+                        order: 2, // อยู่ข้างหลัง
+                        barPercentage: 0.7,
                         categoryPercentage: 0.8,
-                        borderRadius: 0,
-                        order: 2
+                        grouped: false
                     },
+                    
+                    // --- 3. Actual Revenue (Foreground) ---
                     {
                         label: 'Actual Revenue',
                         data: actualDataArr,
@@ -1170,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const idx = ctx.dataIndex;
                             const p = planDataArr[idx];
                             const a = actualDataArr[idx];
-                            return (a >= p && p > 0) ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)';
+                            return (a >= p && p > 0) ? 'rgba(75, 192, 192, 0.9)' : 'rgba(255, 99, 132, 0.9)';
                         },
                         hoverBackgroundColor: (ctx) => {
                             const idx = ctx.dataIndex;
@@ -1178,12 +1273,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             const a = actualDataArr[idx];
                             return (a >= p && p > 0) ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
                         },
-                        borderWidth: 0,
-                        barPercentage: 0.6, 
+                        order: 1, // อยู่ข้างหน้า
+                        barPercentage: 0.7,
                         categoryPercentage: 0.8,
-                        grouped: false, 
-                        order: 1,
-                        borderRadius: 0
+                        grouped: false
                     }
                 ]
             },
@@ -1192,7 +1285,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { 
+                            font: { size: 10 },
+                            autoSkip: true, 
+                            maxTicksLimit: 15,
+                            maxRotation: 0 
+                        } 
+                    },
                     y: { 
                         beginAtZero: true,
                         grid: { borderDash: [2, 2] },
@@ -1201,26 +1302,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 plugins: {
-                    legend: { 
-                        position: 'top', align: 'end',
-                        labels: {
-                            usePointStyle: true, boxWidth: 8, font: { size: 11 },
-                            generateLabels: (chart) => [
-                                { text: 'Target Trend', strokeStyle: 'rgb(54, 162, 235)', lineWidth: 2, borderDash: [5, 5], fillStyle: 'transparent' },
-                                { text: 'Actual Trend', strokeStyle: 'rgb(75, 192, 192)', lineWidth: 2, fillStyle: 'transparent' },
-                                { text: 'Target Rev.', fillStyle: 'rgba(255, 205, 86, 0.2)', strokeStyle: 'rgba(255, 205, 86, 0.6)', lineWidth: 1 },
-                                { text: 'Actual (Hit)', fillStyle: 'rgba(75, 192, 192, 1)', strokeStyle: 'rgba(75, 192, 192, 1)', lineWidth: 0 },
-                                { text: 'Actual (Miss)', fillStyle: 'rgba(255, 99, 132, 1)', strokeStyle: 'rgba(255, 99, 132, 1)', lineWidth: 0 }
-                            ]
-                        }
-                    },
+                    legend: { position: 'top', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } },
                     tooltip: {
                         callbacks: {
                             title: (items) => new Date(sortedDates[items[0].dataIndex].date).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }),
                             label: (c) => (c.dataset.label||'') + ': ' + (c.parsed.y!==null ? new Intl.NumberFormat('th-TH', {style:'currency', currency:'THB'}).format(c.parsed.y) : '')
                         }
                     },
-                    datalabels: { display: false }
+                    datalabels: { display: false },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    }
                 }
             },
             plugins: plugins
@@ -1234,41 +1327,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = planVsActualChartCanvas.getContext('2d');
         if (!planVsActualChartCanvas || !chartWrapper) return;
 
+        // 1. เตรียมข้อมูล
         const dateMap = {};
         let curr = new Date(startDateFilter.value);
         const end = new Date(endDateFilter.value);
+        
         while (curr <= end) {
             const dStr = curr.toISOString().split('T')[0];
-            dateMap[dStr] = { date: dStr, plan: 0, actual: 0 };
+            dateMap[dStr] = { date: dStr, original: 0, carryOver: 0, actual: 0 };
             curr.setDate(curr.getDate() + 1);
         }
         
         planData.forEach(p => {
             const d = p.plan_date; 
             if (dateMap[d]) {
-                // ★ คำนวณ Adjusted สดๆ
-                const planQty = parseFloat(p.original_planned_quantity || 0) + parseFloat(p.carry_over_quantity || 0);
-                const actQty = parseFloat(p.actual_quantity || 0);
-                
-                dateMap[d].plan += planQty;
-                dateMap[d].actual += actQty;
+                dateMap[d].original += parseFloat(p.original_planned_quantity || 0);
+                dateMap[d].carryOver += parseFloat(p.carry_over_quantity || 0);
+                dateMap[d].actual += parseFloat(p.actual_quantity || 0);
             }
         });
 
         const sortedDates = Object.values(dateMap).sort((a,b) => a.date.localeCompare(b.date));
-        const minWidthPerBar = 50; 
-        const totalWidth = Math.max(chartWrapper.parentElement.clientWidth, sortedDates.length * minWidthPerBar);
-        chartWrapper.style.width = `${totalWidth}px`;
+        
+        chartWrapper.style.width = '100%';
+        chartWrapper.style.height = '100%';
 
         const labels = sortedDates.map(d => {
             const dateObj = new Date(d.date);
             return `${dateObj.getDate()}/${dateObj.getMonth()+1}`; 
         });
-        const planValues = sortedDates.map(d => d.plan);
+        
+        const originalValues = sortedDates.map(d => d.original);
+        const carryOverValues = sortedDates.map(d => d.carryOver);
         const actualValues = sortedDates.map(d => d.actual);
+        const totalTargetValues = sortedDates.map(d => d.original + d.carryOver);
 
         if (planVsActualChartInstance) planVsActualChartInstance.destroy();
-
         const plugins = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
 
         planVsActualChartInstance = new Chart(ctx, {
@@ -1276,11 +1370,11 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: labels,
                 datasets: [
-                    // ★★★ Target Trend (Blue Dashed) ★★★
+                    // --- 1. เส้น Trend (เป้ารวม) ---
                     {
                         type: 'line',
-                        label: 'Plan Trend',
-                        data: planValues,
+                        label: 'Total Target Trend',
+                        data: totalTargetValues,
                         borderColor: 'rgb(54, 162, 235)', 
                         backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         borderWidth: 2,
@@ -1289,55 +1383,59 @@ document.addEventListener('DOMContentLoaded', () => {
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         fill: false,
-                        order: 0,
+                        order: 0, // อยู่บนสุด
                         datalabels: { display: false }
                     },
+                    
+                    // --- 2. Actual (แท่งหน้า) ---
                     {
-                        type: 'line',
-                        label: 'Actual Trend',
+                        label: 'Actual',
                         data: actualValues,
-                        borderColor: 'rgb(75, 192, 192)', 
-                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                        borderWidth: 0,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        fill: false,
-                        order: 0,
-                        datalabels: { display: false }
-                    },
-                    {
-                        label: 'Total Plan',
-                        data: planValues,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 0.5)',
-                        borderWidth: 1,
-                        barPercentage: 0.6,
-                        categoryPercentage: 0.8,
-                        borderRadius: 0,
-                        order: 2
-                    },
-                    {
-                        label: 'Total Actual',
-                        data: actualValues,
+                        stack: 'ActualStack', // ★ แยก Stack ชื่อนี้ไว้
                         backgroundColor: (ctx) => {
                             const idx = ctx.dataIndex;
-                            const p = planValues[idx];
-                            const a = actualValues[idx];
-                            return (a >= p && p > 0) ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)';
+                            const target = totalTargetValues[idx];
+                            const act = actualValues[idx];
+                            return (act >= target && target > 0) ? 'rgba(75, 192, 192, 0.9)' : 'rgba(255, 99, 132, 0.9)';
                         },
                         hoverBackgroundColor: (ctx) => {
-                            const idx = ctx.dataIndex;
-                            const p = planValues[idx];
-                            const a = actualValues[idx];
-                            return (a >= p && p > 0) ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+                             const idx = ctx.dataIndex;
+                            const target = totalTargetValues[idx];
+                            const act = actualValues[idx];
+                            return (act >= target && target > 0) ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
                         },
-                        borderWidth: 0,
-                        barPercentage: 0.6, 
+                        order: 1, // Layer หน้า (Z-Index สูงกว่า)
+                        barPercentage: 0.7, // ★ ปรับให้ผอมกว่าแท่งหลังนิดหน่อย จะได้ดูมีมิติ
                         categoryPercentage: 0.8,
-                        grouped: false, // Overlapping Mode
-                        order: 1,
-                        borderRadius: 0
+                        grouped: false // ★ อนุญาตให้ลอยทับตำแหน่งเดียวกัน
+                    },
+
+                    // --- 3. Original Plan (แท่งหลัง - ส่วนล่าง) ---
+                    // ★ สำคัญ: ต้องใส่อันนี้ก่อน Carry Over เพื่อให้อยู่ข้างล่าง
+                    {
+                        label: 'Original Plan',
+                        data: originalValues,
+                        stack: 'PlanStack', // ★ ชื่อ Stack ต้องเหมือนกับ C/O
+                        backgroundColor: 'rgba(54, 162, 235, 0.4)', 
+                        hoverBackgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        order: 2, // Layer หลัง
+                        barPercentage: 0.7, // ★ แท่งอ้วนกว่า
+                        categoryPercentage: 0.8,
+                        grouped: false
+                    },
+
+                    // --- 4. Carry Over (แท่งหลัง - ส่วนบน) ---
+                    // ★ ใส่ทีหลัง จะไปต่ออยู่บนหัว Original
+                    {
+                        label: 'Carry Over',
+                        data: carryOverValues,
+                        stack: 'PlanStack', // ★ ชื่อ Stack ต้องเหมือนกับ Original
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)', 
+                        hoverBackgroundColor: 'rgba(255, 159, 64, 0.8)',
+                        order: 2, // Layer หลัง
+                        barPercentage: 0.7, // ★ แท่งอ้วนกว่า
+                        categoryPercentage: 0.8,
+                        grouped: false
                     }
                 ]
             },
@@ -1346,8 +1444,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                    y: { beginAtZero: true, grid: { borderDash: [2, 2] }, title: { display: true, text: 'Total Qty' } }
+                    x: { 
+                        stacked: true, // ★ ต้องเปิด Stack แกน X
+                        grid: { display: false }, 
+                        ticks: { 
+                            font: { size: 10 },
+                            autoSkip: true,
+                            maxTicksLimit: 15, 
+                            maxRotation: 0
+                        } 
+                    },
+                    y: { 
+                        stacked: true, // ★ ต้องเปิด Stack แกน Y เพื่อให้ PlanGroup บวกกัน
+                        beginAtZero: true, 
+                        grid: { borderDash: [2, 2] }, 
+                        title: { display: true, text: 'Quantity (Pcs)' } 
+                    }
                 },
                 plugins: {
                     legend: { 
@@ -1356,18 +1468,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     tooltip: {
                         callbacks: {
-                            title: (items) => new Date(sortedDates[items[0].dataIndex].date).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+                            title: (items) => new Date(sortedDates[items[0].dataIndex].date).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }),
+                            footer: (items) => {
+                                const idx = items[0].dataIndex;
+                                const total = totalTargetValues[idx];
+                                return 'Total Target: ' + parseInt(total).toLocaleString();
+                            }
                         }
                     },
-                    datalabels: { display: false }
+                    datalabels: { display: false },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    }
                 }
             },
             plugins: plugins
         });
         
-        if (chartDateDisplay) chartDateDisplay.textContent = "Daily Trend";
+        if (chartDateDisplay) chartDateDisplay.textContent = "Plan Composition vs Actual";
     }
-
     // (ItemChart - No changes needed)
     function renderItemChart(planData) {
         const chartWrapper = document.getElementById('planVsActualChartInnerWrapper');

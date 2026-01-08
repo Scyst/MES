@@ -117,6 +117,25 @@
     box-shadow: inset 0 0 0 9999px rgba(var(--bs-primary-rgb), 0.1) !important;
 }
 
+/* 1. ลดขนาดฟ้อนต์ทั้งตารางลงนิดนึง ให้ดู Compact ขึ้น */
+#productionPlanTable {
+    font-size: 0.9rem !important; /* ประมาณ 13-14px กำลังดีสำหรับข้อมูลเยอะๆ */
+}
+
+/* 2. บีบระยะห่างตัวเลขเฉพาะฟ้อนต์ Prompt ให้ชิดกันขึ้นนิดนึง จะได้ไม่กินที่ */
+#productionPlanTable .text-end {
+    letter-spacing: -0.3px; 
+    white-space: nowrap; /* ห้ามตัดบรรทัดเด็ดขาด */
+}
+
+/* 3. ปรับ Padding ให้ตารางดูไม่บวม */
+#productionPlanTable th, 
+#productionPlanTable td {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    vertical-align: middle;
+}
+
 /* ================================================================= */
 /* 5. Utility Styles */
 /* ================================================================= */

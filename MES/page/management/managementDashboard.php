@@ -28,10 +28,12 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
     
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="../../utils/libs/hammer.min.js"></script>
+    <script src="../../utils/libs/chart.umd.js"></script>
+    <script src="../../utils/libs/chartjs-plugin-datalabels.min.js"></script>
+    <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>
 
     <link rel="stylesheet" href="css/managementDashboard.css?v=<?php echo time(); ?>">
 </head>
@@ -40,10 +42,6 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
     
     <?php 
         if (function_exists('renderDevBanner') && defined('IS_DEVELOPMENT') && IS_DEVELOPMENT) {
-            // เราต้องคำนวณ URL อีกรอบ หรือดึงจาก Global Variable
-            // เพื่อความง่าย ให้ Logic ใน Function จัดการ หรือส่งค่าเข้าไป
-            // ในที่นี้ผมแนะนำให้แก้ check_dev_mode.php ให้รับค่า productionUrl หรือคำนวณใหม่ข้างใน
-            // แต่เพื่อความรวดเร็ว ใช้แบบนี้ครับ:
             
             $currentUri = $_SERVER['REQUEST_URI'];
             $productionPath = str_replace('/Clone/MES/', '/MES/MES/', $currentUri);
@@ -213,9 +211,12 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                             <th class="text-end" style="width: 100px;">C/O</th> 
                                             <th class="text-end" style="width: 100px;">Target</th>
                                             <th class="text-end" style="width: 100px;">Actual</th>
-                                            <th class="text-end text-danger" style="width: 120px;">Cost Budget</th>
-                                            <th class="text-end text-success" style="width: 120px;">Est. Sales</th>
-                                            <th class="text-center" style="width: 250px;">Note</th> 
+                                            
+                                            <th class="text-end text-secondary" style="width: 130px;">Est. Sales</th>
+                                            <th class="text-end text-success fw-bold" style="width: 130px;">Act. Sales</th>
+                                            <th class="text-end fw-bold" style="width: 130px;">Sales Diff</th>
+                                            
+                                            <th class="text-center" style="width: 200px;">Note</th> 
                                         </tr>
                                     </thead>
                                     <tbody id="productionPlanTableBody" class="bg-white"></tbody>
@@ -227,23 +228,35 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                     <ul class="pagination pagination-sm mb-0" id="planningPagination"></ul>
                                 </div>
 
-                                <div class="summary-wrapper d-flex gap-4">
+                                <div class="summary-wrapper d-flex gap-4 align-items-center">
                                     <div class="footer-item">
-                                        <span class="footer-label">Total Plan Qty</span>
+                                        <span class="footer-label">Total Plan (New)</span>
                                         <span class="footer-value text-primary" id="footer-total-qty">0</span>
                                     </div>
                                     
                                     <div class="footer-item border-start ps-3">
-                                        <span class="footer-label">Total Actual Qty</span>
-                                        <span class="footer-value text-dark fw-bold" id="footer-total-actual" style="padding: 0 5px; border-radius: 4px;">0</span>
+                                        <span class="footer-label">Total Actual</span>
+                                        <span class="footer-value text-dark fw-bold" id="footer-total-actual">0</span>
                                     </div>
+
                                     <div class="footer-item border-start ps-3">
-                                        <span class="footer-label">Total Cost Budget</span>
-                                        <span class="footer-value text-danger" id="footer-total-cost">฿0.00</span>
+                                        <span class="footer-label">Remaining Backlog</span>
+                                        <span class="footer-value fw-bold" id="footer-total-backlog" style="color: #fd7e14;">0</span>
                                     </div>
+
                                     <div class="footer-item border-start ps-3">
-                                        <span class="footer-label">Est. Sales Value</span>
-                                        <span class="footer-value text-success" id="footer-total-sale">฿0.00</span>
+                                        <span class="footer-label">Est. Sales</span>
+                                        <span class="footer-value text-secondary" id="footer-total-sale">฿0.00</span>
+                                    </div>
+
+                                    <div class="footer-item border-start ps-3 bg-light rounded px-2">
+                                        <span class="footer-label fw-bold text-success">Actual Sales</span>
+                                        <span class="footer-value text-success fw-bold" id="footer-total-actual-sale">฿0.00</span>
+                                    </div>
+
+                                    <div class="footer-item border-start ps-3">
+                                        <span class="footer-label fw-bold">Sales Diff</span>
+                                        <span class="footer-value fw-bold" id="footer-total-diff-sale">฿0.00</span>
                                     </div>
                                 </div>
                             </div>
