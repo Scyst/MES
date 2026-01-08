@@ -1,0 +1,70 @@
+================================================================================
+PROJECT: IIOT TOOLBOX - MES
+PAGE: Management Dashboard (Production Plan)
+DATE: 08 Jan 2026
+STATUS: Feature Complete (Stable)
+================================================================================
+
+[1] ภาพรวม (Overview)
+--------------------------------------------------------------------------------
+หน้าจอสำหรับวางแผนการผลิต (Rolling Plan) แสดงผลเปรียบเทียบระหว่าง:
+- แผนผลิต (Original Plan)
+- ยอดค้างส่ง/ยอดเกิน (Carry Over)
+- เป้าหมายรวม (Target)
+- ผลิตจริง (Actual)
+- ยอดขายคาดการณ์ vs ยอดขายจริง (Est. Sales vs Act. Sales)
+- ผลต่างยอดเงิน (Diff THB)
+
+[2] สิ่งที่อัปเดตล่าสุด (Recent Updates) - V.4 Stable
+--------------------------------------------------------------------------------
+A. Database & Logic (Backend)
+   1. แก้ไข Stored Procedure `sp_UpdatePlanCarryOver` (และ `_TEST`):
+      - เพิ่มระบบ "Gap Filling" (ถมวันว่าง): สร้าง Row ใหม่ให้อัตโนมัติในวันที่ไม่มีแผนการผลิต
+      - เพื่อแก้ปัญหา "โซ่ขาด" (Broken Chain) ทำให้ยอด Carry Over ส่งต่อข้ามวันได้ถูกต้อง 100%
+      - Logic: Full Outer Join (Plan Last Day vs Actual Last Day) -> Merge Insert/Update Today.
+
+B. User Interface (Frontend)
+   1. ปรับ Layout ตาราง:
+      - เรียงคอลัมน์ใหม่: Est. Sales -> Act. Sales -> Diff (THB).
+      - เอาคอลัมน์ Cost Budget ออก.
+   2. การแสดงผล (Visual):
+      - เปลี่ยน Diff จาก "จำนวนชิ้น" เป็น "จำนวนเงิน (THB)".
+      - ใส่สี Diff: เขียว (กำไร/เท่าทุน), แดง (ขาดทุน/หลุดเป้า).
+      - ปรับลดขนาดฟอนต์ (0.85rem) และลด Letter-spacing ให้แสดงยอดเงินหลัก 100 ล้านได้ไม่เบียด.
+   3. การซ่อนข้อมูล (Filtering):
+      - เพิ่ม JS Filter: ซ่อนแถวที่เป็น 0 ทั้งหมด (Plan=0, C/O=0, Act=0) เพื่อไม่ให้รกตาจาก Ghost Rows ที่เกิดจาก Auto Chain.
+
+C. Footer Summary
+   1. เพิ่มช่อง "Sales Diff": สรุปยอดผลต่างกำไร/ขาดทุนรวมทั้งเดือน.
+   2. เอา Cost Budget รวมออก.
+
+[3] โครงสร้างข้อมูลที่สำคัญ (Technical Specs)
+--------------------------------------------------------------------------------
+- Config: ใช้ `IS_DEVELOPMENT` ใน `config.php` เพื่อสลับตารางจริง/เทส.
+- Tables: `PRODUCTION_PLANS`, `STOCK_TRANSACTIONS`.
+- SP หลัก: `sp_UpdatePlanCarryOver` (คำนวณ C/O และซ่อมโซ่).
+- JS Function หลัก: 
+  - `renderPlanTable`: วาดตาราง + กรองแถวว่าง.
+  - `updateRowCalculationUI`: คำนวณสดเมื่อ User แก้ไขตัวเลข.
+
+[4] สิ่งที่ยังค้างอยู่ / แผนพัฒนาต่อ (To-Do & Future Improvements)
+--------------------------------------------------------------------------------
+[ ] 1. Pagination Issue:
+       เนื่องจากเราซ่อนแถวด้วย JS (Client-side), ถ้าหน้าไหนมีแต่แถวว่าง 
+       หน้านั้นอาจจะดูเหมือนไม่มีข้อมูล (Blank Page) แต่ Footer ยังโชว์ยอด.
+       (Sol: ย้าย Logic การกรอง 0 ไปไว้ใน SQL Query ในอนาคต).
+
+[ ] 2. Export Feature:
+       เพิ่มปุ่ม Export ตารางนี้เป็น Excel (.xlsx) ให้ Planner ดึงไปทำ Report.
+
+[ ] 3. Dashboard Charts:
+       นำข้อมูล Diff หรือ OEE ไปพลอตกราฟเส้น/วงกลม ในหน้า Dashboard รวม.
+
+[ ] 4. Performance Tuning:
+       ถ้าข้อมูลเยอะมาก (หลายปี), การกด Calc C/O อาจช้าลง 
+       ต้องคอย Monitor หรือตัด Archive ข้อมูลเก่า.
+
+================================================================================
+NOTE: หาก C/O เพี้ยน หรือยอดหาย ให้กดปุ่ม "Calc C/O" สีเหลือง 1 ครั้ง 
+ระบบจะทำการ Re-chain ข้อมูลย้อนหลัง 7 วันให้อัตโนมัติ.
+================================================================================
