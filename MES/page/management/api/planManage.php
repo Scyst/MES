@@ -44,18 +44,63 @@ try {
             $line = $_GET['line'] ?? null;
             $shift = $_GET['shift'] ?? null;
 
+            // --- 🚀 OPTIMIZATION START 🚀 ---
+            // คำนวณช่วงเวลา (Timestamp) ของกะการผลิต (08:00 ถึง 07:59 ของอีกวัน)
+            // เพื่อให้ Database ใช้ Index ของ transaction_timestamp ได้โดยตรง (SARGable)
+            $startTs = date('Y-m-d 08:00:00', strtotime($startDate));
+            $endTs   = date('Y-m-d 07:59:59', strtotime($endDate . ' +1 day'));
+
+            // [SQL OPTIMIZATION]
+            // เขียน Subquery ใหม่: กรองช่วงเวลาด้วย Timestamp และ Group By
+            // หมายเหตุ: แม้เราจะมี column ProductionDate แล้ว แต่การใช้ Range Query แบบนี้
+            // ก็ยังคงเร็วและปลอดภัยที่สุดสำหรับการดึงข้อมูลช่วงกว้างๆ
+            $actualsSubQuery = "
+                SELECT 
+                    CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) AS ActualDate,
+                    l.production_line AS ActualLine,
+                    CASE WHEN DATEPART(HOUR, DATEADD(HOUR, -8, transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END AS ActualShift,
+                    parameter_id AS ActualItemId,
+                    SUM(quantity) as ActualQty
+                FROM " . TRANSACTIONS_TABLE . " t
+                JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                AND t.transaction_timestamp >= :startTs 
+                AND t.transaction_timestamp <= :endTs
+            ";
+
+            // ถ้ามีการกรอง Line ให้กรองใน Subquery เลยเพื่อลดปริมาณข้อมูลก่อน Grouping
+            if ($line) {
+                $actualsSubQuery .= " AND l.production_line = :lineFilter ";
+            }
+
+            $actualsSubQuery .= " GROUP BY 
+                CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE),
+                l.production_line,
+                CASE WHEN DATEPART(HOUR, DATEADD(HOUR, -8, transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END,
+                parameter_id
+            ";
+            // --- 🚀 OPTIMIZATION END 🚀 ---
+
             $params = [];
+            
             // Base Where Clause
+            // สังเกต: เรายังคง Logic เดิมของ Plan Table ไว้
             $whereClause = " AND (p.plan_date BETWEEN :start AND :end OR actual.ActualDate BETWEEN :start2 AND :end2)";
+            
             $params[':start'] = $startDate;
             $params[':end'] = $endDate;
             $params[':start2'] = $startDate;
             $params[':end2'] = $endDate;
+            
+            // เพิ่ม Params ใหม่สำหรับการ Optimize
+            $params[':startTs'] = $startTs;
+            $params[':endTs'] = $endTs;
 
             if ($line) {
                 $whereClause .= " AND (p.line = :line OR actual.ActualLine = :line2)";
                 $params[':line'] = $line;
                 $params[':line2'] = $line;
+                $params[':lineFilter'] = $line; // สำหรับ Subquery
             }
             if ($shift) {
                 $whereClause .= " AND (p.shift = :shift OR actual.ActualShift = :shift2)";
@@ -63,8 +108,7 @@ try {
                 $params[':shift2'] = $shift;
             }
 
-            // 1. [NEW] Summary Query (คำนวณยอดรวมของ Plan ทั้งหมดในช่วงที่เลือก)
-            // เราจะคำนวณจากแผน (Plan) เป็นหลัก เพื่อดู Budget ของแผน
+            // 1. [NEW] Summary Query (ยอดรวม Budget)
             $summarySql = "
                 SELECT 
                     SUM(ISNULL(p.adjusted_planned_quantity, 0) * ISNULL(i.Cost_Total, 0)) as total_plan_cost,
@@ -89,7 +133,7 @@ try {
             $stmtSum->execute($summaryParams);
             $summaryData = $stmtSum->fetch(PDO::FETCH_ASSOC);
 
-            // 2. Base Query (ใช้ร่วมกันทั้ง Count และ Data)
+            // 2. Base Query
             $baseQuery = "
                 FROM ($actualsSubQuery) AS actual
                 FULL OUTER JOIN $planTable p ON 
@@ -101,16 +145,21 @@ try {
                 WHERE 1=1 $whereClause
             ";
 
-            // 3. Count Query (นับจำนวนทั้งหมดก่อน)
+            // 3. Count Query
             $countSql = "SELECT COUNT(*) " . $baseQuery;
             $stmtCount = $pdo->prepare($countSql);
-            $stmtCount->execute($params);
+            // ข้อควรระวัง: ต้อง bind params ทั้งหมดที่เตรียมไว้
+            foreach ($params as $key => $val) {
+                // ข้าม offset/limit ใน count query
+                if ($key !== ':offset' && $key !== ':limit') {
+                    $stmtCount->bindValue($key, $val);
+                }
+            }
+            $stmtCount->execute();
             $totalRecords = $stmtCount->fetchColumn();
-            
-            // คำนวณจำนวนหน้า
             $totalPages = ($limit > 0) ? ceil($totalRecords / $limit) : 1;
 
-            // 4. Data Query (เพิ่ม standard_price)
+            // 4. Data Query
             $dataSql = "
                 SELECT
                     ISNULL(p.plan_id, 0) AS plan_id,
@@ -141,7 +190,6 @@ try {
                 ORDER BY plan_date DESC, line, shift
             ";
 
-            // เพิ่ม Pagination Logic (เฉพาะเมื่อ limit ไม่ใช่ -1)
             if ($limit > 0) {
                 $dataSql .= " OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY";
                 $params[':offset'] = $offset;
@@ -149,7 +197,6 @@ try {
             }
 
             $stmt = $pdo->prepare($dataSql);
-            // Bind Params ที่อาจเพิ่มขึ้นมา (offset, limit ต้อง bind เป็น INT)
             foreach ($params as $key => $val) {
                 if ($key === ':offset' || $key === ':limit') {
                     $stmt->bindValue($key, $val, PDO::PARAM_INT);
@@ -160,11 +207,10 @@ try {
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 5. ส่งคืนผลลัพธ์พร้อม Pagination Metadata และ Summary
             echo json_encode([
                 'success' => true, 
                 'data' => $result,
-                'summary' => $summaryData, // [NEW] ส่งค่า Summary กลับไป
+                'summary' => $summaryData,
                 'pagination' => [
                     'current_page' => $page,
                     'total_pages' => $totalPages,
