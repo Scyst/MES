@@ -390,27 +390,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchDashboardLines() {
-        try {
-            const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
-            if (result.success && result.data && result.data.lines) {
-                const lines = result.data.lines;
-                [planLineFilter, planModalLine].forEach(select => { 
-                    if (select) {
-                        const valueToKeep = ""; 
-                        select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
-                        lines.forEach(line => select.appendChild(new Option(line, line)));
-                        const assemblyOption = Array.from(select.options).find(opt => opt.value.toUpperCase() === 'ASSEMBLY');
-                        if (assemblyOption) select.value = assemblyOption.value;
-                        else if (lines.length > 0) select.value = lines[0];
-                    }
-                });
-                if (planLineFilter.value) {
-                    fetchPlans();
-                    fullCalendarInstance?.refetchEvents();
+    try {
+        const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
+        if (result.success && result.data && result.data.lines) {
+            const lines = result.data.lines;
+            [planLineFilter, planModalLine].forEach(select => { 
+                if (select) {
+                    const valueToKeep = ""; 
+                    select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
+                    lines.forEach(line => select.appendChild(new Option(line, line)));
+                    const assemblyOption = Array.from(select.options).find(opt => opt.value.toUpperCase() === 'ASSEMBLY');
+                    if (assemblyOption) select.value = assemblyOption.value;
+                    else if (lines.length > 0) select.value = lines[0];
                 }
-            }
-        } catch (error) { console.error("Error fetching lines:", error); }
-    }
+            });
+
+            // --- [แก้ไข] ปิดส่วนนี้ทิ้งครับ เพื่อไม่ให้มันแย่งโหลดก่อนเพื่อน ---
+            // if (planLineFilter.value) {
+            //    fetchPlans();
+            //    fullCalendarInstance?.refetchEvents();
+            // }
+            // -----------------------------------------------------------
+        }
+    } catch (error) { console.error("Error fetching lines:", error); }
+}
 
     async function fetchAllItemsForPlanning() {
         // (Logic Cache เดิม)
