@@ -10,13 +10,17 @@ const App = {
     init() {
         // 1. ตั้งค่าเริ่มต้น
         const dateInput = document.getElementById('filterDate');
-        this.currentDate = dateInput.value;
-
-        // 2. Bind Events
-        dateInput.addEventListener('change', (e) => {
-            this.currentDate = e.target.value;
-            this.loadData();
-        });
+        if (dateInput) {
+            this.currentDate = dateInput.value;
+            // 2. Bind Events
+            dateInput.addEventListener('change', (e) => {
+                this.currentDate = e.target.value;
+                this.loadData();
+            });
+        } else {
+            console.error('Date Input (#filterDate) not found!');
+            this.currentDate = new Date().toISOString().split('T')[0];
+        }
 
         // 3. เริ่มโหลดข้อมูลครั้งแรก
         this.loadData();
@@ -26,27 +30,35 @@ const App = {
     },
 
     async loadData() {
-        // เรียก API
-        const data = await API.getSummary(this.currentDate);
-        
-        // ส่งข้อมูลให้ UI วาด
-        if (data) {
-            UI.renderKPI(data);
-            UI.renderCharts(data);
-            UI.renderTable(data, this.viewMode);
+        UI.showLoader(); // Optional: ถ้าไม่อยากให้กระพริบก็เอาออกได้
+        try {
+            // เรียก API
+            const data = await API.getSummary(this.currentDate);
+            
+            // ส่งข้อมูลให้ UI วาด
+            if (data) {
+                UI.renderKPI(data);
+                UI.renderCharts(data);
+                UI.renderTable(data, this.viewMode);
+            }
+        } catch (error) {
+            console.error('Load Data Failed:', error);
+            // UI.showToast("Load Failed", "danger");
+        } finally {
+            UI.hideLoader();
         }
     },
 
+    // [UPDATED] ตัด confirm ออก เพราะ Modal ถามไปแล้ว
     async syncNow() {
-        if (!confirm("ต้องการ Sync ข้อมูลล่าสุดจาก Cloud เดี๋ยวนี้ใช่หรือไม่?")) return;
-        
         UI.showLoader();
         try {
             await API.triggerSync(this.currentDate);
-            UI.showToast("Sync Successful!", "success");
+            UI.showToast("✅ Sync Successful!", "success");
             await this.loadData(); // โหลดข้อมูลใหม่หลัง Sync เสร็จ
         } catch (err) {
-            UI.showToast("Sync Failed!", "danger");
+            console.error(err);
+            UI.showToast("❌ Sync Failed!", "danger");
         } finally {
             UI.hideLoader();
         }
@@ -57,7 +69,7 @@ const App = {
         // ปรับปุ่ม Active
         const buttons = document.querySelectorAll('.card-header .btn-group button');
         buttons.forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
         
         // Render ตารางใหม่โดยไม่ต้องโหลด API ใหม่ (ใช้ข้อมูลเดิมถ้าเก็บไว้ หรือโหลดใหม่ก็ได้)
         this.loadData(); 
@@ -68,12 +80,16 @@ const App = {
         this.autoRefreshTimer = setInterval(() => {
             // เช็คว่าเป็นวันปัจจุบันหรือไม่ ถ้าดูย้อนหลังไม่ต้อง Refresh
             const today = new Date().toISOString().split('T')[0];
-            if (this.currentDate === today) {
+            const dateInput = document.getElementById('filterDate');
+            const selectedDate = dateInput ? dateInput.value : this.currentDate;
+
+            if (selectedDate === today) {
                 console.log("Auto refreshing data...");
                 this.loadData();
             }
         }, 300000); // 5 นาที
     },
+
     async resetDailyData() {
         const targetDate = document.getElementById('filterDate').value;
         
@@ -113,5 +129,9 @@ const App = {
 
 // เริ่มต้นแอพเมื่อโหลดหน้าเว็บเสร็จ
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. โหลด Dropdown ก่อน (สำคัญมาก เพื่อให้ Modal มีข้อมูลพร้อมใช้)
+    Actions.initDropdowns(); 
+    
+    // 2. เริ่ม App
     App.init();
 });

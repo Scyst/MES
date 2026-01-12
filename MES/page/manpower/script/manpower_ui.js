@@ -82,7 +82,7 @@ const UI = {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const lineName = labels[index]; 
-                        if(lineName) Actions.openDetailModal(lineName, document.getElementById('filterDate').value);
+                        if(lineName) Actions.openDetailModal(lineName, '', 'ALL'); // Open All Shifts
                     }
                 },
                 responsive: true,
@@ -115,8 +115,7 @@ const UI = {
         });
     },
 
-    // --- 3. DATA TABLE (3-LEVEL HIERARCHY ENGINE) ---
-    
+    // --- 3. DATA TABLE (HIERARCHY ENGINE) ---
     processGroupedData(rawData, viewMode) {
         const groups = {};
         const grandTotal = {
@@ -126,15 +125,13 @@ const UI = {
         };
 
         rawData.forEach(row => {
-            // Level 1 Key (Line)
+            // Level 1: Line
             let mainKey = viewMode === 'LINE' ? (row.line_name || 'Unassigned') : (row.shift_name || 'Unassigned');
-            
-            // Level 2 Key (Shift)
+            // Level 2: Shift (หรือ Team)
             let subKeyName = viewMode === 'LINE' 
                 ? `${row.shift_name || '-'} ${row.team_group ? '('+row.team_group+')' : ''}`
                 : (row.line_name || '-');
-
-            // Level 3 Key (Emp Type) - 🔥 สิ่งที่คุณต้องการ
+            // Level 3: Emp Type
             let itemKeyName = row.emp_type || 'General';
 
             const stats = {
@@ -148,37 +145,19 @@ const UI = {
             };
             stats.actual = stats.present + stats.late;
 
-            // 1. Init Main Group
-            if (!groups[mainKey]) {
-                groups[mainKey] = {
-                    name: mainKey,
-                    subs: {}, // Level 2 Container
-                    total: { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }
-                };
-            }
+            // Init Groups
+            if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
 
-            // 2. Init Sub Group (Shift)
-            if (!groups[mainKey].subs[subKeyName]) {
-                groups[mainKey].subs[subKeyName] = { 
-                    name: subKeyName, 
-                    items: {}, // Level 3 Container
-                    total: { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }
-                };
-            }
+            if (!groups[mainKey].subs[subKeyName]) groups[mainKey].subs[subKeyName] = { name: subKeyName, items: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
 
-            // 3. Init Item (Emp Type) - 🔥 เก็บแยกประเภทตรงนี้
             if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
-                groups[mainKey].subs[subKeyName].items[itemKeyName] = {
-                    name: itemKeyName,
-                    ...stats
-                };
+                groups[mainKey].subs[subKeyName].items[itemKeyName] = { name: itemKeyName, ...stats };
             } else {
                 this._accumulateStats(groups[mainKey].subs[subKeyName].items[itemKeyName], stats);
             }
 
-            // Grand Total
             this._accumulateStats(grandTotal, stats);
         });
 
@@ -193,6 +172,10 @@ const UI = {
         });
 
         return { groups, grandTotal };
+    },
+
+    _initStats() {
+        return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
     },
 
     _accumulateStats(target, source) {
@@ -221,25 +204,24 @@ const UI = {
 
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
 
-        // 1. Render Grand Total
+        // 1. Grand Total
         tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
 
-        // 2. Render Groups
+        // 2. Groups
         const sortedKeys = Object.keys(groups).sort();
-        
         sortedKeys.forEach(key => {
             const group = groups[key];
+            
+            // Parent Row (Line)
+            // * คลิกเพื่อดู Drill-down ทั้งไลน์ *
+            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode, rawName: group.name });
 
-            // 2.1 Parent Row (Line)
-            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode });
-
-            // 2.2 Sub Rows (Shift)
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
             sortedSubs.forEach(sub => {
-                // Shift Row (Bold หน่อย เพื่อเป็นหัวข้อของลูกๆ)
+                // Child Row (Shift)
                 tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { isChild: true });
 
-                // 2.3 Item Rows (Emp Type) - 🔥 แสดงรายการย่อยตรงนี้
+                // GrandChild Row (Emp Type)
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
                 sortedItems.forEach(item => {
                     tbody.innerHTML += this._createRowHtml(item.name, item, { isGrandChild: true });
@@ -249,24 +231,15 @@ const UI = {
     },
 
     _createRowHtml(label, stats, options = {}) {
-        const { isGrand = false, isParent = false, isChild = false, isGrandChild = false, viewMode = 'LINE' } = options;
+        const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName } = options;
 
-        // Logic สี Diff
         let diffClass = 'text-muted opacity-50';
         let diffPrefix = '';
-        if (stats.diff < 0) {
-            diffClass = 'text-danger fw-bold';
-        } else if (stats.diff > 0) {
-            diffClass = 'text-warning fw-bold text-dark';
-            diffPrefix = '+';
-        } else if (stats.plan > 0 && stats.diff === 0) {
-            diffClass = 'text-success fw-bold';
-        }
+        if (stats.diff < 0) diffClass = 'text-danger fw-bold';
+        else if (stats.diff > 0) { diffClass = 'text-warning fw-bold text-dark'; diffPrefix = '+'; }
+        else if (stats.plan > 0) diffClass = 'text-success fw-bold';
 
-        // Style ของ Row
-        let rowClass = '';
-        let nameHtml = label;
-        let rowAttr = '';
+        let rowClass = '', nameHtml = label, rowAttr = '';
 
         if (isGrand) {
             rowClass = 'table-dark fw-bold border-bottom-0';
@@ -275,27 +248,20 @@ const UI = {
             rowClass = 'table-secondary fw-bold border-top border-white';
             nameHtml = `<i class="fas fa-layer-group me-2 opacity-50"></i>${label}`;
             
+            // 🔥 Drill-down Link for Line
             if (viewMode === 'LINE') {
                 rowClass += ' cursor-pointer';
-                rowAttr = `onclick="Actions.openDetailModal('${label}', document.getElementById('filterDate').value)" title="คลิกเพื่อดูรายละเอียด"`;
+                rowAttr = `onclick="Actions.openDetailModal('${rawName}', '', 'ALL')" title="ดูรายละเอียด ${rawName}"`;
             }
         } else if (isChild) {
-            // Level 2 (Shift)
             rowClass = 'bg-light fw-bold';
-            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;">
-                            <span class="text-dark small"><i class="fas fa-clock me-1 text-muted"></i>${label}</span>
-                        </div>`;
+            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-clock me-1 text-muted"></i>${label}</span></div>`;
         } else if (isGrandChild) {
-            // Level 3 (Emp Type) - 🔥 ย่อหน้าลึกเข้าไปอีก
             rowClass = 'bg-white';
-            nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;">
-                            <span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span>
-                        </div>`;
+            nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
         }
 
-        const costDisplay = stats.cost > 0 
-            ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) 
-            : '-';
+        const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
 
         return `
             <tr class="${rowClass}" ${rowAttr}>
@@ -304,14 +270,10 @@ const UI = {
                 <td class="text-center fw-bold">${stats.plan}</td>
                 <td class="text-center text-success">${stats.present || '-'}</td>
                 <td class="text-center text-warning text-dark">${stats.late || '-'}</td>
-                <td class="text-center text-danger">${stats.absent || '-'}</td>
+                <td class="text-center text-danger cursor-pointer" onclick="event.stopPropagation(); Actions.openDetailModal('${rawName || ''}', '', 'ABSENT')" title="ดูคนขาด">${stats.absent || '-'}</td>
                 <td class="text-center text-info text-dark">${stats.leave || '-'}</td>
-                <td class="text-center fw-bold border-start border-end" style="background-color: rgba(0,0,0,0.02);">
-                    ${stats.actual}
-                </td>
-                <td class="text-center ${diffClass}">
-                    ${diffPrefix}${stats.diff}
-                </td>
+                <td class="text-center fw-bold border-start border-end" style="background-color: rgba(0,0,0,0.02);">${stats.actual}</td>
+                <td class="text-center ${diffClass}">${diffPrefix}${stats.diff}</td>
                 <td class="text-end pe-4 text-secondary small">${costDisplay}</td>
             </tr>
         `;
@@ -320,86 +282,143 @@ const UI = {
     animateNumber(elementId, endValue) {
         const obj = document.getElementById(elementId);
         if (!obj) return;
-        const startValue = parseInt(obj.innerHTML.replace(/,/g, '')) || 0;
-        if (startValue === endValue) return;
         obj.innerHTML = endValue.toLocaleString();
     },
 
-    showToast(message, type) { alert(message); },
-    showLoader() { document.getElementById('syncLoader').style.display = 'block'; },
-    hideLoader() { document.getElementById('syncLoader').style.display = 'none'; },
+    showToast(message, type) { alert(message); }, // เปลี่ยนเป็น Toast จริงๆ สวยกว่าถ้ามี Lib
+    showLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
+    hideLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },
+    
     getStatusBadge(status) {
-        const map = {
-            'PRESENT': 'bg-success',
-            'LATE': 'bg-warning text-dark',
-            'ABSENT': 'bg-danger',
-            'LEAVE': 'bg-info text-dark',
-            'WAITING': 'bg-secondary'
-        };
-        let badgeClass = map[status] || (status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
+        const map = { 'PRESENT': 'bg-success', 'LATE': 'bg-warning text-dark', 'ABSENT': 'bg-danger', 'LEAVE': 'bg-info text-dark', 'WAITING': 'bg-secondary' };
+        let badgeClass = map[status] || (status && status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
         return `<span class="badge ${badgeClass} fw-normal px-2 py-1">${status}</span>`;
     }
 };
 
-// --- 4. DRILL-DOWN & ACTIONS ---
+// --- 4. ACTIONS & DRILL-DOWN ---
 
 const Actions = {
-    currentLine: null,
-    
     // 4.1 เปิดหน้าต่างรายชื่อ (Drill-down)
-    async openDetailModal(lineName, date) {
-        this.currentLine = lineName;
-        const modalEl = document.getElementById('detailListModal');
-        const modal = new bootstrap.Modal(modalEl);
+    async openDetailModal(line, shiftId, filterStatus = 'ALL') {
+        const date = document.getElementById('filterDate').value;
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
         
-        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-layer-group me-2"></i>${lineName}`;
-        document.getElementById('detailModalSubtitle').innerText = `ข้อมูลประจำวันที่ ${date}`;
-        document.getElementById('detailTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
-        
-        // [FIX] เรียก Init Search แบบล้างค่าเก่า
-        this.initSearch();
+        let title = line ? `${line}` : 'รายละเอียด';
+        if (shiftId) title += ` (${shiftId == 1 ? 'กะเช้า ☀️' : 'กะดึก 🌙'})`;
+        if (filterStatus !== 'ALL') title += ` - แสดงเฉพาะ ${filterStatus}`;
 
+        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
+        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>`;
+        
         modal.show();
 
+        // [FIX] Reset Search Box
+        const searchInput = document.getElementById('searchDetail');
+        if(searchInput) searchInput.value = '';
+
         try {
-            const rawData = await API.getDailyLog(date, lineName);
-            this.renderDetailList(rawData);
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'get_daily_details',
+                    date: date,
+                    line: line,
+                    shift_id: shiftId,
+                    filter_status: filterStatus
+                })
+            });
+            const json = await res.json();
+            
+            if (json.success) {
+                this.renderDetailTable(json.data);
+            } else {
+                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${json.message}</td></tr>`;
+            }
         } catch (err) {
             console.error(err);
-            document.getElementById('detailTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error loading data</td></tr>`;
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
 
-    // 4.2 วาดตารางรายชื่อ
-    renderDetailList(data) {
-        const tbody = document.getElementById('detailTableBody');
+    // 4.2 วาดตารางรายชื่อ (Inline Edit) - ใช้ emp_id เป็น ID เพื่อความแม่นยำ
+    renderDetailTable(list) {
+        const tbody = document.getElementById('detailModalBody');
         tbody.innerHTML = '';
-        
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">ไม่พบพนักงานในแผนกนี้</td></tr>`;
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
-        data.forEach(row => {
-            const statusBadge = this.getStatusBadge(row.status);
-            const timeIn = row.scan_in_time ? row.scan_in_time.substring(11, 16) : '-';
-            const timeOut = row.scan_out_time ? row.scan_out_time.substring(11, 16) : '-';
-            const shiftName = row.shift_name || '-';
+        const formatTime = (t) => t ? t.substring(11, 16) : '';
+
+        list.forEach(row => {
+            // 🔥 [จุดสำคัญ 1] ใช้ emp_id เป็น Unique Key สำหรับสร้าง ID
+            const uid = row.emp_id; 
             
+            const inTime = formatTime(row.scan_in_time);
+            const outTime = formatTime(row.scan_out_time);
+            
+            // สร้าง Dropdown
+            const statusOptions = [
+                { val: 'PRESENT', label: '✅ มาทำงาน' },
+                { val: 'LATE', label: '⏰ สาย' },
+                { val: 'ABSENT', label: '❌ ขาดงาน' },
+                { val: 'SICK', label: '🤢 ลาป่วย' },
+                { val: 'BUSINESS', label: '👜 ลากิจ' },
+                { val: 'VACATION', label: '🏖️ พักร้อน' },
+                { val: 'OTHER', label: '⚪ อื่นๆ' }
+            ];
+
+            let optionsHtml = '';
+            statusOptions.forEach(opt => {
+                const selected = (row.status === opt.val) ? 'selected' : '';
+                optionsHtml += `<option value="${opt.val}" ${selected}>${opt.label}</option>`;
+            });
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-4">
-                    <div class="fw-bold text-dark">${row.name_th}</div>
-                    <small class="text-muted" style="font-size:0.75rem;">${row.emp_id} | ${row.position}</small>
+                    <div class="fw-bold">${row.name_th}</div>
+                    <small class="text-muted" style="font-size:0.75rem;">${row.emp_id} | ${row.position || '-'}</small>
                 </td>
-                <td class="text-primary fw-bold font-monospace">${timeIn}</td>
-                <td class="text-primary fw-bold font-monospace">${timeOut}</td>
-                <td class="text-center"><span class="badge bg-light text-dark border">${shiftName}</span></td>
-                <td class="text-center">${statusBadge}</td>
-                <td class="small text-muted text-truncate" style="max-width: 150px;">${row.remark || '-'}</td>
-                <td class="text-end pe-4">
-                    <button class="btn btn-sm btn-outline-primary border-0" onclick='Actions.openEditModal(${JSON.stringify(row)})'>
-                        <i class="fas fa-pen-square fa-lg"></i>
+                
+                <td class="text-center p-1">
+                    <input type="time" class="form-control form-control-sm text-center font-monospace text-primary border-0 bg-light" 
+                           id="in_${uid}" 
+                           value="${inTime}" 
+                           style="width: 100px; margin: 0 auto; cursor: pointer;">
+                </td>
+
+                <td class="text-center p-1">
+                    <input type="time" class="form-control form-control-sm text-center font-monospace text-secondary border-0 bg-light" 
+                           id="out_${uid}" 
+                           value="${outTime}" 
+                           style="width: 100px; margin: 0 auto; cursor: pointer;">
+                </td>
+
+                <td class="text-center p-1">
+                    <select class="form-select form-select-sm shadow-none border-0 bg-light fw-bold" 
+                            id="status_${uid}" 
+                            style="width: 140px; font-size: 0.85rem; margin: 0 auto;">
+                        ${optionsHtml}
+                    </select>
+                </td>
+
+                <td class="p-1">
+                    <input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0" 
+                           id="remark_${uid}" 
+                           value="${row.remark || ''}" 
+                           placeholder="...">
+                </td>
+
+                <td class="text-center pe-4">
+                    <button class="btn btn-sm btn-primary shadow-sm" 
+                            onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" 
+                            title="บันทึก">
+                        <i class="fas fa-save"></i>
                     </button>
                 </td>
             `;
@@ -407,206 +426,481 @@ const Actions = {
         });
     },
 
-    // 4.3 เปิดหน้าต่างแก้ไข (Edit Modal)
+    // 4.3 บันทึกสถานะ (แก้ไขให้รับ empId และเช็ค Element ก่อนดึงค่า)
+    async saveLogStatus(logId, empId) {
+        // 🔥 [จุดสำคัญ 2] ดึง Element ด้วย ID ที่ตรงกับที่สร้างในข้อ 1
+        const elStatus = document.getElementById(`status_${empId}`);
+        const elRemark = document.getElementById(`remark_${empId}`);
+        const elIn     = document.getElementById(`in_${empId}`);
+        const elOut    = document.getElementById(`out_${empId}`);
+        
+        // Safety Check: ถ้าหา Element ไม่เจอ ให้หยุดทำงานและแจ้งเตือน (กันจอขาว)
+        if (!elStatus || !elIn) {
+            alert(`System Error: Cannot find input elements for ID ${empId}. Please refresh.`);
+            console.error('Missing Element ID:', `status_${empId}`, `in_${empId}`);
+            return;
+        }
+
+        const status  = elStatus.value;
+        const remark  = elRemark.value;
+        const timeIn  = elIn.value;
+        const timeOut = elOut.value;
+        
+        // ดึงวันที่จากหน้า Dashboard
+        const dateInput = document.getElementById('filterDate');
+        const dateStr = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+        // Format Date Time
+        let scanInFull  = null;
+        let scanOutFull = null;
+
+        if (timeIn) {
+            scanInFull = `${dateStr} ${timeIn}:00`;
+        }
+
+        if (timeOut) {
+            let outDate = dateStr;
+            const hourOut = parseInt(timeOut.split(':')[0]);
+            // Logic ข้ามวัน (ถ้าเวลาออก < เวลาเข้า หรือ ออกช่วง 00-07 โมง)
+            if ((timeIn && timeOut < timeIn) || (hourOut >= 0 && hourOut <= 7)) {
+                const d = new Date(dateStr);
+                d.setDate(d.getDate() + 1);
+                outDate = d.toISOString().split('T')[0];
+            }
+            scanOutFull = `${outDate} ${timeOut}:00`;
+        }
+
+        const btn = event.currentTarget; 
+        const originalIcon = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_log',
+                    log_id: logId,
+                    emp_id: empId,
+                    log_date: dateStr,
+                    status: status,
+                    remark: remark,
+                    scan_in_time: scanInFull,
+                    scan_out_time: scanOutFull
+                })
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                btn.classList.replace('btn-primary', 'btn-success');
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                
+                // คืนค่าปุ่ม
+                setTimeout(() => {
+                    btn.classList.replace('btn-success', 'btn-primary');
+                    btn.innerHTML = originalIcon;
+                    btn.disabled = false;
+                    
+                    // ถ้าเป็นการ Insert ใหม่ (logId=0) ควรโหลดข้อมูลใหม่เพื่อให้ได้ log_id จริง
+                    if (logId == 0) {
+                        // Optional: Actions.openDetailModal(...) 
+                        App.loadData(); 
+                    } else {
+                        App.loadData(); 
+                    }
+                }, 1000);
+
+            } else {
+                alert('Error: ' + json.message);
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('Failed: ' + err.message);
+            btn.innerHTML = originalIcon;
+            btn.disabled = false;
+        }
+    },
+
+    // 4.3 เปิดหน้าต่างแก้ไข (Edit Modal) - แก้ไขให้รับค่า Line/Team มาใส่
     openEditModal(row) {
-        // ไม่ต้องซ่อน Detail Modal เพราะเราใช้ Z-Index จัดการแล้ว
         const modal = new bootstrap.Modal(document.getElementById('editLogModal'));
         
-        // Fill Data
+        // Fill IDs
         document.getElementById('editLogId').value = row.log_id || 0;
         document.getElementById('editEmpIdHidden').value = row.emp_id;
         document.getElementById('editEmpName').value = row.name_th;
         
-        document.getElementById('editLogLine').value = row.line || '-';
+        // 🔥 Fill Snapshot Data (Line & Team)
+        // ถ้าเป็นข้อมูลเก่า row.line คือ actual_line, ถ้าใหม่คือ master line
+        document.getElementById('editLogLine').value = row.line || 'ASSEMBLY'; 
         document.getElementById('editLogTeam').value = row.team_group || '-';
         
+        // Fill Status & Shift
         document.getElementById('editStatus').value = row.status || 'WAITING';
         document.getElementById('editLogShift').value = row.actual_shift_id || '';
         
-        // Fix Date Format for datetime-local input (replace space with T)
+        // Fix Date Format
         document.getElementById('editScanInTime').value = row.scan_in_time ? row.scan_in_time.replace(' ', 'T') : '';
         document.getElementById('editScanOutTime').value = row.scan_out_time ? row.scan_out_time.replace(' ', 'T') : '';
-        
         document.getElementById('editRemark').value = row.remark || '';
         
         modal.show();
     },
 
-    // 4.4 บันทึกข้อมูล (Save)
+    // 4.4 บันทึกข้อมูล (Save) - ส่ง Line/Team กลับไปด้วย
     async saveLogChanges() {
         const payload = {
             action: 'update_log',
             log_id: document.getElementById('editLogId').value,
             emp_id: document.getElementById('editEmpIdHidden').value,
+            
+            // 🔥 ส่งค่า Snapshot ที่เลือกใหม่กลับไป
+            actual_line: document.getElementById('editLogLine').value,
+            actual_team: document.getElementById('editLogTeam').value,
+            
             status: document.getElementById('editStatus').value,
             shift_id: document.getElementById('editLogShift').value,
             scan_in_time: document.getElementById('editScanInTime').value.replace('T', ' '),
             scan_out_time: document.getElementById('editScanOutTime').value.replace('T', ' '),
-            remark: document.getElementById('editRemark').value
+            remark: document.getElementById('editRemark').value,
+            
+            // เอาวันที่จาก Dashboard ไปด้วย เพื่อความชัวร์
+            log_date: document.getElementById('filterDate').value 
         };
 
-        if(!confirm('ยืนยันการบันทึกข้อมูล?')) return;
+        if(!confirm('ยืนยันการบันทึกการแก้ไขประวัติ?')) return;
 
         try {
-            const res = await API.updateLog(payload); 
-            if(res.success) {
+            const res = await fetch('api/api_daily_operations.php', { // เรียกใช้ไฟล์เดิม
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }); 
+            const json = await res.json();
+            
+            if(json.success) {
                 alert('บันทึกเรียบร้อย!');
                 bootstrap.Modal.getInstance(document.getElementById('editLogModal')).hide();
                 
-                // Refresh Detail List
+                // Refresh หน้าจอ
                 const date = document.getElementById('filterDate').value;
-                this.openDetailModal(this.currentLine, date); 
+                // ถ้าเปิดมาจาก Drill-down ให้รีเฟรช Drill-down ด้วย
+                if (document.getElementById('detailModal').classList.contains('show')) {
+                     // ดึงชื่อ Line จากหัวข้อ Modal (Trick) หรือตัวแปร Global
+                     const currentTitle = document.getElementById('detailModalTitle').innerText; // e.g. "PAINT (Day)"
+                     // แต่เพื่อความง่าย Refresh Main Data ก็พอ
+                }
                 
-                // Refresh Main Dashboard
                 App.loadData();
             } else {
-                alert('Error: ' + res.message);
+                alert('Error: ' + json.message);
             }
         } catch(err) {
             alert('Save Failed: ' + err.message);
         }
     },
 
-    // [FIX] ระบบค้นหาแบบ Robust (ลบ Event เก่าทิ้งก่อนสร้างใหม่)
+    // [FIX] ระบบค้นหา (แก้ Bug ให้หาเจอใน detailModalBody)
     initSearch() {
         const input = document.getElementById('searchDetail');
         if(!input) return;
 
-        // Reset Value
-        input.value = '';
-
-        // Clone Node เพื่อลบ Event Listener เก่าที่อาจค้างอยู่
+        // Clone Node เพื่อลบ Event เก่า
         const newInput = input.cloneNode(true);
         input.parentNode.replaceChild(newInput, input);
 
-        // Bind Event ใหม่
         newInput.addEventListener('keyup', function() {
             const filter = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#detailTableBody tr');
+            // [FIX] ต้องหาใน #detailModalBody
+            const rows = document.querySelectorAll('#detailModalBody tr');
 
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
-                if (text.includes(filter)) {
-                    row.style.removeProperty('display');
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = text.includes(filter) ? '' : 'none';
             });
         });
-        
-        // Auto Focus
-        setTimeout(() => newInput.focus(), 500);
     },
 
-    getStatusBadge(status) {
-        const map = {
-            'PRESENT': 'bg-success',
-            'LATE': 'bg-warning text-dark',
-            'ABSENT': 'bg-danger',
-            'LEAVE': 'bg-info text-dark',
-            'WAITING': 'bg-secondary'
-        };
-        let badgeClass = map[status] || (status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
-        return `<span class="badge ${badgeClass} fw-normal px-2 py-1">${status}</span>`;
-    },
-
-    // 4.5 เปิดหน้าจัดการกะ (Shift Planner)
+    // --- 5. SHIFT PLANNER ---
     async openShiftPlanner() {
         const modalEl = document.getElementById('shiftPlannerModal');
         const modal = new bootstrap.Modal(modalEl);
-        
-        // ใส่ Loading รอ
         document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
         modal.show();
 
         try {
-            // เรียก API ไปดึงข้อมูลทีม
             const res = await fetch('api/api_master_data.php?action=read_team_shifts');
             const json = await res.json();
-            
-            if (json.success) {
-                this.renderShiftPlannerTable(json.data);
-            } else {
-                alert('Error: ' + json.message);
-            }
+            if (json.success) this.renderShiftPlannerTable(json.data);
+            else alert('Error: ' + json.message);
         } catch (err) {
             console.error(err);
             document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
 
-    // 4.6 วาดตาราง Shift Planner
     renderShiftPlannerTable(teams) {
         const tbody = document.getElementById('shiftPlannerBody');
         tbody.innerHTML = '';
-
-        // Group by Line เพื่อความสวยงาม
         let currentLine = null;
 
         teams.forEach(t => {
-            // สร้าง Header แยก Line
             if (t.line !== currentLine) {
                 currentLine = t.line;
                 tbody.innerHTML += `<tr class="table-secondary fw-bold"><td colspan="4">${currentLine}</td></tr>`;
             }
-
-            // ตรวจสอบกะปัจจุบัน (1=Day, 2=Night)
+            
             const isDay = (t.default_shift_id == 1);
             const shiftBadge = isDay 
-                ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i>DAY SHIFT</span>`
-                : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i>NIGHT SHIFT</span>`;
+                ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i> DAY</span>`
+                : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i> NIGHT</span>`;
 
-            // ปุ่มสลับกะ (ตรงข้ามกับปัจจุบัน)
-            const targetShiftId = isDay ? 2 : 1;
             const btnClass = isDay ? 'btn-outline-dark' : 'btn-outline-info';
-            const btnLabel = isDay ? '<i class="fas fa-moon me-1"></i>Switch to Night' : '<i class="fas fa-sun me-1"></i>Switch to Day';
+            const btnLabel = isDay ? '<i class="fas fa-moon me-1"></i> To Night' : '<i class="fas fa-sun me-1"></i> To Day';
+            const targetShiftId = isDay ? 2 : 1;
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="ps-4">
-                    <span class="fw-bold text-primary">${t.team_group || '-'}</span>
-                    <small class="text-muted ms-2">(${t.member_count} คน)</small>
-                </td>
-                <td class="text-center">${shiftBadge}</td>
-                <td class="text-center text-muted small">ID: ${t.default_shift_id}</td>
-                <td class="text-center pe-4">
-                    <button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">
-                        ${btnLabel}
-                    </button>
-                </td>
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4"><span class="fw-bold text-primary">${t.team_group || '-'}</span> <small class="text-muted">(${t.member_count} คน)</small></td>
+                    <td class="text-center">${shiftBadge}</td>
+                    <td class="text-center text-muted small">${t.default_shift_id}</td>
+                    <td class="text-center pe-4">
+                        <button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">${btnLabel}</button>
+                    </td>
+                </tr>
             `;
-            tbody.appendChild(tr);
         });
     },
 
-    // 4.7 สั่งสลับกะ (API Call)
     async switchTeamShift(line, team, newShiftId) {
         const shiftName = (newShiftId == 1) ? "🌞 DAY" : "🌙 NIGHT";
-        if (!confirm(`ยืนยันเปลี่ยนกะของ [${line} - ${team}] \nให้เป็น ${shiftName} SHIFT ?`)) return;
+        if (!confirm(`เปลี่ยนกะของ [${line} - ${team}] เป็น ${shiftName} ?`)) return;
 
         try {
             const res = await fetch('api/api_master_data.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_team_shift',
-                    line: line,
-                    team: team,
-                    new_shift_id: newShiftId
-                })
+                body: JSON.stringify({ action: 'update_team_shift', line, team, new_shift_id: newShiftId })
             });
             const json = await res.json();
 
             if (json.success) {
-                alert(`✅ เรียบร้อย! เปลี่ยนกะสำเร็จ\n\nคำแนะนำ: กรุณากดปุ่ม 'Reset & Sync' ที่หน้า Dashboard เพื่ออัปเดตข้อมูลของวันนี้ใหม่`);
-                this.openShiftPlanner(); // โหลดตารางใหม่
+                alert(`✅ เปลี่ยนกะสำเร็จ! กรุณากด 'Reset & Sync' ข้อมูลใหม่`);
+                this.openShiftPlanner();
             } else {
                 alert('Error: ' + json.message);
             }
         } catch (err) {
             alert('Failed: ' + err.message);
         }
+    },
+
+    // 5.5 Export Excel
+    exportExcel() {
+        const date = document.getElementById('filterDate').value;
+        // ส่งไปยังไฟล์ export ที่สร้างไว้
+        window.location.href = `api/api_export.php?date=${date}`;
+    },
+    
+    // Variables Cache สำหรับ Address Book (เก็บข้อมูลดิบไว้ค้นหา)
+    _employeeCache: [],
+
+    // 5.6 เปิดสมุดรายชื่อ (Address Book)
+    async openEmployeeManager() {
+        const modal = new bootstrap.Modal(document.getElementById('empListModal'));
+        document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+        modal.show();
+
+        try {
+            const res = await fetch('api/api_master_data.php?action=read_employees');
+            const json = await res.json();
+            
+            if (json.success) {
+                this._employeeCache = json.data;
+                this.renderEmployeeTable(json.data);
+            } else {
+                alert('Error loading employees');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    },
+
+    // 5.7 วาดตารางพนักงาน
+    renderEmployeeTable(list) {
+        const tbody = document.getElementById('empListBody');
+        tbody.innerHTML = '';
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
+            return;
+        }
+
+        const displayList = list.slice(0, 100); // Limit 100 คนแรกเพื่อความลื่น
+
+        displayList.forEach(emp => {
+            const statusBadge = (emp.is_active == 1) 
+                ? '<span class="badge bg-success bg-opacity-10 text-success">Active</span>' 
+                : '<span class="badge bg-secondary bg-opacity-10 text-secondary">Inactive</span>';
+            
+            const empJson = encodeURIComponent(JSON.stringify(emp));
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4 font-monospace small">${emp.emp_id}</td>
+                    <td class="fw-bold text-primary">${emp.name_th}</td>
+                    <td>${emp.position || '-'}</td>
+                    <td><span class="badge bg-light text-dark border">${emp.line}</span></td>
+                    <td class="text-center">${emp.shift_name || '-'}</td>
+                    <td class="text-center fw-bold">${emp.team_group || '-'}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center pe-4">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="Actions.openEmpEdit('${empJson}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    },
+
+    // 5.8 กรองรายชื่อ (Search)
+    filterEmployeeList() {
+        const term = document.getElementById('empSearchBox').value.toLowerCase();
+        const filtered = this._employeeCache.filter(emp => {
+            return (emp.name_th && emp.name_th.toLowerCase().includes(term)) ||
+                   (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) ||
+                   (emp.line && emp.line.toLowerCase().includes(term));
+        });
+        this.renderEmployeeTable(filtered);
+    },
+
+    // 5.9 เปิดหน้าแก้ไข/สร้างใหม่ (Edit Modal)
+    openEmpEdit(empDataEncoded = null) {
+        const modal = new bootstrap.Modal(document.getElementById('empEditModal'));
+        const isEdit = !!empDataEncoded;
+        
+        document.getElementById('isEditMode').value = isEdit ? '1' : '0';
+        document.getElementById('empEditTitle').innerHTML = isEdit ? '<i class="fas fa-user-edit me-2"></i>Edit Employee' : '<i class="fas fa-user-plus me-2"></i>New Employee';
+        
+        const btnDel = document.getElementById('btnDeleteEmp');
+        if(btnDel) btnDel.style.display = isEdit ? 'block' : 'none';
+
+        if (isEdit) {
+            const emp = JSON.parse(decodeURIComponent(empDataEncoded));
+            document.getElementById('empEditId').value = emp.emp_id;
+            document.getElementById('empEditId').readOnly = true;
+            document.getElementById('empEditName').value = emp.name_th;
+            document.getElementById('empEditPos').value = emp.position;
+            document.getElementById('empEditLine').value = emp.line;
+            document.getElementById('empEditShift').value = emp.default_shift_id;
+            document.getElementById('empEditTeam').value = emp.team_group;
+            document.getElementById('empEditActive').checked = (emp.is_active == 1);
+        } else {
+            document.getElementById('empEditForm').reset();
+            document.getElementById('empEditId').readOnly = false;
+            document.getElementById('empEditActive').checked = true;
+        }
+        modal.show();
+    },
+
+    // 5.10 บันทึกข้อมูลพนักงาน
+    async saveEmployee() {
+        const isEdit = document.getElementById('isEditMode').value === '1';
+        const payload = {
+            action: isEdit ? 'update_employee' : 'create_employee',
+            emp_id: document.getElementById('empEditId').value,
+            name_th: document.getElementById('empEditName').value,
+            position: document.getElementById('empEditPos').value,
+            line: document.getElementById('empEditLine').value,
+            shift_id: document.getElementById('empEditShift').value,
+            team_group: document.getElementById('empEditTeam').value,
+            is_active: document.getElementById('empEditActive').checked ? 1 : 0
+        };
+
+        if(!payload.emp_id || !payload.name_th || !payload.line) {
+            alert('กรุณากรอกข้อมูลให้ครบ (ID, Name, Line)');
+            return;
+        }
+
+        try {
+            const res = await fetch('api/api_master_data.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                alert('Saved Successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide();
+                this.openEmployeeManager(); // Refresh List
+                App.loadData(); // Refresh Dashboard
+            } else {
+                alert('Error: ' + json.message);
+            }
+        } catch (err) {
+            alert('Failed: ' + err.message);
+        }
+    },
+
+    // 5.11 ปิดการใช้งานพนักงาน (Soft Delete / Disable)
+    async deleteEmployee() {
+        const empId = document.getElementById('empEditId').value;
+        const empName = document.getElementById('empEditName').value;
+
+        // เปลี่ยนข้อความยืนยันให้ชัดเจน
+        if(!confirm(`ยืนยันการ "ปิดการใช้งาน" (Set Inactive) พนักงานท่านนี้?\n\nรหัส: ${empId}\nชื่อ: ${empName}\n\n(ข้อมูลประวัติการทำงานจะยังคงอยู่)`)) return;
+
+        // เทคนิค: สั่ง Uncheck ปุ่ม Active ในฟอร์ม แล้วเรียก Save เลย
+        document.getElementById('empEditActive').checked = false;
+        
+        // เรียกฟังก์ชัน saveEmployee() เพื่อส่งค่า update_employee ไปที่ API
+        // ซึ่งมันจะส่งค่า is_active = 0 ไปให้เอง
+        await this.saveEmployee();
+    },
+
+    // 7. Init Dropdowns (แก้ให้รองรับ Modal ใหม่)
+    async initDropdowns() {
+        try {
+            const res = await fetch('api/api_master_data.php?action=read_structure');
+            const json = await res.json();
+
+            if (json.success) {
+                // [UPDATED IDs] เพิ่ม empEditLine และ empEditTeam
+                const lineSelects = ['editLogLine', 'filterLine', 'empEditLine']; 
+                const teamSelects = ['editLogTeam', 'empEditTeam'];
+
+                // Populate Lines
+                lineSelects.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        let currentVal = el.value;
+                        el.innerHTML = '<option value="">-- Select Line --</option>';
+                        if(id === 'filterLine') el.innerHTML = '<option value="ALL">-- All Lines --</option>';
+
+                        json.lines.forEach(line => {
+                            el.innerHTML += `<option value="${line}">${line}</option>`;
+                        });
+                        if(currentVal && json.lines.includes(currentVal)) el.value = currentVal;
+                    }
+                });
+
+                // Populate Teams
+                teamSelects.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = '<option value="">-</option>';
+                        json.teams.forEach(team => {
+                            el.innerHTML += `<option value="${team}">Team ${team}</option>`;
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to load dropdowns:', err);
+        }
     }
 };
-
-window.saveLogChanges = () => Actions.saveLogChanges();

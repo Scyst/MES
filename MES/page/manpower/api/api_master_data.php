@@ -2,18 +2,6 @@
 // MES/page/manpower/api/api_master_data.php
 // รวม: manage_employees, batch_shift_update, manage_mapping, generate_calendar, team_shift_manager
 
-/* * =================================================================================
- * [REMINDER] วิธีสร้างปฏิทินวันหยุดประจำปี (Auto Generate Holiday)
- * =================================================================================
- * ให้ Login เข้าระบบ แล้วเปิดลิงก์นี้ใน Browser ปีละ 1 ครั้ง:
- * * ปี 2025:
- * https://oem.sncformer.com/iot-toolbox/sandbox-b9/Clone/MES/page/manpower/api/api_master_data.php?action=generate_calendar&year=2025
- * * ปี 2026:
- * https://oem.sncformer.com/iot-toolbox/sandbox-b9/Clone/MES/page/manpower/api/api_master_data.php?action=generate_calendar&year=2026
- * * (ระบบจะสร้างวันอาทิตย์เป็นวันหยุด และดึงวันหยุดราชการจาก API มาใส่ตาราง MANPOWER_CALENDAR ให้เอง)
- * =================================================================================
- */
-
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
@@ -26,14 +14,12 @@ if (!hasRole(['admin', 'creator', 'supervisor'])) {
     exit;
 }
 
-// รับค่า action รองรับทั้ง GET และ POST
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $_GET['action'] ?? ($input['action'] ?? 'read_employees');
 
 try {
     // ==================================================================================
     // 1. Employee: read_employees 
-    // (ดึงข้อมูลพนักงาน + Dropdown Line/Shift)
     // ==================================================================================
     if ($action === 'read_employees') {
         $sql = "SELECT 
@@ -47,11 +33,9 @@ try {
         $stmt = $pdo->query($sql);
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // ดึงตัวเลือก Shifts
         $stmtShifts = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WHERE is_active = 1 ORDER BY start_time");
         $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
 
-        // ดึงตัวเลือก Lines จากที่มีอยู่จริง + Default
         $stmtLines = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
         $lines = $stmtLines->fetchAll(PDO::FETCH_COLUMN);
 
@@ -67,8 +51,36 @@ try {
         ]);
 
     // ==================================================================================
+    // 1.1 ACTION: read_structure (ดึงรายชื่อ Line และ Team สำหรับ Dropdown)
+    // ==================================================================================
+    } elseif ($action === 'read_structure') {
+        // 1. ดึง Line ทั้งหมดที่มีในระบบ
+        $stmtLines = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL AND line != ''");
+        $dbLines = $stmtLines->fetchAll(PDO::FETCH_COLUMN);
+
+        // 2. Line มาตรฐาน (เผื่อใน DB ยังไม่มีใครอยู่ แต่ต้องมีให้เลือก)
+        $defaultLines = ["ASSEMBLY", "BEND", "PAINT", "PRESS", "QA/QC", "SPOT", "ST/WH", "MT/PE", "OFFICE", "TOOLBOX_POOL"];
+        
+        // รวมกัน + ตัดตัวซ้ำ + เรียงลำดับ
+        $lines = array_unique(array_merge($dbLines, $defaultLines));
+        sort($lines);
+
+        // 3. ดึง Team ทั้งหมดที่มีในระบบ
+        $stmtTeams = $pdo->query("SELECT DISTINCT team_group FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE team_group IS NOT NULL AND team_group != ''");
+        $dbTeams = $stmtTeams->fetchAll(PDO::FETCH_COLUMN);
+        
+        $defaultTeams = ["A", "B", "C", "D"]; // Team มาตรฐาน
+        $teams = array_unique(array_merge($dbTeams, $defaultTeams));
+        sort($teams);
+
+        echo json_encode([
+            'success' => true,
+            'lines' => $lines,
+            'teams' => $teams
+        ]);
+
+    // ==================================================================================
     // 2. Employee: update_employee 
-    // (แก้ไขรายคน - Logic เดิมจาก manage_employees.php)
     // ==================================================================================
     } elseif ($action === 'update_employee') {
         $empId  = $input['emp_id'] ?? '';
@@ -89,8 +101,7 @@ try {
         echo json_encode(['success' => true, 'message' => 'Employee updated successfully']);
 
     // ==================================================================================
-    // 3. Employee: update_team_shift_legacy (Logic เดิม)
-    // (เปลี่ยนกะแบบระบุ Shift A -> X, Shift B -> Y)
+    // 3. Employee: update_team_shift_legacy
     // ==================================================================================
     } elseif ($action === 'update_team_shift_legacy') {
         $line   = $input['line'] ?? '';
@@ -102,7 +113,6 @@ try {
         $pdo->beginTransaction();
         $updateCount = 0;
 
-        // Update Team A
         if (!empty($shiftA)) {
             $sqlA = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
                      SET default_shift_id = ?, last_sync_at = GETDATE()
@@ -112,7 +122,6 @@ try {
             $updateCount += $stmtA->rowCount();
         }
 
-        // Update Team B
         if (!empty($shiftB)) {
             $sqlB = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
                      SET default_shift_id = ?, last_sync_at = GETDATE()
@@ -131,13 +140,13 @@ try {
         }
 
     // ==================================================================================
-    // 4. Mapping: read_mappings 
-    // (ดึงข้อมูล Mapping)
+    // 4. Mapping: read_mappings (ตัด Section Mapping ออก)
     // ==================================================================================
     } elseif ($action === 'read_mappings') {
-        $sqlSec = "SELECT * FROM " . MANPOWER_SECTION_MAPPING_TABLE . " ORDER BY display_section";
-        $stmtSec = $pdo->query($sqlSec);
-        $sections = $stmtSec->fetchAll(PDO::FETCH_ASSOC);
+        // [MODIFIED] ดึง Line จาก Employee Table โดยตรง (แทนการดึงจาก Table Mapping ที่จะลบ)
+        // เพื่อเอาไปแสดงในหน้า Mapping (เผื่ออนาคตจะ Map อย่างอื่น) หรือใช้เป็น Reference
+        $stmtLines = $pdo->query("SELECT DISTINCT line as display_section, line as api_department FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
+        $sections = $stmtLines->fetchAll(PDO::FETCH_ASSOC);
 
         $sqlCat = "SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name";
         $stmtCat = $pdo->query($sqlCat);
@@ -145,27 +154,20 @@ try {
 
         echo json_encode([
             'success' => true,
-            'sections' => $sections,
+            'sections' => $sections, // ส่งกลับไปเพื่อให้หน้า Frontend ไม่พัง (แต่เป็นข้อมูล Realtime)
             'categories' => $categories
         ]);
 
     // ==================================================================================
-    // 5. Mapping: save_mappings 
-    // (บันทึก Mapping)
+    // 5. Mapping: save_mappings (เหลือแค่ Category)
     // ==================================================================================
     } elseif ($action === 'save_mappings') {
         if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized to edit mappings.");
 
         $pdo->beginTransaction();
 
-        // 5.1 Save Sections
-        if (isset($input['sections'])) {
-            $pdo->exec("DELETE FROM " . MANPOWER_SECTION_MAPPING_TABLE);
-            $stmtSec = $pdo->prepare("INSERT INTO " . MANPOWER_SECTION_MAPPING_TABLE . " (api_department, display_section, is_production) VALUES (?, ?, ?)");
-            foreach ($input['sections'] as $sec) {
-                $stmtSec->execute([$sec['api_department'], $sec['display_section'], $sec['is_production']]);
-            }
-        }
+        // [REMOVED] 5.1 Save Sections (ตัดทิ้ง เพราะเราไม่ใช้ Table นี้แล้ว)
+        // if (isset($input['sections'])) { ... }
 
         // 5.2 Save Categories
         if (isset($input['categories'])) {
@@ -183,11 +185,10 @@ try {
         }
 
         $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Mapping saved successfully']);
+        echo json_encode(['success' => true, 'message' => 'Mapping saved successfully (Category Only)']);
 
     // ==================================================================================
     // 6. Calendar: generate_calendar 
-    // (สร้างปฏิทินวันหยุดประจำปีอัตโนมัติ)
     // ==================================================================================
     } elseif ($action === 'generate_calendar') {
         if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
@@ -196,11 +197,9 @@ try {
         
         $pdo->beginTransaction();
 
-        // 6.1 ล้างข้อมูลเก่าของปีนั้น
         $stmtDel = $pdo->prepare("DELETE FROM MANPOWER_CALENDAR WHERE YEAR(calendar_date) = ?");
         $stmtDel->execute([$year]);
 
-        // 6.2 วนลูปสร้างวันอาทิตย์ (Sunday Loop)
         $startDate = new DateTime("$year-01-01");
         $endDate   = new DateTime("$year-12-31");
         
@@ -221,7 +220,6 @@ try {
             $startDate->modify('+1 day');
         }
 
-        // 6.3 ดึงวันหยุดราชการจาก API
         $apiUrl = "https://date.nager.at/api/v3/PublicHolidays/$year/TH";
         $context = stream_context_create(["http" => ["header" => "User-Agent: Mozilla/5.0"]]);
         $json = @file_get_contents($apiUrl, false, $context);
@@ -232,7 +230,6 @@ try {
                 $hDate = $h['date'];
                 $hName = $h['localName'] ?? $h['name'];
 
-                // เช็คว่ามีใน DB หรือยัง (เช่น ตรงกับวันอาทิตย์)
                 $check = $pdo->prepare("SELECT COUNT(*) FROM MANPOWER_CALENDAR WHERE calendar_date = ?");
                 $check->execute([$hDate]);
                 
@@ -249,10 +246,9 @@ try {
         echo json_encode(['success' => true, 'message' => "Generated calendar for year $year successfully."]);
 
     // ==================================================================================
-    // 7. [NEW] Team Shift: read_team_shifts (ดูภาพรวมกะของแต่ละทีม)
+    // 7. Team Shift: read_team_shifts
     // ==================================================================================
     } elseif ($action === 'read_team_shifts') {
-        // ดึงข้อมูล Line + Team และดูว่าคนส่วนใหญ่อยู่กะไหน (Majority Rule)
         $sql = "SELECT 
                     line, 
                     ISNULL(team_group, '-') as team_group,
@@ -268,7 +264,6 @@ try {
         $stmt = $pdo->query($sql);
         $raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Grouping ให้เหลือบรรทัดเดียวต่อทีม (กรณีทีมเดียวกันแต่มีคนหลุดกะไปบ้าง ให้ยึดเสียงส่วนใหญ่)
         $teams = [];
         foreach ($raw as $r) {
             $key = $r['line'] . '|' . $r['team_group'];
@@ -284,7 +279,7 @@ try {
         echo json_encode(['success' => true, 'data' => array_values($teams)]);
 
     // ==================================================================================
-    // 8. [NEW] Team Shift: update_team_shift (สลับกะยกทีม)
+    // 8. Team Shift: update_team_shift
     // ==================================================================================
     } elseif ($action === 'update_team_shift') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -297,14 +292,12 @@ try {
 
         $pdo->beginTransaction();
 
-        // [FIXED] เปลี่ยน updated_at เป็น last_sync_at
         $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . "
                 SET default_shift_id = ?, last_sync_at = GETDATE()
                 WHERE line = ? AND is_active = 1";
         
         $params = [$newShiftId, $line];
 
-        // ถ้าระบุ Team (และไม่ใช่ขีด) ให้กรองด้วย
         if (!empty($team) && $team !== '-') {
             $sql .= " AND team_group = ?";
             $params[] = $team;
