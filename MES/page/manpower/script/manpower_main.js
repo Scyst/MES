@@ -73,6 +73,41 @@ const App = {
                 this.loadData();
             }
         }, 300000); // 5 นาที
+    },
+    async resetDailyData() {
+        const targetDate = document.getElementById('filterDate').value;
+        
+        if (!confirm(`⚠️ คำเตือน: คุณต้องการ "ล้างข้อมูล" และ "ดึงใหม่" ของวันที่ [${targetDate}] ใช่หรือไม่?\n\nข้อมูลการแก้ไข Manual (Remark/Status) จะหายไปทั้งหมด!`)) {
+            return;
+        }
+
+        UI.showLoader(); // โชว์ Loading
+
+        try {
+            // Step 1: สั่งลบข้อมูลเก่า
+            console.log("1. Clearing data...");
+            const clearRes = await API.clearDailyLog(targetDate);
+            
+            if (!clearRes.success) {
+                throw new Error("Clear Failed: " + clearRes.message);
+            }
+
+            // Step 2: สั่ง Sync ใหม่ (Logic เดียวกับ syncNow)
+            console.log("2. Syncing new data...");
+            // ส่ง date ไปทั้ง start และ end เพื่อ sync แค่วันเดียว
+            await API.triggerSync(targetDate); 
+
+            UI.showToast(`✅ รีเซ็ตข้อมูลวันที่ ${targetDate} เรียบร้อยแล้ว`, "success");
+            
+            // Step 3: โหลดหน้าจอใหม่
+            await this.loadData();
+
+        } catch (err) {
+            console.error(err);
+            UI.showToast("❌ เกิดข้อผิดพลาด: " + err.message, "danger");
+        } finally {
+            UI.hideLoader(); // ปิด Loading
+        }
     }
 };
 

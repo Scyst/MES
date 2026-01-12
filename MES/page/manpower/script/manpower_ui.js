@@ -14,8 +14,6 @@ const UI = {
             const present = parseInt(row.present || 0);
             const late = parseInt(row.late || 0);
             const absent = parseInt(row.absent || 0);
-            
-            // 🔥 รับค่าเงินจาก SQL (ถ้าไม่มีให้เป็น 0)
             const cost = parseFloat(row.total_cost || 0);
 
             totalPlan += plan;
@@ -37,13 +35,10 @@ const UI = {
 
     // --- 2. CHARTS ---
     renderCharts(data) {
-        // Group Data by Line Name
         const labels = [];
         const dataPlan = [];
         const dataActual = [];
         const grouped = {};
-
-        // นับยอดรวมสถานะสำหรับ Pie Chart
         let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0;
 
         data.forEach(row => {
@@ -57,7 +52,6 @@ const UI = {
             grouped[line].plan += plan;
             grouped[line].actual += (present + late);
 
-            // Pie Data
             sumPresent += present;
             sumLate += late;
             sumAbsent += parseInt(row.absent || 0);
@@ -70,7 +64,7 @@ const UI = {
             dataActual.push(val.actual);
         }
 
-        // 2.1 Bar Chart
+        // Bar Chart
         const ctxBar = document.getElementById('barChart').getContext('2d');
         if (this.charts.bar) this.charts.bar.destroy();
 
@@ -84,18 +78,11 @@ const UI = {
                 ]
             },
             options: {
-                // [FIX] แก้ไข onClick ให้ดึงค่า Line Name จากตัวแปร labels โดยตรง (Closure) เพื่อความแม่นยำ
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const lineName = labels[index]; // ใช้ค่าจากตัวแปร labels ที่ scope ด้านบน
-                        const date = document.getElementById('filterDate').value;
-                        
-                        console.log("Clicking Line:", lineName);
-                        
-                        if(lineName) {
-                            Actions.openDetailModal(lineName, date);
-                        }
+                        const lineName = labels[index]; 
+                        if(lineName) Actions.openDetailModal(lineName, document.getElementById('filterDate').value);
                     }
                 },
                 responsive: true,
@@ -105,7 +92,7 @@ const UI = {
             }
         });
 
-        // 2.2 Pie Chart
+        // Pie Chart
         const ctxPie = document.getElementById('pieChart').getContext('2d');
         if (this.charts.pie) this.charts.pie.destroy();
 
@@ -128,114 +115,206 @@ const UI = {
         });
     },
 
-    // --- 3. DATA TABLE ---
+    // --- 3. DATA TABLE (3-LEVEL HIERARCHY ENGINE) ---
+    
+    processGroupedData(rawData, viewMode) {
+        const groups = {};
+        const grandTotal = {
+            name: 'GRAND TOTAL',
+            hc: 0, plan: 0, present: 0, late: 0, 
+            absent: 0, leave: 0, actual: 0, diff: 0, cost: 0
+        };
+
+        rawData.forEach(row => {
+            // Level 1 Key (Line)
+            let mainKey = viewMode === 'LINE' ? (row.line_name || 'Unassigned') : (row.shift_name || 'Unassigned');
+            
+            // Level 2 Key (Shift)
+            let subKeyName = viewMode === 'LINE' 
+                ? `${row.shift_name || '-'} ${row.team_group ? '('+row.team_group+')' : ''}`
+                : (row.line_name || '-');
+
+            // Level 3 Key (Emp Type) - 🔥 สิ่งที่คุณต้องการ
+            let itemKeyName = row.emp_type || 'General';
+
+            const stats = {
+                hc: parseInt(row.total_hc || 0), 
+                plan: parseInt(row.plan || 0),
+                present: parseInt(row.present || 0),
+                late: parseInt(row.late || 0),
+                absent: parseInt(row.absent || 0),
+                leave: parseInt(row.leave || 0),
+                cost: parseFloat(row.total_cost || 0)
+            };
+            stats.actual = stats.present + stats.late;
+
+            // 1. Init Main Group
+            if (!groups[mainKey]) {
+                groups[mainKey] = {
+                    name: mainKey,
+                    subs: {}, // Level 2 Container
+                    total: { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }
+                };
+            }
+            this._accumulateStats(groups[mainKey].total, stats);
+
+            // 2. Init Sub Group (Shift)
+            if (!groups[mainKey].subs[subKeyName]) {
+                groups[mainKey].subs[subKeyName] = { 
+                    name: subKeyName, 
+                    items: {}, // Level 3 Container
+                    total: { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }
+                };
+            }
+            this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
+
+            // 3. Init Item (Emp Type) - 🔥 เก็บแยกประเภทตรงนี้
+            if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
+                groups[mainKey].subs[subKeyName].items[itemKeyName] = {
+                    name: itemKeyName,
+                    ...stats
+                };
+            } else {
+                this._accumulateStats(groups[mainKey].subs[subKeyName].items[itemKeyName], stats);
+            }
+
+            // Grand Total
+            this._accumulateStats(grandTotal, stats);
+        });
+
+        // Calculate Diffs
+        this._calculateDiff(grandTotal);
+        Object.values(groups).forEach(group => {
+            this._calculateDiff(group.total);
+            Object.values(group.subs).forEach(sub => {
+                this._calculateDiff(sub.total);
+                Object.values(sub.items).forEach(item => this._calculateDiff(item));
+            });
+        });
+
+        return { groups, grandTotal };
+    },
+
+    _accumulateStats(target, source) {
+        target.hc += source.hc;
+        target.plan += source.plan;
+        target.present += source.present;
+        target.late += source.late;
+        target.absent += source.absent;
+        target.leave += source.leave;
+        target.actual += source.actual;
+        target.cost += source.cost;
+    },
+
+    _calculateDiff(obj) {
+        obj.diff = obj.actual - obj.plan;
+    },
+
     renderTable(data, viewMode = 'LINE') {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
 
         if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
-        let grouped = {};
+        const { groups, grandTotal } = this.processGroupedData(data, viewMode);
 
-        data.forEach(row => {
-            let key = viewMode === 'LINE' ? (row.line_name || 'Unassigned') : (row.shift_name || 'Unassigned');
-            
-            if (!grouped[key]) {
-                grouped[key] = {
-                    name: key,
-                    plan: 0, present: 0, late: 0, absent: 0, leave: 0,
-                    cost: 0,
-                    subs: [] 
-                };
-            }
+        // 1. Render Grand Total
+        tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
 
-            const plan = parseInt(row.plan || 0);
-            const pres = parseInt(row.present || 0);
-            const late = parseInt(row.late || 0);
-            const abs  = parseInt(row.absent || 0);
-            const lve  = parseInt(row.leave || 0);
-            const cost = parseFloat(row.total_cost || 0);
+        // 2. Render Groups
+        const sortedKeys = Object.keys(groups).sort();
+        
+        sortedKeys.forEach(key => {
+            const group = groups[key];
 
-            grouped[key].plan += plan;
-            grouped[key].present += pres;
-            grouped[key].late += late;
-            grouped[key].absent += abs;
-            grouped[key].leave += lve;
-            grouped[key].cost += cost;
+            // 2.1 Parent Row (Line)
+            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode });
 
-            grouped[key].subs.push({
-                subName: viewMode === 'LINE' ? row.shift_name : row.line_name,
-                team: row.team_group || '-',
-                category: row.emp_type || '-',
-                cost: cost,
-                ...row 
+            // 2.2 Sub Rows (Shift)
+            const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
+            sortedSubs.forEach(sub => {
+                // Shift Row (Bold หน่อย เพื่อเป็นหัวข้อของลูกๆ)
+                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { isChild: true });
+
+                // 2.3 Item Rows (Emp Type) - 🔥 แสดงรายการย่อยตรงนี้
+                const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
+                sortedItems.forEach(item => {
+                    tbody.innerHTML += this._createRowHtml(item.name, item, { isGrandChild: true });
+                });
             });
         });
+    },
 
-        Object.values(grouped).forEach(g => {
-            const actual = g.present + g.late;
-            const diff = actual - g.plan;
-            const diffClass = diff < 0 ? 'text-danger' : (diff > 0 ? 'text-success' : 'text-muted');
-            const cost = g.cost;
+    _createRowHtml(label, stats, options = {}) {
+        const { isGrand = false, isParent = false, isChild = false, isGrandChild = false, viewMode = 'LINE' } = options;
 
-            // Master Row (เพิ่ม onclick เพื่อให้กดที่ชื่อแผนกในตารางแล้วเปิด Drill-down ได้ด้วย)
-            const tr = document.createElement('tr');
-            tr.className = 'table-light fw-bold border-bottom cursor-pointer'; // เพิ่ม cursor-pointer
+        // Logic สี Diff
+        let diffClass = 'text-muted opacity-50';
+        let diffPrefix = '';
+        if (stats.diff < 0) {
+            diffClass = 'text-danger fw-bold';
+        } else if (stats.diff > 0) {
+            diffClass = 'text-warning fw-bold text-dark';
+            diffPrefix = '+';
+        } else if (stats.plan > 0 && stats.diff === 0) {
+            diffClass = 'text-success fw-bold';
+        }
+
+        // Style ของ Row
+        let rowClass = '';
+        let nameHtml = label;
+        let rowAttr = '';
+
+        if (isGrand) {
+            rowClass = 'table-dark fw-bold border-bottom-0';
+            nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
+        } else if (isParent) {
+            rowClass = 'table-secondary fw-bold border-top border-white';
+            nameHtml = `<i class="fas fa-layer-group me-2 opacity-50"></i>${label}`;
             
-            // ผูก event click ที่แถวแม่
-            if(viewMode === 'LINE') {
-                tr.onclick = () => {
-                    const date = document.getElementById('filterDate').value;
-                    Actions.openDetailModal(g.name, date);
-                };
-                tr.title = "คลิกเพื่อดูรายละเอียด";
+            if (viewMode === 'LINE') {
+                rowClass += ' cursor-pointer';
+                rowAttr = `onclick="Actions.openDetailModal('${label}', document.getElementById('filterDate').value)" title="คลิกเพื่อดูรายละเอียด"`;
             }
+        } else if (isChild) {
+            // Level 2 (Shift)
+            rowClass = 'bg-light fw-bold';
+            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;">
+                            <span class="text-dark small"><i class="fas fa-clock me-1 text-muted"></i>${label}</span>
+                        </div>`;
+        } else if (isGrandChild) {
+            // Level 3 (Emp Type) - 🔥 ย่อหน้าลึกเข้าไปอีก
+            rowClass = 'bg-white';
+            nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;">
+                            <span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span>
+                        </div>`;
+        }
 
-            tr.innerHTML = `
-                <td class="ps-4 text-primary"><i class="fas fa-search-plus me-2 opacity-50"></i>${g.name}</td>
-                <td class="text-center">-</td>
-                <td class="text-center">${g.plan}</td>
-                <td class="text-center text-success">${g.present}</td>
-                <td class="text-center text-warning">${g.late}</td>
-                <td class="text-center text-danger">${g.absent}</td>
-                <td class="text-center text-info">${g.leave}</td>
-                <td class="text-center ${diffClass}">${diff > 0 ? '+'+diff : diff}</td>
-                <td class="text-end pe-4">${cost.toLocaleString()}</td>
-            `;
-            tbody.appendChild(tr);
+        const costDisplay = stats.cost > 0 
+            ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) 
+            : '-';
 
-            // Sub Rows
-            g.subs.forEach(s => {
-                const sPlan = parseInt(s.plan||0);
-                const sPres = parseInt(s.present||0);
-                const sLate = parseInt(s.late||0);
-                const sAbs  = parseInt(s.absent||0);
-                const sLve  = parseInt(s.leave||0);
-                const sAct  = sPres + sLate;
-                const sDiff = sAct - sPlan;
-                const sDiffClass = sDiff < 0 ? 'text-danger' : (sDiff > 0 ? 'text-success' : 'text-muted');
-                const sCost = s.cost;
-
-                const subTr = document.createElement('tr');
-                subTr.innerHTML = `
-                    <td class="ps-5 text-muted small" style="font-size:0.85rem;">
-                        <i class="fas fa-angle-right me-2 opacity-50"></i>${s.category} (${s.team})
-                    </td>
-                    <td class="text-center small text-muted">${s.subName}</td>
-                    <td class="text-center text-muted small">${sPlan}</td>
-                    <td class="text-center small">${sPres > 0 ? sPres : '-'}</td>
-                    <td class="text-center small">${sLate > 0 ? sLate : '-'}</td>
-                    <td class="text-center small">${sAbs > 0 ? sAbs : '-'}</td>
-                    <td class="text-center small">${sLve > 0 ? sLve : '-'}</td>
-                    <td class="text-center ${sDiffClass} small">${sDiff > 0 ? '+'+sDiff : sDiff}</td>
-                    <td class="text-end pe-4 text-muted small">${sCost.toLocaleString()}</td>
-                `;
-                tbody.appendChild(subTr);
-            });
-        });
+        return `
+            <tr class="${rowClass}" ${rowAttr}>
+                <td class="ps-3 text-truncate" style="max-width: 300px;">${nameHtml}</td>
+                <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
+                <td class="text-center fw-bold">${stats.plan}</td>
+                <td class="text-center text-success">${stats.present || '-'}</td>
+                <td class="text-center text-warning text-dark">${stats.late || '-'}</td>
+                <td class="text-center text-danger">${stats.absent || '-'}</td>
+                <td class="text-center text-info text-dark">${stats.leave || '-'}</td>
+                <td class="text-center fw-bold border-start border-end" style="background-color: rgba(0,0,0,0.02);">
+                    ${stats.actual}
+                </td>
+                <td class="text-center ${diffClass}">
+                    ${diffPrefix}${stats.diff}
+                </td>
+                <td class="text-end pe-4 text-secondary small">${costDisplay}</td>
+            </tr>
+        `;
     },
 
     animateNumber(elementId, endValue) {
@@ -248,7 +327,18 @@ const UI = {
 
     showToast(message, type) { alert(message); },
     showLoader() { document.getElementById('syncLoader').style.display = 'block'; },
-    hideLoader() { document.getElementById('syncLoader').style.display = 'none'; }
+    hideLoader() { document.getElementById('syncLoader').style.display = 'none'; },
+    getStatusBadge(status) {
+        const map = {
+            'PRESENT': 'bg-success',
+            'LATE': 'bg-warning text-dark',
+            'ABSENT': 'bg-danger',
+            'LEAVE': 'bg-info text-dark',
+            'WAITING': 'bg-secondary'
+        };
+        let badgeClass = map[status] || (status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
+        return `<span class="badge ${badgeClass} fw-normal px-2 py-1">${status}</span>`;
+    }
 };
 
 // --- 4. DRILL-DOWN & ACTIONS ---
@@ -418,6 +508,104 @@ const Actions = {
         };
         let badgeClass = map[status] || (status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
         return `<span class="badge ${badgeClass} fw-normal px-2 py-1">${status}</span>`;
+    },
+
+    // 4.5 เปิดหน้าจัดการกะ (Shift Planner)
+    async openShiftPlanner() {
+        const modalEl = document.getElementById('shiftPlannerModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // ใส่ Loading รอ
+        document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
+        modal.show();
+
+        try {
+            // เรียก API ไปดึงข้อมูลทีม
+            const res = await fetch('api/api_master_data.php?action=read_team_shifts');
+            const json = await res.json();
+            
+            if (json.success) {
+                this.renderShiftPlannerTable(json.data);
+            } else {
+                alert('Error: ' + json.message);
+            }
+        } catch (err) {
+            console.error(err);
+            document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load data</td></tr>`;
+        }
+    },
+
+    // 4.6 วาดตาราง Shift Planner
+    renderShiftPlannerTable(teams) {
+        const tbody = document.getElementById('shiftPlannerBody');
+        tbody.innerHTML = '';
+
+        // Group by Line เพื่อความสวยงาม
+        let currentLine = null;
+
+        teams.forEach(t => {
+            // สร้าง Header แยก Line
+            if (t.line !== currentLine) {
+                currentLine = t.line;
+                tbody.innerHTML += `<tr class="table-secondary fw-bold"><td colspan="4">${currentLine}</td></tr>`;
+            }
+
+            // ตรวจสอบกะปัจจุบัน (1=Day, 2=Night)
+            const isDay = (t.default_shift_id == 1);
+            const shiftBadge = isDay 
+                ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i>DAY SHIFT</span>`
+                : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i>NIGHT SHIFT</span>`;
+
+            // ปุ่มสลับกะ (ตรงข้ามกับปัจจุบัน)
+            const targetShiftId = isDay ? 2 : 1;
+            const btnClass = isDay ? 'btn-outline-dark' : 'btn-outline-info';
+            const btnLabel = isDay ? '<i class="fas fa-moon me-1"></i>Switch to Night' : '<i class="fas fa-sun me-1"></i>Switch to Day';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-4">
+                    <span class="fw-bold text-primary">${t.team_group || '-'}</span>
+                    <small class="text-muted ms-2">(${t.member_count} คน)</small>
+                </td>
+                <td class="text-center">${shiftBadge}</td>
+                <td class="text-center text-muted small">ID: ${t.default_shift_id}</td>
+                <td class="text-center pe-4">
+                    <button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">
+                        ${btnLabel}
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    // 4.7 สั่งสลับกะ (API Call)
+    async switchTeamShift(line, team, newShiftId) {
+        const shiftName = (newShiftId == 1) ? "🌞 DAY" : "🌙 NIGHT";
+        if (!confirm(`ยืนยันเปลี่ยนกะของ [${line} - ${team}] \nให้เป็น ${shiftName} SHIFT ?`)) return;
+
+        try {
+            const res = await fetch('api/api_master_data.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_team_shift',
+                    line: line,
+                    team: team,
+                    new_shift_id: newShiftId
+                })
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                alert(`✅ เรียบร้อย! เปลี่ยนกะสำเร็จ\n\nคำแนะนำ: กรุณากดปุ่ม 'Reset & Sync' ที่หน้า Dashboard เพื่ออัปเดตข้อมูลของวันนี้ใหม่`);
+                this.openShiftPlanner(); // โหลดตารางใหม่
+            } else {
+                alert('Error: ' + json.message);
+            }
+        } catch (err) {
+            alert('Failed: ' + err.message);
+        }
     }
 };
 

@@ -355,11 +355,11 @@ function renderTable() {
 
             <td class="text-center">${inputHTML('container_no', row.container_no)}</td>
             <td class="text-center">${inputHTML('seal_no', row.seal_no)}</td>
+            <td class="text-center">${inputHTML('container_tare', row.container_tare)}</td>
             <td class="text-center">${row.shipping_week || '-'}</td>
             <td class="text-center">${inputHTML('dc_location', row.dc_location)}</td>
             
             <td class="text-center">${inputHTML('ctn_size', row.ctn_size)}</td>
-            <td class="text-center">${inputHTML('container_tare', row.container_tare)}</td>
             <td class="text-center">${inputHTML('net_weight', row.net_weight)}</td>
             <td class="text-center">${inputHTML('gross_weight', row.gross_weight)}</td>
             <td class="text-center">${inputHTML('cbm', row.cbm)}</td>

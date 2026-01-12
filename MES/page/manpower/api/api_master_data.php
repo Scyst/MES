@@ -1,6 +1,6 @@
 <?php
 // MES/page/manpower/api/api_master_data.php
-// รวม: manage_employees, batch_shift_update, manage_mapping, generate_calendar
+// รวม: manage_employees, batch_shift_update, manage_mapping, generate_calendar, team_shift_manager
 
 /* * =================================================================================
  * [REMINDER] วิธีสร้างปฏิทินวันหยุดประจำปี (Auto Generate Holiday)
@@ -89,10 +89,10 @@ try {
         echo json_encode(['success' => true, 'message' => 'Employee updated successfully']);
 
     // ==================================================================================
-    // 3. Employee: update_team_shift 
-    // (เปลี่ยนกะยกทีม - Logic เดิมจาก batch_shift_update.php)
+    // 3. Employee: update_team_shift_legacy (Logic เดิม)
+    // (เปลี่ยนกะแบบระบุ Shift A -> X, Shift B -> Y)
     // ==================================================================================
-    } elseif ($action === 'update_team_shift') {
+    } elseif ($action === 'update_team_shift_legacy') {
         $line   = $input['line'] ?? '';
         $shiftA = $input['shift_a'] ?? null; 
         $shiftB = $input['shift_b'] ?? null;
@@ -132,15 +132,13 @@ try {
 
     // ==================================================================================
     // 4. Mapping: read_mappings 
-    // (ดึงข้อมูล Mapping - Logic เดิมจาก manage_mapping.php)
+    // (ดึงข้อมูล Mapping)
     // ==================================================================================
     } elseif ($action === 'read_mappings') {
-        // เช็คก่อน! ถ้ายังไม่สร้างตาราง Section อาจจะ Error (แต่ตารางนี้มีมานานแล้ว น่าจะรอด)
         $sqlSec = "SELECT * FROM " . MANPOWER_SECTION_MAPPING_TABLE . " ORDER BY display_section";
         $stmtSec = $pdo->query($sqlSec);
         $sections = $stmtSec->fetchAll(PDO::FETCH_ASSOC);
 
-        // ⚠️ เตือนสติ: ถ้ายังไม่รัน SQL เพิ่ม column rate_type จะพังตรงนี้
         $sqlCat = "SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name";
         $stmtCat = $pdo->query($sqlCat);
         $categories = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
@@ -153,7 +151,7 @@ try {
 
     // ==================================================================================
     // 5. Mapping: save_mappings 
-    // (บันทึก Mapping - Logic เดิม ลบแล้วลงใหม่)
+    // (บันทึก Mapping)
     // ==================================================================================
     } elseif ($action === 'save_mappings') {
         if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized to edit mappings.");
@@ -173,7 +171,6 @@ try {
         if (isset($input['categories'])) {
             $pdo->exec("DELETE FROM " . MANPOWER_CATEGORY_MAPPING_TABLE);
             
-            // ⚠️ เตือนสติ: ตารางนี้ต้องมี column 'rate_type' แล้วนะ! อย่าลืมรัน SQL!
             $stmtCat = $pdo->prepare("INSERT INTO " . MANPOWER_CATEGORY_MAPPING_TABLE . " (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
             
             foreach ($input['categories'] as $cat) {
@@ -189,20 +186,17 @@ try {
         echo json_encode(['success' => true, 'message' => 'Mapping saved successfully']);
 
     // ==================================================================================
-    // 6. [NEW] Calendar: generate_calendar 
+    // 6. Calendar: generate_calendar 
     // (สร้างปฏิทินวันหยุดประจำปีอัตโนมัติ)
     // ==================================================================================
     } elseif ($action === 'generate_calendar') {
         if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
 
-        // ⚠️ เตือนสติ: ต้องสร้างตาราง MANPOWER_CALENDAR ใน Database ก่อน!
-        // CREATE TABLE MANPOWER_CALENDAR (...)
-
-        $year = $_GET['year'] ?? date('Y', strtotime('+1 year')); // Default: ปีหน้า
+        $year = $_GET['year'] ?? date('Y', strtotime('+1 year')); 
         
         $pdo->beginTransaction();
 
-        // 6.1 ล้างข้อมูลเก่าของปีนั้น (Reset)
+        // 6.1 ล้างข้อมูลเก่าของปีนั้น
         $stmtDel = $pdo->prepare("DELETE FROM MANPOWER_CALENDAR WHERE YEAR(calendar_date) = ?");
         $stmtDel->execute([$year]);
 
@@ -220,15 +214,14 @@ try {
                     $startDate->format('Y-m-d'),
                     'HOLIDAY',
                     'Sunday',
-                    2.0, // ทำงานวันหยุด x2
-                    3.0  // OT วันหยุด x3
+                    2.0, 
+                    3.0  
                 ]);
             }
             $startDate->modify('+1 day');
         }
 
-        // 6.3 ดึงวันหยุดราชการจาก API (Nager.Date)
-        // *API นี้ฟรีและแม่นยำ ถ้าใช้ไม่ได้ให้ลองเปลี่ยน User-Agent
+        // 6.3 ดึงวันหยุดราชการจาก API
         $apiUrl = "https://date.nager.at/api/v3/PublicHolidays/$year/TH";
         $context = stream_context_create(["http" => ["header" => "User-Agent: Mozilla/5.0"]]);
         $json = @file_get_contents($apiUrl, false, $context);
@@ -244,11 +237,9 @@ try {
                 $check->execute([$hDate]);
                 
                 if ($check->fetchColumn() > 0) {
-                    // มีแล้ว -> อัปเดตชื่อ (ทับวันอาทิตย์)
                     $upd = $pdo->prepare("UPDATE MANPOWER_CALENDAR SET description = ? WHERE calendar_date = ?");
                     $upd->execute([$hName, $hDate]);
                 } else {
-                    // ยังไม่มี -> Insert ใหม่
                     $stmtInsert->execute([$hDate, 'HOLIDAY', $hName, 2.0, 3.0]);
                 }
             }
@@ -256,6 +247,75 @@ try {
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => "Generated calendar for year $year successfully."]);
+
+    // ==================================================================================
+    // 7. [NEW] Team Shift: read_team_shifts (ดูภาพรวมกะของแต่ละทีม)
+    // ==================================================================================
+    } elseif ($action === 'read_team_shifts') {
+        // ดึงข้อมูล Line + Team และดูว่าคนส่วนใหญ่อยู่กะไหน (Majority Rule)
+        $sql = "SELECT 
+                    line, 
+                    ISNULL(team_group, '-') as team_group,
+                    default_shift_id,
+                    COUNT(emp_id) as member_count,
+                    ISNULL(S.shift_name, 'Unknown') as shift_name
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " E
+                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
+                WHERE E.is_active = 1
+                GROUP BY line, team_group, default_shift_id, S.shift_name
+                ORDER BY line, team_group";
+
+        $stmt = $pdo->query($sql);
+        $raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Grouping ให้เหลือบรรทัดเดียวต่อทีม (กรณีทีมเดียวกันแต่มีคนหลุดกะไปบ้าง ให้ยึดเสียงส่วนใหญ่)
+        $teams = [];
+        foreach ($raw as $r) {
+            $key = $r['line'] . '|' . $r['team_group'];
+            if (!isset($teams[$key])) {
+                $teams[$key] = $r;
+            } else {
+                if ($r['member_count'] > $teams[$key]['member_count']) {
+                    $teams[$key] = $r;
+                }
+            }
+        }
+
+        echo json_encode(['success' => true, 'data' => array_values($teams)]);
+
+    // ==================================================================================
+    // 8. [NEW] Team Shift: update_team_shift (สลับกะยกทีม)
+    // ==================================================================================
+    } elseif ($action === 'update_team_shift') {
+        if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+
+        $line = $input['line'] ?? '';
+        $team = $input['team'] ?? '';
+        $newShiftId = $input['new_shift_id'] ?? '';
+
+        if (empty($line) || empty($newShiftId)) throw new Exception("Missing parameters.");
+
+        $pdo->beginTransaction();
+
+        // [FIXED] เปลี่ยน updated_at เป็น last_sync_at
+        $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . "
+                SET default_shift_id = ?, last_sync_at = GETDATE()
+                WHERE line = ? AND is_active = 1";
+        
+        $params = [$newShiftId, $line];
+
+        // ถ้าระบุ Team (และไม่ใช่ขีด) ให้กรองด้วย
+        if (!empty($team) && $team !== '-') {
+            $sql .= " AND team_group = ?";
+            $params[] = $team;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $count = $stmt->rowCount();
+
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => "Updated $count employees to new shift."]);
 
     } else {
         throw new Exception("Invalid Action");

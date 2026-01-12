@@ -3,8 +3,8 @@
 
 // 1. Setup Environment
 date_default_timezone_set('Asia/Bangkok'); 
-ignore_user_abort(true); // 👈 สำคัญ! สั่งให้ทำงานต่อแม้ Node-RED ตัดสายไปแล้ว
-set_time_limit(0);       // 👈 สำคัญ! ปลดล็อคเวลาให้รันได้ยาวๆ ไม่จำกัด
+ignore_user_abort(true); 
+set_time_limit(0);       
 header('Content-Type: application/json');
 
 // --- 🔒 SECURITY GATE ---
@@ -19,7 +19,7 @@ if ($incomingKey !== $API_SECRET) {
 // -----------------------
 
 // =================================================================
-// 🚀 เทคนิค FIRE AND FORGET: ตอบกลับ Node-RED ทันที แล้วทำงานต่อ
+// 🚀 FIRE AND FORGET
 // =================================================================
 ob_start();
 echo json_encode([
@@ -29,17 +29,13 @@ echo json_encode([
 ]);
 $size = ob_get_length();
 header("Content-Length: $size");
-header('Connection: close'); // บอก Node-RED ว่า "จบการคุยแค่นี้นะ"
+header('Connection: close'); 
 ob_end_flush();
 @ob_flush();
 flush();
 if (function_exists('fastcgi_finish_request')) {
-    fastcgi_finish_request(); // สั่งจบ Request ทันที (สำหรับ IIS/Nginx)
+    fastcgi_finish_request(); 
 }
-// =================================================================
-// 👇 หลังจากบรรทัดนี้ Node-RED จะได้รับของแล้วตัดสายไป
-//    แต่ PHP จะยังคงทำงานต่ออยู่เบื้องหลังครับ 👇
-// =================================================================
 
 require_once __DIR__ . '/../../db.php'; 
 require_once __DIR__ . '/../../../config/config.php';
@@ -67,9 +63,6 @@ try {
     if (!$apiResponse) throw new Exception("API Connection Failed");
     $rawList = json_decode($apiResponse, true) ?? [];
 
-    // ❌ ปิด Transaction ถาวร (เพื่อให้เว็บแทรกเข้าอ่านได้)
-    // $pdo->beginTransaction();
-
     // 4. Load Config
     $shiftConfig = [];
     $stmtShifts = $pdo->query("SELECT shift_id, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE);
@@ -78,11 +71,18 @@ try {
     $defaultShiftId = 1; 
     foreach ($shiftConfig as $id => $s) { if (strpos($s['start_time'], '08:') === 0) { $defaultShiftId = $id; break; } }
 
-    // 5. Group Data
+    // =================================================================
+    // 5. Group Data (เฉพาะ Team 1)
+    // =================================================================
     $groupedData = []; 
     foreach ($rawList as $row) {
         $dept = $row['DEPARTMENT'] ?? '';
-        if (stripos($dept, 'Toolbox') === false && stripos($dept, 'B9') === false && stripos($dept, 'B10') === false) continue; 
+        
+        // กรองเฉพาะแผนกของบริษัทเรา
+        if (stripos($dept, 'Toolbox - Team1 M-DL') === false && 
+            stripos($dept, 'Toolbox - Team1 D-DL') === false) {
+            continue; // ข้ามคนที่ไม่ใช่ Team 1
+        }
         
         $empId = strval($row['EMPID']);
         if (!isset($groupedData[$empId])) $groupedData[$empId] = ['info' => $row, 'timestamps' => []];
@@ -91,7 +91,9 @@ try {
         if ($ts && date('Y', $ts) > 2020) $groupedData[$empId]['timestamps'][] = $ts; 
     }
 
-    // 6. Update Master Data
+    // =================================================================
+    // 6. Update Master Data & Auto Disable [UPDATED]
+    // =================================================================
     $existingEmployees = [];
     $sqlEmp = "SELECT E.emp_id, E.line, E.default_shift_id, E.team_group, E.is_active, 
                       ISNULL(CM.category_name, 'Other') as emp_type
@@ -102,20 +104,22 @@ try {
     while ($row = $stmtCheckIds->fetch(PDO::FETCH_ASSOC)) { $existingEmployees[strval($row['emp_id'])] = $row; }
     
     $stmtInsertEmp = $pdo->prepare("INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " (emp_id, name_th, position, department_api, is_active, line, default_shift_id, last_sync_at) VALUES (?, ?, ?, ?, 1, 'TOOLBOX_POOL', ?, GETDATE())");
-    $stmtUpdateEmp = $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET position = ?, department_api = ?, last_sync_at = GETDATE() WHERE emp_id = ?");
+    $stmtUpdateEmp = $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET position = ?, department_api = ?, is_active = 1, last_sync_at = GETDATE() WHERE emp_id = ?");
+    
+    // 🔴 Statement สำหรับปิดใช้งานคนที่ไม่อยู่ใน Team 1
+    $stmtDisableEmp = $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET is_active = 0, last_sync_at = GETDATE() WHERE emp_id = ?");
 
-    $stats = ['new' => 0, 'updated' => 0, 'log_processed' => 0];
+    $stats = ['new' => 0, 'updated' => 0, 'disabled' => 0, 'log_processed' => 0];
 
+    // 6.1 Process Active Employees (จาก API)
     foreach ($groupedData as $apiEmpId => $data) {
         $info = $data['info'];
         if (isset($existingEmployees[$apiEmpId])) {
-            if ($existingEmployees[$apiEmpId]['is_active'] == 1) {
-                // ✅ เปิดใช้งาน: บันทึก Master Data
-                $stmtUpdateEmp->execute([$info['POSITION']??'-', $info['DEPARTMENT']??'-', $apiEmpId]);
-                $stats['updated']++;
-            }
+            // มีอยู่แล้ว -> อัปเดตข้อมูล + บังคับ Active (เผื่อเคยโดนปิดไป)
+            $stmtUpdateEmp->execute([$info['POSITION']??'-', $info['DEPARTMENT']??'-', $apiEmpId]);
+            $stats['updated']++;
         } else {
-            // ✅ เปิดใช้งาน: เพิ่มพนักงานใหม่
+            // ยังไม่มี -> สร้างใหม่ (เข้ากลุ่ม TOOLBOX_POOL)
             $stmtInsertEmp->execute([$apiEmpId, $info['NAME']??'-', $info['POSITION']??'-', $info['DEPARTMENT']??'-', $defaultShiftId]);
             $existingEmployees[$apiEmpId] = [
                 'emp_id' => $apiEmpId, 'line' => 'TOOLBOX_POOL', 'default_shift_id' => $defaultShiftId,
@@ -123,8 +127,20 @@ try {
             ];
             $stats['new']++;
         }
-        // 🐢 ชะลอความเร็ว: พัก 0.01 วินาที
         usleep(10000); 
+    }
+
+    // 6.2 Process Inactive Employees (Auto Disable) 🔥 [NEW LOGIC]
+    foreach ($existingEmployees as $dbEmpId => $dbEmpData) {
+        // เงื่อนไข: ถ้าใน DB สถานะเป็น Active แต่ 'ไม่มีชื่อ' ใน $groupedData (ที่กรอง Team 1 มาแล้ว)
+        if ($dbEmpData['is_active'] == 1 && !isset($groupedData[$dbEmpId])) {
+            $stmtDisableEmp->execute([$dbEmpId]);
+            
+            // อัปเดตตัวแปรใน Memory ด้วย เพื่อไม่ให้ไปสร้าง Log ในขั้นตอนที่ 7
+            $existingEmployees[$dbEmpId]['is_active'] = 0; 
+            
+            $stats['disabled']++;
+        }
     }
 
     // 7. Process Logs
@@ -148,14 +164,15 @@ try {
         
         foreach ($existingEmployees as $empId => $empData) {
             
-            // 7.1 Ghost Buster
+            // 7.1 Ghost Buster & Inactive Cleanup
+            // ถ้าเป็นคนที่เราเพิ่งสั่ง Disable ไป (หรือ Inactive อยู่แล้ว) ให้ลบ Log ที่ยังไม่ Verify ทิ้ง
             if (isset($empData['is_active']) && $empData['is_active'] == 0) {
                 $stmtCheckLog->execute([$empId, $procDate]);
                 $ghostLog = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
                 if ($ghostLog && $ghostLog['is_verified'] == 0) {
                     $stmtDeleteLog->execute([$ghostLog['log_id']]);
                 }
-                continue; 
+                continue; // ข้ามไป ไม่สร้าง Log ใหม่
             }
 
             // 7.2 Snapshot & Check
@@ -201,7 +218,7 @@ try {
                 $logDate = $procDate; 
                 $status = 'PRESENT'; 
 
-                // ✅ เปิดใช้งาน: บันทึก Log คนมาทำงาน
+                // บันทึก Log คนมาทำงาน
                 if ($logExist) {
                     $stmtUpdateLog->execute([$inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
                 } else {
@@ -209,7 +226,7 @@ try {
                 }
 
             } else {
-                // ✅ เปิดใช้งาน: บันทึกคนขาดงาน
+                // บันทึกคนขาดงาน
                 if (!$logExist) {
                     $defaultStatus = ($procDate < date('Y-m-d')) ? 'ABSENT' : 'WAITING';
                     $stmtInsertLog->execute([$procDate, $empId, null, null, $defaultStatus, $targetShiftId, $snapLine, $snapTeam, $snapType]);
@@ -217,8 +234,6 @@ try {
             }
             $stats['log_processed']++;
 
-            // 🐢 KEY FIX: ชะลอความเร็ว 0.05 วินาทีต่อคน (ให้ DB หายใจ)
-            // ทำให้ 200 คน ใช้เวลาเพิ่มขึ้นประมาณ 10 วินาที ซึ่งคุ้มค่ากับเว็บที่ลื่นขึ้น
             usleep(50000); 
         }
         $currTs = strtotime('+1 day', $currTs);
@@ -234,18 +249,13 @@ try {
     $runDate = $calcStart;
     while (strtotime($runDate) <= strtotime($calcEnd)) {
         $stmtSP->execute([$runDate]);
-        
-        // 🐢 KEY FIX: ชะลอ 0.2 วินาที หลังคำนวณเสร็จแต่ละวัน
         usleep(200000); 
-        
         $runDate = date('Y-m-d', strtotime("+1 day", strtotime($runDate)));
     }
 
-    // $pdo->commit(); // ปิดถาวร
     echo json_encode(['success' => true, 'message' => 'Sync & Calculation Completed', 'stats' => $stats]);
 
 } catch (Exception $e) {
-    // if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

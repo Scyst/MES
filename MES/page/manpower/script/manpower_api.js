@@ -30,16 +30,15 @@ const API = {
 
     async triggerSync(dateString) {
         try {
-            // ✅ แก้ไข: เปลี่ยน & เป็น ? เพราะ URL_SYNC ยังไม่มี Parameter ตัวแรก
-            const response = await fetch(`${this.URL_SYNC}?startDate=${dateString}&endDate=${dateString}`);
+            const secretKey = "SNC_TOOLBOX_SECURE_KEY_998877";
+            const response = await fetch(`${this.URL_SYNC}?startDate=${dateString}&endDate=${dateString}&secret_key=${secretKey}`);
             
             if (!response.ok) {
-                // อ่าน Error เป็น Text ก่อนเผื่อไม่ใช่ JSON (เช่น 404 HTML)
                 const text = await response.text();
                 throw new Error(`Server Error: ${response.status} - ${text.substring(0, 100)}`);
             }
 
-            return JSON.parse(await response.text()); // ใช้ JSON.parse เพื่อความชัวร์
+            return JSON.parse(await response.text());
         } catch (error) {
             console.error("Sync Error:", error);
             throw error;
@@ -62,5 +61,22 @@ const API = {
             body: JSON.stringify(payload)
         });
         return await res.json();
+    },
+    async clearDailyLog(date) {
+        try {
+            const response = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'clear_day',
+                    date: date,
+                    line: 'ALL' // ลบทุกไลน์ของวันนั้น
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error("Clear Data Error:", error);
+            throw error;
+        }
     }
 };

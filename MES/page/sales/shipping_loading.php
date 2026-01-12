@@ -235,11 +235,11 @@ $pageHelpId = "helpModal";
                                     
                                     <th class="col-md">Container No.</th>
                                     <th class="col-md">Seal No.</th>
+                                    <th class="col-sm">Tare</th>
                                     <th class="col-week">Week</th>
                                     <th style="width: 150px;">DC</th>
                                     
                                     <th class="col-sm">CTN Size</th>
-                                    <th class="col-sm">Tare</th>
                                     <th class="col-sm">N.W.</th>
                                     <th class="col-sm">G.W.</th>
                                     <th class="col-sm">CBM</th>
