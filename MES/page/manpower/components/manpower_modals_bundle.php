@@ -3,7 +3,7 @@
 // แก้ไข: เพิ่มส่วนแสดง Snapshot History (Line/Team ณ วันที่เกิดรายการ) ใน editLogModal
 ?>
 
-<div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -244,6 +244,50 @@
                 <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="syncApiData(true); bootstrap.Modal.getInstance(document.getElementById('syncConfirmModal')).hide();">
                     <i class="fas fa-check me-2"></i>ยืนยัน Sync
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom py-3">
+                <div>
+                    <h5 class="modal-title fw-bold text-primary" id="detailModalTitle">
+                        <i class="fas fa-list-alt me-2"></i>Employee List
+                    </h5>
+                    <p class="text-muted small mb-0" id="detailModalSubtitle">รายชื่อพนักงานในแผนก...</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control form-control-sm" id="searchDetail" placeholder="🔍 ค้นหาชื่อ..." style="width: 200px;">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 table-striped" id="detailTable">
+                        <thead class="bg-white text-secondary sticky-top shadow-sm" style="z-index: 1;">
+                            <tr>
+                                <th class="ps-4 py-3" style="width: 25%;">Employee</th>
+                                <th style="width: 15%;">Time In</th>
+                                <th style="width: 15%;">Time Out</th>
+                                <th class="text-center" style="width: 10%;">Shift</th>
+                                <th class="text-center" style="width: 15%;">Status</th>
+                                <th style="width: 15%;">Remark</th>
+                                <th class="text-end pe-4" style="width: 5%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-white py-2">
+                <div class="me-auto text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>คลิกที่ปุ่ม <i class="fas fa-pen-square text-primary"></i> เพื่อแก้ไขข้อมูลรายคน
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

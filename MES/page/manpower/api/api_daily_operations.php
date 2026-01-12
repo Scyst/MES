@@ -30,7 +30,9 @@ try {
     if ($action === 'read_daily') {
         $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
         $endDate    = $_GET['endDate']   ?? $startDate; 
-        $lineFilter = $_GET['line'] ?? ''; 
+        
+        // [FIX] รับค่า Line ให้ชัวร์ที่สุด (ตัดช่องว่าง, กันค่า null)
+        $lineFilter = isset($_GET['line']) ? trim($_GET['line']) : ''; 
 
         // [Logic ใหม่] อ่านข้อมูลจาก Log (History) ก่อน -> ถ้าไม่มีค่อยไป Master
         $sql = "SELECT 
@@ -49,10 +51,6 @@ try {
                     E.is_active, 
 
                     -- [CRITICAL] Snapshot Line Logic
-                    -- 1. ดู mapping ของ actual_line (จาก Log)
-                    -- 2. ดู actual_line ดิบๆ
-                    -- 3. ดู mapping ของ line ปัจจุบัน (Master)
-                    -- 4. ดู line ปัจจุบันดิบๆ
                     COALESCE(SM_Act.display_section, L.actual_line, SM.display_section, E.line, 'Unassigned') as line, 
                     
                     -- [CRITICAL] Snapshot Team Logic
@@ -70,7 +68,7 @@ try {
 
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E
                 
-                -- 1. Mapping สำหรับ Master Data (ข้อมูลปัจจุบัน)
+                -- 1. Mapping สำหรับ Master Data
                 LEFT JOIN " . MANPOWER_SECTION_MAPPING_TABLE . " SM ON E.line = SM.api_department
                 
                 -- 2. Shift & Category Master
@@ -82,15 +80,12 @@ try {
                     ON E.emp_id = L.emp_id 
                     AND L.log_date BETWEEN :start AND :end
                 
-                -- 4. [NEW] Mapping สำหรับ Snapshot Data (ข้อมูลในอดีตจาก Log)
+                -- 4. Mapping สำหรับ Snapshot Data
                 LEFT JOIN " . MANPOWER_SECTION_MAPPING_TABLE . " SM_Act ON L.actual_line = SM_Act.api_department
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
 
                 WHERE 
-                    -- แสดงคนที่มี Log (ประวัติ) หรือ คนที่ Active (ปัจจุบัน)
-                    (L.log_id IS NOT NULL) 
-                    OR 
-                    (E.is_active = 1)";
+                    ((L.log_id IS NOT NULL) OR (E.is_active = 1))";
         
         $params = [
             ':startDateDisp' => $startDate,
@@ -99,8 +94,9 @@ try {
             ':end' => $endDate
         ];
 
-        // Filter Logic: ต้องกรองจากค่าที่ Display จริงๆ (Snapshot Priority)
-        if (!empty($lineFilter) && $lineFilter !== 'ALL') {
+        // [FIXED] Filter Logic: กรองข้อมูลให้แม่นยำขึ้น
+        // ต้องไม่เป็นค่าว่าง และต้องไม่ใช่ string "undefined" หรือ "null" ที่อาจหลุดมาจาก JS
+        if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
             $sql .= " AND COALESCE(SM_Act.display_section, L.actual_line, SM.display_section, E.line, 'Unassigned') = :line";
             $params[':line'] = $lineFilter;
         }
@@ -110,7 +106,7 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+        
         // Calculate Summary for Header (Client-side usage)
         $summary = [
             'total' => count($data), 'present' => 0, 'absent' => 0, 
@@ -155,8 +151,7 @@ try {
         // เลือก Function ตามโหมด (Prod หรือ Test)
         $funcName = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
 
-        // เรียก SQL Function โดยตรง (เร็วกว่า และ Logic อยู่ที่ Database)
-        // ต้อง Alias ชื่อ column ให้ตรงกับที่ JS ต้องการ (plan, present, late...)
+        // เรียก SQL Function โดยตรง
         $sql = "SELECT 
                     display_section as line_name,
                     shift_name,
@@ -171,7 +166,8 @@ try {
                     Count_Absent     as [absent], 
                     Count_Leave      as [leave], 
                     Count_Actual     as [actual],
-                    (Count_Actual - Total_Registered) as [diff]
+                    (Count_Actual - Total_Registered) as [diff],
+                    Total_Cost       as [total_cost]
 
                 FROM $funcName(:date)
                 ORDER BY section_id, display_section, shift_name, team_group";

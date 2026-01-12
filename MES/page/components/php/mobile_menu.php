@@ -99,10 +99,10 @@ $userRole = $_SESSION['user']['role'] ?? null;
             </li>
             
             <?php if ($userRole && in_array($userRole, ['operator','supervisor', 'admin', 'creator'])): ?>
-            <li class="list-group-item list-group-item-action disabled">
-                <a class="text-decoration-none text-body d-block" href="../documentCenter/documentCenterUI.php" tabindex="-1" aria-disabled="true">
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../documentCenter/documentCenterUI.php">
                     <i class="fas fa-folder-open fa-fw me-3"></i>
-                    <span style="text-decoration: line-through;">Document Center <small>(ยังไม่รองรับ)</small></span>
+                    <span>Document Center</span>
                 </a>
             </li>
             <li class="list-group-item" style="background-color: var(--bs-tertiary-bg);"></li>
