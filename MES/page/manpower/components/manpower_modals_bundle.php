@@ -109,13 +109,17 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 table-striped">
                         <thead class="bg-white text-secondary sticky-top shadow-sm" style="z-index: 1;">
-                            <tr>
-                                <th class="ps-4 py-3" style="width: 25%;">Employee</th>
-                                <th class="text-center" style="width: 15%;">Time In</th>
-                                <th class="text-center" style="width: 15%;">Time Out</th>
-                                <th class="text-center" style="width: 15%;">Status (Edit)</th>
-                                <th style="width: 20%;">Remark</th>
-                                <th class="text-center pe-4" style="width: 10%;">Save</th>
+                            <tr class="text-center small text-muted text-uppercase">
+                                <th class="text-start ps-4 py-3" style="width: 20%;">Employee</th>
+                                <th style="width: 12%;">Line</th>
+                                <th style="width: 8%;">Team</th>
+                                <th style="width: 10%;">Shift</th>
+                                
+                                <th style="width: 10%;">In</th>
+                                <th style="width: 10%;">Out</th>
+                                <th style="width: 12%;">Status</th>
+                                <th style="width: 10%;">Remark</th>
+                                <th class="pe-4" style="width: 8%;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="detailModalBody"></tbody>

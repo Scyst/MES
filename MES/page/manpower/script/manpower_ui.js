@@ -299,6 +299,9 @@ const UI = {
 // --- 4. ACTIONS & DRILL-DOWN ---
 
 const Actions = {
+    // เก็บโครงสร้าง Line/Team ไว้ใช้สร้าง Dropdown ในตาราง
+    _structureCache: { lines: [], teams: [] },
+
     // 4.1 เปิดหน้าต่างรายชื่อ (Drill-down)
     async openDetailModal(line, shiftId, filterStatus = 'ALL') {
         const date = document.getElementById('filterDate').value;
@@ -309,7 +312,9 @@ const Actions = {
         if (filterStatus !== 'ALL') title += ` - แสดงเฉพาะ ${filterStatus}`;
 
         document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
-        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>`;
+        
+        // [FIXED] แก้ colspan เป็น 9 ให้พอดีกับจำนวนคอลัมน์ใหม่
+        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>`;
         
         modal.show();
 
@@ -317,13 +322,18 @@ const Actions = {
         const searchInput = document.getElementById('searchDetail');
         if(searchInput) searchInput.value = '';
 
+        // [Logic สำคัญ] เช็คว่ามีข้อมูล Dropdown หรือยัง ถ้าไม่มีให้โหลดก่อน
+        if (this._structureCache.lines.length === 0) {
+            await this.initDropdowns(); 
+        }
+
         try {
             const res = await fetch('api/api_daily_operations.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'get_daily_details',
-                    date: date,
+                    date: document.getElementById('filterDate').value,
                     line: line,
                     shift_id: shiftId,
                     filter_status: filterStatus
@@ -334,90 +344,133 @@ const Actions = {
             if (json.success) {
                 this.renderDetailTable(json.data);
             } else {
-                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${json.message}</td></tr>`;
+                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">${json.message}</td></tr>`;
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load data</td></tr>`;
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
 
-    // 4.2 วาดตารางรายชื่อ (Inline Edit) - ใช้ emp_id เป็น ID เพื่อความแม่นยำ
+    // 4.2 วาดตารางรายชื่อ (Inline Edit)
     renderDetailTable(list) {
         const tbody = document.getElementById('detailModalBody');
         tbody.innerHTML = '';
 
         if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
         const formatTime = (t) => t ? t.substring(11, 16) : '';
+        const createOptions = (items, selectedVal, isTeam = false) => {
+            let html = '';
+            items.forEach(item => {
+                const val = item;
+                const sel = (val == selectedVal) ? 'selected' : '';
+                html += `<option value="${val}" ${sel}>${val}</option>`;
+            });
+            return html;
+        };
 
         list.forEach(row => {
-            // 🔥 [จุดสำคัญ 1] ใช้ emp_id เป็น Unique Key สำหรับสร้าง ID
             const uid = row.emp_id; 
             
-            const inTime = formatTime(row.scan_in_time);
-            const outTime = formatTime(row.scan_out_time);
-            
-            // สร้าง Dropdown
+            // 1. Snapshot Options (ข้อมูลรายวัน)
+            const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line); 
+            const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group, true);
+            const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
+            const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
+
+            // 2. Status Options
             const statusOptions = [
-                { val: 'PRESENT', label: '✅ มาทำงาน' },
+                { val: 'PRESENT', label: '✅ มา' },
                 { val: 'LATE', label: '⏰ สาย' },
-                { val: 'ABSENT', label: '❌ ขาดงาน' },
-                { val: 'SICK', label: '🤢 ลาป่วย' },
-                { val: 'BUSINESS', label: '👜 ลากิจ' },
+                { val: 'ABSENT', label: '❌ ขาด' },
+                { val: 'SICK', label: '🤢 ป่วย' },
+                { val: 'BUSINESS', label: '👜 กิจ' },
                 { val: 'VACATION', label: '🏖️ พักร้อน' },
                 { val: 'OTHER', label: '⚪ อื่นๆ' }
             ];
-
-            let optionsHtml = '';
+            let statusOptsHtml = '';
             statusOptions.forEach(opt => {
                 const selected = (row.status === opt.val) ? 'selected' : '';
-                optionsHtml += `<option value="${opt.val}" ${selected}>${opt.label}</option>`;
+                statusOptsHtml += `<option value="${opt.val}" ${selected}>${opt.label}</option>`;
             });
+
+            // 🔥 [NEW] 3. เตรียมข้อมูล Master เพื่อส่งไปหน้า Edit Modal
+            // เราต้อง map ชื่อ field ให้ตรงกับที่ openEmpEdit ต้องการ
+            const masterData = {
+                emp_id: row.emp_id,
+                name_th: row.name_th,
+                position: row.position,
+                // ระวัง! ต้องส่งค่า Master (row.line) ไม่ใช่ Snapshot (row.actual_line)
+                line: row.line, 
+                team_group: row.team_group,
+                default_shift_id: row.default_shift_id,
+                is_active: 1 // สมมติว่าเป็น 1 เพราะโชว์ในหน้านี้ได้
+            };
+            const masterDataJson = encodeURIComponent(JSON.stringify(masterData));
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-4">
-                    <div class="fw-bold">${row.name_th}</div>
-                    <small class="text-muted" style="font-size:0.75rem;">${row.emp_id} | ${row.position || '-'}</small>
+                    <div class="fw-bold text-truncate" style="max-width: 150px;" title="${row.name_th}">${row.name_th}</div>
+                    <small class="text-muted" style="font-size:0.7rem;">${row.emp_id}</small>
                 </td>
                 
-                <td class="text-center p-1">
-                    <input type="time" class="form-control form-control-sm text-center font-monospace text-primary border-0 bg-light" 
-                           id="in_${uid}" 
-                           value="${inTime}" 
-                           style="width: 100px; margin: 0 auto; cursor: pointer;">
+                <td class="p-1">
+                    <select class="form-select form-select-sm border-0 bg-light small" id="line_${uid}" style="font-size: 0.8rem;">
+                        ${lineOpts}
+                    </select>
                 </td>
 
-                <td class="text-center p-1">
-                    <input type="time" class="form-control form-control-sm text-center font-monospace text-secondary border-0 bg-light" 
-                           id="out_${uid}" 
-                           value="${outTime}" 
-                           style="width: 100px; margin: 0 auto; cursor: pointer;">
+                <td class="p-1">
+                    <select class="form-select form-select-sm border-0 bg-light small" id="team_${uid}" style="font-size: 0.8rem;">
+                        <option value="-">-</option>
+                        ${teamOpts}
+                    </select>
                 </td>
 
-                <td class="text-center p-1">
-                    <select class="form-select form-select-sm shadow-none border-0 bg-light fw-bold" 
-                            id="status_${uid}" 
-                            style="width: 140px; font-size: 0.85rem; margin: 0 auto;">
-                        ${optionsHtml}
+                <td class="p-1">
+                    <select class="form-select form-select-sm border-0 bg-light small fw-bold text-primary" id="shift_${uid}" style="font-size: 0.8rem;">
+                        <option value="1" ${shift1Sel}>Day</option>
+                        <option value="2" ${shift2Sel}>Night</option>
+                    </select>
+                </td>
+
+                <td class="p-1 text-center">
+                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" 
+                           id="in_${uid}" value="${formatTime(row.scan_in_time)}">
+                </td>
+                <td class="p-1 text-center">
+                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" 
+                           id="out_${uid}" value="${formatTime(row.scan_out_time)}">
+                </td>
+
+                <td class="p-1">
+                    <select class="form-select form-select-sm border-0 bg-light fw-bold" id="status_${uid}" style="font-size: 0.8rem;">
+                        ${statusOptsHtml}
                     </select>
                 </td>
 
                 <td class="p-1">
                     <input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0" 
-                           id="remark_${uid}" 
-                           value="${row.remark || ''}" 
-                           placeholder="...">
+                           id="remark_${uid}" value="${row.remark || ''}" placeholder="...">
                 </td>
 
-                <td class="text-center pe-4">
-                    <button class="btn btn-sm btn-primary shadow-sm" 
+                <td class="text-center pe-4 text-nowrap">
+                    <button class="btn btn-sm btn-outline-secondary border-0 rounded-circle me-1" 
+                            style="width: 30px; height: 30px;"
+                            onclick="Actions.openEmpEdit('${masterDataJson}')" 
+                            title="แก้ไขข้อมูลหลัก (Master Data)">
+                        <i class="fas fa-user-edit"></i>
+                    </button>
+
+                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" 
+                            style="width: 30px; height: 30px;"
                             onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" 
-                            title="บันทึก">
+                            title="บันทึกการลงเวลา">
                         <i class="fas fa-save"></i>
                     </button>
                 </td>
@@ -428,43 +481,30 @@ const Actions = {
 
     // 4.3 บันทึกสถานะ (แก้ไขให้รับ empId และเช็ค Element ก่อนดึงค่า)
     async saveLogStatus(logId, empId) {
-        // 🔥 [จุดสำคัญ 2] ดึง Element ด้วย ID ที่ตรงกับที่สร้างในข้อ 1
+        // ดึงค่าจาก Input ทั้งหมด
         const elStatus = document.getElementById(`status_${empId}`);
+        const elLine   = document.getElementById(`line_${empId}`);
+        const elTeam   = document.getElementById(`team_${empId}`);
+        const elShift  = document.getElementById(`shift_${empId}`);
         const elRemark = document.getElementById(`remark_${empId}`);
         const elIn     = document.getElementById(`in_${empId}`);
         const elOut    = document.getElementById(`out_${empId}`);
         
-        // Safety Check: ถ้าหา Element ไม่เจอ ให้หยุดทำงานและแจ้งเตือน (กันจอขาว)
-        if (!elStatus || !elIn) {
-            alert(`System Error: Cannot find input elements for ID ${empId}. Please refresh.`);
-            console.error('Missing Element ID:', `status_${empId}`, `in_${empId}`);
-            return;
-        }
+        if (!elStatus || !elLine) return; // Safety check
 
-        const status  = elStatus.value;
-        const remark  = elRemark.value;
-        const timeIn  = elIn.value;
+        // เตรียม Payload
+        const dateStr = document.getElementById('filterDate').value;
+        const timeIn = elIn.value;
         const timeOut = elOut.value;
-        
-        // ดึงวันที่จากหน้า Dashboard
-        const dateInput = document.getElementById('filterDate');
-        const dateStr = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
 
-        // Format Date Time
-        let scanInFull  = null;
+        // Date Logic (เหมือนเดิม)
+        let scanInFull = timeIn ? `${dateStr} ${timeIn}:00` : null;
         let scanOutFull = null;
-
-        if (timeIn) {
-            scanInFull = `${dateStr} ${timeIn}:00`;
-        }
-
         if (timeOut) {
             let outDate = dateStr;
             const hourOut = parseInt(timeOut.split(':')[0]);
-            // Logic ข้ามวัน (ถ้าเวลาออก < เวลาเข้า หรือ ออกช่วง 00-07 โมง)
             if ((timeIn && timeOut < timeIn) || (hourOut >= 0 && hourOut <= 7)) {
-                const d = new Date(dateStr);
-                d.setDate(d.getDate() + 1);
+                const d = new Date(dateStr); d.setDate(d.getDate() + 1);
                 outDate = d.toISOString().split('T')[0];
             }
             scanOutFull = `${outDate} ${timeOut}:00`;
@@ -484,8 +524,14 @@ const Actions = {
                     log_id: logId,
                     emp_id: empId,
                     log_date: dateStr,
-                    status: status,
-                    remark: remark,
+                    
+                    // 🔥 ส่งข้อมูล Snapshot ที่แก้ไขไปด้วย
+                    actual_line: elLine.value,
+                    actual_team: elTeam.value,
+                    shift_id: elShift.value,
+
+                    status: elStatus.value,
+                    remark: elRemark.value,
                     scan_in_time: scanInFull,
                     scan_out_time: scanOutFull
                 })
@@ -495,22 +541,12 @@ const Actions = {
             if (json.success) {
                 btn.classList.replace('btn-primary', 'btn-success');
                 btn.innerHTML = '<i class="fas fa-check"></i>';
-                
-                // คืนค่าปุ่ม
                 setTimeout(() => {
                     btn.classList.replace('btn-success', 'btn-primary');
                     btn.innerHTML = originalIcon;
                     btn.disabled = false;
-                    
-                    // ถ้าเป็นการ Insert ใหม่ (logId=0) ควรโหลดข้อมูลใหม่เพื่อให้ได้ log_id จริง
-                    if (logId == 0) {
-                        // Optional: Actions.openDetailModal(...) 
-                        App.loadData(); 
-                    } else {
-                        App.loadData(); 
-                    }
+                    App.loadData(); // Refresh Main Dashboard
                 }, 1000);
-
             } else {
                 alert('Error: ' + json.message);
                 btn.innerHTML = originalIcon;
@@ -862,40 +898,37 @@ const Actions = {
         await this.saveEmployee();
     },
 
-    // 7. Init Dropdowns (แก้ให้รองรับ Modal ใหม่)
+    // [FIXED] Init Dropdowns - เพิ่มการเก็บ Cache
     async initDropdowns() {
         try {
             const res = await fetch('api/api_master_data.php?action=read_structure');
             const json = await res.json();
 
             if (json.success) {
-                // [UPDATED IDs] เพิ่ม empEditLine และ empEditTeam
+                // 🔥 [สำคัญมาก] เก็บข้อมูลเข้า Cache เพื่อให้ DetailTable ดึงไปใช้
+                this._structureCache.lines = json.lines;
+                this._structureCache.teams = json.teams;
+
+                // (โค้ดเดิมที่ Populate หน้า Modal อื่นๆ...)
                 const lineSelects = ['editLogLine', 'filterLine', 'empEditLine']; 
                 const teamSelects = ['editLogTeam', 'empEditTeam'];
-
-                // Populate Lines
+                
                 lineSelects.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
                         let currentVal = el.value;
-                        el.innerHTML = '<option value="">-- Select Line --</option>';
-                        if(id === 'filterLine') el.innerHTML = '<option value="ALL">-- All Lines --</option>';
-
-                        json.lines.forEach(line => {
-                            el.innerHTML += `<option value="${line}">${line}</option>`;
-                        });
+                        el.innerHTML = '<option value="">-- Select --</option>';
+                        if(id==='filterLine') el.innerHTML += '<option value="ALL">All Lines</option>';
+                        json.lines.forEach(l => el.innerHTML += `<option value="${l}">${l}</option>`);
                         if(currentVal && json.lines.includes(currentVal)) el.value = currentVal;
                     }
                 });
 
-                // Populate Teams
                 teamSelects.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
                         el.innerHTML = '<option value="">-</option>';
-                        json.teams.forEach(team => {
-                            el.innerHTML += `<option value="${team}">Team ${team}</option>`;
-                        });
+                        json.teams.forEach(t => el.innerHTML += `<option value="${t}">Team ${t}</option>`);
                     }
                 });
             }

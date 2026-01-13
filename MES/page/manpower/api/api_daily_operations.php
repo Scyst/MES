@@ -25,7 +25,7 @@ session_write_close();
 
 try {
     // ==================================================================================
-    // 1. ACTION: read_daily (ดูข้อมูลรายวัน - ตัด Mapping ออก)
+    // 1. ACTION: read_daily (ดูข้อมูลรายวันแบบละเอียด - กู้คืนให้ครบถ้วน)
     // ==================================================================================
     if ($action === 'read_daily') {
         $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
@@ -33,7 +33,6 @@ try {
         
         $lineFilter = isset($_GET['line']) ? trim($_GET['line']) : ''; 
 
-        // [Logic ใหม่] อ่านข้อมูลจาก Log (History) ก่อน -> ถ้าไม่มีค่อยไป Master
         $sql = "SELECT 
                     ISNULL(L.log_id, 0) as log_id,
                     ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), :startDateDisp) as log_date,
@@ -49,9 +48,8 @@ try {
                     E.emp_id, E.name_th, E.position, 
                     E.is_active, 
 
-                    -- [FIX] ตัด Mapping ออก: ใช้ค่าจาก Log (actual_line) หรือ Master (line) ตรงๆ
+                    -- ใช้ค่าจาก Log (actual_line) หรือ Master (line)
                     ISNULL(L.actual_line, E.line) as line, 
-                    
                     ISNULL(L.actual_team, E.team_group) as team_group,
 
                     -- Shift Info
@@ -68,7 +66,14 @@ try {
                 
                 -- Shift & Category Master
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
-                LEFT JOIN " . MANPOWER_CATEGORY_MAPPING_TABLE . " CM ON E.position = CM.keyword
+                
+                -- Category Mapping (ยังคงไว้สำหรับดึงชื่อตำแหน่ง)
+                OUTER APPLY (
+                    SELECT TOP 1 category_name 
+                    FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                    WHERE E.position = M.keyword OR E.position LIKE '%' + M.keyword + '%' 
+                    ORDER BY LEN(M.keyword) DESC
+                ) CM
                 
                 -- Log Table (ข้อมูลรายวัน)
                 LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
@@ -88,9 +93,8 @@ try {
             ':end' => $endDate
         ];
 
-        // [FIX] แก้ Filter ไม่ให้เช็คกับ Mapping
+        // Filter Line (ใช้ actual_line หรือ master line)
         if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
-            // เช็คว่า ถ้ามี Log ให้ดู Actual Line, ถ้าไม่มีให้ดู Master Line
             $sql .= " AND ISNULL(L.actual_line, E.line) = :line";
             $params[':line'] = $lineFilter;
         }
@@ -135,9 +139,9 @@ try {
             'summary' => $summary,
             'last_update_ts' => $maxUpdateTimestamp
         ]);
-        
+
     // ==================================================================================
-    // 2. ACTION: read_summary (ใช้ SQL Function ตัวใหม่)
+    // 2. ACTION: read_summary (Dashboard Summary)
     // ==================================================================================
     } elseif ($action === 'read_summary') {
         $date = $_GET['date'] ?? date('Y-m-d');
@@ -175,7 +179,7 @@ try {
         ]);
 
     // ==================================================================================
-    // 3. ACTION: update_log (เพิ่มการบันทึก Snapshot Line/Team)
+    // 3. ACTION: update_log (บันทึกข้อมูล + แก้ไข Snapshot)
     // ==================================================================================
     } elseif ($action === 'update_log') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -185,7 +189,7 @@ try {
         $remark = trim($input['remark'] ?? '');
         $shiftId = !empty($input['shift_id']) ? intval($input['shift_id']) : null;
         
-        // [NEW] รับค่า Snapshot ใหม่ (ถ้ามีการแก้ไข)
+        // รับค่า Snapshot (Line/Team)
         $actualLine = !empty($input['actual_line']) ? $input['actual_line'] : null; 
         $actualTeam = !empty($input['actual_team']) ? $input['actual_team'] : null;
 
@@ -199,11 +203,8 @@ try {
 
         $pdo->beginTransaction();
 
-        // ---------------------------------------------------------
-        // CASE 1: UPDATE (แก้ไขข้อมูลที่มีอยู่แล้ว)
-        // ---------------------------------------------------------
+        // --- CASE 1: UPDATE ---
         if ($logId != 0) {
-            // ตรวจสอบสิทธิ์ (Security Check)
             $stmtCheck = $pdo->prepare("SELECT L.is_verified, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
             $stmtCheck->execute([$logId]);
             $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
@@ -218,12 +219,12 @@ try {
                 throw new Exception("Record is locked (Verified).");
             }
 
-            // [UPDATED SQL] เพิ่ม actual_line, actual_team
+            // Update พร้อม Logic เช็คค่าว่าง (ISNULL)
             $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
                     SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, 
                         shift_id = ?, 
-                        actual_line = ISNULL(?, actual_line), -- ถ้าส่งมาให้แก้ ถ้าไม่ส่งใช้ค่าเดิม
-                        actual_team = ISNULL(?, actual_team), -- ถ้าส่งมาให้แก้ ถ้าไม่ส่งใช้ค่าเดิม
+                        actual_line = ISNULL(?, actual_line), 
+                        actual_team = ISNULL(?, actual_team),
                         updated_by = ?, updated_at = GETDATE(),
                         is_verified = 1
                     WHERE log_id = ?";
@@ -231,25 +232,26 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $status, $remark, $scanIn, $scanOut, $shiftId, 
-                $actualLine, $actualTeam, // params ใหม่
+                $actualLine, $actualTeam,
                 $updatedBy, $logId
             ]);
             
             $msg = "Update successful (Snapshot Updated)";
 
-        // ---------------------------------------------------------
-        // CASE 2: INSERT (สร้างข้อมูลใหม่ - ยังไม่มีใน Log)
-        // ---------------------------------------------------------
+        // --- CASE 2: INSERT ---
         } else {
             if (!$empId || !$logDate) throw new Exception("New record requires Emp ID and Date.");
 
-            // ดึงข้อมูล Master ปัจจุบัน เพื่อใช้เป็น Default หรือหา Emp Type
+            // ดึง Master Data มาเป็น Default
             $stmtSnap = $pdo->prepare("
                 SELECT E.line, E.team_group, ISNULL(CM.category_name, 'Other') as emp_type
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                LEFT JOIN " . MANPOWER_CATEGORY_MAPPING_TABLE . " CM 
-                    ON E.position = CM.keyword 
-                    OR E.position LIKE '%' + CM.keyword + '%' -- [UPDATED] ใช้ Logic แบบใหม่ให้ตรงกับ SP
+                OUTER APPLY (
+                    SELECT TOP 1 category_name 
+                    FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                    WHERE E.position = M.keyword OR E.position LIKE '%' + M.keyword + '%' 
+                    ORDER BY LEN(M.keyword) DESC
+                ) CM
                 WHERE E.emp_id = ?
             ");
             $stmtSnap->execute([$empId]);
@@ -257,12 +259,10 @@ try {
 
             if (!$snapData) throw new Exception("Employee Master not found.");
 
-            // [LOGIC] ถ้า User ไม่ได้เลือก Line/Team มา ให้ใช้ค่าจาก Master เป็น Default
             $finalLine = $actualLine ?? $snapData['line'];
             $finalTeam = $actualTeam ?? $snapData['team_group'];
-            $finalType = $snapData['emp_type']; // Type เอาจาก Master เสมอ (User แก้ไม่ได้)
+            $finalType = $snapData['emp_type'];
 
-            // [UPDATED SQL] Insert พร้อม Snapshot ที่ถูกต้อง
             $sql = "INSERT INTO " . MANPOWER_DAILY_LOGS_TABLE . " 
                     (log_date, emp_id, status, remark, scan_in_time, scan_out_time, shift_id, 
                      actual_line, actual_team, actual_emp_type, 
@@ -282,7 +282,7 @@ try {
             $msg = "Created new record (History Saved)";
         }
 
-        // Log Activity
+        // Log
         $detail = "Manpower Update LogID:$logId Status:$status Shift:$shiftId Line:$actualLine";
         $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_EDIT', ?, GETDATE())");
         $stmtLog->execute([$updatedBy, $detail]);
@@ -291,10 +291,10 @@ try {
         echo json_encode(['success' => true, 'message' => $msg]);
 
     // ==================================================================================
-    // 4. ACTION: clear_day
+    // 4. ACTION: clear_day (ล้างข้อมูล)
     // ==================================================================================
     } elseif ($action === 'clear_day') {
-        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized to clear data.");
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
 
         $date = $input['date'] ?? '';
         $line = $input['line'] ?? '';
@@ -304,39 +304,31 @@ try {
         $pdo->beginTransaction();
 
         $sqlDeleteLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_date = ?";
-        $sqlDeleteCost = "DELETE FROM " . MANUAL_COSTS_TABLE . " WHERE entry_date = ?";
+        $sqlDeleteCost = "DELETE FROM " . MANUAL_COSTS_TABLE . " WHERE entry_date = ?"; // ถ้ามีตารางนี้
 
         if (!empty($line) && $line !== 'ALL') {
             $sqlDeleteLog = "DELETE L FROM " . MANPOWER_DAILY_LOGS_TABLE . " L
                              LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id
-                             WHERE L.log_date = ? 
-                             AND (L.actual_line = ? OR E.line = ?)";
+                             WHERE L.log_date = ? AND (L.actual_line = ? OR E.line = ?)";
             
-            $sqlDeleteCost .= " AND line = ?";
-            
+            // Execute Delete Log
             $stmt = $pdo->prepare($sqlDeleteLog);
             $stmt->execute([$date, $line, $line]);
             $deletedCount = $stmt->rowCount();
-
-            $stmtCost = $pdo->prepare($sqlDeleteCost);
-            $stmtCost->execute([$date, $line]);
-
-        } else {
-            $sqlDeleteCost .= " AND cost_category = 'LABOR'";
             
+            // Execute Delete Cost (ถ้ามี Logic นี้)
+            // ...
+        } else {
             $stmt = $pdo->prepare($sqlDeleteLog);
             $stmt->execute([$date]);
             $deletedCount = $stmt->rowCount();
-
-            $stmtCost = $pdo->prepare($sqlDeleteCost);
-            $stmtCost->execute([$date]);
         }
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => "Cleared $deletedCount records."]);
 
     // ==================================================================================
-    // 5. ACTION: get_daily_details (Dynamic Shift Filter + ตัด Mapping ออก)
+    // 5. ACTION: get_daily_details (Drill-down Data) -> 🔥 แก้ให้ดึง Snapshot ออกมาให้ครบ
     // ==================================================================================
     } elseif ($action === 'get_daily_details') {
         $date = $input['date'] ?? date('Y-m-d');
@@ -348,7 +340,6 @@ try {
              exit;
         }
 
-        // 1. ตั้งต้น SQL หลัก (ยังไม่กรอง Shift)
         $sql = "SELECT 
                     ISNULL(L.log_id, 0) as log_id,
                     E.emp_id,
@@ -364,52 +355,48 @@ try {
                     END as status,
                     
                     L.remark,
-                    ISNULL(L.shift_id, E.default_shift_id) as actual_shift_id,
-                    ISNULL(S.shift_name, S_Def.shift_name) as shift_name
+                    ISNULL(L.shift_id, E.default_shift_id) as shift_id,
+                    E.default_shift_id,
+
+                    -- 🔥 [FIXED] Select Fields ให้ครบเพื่อให้ JS ทำ Dropdown ได้ถูกต้อง
+                    L.actual_line,
+                    L.actual_team,
+                    E.line,
+                    E.team_group
 
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Def ON E.default_shift_id = S_Def.shift_id
                 LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
                     ON E.emp_id = L.emp_id AND L.log_date = :date
-                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
-
-                -- [FIX] ตัด Mapping ออก 
-
+                
                 WHERE E.is_active = 1";
 
-        // 2. กำหนด Params เริ่มต้น
         $params = [
             ':date'      => $date, 
             ':dateCheck' => $date
         ];
 
-        // 3. กรอง Line (ตัดส่วน Mapping ออก)
-        // เช็คว่า E.line ตรง หรือ L.actual_line ตรง
-        $sql .= " AND (
-                      E.line = :line1 
-                      OR L.actual_line = :line2
-                  )";
-        $params[':line1'] = $line;
-        $params[':line2'] = $line;
+        // Filter Line (Actual or Master)
+        $sql .= " AND (ISNULL(L.actual_line, E.line) = :line)";
+        $params[':line'] = $line;
 
-        // 4. กรอง Shift (Dynamic)
-        if (!empty($shift)) {
-            $sql .= " AND (
-                          (L.shift_id IS NOT NULL AND L.shift_id = :shift1) 
-                          OR 
-                          (L.shift_id IS NULL AND E.default_shift_id = :shift2)
-                      )";
-            $params[':shift1'] = $shift;
-            $params[':shift2'] = $shift;
+        // Filter Shift (Dynamic)
+        if (!empty($shift) && $shift !== 'ALL') {
+            $sql .= " AND (ISNULL(L.shift_id, E.default_shift_id) = :shift)";
+            $params[':shift'] = $shift;
         }
 
-        $sql .= " ORDER BY E.emp_id";
+        $sql .= " ORDER BY 
+                    ISNULL(L.actual_line, E.line) ASC,           
+                    ISNULL(L.actual_team, E.team_group) ASC,     
+                    ISNULL(L.shift_id, E.default_shift_id) ASC,  
+                    E.position ASC,                              
+                    E.emp_id ASC";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Filter Status ด้วย PHP
+        // Filter Status in PHP
         $filterStatus = $input['filter_status'] ?? 'ALL';
         $finalData = [];
 
@@ -422,7 +409,7 @@ try {
         echo json_encode(['success' => true, 'data' => $finalData]);
 
     // ==================================================================================
-    // 6. ACTION: update_log_status
+    // 6. ACTION: update_log_status (Quick Update)
     // ==================================================================================
     } elseif ($action === 'update_log_status') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");

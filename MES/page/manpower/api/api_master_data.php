@@ -28,7 +28,14 @@ try {
                     S.shift_name
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
-                ORDER BY CASE WHEN E.line = 'TOOLBOX_POOL' THEN 0 ELSE 1 END, E.line, E.emp_id";
+                
+                ORDER BY 
+                    E.is_active DESC,
+                    E.line ASC,
+                    E.team_group ASC,
+                    E.default_shift_id ASC,
+                    E.position ASC,
+                    E.emp_id ASC";
         
         $stmt = $pdo->query($sql);
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
