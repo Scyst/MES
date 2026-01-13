@@ -7,8 +7,11 @@ const UI = {
     // =========================================================================
     // 1. KPI CARDS
     // =========================================================================
+    // =========================================================================
+    // 1. KPI CARDS
+    // =========================================================================
     renderKPI(data) {
-        let totalPlan = 0, totalActual = 0, totalLate = 0, totalAbsent = 0;
+        let totalPlan = 0, totalActual = 0, totalLate = 0, totalAbsent = 0, totalLeave = 0;
         let totalCost = 0;
 
         data.forEach(row => {
@@ -16,12 +19,14 @@ const UI = {
             const present = parseInt(row.present || 0);
             const late = parseInt(row.late || 0);
             const absent = parseInt(row.absent || 0);
+            const leave = parseInt(row.leave || 0); // 🔥 เพิ่มการรับค่า Leave
             const cost = parseFloat(row.total_cost || 0);
 
             totalPlan += plan;
             totalActual += (present + late);
             totalLate += late;
             totalAbsent += absent;
+            totalLeave += leave; // 🔥 บวกยอด Leave
             totalCost += cost;
         });
 
@@ -29,20 +34,46 @@ const UI = {
         this.animateNumber('kpi-actual', totalActual);
         this.animateNumber('kpi-cost', parseInt(totalCost));
         this.animateNumber('kpi-absent', totalAbsent);
+        
+        // Update Text
         document.getElementById('kpi-late').innerText = totalLate;
+        document.getElementById('kpi-leave').innerText = totalLeave; // 🔥 แสดงยอด Leave
 
         const rate = totalPlan > 0 ? ((totalActual / totalPlan) * 100).toFixed(1) : 0;
         document.getElementById('kpi-rate').innerText = `${rate}% Attendance`;
 
-        // 🔥 Event Click
-        this._bindKpiClick('card-plan', 'ALL');
-        this._bindKpiClick('card-late', 'LATE');
-        this._bindKpiClick('card-absent', 'ABSENT');
+        // --------------------------------------------------------
+        // 🔥 Event Bindings (แก้เรื่องกดแล้วซ้อนกันตรงนี้)
+        // --------------------------------------------------------
         
-        const actualCard = document.getElementById('card-actual'); 
-        if(actualCard) {
-            actualCard.style.cursor = 'pointer';
-            actualCard.onclick = () => Actions.openDetailModal('', '', 'ALL', 'PRESENT_AND_LATE'); 
+        // 1. Plan Card
+        const cardPlan = document.getElementById('card-plan');
+        if(cardPlan) cardPlan.onclick = () => Actions.openDetailModal('', '', 'ALL', 'ALL');
+
+        // 2. Actual Card
+        const cardActual = document.getElementById('card-actual'); 
+        if(cardActual) cardActual.onclick = () => Actions.openDetailModal('', '', 'ALL', 'PRESENT_AND_LATE');
+
+        // 3. Absent Card (Parent) -> กดพื้นที่ว่างๆ จะไป Absent
+        const cardAbsent = document.getElementById('card-absent');
+        if(cardAbsent) cardAbsent.onclick = () => Actions.openDetailModal('', '', 'ALL', 'ABSENT');
+
+        // 4. Late Button (Child) -> 🔥 ต้องมี stopPropagation() ไม่ให้ไปกระตุ้น Absent
+        const cardLate = document.getElementById('card-late');
+        if(cardLate) {
+            cardLate.onclick = (e) => {
+                e.stopPropagation(); // หยุดไม่ให้ทะลุไปหา Parent
+                Actions.openDetailModal('', '', 'ALL', 'LATE');
+            };
+        }
+
+        // 5. Leave Button (Child) -> 🔥 ต้องมี stopPropagation()
+        const cardLeave = document.getElementById('card-leave');
+        if(cardLeave) {
+            cardLeave.onclick = (e) => {
+                e.stopPropagation(); // หยุดไม่ให้ทะลุไปหา Parent
+                Actions.openDetailModal('', '', 'ALL', 'LEAVE');
+            };
         }
     },
 
@@ -155,14 +186,50 @@ const UI = {
         const grandTotal = { name: 'GRAND TOTAL', hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
 
         rawData.forEach(row => {
-            let mainKey = viewMode === 'LINE' ? (row.line_name || 'Unassigned') : (row.shift_name || 'Unassigned');
-            let subKeyName = viewMode === 'LINE' ? `${row.shift_name || '-'} ${row.team_group ? '('+row.team_group+')' : ''}` : (row.line_name || '-');
-            let itemKeyName = row.emp_type || 'General';
+            // ---------------------------------------------------------
+            // 🔥 Logic การจัดกลุ่มตาม View Mode
+            // ---------------------------------------------------------
+            let mainKey, subKeyName, itemKeyName;
+            
+            // Meta Data สำหรับ Drill-down
+            let metaLine = '', metaShift = '', metaType = '';
 
-            // Extract Shift ID for linking
-            let shiftIdForLink = '';
-            if (row.shift_name && row.shift_name.includes('Day')) shiftIdForLink = '1';
-            else if (row.shift_name && row.shift_name.includes('Night')) shiftIdForLink = '2';
+            // Extract Shift ID (Helper)
+            let shiftId = '';
+            if (row.shift_name && row.shift_name.includes('Day')) shiftId = '1';
+            else if (row.shift_name && row.shift_name.includes('Night')) shiftId = '2';
+
+            if (viewMode === 'TYPE') {
+                // Mode 3: By Type (Type -> Line -> Shift)
+                mainKey = row.emp_type || 'Uncategorized'; // Level 1
+                subKeyName = row.line_name || '-';         // Level 2
+                itemKeyName = `${row.shift_name} (${row.team_group})`; // Level 3
+                
+                // Set Meta for Child (Line)
+                metaLine = row.line_name;
+                metaType = mainKey;
+                
+            } else if (viewMode === 'SHIFT') {
+                // Mode 2: By Shift (Shift -> Line -> Type)
+                mainKey = row.shift_name || 'Unassigned';
+                subKeyName = row.line_name || '-';
+                itemKeyName = row.emp_type || 'General';
+                
+                // Set Meta for Child (Line)
+                metaLine = row.line_name;
+                metaShift = shiftId;
+
+            } else {
+                // Mode 1: By Line (Default: Line -> Shift -> Type)
+                mainKey = row.line_name || 'Unassigned';
+                subKeyName = `${row.shift_name} ${row.team_group ? '('+row.team_group+')' : ''}`;
+                itemKeyName = row.emp_type || 'General';
+                
+                // Set Meta for Child (Shift)
+                metaLine = mainKey;
+                metaShift = shiftId;
+            }
+            // ---------------------------------------------------------
 
             const stats = {
                 hc: parseInt(row.total_hc || 0), plan: parseInt(row.plan || 0),
@@ -172,34 +239,31 @@ const UI = {
             };
             stats.actual = stats.present + stats.late;
 
-            // Level 1: Parent
+            // 1. Parent
             if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
 
-            // Level 2: Child (Shift)
+            // 2. Child (Sub)
             if (!groups[mainKey].subs[subKeyName]) {
                 groups[mainKey].subs[subKeyName] = { 
                     name: subKeyName, 
                     items: {}, 
                     total: this._initStats(),
-                    // 🔥 Meta: Line & Shift
-                    meta: {
-                        line: (viewMode === 'LINE') ? mainKey : subKeyName,
-                        shift: shiftIdForLink
-                    }
+                    // 🔥 Meta Data ที่ถูกต้องตาม Mode
+                    meta: { line: metaLine, shift: metaShift, type: metaType }
                 };
             }
             this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
 
-            // Level 3: GrandChild (Type)
+            // 3. GrandChild (Item)
             if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
+                // สำหรับ Grandchild เราใส่ Meta ให้ครบทุกมิติเลยเพื่อความชัวร์
                 groups[mainKey].subs[subKeyName].items[itemKeyName] = { 
                     name: itemKeyName, 
-                    // 🔥 Meta: Line & Shift & Type
-                    meta: {
-                        line: (viewMode === 'LINE') ? mainKey : subKeyName,
-                        shift: shiftIdForLink,
-                        type: itemKeyName // ส่งชื่อ Type ไปด้วย
+                    meta: { 
+                        line: row.line_name, 
+                        shift: shiftId, 
+                        type: row.emp_type 
                     },
                     ...stats 
                 };
@@ -287,41 +351,58 @@ const UI = {
         if (isGrand) {
             rowClass = 'table-dark fw-bold border-bottom-0';
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
+            // Grand Total: View All
+            canClick = true; 
         } 
         else if (isParent) {
             rowClass = 'table-secondary fw-bold border-top border-white';
-            nameHtml = `<i class="fas fa-layer-group me-2 opacity-50"></i>${label}`;
+            
+            // Icon ตาม Mode
+            let icon = 'fa-layer-group';
+            if (viewMode === 'TYPE') icon = 'fa-user-tag';
+            if (viewMode === 'SHIFT') icon = 'fa-clock';
+            nameHtml = `<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
+
             if (viewMode === 'LINE') {
-                tLine = rawName;
-                canClick = true;
-                nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '', 'ALL', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
+                tLine = rawName; canClick = true;
+            } else if (viewMode === 'TYPE') {
+                tType = rawName; canClick = true; // ดู Type นี้ ทั้งโรงงาน
+            } else if (viewMode === 'SHIFT') {
+                // Shift ชื่ออาจจะซ้ำกัน (Day) ต้องระวัง แต่ปกติกดดูรวมได้
+                // tShift = ... (ข้ามไปก่อนเพื่อความชัวร์)
+            }
+
+            // ถ้ากดได้ ให้ชื่อเป็น Link
+            if (canClick) {
+                nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
             }
         } 
         else if (isChild) {
             rowClass = 'bg-light fw-bold';
-            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-clock me-1 text-muted"></i>${label}</span></div>`;
+            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-angle-right me-1 text-muted"></i>${label}</span></div>`;
+            
+            // ใช้ Meta ที่ฝังมาจาก processGroupedData
             if (meta) {
-                tLine = meta.line;
-                tShift = meta.shift;
+                tLine = meta.line || '';
+                tShift = meta.shift || '';
+                tType = meta.type || 'ALL';
                 canClick = true;
             }
         } 
         else if (isGrandChild) {
             rowClass = 'bg-white';
             nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
-            // 🔥 Level 3 Drill-down
+            
             if (meta) {
                 tLine = meta.line;
                 tShift = meta.shift;
-                tType = meta.type; // Specific Type
+                tType = meta.type;
                 canClick = true;
             }
         }
 
-        // Helper Click Attribute
         const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
         const hoverClass = canClick ? 'cursor-pointer-cell' : '';
-
         const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
 
         return `

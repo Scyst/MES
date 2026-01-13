@@ -145,18 +145,29 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-danger" id="card-absent">
                         <div class="d-flex justify-content-between">
-                            <div>
-                                <p class="text-muted small mb-1 text-uppercase fw-bold">Absent / Late (ขาด/สาย)</p>
-                                <div class="d-flex align-items-baseline gap-2">
+                            <div class="d-flex flex-column justify-content-between w-100">
+                                
+                                <p class="text-muted small mb-1 text-uppercase fw-bold">Abnormalities (ผิดปกติ/ลา)</p>
+                                
+                                <div class="d-flex align-items-baseline gap-2 mb-2">
                                     <h2 class="fw-bold text-danger mb-0" id="kpi-absent">0</h2>
-                                    <small class="text-muted">Absent</small>
+                                    <small class="text-danger">Absent</small>
                                 </div>
-                                <div id="card-late" class="d-inline-block mt-1 px-2 py-0 bg-warning bg-opacity-25 rounded border border-warning text-dark fw-bold cursor-pointer">
-                                    <span id="kpi-late">0</span> Late
+
+                                <div class="d-flex gap-2">
+                                    <div id="card-late" class="px-2 py-1 bg-warning bg-opacity-25 rounded border border-warning text-dark fw-bold cursor-pointer small">
+                                        <i class="fas fa-clock me-1"></i><span id="kpi-late">0</span> Late
+                                    </div>
+
+                                    <div id="card-leave" class="px-2 py-1 bg-info bg-opacity-25 rounded border border-info text-dark fw-bold cursor-pointer small">
+                                        <i class="fas fa-bed me-1"></i><span id="kpi-leave">0</span> Leave
+                                    </div>
                                 </div>
+
                             </div>
+                            
                             <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger" style="height: fit-content;">
-                                <i class="fas fa-user-times fa-lg"></i>
+                                <i class="fas fa-user-clock fa-lg"></i>
                             </div>
                         </div>
                     </div>
@@ -200,6 +211,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewShift" autocomplete="off" onchange="App.setView('SHIFT')">
                         <label class="btn btn-outline-secondary" for="viewShift"><i class="fas fa-clock me-1"></i>By Shift</label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="viewType" autocomplete="off" onchange="App.setView('TYPE')">
+                        <label class="btn btn-outline-secondary" for="viewType"><i class="fas fa-user-tag me-1"></i>By Type</label>
                     </div>
                 </div>
                 <div class="card-body p-0">
