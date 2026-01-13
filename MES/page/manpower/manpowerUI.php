@@ -1,5 +1,5 @@
 <?php
-// page/manpower/manpowerUI2.php
+// page/manpower/manpowerUI.php
 require_once __DIR__ . '/../components/init.php';
 
 // ตรวจสอบสิทธิ์
@@ -28,9 +28,13 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
             border: none;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer; /* เพิ่ม cursor pointer ให้รู้ว่ากดได้ */
         }
-        .card-kpi:hover { transform: translateY(-3px); }
+        .card-kpi:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
 
         .table-responsive {
             border-radius: 8px;
@@ -97,7 +101,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
             <div class="row g-3 mb-4">
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-primary">
+                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-primary" id="card-plan">
                         <div class="d-flex justify-content-between">
                             <div>
                                 <p class="text-muted small mb-1 text-uppercase fw-bold">Total Plan (แผนรวม)</p>
@@ -111,7 +115,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                     </div>
                 </div>
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-success">
+                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-success" id="card-actual">
                         <div class="d-flex justify-content-between">
                             <div>
                                 <p class="text-muted small mb-1 text-uppercase fw-bold">Actual Present (มาจริง)</p>
@@ -125,7 +129,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                     </div>
                 </div>
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-warning">
+                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-warning" style="cursor: default;">
                         <div class="d-flex justify-content-between">
                             <div>
                                 <p class="text-muted small mb-1 text-uppercase fw-bold">Est. Cost (ค่าแรง)</p>
@@ -139,7 +143,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                     </div>
                 </div>
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-danger">
+                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-danger" id="card-absent">
                         <div class="d-flex justify-content-between">
                             <div>
                                 <p class="text-muted small mb-1 text-uppercase fw-bold">Absent / Late (ขาด/สาย)</p>
@@ -147,7 +151,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                                     <h2 class="fw-bold text-danger mb-0" id="kpi-absent">0</h2>
                                     <small class="text-muted">Absent</small>
                                 </div>
-                                <small class="text-warning text-dark fw-bold"><span id="kpi-late">0</span> Late</small>
+                                <div id="card-late" class="d-inline-block mt-1 px-2 py-0 bg-warning bg-opacity-25 rounded border border-warning text-dark fw-bold cursor-pointer">
+                                    <span id="kpi-late">0</span> Late
+                                </div>
                             </div>
                             <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger" style="height: fit-content;">
                                 <i class="fas fa-user-times fa-lg"></i>
@@ -238,7 +244,6 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="script/manpower_api.js?v=<?php echo time(); ?>"></script>
     <script src="script/manpower_ui.js?v=<?php echo time(); ?>"></script>
     <script src="script/manpower_main.js?v=<?php echo time(); ?>"></script>

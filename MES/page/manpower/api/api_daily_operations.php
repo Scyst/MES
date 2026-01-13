@@ -20,86 +20,144 @@ $updatedBy = $currentUser['username'];
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $_GET['action'] ?? ($input['action'] ?? 'read_daily');
 
-// ปิด Session เพื่อลดการล็อกไฟล์ session
+// ปิด Session เพื่อลดการล็อกไฟล์ session (Performance Tuning)
 session_write_close();
 
 try {
     // ==================================================================================
-    // 1. ACTION: read_daily (ดูข้อมูลรายวันแบบละเอียด - กู้คืนให้ครบถ้วน)
+    // 1. ACTION: read_daily (ดึงข้อมูลรายวัน + คำนวณเงิน + ตัดเกรด)
     // ==================================================================================
     if ($action === 'read_daily') {
         $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
         $endDate    = $_GET['endDate']   ?? $startDate; 
         
         $lineFilter = isset($_GET['line']) ? trim($_GET['line']) : ''; 
+        $empTypeFilter = isset($_GET['type']) ? trim($_GET['type']) : '';
 
+        // SQL Logic: คำนวณ 8 ชม. + OT Step + ตัดคนลืมสแกน
         $sql = "SELECT 
                     ISNULL(L.log_id, 0) as log_id,
                     ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), :startDateDisp) as log_date,
-                    CONVERT(VARCHAR(19), L.scan_in_time, 120) as scan_in_time,
-                    CONVERT(VARCHAR(19), L.scan_out_time, 120) as scan_out_time,
+                    CONVERT(VARCHAR(5), L.scan_in_time, 108) as in_time,   
+                    CONVERT(VARCHAR(5), L.scan_out_time, 108) as out_time, 
+                    
+                    -- Status Logic
                     CASE 
                         WHEN L.status IS NOT NULL THEN L.status
                         WHEN :startDateCheck < CAST(GETDATE() AS DATE) THEN 'ABSENT'
                         ELSE 'WAITING'
                     END as status,
+                    
                     L.remark, 
-                    ISNULL(L.is_verified, 0) as is_verified,
                     E.emp_id, E.name_th, E.position, 
-                    E.is_active, 
-
-                    -- ใช้ค่าจาก Log (actual_line) หรือ Master (line)
+                    
+                    -- Shift & Line Info (Priority: Snapshot > Master)
                     ISNULL(L.actual_line, E.line) as line, 
                     ISNULL(L.actual_team, E.team_group) as team_group,
+                    ISNULL(L.shift_id, E.default_shift_id) as shift_id,
+                    ISNULL(S.shift_name, S_Master.shift_name) as shift_name,
+                    E.default_shift_id,
+                    
+                    -- Snapshot Data (สำหรับ Frontend Dropdown)
+                    L.actual_line,
+                    L.actual_team,
+                    E.line as master_line,
+                    E.team_group as master_team,
+                    
+                    -- ✅ 1. เช็คคนลืมสแกนออก (Flag)
+                    CASE 
+                        WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1 
+                        ELSE 0 
+                    END as is_forgot_out,
 
-                    -- Shift Info
-                    ISNULL(S.shift_name, S_Master.shift_name) as shift_name, 
-                    ISNULL(S.start_time, S_Master.start_time) as shift_start, 
-                    ISNULL(S.end_time,   S_Master.end_time)   as shift_end,
-                    
-                    L.shift_id as actual_shift_id,
-                    
-                    -- Snapshot Type Logic
-                    ISNULL(L.actual_emp_type, ISNULL(CM.category_name, 'Other')) as category_name
+                    -- ✅ 2. คำนวณเงินรายหัว (Est. Cost)
+                    CAST(
+                        CASE 
+                            WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                -- [A] ฐานเงินเดือน/ค่าแรง (8 ชม.)
+                                (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (COALESCE(CM.hourly_rate,0) * Rate.Work_Multiplier) END)
+                                +
+                                -- [B] ค่า OT (Logic: ลืมสแกน = 0, OT Step 30 นาที, Cap 6 ชม.)
+                                (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
+                            ELSE 0 
+                        END
+                    AS DECIMAL(10,2)) as est_cost
 
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E
                 
-                -- Shift & Category Master
+                -- Shift Master
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
                 
-                -- Category Mapping (ยังคงไว้สำหรับดึงชื่อตำแหน่ง)
+                -- Category Mapping (ดึงเรทเงิน)
                 OUTER APPLY (
-                    SELECT TOP 1 category_name 
-                    FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
-                    WHERE E.position = M.keyword OR E.position LIKE '%' + M.keyword + '%' 
+                    SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                    WHERE E.position LIKE '%' + M.keyword + '%' 
                     ORDER BY LEN(M.keyword) DESC
                 ) CM
                 
-                -- Log Table (ข้อมูลรายวัน)
+                -- Log Table
                 LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
                     ON E.emp_id = L.emp_id 
                     AND L.log_date BETWEEN :start AND :end
                 
-                -- Shift จริงใน Log
+                -- Shift Actual
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
+                
+                -- Calendar
+                LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
+
+                -- ✅ 3. Helper: Rate Multipliers
+                CROSS APPLY (SELECT CASE WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 WHEN Cal.day_type='HOLIDAY' THEN 3.0 ELSE 1.5 END AS OT_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 ELSE 1.0 END AS Work_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 ELSE COALESCE(CM.hourly_rate,0) END AS Hourly_Base) AS Rate
+                
+                -- ✅ 4. Helper: Time Calc & Auto-Cutoff
+                CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
+                CROSS APPLY (
+                    SELECT CASE 
+                        WHEN L.scan_out_time IS NOT NULL THEN L.scan_out_time 
+                        WHEN L.log_date < CAST(GETDATE() AS DATE) THEN T0.Shift_Start -- อดีต+ลืม = ตัดเวลาทิ้ง (OT=0)
+                        ELSE GETDATE() -- วันนี้ = วิ่งตามจริง
+                    END AS Calc_End_Time
+                ) AS T1
+                CROSS APPLY (SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Total_Minutes) AS T2
+                
+                -- ✅ 5. Helper: OT Step 30 นาที
+                CROSS APPLY (SELECT CASE WHEN T2.Total_Minutes > 570 THEN FLOOR((T2.Total_Minutes - 570) / 30.0) * 0.5 ELSE 0 END AS OT_Hours) AS Step_OT
+                CROSS APPLY (SELECT CASE WHEN L.log_date < CAST(GETDATE() AS DATE) AND L.scan_out_time IS NULL THEN 0 WHEN Step_OT.OT_Hours > 6 THEN 6 ELSE Step_OT.OT_Hours END AS OT_Capped) AS Final_OT
 
                 WHERE 
-                    ((L.log_id IS NOT NULL) OR (E.is_active = 1))";
+                    E.is_active = 1
+                    -- ✅ 6. Ghost Plan Filter
+                    AND (L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= :createDateCheck))
+        ";
         
         $params = [
             ':startDateDisp' => $startDate,
             ':startDateCheck' => $startDate,
             ':start' => $startDate, 
-            ':end' => $endDate
+            ':end' => $endDate,
+            ':calDate' => $startDate,
+            ':t0Date' => $startDate,
+            ':createDateCheck' => $startDate
         ];
 
-        // Filter Line (ใช้ actual_line หรือ master line)
+        // Filter Line
         if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
             $sql .= " AND ISNULL(L.actual_line, E.line) = :line";
             $params[':line'] = $lineFilter;
         }
 
-        $sql .= " ORDER BY line ASC, team_group ASC, E.emp_id ASC";
+        if (!empty($empTypeFilter) && $empTypeFilter !== 'ALL' && $empTypeFilter !== 'undefined') {
+            // ต้องเช็คว่าใน DB เราเก็บ Type ไว้ที่ไหน (ปกติเทียบกับ Category Name)
+            // สูตร: ถ้า category_name ตรงกับที่ส่งมา หรือถ้าเป็น Other ก็เช็คว่าไม่มี category
+            if ($empTypeFilter === 'Other') {
+                $sql .= " AND (CM.category_name IS NULL)";
+            } else {
+                $sql .= " AND (CM.category_name = :empType)";
+                $params[':empType'] = $empTypeFilter;
+            }
+        }
+
+        $sql .= " ORDER BY line ASC, E.emp_id ASC";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -111,33 +169,24 @@ try {
             'late' => 0, 'leave' => 0, 'waiting' => 0, 'other' => 0, 'other_total' => 0
         ];
         
-        $maxUpdateTimestamp = null;
-
-        foreach ($data as &$row) {
-            $row['scan_time_display'] = $row['scan_in_time'] ? date('H:i', strtotime($row['scan_in_time'])) : '-';
-            
+        foreach ($data as $row) {
             $st = strtoupper($row['status']);
             if ($st === 'PRESENT') $summary['present']++;
             elseif ($st === 'ABSENT') $summary['absent']++;
             elseif ($st === 'LATE') $summary['late']++;
             elseif ($st === 'WAITING') $summary['waiting']++;
-            elseif (strpos($st, 'LEAVE') !== false) $summary['leave']++;
+            
+            // 🔥 [FIXED] รวม 'OTHER' เข้าไปในกลุ่ม Leave ด้วย
+            elseif (in_array($st, ['SICK', 'BUSINESS', 'VACATION', 'LEAVE', 'OTHER'])) $summary['leave']++;
+            
             else $summary['other']++;
-
-             if (isset($row['updated_at'])) {
-                $ts = strtotime($row['updated_at']);
-                if ($maxUpdateTimestamp === null || $ts > $maxUpdateTimestamp) {
-                    $maxUpdateTimestamp = $ts;
-                }
-            }
         }
         $summary['other_total'] = $summary['late'] + $summary['leave'] + $summary['other'] + $summary['waiting'];
 
         echo json_encode([
             'success' => true,
             'data' => $data,
-            'summary' => $summary,
-            'last_update_ts' => $maxUpdateTimestamp
+            'summary' => $summary
         ]);
 
     // ==================================================================================
@@ -193,6 +242,7 @@ try {
         $actualLine = !empty($input['actual_line']) ? $input['actual_line'] : null; 
         $actualTeam = !empty($input['actual_team']) ? $input['actual_team'] : null;
 
+        // แปลงค่าว่างเป็น NULL เพื่อไม่ให้ DB Error
         $scanIn  = !empty($input['scan_in_time']) ? $input['scan_in_time'] : null;
         $scanOut = !empty($input['scan_out_time']) ? $input['scan_out_time'] : null;
         
@@ -203,7 +253,7 @@ try {
 
         $pdo->beginTransaction();
 
-        // --- CASE 1: UPDATE ---
+        // --- CASE 1: UPDATE Existing Log ---
         if ($logId != 0) {
             $stmtCheck = $pdo->prepare("SELECT L.is_verified, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
             $stmtCheck->execute([$logId]);
@@ -238,7 +288,7 @@ try {
             
             $msg = "Update successful (Snapshot Updated)";
 
-        // --- CASE 2: INSERT ---
+        // --- CASE 2: INSERT New Log ---
         } else {
             if (!$empId || !$logDate) throw new Exception("New record requires Emp ID and Date.");
 
@@ -282,7 +332,7 @@ try {
             $msg = "Created new record (History Saved)";
         }
 
-        // Log
+        // Log Action
         $detail = "Manpower Update LogID:$logId Status:$status Shift:$shiftId Line:$actualLine";
         $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_EDIT', ?, GETDATE())");
         $stmtLog->execute([$updatedBy, $detail]);
@@ -304,20 +354,18 @@ try {
         $pdo->beginTransaction();
 
         $sqlDeleteLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_date = ?";
-        $sqlDeleteCost = "DELETE FROM " . MANUAL_COSTS_TABLE . " WHERE entry_date = ?"; // ถ้ามีตารางนี้
+        
+        // ถ้าต้องการลบ Cost ด้วย ให้เปิดคอมเมนต์บรรทัดนี้
+        // $sqlDeleteCost = "DELETE FROM " . MANUAL_COSTS_TABLE . " WHERE entry_date = ?"; 
 
         if (!empty($line) && $line !== 'ALL') {
             $sqlDeleteLog = "DELETE L FROM " . MANPOWER_DAILY_LOGS_TABLE . " L
                              LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id
                              WHERE L.log_date = ? AND (L.actual_line = ? OR E.line = ?)";
             
-            // Execute Delete Log
             $stmt = $pdo->prepare($sqlDeleteLog);
             $stmt->execute([$date, $line, $line]);
             $deletedCount = $stmt->rowCount();
-            
-            // Execute Delete Cost (ถ้ามี Logic นี้)
-            // ...
         } else {
             $stmt = $pdo->prepare($sqlDeleteLog);
             $stmt->execute([$date]);
@@ -328,88 +376,7 @@ try {
         echo json_encode(['success' => true, 'message' => "Cleared $deletedCount records."]);
 
     // ==================================================================================
-    // 5. ACTION: get_daily_details (Drill-down Data) -> 🔥 แก้ให้ดึง Snapshot ออกมาให้ครบ
-    // ==================================================================================
-    } elseif ($action === 'get_daily_details') {
-        $date = $input['date'] ?? date('Y-m-d');
-        $line = $input['line'] ?? '';
-        $shift = $input['shift_id'] ?? ''; 
-        
-        if (empty($line)) {
-             echo json_encode(['success' => true, 'data' => []]);
-             exit;
-        }
-
-        $sql = "SELECT 
-                    ISNULL(L.log_id, 0) as log_id,
-                    E.emp_id,
-                    E.name_th,
-                    E.position,
-                    L.scan_in_time,
-                    L.scan_out_time,
-                    
-                    CASE 
-                        WHEN L.status IS NOT NULL THEN L.status
-                        WHEN :dateCheck < CAST(GETDATE() AS DATE) THEN 'ABSENT'
-                        ELSE 'WAITING'
-                    END as status,
-                    
-                    L.remark,
-                    ISNULL(L.shift_id, E.default_shift_id) as shift_id,
-                    E.default_shift_id,
-
-                    -- 🔥 [FIXED] Select Fields ให้ครบเพื่อให้ JS ทำ Dropdown ได้ถูกต้อง
-                    L.actual_line,
-                    L.actual_team,
-                    E.line,
-                    E.team_group
-
-                FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
-                    ON E.emp_id = L.emp_id AND L.log_date = :date
-                
-                WHERE E.is_active = 1";
-
-        $params = [
-            ':date'      => $date, 
-            ':dateCheck' => $date
-        ];
-
-        // Filter Line (Actual or Master)
-        $sql .= " AND (ISNULL(L.actual_line, E.line) = :line)";
-        $params[':line'] = $line;
-
-        // Filter Shift (Dynamic)
-        if (!empty($shift) && $shift !== 'ALL') {
-            $sql .= " AND (ISNULL(L.shift_id, E.default_shift_id) = :shift)";
-            $params[':shift'] = $shift;
-        }
-
-        $sql .= " ORDER BY 
-                    ISNULL(L.actual_line, E.line) ASC,           
-                    ISNULL(L.actual_team, E.team_group) ASC,     
-                    ISNULL(L.shift_id, E.default_shift_id) ASC,  
-                    E.position ASC,                              
-                    E.emp_id ASC";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Filter Status in PHP
-        $filterStatus = $input['filter_status'] ?? 'ALL';
-        $finalData = [];
-
-        foreach ($rawData as $row) {
-            if ($filterStatus === 'ALL' || $row['status'] === $filterStatus) {
-                $finalData[] = $row;
-            }
-        }
-
-        echo json_encode(['success' => true, 'data' => $finalData]);
-
-    // ==================================================================================
-    // 6. ACTION: update_log_status (Quick Update)
+    // 5. ACTION: update_log_status (Quick Update) - เผื่อไว้ใช้
     // ==================================================================================
     } elseif ($action === 'update_log_status') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");

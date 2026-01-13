@@ -95,7 +95,7 @@
                     <h5 class="modal-title fw-bold text-primary" id="detailModalTitle">
                         <i class="fas fa-list-alt me-2"></i>Employee List
                     </h5>
-                    <p class="text-muted small mb-0">รายละเอียดการลงเวลา</p>
+                    <p class="text-muted small mb-0">รายละเอียดการลงเวลาและค่าแรง</p>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <div class="input-group input-group-sm" style="width: 250px;">
@@ -107,28 +107,16 @@
             </div>
             <div class="modal-body p-0 bg-light">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 table-striped">
-                        <thead class="bg-white text-secondary sticky-top shadow-sm" style="z-index: 1;">
-                            <tr class="text-center small text-muted text-uppercase">
-                                <th class="text-start ps-4 py-3" style="width: 20%;">Employee</th>
-                                <th style="width: 12%;">Line</th>
-                                <th style="width: 8%;">Team</th>
-                                <th style="width: 10%;">Shift</th>
-                                
-                                <th style="width: 10%;">In</th>
-                                <th style="width: 10%;">Out</th>
-                                <th style="width: 12%;">Status</th>
-                                <th style="width: 10%;">Remark</th>
-                                <th class="pe-4" style="width: 8%;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detailModalBody"></tbody>
+                    <table class="table table-hover align-middle mb-0 table-striped" id="detailModalTable">
+                        <tbody id="detailModalBody">
+                            <tr><td colspan="10" class="text-center py-5 text-muted">Loading data...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
             <div class="modal-footer bg-white py-2">
                 <div class="me-auto text-muted small">
-                    <i class="fas fa-info-circle me-1"></i> สามารถเปลี่ยนสถานะและกดปุ่ม Save ได้ทันที
+                    <i class="fas fa-info-circle me-1"></i> สามารถเปลี่ยนสถานะและกดปุ่ม Save ได้ทันที | <span class="text-danger">*สีแดง = ลืมรูดบัตร (คิดเงิน 8 ชม.)</span>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>

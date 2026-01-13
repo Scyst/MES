@@ -4,7 +4,9 @@
 const UI = {
     charts: {},
 
-    // --- 1. KPI CARDS ---
+    // =========================================================================
+    // 1. KPI CARDS
+    // =========================================================================
     renderKPI(data) {
         let totalPlan = 0, totalActual = 0, totalLate = 0, totalAbsent = 0;
         let totalCost = 0;
@@ -31,9 +33,30 @@ const UI = {
 
         const rate = totalPlan > 0 ? ((totalActual / totalPlan) * 100).toFixed(1) : 0;
         document.getElementById('kpi-rate').innerText = `${rate}% Attendance`;
+
+        // 🔥 Event Click
+        this._bindKpiClick('card-plan', 'ALL');
+        this._bindKpiClick('card-late', 'LATE');
+        this._bindKpiClick('card-absent', 'ABSENT');
+        
+        const actualCard = document.getElementById('card-actual'); 
+        if(actualCard) {
+            actualCard.style.cursor = 'pointer';
+            actualCard.onclick = () => Actions.openDetailModal('', '', 'ALL', 'PRESENT_AND_LATE'); 
+        }
     },
 
-    // --- 2. CHARTS ---
+    _bindKpiClick(elementId, status) {
+        const el = document.getElementById(elementId);
+        if (el) {
+            el.style.cursor = 'pointer';
+            el.onclick = () => Actions.openDetailModal('', '', 'ALL', status);
+        }
+    },
+
+    // =========================================================================
+    // 2. CHARTS
+    // =========================================================================
     renderCharts(data) {
         const labels = [];
         const dataPlan = [];
@@ -55,6 +78,8 @@ const UI = {
             sumPresent += present;
             sumLate += late;
             sumAbsent += parseInt(row.absent || 0);
+            
+            // รวม Leave ทุกประเภท (ตาม Logic ใหม่ใน DB)
             sumLeave += parseInt(row.leave || 0);
         });
 
@@ -82,7 +107,7 @@ const UI = {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const lineName = labels[index]; 
-                        if(lineName) Actions.openDetailModal(lineName, '', 'ALL'); // Open All Shifts
+                        if(lineName) Actions.openDetailModal(lineName, '', 'ALL', 'ALL'); 
                     }
                 },
                 responsive: true,
@@ -107,6 +132,13 @@ const UI = {
                 }]
             },
             options: {
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const statuses = ['PRESENT', 'LATE', 'ABSENT', 'LEAVE']; 
+                        Actions.openDetailModal('', '', 'ALL', statuses[index]);
+                    }
+                },
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '70%',
@@ -115,53 +147,68 @@ const UI = {
         });
     },
 
-    // --- 3. DATA TABLE (HIERARCHY ENGINE) ---
+    // =========================================================================
+    // 3. MAIN TABLE (Hierarchy View - 3 Levels)
+    // =========================================================================
     processGroupedData(rawData, viewMode) {
         const groups = {};
-        const grandTotal = {
-            name: 'GRAND TOTAL',
-            hc: 0, plan: 0, present: 0, late: 0, 
-            absent: 0, leave: 0, actual: 0, diff: 0, cost: 0
-        };
+        const grandTotal = { name: 'GRAND TOTAL', hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
 
         rawData.forEach(row => {
-            // Level 1: Line
             let mainKey = viewMode === 'LINE' ? (row.line_name || 'Unassigned') : (row.shift_name || 'Unassigned');
-            // Level 2: Shift (หรือ Team)
-            let subKeyName = viewMode === 'LINE' 
-                ? `${row.shift_name || '-'} ${row.team_group ? '('+row.team_group+')' : ''}`
-                : (row.line_name || '-');
-            // Level 3: Emp Type
+            let subKeyName = viewMode === 'LINE' ? `${row.shift_name || '-'} ${row.team_group ? '('+row.team_group+')' : ''}` : (row.line_name || '-');
             let itemKeyName = row.emp_type || 'General';
 
+            // Extract Shift ID for linking
+            let shiftIdForLink = '';
+            if (row.shift_name && row.shift_name.includes('Day')) shiftIdForLink = '1';
+            else if (row.shift_name && row.shift_name.includes('Night')) shiftIdForLink = '2';
+
             const stats = {
-                hc: parseInt(row.total_hc || 0), 
-                plan: parseInt(row.plan || 0),
-                present: parseInt(row.present || 0),
-                late: parseInt(row.late || 0),
-                absent: parseInt(row.absent || 0),
-                leave: parseInt(row.leave || 0),
+                hc: parseInt(row.total_hc || 0), plan: parseInt(row.plan || 0),
+                present: parseInt(row.present || 0), late: parseInt(row.late || 0),
+                absent: parseInt(row.absent || 0), leave: parseInt(row.leave || 0),
                 cost: parseFloat(row.total_cost || 0)
             };
             stats.actual = stats.present + stats.late;
 
-            // Init Groups
+            // Level 1: Parent
             if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
 
-            if (!groups[mainKey].subs[subKeyName]) groups[mainKey].subs[subKeyName] = { name: subKeyName, items: {}, total: this._initStats() };
+            // Level 2: Child (Shift)
+            if (!groups[mainKey].subs[subKeyName]) {
+                groups[mainKey].subs[subKeyName] = { 
+                    name: subKeyName, 
+                    items: {}, 
+                    total: this._initStats(),
+                    // 🔥 Meta: Line & Shift
+                    meta: {
+                        line: (viewMode === 'LINE') ? mainKey : subKeyName,
+                        shift: shiftIdForLink
+                    }
+                };
+            }
             this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
 
+            // Level 3: GrandChild (Type)
             if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
-                groups[mainKey].subs[subKeyName].items[itemKeyName] = { name: itemKeyName, ...stats };
+                groups[mainKey].subs[subKeyName].items[itemKeyName] = { 
+                    name: itemKeyName, 
+                    // 🔥 Meta: Line & Shift & Type
+                    meta: {
+                        line: (viewMode === 'LINE') ? mainKey : subKeyName,
+                        shift: shiftIdForLink,
+                        type: itemKeyName // ส่งชื่อ Type ไปด้วย
+                    },
+                    ...stats 
+                };
             } else {
                 this._accumulateStats(groups[mainKey].subs[subKeyName].items[itemKeyName], stats);
             }
-
             this._accumulateStats(grandTotal, stats);
         });
 
-        // Calculate Diffs
         this._calculateDiff(grandTotal);
         Object.values(groups).forEach(group => {
             this._calculateDiff(group.total);
@@ -170,113 +217,126 @@ const UI = {
                 Object.values(sub.items).forEach(item => this._calculateDiff(item));
             });
         });
-
         return { groups, grandTotal };
     },
 
-    _initStats() {
-        return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
-    },
+    _initStats() { return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }; },
 
     _accumulateStats(target, source) {
-        target.hc += source.hc;
-        target.plan += source.plan;
-        target.present += source.present;
-        target.late += source.late;
-        target.absent += source.absent;
-        target.leave += source.leave;
-        target.actual += source.actual;
-        target.cost += source.cost;
+        target.hc += source.hc; target.plan += source.plan; target.present += source.present;
+        target.late += source.late; target.absent += source.absent; target.leave += source.leave;
+        target.actual += source.actual; target.cost += source.cost;
     },
 
-    _calculateDiff(obj) {
-        obj.diff = obj.actual - obj.plan;
-    },
+    _calculateDiff(obj) { obj.diff = obj.actual - obj.plan; },
 
     renderTable(data, viewMode = 'LINE') {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`;
-            return;
-        }
-
+        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; return; }
+        
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
-
+        
         // 1. Grand Total
         tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
-
-        // 2. Groups
+        
         const sortedKeys = Object.keys(groups).sort();
         sortedKeys.forEach(key => {
             const group = groups[key];
+            // 2. Parent Row (Line)
+            tbody.innerHTML += this._createRowHtml(group.name, group.total, { 
+                isParent: true, 
+                viewMode, 
+                rawName: group.name 
+            });
             
-            // Parent Row (Line)
-            // * คลิกเพื่อดู Drill-down ทั้งไลน์ *
-            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode, rawName: group.name });
-
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
             sortedSubs.forEach(sub => {
-                // Child Row (Shift)
-                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { isChild: true });
-
-                // GrandChild Row (Emp Type)
+                // 3. Child Row (Shift)
+                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
+                    isChild: true, 
+                    meta: sub.meta // Pass Metadata
+                });
+                
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
                 sortedItems.forEach(item => {
-                    tbody.innerHTML += this._createRowHtml(item.name, item, { isGrandChild: true });
+                    // 4. Grandchild Row (Type) - Clickable!
+                    tbody.innerHTML += this._createRowHtml(item.name, item, { 
+                        isGrandChild: true,
+                        meta: item.meta // Pass Metadata
+                    });
                 });
             });
         });
     },
 
     _createRowHtml(label, stats, options = {}) {
-        const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName } = options;
-
-        let diffClass = 'text-muted opacity-50';
-        let diffPrefix = '';
+        const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta } = options;
+        
+        let diffClass = 'text-muted opacity-50', diffPrefix = '';
         if (stats.diff < 0) diffClass = 'text-danger fw-bold';
         else if (stats.diff > 0) { diffClass = 'text-warning fw-bold text-dark'; diffPrefix = '+'; }
         else if (stats.plan > 0) diffClass = 'text-success fw-bold';
 
-        let rowClass = '', nameHtml = label, rowAttr = '';
+        let rowClass = '', nameHtml = label;
+        
+        // --- 🔗 Drill-down Parameters ---
+        let tLine = '', tShift = '', tType = 'ALL';
+        let canClick = false;
 
         if (isGrand) {
             rowClass = 'table-dark fw-bold border-bottom-0';
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
-        } else if (isParent) {
+        } 
+        else if (isParent) {
             rowClass = 'table-secondary fw-bold border-top border-white';
             nameHtml = `<i class="fas fa-layer-group me-2 opacity-50"></i>${label}`;
-            
-            // 🔥 Drill-down Link for Line
             if (viewMode === 'LINE') {
-                rowClass += ' cursor-pointer';
-                rowAttr = `onclick="Actions.openDetailModal('${rawName}', '', 'ALL')" title="ดูรายละเอียด ${rawName}"`;
+                tLine = rawName;
+                canClick = true;
+                nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '', 'ALL', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
             }
-        } else if (isChild) {
+        } 
+        else if (isChild) {
             rowClass = 'bg-light fw-bold';
             nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-clock me-1 text-muted"></i>${label}</span></div>`;
-        } else if (isGrandChild) {
+            if (meta) {
+                tLine = meta.line;
+                tShift = meta.shift;
+                canClick = true;
+            }
+        } 
+        else if (isGrandChild) {
             rowClass = 'bg-white';
             nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
+            // 🔥 Level 3 Drill-down
+            if (meta) {
+                tLine = meta.line;
+                tShift = meta.shift;
+                tType = meta.type; // Specific Type
+                canClick = true;
+            }
         }
+
+        // Helper Click Attribute
+        const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
+        const hoverClass = canClick ? 'cursor-pointer-cell' : '';
 
         const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
 
         return `
-            <tr class="${rowClass}" ${rowAttr}>
+            <tr class="${rowClass}">
                 <td class="ps-3 text-truncate" style="max-width: 300px;">${nameHtml}</td>
                 <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
-                <td class="text-center fw-bold">${stats.plan}</td>
-                <td class="text-center text-success">${stats.present || '-'}</td>
-                <td class="text-center text-warning text-dark">${stats.late || '-'}</td>
-                <td class="text-center text-danger cursor-pointer" onclick="event.stopPropagation(); Actions.openDetailModal('${rawName || ''}', '', 'ABSENT')" title="ดูคนขาด">${stats.absent || '-'}</td>
-                <td class="text-center text-info text-dark">${stats.leave || '-'}</td>
-                <td class="text-center fw-bold border-start border-end" style="background-color: rgba(0,0,0,0.02);">${stats.actual}</td>
+                <td class="text-center fw-bold ${hoverClass}" ${clickAttr('ALL')}>${stats.plan}</td>
+                <td class="text-center text-success ${hoverClass}" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
+                <td class="text-center text-warning text-dark ${hoverClass}" ${clickAttr('LATE')}>${stats.late || '-'}</td>
+                <td class="text-center text-danger ${hoverClass}" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
+                <td class="text-center text-info text-dark ${hoverClass}" ${clickAttr('LEAVE')}>${stats.leave || '-'}</td>
+                <td class="text-center fw-bold border-start border-end ${hoverClass}" style="background-color: rgba(0,0,0,0.02);" ${clickAttr('PRESENT_AND_LATE')}>${stats.actual}</td>
                 <td class="text-center ${diffClass}">${diffPrefix}${stats.diff}</td>
                 <td class="text-end pe-4 text-secondary small">${costDisplay}</td>
-            </tr>
-        `;
+            </tr>`;
     },
 
     animateNumber(elementId, endValue) {
@@ -285,85 +345,132 @@ const UI = {
         obj.innerHTML = endValue.toLocaleString();
     },
 
-    showToast(message, type) { alert(message); }, // เปลี่ยนเป็น Toast จริงๆ สวยกว่าถ้ามี Lib
+    showToast(message, type) { alert(message); },
     showLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
     hideLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },
-    
-    getStatusBadge(status) {
-        const map = { 'PRESENT': 'bg-success', 'LATE': 'bg-warning text-dark', 'ABSENT': 'bg-danger', 'LEAVE': 'bg-info text-dark', 'WAITING': 'bg-secondary' };
-        let badgeClass = map[status] || (status && status.includes('LEAVE') ? map['LEAVE'] : 'bg-light text-dark border');
-        return `<span class="badge ${badgeClass} fw-normal px-2 py-1">${status}</span>`;
-    }
 };
 
-// --- 4. ACTIONS & DRILL-DOWN ---
+// =============================================================================
+// 4. ACTIONS
+// =============================================================================
 
 const Actions = {
-    // เก็บโครงสร้าง Line/Team ไว้ใช้สร้าง Dropdown ในตาราง
     _structureCache: { lines: [], teams: [] },
+    
+    // 🔥 State Management
+    _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
 
-    // 4.1 เปิดหน้าต่างรายชื่อ (Drill-down)
-    async openDetailModal(line, shiftId, filterStatus = 'ALL') {
-        const date = document.getElementById('filterDate').value;
+    // -------------------------------------------------------------------------
+    // 4.1 DETAIL MODAL (Drill-down)
+    // -------------------------------------------------------------------------
+    async openDetailModal(line, shiftId, empType = 'ALL', filterStatus = 'ALL') {
+        // Handle Backward Compatibility
+        if (arguments.length === 3 && (empType === 'ALL' || empType === 'PRESENT' || empType === 'LATE' || empType === 'ABSENT')) {
+             filterStatus = empType;
+             empType = 'ALL';
+        }
+
+        this._lastDetailParams = { line, shiftId, empType, filterStatus };
+        
         const modal = new bootstrap.Modal(document.getElementById('detailModal'));
         
-        let title = line ? `${line}` : 'รายละเอียด';
+        let title = line ? `${line}` : 'รายละเอียดทั้งหมด';
         if (shiftId) title += ` (${shiftId == 1 ? 'กะเช้า ☀️' : 'กะดึก 🌙'})`;
-        if (filterStatus !== 'ALL') title += ` - แสดงเฉพาะ ${filterStatus}`;
-
+        if (empType !== 'ALL') title += ` [${empType}]`;
+        if (filterStatus !== 'ALL') title += ` - ${filterStatus}`;
+        
         document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
         
-        // [FIXED] แก้ colspan เป็น 9 ให้พอดีกับจำนวนคอลัมน์ใหม่
-        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>`;
+        // Dynamic Header (with Cost)
+        const tableHeader = `
+            <thead>
+                <tr class="table-light text-secondary small text-center">
+                    <th>พนักงาน</th>
+                    <th width="10%">ไลน์</th>
+                    <th width="8%">ทีม</th>
+                    <th width="8%">กะ</th>
+                    <th width="10%">เข้า</th>
+                    <th width="10%">ออก</th>
+                    <th width="10%">สถานะ</th>
+                    <th width="15%">หมายเหตุ</th>
+                    <th width="10%" class="text-end">Est. Cost</th>
+                    <th width="8%">Action</th>
+                </tr>
+            </thead>
+        `;
+        document.getElementById('detailModalTable').innerHTML = `${tableHeader}<tbody id="detailModalBody"><tr><td colspan="10" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr></tbody>`;
         
         modal.show();
-
-        // [FIX] Reset Search Box
         const searchInput = document.getElementById('searchDetail');
         if(searchInput) searchInput.value = '';
 
-        // [Logic สำคัญ] เช็คว่ามีข้อมูล Dropdown หรือยัง ถ้าไม่มีให้โหลดก่อน
-        if (this._structureCache.lines.length === 0) {
-            await this.initDropdowns(); 
-        }
+        await this.fetchDetailData();
+    },
+
+    async fetchDetailData() {
+        const { line, shiftId, empType, filterStatus } = this._lastDetailParams;
+        const date = document.getElementById('filterDate').value;
+
+        if (this._structureCache.lines.length === 0) { await this.initDropdowns(); }
 
         try {
-            const res = await fetch('api/api_daily_operations.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'get_daily_details',
-                    date: document.getElementById('filterDate').value,
-                    line: line,
-                    shift_id: shiftId,
-                    filter_status: filterStatus
-                })
-            });
+            // 🔥 ส่ง empType ไป API
+            const url = `api/api_daily_operations.php?action=read_daily&date=${date}&line=${encodeURIComponent(line)}&type=${encodeURIComponent(empType)}`;
+            const res = await fetch(url);
             const json = await res.json();
             
             if (json.success) {
-                this.renderDetailTable(json.data);
+                let filteredData = json.data;
+                
+                // Filter Logic
+                if (filterStatus !== 'ALL') {
+                    if (filterStatus === 'PRESENT_AND_LATE') {
+                        filteredData = json.data.filter(r => r.status === 'PRESENT' || r.status === 'LATE');
+                    } else if (filterStatus === 'LEAVE') {
+                        // รวมกลุ่ม Leave
+                        const nonLeaveStatus = ['PRESENT', 'LATE', 'ABSENT', 'WAITING'];
+                        filteredData = json.data.filter(r => !nonLeaveStatus.includes(r.status));
+                    } else {
+                        filteredData = json.data.filter(r => r.status === filterStatus);
+                    }
+                }
+                
+                // Filter Shift
+                if (shiftId) {
+                    filteredData = filteredData.filter(r => r.shift_id == shiftId || r.default_shift_id == shiftId);
+                }
+
+                // Sorting
+                filteredData.sort((a, b) => {
+                    const score = (row) => {
+                        if (parseInt(row.is_forgot_out) === 1) return 0;
+                        if (row.status === 'ABSENT') return 1;
+                        if (row.status === 'LATE') return 2;
+                        return 3;
+                    };
+                    return score(a) - score(b);
+                });
+
+                this.renderDetailTable(filteredData);
             } else {
-                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">${json.message}</td></tr>`;
+                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">${json.message}</td></tr>`;
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">Failed to load data</td></tr>`;
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
 
-    // 4.2 วาดตารางรายชื่อ (Inline Edit)
     renderDetailTable(list) {
         const tbody = document.getElementById('detailModalBody');
         tbody.innerHTML = '';
 
         if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
-        const formatTime = (t) => t ? t.substring(11, 16) : '';
-        const createOptions = (items, selectedVal, isTeam = false) => {
+        const createOptions = (items, selectedVal) => {
             let html = '';
             items.forEach(item => {
                 const val = item;
@@ -375,129 +482,96 @@ const Actions = {
 
         list.forEach(row => {
             const uid = row.emp_id; 
-            
-            // 1. Snapshot Options (ข้อมูลรายวัน)
             const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line); 
-            const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group, true);
+            const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group);
             const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
             const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
 
-            // 2. Status Options
+            // Status List (Updated)
             const statusOptions = [
-                { val: 'PRESENT', label: '✅ มา' },
-                { val: 'LATE', label: '⏰ สาย' },
-                { val: 'ABSENT', label: '❌ ขาด' },
-                { val: 'SICK', label: '🤢 ป่วย' },
-                { val: 'BUSINESS', label: '👜 กิจ' },
-                { val: 'VACATION', label: '🏖️ พักร้อน' },
-                { val: 'OTHER', label: '⚪ อื่นๆ' }
+                { val: 'WAITING',  label: '⏳ รอเข้างาน (Waiting)' },
+                { val: 'PRESENT',  label: '✅ มา (Present)' },
+                { val: 'LATE',     label: '⏰ สาย (Late)' },
+                { val: 'ABSENT',   label: '❌ ขาด (Absent)' },
+                { val: 'SICK',     label: '🤢 ลาป่วย (Sick)' },
+                { val: 'BUSINESS', label: '👜 ลากิจ (Business)' },
+                { val: 'VACATION', label: '🏖️ พักร้อน (Vacation)' },
+                { val: 'OTHER',    label: '⚪ อื่นๆ (Other)' }
             ];
             let statusOptsHtml = '';
             statusOptions.forEach(opt => {
-                const selected = (row.status === opt.val) ? 'selected' : '';
-                statusOptsHtml += `<option value="${opt.val}" ${selected}>${opt.label}</option>`;
+                const sel = (row.status === opt.val) ? 'selected' : '';
+                statusOptsHtml += `<option value="${opt.val}" ${sel}>${opt.label}</option>`;
             });
 
-            // 🔥 [NEW] 3. เตรียมข้อมูล Master เพื่อส่งไปหน้า Edit Modal
-            // เราต้อง map ชื่อ field ให้ตรงกับที่ openEmpEdit ต้องการ
-            const masterData = {
-                emp_id: row.emp_id,
-                name_th: row.name_th,
-                position: row.position,
-                // ระวัง! ต้องส่งค่า Master (row.line) ไม่ใช่ Snapshot (row.actual_line)
-                line: row.line, 
-                team_group: row.team_group,
-                default_shift_id: row.default_shift_id,
-                is_active: 1 // สมมติว่าเป็น 1 เพราะโชว์ในหน้านี้ได้
-            };
-            const masterDataJson = encodeURIComponent(JSON.stringify(masterData));
+            // Data Objects
+            const masterData = { emp_id: row.emp_id, name_th: row.name_th, position: row.position, line: row.line, team_group: row.team_group, default_shift_id: row.default_shift_id, is_active: 1 };
+            const masterJson = encodeURIComponent(JSON.stringify(masterData));
+
+            // Logic
+            let trClass = '';
+            let outTimeDisplay = row.out_time;
+            if (parseInt(row.is_forgot_out) === 1) {
+                trClass = 'table-danger';
+                outTimeDisplay = `<span class="text-danger fw-bold" title="ระบบตัดจบ 8 ชม."><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
+            } else if (!outTimeDisplay) {
+                outTimeDisplay = ''; 
+            }
+
+            const costVal = parseFloat(row.est_cost || 0);
+            const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
 
             const tr = document.createElement('tr');
+            if(trClass) tr.className = trClass;
+
             tr.innerHTML = `
                 <td class="ps-4">
                     <div class="fw-bold text-truncate" style="max-width: 150px;" title="${row.name_th}">${row.name_th}</div>
-                    <small class="text-muted" style="font-size:0.7rem;">${row.emp_id}</small>
+                    <small class="text-muted font-monospace" style="font-size:0.7rem;">${row.emp_id}</small>
                 </td>
-                
+                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
+                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
                 <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-light small" id="line_${uid}" style="font-size: 0.8rem;">
-                        ${lineOpts}
+                    <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary" id="shift_${uid}" style="font-size: 0.8rem;">
+                        <option value="1" ${shift1Sel}>Day</option><option value="2" ${shift2Sel}>Night</option>
                     </select>
-                </td>
-
-                <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-light small" id="team_${uid}" style="font-size: 0.8rem;">
-                        <option value="-">-</option>
-                        ${teamOpts}
-                    </select>
-                </td>
-
-                <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-light small fw-bold text-primary" id="shift_${uid}" style="font-size: 0.8rem;">
-                        <option value="1" ${shift1Sel}>Day</option>
-                        <option value="2" ${shift2Sel}>Night</option>
-                    </select>
-                </td>
-
-                <td class="p-1 text-center">
-                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" 
-                           id="in_${uid}" value="${formatTime(row.scan_in_time)}">
                 </td>
                 <td class="p-1 text-center">
-                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" 
-                           id="out_${uid}" value="${formatTime(row.scan_out_time)}">
+                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
                 </td>
-
-                <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-light fw-bold" id="status_${uid}" style="font-size: 0.8rem;">
-                        ${statusOptsHtml}
-                    </select>
+                <td class="p-1 text-center">
+                     ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
+                     <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
+                     ${parseInt(row.is_forgot_out) === 1 ? `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>` : ''}
                 </td>
-
-                <td class="p-1">
-                    <input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0" 
-                           id="remark_${uid}" value="${row.remark || ''}" placeholder="...">
-                </td>
-
-                <td class="text-center pe-4 text-nowrap">
-                    <button class="btn btn-sm btn-outline-secondary border-0 rounded-circle me-1" 
-                            style="width: 30px; height: 30px;"
-                            onclick="Actions.openEmpEdit('${masterDataJson}')" 
-                            title="แก้ไขข้อมูลหลัก (Master Data)">
-                        <i class="fas fa-user-edit"></i>
-                    </button>
-
-                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" 
-                            style="width: 30px; height: 30px;"
-                            onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" 
-                            title="บันทึกการลงเวลา">
-                        <i class="fas fa-save"></i>
-                    </button>
+                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent fw-bold" id="status_${uid}" style="font-size: 0.8rem;">${statusOptsHtml}</select></td>
+                <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
+                <td class="text-end pe-3 align-middle">${costHtml}</td>
+                <td class="text-center text-nowrap">
+                    <button class="btn btn-sm btn-outline-secondary border-0 rounded-circle me-1" style="width: 25px; height: 25px; padding: 0;" onclick="Actions.openEmpEdit('${masterJson}')" title="Edit Master"><i class="fas fa-user-edit" style="font-size: 0.7rem;"></i></button>
+                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 25px; height: 25px; padding: 0;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" title="Save"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     },
 
-    // 4.3 บันทึกสถานะ (แก้ไขให้รับ empId และเช็ค Element ก่อนดึงค่า)
+    // 4.3 Save Inline Status
     async saveLogStatus(logId, empId) {
-        // ดึงค่าจาก Input ทั้งหมด
         const elStatus = document.getElementById(`status_${empId}`);
-        const elLine   = document.getElementById(`line_${empId}`);
-        const elTeam   = document.getElementById(`team_${empId}`);
-        const elShift  = document.getElementById(`shift_${empId}`);
+        const elLine = document.getElementById(`line_${empId}`);
+        const elTeam = document.getElementById(`team_${empId}`);
+        const elShift = document.getElementById(`shift_${empId}`);
         const elRemark = document.getElementById(`remark_${empId}`);
-        const elIn     = document.getElementById(`in_${empId}`);
-        const elOut    = document.getElementById(`out_${empId}`);
+        const elIn = document.getElementById(`in_${empId}`);
+        const elOut = document.getElementById(`out_${empId}`);
         
-        if (!elStatus || !elLine) return; // Safety check
+        if (!elStatus || !elLine) return;
 
-        // เตรียม Payload
         const dateStr = document.getElementById('filterDate').value;
         const timeIn = elIn.value;
         const timeOut = elOut.value;
 
-        // Date Logic (เหมือนเดิม)
         let scanInFull = timeIn ? `${dateStr} ${timeIn}:00` : null;
         let scanOutFull = null;
         if (timeOut) {
@@ -512,146 +586,75 @@ const Actions = {
 
         const btn = event.currentTarget; 
         const originalIcon = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
         try {
             const res = await fetch('api/api_daily_operations.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'update_log',
-                    log_id: logId,
-                    emp_id: empId,
-                    log_date: dateStr,
-                    
-                    // 🔥 ส่งข้อมูล Snapshot ที่แก้ไขไปด้วย
-                    actual_line: elLine.value,
-                    actual_team: elTeam.value,
-                    shift_id: elShift.value,
-
-                    status: elStatus.value,
-                    remark: elRemark.value,
-                    scan_in_time: scanInFull,
-                    scan_out_time: scanOutFull
+                    action: 'update_log', log_id: logId, emp_id: empId, log_date: dateStr,
+                    actual_line: elLine.value, actual_team: elTeam.value, shift_id: elShift.value,
+                    status: elStatus.value, remark: elRemark.value,
+                    scan_in_time: scanInFull, scan_out_time: scanOutFull
                 })
             });
             const json = await res.json();
 
             if (json.success) {
-                btn.classList.replace('btn-primary', 'btn-success');
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => {
-                    btn.classList.replace('btn-success', 'btn-primary');
-                    btn.innerHTML = originalIcon;
-                    btn.disabled = false;
-                    App.loadData(); // Refresh Main Dashboard
-                }, 1000);
+                btn.classList.replace('btn-primary', 'btn-success'); btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(async () => {
+                    btn.classList.replace('btn-success', 'btn-primary'); btn.innerHTML = originalIcon; btn.disabled = false;
+                    await Actions.fetchDetailData(); 
+                    App.loadData();
+                }, 500);
             } else {
-                alert('Error: ' + json.message);
-                btn.innerHTML = originalIcon;
-                btn.disabled = false;
+                alert('Error: ' + json.message); btn.innerHTML = originalIcon; btn.disabled = false;
             }
         } catch (err) {
-            alert('Failed: ' + err.message);
-            btn.innerHTML = originalIcon;
-            btn.disabled = false;
+            alert('Failed: ' + err.message); btn.innerHTML = originalIcon; btn.disabled = false;
         }
     },
 
-    // 4.3 เปิดหน้าต่างแก้ไข (Edit Modal) - แก้ไขให้รับค่า Line/Team มาใส่
-    openEditModal(row) {
-        const modal = new bootstrap.Modal(document.getElementById('editLogModal'));
-        
-        // Fill IDs
-        document.getElementById('editLogId').value = row.log_id || 0;
-        document.getElementById('editEmpIdHidden').value = row.emp_id;
-        document.getElementById('editEmpName').value = row.name_th;
-        
-        // 🔥 Fill Snapshot Data (Line & Team)
-        // ถ้าเป็นข้อมูลเก่า row.line คือ actual_line, ถ้าใหม่คือ master line
-        document.getElementById('editLogLine').value = row.line || 'ASSEMBLY'; 
-        document.getElementById('editLogTeam').value = row.team_group || '-';
-        
-        // Fill Status & Shift
-        document.getElementById('editStatus').value = row.status || 'WAITING';
-        document.getElementById('editLogShift').value = row.actual_shift_id || '';
-        
-        // Fix Date Format
-        document.getElementById('editScanInTime').value = row.scan_in_time ? row.scan_in_time.replace(' ', 'T') : '';
-        document.getElementById('editScanOutTime').value = row.scan_out_time ? row.scan_out_time.replace(' ', 'T') : '';
-        document.getElementById('editRemark').value = row.remark || '';
-        
-        modal.show();
-    },
-
-    // 4.4 บันทึกข้อมูล (Save) - ส่ง Line/Team กลับไปด้วย
-    async saveLogChanges() {
-        const payload = {
-            action: 'update_log',
-            log_id: document.getElementById('editLogId').value,
-            emp_id: document.getElementById('editEmpIdHidden').value,
-            
-            // 🔥 ส่งค่า Snapshot ที่เลือกใหม่กลับไป
-            actual_line: document.getElementById('editLogLine').value,
-            actual_team: document.getElementById('editLogTeam').value,
-            
-            status: document.getElementById('editStatus').value,
-            shift_id: document.getElementById('editLogShift').value,
-            scan_in_time: document.getElementById('editScanInTime').value.replace('T', ' '),
-            scan_out_time: document.getElementById('editScanOutTime').value.replace('T', ' '),
-            remark: document.getElementById('editRemark').value,
-            
-            // เอาวันที่จาก Dashboard ไปด้วย เพื่อความชัวร์
-            log_date: document.getElementById('filterDate').value 
-        };
-
-        if(!confirm('ยืนยันการบันทึกการแก้ไขประวัติ?')) return;
-
+    // -------------------------------------------------------------------------
+    // 4.4 INITIALIZE DROPDOWNS
+    // -------------------------------------------------------------------------
+    async initDropdowns() {
         try {
-            const res = await fetch('api/api_daily_operations.php', { // เรียกใช้ไฟล์เดิม
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }); 
+            const res = await fetch('api/api_master_data.php?action=read_structure');
             const json = await res.json();
-            
-            if(json.success) {
-                alert('บันทึกเรียบร้อย!');
-                bootstrap.Modal.getInstance(document.getElementById('editLogModal')).hide();
+            if (json.success) {
+                this._structureCache.lines = json.lines;
+                this._structureCache.teams = json.teams;
                 
-                // Refresh หน้าจอ
-                const date = document.getElementById('filterDate').value;
-                // ถ้าเปิดมาจาก Drill-down ให้รีเฟรช Drill-down ด้วย
-                if (document.getElementById('detailModal').classList.contains('show')) {
-                     // ดึงชื่อ Line จากหัวข้อ Modal (Trick) หรือตัวแปร Global
-                     const currentTitle = document.getElementById('detailModalTitle').innerText; // e.g. "PAINT (Day)"
-                     // แต่เพื่อความง่าย Refresh Main Data ก็พอ
-                }
-                
-                App.loadData();
-            } else {
-                alert('Error: ' + json.message);
+                const lineSelects = ['editLogLine', 'filterLine', 'empEditLine', 'newEmpLine']; 
+                lineSelects.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = '<option value="">-- Select --</option>';
+                        if(id==='filterLine') el.innerHTML += '<option value="ALL">All Lines</option>';
+                        json.lines.forEach(l => el.innerHTML += `<option value="${l}">${l}</option>`);
+                    }
+                });
+                const teamSelects = ['editLogTeam', 'empEditTeam', 'newEmpTeam'];
+                teamSelects.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = '<option value="">-</option>';
+                        json.teams.forEach(t => el.innerHTML += `<option value="${t}">Team ${t}</option>`);
+                    }
+                });
             }
-        } catch(err) {
-            alert('Save Failed: ' + err.message);
-        }
+        } catch (err) { console.error('Failed to load dropdowns:', err); }
     },
 
-    // [FIX] ระบบค้นหา (แก้ Bug ให้หาเจอใน detailModalBody)
     initSearch() {
         const input = document.getElementById('searchDetail');
         if(!input) return;
-
-        // Clone Node เพื่อลบ Event เก่า
         const newInput = input.cloneNode(true);
         input.parentNode.replaceChild(newInput, input);
-
         newInput.addEventListener('keyup', function() {
             const filter = this.value.toLowerCase();
-            // [FIX] ต้องหาใน #detailModalBody
             const rows = document.querySelectorAll('#detailModalBody tr');
-
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
                 row.style.display = text.includes(filter) ? '' : 'none';
@@ -659,13 +662,14 @@ const Actions = {
         });
     },
 
-    // --- 5. SHIFT PLANNER ---
+    // -------------------------------------------------------------------------
+    // 6. SHIFT PLANNER & EMPLOYEE MANAGER
+    // -------------------------------------------------------------------------
     async openShiftPlanner() {
         const modalEl = document.getElementById('shiftPlannerModal');
         const modal = new bootstrap.Modal(modalEl);
         document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
         modal.show();
-
         try {
             const res = await fetch('api/api_master_data.php?action=read_team_shifts');
             const json = await res.json();
@@ -676,173 +680,94 @@ const Actions = {
             document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
-
     renderShiftPlannerTable(teams) {
         const tbody = document.getElementById('shiftPlannerBody');
         tbody.innerHTML = '';
         let currentLine = null;
-
         teams.forEach(t => {
             if (t.line !== currentLine) {
                 currentLine = t.line;
                 tbody.innerHTML += `<tr class="table-secondary fw-bold"><td colspan="4">${currentLine}</td></tr>`;
             }
-            
             const isDay = (t.default_shift_id == 1);
-            const shiftBadge = isDay 
-                ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i> DAY</span>`
-                : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i> NIGHT</span>`;
-
+            const shiftBadge = isDay ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i> DAY</span>` : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i> NIGHT</span>`;
             const btnClass = isDay ? 'btn-outline-dark' : 'btn-outline-info';
             const btnLabel = isDay ? '<i class="fas fa-moon me-1"></i> To Night' : '<i class="fas fa-sun me-1"></i> To Day';
             const targetShiftId = isDay ? 2 : 1;
-
-            tbody.innerHTML += `
-                <tr>
-                    <td class="ps-4"><span class="fw-bold text-primary">${t.team_group || '-'}</span> <small class="text-muted">(${t.member_count} คน)</small></td>
-                    <td class="text-center">${shiftBadge}</td>
-                    <td class="text-center text-muted small">${t.default_shift_id}</td>
-                    <td class="text-center pe-4">
-                        <button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">${btnLabel}</button>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML += `<tr><td class="ps-4"><span class="fw-bold text-primary">${t.team_group || '-'}</span> <small class="text-muted">(${t.member_count} คน)</small></td><td class="text-center">${shiftBadge}</td><td class="text-center text-muted small">${t.default_shift_id}</td><td class="text-center pe-4"><button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">${btnLabel}</button></td></tr>`;
         });
     },
-
     async switchTeamShift(line, team, newShiftId) {
         const shiftName = (newShiftId == 1) ? "🌞 DAY" : "🌙 NIGHT";
         if (!confirm(`เปลี่ยนกะของ [${line} - ${team}] เป็น ${shiftName} ?`)) return;
-
         try {
             const res = await fetch('api/api_master_data.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'update_team_shift', line, team, new_shift_id: newShiftId })
             });
             const json = await res.json();
-
-            if (json.success) {
-                alert(`✅ เปลี่ยนกะสำเร็จ! กรุณากด 'Reset & Sync' ข้อมูลใหม่`);
-                this.openShiftPlanner();
-            } else {
-                alert('Error: ' + json.message);
-            }
-        } catch (err) {
-            alert('Failed: ' + err.message);
-        }
+            if (json.success) { alert(`✅ เปลี่ยนกะสำเร็จ! กรุณากด 'Reset & Sync' ข้อมูลใหม่`); this.openShiftPlanner(); }
+            else { alert('Error: ' + json.message); }
+        } catch (err) { alert('Failed: ' + err.message); }
     },
 
-    // 5.5 Export Excel
-    exportExcel() {
-        const date = document.getElementById('filterDate').value;
-        // ส่งไปยังไฟล์ export ที่สร้างไว้
-        window.location.href = `api/api_export.php?date=${date}`;
-    },
+    exportExcel() { window.location.href = `api/api_export.php?date=${document.getElementById('filterDate').value}`; },
     
-    // Variables Cache สำหรับ Address Book (เก็บข้อมูลดิบไว้ค้นหา)
+    // Employee Manager Functions
     _employeeCache: [],
-
-    // 5.6 เปิดสมุดรายชื่อ (Address Book)
     async openEmployeeManager() {
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
         document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
         modal.show();
-
         try {
             const res = await fetch('api/api_master_data.php?action=read_employees');
             const json = await res.json();
-            
-            if (json.success) {
-                this._employeeCache = json.data;
-                this.renderEmployeeTable(json.data);
-            } else {
-                alert('Error loading employees');
-            }
-        } catch (err) {
-            console.error(err);
-        }
+            if (json.success) { this._employeeCache = json.data; this.renderEmployeeTable(json.data); }
+        } catch (e) { console.error(e); }
     },
-
-    // 5.7 วาดตารางพนักงาน
     renderEmployeeTable(list) {
-        const tbody = document.getElementById('empListBody');
-        tbody.innerHTML = '';
-
-        if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
-            return;
-        }
-
-        const displayList = list.slice(0, 100); // Limit 100 คนแรกเพื่อความลื่น
-
-        displayList.forEach(emp => {
-            const statusBadge = (emp.is_active == 1) 
-                ? '<span class="badge bg-success bg-opacity-10 text-success">Active</span>' 
-                : '<span class="badge bg-secondary bg-opacity-10 text-secondary">Inactive</span>';
-            
-            const empJson = encodeURIComponent(JSON.stringify(emp));
-
-            tbody.innerHTML += `
-                <tr>
-                    <td class="ps-4 font-monospace small">${emp.emp_id}</td>
-                    <td class="fw-bold text-primary">${emp.name_th}</td>
-                    <td>${emp.position || '-'}</td>
-                    <td><span class="badge bg-light text-dark border">${emp.line}</span></td>
-                    <td class="text-center">${emp.shift_name || '-'}</td>
-                    <td class="text-center fw-bold">${emp.team_group || '-'}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="text-center pe-4">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="Actions.openEmpEdit('${empJson}')">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
+         const tbody = document.getElementById('empListBody'); tbody.innerHTML = '';
+         if(!list || list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">No Data</td></tr>`; return; }
+         list.slice(0, 100).forEach(emp => {
+             const statusBadge = (emp.is_active == 1) ? '<span class="badge bg-success bg-opacity-10 text-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>';
+             const empJson = encodeURIComponent(JSON.stringify(emp));
+             tbody.innerHTML += `<tr><td class="ps-4 font-monospace small">${emp.emp_id}</td><td class="fw-bold text-primary">${emp.name_th}</td><td>${emp.position||'-'}</td><td><span class="badge bg-light text-dark border">${emp.line}</span></td><td class="text-center">${emp.shift_name||'-'}</td><td class="text-center fw-bold">${emp.team_group||'-'}</td><td class="text-center">${statusBadge}</td><td class="text-center"><button class="btn btn-sm btn-outline-secondary" onclick="Actions.openEmpEdit('${empJson}')"><i class="fas fa-edit"></i></button></td></tr>`;
+         });
     },
-
-    // 5.8 กรองรายชื่อ (Search)
     filterEmployeeList() {
         const term = document.getElementById('empSearchBox').value.toLowerCase();
-        const filtered = this._employeeCache.filter(emp => {
-            return (emp.name_th && emp.name_th.toLowerCase().includes(term)) ||
-                   (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) ||
-                   (emp.line && emp.line.toLowerCase().includes(term));
-        });
+        const filtered = this._employeeCache.filter(emp => (emp.name_th && emp.name_th.toLowerCase().includes(term)) || (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) || (emp.line && emp.line.toLowerCase().includes(term)));
         this.renderEmployeeTable(filtered);
     },
-
-    // 5.9 เปิดหน้าแก้ไข/สร้างใหม่ (Edit Modal)
-    openEmpEdit(empDataEncoded = null) {
+    openEmpEdit(data) {
         const modal = new bootstrap.Modal(document.getElementById('empEditModal'));
-        const isEdit = !!empDataEncoded;
-        
+        const isEdit = !!data;
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
-        document.getElementById('empEditTitle').innerHTML = isEdit ? '<i class="fas fa-user-edit me-2"></i>Edit Employee' : '<i class="fas fa-user-plus me-2"></i>New Employee';
+        document.getElementById('empEditTitle').innerHTML = isEdit ? 'Edit Employee' : 'New Employee';
         
-        const btnDel = document.getElementById('btnDeleteEmp');
-        if(btnDel) btnDel.style.display = isEdit ? 'block' : 'none';
+        if(this._structureCache.lines.length === 0) this.initDropdowns();
 
-        if (isEdit) {
-            const emp = JSON.parse(decodeURIComponent(empDataEncoded));
-            document.getElementById('empEditId').value = emp.emp_id;
-            document.getElementById('empEditId').readOnly = true;
-            document.getElementById('empEditName').value = emp.name_th;
-            document.getElementById('empEditPos').value = emp.position;
-            document.getElementById('empEditLine').value = emp.line;
-            document.getElementById('empEditShift').value = emp.default_shift_id;
-            document.getElementById('empEditTeam').value = emp.team_group;
-            document.getElementById('empEditActive').checked = (emp.is_active == 1);
+        if(isEdit) {
+            const emp = JSON.parse(decodeURIComponent(data));
+            document.getElementById('empEditId').value = emp.emp_id; document.getElementById('empEditId').readOnly = true;
+            document.getElementById('empEditName').value = emp.name_th; document.getElementById('empEditPos').value = emp.position;
+            
+            setTimeout(() => {
+                document.getElementById('empEditLine').value = emp.line; 
+                document.getElementById('empEditShift').value = emp.default_shift_id;
+                document.getElementById('empEditTeam').value = emp.team_group; 
+            }, 100);
+            
+            document.getElementById('empEditActive').checked = (emp.is_active==1);
+            if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
         } else {
-            document.getElementById('empEditForm').reset();
-            document.getElementById('empEditId').readOnly = false;
+            document.getElementById('empEditForm').reset(); 
+            document.getElementById('empEditId').readOnly = false; 
             document.getElementById('empEditActive').checked = true;
+            if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'none';
         }
         modal.show();
     },
-
-    // 5.10 บันทึกข้อมูลพนักงาน
     async saveEmployee() {
         const isEdit = document.getElementById('isEditMode').value === '1';
         const payload = {
@@ -855,85 +780,51 @@ const Actions = {
             team_group: document.getElementById('empEditTeam').value,
             is_active: document.getElementById('empEditActive').checked ? 1 : 0
         };
-
-        if(!payload.emp_id || !payload.name_th || !payload.line) {
-            alert('กรุณากรอกข้อมูลให้ครบ (ID, Name, Line)');
-            return;
-        }
-
-        try {
-            const res = await fetch('api/api_master_data.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const json = await res.json();
-
-            if (json.success) {
-                alert('Saved Successfully!');
-                bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide();
-                this.openEmployeeManager(); // Refresh List
-                App.loadData(); // Refresh Dashboard
-            } else {
-                alert('Error: ' + json.message);
-            }
-        } catch (err) {
-            alert('Failed: ' + err.message);
-        }
-    },
-
-    // 5.11 ปิดการใช้งานพนักงาน (Soft Delete / Disable)
-    async deleteEmployee() {
-        const empId = document.getElementById('empEditId').value;
-        const empName = document.getElementById('empEditName').value;
-
-        // เปลี่ยนข้อความยืนยันให้ชัดเจน
-        if(!confirm(`ยืนยันการ "ปิดการใช้งาน" (Set Inactive) พนักงานท่านนี้?\n\nรหัส: ${empId}\nชื่อ: ${empName}\n\n(ข้อมูลประวัติการทำงานจะยังคงอยู่)`)) return;
-
-        // เทคนิค: สั่ง Uncheck ปุ่ม Active ในฟอร์ม แล้วเรียก Save เลย
-        document.getElementById('empEditActive').checked = false;
         
-        // เรียกฟังก์ชัน saveEmployee() เพื่อส่งค่า update_employee ไปที่ API
-        // ซึ่งมันจะส่งค่า is_active = 0 ไปให้เอง
-        await this.saveEmployee();
-    },
+        if(!payload.emp_id || !payload.name_th) { alert('Please fill in required fields'); return; }
 
-    // [FIXED] Init Dropdowns - เพิ่มการเก็บ Cache
-    async initDropdowns() {
         try {
-            const res = await fetch('api/api_master_data.php?action=read_structure');
+            const res = await fetch('api/api_master_data.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const json = await res.json();
-
-            if (json.success) {
-                // 🔥 [สำคัญมาก] เก็บข้อมูลเข้า Cache เพื่อให้ DetailTable ดึงไปใช้
-                this._structureCache.lines = json.lines;
-                this._structureCache.teams = json.teams;
-
-                // (โค้ดเดิมที่ Populate หน้า Modal อื่นๆ...)
-                const lineSelects = ['editLogLine', 'filterLine', 'empEditLine']; 
-                const teamSelects = ['editLogTeam', 'empEditTeam'];
+            if(json.success) { 
+                alert('Saved Successfully!'); 
+                bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide(); 
                 
-                lineSelects.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        let currentVal = el.value;
-                        el.innerHTML = '<option value="">-- Select --</option>';
-                        if(id==='filterLine') el.innerHTML += '<option value="ALL">All Lines</option>';
-                        json.lines.forEach(l => el.innerHTML += `<option value="${l}">${l}</option>`);
-                        if(currentVal && json.lines.includes(currentVal)) el.value = currentVal;
-                    }
-                });
-
-                teamSelects.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.innerHTML = '<option value="">-</option>';
-                        json.teams.forEach(t => el.innerHTML += `<option value="${t}">Team ${t}</option>`);
-                    }
-                });
+                // 🔥 Auto Refresh Detail Modal
+                if(document.getElementById('detailModal').classList.contains('show')){
+                    await Actions.fetchDetailData();
+                }
+                if(document.getElementById('empListModal').classList.contains('show')){
+                    Actions.openEmployeeManager(); 
+                }
+                
+                App.loadData(); 
             }
-        } catch (err) {
-            console.error('Failed to load dropdowns:', err);
-        }
+            else alert('Error: ' + json.message);
+        } catch(e) { alert('Failed: ' + e.message); }
+    },
+    async createEmployee() { 
+        const payload = {
+            action: 'create_employee',
+            emp_id: document.getElementById('newEmpId').value,
+            name_th: document.getElementById('newEmpName').value,
+            position: document.getElementById('newEmpPos').value,
+            line: document.getElementById('newEmpLine').value,
+            shift_id: document.getElementById('newEmpShift').value,
+            team_group: document.getElementById('newEmpTeam').value,
+            is_active: 1
+        };
+        if(!payload.emp_id || !payload.name_th || !payload.line) { alert('Please fill in required fields'); return; }
+        try {
+            const res = await fetch('api/api_master_data.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const json = await res.json();
+            if(json.success) { alert('Created!'); bootstrap.Modal.getInstance(document.getElementById('createEmpModal')).hide(); App.loadData(); }
+            else alert('Error: ' + json.message);
+        } catch(e) { alert('Failed: ' + e.message); }
+    },
+    async deleteEmployee() {
+        if(!confirm('Disable this employee?')) return;
+        document.getElementById('empEditActive').checked = false;
+        this.saveEmployee();
     }
 };
