@@ -20,6 +20,7 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php require_once __DIR__ . '/../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
     

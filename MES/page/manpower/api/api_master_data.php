@@ -1,328 +1,248 @@
 <?php
 // MES/page/manpower/api/api_master_data.php
-// รวม: manage_employees, batch_shift_update, manage_mapping, generate_calendar, team_shift_manager
 
+// 1. ตั้งค่า Header ให้เป็น JSON เสมอ (สำคัญมาก)
 header('Content-Type: application/json');
+
+// 2. ปิดการแสดง Error ผ่าน HTML (ให้ส่งเป็น JSON แทนถ้าพัง)
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// อนุญาตเฉพาะ Admin / Creator / Supervisor
-if (!hasRole(['admin', 'creator', 'supervisor'])) {
-    http_response_code(403);
+// ตรวจสอบสิทธิ์
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
+// รับค่า Action
 $input = json_decode(file_get_contents('php://input'), true);
-$action = $_GET['action'] ?? ($input['action'] ?? 'read_employees');
+$action = $_GET['action'] ?? ($input['action'] ?? '');
 
+$currentUser = $_SESSION['user'];
+$updatedBy = $currentUser['username'];
+
+// เริ่มทำงาน
 try {
+    
     // ==================================================================================
-    // 1. Employee: read_employees 
+    // 1. ACTION: read_structure (สำหรับ Dropdown Line/Team)
     // ==================================================================================
-    if ($action === 'read_employees') {
-        $sql = "SELECT 
-                    E.id, E.emp_id, E.name_th, E.position, E.line, E.department_api, E.is_active,
-                    E.default_shift_id, E.team_group,
-                    S.shift_name
-                FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
-                LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
-                
-                ORDER BY 
-                    E.is_active DESC,
-                    E.line ASC,
-                    E.team_group ASC,
-                    E.default_shift_id ASC,
-                    E.position ASC,
-                    E.emp_id ASC";
-        
-        $stmt = $pdo->query($sql);
-        $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($action === 'read_structure') {
+        // ดึง Line ทั้งหมด
+        $stmtLine = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC");
+        $lines = $stmtLine->fetchAll(PDO::FETCH_COLUMN);
 
-        $stmtShifts = $pdo->query("SELECT shift_id, shift_name, start_time, end_time FROM " . MANPOWER_SHIFTS_TABLE . " WHERE is_active = 1 ORDER BY start_time");
-        $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
-
-        $stmtLines = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
-        $lines = $stmtLines->fetchAll(PDO::FETCH_COLUMN);
-
-        $defaultLines = ["ASSEMBLY", "BEND", "PAINT", "PRESS", "SPOT", "ST/WH", "QA/QC", "MT/PE", "OFFICE", "TOOLBOX_POOL"];
-        $lines = array_unique(array_merge($lines, $defaultLines));
-        sort($lines);
-
-        echo json_encode([
-            'success' => true,
-            'data' => $employees,
-            'shifts' => $shifts,
-            'lines' => $lines
-        ]);
-
-    // ==================================================================================
-    // 1.1 ACTION: read_structure (ดึงรายชื่อ Line และ Team สำหรับ Dropdown)
-    // ==================================================================================
-    } elseif ($action === 'read_structure') {
-        // 1. ดึง Line ทั้งหมดที่มีในระบบ
-        $stmtLines = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL AND line != ''");
-        $dbLines = $stmtLines->fetchAll(PDO::FETCH_COLUMN);
-
-        // 2. Line มาตรฐาน (เผื่อใน DB ยังไม่มีใครอยู่ แต่ต้องมีให้เลือก)
-        $defaultLines = ["ASSEMBLY", "BEND", "PAINT", "PRESS", "QA/QC", "SPOT", "ST/WH", "MT/PE", "OFFICE", "TOOLBOX_POOL"];
-        
-        // รวมกัน + ตัดตัวซ้ำ + เรียงลำดับ
-        $lines = array_unique(array_merge($dbLines, $defaultLines));
-        sort($lines);
-
-        // 3. ดึง Team ทั้งหมดที่มีในระบบ
-        $stmtTeams = $pdo->query("SELECT DISTINCT team_group FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE team_group IS NOT NULL AND team_group != ''");
-        $dbTeams = $stmtTeams->fetchAll(PDO::FETCH_COLUMN);
-        
-        $defaultTeams = ["A", "B", "C", "D"]; // Team มาตรฐาน
-        $teams = array_unique(array_merge($dbTeams, $defaultTeams));
-        sort($teams);
+        // ดึง Team ทั้งหมด
+        $stmtTeam = $pdo->query("SELECT DISTINCT team_group FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group ASC");
+        $teams = $stmtTeam->fetchAll(PDO::FETCH_COLUMN);
 
         echo json_encode([
             'success' => true,
             'lines' => $lines,
             'teams' => $teams
         ]);
+    }
 
     // ==================================================================================
-    // 2. Employee: update_employee 
+    // 2. ACTION: read_employees (แก้ไขเพิ่ม Filter Active)
     // ==================================================================================
-    } elseif ($action === 'update_employee') {
-        $empId  = $input['emp_id'] ?? '';
-        $line   = $input['line'] ?? null;
-        $shift  = $input['shift_id'] ?? null;
-        $team   = $input['team_group'] ?? null;
-        $active = $input['is_active'] ?? 1;
+    elseif ($action === 'read_employees') {
+        // รับค่า filter (ถ้าส่งมาเป็น 'true' คือเอาหมด, ถ้าไม่ส่งเอาแค่ Active)
+        $showAll = isset($_GET['show_all']) && $_GET['show_all'] === 'true';
 
-        if (empty($empId)) throw new Exception("Employee ID is required.");
-        if (empty($line)) throw new Exception("Line is required.");
-
-        $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                SET line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE()
-                WHERE emp_id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$line, $shift, $team, $active, $empId]);
-
-        echo json_encode(['success' => true, 'message' => 'Employee updated successfully']);
-
-    // ==================================================================================
-    // 3. Employee: update_team_shift_legacy
-    // ==================================================================================
-    } elseif ($action === 'update_team_shift_legacy') {
-        $line   = $input['line'] ?? '';
-        $shiftA = $input['shift_a'] ?? null; 
-        $shiftB = $input['shift_b'] ?? null;
-        
-        if (empty($line)) throw new Exception("Line is required.");
-
-        $pdo->beginTransaction();
-        $updateCount = 0;
-
-        if (!empty($shiftA)) {
-            $sqlA = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                     SET default_shift_id = ?, last_sync_at = GETDATE()
-                     WHERE line = ? AND team_group = 'A' AND is_active = 1";
-            $stmtA = $pdo->prepare($sqlA);
-            $stmtA->execute([$shiftA, $line]);
-            $updateCount += $stmtA->rowCount();
-        }
-
-        if (!empty($shiftB)) {
-            $sqlB = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                     SET default_shift_id = ?, last_sync_at = GETDATE()
-                     WHERE line = ? AND team_group = 'B' AND is_active = 1";
-            $stmtB = $pdo->prepare($sqlB);
-            $stmtB->execute([$shiftB, $line]);
-            $updateCount += $stmtB->rowCount();
-        }
-
-        $pdo->commit();
-        
-        if ($updateCount === 0) {
-            echo json_encode(['success' => true, 'message' => "No employees updated (Check Team Assignment)."]);
-        } else {
-            echo json_encode(['success' => true, 'message' => "Success! Updated $updateCount employees."]);
-        }
-
-    // ==================================================================================
-    // 4. Mapping: read_mappings (ตัด Section Mapping ออก)
-    // ==================================================================================
-    } elseif ($action === 'read_mappings') {
-        // [MODIFIED] ดึง Line จาก Employee Table โดยตรง (แทนการดึงจาก Table Mapping ที่จะลบ)
-        // เพื่อเอาไปแสดงในหน้า Mapping (เผื่ออนาคตจะ Map อย่างอื่น) หรือใช้เป็น Reference
-        $stmtLines = $pdo->query("SELECT DISTINCT line as display_section, line as api_department FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
-        $sections = $stmtLines->fetchAll(PDO::FETCH_ASSOC);
-
-        $sqlCat = "SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name";
-        $stmtCat = $pdo->query($sqlCat);
-        $categories = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            'success' => true,
-            'sections' => $sections, // ส่งกลับไปเพื่อให้หน้า Frontend ไม่พัง (แต่เป็นข้อมูล Realtime)
-            'categories' => $categories
-        ]);
-
-    // ==================================================================================
-    // 5. Mapping: save_mappings (เหลือแค่ Category)
-    // ==================================================================================
-    } elseif ($action === 'save_mappings') {
-        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized to edit mappings.");
-
-        $pdo->beginTransaction();
-
-        // [REMOVED] 5.1 Save Sections (ตัดทิ้ง เพราะเราไม่ใช้ Table นี้แล้ว)
-        // if (isset($input['sections'])) { ... }
-
-        // 5.2 Save Categories
-        if (isset($input['categories'])) {
-            $pdo->exec("DELETE FROM " . MANPOWER_CATEGORY_MAPPING_TABLE);
-            
-            $stmtCat = $pdo->prepare("INSERT INTO " . MANPOWER_CATEGORY_MAPPING_TABLE . " (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
-            
-            foreach ($input['categories'] as $cat) {
-                $keyword = $cat['api_position'] ?? $cat['keyword'];
-                $rate = $cat['hourly_rate'] ?? 0;
-                $type = $cat['rate_type'] ?? 'HOURLY'; // Default Value
-                
-                $stmtCat->execute([$keyword, $cat['category_name'], $rate, $type]);
-            }
-        }
-
-        $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Mapping saved successfully (Category Only)']);
-
-    // ==================================================================================
-    // 6. Calendar: generate_calendar 
-    // ==================================================================================
-    } elseif ($action === 'generate_calendar') {
-        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
-
-        $year = $_GET['year'] ?? date('Y', strtotime('+1 year')); 
-        
-        $pdo->beginTransaction();
-
-        $stmtDel = $pdo->prepare("DELETE FROM MANPOWER_CALENDAR WHERE YEAR(calendar_date) = ?");
-        $stmtDel->execute([$year]);
-
-        $startDate = new DateTime("$year-01-01");
-        $endDate   = new DateTime("$year-12-31");
-        
-        $stmtInsert = $pdo->prepare("INSERT INTO MANPOWER_CALENDAR 
-            (calendar_date, day_type, description, work_rate_holiday, ot_rate_holiday) 
-            VALUES (?, ?, ?, ?, ?)");
-
-        while ($startDate <= $endDate) {
-            if ($startDate->format('w') == 0) { // 0 = Sunday
-                $stmtInsert->execute([
-                    $startDate->format('Y-m-d'),
-                    'HOLIDAY',
-                    'Sunday',
-                    2.0, 
-                    3.0  
-                ]);
-            }
-            $startDate->modify('+1 day');
-        }
-
-        $apiUrl = "https://date.nager.at/api/v3/PublicHolidays/$year/TH";
-        $context = stream_context_create(["http" => ["header" => "User-Agent: Mozilla/5.0"]]);
-        $json = @file_get_contents($apiUrl, false, $context);
-        
-        if ($json) {
-            $holidays = json_decode($json, true);
-            foreach ($holidays as $h) {
-                $hDate = $h['date'];
-                $hName = $h['localName'] ?? $h['name'];
-
-                $check = $pdo->prepare("SELECT COUNT(*) FROM MANPOWER_CALENDAR WHERE calendar_date = ?");
-                $check->execute([$hDate]);
-                
-                if ($check->fetchColumn() > 0) {
-                    $upd = $pdo->prepare("UPDATE MANPOWER_CALENDAR SET description = ? WHERE calendar_date = ?");
-                    $upd->execute([$hName, $hDate]);
-                } else {
-                    $stmtInsert->execute([$hDate, 'HOLIDAY', $hName, 2.0, 3.0]);
-                }
-            }
-        }
-
-        $pdo->commit();
-        echo json_encode(['success' => true, 'message' => "Generated calendar for year $year successfully."]);
-
-    // ==================================================================================
-    // 7. Team Shift: read_team_shifts
-    // ==================================================================================
-    } elseif ($action === 'read_team_shifts') {
         $sql = "SELECT 
-                    line, 
-                    ISNULL(team_group, '-') as team_group,
-                    default_shift_id,
-                    COUNT(emp_id) as member_count,
-                    ISNULL(S.shift_name, 'Unknown') as shift_name
+                    E.emp_id, E.name_th, E.position, E.line, E.team_group, 
+                    E.default_shift_id, E.is_active,
+                    ISNULL(S.shift_name, '-') as shift_name,
+                    ISNULL(CM.category_name, 'Other') as emp_type
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " E
                 LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
-                WHERE E.is_active = 1
-                GROUP BY line, team_group, default_shift_id, S.shift_name
+                OUTER APPLY (
+                    SELECT TOP 1 category_name 
+                    FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                    WHERE E.position LIKE '%' + M.keyword + '%' 
+                    ORDER BY LEN(M.keyword) DESC
+                ) CM";
+        
+        // 🔥 ถ้าไม่เลือก Show All ให้กรองเอาเฉพาะคน Active
+        if (!$showAll) {
+            $sql .= " WHERE E.is_active = 1";
+        }
+                
+        $sql .= " ORDER BY E.is_active DESC, E.line ASC, E.emp_id ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'data' => $data]);
+    }
+
+    // ==================================================================================
+    // 3. ACTION: read_team_shifts (สำหรับ Shift Planner)
+    // ==================================================================================
+    elseif ($action === 'read_team_shifts') {
+        // Group by Line+Team เพื่อดูว่าทีมไหนอยู่กะอะไร
+        $sql = "SELECT 
+                    line, 
+                    team_group, 
+                    MAX(default_shift_id) as default_shift_id, 
+                    COUNT(emp_id) as member_count
+                FROM " . MANPOWER_EMPLOYEES_TABLE . "
+                WHERE is_active = 1 AND team_group IS NOT NULL AND team_group != ''
+                GROUP BY line, team_group
                 ORDER BY line, team_group";
 
-        $stmt = $pdo->query($sql);
-        $raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $teams = [];
-        foreach ($raw as $r) {
-            $key = $r['line'] . '|' . $r['team_group'];
-            if (!isset($teams[$key])) {
-                $teams[$key] = $r;
-            } else {
-                if ($r['member_count'] > $teams[$key]['member_count']) {
-                    $teams[$key] = $r;
-                }
-            }
-        }
-
-        echo json_encode(['success' => true, 'data' => array_values($teams)]);
+        echo json_encode(['success' => true, 'data' => $data]);
+    }
 
     // ==================================================================================
-    // 8. Team Shift: update_team_shift
+    // 4. ACTION: update_team_shift (เปลี่ยนกะยกทีม)
     // ==================================================================================
-    } elseif ($action === 'update_team_shift') {
-        if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+    elseif ($action === 'update_team_shift') {
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
         $line = $input['line'] ?? '';
         $team = $input['team'] ?? '';
         $newShiftId = $input['new_shift_id'] ?? '';
 
-        if (empty($line) || empty($newShiftId)) throw new Exception("Missing parameters.");
+        if (empty($line) || empty($team) || empty($newShiftId)) throw new Exception("Missing parameters");
 
-        $pdo->beginTransaction();
-
-        $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . "
-                SET default_shift_id = ?, last_sync_at = GETDATE()
-                WHERE line = ? AND is_active = 1";
+        // อัปเดตพนักงานทุกคนใน Line/Team นั้น
+        $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                SET default_shift_id = ? 
+                WHERE line = ? AND team_group = ? AND is_active = 1";
         
-        $params = [$newShiftId, $line];
-
-        if (!empty($team) && $team !== '-') {
-            $sql .= " AND team_group = ?";
-            $params[] = $team;
-        }
-
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute([$newShiftId, $line, $team]);
+        
         $count = $stmt->rowCount();
 
-        $pdo->commit();
-        echo json_encode(['success' => true, 'message' => "Updated $count employees to new shift."]);
+        // Log
+        $detail = "Shift Change: $line Team $team -> Shift $newShiftId ($count updated)";
+        $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'SHIFT_PLAN', ?, GETDATE())");
+        $stmtLog->execute([$updatedBy, $detail]);
 
-    } else {
-        throw new Exception("Invalid Action");
+        echo json_encode(['success' => true, 'message' => "Updated $count employees."]);
+    }
+
+    // ==================================================================================
+    // 5. ACTION: create_employee (เพิ่มพนักงานใหม่)
+    // ==================================================================================
+    elseif ($action === 'create_employee') {
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+
+        $empId = trim($input['emp_id']);
+        $name = trim($input['name_th']);
+        $pos = trim($input['position'] ?? 'Operator');
+        $line = trim($input['line']);
+        $shift = $input['shift_id'] ?? 1;
+        $team = trim($input['team_group'] ?? '-');
+
+        // Check Duplicate
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE emp_id = ?");
+        $stmtCheck->execute([$empId]);
+        if ($stmtCheck->fetchColumn() > 0) throw new Exception("Employee ID already exists!");
+
+        $sql = "INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " 
+                (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE())";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$empId, $name, $pos, $line, $shift, $team]);
+
+        echo json_encode(['success' => true, 'message' => 'Created successfully']);
+    }
+
+    // ==================================================================================
+    // 6. ACTION: update_employee (แก้ไขข้อมูลพนักงาน)
+    // ==================================================================================
+    elseif ($action === 'update_employee') {
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+
+        $empId = trim($input['emp_id']);
+        $name = trim($input['name_th']);
+        $pos = trim($input['position']);
+        $line = trim($input['line']);
+        $shift = $input['shift_id'];
+        $team = trim($input['team_group']);
+        $active = isset($input['is_active']) ? intval($input['is_active']) : 1;
+
+        $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?
+                WHERE emp_id = ?";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$name, $pos, $line, $shift, $team, $active, $empId]);
+
+        echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+    }
+
+    // ==================================================================================
+    // 7. MAPPING: read_mappings (ดึงข้อมูล Mapping ที่มีอยู่)
+    // ==================================================================================
+    elseif ($action === 'read_mappings') {
+        // ดึงข้อมูลเรียงตามชื่อกลุ่ม
+        $sql = "SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name ASC, keyword ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'categories' => $categories
+        ]);
+    }
+
+    // ==================================================================================
+    // 8. MAPPING: save_mappings (บันทึกข้อมูล Mapping)
+    // ==================================================================================
+    elseif ($action === 'save_mappings') {
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
+
+        $categories = $input['categories'] ?? [];
+
+        $pdo->beginTransaction();
+        
+        // 1. ลบของเก่าออกทั้งหมด (ล้างไพ่)
+        $pdo->exec("DELETE FROM " . MANPOWER_CATEGORY_MAPPING_TABLE);
+        
+        // 2. วนลูปใส่ของใหม่เข้าไป
+        $stmt = $pdo->prepare("INSERT INTO " . MANPOWER_CATEGORY_MAPPING_TABLE . " (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
+        
+        foreach ($categories as $cat) {
+            // กำหนดค่า Default ถ้าไม่มีส่งมา
+            $rate = $cat['hourly_rate'] ?? 0;
+            $type = $cat['rate_type'] ?? 'MONTHLY'; // Default ตาม Schema
+            
+            $stmt->execute([
+                trim($cat['keyword']), 
+                trim($cat['category_name']), 
+                $rate, 
+                $type
+            ]);
+        }
+
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
+    }
+
+    // หากไม่เจอ Action
+    else {
+        throw new Exception("Invalid Action or Method");
     }
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    // ถ้ามี Error ให้ส่งเป็น JSON เสมอ
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

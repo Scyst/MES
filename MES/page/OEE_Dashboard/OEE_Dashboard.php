@@ -7,7 +7,8 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
 <html lang="en">
 <head>
     <title>TOOLBOX - DASHBOARD</title>
-    <?php include_once '../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
 </head>
 
 <body class="dashboard-page">

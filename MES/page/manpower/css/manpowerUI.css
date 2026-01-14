@@ -1,0 +1,130 @@
+/* MES/page/manpower/css/manpowerUI.css */
+/* COMPACT EXECUTIVE THEME */
+
+:root {
+    --mp-primary: #4e73df;
+    --mp-success: #198754;
+    --mp-warning: #ffc107;
+    --mp-danger:  #dc3545;
+    --mp-info:    #0dcaf0;
+    
+    /* Soft Colors */
+    --bg-soft-primary: #e8f0fe; --text-soft-primary: #0a58ca;
+    --bg-soft-success: #e6f8f0; --text-soft-success: #0f5132;
+    --bg-soft-warning: #fff8e1; --text-soft-warning: #856404;
+    --bg-soft-danger:  #fce8e6; --text-soft-danger:  #842029;
+}
+
+body {
+    background-color: #f8f9fa; /* สีพื้นหลังเดียวกับ Executive */
+}
+
+/* =================================================================== */
+/* 1. COMPACT CARDS (หัวใจสำคัญของการแก้บวม) */
+/* =================================================================== */
+.card-kpi, .chart-card {
+    background: #fff;
+    border-radius: 6px;       /* ลดความมนลงให้ดู Sharp ขึ้น */
+    border: 1px solid #dce0e4;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    padding: 1rem !important; /* 🔥 ลด Padding จาก 1.5rem เหลือ 1rem */
+    height: 100%;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.card-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    border-color: #b0b0b0;
+    cursor: pointer;
+}
+
+/* เส้นสีด้านซ้าย */
+.border-start-4 { border-left-width: 4px !important; }
+
+/* จัด Font ให้เล็กและคม */
+.text-label {
+    font-size: 0.7rem !important; /* เล็กลง */
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6c757d;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.display-value {
+    font-size: 1.75rem !important; /* 🔥 ลดขนาดตัวเลขลง (เดิม 2.5-3rem) */
+    font-weight: 800;
+    line-height: 1.1;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.unit-label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+/* ลดขนาด Icon พื้นหลัง */
+.icon-shape {
+    width: 42px !important;    /* ลดขนาดกล่องไอคอน */
+    height: 42px !important;
+    font-size: 1.1rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+}
+
+/* ปุ่ม Action เล็กๆ ในการ์ดแดง */
+.kpi-action-badge {
+    font-size: 0.75rem !important;
+    padding: 4px 8px !important;
+    border-radius: 4px;
+}
+
+/* =================================================================== */
+/* 2. COMPACT CHARTS */
+/* =================================================================== */
+.chart-card h4 {
+    font-size: 0.95rem; /* หัวข้อกราฟเล็กลง */
+    font-weight: 700;
+    color: #495057;
+    text-transform: uppercase;
+}
+
+.chart-container-box {
+    position: relative;
+    width: 100%;
+    height: 240px !important; /* 🔥 บังคับความสูงกราฟให้เตี้ยลง (เดิม auto/300+) */
+}
+
+/* =================================================================== */
+/* 3. COMPACT TABLE */
+/* =================================================================== */
+.table-responsive {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    background-color: #f8f9fa !important;
+    color: #6c757d;
+    font-weight: 700;
+    padding: 0.75rem 0.5rem !important; /* ลด padding หัวตาราง */
+}
+
+.table td {
+    font-size: 0.85rem !important; /* ตัวหนังสือในตารางเล็กลง */
+    padding: 0.6rem 0.5rem !important; /* ลดความสูงของแถว */
+    vertical-align: middle;
+}
+
+/* ปุ่มเลือก View Mode ให้เล็กลง */
+.btn-group-sm .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+}

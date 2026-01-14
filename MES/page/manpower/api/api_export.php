@@ -14,21 +14,33 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 
 // สร้าง Output
 $output = fopen('php://output', 'w');
-fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM
+fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM สำหรับภาษาไทย
 
-// Header CSV
+// Header CSV (ใช้ชื่อ Position แต่ไส้ในจะเป็น Type)
 fputcsv($output, [
-    'Date', 'Employee ID', 'Name', 'Position', 'Line/Section', 
-    'Team', 'Shift', 'Time In', 'Time Out', 'Status', 'Remark', 'Updated By'
+    'Date', 
+    'Emp ID', 
+    'Name', 
+    'Position', // <--- ชื่อหัวข้อคือ Position
+    'Line', 
+    'Team', 
+    'Shift', 
+    'Time In', 
+    'Time Out', 
+    'Status', 
+    'Remark', 
+    'Updated By'
 ]);
 
 try {
-    // [FIXED] เปลี่ยน :date เป็น :date1 และ :date2 เพื่อแก้ปัญหา SQL Error
     $sql = "SELECT 
-                ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), :date1) as log_date, -- <== จุดที่ 1
+                ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), :date1) as log_date,
                 E.emp_id, 
                 E.name_th, 
-                E.position,
+                
+                -- 🔥 เอาค่า Type มาแสดงเป็น Position เลย (เพราะ Position เดิมมันมั่ว)
+                ISNULL(CM.category_name, 'Other') as position_display,
+
                 ISNULL(L.actual_line, E.line) as line,
                 ISNULL(L.actual_team, E.team_group) as team,
                 ISNULL(S.shift_name, '-') as shift_name,
@@ -39,30 +51,37 @@ try {
                 L.updated_by
             FROM " . MANPOWER_EMPLOYEES_TABLE . " E
             LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
-                ON E.emp_id = L.emp_id AND L.log_date = :date2 -- <== จุดที่ 2
+                ON E.emp_id = L.emp_id AND L.log_date = :date2
             LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S 
                 ON ISNULL(L.shift_id, E.default_shift_id) = S.shift_id
             
+            -- Logic หา Type จาก Keyword
+            OUTER APPLY (
+                SELECT TOP 1 category_name 
+                FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                WHERE E.position LIKE '%' + M.keyword + '%' 
+                ORDER BY LEN(M.keyword) DESC
+            ) CM
+            
             WHERE E.is_active = 1 OR L.log_id IS NOT NULL
-            ORDER BY line, team, E.emp_id";
+            ORDER BY line, team, position_display, E.emp_id";
 
     $stmt = $pdo->prepare($sql);
-    
-    // [FIXED] ส่งค่าไป 2 ตัว (ค่าเดียวกัน)
     $stmt->execute([
         ':date1' => $date,
         ':date2' => $date
     ]);
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $in = $row['scan_in_time'] ? substr($row['scan_in_time'], 11, 5) : '-';
-        $out = $row['scan_out_time'] ? substr($row['scan_out_time'], 11, 5) : '-';
+        // Format เวลาให้สวยงาม (ตัดวินาทีออก)
+        $in = $row['scan_in_time'] ? date('H:i', strtotime($row['scan_in_time'])) : '-';
+        $out = $row['scan_out_time'] ? date('H:i', strtotime($row['scan_out_time'])) : '-';
 
         fputcsv($output, [
             $row['log_date'],
-            $row['emp_id'],
+            " " . $row['emp_id'], // เคาะวรรคกัน Excel แปลงเป็น Scientific Notation
             $row['name_th'],
-            $row['position'],
+            $row['position_display'], // <--- ใส่ค่า Type ลงไปในช่อง Position
             $row['line'],
             $row['team'],
             $row['shift_name'],

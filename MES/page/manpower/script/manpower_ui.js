@@ -129,8 +129,8 @@ const UI = {
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Plan', data: dataPlan, backgroundColor: '#0d6efd', borderRadius: 4 },
-                    { label: 'Actual', data: dataActual, backgroundColor: '#198754', borderRadius: 4 }
+                    { label: 'Plan', data: dataPlan, backgroundColor: '#4e73df', borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 },
+                    { label: 'Actual', data: dataActual, backgroundColor: '#1cc88a', borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 }
                 ]
             },
             options: {
@@ -143,8 +143,40 @@ const UI = {
                 },
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, grid: { borderDash: [2, 2] } } },
-                plugins: { legend: { position: 'top' } }
+                plugins: { 
+        legend: { 
+            position: 'top', 
+            align: 'end', 
+            labels: { 
+                usePointStyle: true, 
+                boxWidth: 8, 
+                font: { family: 'Prompt', size: 14 } // 🔥 แก้ตรงนี้: เพิ่มขนาด Font Legend
+            } 
+        },
+        tooltip: {
+            bodyFont: { size: 14 },
+            titleFont: { size: 14 }
+        }
+    },
+    scales: { 
+        y: { 
+            beginAtZero: true, 
+            border: { display: false },
+            grid: { color: '#f3f6f9', drawBorder: false },
+            ticks: { 
+                font: { family: 'Prompt', size: 12 }, // 🔥 แก้ตรงนี้: แกน Y ใหญ่ขึ้น
+                color: '#a0aec0' 
+            }
+        },
+        x: { 
+            grid: { display: false }, 
+            ticks: { 
+                font: { family: 'Prompt', size: 12, weight: 'bold' }, // 🔥 แก้ตรงนี้: แกน X (ชื่อ Line) ใหญ่และหนา
+                color: '#718096' 
+            }
+        }
+    },
+    barThickness: 35,
             }
         });
 
@@ -158,8 +190,10 @@ const UI = {
                 labels: ['Present', 'Late', 'Absent', 'Leave'],
                 datasets: [{
                     data: [sumPresent, sumLate, sumAbsent, sumLeave],
-                    backgroundColor: ['#198754', '#ffc107', '#dc3545', '#0dcaf0'],
-                    borderWidth: 0
+                    backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
                 }]
             },
             options: {
@@ -172,8 +206,22 @@ const UI = {
                 },
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } }
+                cutout: '75%',
+                plugins: { 
+                    legend: { 
+                        position: 'bottom', 
+                        labels: { 
+                            usePointStyle: true, 
+                            padding: 20,
+                            font: { family: 'Prompt', size: 14 } // 🔥 แก้ตรงนี้: ขยาย Font Legend ด้านล่าง
+                        } 
+                    },
+                    tooltip: {
+                        bodyFont: { size: 14 }
+                    }
+                },
+                cutout: '65%',
+                layout: { padding: 10 }
             }
         });
     },
@@ -551,7 +599,7 @@ const Actions = {
             return;
         }
 
-        const createOptions = (items, selectedVal) => {
+        const createOptions = (items, selectedVal) => { /* ...โค้ดเดิม... */
             let html = '';
             items.forEach(item => {
                 const val = item;
@@ -568,9 +616,9 @@ const Actions = {
             const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
             const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
 
-            // Status List (Updated)
+            // --- Status List ---
             const statusOptions = [
-                { val: 'WAITING',  label: '⏳ รอเข้างาน (Waiting)' },
+                { val: 'WAITING',  label: '⏳ รอเข้างาน' },
                 { val: 'PRESENT',  label: '✅ มา (Present)' },
                 { val: 'LATE',     label: '⏰ สาย (Late)' },
                 { val: 'ABSENT',   label: '❌ ขาด (Absent)' },
@@ -585,16 +633,24 @@ const Actions = {
                 statusOptsHtml += `<option value="${opt.val}" ${sel}>${opt.label}</option>`;
             });
 
-            // Data Objects
+            // --- 🔥 [NEW] Logic เลือกสี Badge แบบ Soft UI ---
+            let badgeClass = 'badge-soft-primary'; // Default
+            if (row.status === 'PRESENT') badgeClass = 'badge-soft-success';
+            else if (row.status === 'LATE') badgeClass = 'badge-soft-warning';
+            else if (row.status === 'ABSENT') badgeClass = 'badge-soft-danger';
+            else if (['SICK', 'BUSINESS', 'VACATION'].includes(row.status)) badgeClass = 'badge-soft-info';
+            else if (row.status === 'WAITING') badgeClass = 'badge bg-light text-secondary border'; // ยังไม่มา
+
+            // Master Data (สำหรับปุ่ม Edit)
             const masterData = { emp_id: row.emp_id, name_th: row.name_th, position: row.position, line: row.line, team_group: row.team_group, default_shift_id: row.default_shift_id, is_active: 1 };
             const masterJson = encodeURIComponent(JSON.stringify(masterData));
 
-            // Logic
+            // Logic แถวแดง (ลืมรูด)
             let trClass = '';
             let outTimeDisplay = row.out_time;
             if (parseInt(row.is_forgot_out) === 1) {
-                trClass = 'table-danger';
-                outTimeDisplay = `<span class="text-danger fw-bold" title="ระบบตัดจบ 8 ชม."><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
+                trClass = 'table-danger bg-opacity-10'; // ปรับให้จางลงหน่อยจะได้ไม่แสบตา
+                outTimeDisplay = `<span class="text-danger fw-bold small" title="ระบบตัดจบ 8 ชม."><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
             } else if (!outTimeDisplay) {
                 outTimeDisplay = ''; 
             }
@@ -607,30 +663,39 @@ const Actions = {
 
             tr.innerHTML = `
                 <td class="ps-4">
-                    <div class="fw-bold text-truncate" style="max-width: 150px;" title="${row.name_th}">${row.name_th}</div>
-                    <small class="text-muted font-monospace" style="font-size:0.7rem;">${row.emp_id}</small>
+                    <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${row.name_th}</div>
+                    <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
                 </td>
-                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
-                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
+                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
+                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
                 <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary" id="shift_${uid}" style="font-size: 0.8rem;">
+                    <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary shadow-none" id="shift_${uid}" style="font-size: 0.8rem;">
                         <option value="1" ${shift1Sel}>Day</option><option value="2" ${shift2Sel}>Night</option>
                     </select>
                 </td>
-                <td class="p-1 text-center">
+                
+                <td class="p-1 text-center cursor-pointer-cell">
                     <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
                 </td>
-                <td class="p-1 text-center">
+                <td class="p-1 text-center cursor-pointer-cell">
                      ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
                      <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
                      ${parseInt(row.is_forgot_out) === 1 ? `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>` : ''}
                 </td>
-                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent fw-bold" id="status_${uid}" style="font-size: 0.8rem;">${statusOptsHtml}</select></td>
-                <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
+                
+                <td class="p-1">
+                    <div class="position-relative">
+                        <select class="form-select form-select-sm border-0 bg-transparent fw-bold shadow-none text-uppercase" id="status_${uid}" style="font-size: 0.75rem; z-index:2; position:relative;">
+                            ${statusOptsHtml}
+                        </select>
+                        </div>
+                </td>
+
+                <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
                 <td class="text-end pe-3 align-middle">${costHtml}</td>
                 <td class="text-center text-nowrap">
-                    <button class="btn btn-sm btn-outline-secondary border-0 rounded-circle me-1" style="width: 25px; height: 25px; padding: 0;" onclick="Actions.openEmpEdit('${masterJson}')" title="Edit Master"><i class="fas fa-user-edit" style="font-size: 0.7rem;"></i></button>
-                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 25px; height: 25px; padding: 0;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" title="Save"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
+                    <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
+                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -799,25 +864,77 @@ const Actions = {
     async openEmployeeManager() {
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
         document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
-        modal.show();
+        
+        // เช็คว่า Modal เปิดอยู่แล้วหรือเปล่า (ถ้าเปิดอยู่ไม่ต้องสั่ง show ซ้ำ เดี๋ยวจอดำ)
+        if(!document.getElementById('empListModal').classList.contains('show')) {
+            modal.show();
+        }
+
+        // 🔥 รับค่าจาก Checkbox
+        const showAll = document.getElementById('showInactiveToggle').checked;
+
         try {
-            const res = await fetch('api/api_master_data.php?action=read_employees');
+            // ส่ง param show_all ไป
+            const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=${showAll}`);
             const json = await res.json();
             if (json.success) { this._employeeCache = json.data; this.renderEmployeeTable(json.data); }
         } catch (e) { console.error(e); }
     },
+
     renderEmployeeTable(list) {
-         const tbody = document.getElementById('empListBody'); tbody.innerHTML = '';
-         if(!list || list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">No Data</td></tr>`; return; }
-         list.slice(0, 100).forEach(emp => {
-             const statusBadge = (emp.is_active == 1) ? '<span class="badge bg-success bg-opacity-10 text-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>';
+         const tbody = document.getElementById('empListBody'); 
+         tbody.innerHTML = '';
+         
+         if (!list || list.length === 0) { 
+             tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; 
+             return; 
+         }
+         
+         list.forEach(emp => {
+             // 🔥 [NEW] Badge สถานะ Active (Soft UI)
+             const statusBadge = (emp.is_active == 1) 
+                ? '<span class="badge badge-soft-success badge-pill">Active</span>' 
+                : '<span class="badge bg-light text-secondary border badge-pill">Inactive</span>';
+             
+             // 🔥 [NEW] Badge ประเภทพนักงาน (Soft UI)
+             let typeClass = 'badge-soft-secondary';
+             if (emp.emp_type === 'Monthly') typeClass = 'badge-soft-primary';      // สีฟ้า
+             else if (emp.emp_type === 'Daily') typeClass = 'badge-soft-success';   // สีเขียว
+             else if (emp.emp_type === 'Subcontract') typeClass = 'badge-soft-warning'; // สีเหลือง
+             else if (emp.emp_type === 'Student') typeClass = 'badge-soft-info';    // สีฟ้าทะเล
+             
+             const typeBadge = `<span class="badge ${typeClass} badge-pill">${emp.emp_type}</span>`;
+
              const empJson = encodeURIComponent(JSON.stringify(emp));
-             tbody.innerHTML += `<tr><td class="ps-4 font-monospace small">${emp.emp_id}</td><td class="fw-bold text-primary">${emp.name_th}</td><td>${emp.position||'-'}</td><td><span class="badge bg-light text-dark border">${emp.line}</span></td><td class="text-center">${emp.shift_name||'-'}</td><td class="text-center fw-bold">${emp.team_group||'-'}</td><td class="text-center">${statusBadge}</td><td class="text-center"><button class="btn btn-sm btn-outline-secondary" onclick="Actions.openEmpEdit('${empJson}')"><i class="fas fa-edit"></i></button></td></tr>`;
+             
+             tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4 font-monospace small text-muted">${emp.emp_id}</td>
+                    <td class="fw-bold text-dark">${emp.name_th}</td>
+                    <td>${typeBadge}</td> <td><span class="fw-bold text-primary small">${emp.line}</span></td>
+                    <td class="text-center small">${emp.shift_name || '-'}</td>
+                    <td class="text-center fw-bold text-dark">${emp.team_group || '-'}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center pe-4">
+                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle" 
+                                style="width: 32px; height: 32px;"
+                                onclick="Actions.openEmpEdit('${empJson}')" title="แก้ไขข้อมูล">
+                            <i class="fas fa-pen text-secondary" style="font-size: 0.8rem;"></i>
+                        </button>
+                    </td>
+                </tr>
+             `;
          });
     },
+
     filterEmployeeList() {
         const term = document.getElementById('empSearchBox').value.toLowerCase();
-        const filtered = this._employeeCache.filter(emp => (emp.name_th && emp.name_th.toLowerCase().includes(term)) || (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) || (emp.line && emp.line.toLowerCase().includes(term)));
+        const filtered = this._employeeCache.filter(emp => 
+            (emp.name_th && emp.name_th.toLowerCase().includes(term)) || 
+            (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) || 
+            (emp.line && emp.line.toLowerCase().includes(term)) ||
+            (emp.emp_type && emp.emp_type.toLowerCase().includes(term))
+        );
         this.renderEmployeeTable(filtered);
     },
     openEmpEdit(data) {
@@ -907,5 +1024,102 @@ const Actions = {
         if(!confirm('Disable this employee?')) return;
         document.getElementById('empEditActive').checked = false;
         this.saveEmployee();
+    },
+
+    // -------------------------------------------------------------------------
+    // 7. MAPPING MANAGER (Position -> Type)
+    // -------------------------------------------------------------------------
+    _mappingCache: [],
+
+    async openMappingManager() {
+        const modal = new bootstrap.Modal(document.getElementById('mappingModal'));
+        modal.show();
+        await this.loadMappings();
+    },
+
+    async loadMappings() {
+        try {
+            const res = await fetch('api/api_master_data.php?action=read_mappings');
+            const json = await res.json();
+            if (json.success) {
+                this.renderMappingTable(json.categories);
+            }
+        } catch (e) { console.error(e); }
+    },
+
+    renderMappingTable(list) {
+        const tbody = document.getElementById('mappingBody');
+        const datalist = document.getElementById('typeList');
+        
+        tbody.innerHTML = '';
+        datalist.innerHTML = ''; // Clear old options
+
+        // เก็บ Type ที่มีอยู่แล้ว (เพื่อเอามาทำ Suggestion)
+        const uniqueTypes = new Set(['Monthly', 'Daily', 'Subcontract', 'Student']); // Default
+
+        list.forEach((item, index) => {
+            if(item.category_name) uniqueTypes.add(item.category_name);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4 fw-bold text-dark">${item.keyword}</td>
+                    <td><span class="badge bg-light text-dark border">${item.category_name}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm text-danger" onclick="Actions.deleteMapping(${index})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        // Update Datalist (สร้างตัวเลือกให้อัตโนมัติ)
+        uniqueTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            datalist.appendChild(option);
+        });
+
+        this._mappingCache = list; 
+    },
+
+    async addMapping() {
+        const key = document.getElementById('newMapKeyword').value.trim();
+        const type = document.getElementById('newMapType').value.trim(); // รับค่าจากการพิมพ์
+        
+        if (!key || !type) return alert('กรุณาระบุทั้ง Keyword และ Type');
+
+        // เพิ่มข้อมูลใหม่ลงใน Cache
+        this._mappingCache.push({ keyword: key, category_name: type, hourly_rate: 0 });
+        
+        // Save & Refresh
+        await this.saveMappings();
+        
+        // Clear Inputs
+        document.getElementById('newMapKeyword').value = '';
+        document.getElementById('newMapType').value = '';
+        
+        // Re-render (เพื่ออัปเดตตารางและ Datalist)
+        this.renderMappingTable(this._mappingCache);
+    },
+
+    async deleteMapping(index) {
+        if(!confirm('ลบการจับคู่นี้?')) return;
+        this._mappingCache.splice(index, 1);
+        await this.saveMappings();
+        this.renderMappingTable(this._mappingCache);
+    },
+
+    async saveMappings() {
+        try {
+            await fetch('api/api_master_data.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save_mappings',
+                    categories: this._mappingCache
+                })
+            });
+        } catch (e) { alert('Save Error: ' + e.message); }
     }
 };

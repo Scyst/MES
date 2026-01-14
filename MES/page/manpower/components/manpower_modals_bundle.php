@@ -235,17 +235,27 @@
 <div class="modal fade" id="empListModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" style="height: 80vh;">
+            
             <div class="modal-header bg-white border-bottom py-3">
                 <div>
                     <h5 class="modal-title fw-bold text-dark"><i class="fas fa-address-book me-2 text-primary"></i>Employee Address Book</h5>
                     <p class="text-muted small mb-0">ค้นหาและจัดการข้อมูลพนักงาน</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <div class="input-group" style="width: 300px;">
-                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0" id="empSearchBox" placeholder="ค้นหาชื่อ, รหัส, แผนก..." onkeyup="Actions.filterEmployeeList()">
-                    </div>
+                
+                <div class="d-flex align-items-center gap-2">
                     
+                    <div class="form-check form-switch me-2 border rounded p-1 ps-5 pe-2 bg-light">
+                        <input class="form-check-input" type="checkbox" id="showInactiveToggle" onchange="Actions.openEmployeeManager()">
+                        <label class="form-check-label small fw-bold text-secondary cursor-pointer" for="showInactiveToggle">Show Inactive</label>
+                    </div>
+
+                    <div class="input-group" style="width: 250px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0" id="empSearchBox" placeholder="ค้นหาชื่อ, รหัส..." onkeyup="Actions.filterEmployeeList()">
+                    </div>
+                    <button class="btn btn-outline-primary shadow-sm" onclick="Actions.openMappingManager()">
+                        <i class="fas fa-tags me-1"></i> Mappings
+                    </button>
                     <button class="btn btn-primary" onclick="Actions.openEmpEdit()">
                         <i class="fas fa-plus"></i> New
                     </button>
@@ -253,19 +263,20 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
             </div>
+
             <div class="modal-body p-0 bg-light">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 table-striped">
                         <thead class="bg-white text-secondary sticky-top shadow-sm">
-                            <tr>
-                                <th class="ps-4">ID</th>
-                                <th>Name</th>
-                                <th>Position</th>
-                                <th>Line</th>
-                                <th class="text-center">Shift</th>
-                                <th class="text-center">Team</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center pe-4">Action</th>
+                            <tr class="text-uppercase small">
+                                <th class="ps-4" style="width:15%">ID</th>
+                                <th style="width:25%">Name</th>
+                                <th style="width:15%">Position</th>
+                                <th style="width:10%">Line</th>
+                                <th class="text-center" style="width:10%">Shift</th>
+                                <th class="text-center" style="width:5%">Team</th>
+                                <th class="text-center" style="width:10%">Active</th>
+                                <th class="text-center pe-4" style="width:5%">Edit</th>
                             </tr>
                         </thead>
                         <tbody id="empListBody">
@@ -342,6 +353,56 @@
                 <button type="button" class="btn btn-primary" onclick="Actions.saveEmployee()">
                     <i class="fas fa-save me-1"></i> Save Data
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="mappingModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-indigo text-white" style="background-color: #6610f2;">
+                <div>
+                    <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Position Mapping</h5>
+                    <p class="mb-0 small opacity-75">จับคู่ "คำในตำแหน่ง" ให้เป็น "ประเภทพนักงาน"</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Keyword (คำในตำแหน่ง)</th>
+                                <th>Map to Type</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingBody">
+                            </tbody>
+                        <tfoot class="bg-light border-top">
+                            <tr>
+                                <td class="ps-4">
+                                    <input type="text" class="form-control form-control-sm" id="newMapKeyword" placeholder="เช่น Driver, Admin...">
+                                </td>
+                                <td>
+                                    <input class="form-control form-control-sm" list="typeList" id="newMapType" placeholder="เลือกหรือพิมพ์ใหม่...">
+                                    <datalist id="typeList">
+                                        </datalist>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-primary rounded-circle shadow-sm" onclick="Actions.addMapping()" title="Add">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <small class="text-muted me-auto"><i class="fas fa-info-circle me-1"></i>ระบบจะเรียนรู้ประเภทใหม่ๆ จากสิ่งที่คุณพิมพ์เพิ่มเข้าไป</small>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

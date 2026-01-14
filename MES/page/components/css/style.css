@@ -20,6 +20,29 @@ html {
     --mes-color-success: #198754;
     --mes-color-warning: #ffc107;
     --mes-color-danger:  #dc3545;
+
+    /* --- ✨ NEW: Manpower Soft Palette (เพิ่มส่วนนี้) --- */
+    --mp-primary: #4e73df;
+    --mp-success: #1cc88a;
+    --mp-info:    #36b9cc;
+    --mp-warning: #f6c23e;
+    --mp-danger:  #e74a3b;
+
+    /* --- ✨ NEW: Soft Backgrounds (เพิ่มส่วนนี้) --- */
+    --bg-soft-success: #d1f2eb;
+    --text-soft-success: #0e6b4b;
+    
+    --bg-soft-warning: #fff3cd;
+    --text-soft-warning: #856404;
+    
+    --bg-soft-danger:  #f8d7da;
+    --text-soft-danger: #721c24;
+    
+    --bg-soft-info:    #d1ecf1;
+    --text-soft-info:  #0c5460;
+    
+    --bg-soft-primary: #e8f0fe;
+    --text-soft-primary: #1a73e8;
 }
 [data-bs-theme="dark"] { /* Dark Theme */
     --bs-body-bg: #1a1a1a;

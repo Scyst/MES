@@ -11,7 +11,7 @@ if (!isset($_SESSION['user'])) {
 // 1. ตั้งค่า Header Variable
 $currentUser = $_SESSION['user'];
 $pageTitle = "Manpower Management";
-$pageHeaderTitle = "Manpower Dashboard";
+$pageHeaderTitle = "Manpower Dashboard"; // ค่านี้จะไปโชว์ที่ Top Header
 $pageHeaderSubtitle = "ติดตามสถานะพนักงานและการเข้ากะ (Real-time)";
 ?>
 
@@ -19,38 +19,12 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 <html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
-    
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
+    
+    <link href="css/manpowerUI.css?v=<?php echo time(); ?>" rel="stylesheet">
 
-    <style>
-        /* Custom Styles */
-        .card-kpi {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer; /* เพิ่ม cursor pointer ให้รู้ว่ากดได้ */
-        }
-        .card-kpi:hover { 
-            transform: translateY(-3px); 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        }
-
-        .table-responsive {
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0,0,0,0.02);
-        }
-        
-        .cursor-pointer { cursor: pointer; transition: background-color 0.15s; }
-        .cursor-pointer:hover { background-color: rgba(0,0,0,0.05) !important; }
-
-        .chart-container-box {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-    </style>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
 </head>
 
 <body class="dashboard-page layout-top-header">
@@ -58,184 +32,164 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <?php include_once __DIR__ . '/../components/php/top_header.php'; ?>
 
     <main id="main-content">
-        <div class="container-fluid py-4" style="max-width: 1600px;">
-            
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-1 fw-bold text-primary"><i class="fas fa-users-cog me-2"></i><?php echo $pageHeaderTitle; ?></h4>
-                    <p class="text-muted mb-0 small"><?php echo $pageHeaderSubtitle; ?></p>
+        <div class="container-fluid p-3"> <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded border shadow-sm">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="far fa-calendar-alt"></i></span>
+                        <input type="date" id="filterDate" class="form-control border-start-0 ps-0 fw-bold text-dark" 
+                            value="<?php echo date('Y-m-d'); ?>" 
+                            style="max-width: 120px; font-family: 'Prompt'; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-light border text-secondary" onclick="App.loadData()"><i class="fas fa-sync-alt"></i></button>
+                    <button class="btn btn-sm btn-primary px-3 fw-bold" onclick="App.syncNow()"><i class="fas fa-cloud-download-alt me-1"></i> Sync</button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle px-2" type="button" data-bs-toggle="dropdown">Actions</button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
+                            <li><a class="dropdown-item" href="#" onclick="Actions.exportExcel()"><i class="fas fa-file-excel text-success me-2"></i>Export Excel</a></li>
+                            <?php if (hasRole(['admin', 'creator'])): ?>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openShiftPlanner()">Shift Planner</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openMappingManager()">Maps Config</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Data</a></li>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3"> <div class="col-xl-3 col-md-6">
+                    <div class="card-kpi border-start-4 border-primary" id="card-plan">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="text-label">Total Plan</div>
+                                <div class="display-value" id="kpi-plan">0</div>
+                                <div class="unit-label"><i class="fas fa-user me-1"></i>Persons</div>
+                            </div>
+                            <div class="icon-shape bg-soft-primary text-primary">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="d-flex gap-2 flex-wrap">
-                    <input type="date" id="filterDate" class="form-control shadow-sm" value="<?php echo date('Y-m-d'); ?>" style="width: auto;">
-                    
-                    <button class="btn btn-white border shadow-sm text-primary" onclick="App.loadData()" title="โหลดข้อมูลใหม่">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    
-                    <button class="btn btn-primary shadow-sm" onclick="App.syncNow()" title="ดึงข้อมูลจาก Cloud">
-                        <i class="fas fa-cloud-download-alt me-1"></i> Sync Data
-                    </button>
-
-                    <button class="btn btn-success shadow-sm" onclick="Actions.exportExcel()" title="ส่งออกเป็น Excel">
-                        <i class="fas fa-file-excel me-1"></i> Export
-                    </button>
-
-                    <?php if (hasRole(['admin', 'creator'])): ?>
-                    <div class="vr mx-1 d-none d-md-block"></div>
-                    
-                    <button class="btn btn-outline-dark shadow-sm" onclick="Actions.openEmployeeManager()" title="จัดการรายชื่อพนักงาน">
-                        <i class="fas fa-user-friends me-1"></i> Staff
-                    </button>
-
-                    <button class="btn btn-warning shadow-sm fw-bold text-dark" onclick="Actions.openShiftPlanner()" title="จัดการกะการทำงาน (Shift Rotation)">
-                        <i class="fas fa-people-arrows me-1"></i> Shift
-                    </button>
-                    
-                    <button class="btn btn-outline-danger shadow-sm" onclick="App.resetDailyData()" title="[Admin] ล้างและดึงใหม่">
-                        <i class="fas fa-trash-restore-alt"></i>
-                    </button>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="row g-3 mb-4">
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-primary" id="card-plan">
-                        <div class="d-flex justify-content-between">
+                    <div class="card-kpi border-start-4 border-success" id="card-actual">
+                        <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <p class="text-muted small mb-1 text-uppercase fw-bold">Total Plan (แผนรวม)</p>
-                                <h2 class="fw-bold text-dark mb-0" id="kpi-plan">0</h2>
-                                <small class="text-muted">Persons</small>
+                                <div class="text-label">Present</div>
+                                <div class="display-value text-success" id="kpi-actual">0</div>
+                                <span class="badge badge-soft-success mt-1 fw-normal" id="kpi-rate" style="font-size: 0.75rem;">0%</span>
                             </div>
-                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary" style="height: fit-content;">
-                                <i class="fas fa-clipboard-list fa-lg"></i>
+                            <div class="icon-shape bg-soft-success text-success">
+                                <i class="fas fa-user-check"></i>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-success" id="card-actual">
-                        <div class="d-flex justify-content-between">
+                    <div class="card-kpi border-start-4 border-warning">
+                        <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <p class="text-muted small mb-1 text-uppercase fw-bold">Actual Present (มาจริง)</p>
-                                <h2 class="fw-bold text-success mb-0" id="kpi-actual">0</h2>
-                                <small class="text-success fw-bold" id="kpi-rate">0% Attendance</small>
+                                <div class="text-label">Est. Cost</div>
+                                <div class="display-value text-warning" id="kpi-cost">0</div>
+                                <div class="unit-label">THB (Approx.)</div>
                             </div>
-                            <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success" style="height: fit-content;">
-                                <i class="fas fa-user-check fa-lg"></i>
+                            <div class="icon-shape bg-soft-warning text-warning">
+                                <i class="fas fa-coins"></i>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-warning" style="cursor: default;">
+                    <div class="card-kpi border-start-4 border-danger" id="card-absent">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <p class="text-muted small mb-1 text-uppercase fw-bold">Est. Cost (ค่าแรง)</p>
-                                <h2 class="fw-bold text-warning mb-0" id="kpi-cost">0</h2>
-                                <small class="text-muted">THB (Estimated)</small>
+                                <div class="text-label">Abnormalities</div>
+                                <div class="display-value text-danger" id="kpi-absent">0</div>
                             </div>
-                            <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning text-dark" style="height: fit-content;">
-                                <i class="fas fa-coins fa-lg"></i>
+                            <div class="icon-shape bg-soft-danger text-danger">
+                                <i class="fas fa-user-clock"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-kpi bg-white p-3 h-100 border-start border-4 border-danger" id="card-absent">
-                        <div class="d-flex justify-content-between">
-                            <div class="d-flex flex-column justify-content-between w-100">
-                                
-                                <p class="text-muted small mb-1 text-uppercase fw-bold">Abnormalities (ผิดปกติ/ลา)</p>
-                                
-                                <div class="d-flex align-items-baseline gap-2 mb-2">
-                                    <h2 class="fw-bold text-danger mb-0" id="kpi-absent">0</h2>
-                                    <small class="text-danger">Absent</small>
-                                </div>
-
-                                <div class="d-flex gap-2">
-                                    <div id="card-late" class="px-2 py-1 bg-warning bg-opacity-25 rounded border border-warning text-dark fw-bold cursor-pointer small">
-                                        <i class="fas fa-clock me-1"></i><span id="kpi-late">0</span> Late
-                                    </div>
-
-                                    <div id="card-leave" class="px-2 py-1 bg-info bg-opacity-25 rounded border border-info text-dark fw-bold cursor-pointer small">
-                                        <i class="fas fa-bed me-1"></i><span id="kpi-leave">0</span> Leave
-                                    </div>
-                                </div>
-
+                        <div class="d-flex gap-2 mt-2 pt-2 border-top border-light">
+                            <div id="card-late" class="kpi-action-badge badge-soft-warning w-100 cursor-pointer">
+                                Late: <span id="kpi-late" class="fw-bold">0</span>
                             </div>
-                            
-                            <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger" style="height: fit-content;">
-                                <i class="fas fa-user-clock fa-lg"></i>
+                            <div id="card-leave" class="kpi-action-badge badge-soft-info w-100 cursor-pointer">
+                                Leave: <span id="kpi-leave" class="fw-bold">0</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mb-4">
+            <div class="row g-3 mb-3">
                 <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 py-3">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-bar me-2 text-primary"></i>Plan vs Actual by Line</h6>
+                    <div class="chart-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h4><i class="fas fa-chart-bar text-primary me-2"></i>Plan vs Actual</h4>
+                            <small class="text-muted" style="font-size: 0.7rem;">Scroll to view more</small>
                         </div>
-                        <div class="card-body">
-                            <div class="chart-container-box">
+                        <div class="chart-scroll-container" style="height: 240px; overflow-x: auto; overflow-y: hidden;">
+                            <div id="barChartInnerWrapper" style="height: 100%; position: relative; width: 100%;">
                                 <canvas id="barChart"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 py-3">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-primary"></i>Status Distribution</h6>
+                    <div class="chart-card">
+                        <div class="mb-2">
+                            <h4><i class="fas fa-chart-pie text-primary me-2"></i>Distribution</h4>
                         </div>
-                        <div class="card-body d-flex align-items-center justify-content-center">
-                            <div style="height: 250px; width: 100%;">
-                                <canvas id="pieChart"></canvas>
-                            </div>
+                        <div class="chart-container-box d-flex justify-content-center">
+                            <canvas id="pieChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm mb-5">
-                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-table me-2 text-primary"></i>Detailed Manpower Status</h6>
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark small text-uppercase"><i class="fas fa-list-alt text-primary me-2"></i>Status Detail</h6>
                     
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="viewMode" id="viewLine" autocomplete="off" checked onchange="App.setView('LINE')">
-                        <label class="btn btn-outline-secondary" for="viewLine"><i class="fas fa-list me-1"></i>By Line</label>
+                    <div class="btn-group btn-group-sm">
+                        <input type="radio" class="btn-check" name="viewMode" id="viewLine" checked onchange="App.setView('LINE')">
+                        <label class="btn btn-outline-secondary" for="viewLine">Line</label>
 
-                        <input type="radio" class="btn-check" name="viewMode" id="viewShift" autocomplete="off" onchange="App.setView('SHIFT')">
-                        <label class="btn btn-outline-secondary" for="viewShift"><i class="fas fa-clock me-1"></i>By Shift</label>
+                        <input type="radio" class="btn-check" name="viewMode" id="viewShift" onchange="App.setView('SHIFT')">
+                        <label class="btn btn-outline-secondary" for="viewShift">Shift</label>
 
-                        <input type="radio" class="btn-check" name="viewMode" id="viewType" autocomplete="off" onchange="App.setView('TYPE')">
-                        <label class="btn btn-outline-secondary" for="viewType"><i class="fas fa-user-tag me-1"></i>By Type</label>
+                        <input type="radio" class="btn-check" name="viewMode" id="viewType" onchange="App.setView('TYPE')">
+                        <label class="btn btn-outline-secondary" for="viewType">Type</label>
                     </div>
                 </div>
+                
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="manpowerTable">
-                            <thead class="table-light">
-                                <tr class="text-uppercase small text-muted">
-                                    <th class="ps-4" style="min-width: 200px;">Group / Line</th>
-                                    <th class="text-center text-primary border-end" style="width: 8%;">Reg. HC</th>
-                                    <th class="text-center" style="width: 8%;">Plan</th>
-                                    <th class="text-center text-success" style="width: 8%;">Present</th>
-                                    <th class="text-center text-warning text-dark" style="width: 8%;">Late</th>
-                                    <th class="text-center text-danger" style="width: 8%;">Absent</th>
-                                    <th class="text-center text-info text-dark" style="width: 8%;">Leave</th>
-                                    <th class="text-center border-start border-end table-active fw-bold" style="width: 9%;">Actual</th>
-                                    <th class="text-center fw-bold" style="width: 8%;">Diff</th>
-                                    <th class="text-end pe-4" style="width: 10%;">Cost (THB)</th>
+                    <div class="table-responsive border-0" style="max-height: 500px;">
+                        <table class="table table-hover mb-0 w-100" id="manpowerTable">
+                            <thead class="sticky-top" style="z-index: 5;">
+                                <tr>
+                                    <th class="ps-3">Group / Line</th>
+                                    <th class="text-center">HC</th>
+                                    <th class="text-center">Plan</th>
+                                    <th class="text-center text-success">Present</th>
+                                    <th class="text-center text-warning">Late</th>
+                                    <th class="text-center text-danger">Absent</th>
+                                    <th class="text-center text-info">Leave</th>
+                                    <th class="text-center border-start bg-light">Actual</th>
+                                    <th class="text-center">Diff</th>
+                                    <th class="text-end pe-3">Cost</th>
                                 </tr>
                             </thead>
-                            <tbody id="tableBody">
-                                <tr><td colspan="10" class="text-center py-5 text-muted">Connecting to database...</td></tr>
-                            </tbody>
+                            <tbody id="tableBody"></tbody>
                         </table>
                     </div>
                 </div>

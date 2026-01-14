@@ -22,7 +22,8 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
 <html lang="en">
 <head>
     <title><?php echo $pageTitle; ?></title>
-    <?php include_once '../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/common_head.php'; ?>
+    <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
@@ -30,10 +31,6 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="../../utils/libs/hammer.min.js"></script>
-    <script src="../../utils/libs/chart.umd.js"></script>
-    <script src="../../utils/libs/chartjs-plugin-datalabels.min.js"></script>
-    <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>
 
     <link rel="stylesheet" href="css/managementDashboard.css?v=<?php echo time(); ?>">
 </head>
