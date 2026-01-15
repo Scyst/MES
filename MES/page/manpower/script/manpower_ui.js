@@ -7,9 +7,6 @@ const UI = {
     // =========================================================================
     // 1. KPI CARDS
     // =========================================================================
-    // =========================================================================
-    // 1. KPI CARDS
-    // =========================================================================
     renderKPI(data) {
         let totalPlan = 0, totalActual = 0, totalLate = 0, totalAbsent = 0, totalLeave = 0;
         let totalCost = 0;
@@ -19,14 +16,14 @@ const UI = {
             const present = parseInt(row.present || 0);
             const late = parseInt(row.late || 0);
             const absent = parseInt(row.absent || 0);
-            const leave = parseInt(row.leave || 0); // 🔥 เพิ่มการรับค่า Leave
+            const leave = parseInt(row.leave || 0); 
             const cost = parseFloat(row.total_cost || 0);
 
             totalPlan += plan;
             totalActual += (present + late);
             totalLate += late;
             totalAbsent += absent;
-            totalLeave += leave; // 🔥 บวกยอด Leave
+            totalLeave += leave;
             totalCost += cost;
         });
 
@@ -35,15 +32,19 @@ const UI = {
         this.animateNumber('kpi-cost', parseInt(totalCost));
         this.animateNumber('kpi-absent', totalAbsent);
         
-        // Update Text
-        document.getElementById('kpi-late').innerText = totalLate;
-        document.getElementById('kpi-leave').innerText = totalLeave; // 🔥 แสดงยอด Leave
+        // Update Sub-text
+        const elLate = document.getElementById('kpi-late');
+        if(elLate) elLate.innerText = totalLate;
+        
+        const elLeave = document.getElementById('kpi-leave');
+        if(elLeave) elLeave.innerText = totalLeave;
 
         const rate = totalPlan > 0 ? ((totalActual / totalPlan) * 100).toFixed(1) : 0;
-        document.getElementById('kpi-rate').innerText = `${rate}% Attendance`;
+        const elRate = document.getElementById('kpi-rate');
+        if(elRate) elRate.innerText = `${rate}% Rate`;
 
         // --------------------------------------------------------
-        // 🔥 Event Bindings (แก้เรื่องกดแล้วซ้อนกันตรงนี้)
+        // 🔥 Event Bindings (Cards)
         // --------------------------------------------------------
         
         // 1. Plan Card
@@ -54,35 +55,34 @@ const UI = {
         const cardActual = document.getElementById('card-actual'); 
         if(cardActual) cardActual.onclick = () => Actions.openDetailModal('', '', 'ALL', 'PRESENT_AND_LATE');
 
-        // 3. Absent Card (Parent) -> กดพื้นที่ว่างๆ จะไป Absent
+        // 3. Absent Card (Parent)
         const cardAbsent = document.getElementById('card-absent');
         if(cardAbsent) cardAbsent.onclick = () => Actions.openDetailModal('', '', 'ALL', 'ABSENT');
 
-        // 4. Late Button (Child) -> 🔥 ต้องมี stopPropagation() ไม่ให้ไปกระตุ้น Absent
+        // 4. Late Button (Child) - Stop Propagation
         const cardLate = document.getElementById('card-late');
         if(cardLate) {
             cardLate.onclick = (e) => {
-                e.stopPropagation(); // หยุดไม่ให้ทะลุไปหา Parent
+                e.stopPropagation();
                 Actions.openDetailModal('', '', 'ALL', 'LATE');
             };
         }
 
-        // 5. Leave Button (Child) -> 🔥 ต้องมี stopPropagation()
+        // 5. Leave Button (Child) - Stop Propagation
         const cardLeave = document.getElementById('card-leave');
         if(cardLeave) {
             cardLeave.onclick = (e) => {
-                e.stopPropagation(); // หยุดไม่ให้ทะลุไปหา Parent
+                e.stopPropagation(); 
                 Actions.openDetailModal('', '', 'ALL', 'LEAVE');
             };
         }
     },
 
-    _bindKpiClick(elementId, status) {
-        const el = document.getElementById(elementId);
-        if (el) {
-            el.style.cursor = 'pointer';
-            el.onclick = () => Actions.openDetailModal('', '', 'ALL', status);
-        }
+    animateNumber(elementId, endValue) {
+        const obj = document.getElementById(elementId);
+        if (!obj) return;
+        // ใช้ toLocaleString ให้มีลูกน้ำคั่นหลักพัน
+        obj.innerText = endValue.toLocaleString();
     },
 
     // =========================================================================
@@ -109,8 +109,6 @@ const UI = {
             sumPresent += present;
             sumLate += late;
             sumAbsent += parseInt(row.absent || 0);
-            
-            // รวม Leave ทุกประเภท (ตาม Logic ใหม่ใน DB)
             sumLeave += parseInt(row.leave || 0);
         });
 
@@ -124,13 +122,22 @@ const UI = {
         const ctxBar = document.getElementById('barChart').getContext('2d');
         if (this.charts.bar) this.charts.bar.destroy();
 
+        // คำนวณความกว้าง Dynamic Scroll
+        const scrollContainer = document.querySelector('.chart-scroll-container');
+        const chartWrapper = document.getElementById('barChartInnerWrapper');
+        if(scrollContainer && chartWrapper) {
+            const minWidthPerBar = 50; 
+            const calculatedWidth = Math.max(scrollContainer.clientWidth, labels.length * minWidthPerBar);
+            chartWrapper.style.width = `${calculatedWidth}px`;
+        }
+
         this.charts.bar = new Chart(ctxBar, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Plan', data: dataPlan, backgroundColor: '#4e73df', borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 },
-                    { label: 'Actual', data: dataActual, backgroundColor: '#1cc88a', borderRadius: 4, barPercentage: 0.7, categoryPercentage: 0.8 }
+                    { label: 'Plan', data: dataPlan, backgroundColor: '#4e73df', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 },
+                    { label: 'Actual', data: dataActual, backgroundColor: '#1cc88a', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 }
                 ]
             },
             options: {
@@ -144,39 +151,17 @@ const UI = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { 
-        legend: { 
-            position: 'top', 
-            align: 'end', 
-            labels: { 
-                usePointStyle: true, 
-                boxWidth: 8, 
-                font: { family: 'Prompt', size: 14 } // 🔥 แก้ตรงนี้: เพิ่มขนาด Font Legend
-            } 
-        },
-        tooltip: {
-            bodyFont: { size: 14 },
-            titleFont: { size: 14 }
-        }
-    },
-    scales: { 
-        y: { 
-            beginAtZero: true, 
-            border: { display: false },
-            grid: { color: '#f3f6f9', drawBorder: false },
-            ticks: { 
-                font: { family: 'Prompt', size: 12 }, // 🔥 แก้ตรงนี้: แกน Y ใหญ่ขึ้น
-                color: '#a0aec0' 
-            }
-        },
-        x: { 
-            grid: { display: false }, 
-            ticks: { 
-                font: { family: 'Prompt', size: 12, weight: 'bold' }, // 🔥 แก้ตรงนี้: แกน X (ชื่อ Line) ใหญ่และหนา
-                color: '#718096' 
-            }
-        }
-    },
-    barThickness: 35,
+                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 12 } } },
+                    tooltip: { bodyFont: { size: 13 }, titleFont: { size: 13 } },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    }
+                },
+                scales: { 
+                    y: { beginAtZero: true, border: { display: false }, grid: { color: '#f3f6f9' }, ticks: { font: { family: 'Prompt', size: 11 } } },
+                    x: { grid: { display: false }, ticks: { font: { family: 'Prompt', size: 11, weight: 'bold' } } }
+                }
             }
         });
 
@@ -191,9 +176,7 @@ const UI = {
                 datasets: [{
                     data: [sumPresent, sumLate, sumAbsent, sumLeave],
                     backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff',
-                    hoverOffset: 4
+                    borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
                 }]
             },
             options: {
@@ -206,78 +189,43 @@ const UI = {
                 },
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '75%',
+                cutout: '70%',
                 plugins: { 
-                    legend: { 
-                        position: 'bottom', 
-                        labels: { 
-                            usePointStyle: true, 
-                            padding: 20,
-                            font: { family: 'Prompt', size: 14 } // 🔥 แก้ตรงนี้: ขยาย Font Legend ด้านล่าง
-                        } 
-                    },
-                    tooltip: {
-                        bodyFont: { size: 14 }
-                    }
+                    legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 11 } } }
                 },
-                cutout: '65%',
-                layout: { padding: 10 }
+                layout: { padding: 0 }
             }
         });
     },
 
     // =========================================================================
-    // 3. MAIN TABLE (Hierarchy View - 3 Levels)
+    // 3. MAIN TABLE
     // =========================================================================
     processGroupedData(rawData, viewMode) {
         const groups = {};
         const grandTotal = { name: 'GRAND TOTAL', hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
 
         rawData.forEach(row => {
-            // ---------------------------------------------------------
-            // 🔥 Logic การจัดกลุ่มตาม View Mode
-            // ---------------------------------------------------------
             let mainKey, subKeyName, itemKeyName;
-            
-            // Meta Data สำหรับ Drill-down
             let metaLine = '', metaShift = '', metaType = '';
-
-            // Extract Shift ID (Helper)
-            let shiftId = '';
-            if (row.shift_name && row.shift_name.includes('Day')) shiftId = '1';
-            else if (row.shift_name && row.shift_name.includes('Night')) shiftId = '2';
+            let shiftId = (row.shift_name && row.shift_name.includes('Day')) ? '1' : '2';
 
             if (viewMode === 'TYPE') {
-                // Mode 3: By Type (Type -> Line -> Shift)
-                mainKey = row.emp_type || 'Uncategorized'; // Level 1
-                subKeyName = row.line_name || '-';         // Level 2
-                itemKeyName = `${row.shift_name} (${row.team_group})`; // Level 3
-                
-                // Set Meta for Child (Line)
-                metaLine = row.line_name;
-                metaType = mainKey;
-                
+                mainKey = row.emp_type || 'Uncategorized';
+                subKeyName = row.line_name || '-';
+                itemKeyName = `${row.shift_name} (${row.team_group})`;
+                metaLine = row.line_name; metaType = mainKey;
             } else if (viewMode === 'SHIFT') {
-                // Mode 2: By Shift (Shift -> Line -> Type)
                 mainKey = row.shift_name || 'Unassigned';
                 subKeyName = row.line_name || '-';
                 itemKeyName = row.emp_type || 'General';
-                
-                // Set Meta for Child (Line)
-                metaLine = row.line_name;
-                metaShift = shiftId;
-
-            } else {
-                // Mode 1: By Line (Default: Line -> Shift -> Type)
+                metaLine = row.line_name; metaShift = shiftId;
+            } else { // LINE (Default)
                 mainKey = row.line_name || 'Unassigned';
                 subKeyName = `${row.shift_name} ${row.team_group ? '('+row.team_group+')' : ''}`;
                 itemKeyName = row.emp_type || 'General';
-                
-                // Set Meta for Child (Shift)
-                metaLine = mainKey;
-                metaShift = shiftId;
+                metaLine = mainKey; metaShift = shiftId;
             }
-            // ---------------------------------------------------------
 
             const stats = {
                 hc: parseInt(row.total_hc || 0), plan: parseInt(row.plan || 0),
@@ -287,32 +235,24 @@ const UI = {
             };
             stats.actual = stats.present + stats.late;
 
-            // 1. Parent
+            // Parent
             if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
 
-            // 2. Child (Sub)
+            // Sub
             if (!groups[mainKey].subs[subKeyName]) {
                 groups[mainKey].subs[subKeyName] = { 
-                    name: subKeyName, 
-                    items: {}, 
-                    total: this._initStats(),
-                    // 🔥 Meta Data ที่ถูกต้องตาม Mode
+                    name: subKeyName, items: {}, total: this._initStats(),
                     meta: { line: metaLine, shift: metaShift, type: metaType }
                 };
             }
             this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
 
-            // 3. GrandChild (Item)
+            // Item
             if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
-                // สำหรับ Grandchild เราใส่ Meta ให้ครบทุกมิติเลยเพื่อความชัวร์
                 groups[mainKey].subs[subKeyName].items[itemKeyName] = { 
                     name: itemKeyName, 
-                    meta: { 
-                        line: row.line_name, 
-                        shift: shiftId, 
-                        type: row.emp_type 
-                    },
+                    meta: { line: row.line_name, shift: shiftId, type: row.emp_type },
                     ...stats 
                 };
             } else {
@@ -349,34 +289,20 @@ const UI = {
         
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
-        // 1. Grand Total
         tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
         
         const sortedKeys = Object.keys(groups).sort();
         sortedKeys.forEach(key => {
             const group = groups[key];
-            // 2. Parent Row (Line)
-            tbody.innerHTML += this._createRowHtml(group.name, group.total, { 
-                isParent: true, 
-                viewMode, 
-                rawName: group.name 
-            });
+            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode, rawName: group.name });
             
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
             sortedSubs.forEach(sub => {
-                // 3. Child Row (Shift)
-                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
-                    isChild: true, 
-                    meta: sub.meta // Pass Metadata
-                });
+                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { isChild: true, meta: sub.meta });
                 
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
                 sortedItems.forEach(item => {
-                    // 4. Grandchild Row (Type) - Clickable!
-                    tbody.innerHTML += this._createRowHtml(item.name, item, { 
-                        isGrandChild: true,
-                        meta: item.meta // Pass Metadata
-                    });
+                    tbody.innerHTML += this._createRowHtml(item.name, item, { isGrandChild: true, meta: item.meta });
                 });
             });
         });
@@ -391,62 +317,33 @@ const UI = {
         else if (stats.plan > 0) diffClass = 'text-success fw-bold';
 
         let rowClass = '', nameHtml = label;
-        
-        // --- 🔗 Drill-down Parameters ---
         let tLine = '', tShift = '', tType = 'ALL';
         let canClick = false;
 
         if (isGrand) {
             rowClass = 'table-dark fw-bold border-bottom-0';
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
-            // Grand Total: View All
             canClick = true; 
         } 
         else if (isParent) {
             rowClass = 'table-secondary fw-bold border-top border-white';
-            
-            // Icon ตาม Mode
-            let icon = 'fa-layer-group';
-            if (viewMode === 'TYPE') icon = 'fa-user-tag';
-            if (viewMode === 'SHIFT') icon = 'fa-clock';
+            let icon = viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group');
             nameHtml = `<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
 
-            if (viewMode === 'LINE') {
-                tLine = rawName; canClick = true;
-            } else if (viewMode === 'TYPE') {
-                tType = rawName; canClick = true; // ดู Type นี้ ทั้งโรงงาน
-            } else if (viewMode === 'SHIFT') {
-                // Shift ชื่ออาจจะซ้ำกัน (Day) ต้องระวัง แต่ปกติกดดูรวมได้
-                // tShift = ... (ข้ามไปก่อนเพื่อความชัวร์)
-            }
-
-            // ถ้ากดได้ ให้ชื่อเป็น Link
-            if (canClick) {
-                nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
-            }
+            if (viewMode === 'LINE') { tLine = rawName; canClick = true; }
+            else if (viewMode === 'TYPE') { tType = rawName; canClick = true; }
+            
+            if (canClick) nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
         } 
         else if (isChild) {
             rowClass = 'bg-light fw-bold';
             nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-angle-right me-1 text-muted"></i>${label}</span></div>`;
-            
-            // ใช้ Meta ที่ฝังมาจาก processGroupedData
-            if (meta) {
-                tLine = meta.line || '';
-                tShift = meta.shift || '';
-                tType = meta.type || 'ALL';
-                canClick = true;
-            }
+            if (meta) { tLine = meta.line || ''; tShift = meta.shift || ''; tType = meta.type || 'ALL'; canClick = true; }
         } 
         else if (isGrandChild) {
             rowClass = 'bg-white';
             nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
-            
-            if (meta) {
-                tLine = meta.line;
-                tShift = meta.shift;
-                tType = meta.type;
-                canClick = true;
-            }
+            if (meta) { tLine = meta.line; tShift = meta.shift; tType = meta.type; canClick = true; }
         }
 
         const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
@@ -468,12 +365,6 @@ const UI = {
             </tr>`;
     },
 
-    animateNumber(elementId, endValue) {
-        const obj = document.getElementById(elementId);
-        if (!obj) return;
-        obj.innerHTML = endValue.toLocaleString();
-    },
-
     showToast(message, type) { alert(message); },
     showLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
     hideLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },
@@ -485,24 +376,18 @@ const UI = {
 
 const Actions = {
     _structureCache: { lines: [], teams: [] },
-    
-    // 🔥 State Management
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
 
-    // -------------------------------------------------------------------------
-    // 4.1 DETAIL MODAL (Drill-down)
-    // -------------------------------------------------------------------------
     async openDetailModal(line, shiftId, empType = 'ALL', filterStatus = 'ALL') {
-        // Handle Backward Compatibility
+        // Handle arguments
         if (arguments.length === 3 && (empType === 'ALL' || empType === 'PRESENT' || empType === 'LATE' || empType === 'ABSENT')) {
-             filterStatus = empType;
-             empType = 'ALL';
+             filterStatus = empType; empType = 'ALL';
         }
-
         this._lastDetailParams = { line, shiftId, empType, filterStatus };
         
         const modal = new bootstrap.Modal(document.getElementById('detailModal'));
         
+        // Setup Title
         let title = line ? `${line}` : 'รายละเอียดทั้งหมด';
         if (shiftId) title += ` (${shiftId == 1 ? 'กะเช้า ☀️' : 'กะดึก 🌙'})`;
         if (empType !== 'ALL') title += ` [${empType}]`;
@@ -510,66 +395,58 @@ const Actions = {
         
         document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
         
-        // Dynamic Header (with Cost)
-        const tableHeader = `
+        // 🔥 [PERFORMANCE FIX] Reset ตารางให้เป็น Loading ทันที
+        document.getElementById('detailModalTable').innerHTML = `
             <thead>
                 <tr class="table-light text-secondary small text-center">
-                    <th>พนักงาน</th>
-                    <th width="10%">ไลน์</th>
-                    <th width="8%">ทีม</th>
-                    <th width="8%">กะ</th>
-                    <th width="10%">เข้า</th>
-                    <th width="10%">ออก</th>
-                    <th width="10%">สถานะ</th>
-                    <th width="15%">หมายเหตุ</th>
-                    <th width="10%" class="text-end">Est. Cost</th>
-                    <th width="8%">Action</th>
+                    <th>พนักงาน</th><th width="10%">ไลน์</th><th width="8%">ทีม</th><th width="8%">กะ</th>
+                    <th width="10%">เข้า</th><th width="10%">ออก</th><th width="10%">สถานะ</th>
+                    <th width="15%">หมายเหตุ</th><th width="10%" class="text-end">Cost</th><th width="8%">Action</th>
                 </tr>
             </thead>
-        `;
-        document.getElementById('detailModalTable').innerHTML = `${tableHeader}<tbody id="detailModalBody"><tr><td colspan="10" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr></tbody>`;
+            <tbody id="detailModalBody">
+                <tr><td colspan="10" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-2"></div>
+                    <div>Loading Data...</div>
+                </td></tr>
+            </tbody>`;
         
-        modal.show();
+        // Reset Search Input
         const searchInput = document.getElementById('searchDetail');
-        if(searchInput) searchInput.value = '';
+        if(searchInput) {
+            searchInput.value = '';
+            this.initSearch(); // Bind Search Event
+        }
 
-        await this.fetchDetailData();
+        // 🔥 [KEY FIX] แสดง Modal ให้เสร็จก่อน แล้วค่อยโหลดข้อมูล (แก้ Modal ค้าง)
+        modal.show();
+        
+        setTimeout(() => {
+            this.fetchDetailData();
+        }, 300); // รอ 0.3 วิ ให้ Animation Modal เล่นจบก่อนค่อยโหลด
     },
 
     async fetchDetailData() {
         const { line, shiftId, empType, filterStatus } = this._lastDetailParams;
         const date = document.getElementById('filterDate').value;
-
-        if (this._structureCache.lines.length === 0) { await this.initDropdowns(); }
+        if (this._structureCache.lines.length === 0) await this.initDropdowns();
 
         try {
-            // 🔥 ส่ง empType ไป API
             const url = `api/api_daily_operations.php?action=read_daily&date=${date}&line=${encodeURIComponent(line)}&type=${encodeURIComponent(empType)}`;
             const res = await fetch(url);
             const json = await res.json();
             
             if (json.success) {
                 let filteredData = json.data;
-                
-                // Filter Logic
                 if (filterStatus !== 'ALL') {
-                    if (filterStatus === 'PRESENT_AND_LATE') {
-                        filteredData = json.data.filter(r => r.status === 'PRESENT' || r.status === 'LATE');
-                    } else if (filterStatus === 'LEAVE') {
-                        // รวมกลุ่ม Leave
+                    if (filterStatus === 'PRESENT_AND_LATE') filteredData = json.data.filter(r => r.status === 'PRESENT' || r.status === 'LATE');
+                    else if (filterStatus === 'LEAVE') {
                         const nonLeaveStatus = ['PRESENT', 'LATE', 'ABSENT', 'WAITING'];
                         filteredData = json.data.filter(r => !nonLeaveStatus.includes(r.status));
-                    } else {
-                        filteredData = json.data.filter(r => r.status === filterStatus);
-                    }
+                    } else filteredData = json.data.filter(r => r.status === filterStatus);
                 }
-                
-                // Filter Shift
-                if (shiftId) {
-                    filteredData = filteredData.filter(r => r.shift_id == shiftId || r.default_shift_id == shiftId);
-                }
+                if (shiftId) filteredData = filteredData.filter(r => r.shift_id == shiftId || r.default_shift_id == shiftId);
 
-                // Sorting
                 filteredData.sort((a, b) => {
                     const score = (row) => {
                         if (parseInt(row.is_forgot_out) === 1) return 0;
@@ -592,117 +469,90 @@ const Actions = {
 
     renderDetailTable(list) {
         const tbody = document.getElementById('detailModalBody');
-        tbody.innerHTML = '';
-
-        if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
-            return;
+        
+        if (!list || list.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`; 
+            return; 
         }
 
-        const createOptions = (items, selectedVal) => { /* ...โค้ดเดิม... */
-            let html = '';
-            items.forEach(item => {
-                const val = item;
-                const sel = (val == selectedVal) ? 'selected' : '';
-                html += `<option value="${val}" ${sel}>${val}</option>`;
-            });
-            return html;
+        // Helper สร้าง Option (อยู่นอก Loop เพื่อความเร็ว)
+        const createOptions = (items, selectedVal) => items.map(val => `<option value="${val}" ${val == selectedVal ? 'selected' : ''}>${val}</option>`).join('');
+        
+        // Status Options Map (สร้างครั้งเดียวพอ)
+        const statusMap = {
+            'WAITING': '⏳ รอเข้างาน', 'PRESENT': '✅ มา (Present)', 'LATE': '⏰ สาย (Late)',
+            'ABSENT': '❌ ขาด (Absent)', 'SICK': '🤢 ลาป่วย (Sick)', 'BUSINESS': '👜 ลากิจ (Business)',
+            'VACATION': '🏖️ พักร้อน (Vacation)', 'OTHER': '⚪ อื่นๆ (Other)'
         };
+        const statusOptionsArr = Object.entries(statusMap).map(([val, label]) => ({val, label}));
 
-        list.forEach(row => {
-            const uid = row.emp_id; 
-            const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line); 
+        // 🔥 [PERFORMANCE] ใช้ Array.map สร้าง String ก้อนใหญ่แทนการ Loop แปะ DOM
+        const rowsHTML = list.map(row => {
+            const uid = row.emp_id;
+            
+            // Dropdowns (string operation is fast)
+            const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line);
             const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group);
             const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
             const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
 
-            // --- Status List ---
-            const statusOptions = [
-                { val: 'WAITING',  label: '⏳ รอเข้างาน' },
-                { val: 'PRESENT',  label: '✅ มา (Present)' },
-                { val: 'LATE',     label: '⏰ สาย (Late)' },
-                { val: 'ABSENT',   label: '❌ ขาด (Absent)' },
-                { val: 'SICK',     label: '🤢 ลาป่วย (Sick)' },
-                { val: 'BUSINESS', label: '👜 ลากิจ (Business)' },
-                { val: 'VACATION', label: '🏖️ พักร้อน (Vacation)' },
-                { val: 'OTHER',    label: '⚪ อื่นๆ (Other)' }
-            ];
-            let statusOptsHtml = '';
-            statusOptions.forEach(opt => {
-                const sel = (row.status === opt.val) ? 'selected' : '';
-                statusOptsHtml += `<option value="${opt.val}" ${sel}>${opt.label}</option>`;
-            });
+            // Status Select
+            const statusOptsHtml = statusOptionsArr.map(opt => `<option value="${opt.val}" ${row.status === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
 
-            // --- 🔥 [NEW] Logic เลือกสี Badge แบบ Soft UI ---
-            let badgeClass = 'badge-soft-primary'; // Default
-            if (row.status === 'PRESENT') badgeClass = 'badge-soft-success';
-            else if (row.status === 'LATE') badgeClass = 'badge-soft-warning';
-            else if (row.status === 'ABSENT') badgeClass = 'badge-soft-danger';
-            else if (['SICK', 'BUSINESS', 'VACATION'].includes(row.status)) badgeClass = 'badge-soft-info';
-            else if (row.status === 'WAITING') badgeClass = 'badge bg-light text-secondary border'; // ยังไม่มา
-
-            // Master Data (สำหรับปุ่ม Edit)
-            const masterData = { emp_id: row.emp_id, name_th: row.name_th, position: row.position, line: row.line, team_group: row.team_group, default_shift_id: row.default_shift_id, is_active: 1 };
-            const masterJson = encodeURIComponent(JSON.stringify(masterData));
-
-            // Logic แถวแดง (ลืมรูด)
-            let trClass = '';
-            let outTimeDisplay = row.out_time;
-            if (parseInt(row.is_forgot_out) === 1) {
-                trClass = 'table-danger bg-opacity-10'; // ปรับให้จางลงหน่อยจะได้ไม่แสบตา
-                outTimeDisplay = `<span class="text-danger fw-bold small" title="ระบบตัดจบ 8 ชม."><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
-            } else if (!outTimeDisplay) {
-                outTimeDisplay = ''; 
-            }
-
+            // Logic เดิม
             const costVal = parseFloat(row.est_cost || 0);
             const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
+            
+            let outTimeDisplay = row.out_time;
+            let trClass = '';
+            let forgotOutHtml = '';
+            
+            if (parseInt(row.is_forgot_out) === 1) {
+                trClass = 'table-danger bg-opacity-10';
+                outTimeDisplay = `<span class="text-danger fw-bold small"><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
+                forgotOutHtml = `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>`;
+            }
 
-            const tr = document.createElement('tr');
-            if(trClass) tr.className = trClass;
+            const masterJson = encodeURIComponent(JSON.stringify({ emp_id: row.emp_id, name_th: row.name_th, position: row.position, line: row.line, team_group: row.team_group, default_shift_id: row.default_shift_id, is_active: 1 }));
 
-            tr.innerHTML = `
-                <td class="ps-4">
-                    <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${row.name_th}</div>
-                    <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
-                </td>
-                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
-                <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
-                <td class="p-1">
-                    <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary shadow-none" id="shift_${uid}" style="font-size: 0.8rem;">
-                        <option value="1" ${shift1Sel}>Day</option><option value="2" ${shift2Sel}>Night</option>
-                    </select>
-                </td>
-                
-                <td class="p-1 text-center cursor-pointer-cell">
-                    <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
-                </td>
-                <td class="p-1 text-center cursor-pointer-cell">
-                     ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
-                     <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
-                     ${parseInt(row.is_forgot_out) === 1 ? `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>` : ''}
-                </td>
-                
-                <td class="p-1">
-                    <div class="position-relative">
-                        <select class="form-select form-select-sm border-0 bg-transparent fw-bold shadow-none text-uppercase" id="status_${uid}" style="font-size: 0.75rem; z-index:2; position:relative;">
-                            ${statusOptsHtml}
+            // Return HTML String of ONE row
+            return `
+                <tr class="${trClass}">
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${row.name_th}</div>
+                        <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
+                    </td>
+                    <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
+                    <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
+                    <td class="p-1">
+                        <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary shadow-none" id="shift_${uid}" style="font-size: 0.8rem;">
+                            <option value="1" ${shift1Sel}>Day</option><option value="2" ${shift2Sel}>Night</option>
                         </select>
-                        </div>
-                </td>
+                    </td>
+                    <td class="p-1 text-center cursor-pointer-cell">
+                        <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
+                    </td>
+                    <td class="p-1 text-center cursor-pointer-cell">
+                         ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
+                         <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
+                         ${forgotOutHtml}
+                    </td>
+                    <td class="p-1">
+                        <select class="form-select form-select-sm border-0 bg-transparent fw-bold shadow-none text-uppercase" id="status_${uid}" style="font-size: 0.75rem;">${statusOptsHtml}</select>
+                    </td>
+                    <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
+                    <td class="text-end pe-3 align-middle">${costHtml}</td>
+                    <td class="text-center text-nowrap">
+                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
+                        <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
+                    </td>
+                </tr>`;
+        }).join(''); // 🔥 รวม Array เป็น String ก้อนเดียว
 
-                <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
-                <td class="text-end pe-3 align-middle">${costHtml}</td>
-                <td class="text-center text-nowrap">
-                    <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
-                    <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+        // แปะ DOM ทีเดียวจบ (Render เร็วมาก)
+        tbody.innerHTML = rowsHTML;
     },
 
-    // 4.3 Save Inline Status
     async saveLogStatus(logId, empId) {
         const elStatus = document.getElementById(`status_${empId}`);
         const elLine = document.getElementById(`line_${empId}`);
@@ -745,25 +595,16 @@ const Actions = {
                 })
             });
             const json = await res.json();
-
             if (json.success) {
                 btn.classList.replace('btn-primary', 'btn-success'); btn.innerHTML = '<i class="fas fa-check"></i>';
                 setTimeout(async () => {
                     btn.classList.replace('btn-success', 'btn-primary'); btn.innerHTML = originalIcon; btn.disabled = false;
-                    await Actions.fetchDetailData(); 
-                    App.loadData();
+                    await Actions.fetchDetailData(); App.loadData();
                 }, 500);
-            } else {
-                alert('Error: ' + json.message); btn.innerHTML = originalIcon; btn.disabled = false;
-            }
-        } catch (err) {
-            alert('Failed: ' + err.message); btn.innerHTML = originalIcon; btn.disabled = false;
-        }
+            } else { alert('Error: ' + json.message); btn.innerHTML = originalIcon; btn.disabled = false; }
+        } catch (err) { alert('Failed: ' + err.message); btn.innerHTML = originalIcon; btn.disabled = false; }
     },
 
-    // -------------------------------------------------------------------------
-    // 4.4 INITIALIZE DROPDOWNS
-    // -------------------------------------------------------------------------
     async initDropdowns() {
         try {
             const res = await fetch('api/api_master_data.php?action=read_structure');
@@ -772,22 +613,15 @@ const Actions = {
                 this._structureCache.lines = json.lines;
                 this._structureCache.teams = json.teams;
                 
-                const lineSelects = ['editLogLine', 'filterLine', 'empEditLine', 'newEmpLine']; 
-                lineSelects.forEach(id => {
+                ['editLogLine', 'filterLine', 'empEditLine', 'newEmpLine'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
-                        el.innerHTML = '<option value="">-- Select --</option>';
-                        if(id==='filterLine') el.innerHTML += '<option value="ALL">All Lines</option>';
-                        json.lines.forEach(l => el.innerHTML += `<option value="${l}">${l}</option>`);
+                        el.innerHTML = '<option value="">-- Select --</option>' + (id==='filterLine'?'<option value="ALL">All Lines</option>':'') + json.lines.map(l => `<option value="${l}">${l}</option>`).join('');
                     }
                 });
-                const teamSelects = ['editLogTeam', 'empEditTeam', 'newEmpTeam'];
-                teamSelects.forEach(id => {
+                ['editLogTeam', 'empEditTeam', 'newEmpTeam'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) {
-                        el.innerHTML = '<option value="">-</option>';
-                        json.teams.forEach(t => el.innerHTML += `<option value="${t}">Team ${t}</option>`);
-                    }
+                    if (el) el.innerHTML = '<option value="">-</option>' + json.teams.map(t => `<option value="${t}">Team ${t}</option>`).join('');
                 });
             }
         } catch (err) { console.error('Failed to load dropdowns:', err); }
@@ -795,86 +629,76 @@ const Actions = {
 
     initSearch() {
         const input = document.getElementById('searchDetail');
-        if(!input) return;
-        const newInput = input.cloneNode(true);
-        input.parentNode.replaceChild(newInput, input);
-        newInput.addEventListener('keyup', function() {
-            const filter = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#detailModalBody tr');
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
-            });
-        });
-    },
+        if (!input) return;
 
-    // -------------------------------------------------------------------------
-    // 6. SHIFT PLANNER & EMPLOYEE MANAGER
-    // -------------------------------------------------------------------------
-    async openShiftPlanner() {
-        const modalEl = document.getElementById('shiftPlannerModal');
-        const modal = new bootstrap.Modal(modalEl);
-        document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
-        modal.show();
-        try {
-            const res = await fetch('api/api_master_data.php?action=read_team_shifts');
-            const json = await res.json();
-            if (json.success) this.renderShiftPlannerTable(json.data);
-            else alert('Error: ' + json.message);
-        } catch (err) {
-            console.error(err);
-            document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load data</td></tr>`;
-        }
-    },
-    renderShiftPlannerTable(teams) {
-        const tbody = document.getElementById('shiftPlannerBody');
-        tbody.innerHTML = '';
-        let currentLine = null;
-        teams.forEach(t => {
-            if (t.line !== currentLine) {
-                currentLine = t.line;
-                tbody.innerHTML += `<tr class="table-secondary fw-bold"><td colspan="4">${currentLine}</td></tr>`;
+        let debounceTimer;
+
+        // ล้าง Event เก่า (ถ้ามี)
+        input.onkeyup = null;
+
+        input.onkeyup = function() {
+            clearTimeout(debounceTimer);
+            
+            const searchTerm = this.value.toLowerCase().trim();
+            const tbody = document.getElementById('detailModalBody');
+            
+            // 1. ถ้าลบจนว่าง ให้โชว์หมดแบบปกติ (ไม่ต้อง Anime เยอะเดี๋ยวตาลาย)
+            if (searchTerm === '') {
+                const rows = tbody.querySelectorAll('tr');
+                requestAnimationFrame(() => {
+                    rows.forEach(r => {
+                        r.style.display = '';
+                        r.classList.remove('search-reveal'); // เอา Animation ออก
+                    });
+                });
+                return;
             }
-            const isDay = (t.default_shift_id == 1);
-            const shiftBadge = isDay ? `<span class="badge bg-info text-dark"><i class="fas fa-sun me-1"></i> DAY</span>` : `<span class="badge bg-dark"><i class="fas fa-moon me-1"></i> NIGHT</span>`;
-            const btnClass = isDay ? 'btn-outline-dark' : 'btn-outline-info';
-            const btnLabel = isDay ? '<i class="fas fa-moon me-1"></i> To Night' : '<i class="fas fa-sun me-1"></i> To Day';
-            const targetShiftId = isDay ? 2 : 1;
-            tbody.innerHTML += `<tr><td class="ps-4"><span class="fw-bold text-primary">${t.team_group || '-'}</span> <small class="text-muted">(${t.member_count} คน)</small></td><td class="text-center">${shiftBadge}</td><td class="text-center text-muted small">${t.default_shift_id}</td><td class="text-center pe-4"><button class="btn btn-sm ${btnClass} fw-bold" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${targetShiftId})">${btnLabel}</button></td></tr>`;
-        });
-    },
-    async switchTeamShift(line, team, newShiftId) {
-        const shiftName = (newShiftId == 1) ? "🌞 DAY" : "🌙 NIGHT";
-        if (!confirm(`เปลี่ยนกะของ [${line} - ${team}] เป็น ${shiftName} ?`)) return;
-        try {
-            const res = await fetch('api/api_master_data.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'update_team_shift', line, team, new_shift_id: newShiftId })
-            });
-            const json = await res.json();
-            if (json.success) { alert(`✅ เปลี่ยนกะสำเร็จ! กรุณากด 'Reset & Sync' ข้อมูลใหม่`); this.openShiftPlanner(); }
-            else { alert('Error: ' + json.message); }
-        } catch (err) { alert('Failed: ' + err.message); }
+
+            // 2. ถ้ามีคำค้นหา -> รอ User หยุดพิมพ์ 0.3 วิ
+            debounceTimer = setTimeout(() => {
+                const rows = tbody.querySelectorAll('tr');
+                
+                requestAnimationFrame(() => {
+                    rows.forEach(row => {
+                        const text = row.innerText.toLowerCase();
+                        // เก็บ status เดิมไว้เปรียบเทียบ
+                        const isCurrentlyVisible = row.style.display !== 'none';
+                        
+                        // Logic การค้นหา
+                        const isMatch = text.includes(searchTerm) || text.includes('loading');
+
+                        if (isMatch) {
+                            if (!isCurrentlyVisible) {
+                                // ถ้าของเดิมซ่อนอยู่ แล้วกำลังจะโชว์ -> ใส่ Animation
+                                row.style.display = '';
+                                row.classList.remove('search-reveal'); // Reset Class
+                                void row.offsetWidth; // 🔥 เทคนิค Trigger Reflow เพื่อให้เล่น Animation ใหม่
+                                row.classList.add('search-reveal');
+                            }
+                        } else {
+                            row.style.display = 'none';
+                            row.classList.remove('search-reveal');
+                        }
+                    });
+                });
+                
+            }, 300); // Delay 300ms
+        };
     },
 
     exportExcel() { window.location.href = `api/api_export.php?date=${document.getElementById('filterDate').value}`; },
     
-    // Employee Manager Functions
+    // -------------------------------------------------------------------------
+    // 6. EMPLOYEE MANAGER
+    // -------------------------------------------------------------------------
     _employeeCache: [],
     async openEmployeeManager() {
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
         document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+        if(!document.getElementById('empListModal').classList.contains('show')) modal.show();
         
-        // เช็คว่า Modal เปิดอยู่แล้วหรือเปล่า (ถ้าเปิดอยู่ไม่ต้องสั่ง show ซ้ำ เดี๋ยวจอดำ)
-        if(!document.getElementById('empListModal').classList.contains('show')) {
-            modal.show();
-        }
-
-        // 🔥 รับค่าจาก Checkbox
-        const showAll = document.getElementById('showInactiveToggle').checked;
-
         try {
-            // ส่ง param show_all ไป
+            const showAll = document.getElementById('showInactiveToggle').checked;
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=${showAll}`);
             const json = await res.json();
             if (json.success) { this._employeeCache = json.data; this.renderEmployeeTable(json.data); }
@@ -882,48 +706,29 @@ const Actions = {
     },
 
     renderEmployeeTable(list) {
-         const tbody = document.getElementById('empListBody'); 
-         tbody.innerHTML = '';
-         
-         if (!list || list.length === 0) { 
-             tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; 
-             return; 
-         }
+         const tbody = document.getElementById('empListBody'); tbody.innerHTML = '';
+         if (!list || list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; return; }
          
          list.forEach(emp => {
-             // 🔥 [NEW] Badge สถานะ Active (Soft UI)
-             const statusBadge = (emp.is_active == 1) 
-                ? '<span class="badge badge-soft-success badge-pill">Active</span>' 
-                : '<span class="badge bg-light text-secondary border badge-pill">Inactive</span>';
-             
-             // 🔥 [NEW] Badge ประเภทพนักงาน (Soft UI)
+             const statusBadge = (emp.is_active == 1) ? '<span class="badge badge-soft-success badge-pill">Active</span>' : '<span class="badge bg-light text-secondary border badge-pill">Inactive</span>';
              let typeClass = 'badge-soft-secondary';
-             if (emp.emp_type === 'Monthly') typeClass = 'badge-soft-primary';      // สีฟ้า
-             else if (emp.emp_type === 'Daily') typeClass = 'badge-soft-success';   // สีเขียว
-             else if (emp.emp_type === 'Subcontract') typeClass = 'badge-soft-warning'; // สีเหลือง
-             else if (emp.emp_type === 'Student') typeClass = 'badge-soft-info';    // สีฟ้าทะเล
-             
-             const typeBadge = `<span class="badge ${typeClass} badge-pill">${emp.emp_type}</span>`;
-
-             const empJson = encodeURIComponent(JSON.stringify(emp));
+             if (emp.emp_type === 'Monthly') typeClass = 'badge-soft-primary';
+             else if (emp.emp_type === 'Daily') typeClass = 'badge-soft-success';
+             else if (emp.emp_type === 'Subcontract') typeClass = 'badge-soft-warning';
              
              tbody.innerHTML += `
                 <tr>
                     <td class="ps-4 font-monospace small text-muted">${emp.emp_id}</td>
                     <td class="fw-bold text-dark">${emp.name_th}</td>
-                    <td>${typeBadge}</td> <td><span class="fw-bold text-primary small">${emp.line}</span></td>
+                    <td><span class="badge ${typeClass} badge-pill">${emp.emp_type}</span></td> 
+                    <td><span class="fw-bold text-primary small">${emp.line}</span></td>
                     <td class="text-center small">${emp.shift_name || '-'}</td>
                     <td class="text-center fw-bold text-dark">${emp.team_group || '-'}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center pe-4">
-                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle" 
-                                style="width: 32px; height: 32px;"
-                                onclick="Actions.openEmpEdit('${empJson}')" title="แก้ไขข้อมูล">
-                            <i class="fas fa-pen text-secondary" style="font-size: 0.8rem;"></i>
-                        </button>
+                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle" style="width: 32px; height: 32px;" onclick="Actions.openEmpEdit('${encodeURIComponent(JSON.stringify(emp))}')"><i class="fas fa-pen text-secondary"></i></button>
                     </td>
-                </tr>
-             `;
+                </tr>`;
          });
     },
 
@@ -932,30 +737,27 @@ const Actions = {
         const filtered = this._employeeCache.filter(emp => 
             (emp.name_th && emp.name_th.toLowerCase().includes(term)) || 
             (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) || 
-            (emp.line && emp.line.toLowerCase().includes(term)) ||
-            (emp.emp_type && emp.emp_type.toLowerCase().includes(term))
+            (emp.line && emp.line.toLowerCase().includes(term))
         );
         this.renderEmployeeTable(filtered);
     },
+
     openEmpEdit(data) {
         const modal = new bootstrap.Modal(document.getElementById('empEditModal'));
         const isEdit = !!data;
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
         document.getElementById('empEditTitle').innerHTML = isEdit ? 'Edit Employee' : 'New Employee';
-        
         if(this._structureCache.lines.length === 0) this.initDropdowns();
 
         if(isEdit) {
             const emp = JSON.parse(decodeURIComponent(data));
             document.getElementById('empEditId').value = emp.emp_id; document.getElementById('empEditId').readOnly = true;
             document.getElementById('empEditName').value = emp.name_th; document.getElementById('empEditPos').value = emp.position;
-            
             setTimeout(() => {
                 document.getElementById('empEditLine').value = emp.line; 
                 document.getElementById('empEditShift').value = emp.default_shift_id;
                 document.getElementById('empEditTeam').value = emp.team_group; 
             }, 100);
-            
             document.getElementById('empEditActive').checked = (emp.is_active==1);
             if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
         } else {
@@ -966,6 +768,7 @@ const Actions = {
         }
         modal.show();
     },
+
     async saveEmployee() {
         const isEdit = document.getElementById('isEditMode').value === '1';
         const payload = {
@@ -978,148 +781,84 @@ const Actions = {
             team_group: document.getElementById('empEditTeam').value,
             is_active: document.getElementById('empEditActive').checked ? 1 : 0
         };
-        
         if(!payload.emp_id || !payload.name_th) { alert('Please fill in required fields'); return; }
 
         try {
             const res = await fetch('api/api_master_data.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const json = await res.json();
             if(json.success) { 
-                alert('Saved Successfully!'); 
                 bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide(); 
-                
-                // 🔥 Auto Refresh Detail Modal
-                if(document.getElementById('detailModal').classList.contains('show')){
-                    await Actions.fetchDetailData();
-                }
-                if(document.getElementById('empListModal').classList.contains('show')){
-                    Actions.openEmployeeManager(); 
-                }
-                
+                if(document.getElementById('empListModal').classList.contains('show')) Actions.openEmployeeManager();
                 App.loadData(); 
-            }
-            else alert('Error: ' + json.message);
+            } else alert('Error: ' + json.message);
         } catch(e) { alert('Failed: ' + e.message); }
     },
-    async createEmployee() { 
-        const payload = {
-            action: 'create_employee',
-            emp_id: document.getElementById('newEmpId').value,
-            name_th: document.getElementById('newEmpName').value,
-            position: document.getElementById('newEmpPos').value,
-            line: document.getElementById('newEmpLine').value,
-            shift_id: document.getElementById('newEmpShift').value,
-            team_group: document.getElementById('newEmpTeam').value,
-            is_active: 1
-        };
-        if(!payload.emp_id || !payload.name_th || !payload.line) { alert('Please fill in required fields'); return; }
+
+    // -------------------------------------------------------------------------
+    // 7. MAPPING & SHIFT PLANNER
+    // -------------------------------------------------------------------------
+    async openShiftPlanner() {
+        const modal = new bootstrap.Modal(document.getElementById('shiftPlannerModal'));
+        document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
+        modal.show();
         try {
-            const res = await fetch('api/api_master_data.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const res = await fetch('api/api_master_data.php?action=read_team_shifts');
             const json = await res.json();
-            if(json.success) { alert('Created!'); bootstrap.Modal.getInstance(document.getElementById('createEmpModal')).hide(); App.loadData(); }
-            else alert('Error: ' + json.message);
-        } catch(e) { alert('Failed: ' + e.message); }
+            if (json.success) this.renderShiftPlannerTable(json.data);
+        } catch (err) { console.error(err); }
     },
-    async deleteEmployee() {
-        if(!confirm('Disable this employee?')) return;
-        document.getElementById('empEditActive').checked = false;
-        this.saveEmployee();
+    renderShiftPlannerTable(teams) {
+        const tbody = document.getElementById('shiftPlannerBody'); tbody.innerHTML = '';
+        let currentLine = null;
+        teams.forEach(t => {
+            if (t.line !== currentLine) { currentLine = t.line; tbody.innerHTML += `<tr class="table-secondary fw-bold"><td colspan="4">${currentLine}</td></tr>`; }
+            const isDay = (t.default_shift_id == 1);
+            const shiftBadge = isDay ? `<span class="badge bg-info text-dark">DAY</span>` : `<span class="badge bg-dark">NIGHT</span>`;
+            const btnClass = isDay ? 'btn-outline-dark' : 'btn-outline-info';
+            const btnLabel = isDay ? 'To Night' : 'To Day';
+            tbody.innerHTML += `<tr><td class="ps-4 fw-bold text-primary">${t.team_group || '-'}</td><td class="text-center">${shiftBadge}</td><td class="text-center">${t.default_shift_id}</td><td class="text-center pe-4"><button class="btn btn-sm ${btnClass}" onclick="Actions.switchTeamShift('${t.line}', '${t.team_group}', ${isDay ? 2 : 1})">${btnLabel}</button></td></tr>`;
+        });
+    },
+    async switchTeamShift(line, team, newShiftId) {
+        if (!confirm(`Switch [${line} - ${team}] to ${newShiftId==1?'DAY':'NIGHT'}?`)) return;
+        try {
+            const res = await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update_team_shift', line, team, new_shift_id: newShiftId }) });
+            const json = await res.json();
+            if (json.success) { this.openShiftPlanner(); } else alert(json.message);
+        } catch (err) { alert(err.message); }
     },
 
-    // -------------------------------------------------------------------------
-    // 7. MAPPING MANAGER (Position -> Type)
-    // -------------------------------------------------------------------------
     _mappingCache: [],
-
     async openMappingManager() {
         const modal = new bootstrap.Modal(document.getElementById('mappingModal'));
         modal.show();
-        await this.loadMappings();
+        const res = await fetch('api/api_master_data.php?action=read_mappings');
+        const json = await res.json();
+        if (json.success) this.renderMappingTable(json.categories);
     },
-
-    async loadMappings() {
-        try {
-            const res = await fetch('api/api_master_data.php?action=read_mappings');
-            const json = await res.json();
-            if (json.success) {
-                this.renderMappingTable(json.categories);
-            }
-        } catch (e) { console.error(e); }
-    },
-
     renderMappingTable(list) {
-        const tbody = document.getElementById('mappingBody');
-        const datalist = document.getElementById('typeList');
-        
-        tbody.innerHTML = '';
-        datalist.innerHTML = ''; // Clear old options
-
-        // เก็บ Type ที่มีอยู่แล้ว (เพื่อเอามาทำ Suggestion)
-        const uniqueTypes = new Set(['Monthly', 'Daily', 'Subcontract', 'Student']); // Default
-
+        const tbody = document.getElementById('mappingBody'); tbody.innerHTML = '';
         list.forEach((item, index) => {
-            if(item.category_name) uniqueTypes.add(item.category_name);
-
-            tbody.innerHTML += `
-                <tr>
-                    <td class="ps-4 fw-bold text-dark">${item.keyword}</td>
-                    <td><span class="badge bg-light text-dark border">${item.category_name}</span></td>
-                    <td class="text-center">
-                        <button class="btn btn-sm text-danger" onclick="Actions.deleteMapping(${index})">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML += `<tr><td class="ps-4 fw-bold">${item.keyword}</td><td><span class="badge bg-light text-dark border">${item.category_name}</span></td><td class="text-center"><button class="btn btn-sm text-danger" onclick="Actions.deleteMapping(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`;
         });
-
-        // Update Datalist (สร้างตัวเลือกให้อัตโนมัติ)
-        uniqueTypes.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            datalist.appendChild(option);
-        });
-
-        this._mappingCache = list; 
+        this._mappingCache = list;
     },
-
     async addMapping() {
         const key = document.getElementById('newMapKeyword').value.trim();
-        const type = document.getElementById('newMapType').value.trim(); // รับค่าจากการพิมพ์
-        
-        if (!key || !type) return alert('กรุณาระบุทั้ง Keyword และ Type');
-
-        // เพิ่มข้อมูลใหม่ลงใน Cache
-        this._mappingCache.push({ keyword: key, category_name: type, hourly_rate: 0 });
-        
-        // Save & Refresh
+        const type = document.getElementById('newMapType').value.trim();
+        if (!key || !type) return alert('Required fields missing');
+        this._mappingCache.push({ keyword: key, category_name: type });
         await this.saveMappings();
-        
-        // Clear Inputs
-        document.getElementById('newMapKeyword').value = '';
-        document.getElementById('newMapType').value = '';
-        
-        // Re-render (เพื่ออัปเดตตารางและ Datalist)
         this.renderMappingTable(this._mappingCache);
+        document.getElementById('newMapKeyword').value = '';
     },
-
     async deleteMapping(index) {
-        if(!confirm('ลบการจับคู่นี้?')) return;
+        if(!confirm('Delete mapping?')) return;
         this._mappingCache.splice(index, 1);
         await this.saveMappings();
         this.renderMappingTable(this._mappingCache);
     },
-
     async saveMappings() {
-        try {
-            await fetch('api/api_master_data.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'save_mappings',
-                    categories: this._mappingCache
-                })
-            });
-        } catch (e) { alert('Save Error: ' + e.message); }
+        await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save_mappings', categories: this._mappingCache }) });
     }
 };

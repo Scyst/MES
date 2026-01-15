@@ -1,94 +1,125 @@
 /* MES/page/manpower/css/manpowerUI.css */
-/* COMPACT EXECUTIVE THEME */
 
+/* =================================================================== */
+/* 0. GLOBAL & UTILS */
+/* =================================================================== */
 :root {
     --mp-primary: #4e73df;
-    --mp-success: #198754;
-    --mp-warning: #ffc107;
-    --mp-danger:  #dc3545;
-    --mp-info:    #0dcaf0;
-    
-    /* Soft Colors */
-    --bg-soft-primary: #e8f0fe; --text-soft-primary: #0a58ca;
-    --bg-soft-success: #e6f8f0; --text-soft-success: #0f5132;
-    --bg-soft-warning: #fff8e1; --text-soft-warning: #856404;
-    --bg-soft-danger:  #fce8e6; --text-soft-danger:  #842029;
+    --mp-success: #1cc88a;
+    --mp-warning: #f6c23e;
+    --mp-danger:  #e74a3b;
+    --mp-info:    #36b9cc;
 }
 
 body {
-    background-color: #f8f9fa; /* สีพื้นหลังเดียวกับ Executive */
+    background-color: #f8f9fa;
 }
 
 /* =================================================================== */
-/* 1. COMPACT CARDS (หัวใจสำคัญของการแก้บวม) */
+/* 1. COMPACT KPI CARDS */
 /* =================================================================== */
-.card-kpi, .chart-card {
+
+/* สไตล์พื้นฐานสำหรับการ์ดทุกประเภท */
+.kpi-card, .chart-card, .card {
     background: #fff;
-    border-radius: 6px;       /* ลดความมนลงให้ดู Sharp ขึ้น */
-    border: 1px solid #dce0e4;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-    padding: 1rem !important; /* 🔥 ลด Padding จาก 1.5rem เหลือ 1rem */
-    height: 100%;
+    border: 1px solid rgba(0,0,0,0.1); /* ขอบบางๆ */
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
-    transition: all 0.2s;
 }
 
-.card-kpi:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-    border-color: #b0b0b0;
-    cursor: pointer;
+/* สไตล์เฉพาะ KPI Card */
+.kpi-card {
+    height: 100%;
+    overflow: hidden;
 }
 
-/* เส้นสีด้านซ้าย */
-.border-start-4 { border-left-width: 4px !important; }
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
 
-/* จัด Font ให้เล็กและคม */
-.text-label {
-    font-size: 0.7rem !important; /* เล็กลง */
+/* เส้นขอบสีด้านซ้ายตามสถานะ */
+.kpi-card.border-primary { border-left: 4px solid var(--mp-primary) !important; }
+.kpi-card.border-success { border-left: 4px solid var(--mp-success) !important; }
+.kpi-card.border-warning { border-left: 4px solid var(--mp-warning) !important; }
+.kpi-card.border-danger  { border-left: 4px solid var(--mp-danger)  !important; }
+
+/* Typography ในการ์ด */
+.kpi-card .text-label {
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #6c757d;
     letter-spacing: 0.5px;
-    margin-bottom: 0.25rem;
+    margin-bottom: 4px;
 }
 
-.display-value {
-    font-size: 1.75rem !important; /* 🔥 ลดขนาดตัวเลขลง (เดิม 2.5-3rem) */
+.kpi-card h2 {
+    font-size: 1.8rem; /* กำหนดขนาดให้พอดี (ไม่เล็กไม่ใหญ่ไป) */
     font-weight: 800;
-    line-height: 1.1;
-    color: #2c3e50;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0;
+    line-height: 1.2;
+    font-family: 'Prompt', sans-serif;
 }
 
-.unit-label {
+.kpi-card .text-sub {
     font-size: 0.75rem;
     color: #888;
+    margin-top: 4px;
 }
 
-/* ลดขนาด Icon พื้นหลัง */
-.icon-shape {
-    width: 42px !important;    /* ลดขนาดกล่องไอคอน */
-    height: 42px !important;
-    font-size: 1.1rem !important;
+/* Utility พื้นหลังสีจาง (Soft Colors) */
+.bg-primary-soft { background-color: rgba(78, 115, 223, 0.1); color: var(--mp-primary); }
+.bg-success-soft { background-color: rgba(28, 200, 138, 0.1); color: var(--mp-success); }
+.bg-warning-soft { background-color: rgba(246, 194, 62, 0.1); color: #d39e00; }
+.bg-danger-soft  { background-color: rgba(231, 74, 59, 0.1);  color: var(--mp-danger); }
+.bg-info-soft    { background-color: rgba(54, 185, 204, 0.1);  color: var(--mp-info); }
+
+/* ไอคอนวงกลม */
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50% !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px !important;
+    font-size: 1.25rem;
+    flex-shrink: 0; /* ป้องกันวงกลมเบี้ยวเวลาจอเล็ก */
 }
 
-/* ปุ่ม Action เล็กๆ ในการ์ดแดง */
-.kpi-action-badge {
-    font-size: 0.75rem !important;
-    padding: 4px 8px !important;
+/* ปุ่ม Action เล็กๆ (Late/Leave) */
+.btn-kpi-action {
+    font-size: 0.80rem;
+    padding: 3px 8px;
     border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btn-kpi-action:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+/* Badge % Attendance */
+.badge-soft-success {
+    background-color: #e6f8f0 !important;
+    color: #0f5132 !important;
+    border: 1px solid #c3e6cb !important;
+    border-radius: 6px;
 }
 
 /* =================================================================== */
 /* 2. COMPACT CHARTS */
 /* =================================================================== */
-.chart-card h4 {
-    font-size: 0.95rem; /* หัวข้อกราฟเล็กลง */
+.chart-card {
+    padding: 1rem;
+}
+
+.chart-card h4, .chart-header-title {
+    font-size: 0.95rem;
     font-weight: 700;
     color: #495057;
     text-transform: uppercase;
@@ -97,7 +128,7 @@ body {
 .chart-container-box {
     position: relative;
     width: 100%;
-    height: 240px !important; /* 🔥 บังคับความสูงกราฟให้เตี้ยลง (เดิม auto/300+) */
+    height: 240px !important;
 }
 
 /* =================================================================== */
@@ -109,22 +140,96 @@ body {
 }
 
 .table th {
-    font-size: 0.75rem;
+    font-size: 0.9rem; /* ตามที่คุณจูนมา */
     text-transform: uppercase;
     background-color: #f8f9fa !important;
     color: #6c757d;
     font-weight: 700;
-    padding: 0.75rem 0.5rem !important; /* ลด padding หัวตาราง */
+    padding: 0.75rem 0.5rem !important;
 }
 
 .table td {
-    font-size: 0.85rem !important; /* ตัวหนังสือในตารางเล็กลง */
-    padding: 0.6rem 0.5rem !important; /* ลดความสูงของแถว */
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.5rem !important;
     vertical-align: middle;
 }
 
-/* ปุ่มเลือก View Mode ให้เล็กลง */
+/* ปุ่ม Group เลือก View Mode */
 .btn-group-sm .btn {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     padding: 0.25rem 0.75rem;
+}
+
+/* =================================================================== */
+/* 5. EXECUTIVE TOOLBAR STYLES (Added) */
+/* =================================================================== */
+
+/* Animation จุดเขียววิบวับ */
+@keyframes ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+.animate-ping {
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Toolbar Container */
+.dashboard-toolbar {
+    height: 38px;
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+    padding: 2px;
+    gap: 5px;
+    display: flex;
+    align-items: center;
+}
+
+/* ปรับแต่ง Input Date ให้เนียนไปกับพื้นหลัง */
+.dashboard-toolbar input[type="date"] {
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    color: #495057;
+    font-family: 'Prompt', sans-serif;
+    cursor: pointer;
+}
+.dashboard-toolbar input[type="date"]:hover {
+    background-color: #f1f3f5;
+    border-radius: 4px;
+}
+
+/* ปรับปุ่มให้สูงเท่ากัน */
+.dashboard-toolbar .btn {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation สำหรับแถวตาราง */
+@keyframes fadeInRow {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animation สำหรับผลการค้นหา */
+@keyframes softReveal {
+    0% { 
+        opacity: 0; 
+        transform: translateY(10px); /* เริ่มจากต่ำลงนิดนึง */
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);    /* ลอยขึ้นมาที่เดิม */
+    }
+}
+
+.search-reveal {
+    animation: softReveal 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; /* ใช้ Bezier Curve ให้นุ่มๆ */
+}
+
+.animate-fade-in {
+    animation: fadeInRow 0.3s ease-out forwards;
 }

@@ -32,98 +32,134 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <?php include_once __DIR__ . '/../components/php/top_header.php'; ?>
 
     <main id="main-content">
-        <div class="container-fluid p-3"> <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded border shadow-sm">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="far fa-calendar-alt"></i></span>
-                        <input type="date" id="filterDate" class="form-control border-start-0 ps-0 fw-bold text-dark" 
-                            value="<?php echo date('Y-m-d'); ?>" 
-                            style="max-width: 120px; font-family: 'Prompt'; font-size: 0.9rem;">
+        <div class="container-fluid p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                
+                <div class="d-flex align-items-center">
+                    <div id="last-update-time" class="d-flex align-items-center gap-2 text-secondary bg-white px-3 py-2 rounded shadow-sm border" style="font-size: 0.9rem;">
+                        <span class="position-relative d-flex h-2 w-2">
+                            <span class="position-absolute top-0 start-0 h-100 w-100 rounded-circle bg-success opacity-75 animate-ping"></span>
+                            <span class="position-relative d-inline-flex rounded-circle h-2 w-2 bg-success" style="width: 8px; height: 8px;"></span>
+                        </span>
+                        <span class="fw-bold text-dark">Manpower Live</span>
+                        <span class="text-muted small border-start ps-2 ms-1" id="live-clock">--:--:--</span>
                     </div>
                 </div>
 
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-light border text-secondary" onclick="App.loadData()"><i class="fas fa-sync-alt"></i></button>
-                    <button class="btn btn-sm btn-primary px-3 fw-bold" onclick="App.syncNow()"><i class="fas fa-cloud-download-alt me-1"></i> Sync</button>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle px-2" type="button" data-bs-toggle="dropdown">Actions</button>
+                <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
+                    
+                    <div class="d-flex align-items-center px-2">
+                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Date:</span>
+                        <input type="date" id="filterDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
+                               value="<?php echo date('Y-m-d'); ?>" 
+                               style="width: 125px; cursor: pointer;">
+                    </div>
+
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
+
+                    <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="App.loadData()" title="Reload Data">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+
+                    <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.syncNow()" title="Sync from Cloud">
+                        <i class="fas fa-cloud-download-alt me-1"></i> Sync
+                    </button>
+
+                    <div class="dropdown ms-1">
+                        <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="More Actions">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
-                            <li><a class="dropdown-item" href="#" onclick="Actions.exportExcel()"><i class="fas fa-file-excel text-success me-2"></i>Export Excel</a></li>
+                            <li><h6 class="dropdown-header">Export</h6></li>
+                            <li><a class="dropdown-item" href="#" onclick="Actions.exportExcel()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
+                            
                             <?php if (hasRole(['admin', 'creator'])): ?>
                                 <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Management</h6></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openShiftPlanner()">Shift Planner</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openMappingManager()">Maps Config</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Data</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Daily Data</a></li>
                             <?php endif; ?>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mb-3"> <div class="col-xl-3 col-md-6">
-                    <div class="card-kpi border-start-4 border-primary" id="card-plan">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="text-label">Total Plan</div>
-                                <div class="display-value" id="kpi-plan">0</div>
-                                <div class="unit-label"><i class="fas fa-user me-1"></i>Persons</div>
-                            </div>
-                            <div class="icon-shape bg-soft-primary text-primary">
-                                <i class="fas fa-clipboard-list"></i>
+            <div class="row g-2 mb-3"> <div class="col-xl-3 col-md-6">
+                    <div class="card shadow-sm kpi-card border-primary h-100" id="card-plan" style="cursor: pointer;">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-uppercase text-primary small fw-bold mb-1">Total Plan</div>
+                                    <h2 class="text-dark" id="kpi-plan">0</h2>
+                                    <div class="small text-muted mt-1 pt-1">Persons Target</div>
+                                </div>
+                                <div class="icon-circle bg-primary-soft">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-xl-3 col-md-6">
-                    <div class="card-kpi border-start-4 border-success" id="card-actual">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="text-label">Present</div>
-                                <div class="display-value text-success" id="kpi-actual">0</div>
-                                <span class="badge badge-soft-success mt-1 fw-normal" id="kpi-rate" style="font-size: 0.75rem;">0%</span>
-                            </div>
-                            <div class="icon-shape bg-soft-success text-success">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-md-6">
-                    <div class="card-kpi border-start-4 border-warning">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="text-label">Est. Cost</div>
-                                <div class="display-value text-warning" id="kpi-cost">0</div>
-                                <div class="unit-label">THB (Approx.)</div>
-                            </div>
-                            <div class="icon-shape bg-soft-warning text-warning">
-                                <i class="fas fa-coins"></i>
+                    <div class="card shadow-sm kpi-card border-success h-100" id="card-actual" style="cursor: pointer;">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-uppercase text-success small fw-bold mb-1">Present</div>
+                                    <h2 class="text-success" id="kpi-actual">0</h2>
+                                    <div class="mt-1 pt-1">
+                                        <span class="badge bg-success-soft border border-success border-opacity-25 text-success" id="kpi-rate" style="font-size: 0.80rem;">0% Rate</span>
+                                    </div>
+                                </div>
+                                <div class="icon-circle bg-success-soft">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-3 col-md-6">
-                    <div class="card-kpi border-start-4 border-danger" id="card-absent">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <div class="text-label">Abnormalities</div>
-                                <div class="display-value text-danger" id="kpi-absent">0</div>
-                            </div>
-                            <div class="icon-shape bg-soft-danger text-danger">
-                                <i class="fas fa-user-clock"></i>
+                    <div class="card shadow-sm kpi-card border-warning h-100">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-uppercase text-warning small fw-bold mb-1" style="color: #d39e00 !important;">Est. Cost</div>
+                                    <h2 class="text-warning" style="color: #d39e00 !important;" id="kpi-cost">0</h2>
+                                    <div class="small text-muted mt-1 pt-1">THB (Estimated)</div>
+                                </div>
+                                <div class="icon-circle bg-warning-soft">
+                                    <i class="fas fa-coins"></i>
+                                </div>
                             </div>
                         </div>
-                        <div class="d-flex gap-2 mt-2 pt-2 border-top border-light">
-                            <div id="card-late" class="kpi-action-badge badge-soft-warning w-100 cursor-pointer">
-                                Late: <span id="kpi-late" class="fw-bold">0</span>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card shadow-sm kpi-card border-danger h-100" id="card-absent">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="text-uppercase text-danger small fw-bold mb-1">Abnormalities</div>
+                                    <h2 class="text-danger" id="kpi-absent">0</h2>
+                                </div>
+                                <div class="icon-circle bg-danger-soft">
+                                    <i class="fas fa-user-clock"></i>
+                                </div>
                             </div>
-                            <div id="card-leave" class="kpi-action-badge badge-soft-info w-100 cursor-pointer">
-                                Leave: <span id="kpi-leave" class="fw-bold">0</span>
+                            
+                            <div class="d-flex gap-2 mt-1 pt-1 border-top border-light">
+                                <div id="card-late" class="btn-kpi-action bg-warning-soft w-50 text-center text-truncate text-dark" title="Click to view Late">
+                                    <i class="fas fa-clock me-1"></i> Late: <span id="kpi-late" class="fw-bold">0</span>
+                                </div>
+                                <div id="card-leave" class="btn-kpi-action bg-info-soft w-50 text-center text-truncate text-dark" title="Click to view Leave">
+                                    <i class="fas fa-bed me-1"></i> Leave: <span id="kpi-leave" class="fw-bold">0</span>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -87,24 +87,29 @@
     </div>
 </div>
 
-<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-white border-bottom py-3">
-                <div>
-                    <h5 class="modal-title fw-bold text-primary" id="detailModalTitle">
-                        <i class="fas fa-list-alt me-2"></i>Employee List
-                    </h5>
-                    <p class="text-muted small mb-0">รายละเอียดการลงเวลาและค่าแรง</p>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <div class="input-group input-group-sm" style="width: 250px;">
-                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0" id="searchDetail" placeholder="ค้นหาชื่อ..." onfocus="Actions.initSearch()">
+            
+            <div class="modal-header bg-white border-bottom pb-0">
+                <div class="w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="modal-title fw-bold text-primary" id="detailModalTitle">
+                                <i class="fas fa-list-alt me-2"></i>Employee List
+                            </h5>
+                            <p class="text-muted small mb-0 opacity-75">รายละเอียดการลงเวลาและค่าแรง</p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                    <div class="input-group input-group-lg mb-3 shadow-sm">
+                        <span class="input-group-text bg-light border-end-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control bg-light border-start-0" id="searchDetail" placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือสถานะ..." style="font-size: 0.95rem;">
+                    </div>
                 </div>
             </div>
+
             <div class="modal-body p-0 bg-light">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 table-striped" id="detailModalTable">
@@ -114,9 +119,13 @@
                     </table>
                 </div>
             </div>
+
             <div class="modal-footer bg-white py-2">
-                <div class="me-auto text-muted small">
-                    <i class="fas fa-info-circle me-1"></i> สามารถเปลี่ยนสถานะและกดปุ่ม Save ได้ทันที | <span class="text-danger">*สีแดง = ลืมรูดบัตร (คิดเงิน 8 ชม.)</span>
+                <div class="me-auto text-muted small d-none d-md-block">
+                    <i class="fas fa-info-circle me-1 text-primary"></i> 
+                    <span class="text-secondary">สามารถเปลี่ยนสถานะและกดปุ่ม <i class="fas fa-save mx-1"></i> ได้ทันที</span>
+                    <span class="mx-2 text-muted">|</span>
+                    <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>สีแดง = ลืมรูดบัตร (คิดเงิน 8 ชม.)</span>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>

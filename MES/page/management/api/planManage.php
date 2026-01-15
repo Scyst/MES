@@ -289,7 +289,7 @@ try {
         case 'calculate_carry_over':
             try {
                 // กำหนดช่วงเวลา (-30 วัน ถึง +30 วัน)
-                $startDate = date('Y-m-d', strtotime('-7 days'));
+                $startDate = date('Y-m-d', strtotime('-14 days'));
                 $endDate   = date('Y-m-d', strtotime('+30 days')); 
                 
                 // ตรวจสอบว่ามี Constant นี้หรือยัง (กันพลาด)

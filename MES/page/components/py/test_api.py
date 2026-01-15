@@ -1,25 +1,49 @@
 import requests
 import json
+from datetime import datetime
 
-# แก้ไข URL ตัด / ที่ซ้ำกันออก
 url = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
-
-# ลองระบุช่วงเวลาที่แคบลง (เช่น ช่วง 1 ชั่วโมง)
-payload = {
-    "start": None, 
-    "end": None  # แก้ไขจาก null เป็น None
-}
-
+payload = {"start": None, "end": None}
 headers = {'Content-Type': 'application/json'}
 
+def format_row(w_center, count_str):
+    # รับค่าเป็น String ทั้งหมดเพื่อความปลอดภัยในการจัดหน้า
+    return f"{w_center:<15} | {count_str:>10}"
+
 try:
-    # เพิ่ม timeout เพื่อป้องกันโปรแกรมค้างหากเน็ตมีปัญหา
+    print(f"📡 กำลังดึงข้อมูลจาก API...")
     response = requests.post(url, headers=headers, json=payload, timeout=10)
+    response.raise_for_status()
     
-    # ตรวจสอบสถานะการตอบกลับ (เช่น 200 OK)
-    response.raise_for_status() 
+    data = response.json()
     
-    print(json.dumps(response.json(), indent=4, ensure_ascii=False))
+    # เจาะข้อมูล
+    machine_list = data.get("data", {}).get("result", [])
+    
+    print(f"\n✅ ดึงข้อมูลสำเร็จ! ({datetime.now().strftime('%H:%M:%S')})")
+    print("="*30)
+    # ส่วนหัวตาราง (ส่ง string เข้าไปปกติ)
+    print(format_row("Work Center", "Counter"))
+    print("-" * 30)
+
+    total_count = 0
+    for machine in machine_list:
+        w_center = machine.get("work_center", "Unknown")
+        count = machine.get("counter", 0)
+        
+        # บวกยอดรวม
+        total_count += count
+        
+        # ✅ แปลงตัวเลขเป็น String พร้อมลูกน้ำ (,) ก่อนส่งไปจัดตาราง
+        count_display = f"{count:,}"
+        
+        print(format_row(w_center, count_display))
+
+    print("="*30)
+    print(f"📌 จำนวนเครื่อง: {len(machine_list)} เครื่อง")
+    print(f"📌 ยอดผลิตรวม: {total_count:,} ชิ้น\n")
 
 except requests.exceptions.RequestException as e:
-    print(f"เกิดข้อผิดพลาดในการเชื่อมต่อ: {e}")
+    print(f"\n❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: {e}")
+except Exception as e:
+    print(f"\n❌ Error: {e}")
