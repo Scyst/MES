@@ -255,11 +255,13 @@ try {
 
         // --- CASE 1: UPDATE Existing Log ---
         if ($logId != 0) {
-            $stmtCheck = $pdo->prepare("SELECT L.is_verified, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
+            $stmtCheck = $pdo->prepare("SELECT L.is_verified, L.log_date, E.line FROM " . MANPOWER_DAILY_LOGS_TABLE . " L JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id WHERE L.log_id = ?");
             $stmtCheck->execute([$logId]);
             $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if (!$log) throw new Exception("Log not found.");
+            
+            $logDate = $log['log_date'];
             
             if (hasRole('supervisor')) {
                 $userLine = $currentUser['line'] ?? '';
@@ -338,6 +340,12 @@ try {
         $stmtLog->execute([$updatedBy, $detail]);
 
         $pdo->commit();
+
+        if ($logDate) {
+            $stmtCalc = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
+            $stmtCalc->execute([$logDate, $logDate]);
+        }
+
         echo json_encode(['success' => true, 'message' => $msg]);
 
     // ==================================================================================
@@ -376,7 +384,7 @@ try {
         echo json_encode(['success' => true, 'message' => "Cleared $deletedCount records."]);
 
     // ==================================================================================
-    // 5. ACTION: update_log_status (Quick Update) - เผื่อไว้ใช้
+    // 5. ACTION: update_log_status (Quick Update)
     // ==================================================================================
     } elseif ($action === 'update_log_status') {
         if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -387,6 +395,11 @@ try {
 
         if (empty($logId) || empty($status)) throw new Exception("Missing parameters");
 
+        $stmtDate = $pdo->prepare("SELECT log_date FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+        $stmtDate->execute([$logId]);
+        $rowDate = $stmtDate->fetch(PDO::FETCH_ASSOC);
+        $calcDate = $rowDate ? $rowDate['log_date'] : null;
+
         $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . "
                 SET status = ?, 
                     remark = ?, 
@@ -396,6 +409,11 @@ try {
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$status, $remark, $updatedBy, $logId]);
+
+        if ($calcDate) {
+            $stmtCalc = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
+            $stmtCalc->execute([$calcDate, $calcDate]);
+        }
 
         echo json_encode(['success' => true, 'message' => 'Updated successfully']);
 
