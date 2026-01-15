@@ -1,6 +1,6 @@
 <?php
 // page/sales/api/manage_shipping.php
-// [UPDATED] - Exclude Remark from UPDATE in MERGE statement
+// [UPDATED] - Cleaned up to use 'loading_date' as Single Source of Truth
 
 define('ALLOW_GUEST_ACCESS', true);
 
@@ -50,15 +50,31 @@ try {
 
     switch ($action) {
         case 'read':
+            // [CHANGED] ใช้ loading_date เป็นหลัก
+            $startDate = $_REQUEST['start_date'] ?? '';
+            $endDate   = $_REQUEST['end_date'] ?? '';
+            $dateCondition = "";
+            $params = [];
+
+            if (!empty($startDate)) {
+                $dateCondition .= " AND s.loading_date >= ? ";
+                $params[] = $startDate;
+            }
+            if (!empty($endDate)) {
+                $dateCondition .= " AND s.loading_date <= ? ";
+                $params[] = $endDate;
+            }
+
+            // [CHANGED] ORDER BY loading_date
             $sql = "SELECT s.*, 
                     (COALESCE(i.Price_USD, i.StandardPrice, 0) * ISNULL(s.quantity, 0)) as price 
                     FROM $table s 
                     LEFT JOIN $itemsTable i ON s.sku = i.sku 
-                    WHERE 1=1 
-                    ORDER BY s.snc_load_day ASC, s.load_time ASC, s.id DESC"; 
-            
+                    WHERE 1=1 " . $dateCondition . " 
+                    ORDER BY s.loading_date ASC, s.load_time ASC, s.id DESC"; 
+
             $stmt = $pdo->prepare($sql);
-            $stmt->execute();
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -68,18 +84,18 @@ try {
             header('Content-Disposition: attachment; filename=Shipping_Schedule_Export_' . date('Y-m-d') . '.csv');
             
             $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM สำหรับ Excel ภาษาไทย
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM
 
-            // 1. หัวตาราง (ย้าย Remark และ Inspect ตามโครงสร้างหน้าเว็บใหม่)
+            // 1. หัวตาราง
             fputcsv($output, [
                 'Seq', 'PO Number', 'Remark', 'SKU', 'Description', 'Quantity',
                 'Load Status', 'Prod Status',
-                'SNC Load Day', 'Load Time', 'DC Location',
+                'Load Date', 'Load Time', 'DC Location', // [CHANGED] เปลี่ยนชื่อหัวตารางเป็น Load Date
                 'Booking No', 'Invoice No', 
                 'Container No', 'Seal No', 'Size', 'Tare', 'Net Weight', 'Gross Weight', 'CBM',
                 'Feeder Vessel', 'Mother Vessel', 'SNC CI No',
                 'SI/VGM Cutoff', 'Pickup Date', 'Return Date', 'ETD',
-                'Inspect Type', 'Inspect Res', // [MOVED] ย้ายมาไว้ท้ายๆ
+                'Inspect Type', 'Inspect Res', 
                 'Cutoff Date', 'Cutoff Time'
             ]);
 
@@ -87,11 +103,11 @@ try {
             $tm = function($t) { return ($t) ? date('H:i', strtotime($t)) : ''; };
             $yn = function($v) { return ($v == 1) ? 'Done' : 'Wait'; };
 
-            // 2. การเรียงลำดับ: วันที่มาก่อน (ASC) แล้วตามด้วยเวลา (ASC)
+            // 2. [CHANGED] เรียงตาม loading_date และใช้ loading_date ในการแสดงผล
             $sql = "SELECT * FROM $table 
                     ORDER BY 
-                        CASE WHEN snc_load_day IS NULL OR snc_load_day = '' THEN 1 ELSE 0 END, 
-                        snc_load_day ASC, 
+                        CASE WHEN loading_date IS NULL OR loading_date = '' THEN 1 ELSE 0 END, 
+                        loading_date ASC, 
                         load_time ASC, 
                         id DESC";
                     
@@ -101,13 +117,13 @@ try {
                 fputcsv($output, [
                     $row['custom_order'], 
                     $row['po_number'], 
-                    $row['remark'],           // [MOVED] Remark มาอยู่นี่
+                    $row['remark'],
                     $row['sku'], 
                     $row['description'], 
                     $row['quantity'],
                     $yn($row['is_loading_done']), 
                     $yn($row['is_production_done']),
-                    $dt($row['snc_load_day']), 
+                    $dt($row['loading_date']),  // [CHANGED] ใช้ loading_date
                     $tm($row['load_time']), 
                     $row['dc_location'],
                     $row['booking_no'], 
@@ -126,8 +142,8 @@ try {
                     $dt($row['pickup_date']), 
                     $dt($row['return_date']), 
                     $dt($row['etd']),
-                    $row['inspect_type'],      // [MOVED]
-                    $row['inspection_result'], // [MOVED]
+                    $row['inspect_type'],
+                    $row['inspection_result'], 
                     $dt($row['cutoff_date']), 
                     $tm($row['cutoff_time'])
                 ]);
@@ -144,7 +160,9 @@ try {
             $columnMap = [
                 'shippingweek' => 'shipping_week', 'status' => 'shipping_customer_status',
                 'inspecttype' => 'inspect_type', 'inspectionresult' => 'inspection_result',
-                'sncloadday' => 'snc_load_day', 'etd' => 'etd', 'dc' => 'dc_location',
+                'sncloadday' => 'loading_date', // [CHANGED] แมพหัวตาราง Excel เก่า เข้า loading_date
+                'loaddate' => 'loading_date',   // [ADDED] เผื่อหัวตาราง Excel เปลี่ยนชื่อมาแล้ว
+                'etd' => 'etd', 'dc' => 'dc_location',
                 'sku' => 'sku', 'po' => 'po_number', 'ponumber' => 'po_number',
                 'bookingno' => 'booking_no', 'invoice' => 'invoice_no', 'description' => 'description',
                 'ctnsqtypieces' => 'quantity', 'qty' => 'quantity', 
@@ -155,11 +173,13 @@ try {
                 'loadtime' => 'load_time', 'time' => 'load_time', 'loadingtime' => 'load_time'
             ];
 
-            $dateCols = ['snc_load_day', 'etd', 'si_vgm_cut_off', 'pickup_date', 'return_date'];
+            // [CHANGED] ใช้ loading_date ในรายการวันที่
+            $dateCols = ['loading_date', 'etd', 'si_vgm_cut_off', 'pickup_date', 'return_date'];
             $numCols = ['quantity', 'container_tare', 'net_weight', 'gross_weight', 'cbm'];
 
             $pdo->beginTransaction();
             foreach ($rows as $index => $row) {
+                // ... (Logic การ Loop เหมือนเดิม) ...
                 $rowNum = $index + 2; 
                 $normalizedRow = [];
                 foreach ($row as $k => $v) {
@@ -200,7 +220,6 @@ try {
                         $colNames[] = $col;
                         $bindParams[] = $val;
                         
-                        // ★★★ [KEY CHANGE] ไม่ update remark ของเก่า ★★★
                         if ($col !== 'remark') {
                             $updatePairs[] = "T.$col = S.$col";
                         }
@@ -230,18 +249,32 @@ try {
             $id = $_POST['id'] ?? null;
             $field = $_POST['field'] ?? null;
             $val = $_POST['value'] ?? null;
+            
+            // [CHANGED] ปรับรายการที่อนุญาตให้เหลือแค่ loading_date
             $allowed = [
                 'container_no', 'booking_no', 'invoice_no', 'remark', 'etd', 
-                'snc_load_day', 'si_vgm_cut_off', 'pickup_date', 'return_date', 
+                'loading_date', // แทนที่ snc_load_day
+                'si_vgm_cut_off', 'pickup_date', 'return_date', 
                 'cutoff_date', 'cutoff_time', 'shipping_customer_status', 
                 'inspect_type', 'inspection_result', 'dc_location', 
                 'feeder_vessel', 'mother_vessel', 'snc_ci_no', 'ctn_size', 
                 'seal_no', 'container_tare', 'net_weight', 'gross_weight', 'cbm',
                 'shipping_week', 'sku', 'load_time'
             ];
-            if ($id && in_array($field, $allowed)) {
-                if ($val && (strpos($field, 'date') !== false || in_array($field, ['etd', 'snc_load_day', 'si_vgm_cut_off']))) $val = $fnDate($val);
+            
+            if ($id && (in_array($field, $allowed) || $field === 'snc_load_day')) { // เผื่อ JS เก่ายังส่ง snc_load_day มา
+                
+                // [SAFETY] ถ้า JS ส่ง snc_load_day มา ให้เปลี่ยนเป็น loading_date ทันที
+                if ($field === 'snc_load_day') {
+                    $field = 'loading_date';
+                }
+
+                // แปลงวันที่
+                if ($val && (strpos($field, 'date') !== false || in_array($field, ['etd', 'si_vgm_cut_off']))) $val = $fnDate($val);
+                
+                // [CHANGED] ตัด Logic Sync ออก อัปเดตแค่ loading_date เพียวๆ
                 $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
+
                 echo json_encode(['success' => true]);
             } else { echo json_encode(['success' => false, 'message' => 'Invalid Field']); }
             break;
@@ -252,6 +285,7 @@ try {
             $val = isset($_POST['checked']) ? (int)$_POST['checked'] : 0;
             if ($id && in_array($field, ['is_loading_done', 'is_production_done'])) {
                  if ($field === 'is_loading_done' && $val == 1) {
+                     // [CHECKED] อันนี้ถูกต้องแล้ว อัปเดต loading_date เมื่อกดเสร็จ
                      $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                  } elseif ($field === 'is_production_done' && $val == 1) {
                      $pdo->prepare("UPDATE $table SET is_production_done = 1, production_date = COALESCE(production_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);

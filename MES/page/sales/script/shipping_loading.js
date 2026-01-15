@@ -5,6 +5,7 @@
  * - Smart KPI & Pipeline Logic
  * - Read-only view for Customers
  * - Full Import/Export Functionality
+ * - [UPDATED] Use 'loading_date' instead of 'snc_load_day'
  */
 
 "use strict";
@@ -29,7 +30,7 @@ $(document).ready(function() {
         importModal = new bootstrap.Modal(modalEl);
     }
     
-    // 2. Load Data (ถ้ายังไม่ใส่รหัส จะติด 401 หรือถูกบังด้วย Modal)
+    // 2. Load Data
     loadData();
 
     // 3. Set Default UI State
@@ -46,6 +47,17 @@ $(document).ready(function() {
             applyGlobalFilter(); 
         }, 300);
     });
+
+    $('#filterStartDate, #filterEndDate').on('change', function() {
+        loadData();
+    });
+
+    // [NEW] ฟังก์ชันล้างค่าวันที่
+    window.clearDateFilter = function() {
+        $('#filterStartDate').val('');
+        $('#filterEndDate').val('');
+        loadData();
+    };
 });
 
 // ============================================================
@@ -93,23 +105,35 @@ async function verifyPasscode() {
 
 function loadData() {
     showSpinner();
+    const startDate = $('#filterStartDate').val() || '';
+    const endDate = $('#filterEndDate').val() || '';
+
     $.ajax({
-        url: `${API_URL}?action=read`,
-        method: 'GET', 
+        url: API_URL,
+        method: 'POST',
+        data: { 
+            action: 'read',
+            start_date: startDate,
+            end_date: endDate
+        },
         dataType: 'json',
-        success: function(res) {
-            if(res.success) {
-                allData = res.data;
+        success: function(response) {
+            if (response.success) {
+                // 1. เก็บข้อมูลลงตัวแปรหลัก
+                allData = response.data;
+
+                // 2. [สำคัญ] คำนวณตัวเลขบนการ์ด KPI ใหม่ทันที
                 calculateKPI(allData);
-                applyGlobalFilter();
+
+                // 3. [สำคัญ] เรียก applyGlobalFilter แทน renderTable 
+                applyGlobalFilter(); 
             } else {
-                console.warn(res.message); // กรณี Unauthorized อาจจะไม่ส่งข้อมูลมา
+                hideSpinner();
+                console.error(response.message);
             }
-            hideSpinner();
         },
         error: function(xhr) {
             hideSpinner();
-            // ถ้าเป็น 401 (ยังไม่ login/ใส่รหัส) ไม่ต้องแจ้งเตือน เพราะ Modal บังอยู่แล้ว
             if (xhr.status !== 401) {
                 console.error('Connection Failed');
             }
@@ -131,7 +155,8 @@ function calculateKPI(data) {
     data.forEach(row => {
         countTotal++;
         
-        const loadDate = getDateObj(row.snc_load_day);
+        // [CHANGED] ใช้ loading_date
+        const loadDate = getDateObj(row.loading_date);
         
         // 1 = เสร็จ, ค่าอื่น (0, null) = ยังไม่เสร็จ
         const isLoadDone = (row.is_loading_done == 1);
@@ -194,7 +219,7 @@ function filterTable(status) {
         else if (status === 'ALL') $('.kpi-card.border-secondary').addClass('ring-2');
 
         applyGlobalFilter();
-    }, 50); 
+    }, 5); 
 }
 
 function applyGlobalFilter() {
@@ -212,7 +237,9 @@ function applyGlobalFilter() {
 
         const isLoadDone = (row.is_loading_done == 1);
         const isProdDone = (row.is_production_done == 1);
-        const loadDate = getDateObj(row.snc_load_day);
+        
+        // [CHANGED] ใช้ loading_date
+        const loadDate = getDateObj(row.loading_date);
 
         // 2. Filter by Card Status
         if (currentStatusFilter === 'ALL') return true;
@@ -238,8 +265,9 @@ function applyGlobalFilter() {
 
     // 3. Sorting (Priority: Delay > Today > Future > No Date)
     filteredData.sort((a, b) => {
-        const da = getDateObj(a.snc_load_day);
-        const db = getDateObj(b.snc_load_day);
+        // [CHANGED] ใช้ loading_date
+        const da = getDateObj(a.loading_date);
+        const db = getDateObj(b.loading_date);
 
         if (!da && !db) return 0;
         if (!da) return 1; // ไม่มีวันที่เอาไปท้ายสุด
@@ -303,7 +331,8 @@ function renderTable() {
             return d; 
         };
 
-        const loadDateObj = getDateObj(row.snc_load_day);
+        // [CHANGED] ใช้ loading_date
+        const loadDateObj = getDateObj(row.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
         
         let poHtml = isDelay 
@@ -313,11 +342,13 @@ function renderTable() {
             : `<span class="text-primary fw-bold font-monospace" style="font-size: 0.9rem;">${row.po_number}</span>`;
 
         let dateHtml = '';
-        const dateVal = fnDateDisplay(row.snc_load_day);
+        // [CHANGED] ใช้ loading_date
+        const dateVal = fnDateDisplay(row.loading_date);
         if(isCustomer) {
             dateHtml = `<span class="${isDelay ? 'text-danger fw-bold' : ''}">${dateVal || '<span class="text-muted fw-light">-</span>'}</span>`;
         } else {
-            dateHtml = `<input type="text" class="editable-input datepicker text-center ${isDelay?'text-danger fw-bold':''}" value="${dateVal}" data-field="snc_load_day" data-id="${row.id}" placeholder="-" style="width:85px; font-size:0.85rem;">`;
+            // [CHANGED] data-field="loading_date"
+            dateHtml = `<input type="text" class="editable-input datepicker text-center ${isDelay?'text-danger fw-bold':''}" value="${dateVal}" data-field="loading_date" data-id="${row.id}" placeholder="-" style="width:85px; font-size:0.85rem;">`;
         }
 
         const cutDateVal = fnDateDisplay(row.cutoff_date);
@@ -329,7 +360,6 @@ function renderTable() {
             ? (cutTimeVal || '<span class="text-muted fw-light">-</span>') 
             : `<input type="time" class="editable-input text-danger fw-bold text-center" value="${cutTimeVal}" onchange="upd(${row.id}, 'cutoff_time', this.value, this)" placeholder="-" style="width:58px; padding:0;">`;
 
-        // เรียงลำดับ <td> ใหม่ตามหัวข้อที่คุณต้องการ (Load -> Prod -> PO -> Remark -> Day/Time -> Booking -> CI -> Invoice -> Desc -> SKU -> Qty -> Cont -> Seal -> Week -> DC ...)
         return `<tr>
             <td class="sticky-col-left-1 bg-white text-center">${btnLoad}</td>
             <td class="sticky-col-left-2 bg-white text-center">${btnProd}</td>
@@ -616,23 +646,17 @@ function guestLogout() {
 }
 
 function updateSummary() {
-    if (!allData || allData.length === 0) return;
+    // [CHANGED] ใช้ filteredData (ข้อมูลที่กรองแล้ว) แทนการ Fix เป็น Today
+    // เพื่อให้ตัวเลขสรุปเปลี่ยนไปตามช่วงวันที่ หรือสถานะที่เราเลือกดูอยู่
+    const targetData = filteredData; 
 
-    // สร้างวันที่วันนี้แบบ YYYY-MM-DD เพื่อเอาไว้เทียบกับค่าใน Database ตรงๆ
-    const now = new Date();
-    const todayISO = now.toISOString().split('T')[0]; 
-    
-    const targetData = allData.filter(row => {
-        // row.snc_load_day มักจะมาเป็น "YYYY-MM-DD"
-        const rowDate = row.snc_load_day ? row.snc_load_day.split(' ')[0] : '';
-        const rowDateObj = getDateObj(row.snc_load_day);
-        
-        const isTodayJob = (rowDate === todayISO);
-        // งานค้าง: วันที่น้อยกว่าวันนี้ และ ยังโหลดไม่เสร็จ
-        const isBacklog = (rowDateObj && rowDateObj < now && row.is_loading_done == 0);
-        
-        return isTodayJob || isBacklog;
-    });
+    if (!targetData || targetData.length === 0) {
+        $('#sumTotalContainers').text('0');
+        $('#sumTotalPcs').text('0');
+        $('#sumLoadProgress').text('0/0');
+        $('#loadProgressBar').css('width', '0%');
+        return;
+    }
 
     // คำนวณ Containers (นับ Unique)
     const uniqueContainers = [...new Set(targetData
@@ -649,7 +673,7 @@ function updateSummary() {
     // คำนวณ Pcs
     const totalPcs = targetData.reduce((sum, row) => sum + (parseInt(row.quantity) || 0), 0);
 
-    // คำนวณ Progress
+    // คำนวณ Progress (เฉพาะงานใน Filter นั้นๆ)
     const totalRows = targetData.length;
     const loadedCount = targetData.filter(row => row.is_loading_done == 1).length;
     const loadPercent = totalRows > 0 ? Math.round((loadedCount / totalRows) * 100) : 0;
@@ -660,7 +684,7 @@ function updateSummary() {
     $('#sumLoadProgress').text(`${loadedCount}/${totalRows}`);
     $('#loadProgressBar').css('width', loadPercent + '%');
     
-    // เปลี่ยนสีหลอด
+    // เปลี่ยนสีหลอดตามความคืบหน้า
     if (loadPercent === 100 && totalRows > 0) {
         $('#loadProgressBar').removeClass('bg-primary').addClass('bg-success');
     } else {

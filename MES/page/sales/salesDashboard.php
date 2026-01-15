@@ -152,7 +152,7 @@ $pageHelpId = "helpModal";
                                     <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search PO, SKU...">
                                 </div>
                                 <a href="shipping_loading.php" class="btn btn-outline-primary btn-sm fw-bold shadow-sm d-flex align-items-center" data-bs-toggle="tooltip" title="ไปหน้าจัดตารางโหลดตู้">
-                                    <i class="fas fa-truck-loading me-2"></i> Shipping Schedule
+                                    <i class="fas fa-truck-loading me-2"></i> Shipping
                                 </a>
                                 <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" 
                                         onclick="resetToPlanOrder()" 
