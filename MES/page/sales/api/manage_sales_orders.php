@@ -46,6 +46,24 @@ try {
     if ($action === 'read') {
         $filter = $_GET['status'] ?? 'ACTIVE'; 
         
+        // [1] รับค่าวันที่
+        $startDate = $_GET['start_date'] ?? '';
+        $endDate   = $_GET['end_date'] ?? '';
+        
+        // [2] เตรียมเงื่อนไข SQL สำหรับวันที่ (ใช้ร่วมกันทั้งตารางและการ์ด)
+        $dateCondition = "";
+        $dateParams = [];
+
+        if (!empty($startDate)) {
+            $dateCondition .= " AND s.loading_date >= ? ";
+            $dateParams[] = $startDate;
+        }
+        if (!empty($endDate)) {
+            $dateCondition .= " AND s.loading_date <= ? ";
+            $dateParams[] = $endDate;
+        }
+
+        // --- ส่วนที่ A: Query ข้อมูลลงตาราง ---
         $columns = "
             s.id, s.po_number, s.sku, s.quantity, 
             s.order_date, s.description, s.color,
@@ -63,26 +81,37 @@ try {
                 LEFT JOIN $itemsTable i ON s.sku = i.sku 
                 WHERE 1=1";
         
+        // เติมเงื่อนไข Filter สถานะ (Active, Wait Prod...)
         if ($filter === 'ACTIVE') $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
         if ($filter === 'WAIT_PROD') $sql .= " AND ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
         if ($filter === 'WAIT_LOAD') $sql .= " AND is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
         if ($filter === 'PROD_DONE') $sql .= " AND is_loading_done = 1"; 
+
+        // เติมเงื่อนไข วันที่ ลงไปในตาราง
+        $sql .= $dateCondition;
         
         $sql .= " ORDER BY ISNULL(custom_order, 999999) ASC, id DESC";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($dateParams); // ส่ง parameter วันที่เข้าไป
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+
+        // --- ส่วนที่ B: Query ตัวเลข KPI (Summary) ---
+        // (ส่วนนี้แหละครับที่จะทำให้การ์ดเปลี่ยนตัวเลข)
+        
         $sumSql = "SELECT 
                    COUNT(*) as total_all,
                    SUM(CASE WHEN ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as total_active,
                    SUM(CASE WHEN ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_prod,
                    SUM(CASE WHEN is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_load,
                    SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as prod_done
-                   FROM $table";
-                    
-        $summary = $pdo->query($sumSql)->fetch(PDO::FETCH_ASSOC);
+                   FROM $table s 
+                   WHERE 1=1 " . $dateCondition; // <--- สำคัญ! เติมเงื่อนไขวันที่เข้าไปตรงนี้
+
+        $stmtSum = $pdo->prepare($sumSql);
+        $stmtSum->execute($dateParams); // ส่ง parameter วันที่ชุดเดียวกันเข้าไป
+        $summary = $stmtSum->fetch(PDO::FETCH_ASSOC);
 
         echo json_encode(['success'=>true, 'data'=>$data, 'summary'=>$summary]);
         exit;
@@ -294,6 +323,25 @@ try {
         $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
         $pdo->prepare($sql)->execute([$in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder]);
         echo json_encode(['success'=>true]); 
+        exit;
+    }
+
+    if ($action === 'delete_single') {
+        $in = json_decode(file_get_contents('php://input'), true);
+        $id = $in['id'] ?? 0;
+        
+        if ($id) {
+            // ลบรายการตาม ID
+            $stmt = $pdo->prepare("DELETE FROM $table WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            // (Optional) ถ้าอยากให้ Reset Custom Order ใหม่ ก็ทำได้ตรงนี้ 
+            // แต่ปกติลบเฉยๆ ก็พอครับ
+            
+            echo json_encode(['success'=>true]);
+        } else {
+            echo json_encode(['success'=>false, 'message'=>'Invalid ID']);
+        }
         exit;
     }
 

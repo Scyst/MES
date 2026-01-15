@@ -163,6 +163,15 @@ $pageHelpId = "helpModal";
                             </div>
 
                             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small">Load:</span>
+                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" title="Start Date">
+                                    <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
+                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" title="End Date">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="clearDateFilter()" title="Clear Dates">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                                 
                                 <div class="d-none d-xl-flex align-items-center border border-secondary-subtle rounded px-3 py-0 bg-body shadow-sm h-100">
                                     <span class="badge bg-dark me-2" id="sum-containers">0</span> <span class="small text-muted fw-bold me-3">Orders</span>

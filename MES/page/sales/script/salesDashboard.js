@@ -21,6 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const createEl = document.getElementById('createOrderModal');
     if (createEl) createOrderModal = new bootstrap.Modal(createEl);
 
+    const startDateInput = document.getElementById('filterStartDate');
+    const endDateInput = document.getElementById('filterEndDate');
+
+    if(startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', () => loadData());
+        endDateInput.addEventListener('change', () => loadData());
+    }
+
     // 2. Event Listeners
     document.getElementById('universalSearch').addEventListener('input', (e) => {
         // Debounce search
@@ -99,19 +107,31 @@ async function fetchExchangeRate() {
 async function loadData() {
     showSpinner();
     try {
-        const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}`);
+        // [NEW] Get Date Values
+        const startDate = document.getElementById('filterStartDate')?.value || '';
+        const endDate = document.getElementById('filterEndDate')?.value || '';
+
+        // ส่งค่าไปพร้อมกับ Query String
+        const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}&start_date=${startDate}&end_date=${endDate}`);
         const json = await res.json();
+
         if (json.success) {
             allData = json.data;
             updateKPI(json.summary);
-            
+
             // Reset sorting to default logic
             sortState = [];
             updateSortUI();
-            
+
             renderTable(document.getElementById('universalSearch').value); 
         }
     } catch (err) { console.error(err); showToast('Error loading data', '#dc3545'); } finally { hideSpinner(); }
+}
+
+function clearDateFilter() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    loadData(); // โหลดข้อมูลใหม่แบบไม่กรองวันที่
 }
 
 function updateKPI(summary) {
@@ -224,16 +244,31 @@ function renderTable(searchTerm) {
 
         const stickyClass = 'bg-white';
         
-        // -- PO Number --
-        let poHtml = '';
+        // [MODIFIED] -- PO Number & Delete Button --
+        let poContent = '';
+        
+        // 1. สร้างเนื้อหา PO (เหมือนเดิม แต่เปลี่ยนชื่อตัวแปรเป็น poContent)
         if (isDelay) {
-            poHtml = `<div class="d-flex align-items-center text-danger" title="Late Delivery">
+            poContent = `<div class="d-flex align-items-center text-danger" title="Late Delivery">
                         <i class="fas fa-exclamation-triangle me-2 blink"></i>
                         <span>${item.po_number}</span>
                       </div>`;
         } else {
-            poHtml = `<span class="text-primary font-monospace">${item.po_number}</span>`;
+            poContent = `<span class="text-primary font-monospace">${item.po_number}</span>`;
         }
+
+        // 2. [NEW] เอา poContent มารวมกับ "ปุ่มลบ" ใส่ใน poHtml
+        const poHtml = `
+            <div class="d-flex justify-content-between align-items-center w-100 group-action">
+                ${poContent}
+                <button class="btn btn-link btn-sm text-danger p-0 ms-2 opacity-25 hover-100" 
+                        onclick="deleteOrder(${item.id}, '${item.po_number}')" 
+                        title="Delete Order"
+                        style="text-decoration:none;">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
 
         // -- Icon Buttons --
         const btnPrdClass = isPrd ? 'status-done' : 'status-wait';
@@ -519,6 +554,43 @@ async function submitCreateOrder() {
             loadData();
         } else { alert('Error: ' + json.message); }
     } catch (err) { alert('Failed to create order'); } finally { hideSpinner(); }
+}
+
+// [NEW] Delete Order Function
+async function deleteOrder(id, poNum) {
+    // 1. Confirm ก่อนลบ
+    if (!confirm(`Are you sure you want to delete PO: ${poNum}?`)) return;
+
+    showSpinner();
+    try {
+        const res = await fetch(`${API_URL}?action=delete_single`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: id })
+        });
+        const json = await res.json();
+
+        if (json.success) {
+            showToast('Order deleted successfully', '#198754'); // สีเขียว
+            
+            // ลบออกจากตัวแปร allData โดยไม่ต้องโหลดใหม่จาก Server (เพื่อความเร็ว)
+            allData = allData.filter(item => item.id != id);
+            
+            // Render ตารางใหม่
+            renderTable(document.getElementById('universalSearch').value);
+            
+            // Update KPI (คำนวณใหม่จาก allData ที่เหลืออยู่)
+            // (หรือจะสั่ง loadData() ใหม่เลยก็ได้ถ้าอยากให้ชัวร์สุดๆ)
+            loadData(); 
+        } else {
+            alert('Error: ' + json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to delete order');
+    } finally {
+        hideSpinner();
+    }
 }
 
 async function uploadFile(e) {

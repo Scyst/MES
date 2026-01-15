@@ -373,3 +373,6 @@ tr:hover td {
 @media (min-width: 992px) { .col-lg-20-percent { flex: 0 0 auto; width: 20%; } }
 @media (max-width: 992px) { .col-lg-20-percent { width: 33.33%; } }
 @media (max-width: 576px) { .col-lg-20-percent { width: 50%; } }
+/* Delete Button Hover Effect */
+.hover-100 { transition: opacity 0.2s; }
+.group-action:hover .hover-100 { opacity: 1 !important; }

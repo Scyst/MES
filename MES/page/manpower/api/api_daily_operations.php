@@ -73,13 +73,33 @@ try {
                     -- ✅ 2. คำนวณเงินรายหัว (Est. Cost)
                     CAST(
                         CASE 
+                            -- [A] มาทำงาน (PRESENT / LATE)
                             WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                -- [A] ฐานเงินเดือน/ค่าแรง (8 ชม.)
-                                (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (COALESCE(CM.hourly_rate,0) * Rate.Work_Multiplier) END)
+                                -- 1. ค่าแรงรายวัน (8 ชม.)
+                                (CASE 
+                                    WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) 
+                                    -- 🔥 แก้ตรงนี้: ใช้ Hourly_Base * 8 จะได้ (400/8)*8 = 400
+                                    ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) 
+                                END)
                                 +
-                                -- [B] ค่า OT (Logic: ลืมสแกน = 0, OT Step 30 นาที, Cap 6 ชม.)
+                                -- 2. ค่า OT
                                 (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
-                            ELSE 0 
+
+                            -- [B] ลาป่วย/พักร้อน (SICK/VACATION) -> รายวันได้ 8 ชม.
+                            WHEN L.status IN ('SICK', 'VACATION') THEN
+                                (CASE 
+                                    WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) 
+                                    -- 🔥 แก้ตรงนี้: จากเดิม CM.hourly_rate * 8 เปลี่ยนเป็น Rate.Hourly_Base * 8
+                                    ELSE (Rate.Hourly_Base * 8.0) 
+                                END)
+
+                            -- [C] ลากิจ (BUSINESS) -> รายวันไม่ได้เงิน, รายเดือนได้ปกติ
+                            WHEN L.status = 'BUSINESS' THEN
+                                (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
+
+                            -- [D] อื่นๆ (ABSENT/WAITING)
+                            ELSE 
+                                (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
                         END
                     AS DECIMAL(10,2)) as est_cost
 
