@@ -65,6 +65,18 @@
 
         <?php if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
         <li>
+            <a class="dropdown-item-icon" href="../sales/salesDashboard.php" title="Sales Tracking">
+                <i class="fas fa-shipping-fast fa-fw"></i>
+                <span>Sales Tracking</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item-icon" href="../loadingReport/loading_report.php" title="Loading Toolbox">
+                <i class="fas fa-truck-loading fa-fw"></i>
+                <span>Loading Report</span>
+            </a>
+        </li>
+        <li>
             <a class="dropdown-item-icon" href="../storeManagement/storeRequest.php" title="Store Request & Scrap">
                 <i class="fas fa-dolly-flatbed fa-fw"></i>
                 <span>Scrap & Replacement</span>

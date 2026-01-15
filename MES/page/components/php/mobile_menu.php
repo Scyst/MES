@@ -63,6 +63,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
             </li>
             <?php endif; ?>
 
+            <?php if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../production/productionUI.php">
                     <i class="fas fa-boxes fa-fw me-3"></i>
@@ -74,6 +75,20 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 <a class="text-decoration-none text-body d-block" href="../production/mobile_entry.php">
                     <i class="fas fa-mobile-alt fa-fw me-3"></i>
                     <span>ลงยอด (Mobile)</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../sales/salesDashboard.php">
+                    <i class="fas fa-shipping-fast fa-fw me-3"></i>
+                    <span>Sales Tracking</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../loadingReport/loading_report.php">
+                    <i class="fas fa-truck-loading fa-fw me-3"></i>
+                    <span>Loading Toolbox</span>
                 </a>
             </li>
 
@@ -97,8 +112,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
                     <span>Stop & Causes</span>
                 </a>
             </li>
-            
-            <?php if ($userRole && in_array($userRole, ['operator','supervisor', 'admin', 'creator'])): ?>
+
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../documentCenter/documentCenterUI.php">
                     <i class="fas fa-folder-open fa-fw me-3"></i>
