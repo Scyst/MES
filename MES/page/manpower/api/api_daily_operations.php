@@ -145,7 +145,7 @@ try {
                 CROSS APPLY (SELECT CASE WHEN L.log_date < CAST(GETDATE() AS DATE) AND L.scan_out_time IS NULL THEN 0 WHEN Step_OT.OT_Hours > 6 THEN 6 ELSE Step_OT.OT_Hours END AS OT_Capped) AS Final_OT
 
                 WHERE 
-                    E.is_active = 1
+                    (E.is_active = 1 OR L.log_id IS NOT NULL)
                     -- ✅ 6. Ghost Plan Filter
                     AND (L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= :createDateCheck))
         ";
