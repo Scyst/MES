@@ -1,0 +1,364 @@
+<?php
+// page/loading/print_report.php
+require_once __DIR__ . '/../components/init.php';
+require_once __DIR__ . '/loading_config.php';
+require_once __DIR__ . '/../db.php'; 
+
+if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
+$report_id = $_GET['report_id'];
+
+// 1. ดึงข้อมูล
+$sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description, s.invoice_no,
+               s.container_no as plan_container, s.seal_no as plan_seal
+        FROM " . LOADING_REPORTS_TABLE . " r
+        LEFT JOIN " . SALES_ORDERS_TABLE . " s ON r.sales_order_id = s.id
+        WHERE r.id = ?";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$report_id]);
+$header = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$header) die("Error: Report not found");
+
+// 2. ดึงรูป
+$photos = [];
+$sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ?";
+$stmtP = $pdo->prepare($sqlPhoto);
+$stmtP->execute([$report_id]);
+while ($row = $stmtP->fetch(PDO::FETCH_ASSOC)) {
+    $photos[$row['photo_type']] = $row['file_path'];
+}
+
+// 3. ดึงผล Checklist
+$checklist_results = [];
+$sqlCheck = "SELECT topic_id, item_index, result, remark FROM " . LOADING_RESULTS_TABLE . " WHERE report_id = ?";
+$stmtC = $pdo->prepare($sqlCheck);
+$stmtC->execute([$report_id]);
+while ($row = $stmtC->fetch(PDO::FETCH_ASSOC)) {
+    $checklist_results[$row['topic_id']][$row['item_index']] = $row;
+}
+
+// --- HELPER FUNCTIONS ---
+function renderCheckbox($result, $targetValue) {
+    $isChecked = ($result === $targetValue);
+    $symbol = $isChecked ? '&#9745;' : '&#9744;'; 
+    $style = $isChecked ? 'font-weight:bold; color:black;' : 'color:#999;';
+    return "<span style='font-size: 16px; $style'>{$symbol}</span>";
+}
+
+function renderContainerTypeCheck($currentType, $targetType) {
+    $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
+    $dbValue = isset($map[$currentType]) ? $map[$currentType] : $currentType;
+    $isMatch = ($dbValue === $targetType);
+    $mark = $isMatch ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
+    
+    return "<span style='display:inline-block; margin-right:10px; position:relative;'>
+        <span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>$mark</span> 
+        $targetType
+    </span>";
+}
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Report_<?php echo $header['po_number']; ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- A4 PRINT SETTINGS --- */
+        @page { size: A4; margin: 10mm; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+        }
+
+        /* --- GENERAL STYLES --- */
+        body { font-family: 'Sarabun', sans-serif; font-size: 12px; line-height: 1.3; color: #000; background: #555; margin: 0; padding: 0; }
+        .page {
+            width: 210mm; min-height: 297mm;
+            padding: 10mm 15mm; margin: 10mm auto;
+            background: white; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            position: relative; box-sizing: border-box;
+        }
+
+        /* --- STYLES FOR PAGE 1 --- */
+        .company-name { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .report-title { font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #000; padding: 5px; margin-bottom: 15px; background: #eee; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .info-table td { border: 1px solid #000; padding: 4px 8px; vertical-align: middle; }
+        .label { font-weight: bold; background-color: #f9f9f9; width: 140px; }
+        .val { font-weight: bold; color: #000; }
+        .photo-section-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; margin-bottom: 10px; padding-bottom: 2px; }
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .photo-card { border: 1px solid #ccc; padding: 5px; text-align: center; page-break-inside: avoid; }
+        .photo-box { width: 100%; height: 200px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #ddd; }
+        .photo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .photo-caption { margin-top: 5px; font-weight: bold; font-size: 11px; }
+
+        /* --- STYLES FOR PAGE 2 (C-TPAT HEADER) --- */
+        .ctpat-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; border: 1px solid #000; }
+        .ctpat-header-table td { 
+            border: 1px solid #000; 
+            vertical-align: top;
+            padding: 0 0 2px 2px;
+        }
+                
+        /* [แก้ไข] ให้ Label และ Value อยู่บรรทัดเดียวกัน */
+        .form-label { 
+            font-size: 9px; 
+            color: #000; 
+            font-weight: bold;
+            margin-right: 5px; /* เว้นระยะห่างจากคำตอบนิดหน่อย */
+        }
+        .form-value { 
+            font-size: 9px; 
+            font-weight: bold; 
+            color: blue; 
+            font-family: 'Sarabun', sans-serif;
+        }
+        
+        .top-brand-row td { border: 1px solid #000; vertical-align: middle; padding: 8px 0; text-align: center; }
+        .brand-snc { font-size: 20px; font-weight: bold; font-style: italic; }
+        .brand-title { font-size: 11px; font-weight: bold; }
+
+        /* --- CHECKLIST TABLE --- */
+        .chk-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: -1px; }
+        .chk-table th, .chk-table td { border: 1px solid #000; padding: 2px; vertical-align: middle; }
+        .chk-table th { background-color: #e0e0e0; text-align: center; font-weight: bold; border-top: 2px solid #000; }
+        .topic-row { background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #000;}
+        .sub-item-row td { border-top: 1px dotted #ccc; }
+        .col-res { text-align: center; width: 40px; }
+        .col-res span { display: block; line-height: 1; }
+        
+        /* Signature */
+        .signature-section { margin-top: 30px; display: flex; justify-content: space-around; page-break-inside: avoid; }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="position: fixed; top: 10px; right: 10px; z-index: 999;">
+        <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            🖨️ PRINT REPORT
+        </button>
+    </div>
+
+    <div class="page">
+        <div class="company-name">SNC Creativity Anthology Company</div>
+        <div class="report-title">LOADING INSPECTION REPORT (6-POINT PHOTO)</div>
+
+        <table class="info-table">
+            <tr>
+                <td class="label">Date (วันที่):</td>
+                <td class="val"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></td>
+                <td class="label">Time (เวลา):</td>
+                <td class="val"><?php echo date('H:i', strtotime($header['created_at'])); ?></td>
+            </tr>
+            <tr>
+                <td class="label">PO Number:</td>
+                <td class="val"><?php echo $header['po_number']; ?></td>
+                <td class="label">Qty (จำนวน):</td>
+                <td class="val"><?php echo number_format($header['quantity']); ?> PCS</td>
+            </tr>
+            <tr>
+                <td class="label">Container No:</td>
+                <td class="val"><?php echo $header['container_no']; ?></td>
+                <td class="label">Seal No:</td>
+                <td class="val"><?php echo $header['seal_no']; ?></td>
+            </tr>
+            <tr>
+                <td class="label">Car License:</td>
+                <td class="val"><?php echo $header['car_license']; ?></td>
+                <td class="label">Size / Type:</td>
+                <td class="val"><?php echo $header['container_type']; ?></td>
+            </tr>
+            <tr>
+                <td class="label">Booking No:</td>
+                <td class="val" colspan="3"><?php echo $header['booking_no']; ?></td>
+            </tr>
+            <tr>
+                <td class="label">Inspector:</td>
+                <td class="val" colspan="3">
+                    <?php echo $_SESSION['user']['name'] ?? '-'; ?> 
+                    (Emp ID: <?php echo $_SESSION['user']['username'] ?? '-'; ?>)
+                </td>
+            </tr>
+        </table>
+
+        <div class="photo-section-title">PHOTO EVIDENCE (หลักฐานรูปถ่าย)</div>
+        <div class="photo-grid">
+            <?php 
+            $photo_config = [
+                'EMPTY' => '1. Empty Container (ตู้เปล่า)',
+                'STUFF50' => '2. Stuffing 50% (บรรจุ 50%)',
+                'STUFF100' => '3. Stuffing 100% (บรรจุเต็ม)',
+                'DOOR50' => '4. Door Left Closed (ปิดประตูซ้าย)',
+                'DOOR100' => '5. Door Fully Closed (ปิดประตูเต็ม)',
+                'SEAL' => '6. Seal Lock (ซีลล็อค)'
+            ];
+            foreach ($photo_config as $type => $caption):
+                $src = isset($photos[$type]) ? $photos[$type] : '';
+            ?>
+            <div class="photo-card">
+                <div class="photo-box">
+                    <?php if ($src): ?>
+                        <img src="<?php echo $src; ?>">
+                    <?php else: ?>
+                        <span style="color:#aaa;">- No Image -</span>
+                    <?php endif; ?>
+                </div>
+                <div class="photo-caption"><?php echo $caption; ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="page page-break" style="padding-top: 10mm;">
+        
+        <table class="ctpat-header-table">
+            <tr class="top-brand-row">
+                <td width="50%">
+                    <span class="brand-snc">SNC</span>
+                </td>
+                <td width="50%">
+                    <div class="brand-title">C-TPAT 10-Point Container Inspection Checklist</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="ctpat-header-table" style="margin-top: -1px;">
+            <tr>
+                <td width="62%"> 
+                    <span class="form-label">Loading Location : SNC Creativity Anthology Company (WH-B10) </span>
+                    <span class="form-value">WH ประตู 1</span>
+                </td>
+                <td width="38%">
+                    <span class="form-label">PO Number หมายเลขคำสั่งซื้อ :</span>
+                    <span class="form-value"><?php echo $header['po_number']; ?></span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div style="display:flex;">
+                        <div style="width:40%;">
+                            <span class="form-label">Date วันที่ :</span>
+                            <span class="form-value"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></span>
+                        </div>
+                        <div style="width:60%;">
+                            <span class="form-label">Time เวลา :</span>
+                            <span class="form-value"><?php echo date('H:i', strtotime($header['created_at'])); ?></span>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="form-label">Quantity (Units) จำนวนสินค้า :</span>
+                    <span class="form-value"><?php echo number_format($header['quantity']); ?> PCS</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="form-label">Container Number หมายเลขตู้คอนเทนเนอร์ :</span>
+                    <span class="form-value"><?php echo $header['container_no']; ?></span>
+                </td>
+                <td>
+                    <span class="form-label">SKU Number หมายเลข SKU :</span>
+                    <span class="form-value"><?php echo $header['sku']; ?></span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="form-label">Container Seal Number หมายเลขซีล :</span>
+                    <span class="form-value"><?php echo $header['seal_no']; ?></span>
+                </td>
+                <td>
+                    <span class="form-label">Car Number ทะเบียนรถ :</span>
+                    <span class="form-value"><?php echo $header['car_license']; ?></span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="form-label">Booking/Bill of Lading Number หมายเลข Booking :</span>
+                    <span class="form-value"><?php echo $header['booking_no']; ?></span>
+                </td>
+                <td>
+                    <span class="form-label">Vender ชื่อขนส่ง :</span>
+                    <span class="form-value"><?php echo $header['driver_name'] ? $header['driver_name'] : '-'; ?></span>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="vertical-align: middle;">
+                    <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
+                    <span class="form-label">
+                        <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
+                        <?php echo renderContainerTypeCheck($header['container_type'], "40'ST"); ?>
+                        <?php echo renderContainerTypeCheck($header['container_type'], "40'HC"); ?>
+                        <?php echo renderContainerTypeCheck($header['container_type'], "45'"); ?>
+                    </span>
+                </td>
+            </tr>
+        </table>
+
+        <table class="ctpat-header-table" style="margin-top: -1px;">
+            <tr>
+                <td width="50%">
+                    <span class="form-label">Supervisor / Mini-MD หัวหน้าแผนก หรือ ผู้จัดการ :</span>
+                </td>
+                <td width="50%">
+                    <span class="form-label">Inspector name ผู้ตรวจสอบตู้ :</span>
+                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
+                        <?php echo $_SESSION['user']['name'] ?? '-'; ?>
+                    </span>
+                </td>
+            </tr>
+        </table>
+
+        <table class="chk-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 50%;">Inspection Point / Result<br>(จุดตรวจสอบ / ผลการตรวจสอบ)</th>
+                    <th colspan="3" style="width: 20%;">Results<br>ผลการตรวจสอบ</th>
+                    <th rowspan="2">Objective evidence & Comment<br>หลักฐาน และข้อคิดเห็น</th>
+                </tr>
+                <tr>
+                    <th class="col-res">Pass<br>ผ่าน</th>
+                    <th class="col-res">Fail<br>ไม่ผ่าน</th>
+                    <th class="col-res">N/A</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $master = getCtpatChecklist();
+                foreach ($master as $topicId => $topic): 
+                ?>
+                <tr class="topic-row">
+                    <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
+                </tr>
+                <?php 
+                    foreach ($topic['items'] as $idx => $itemName): 
+                        $itemIdx = $idx + 1;
+                        $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
+                ?>
+                <tr class="sub-item-row">
+                    <td style="padding-left: 15px;">
+                        <?php echo $itemName; ?>
+                    </td>
+                    <td class="col-res">
+                        <?php echo renderCheckbox($data['result'], 'PASS'); ?>
+                    </td>
+                    <td class="col-res">
+                        <?php echo renderCheckbox($data['result'], 'FAIL'); ?>
+                    </td>
+                    <td class="col-res">
+                        <?php echo renderCheckbox($data['result'], 'N/A'); ?>
+                    </td>
+                    <td>
+                        <?php echo htmlspecialchars($data['remark']); ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
