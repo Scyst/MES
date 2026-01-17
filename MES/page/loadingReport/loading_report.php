@@ -91,71 +91,88 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                                 </div>
 
                                 <div class="card shadow-sm mb-3">
-                                    <div class="card-header info-card-header py-1">
-                                        <i class="fas fa-truck me-1"></i> Truck & Container Info
+                                    <div class="card-header info-card-header">
+                                        <i class="fas fa-edit me-2"></i> Shipment Info
                                     </div>
                                     <div class="card-body">
-                                        <form id="headerForm">
-                                            <div class="row g-2">
-                                                <div class="col-6">
-                                                    <label class="form-label-sm">Car License *</label>
-                                                    <input type="text" id="input_car_license" class="form-control form-control-sm fw-bold" placeholder="e.g. 70-1234">
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label-sm">Size *</label>
-                                                    <select class="form-select form-select-sm fw-bold" id="input_container_type">
-                                                        <option value="" disabled selected>- Select -</option>
-                                                        <option value="20'">20' FT</option>
-                                                        <option value="40'">40' ST</option>
-                                                        <option value="40'HC">40' HC</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-12">
-                                                    <label class="form-label-sm">Container No. *</label>
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text input-group-text-icon"><i class="fas fa-barcode"></i></span>
-                                                        <input type="text" id="input_container" class="form-control fw-bold text-uppercase" placeholder="ABCD 1234567">
-                                                    </div>
-                                                </div>
-                                                <div class="col-12">
-                                                    <label class="form-label-sm">Seal No. *</label>
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text input-group-text-icon text-danger"><i class="fas fa-lock"></i></span>
-                                                        <input type="text" id="input_seal" class="form-control fw-bold text-uppercase" placeholder="Enter Seal No.">
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-12 text-end">
-                                                    <small class="text-muted fst-italic" style="font-size:0.7rem;"><i class="fas fa-save me-1"></i> Auto-saving...</small>
-                                                </div>
+                                        <div class="row g-2">
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Car License (ทะเบียนรถ)</label>
+                                                <input type="text" id="input_car_license" class="form-control form-control-sm">
                                             </div>
-                                        </form>
-                                    </div>
-                                </div>
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Container No.</label>
+                                                <input type="text" id="input_container" class="form-control form-control-sm">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Size</label>
+                                                <input type="text" id="input_container_type" class="form-control form-control-sm" list="container_sizes">
+                                                <datalist id="container_sizes">
+                                                    <option value="20'GP">
+                                                    <option value="40'GP">
+                                                    <option value="40'HC">
+                                                </datalist>
+                                            </div>
 
-                                <h6 class="text-secondary fw-bold mb-2 small"><i class="fas fa-camera me-1"></i> 6-Point Evidence</h6>
-                                <div class="row g-2 mb-5">
-                                    <?php 
-                                    $photos = [
-                                        'EMPTY' => '1. Empty Container',
-                                        'STUFF50' => '2. Stuffing 50%',
-                                        'STUFF100' => '3. Stuffing 100%',
-                                        'DOOR50' => '4. Door (Left Closed)',
-                                        'DOOR100' => '5. Door (Fully Closed)',
-                                        'SEAL' => '6. Seal Lock'
-                                    ];
-                                    foreach ($photos as $key => $label): 
-                                    ?>
-                                    <div class="col-6 col-md-4">
-                                        <div class="camera-box shadow-sm" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')">
-                                            <i class="fas fa-camera fa-2x text-muted mb-2" id="icon_<?php echo $key; ?>"></i>
-                                            <span class="camera-label"><?php echo $label; ?></span>
+                                            <div class="col-6">
+                                                <label class="form-label-sm">Seal No.</label>
+                                                <input type="text" id="input_seal" class="form-control form-control-sm">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label-sm">Cable Seal (ถ้ามี)</label>
+                                                <input type="text" id="input_cable_seal" class="form-control form-control-sm">
+                                            </div>
+
+                                            <div class="col-12"><hr class="my-1"></div>
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Driver Name</label>
+                                                <input type="text" id="input_driver" class="form-control form-control-sm" placeholder="คนขับรถ">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Inspector</label>
+                                                <input type="text" id="input_inspector" class="form-control form-control-sm" placeholder="ผู้ตรวจ">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label-sm">Supervisor</label>
+                                                <input type="text" id="input_supervisor" class="form-control form-control-sm" placeholder="หัวหน้า">
+                                            </div>
                                         </div>
-                                        <input type="file" id="file_<?php echo $key; ?>" accept="image/*" capture="environment" style="display:none;" onchange="handleFileSelect(this, '<?php echo $key; ?>')">
                                     </div>
-                                    <?php endforeach; ?>
                                 </div>
 
+                                <div class="card shadow-sm mb-3">
+                                    <div class="card-header info-card-header">
+                                        <i class="fas fa-camera me-2"></i> Photos (10 Points)
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-2">
+                                            <?php
+                                            // กำหนด 10 จุดตามมาตรฐาน C-TPAT
+                                            $photoPoints = [
+                                                'undercarriage' => '1. Undercarriage (ใต้ท้องรถ)',
+                                                'outside_door' => '2. Outside/Doors (นอก/ประตู)',
+                                                'right_side' => '3. Right Side (ขวา)',
+                                                'left_side' => '4. Left Side (ซ้าย)',
+                                                'front_wall' => '5. Front Wall (ผนังหน้า)',
+                                                'ceiling_roof' => '6. Ceiling/Roof (หลังคา)',
+                                                'floor' => '7. Floor (พื้น)',
+                                                'inside_empty' => '8. Inside Empty (ภายใน-เปล่า)',
+                                                'inside_loaded' => '9. Inside Loaded (ภายใน-ใส่ของ)',
+                                                'seal_lock' => '10. Seal/Lock (ซีลล็อค)'
+                                            ];
+
+                                            foreach ($photoPoints as $key => $label): 
+                                            ?>
+                                            <div class="col-6 col-md-4 col-lg-2"> <div class="camera-box" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')">
+                                                    <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                    <span class="camera-label text-muted small text-center px-1"><?php echo $label; ?></span>
+                                                </div>
+                                                <input type="file" id="file_<?php echo $key; ?>" class="d-none" accept="image/*" capture="environment" onchange="handleFileSelect(this, '<?php echo $key; ?>')">
+                                            </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="tab-pane fade" id="tab-checklist">

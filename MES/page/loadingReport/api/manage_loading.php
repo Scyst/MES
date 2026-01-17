@@ -69,7 +69,9 @@ try {
                         r.container_no as report_container,
                         r.container_type,
                         r.car_license,
-                        r.driver_name
+                        r.driver_name,
+                        r.inspector_name,  /* <--- เพิ่ม */
+                        r.supervisor_name  /* <--- เพิ่ม */
                         FROM " . SALES_ORDERS_TABLE . " s
                         LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id
                         WHERE s.id = ?";
@@ -78,7 +80,7 @@ try {
             $stmt->execute([$so_id]);
             $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // ดึงรูปภาพ (ใช้ LOADING_PHOTOS_TABLE)
+            // ดึงรูปภาพ
             $photos = [];
             if ($header && $header['report_id']) {
                 $sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ?";
@@ -92,34 +94,51 @@ try {
             break;
 
         // 3. Save Header
+        // page/loading/api/manage_loading.php
+
         case 'save_header':
             $so_id = $_POST['sales_order_id'];
             $seal = $_POST['seal_no'] ?? '';
-            $container_no = $_POST['container_no'] ?? '';
-            $container_type = $_POST['container_type'] ?? '';
-            $car_license = $_POST['car_license'] ?? '';
+            $cable_seal = $_POST['cable_seal'] ?? ''; // New
+            $container = $_POST['container_no'] ?? '';
+            $type = $_POST['container_type'] ?? '';
+            $license = $_POST['car_license'] ?? '';
+            $driver = $_POST['driver_name'] ?? ''; // New
+            $inspector = $_POST['inspector_name'] ?? ''; // New
+            $supervisor = $_POST['supervisor_name'] ?? ''; // New
             
-            // เช็คว่ามี Record หรือยัง
-            $chk = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE sales_order_id = ?");
-            $chk->execute([$so_id]);
-            $row = $chk->fetch(PDO::FETCH_ASSOC);
+            // 1. ตรวจสอบว่ามี Report อยู่แล้วหรือยัง
+            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE sales_order_id = ?");
+            $check->execute([$so_id]);
+            $existing = $check->fetch();
 
-            if ($row) {
+            if ($existing) {
                 // UPDATE
-                $report_id = $row['id'];
-                $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET 
-                        seal_no = ?, container_no = ?, container_type = ?, car_license = ?, updated_at = GETDATE() 
+                $report_id = $existing['id'];
+                $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
+                        SET seal_no = ?, cable_seal = ?, container_no = ?, container_type = ?, 
+                            car_license = ?, driver_name = ?, inspector_name = ?, supervisor_name = ?,
+                            updated_at = GETDATE()
                         WHERE id = ?";
-                $pdo->prepare($sql)->execute([$seal, $container_no, $container_type, $car_license, $report_id]);
+                $pdo->prepare($sql)->execute([
+                    $seal, $cable_seal, $container, $type, 
+                    $license, $driver, $inspector, $supervisor, 
+                    $report_id
+                ]);
             } else {
                 // INSERT
+                // ... (Logic Insert เดิม อาจต้องเพิ่ม field ถ้าจำเป็น แต่ปกติ Update จะทำงานก่อนเสมอถ้า UI flow ถูกต้อง) ...
+                // เพื่อความชัวร์ ให้ Insert ฟิลด์ใหม่ไปด้วยเลย
                 $sql = "INSERT INTO " . LOADING_REPORTS_TABLE . " 
-                        (sales_order_id, seal_no, container_no, container_type, car_license, status, created_at) 
-                        VALUES (?, ?, ?, ?, ?, 'DRAFT', GETDATE())";
-                $pdo->prepare($sql)->execute([$so_id, $seal, $container_no, $container_type, $car_license]);
+                        (sales_order_id, seal_no, cable_seal, container_no, container_type, car_license, driver_name, inspector_name, supervisor_name, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', GETDATE())";
+                $pdo->prepare($sql)->execute([
+                    $so_id, $seal, $cable_seal, $container, $type, 
+                    $license, $driver, $inspector, $supervisor
+                ]);
                 $report_id = $pdo->lastInsertId();
             }
-            
+
             echo json_encode(['success' => true, 'report_id' => $report_id]);
             break;
 

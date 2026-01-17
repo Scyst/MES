@@ -7,9 +7,8 @@ $(document).ready(function() {
     loadJobList();
 
     // Auto Save Header Info
-    $('#input_seal, #input_container, #input_car_license, #input_container_type').on('change keyup', function() {
+    $('#input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor').on('change keyup', function() {
         clearTimeout(saveTimer);
-        // Delay save to reduce server load
         saveTimer = setTimeout(saveHeader, 1000); 
     });
 
@@ -33,7 +32,7 @@ function loadJobList() {
             res.data.forEach(job => {
                 let statusClass = 'job-card';
                 let badge = '<span class="badge bg-secondary">Waiting</span>';
-                let printButton = ''; // ตัวแปรเก็บปุ่ม Print
+                let printButton = ''; 
                 
                 if (job.report_status === 'DRAFT') {
                     statusClass += ' draft';
@@ -42,8 +41,6 @@ function loadJobList() {
                     statusClass += ' done';
                     badge = '<span class="badge bg-success">Completed</span>';
                     
-                    // [ADDED] สร้างปุ่ม Print เฉพาะงานที่เสร็จแล้ว
-                    // event.stopPropagation() สำคัญมาก! เพื่อกันไม่ให้คลิกปุ่ม Print แล้วมันไปเปิดหน้าแก้ไขงาน
                     printButton = `
                         <a href="print_report.php?report_id=${job.report_id}" target="_blank" 
                            class="btn btn-sm btn-outline-secondary ms-2" 
@@ -60,7 +57,8 @@ function loadJobList() {
                                 <h5 class="fw-bold text-primary mb-0">${job.po_number}</h5>
                                 <div>
                                     ${badge}
-                                    ${printButton} </div>
+                                    ${printButton} 
+                                </div>
                             </div>
                             <div class="text-muted small mb-1">
                                 <i class="fas fa-truck-loading me-1"></i> ${job.container_no || 'No Container'}
@@ -104,6 +102,16 @@ function openReport(soId) {
         
         // 1. Car License
         $('#input_car_license').val(h.car_license || '');
+        // 2. Container info
+        $('#input_container_type').val(h.container_type || h.ctn_size || '');
+        $('#input_container').val(h.report_container || h.master_container || '');
+        $('#input_seal').val(h.report_seal || h.master_seal || '');
+
+        // --- NEW FIELDS ---
+        $('#input_cable_seal').val(h.cable_seal || '');
+        $('#input_driver').val(h.driver_name || '');
+        $('#input_inspector').val(h.inspector_name || ''); // คนตรวจ
+        $('#input_supervisor').val(h.supervisor_name || ''); // หัวหน้า
         
         // 2. Container Size
         let targetSize = h.container_type || h.ctn_size || '';
@@ -153,27 +161,28 @@ function saveHeader() {
         action: 'save_header',
         sales_order_id: soId,
         seal_no: $('#input_seal').val(),
+        cable_seal: $('#input_cable_seal').val(), // New
         container_no: $('#input_container').val(),
         container_type: $('#input_container_type').val(),
-        car_license: $('#input_car_license').val()
+        car_license: $('#input_car_license').val(),
+        driver_name: $('#input_driver').val(),    // New
+        inspector_name: $('#input_inspector').val(), // New
+        supervisor_name: $('#input_supervisor').val() // New
     };
 
     $.post(API_URL, data, function(res) {
         if (res.success) {
-            if(res.report_id) {
-                $('#current_report_id').val(res.report_id);
-            }
+            if(res.report_id) { $('#current_report_id').val(res.report_id); }
             
-            // Visual Feedback
-            $('#input_seal, #input_container, #input_car_license, #input_container_type').addClass('is-valid');
-            setTimeout(() => {
-                $('#input_seal, #input_container, #input_car_license, #input_container_type').removeClass('is-valid');
-            }, 1000);
+            // Visual Feedback (Add new inputs)
+            const inputs = '#input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor';
+            $(inputs).addClass('is-valid');
+            setTimeout(() => { $(inputs).removeClass('is-valid'); }, 1000);
         }
     }, 'json');
 }
 
-// 4. Photo Upload Logic
+// 4. Photo Upload Logic (with Compression)
 function triggerCamera(type) {
     if ($(`#box_${type}`).hasClass('has-image')) {
         if (!confirm('Replace existing photo?')) return;
@@ -187,6 +196,7 @@ function handleFileSelect(input, type) {
     }
 }
 
+// [MODIFIED] Client-side Image Compression & Upload
 function uploadPhoto(file, type) {
     const reportId = $('#current_report_id').val();
     
@@ -197,45 +207,91 @@ function uploadPhoto(file, type) {
 
     const $box = $(`#box_${type}`);
     const originalContent = $box.html(); 
-    $box.html('<div class="spinner-border text-primary spinner-border-sm"></div>');
+    $box.html('<div class="spinner-border text-primary spinner-border-sm"></div><div class="small text-muted mt-1">Compressing...</div>');
 
-    const fd = new FormData();
-    fd.append('action', 'upload_photo');
-    fd.append('file', file);
-    fd.append('report_id', reportId);
-    fd.append('photo_type', type);
+    // เรียกใช้ฟังก์ชันย่อรูป (Max width 1280px, Quality 0.7)
+    resizeImage(file, 1280, 0.7, function(compressedBlob) {
+        
+        $box.html('<div class="spinner-border text-primary spinner-border-sm"></div><div class="small text-muted mt-1">Uploading...</div>');
 
-    $.ajax({
-        url: API_URL,
-        type: 'POST',
-        data: fd,
-        contentType: false,
-        processData: false,
-        success: function(res) {
-            if (res.success) {
-                $box.html(originalContent); 
-                showPreview(type, res.path);
-            } else {
-                alert('Upload Failed: ' + res.message);
-                $box.html(originalContent); 
+        const fd = new FormData();
+        fd.append('action', 'upload_photo');
+        // ส่งไฟล์ที่บีบอัดแล้วไปแทน (ตั้งชื่อไฟล์ให้ถูกต้องเพื่อให้ PHP รู้ว่าเป็น jpg)
+        fd.append('file', compressedBlob, file.name.replace(/\.[^/.]+$/, "") + ".jpg"); 
+        fd.append('report_id', reportId);
+        fd.append('photo_type', type);
+
+        $.ajax({
+            url: API_URL,
+            type: 'POST',
+            data: fd,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                if (res.success) {
+                    $box.html(originalContent); 
+                    showPreview(type, res.path);
+                } else {
+                    alert('Upload Failed: ' + res.message);
+                    $box.html(originalContent); 
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error(textStatus, errorThrown);
+                alert('Connection Error. Please check your internet or file size.');
+                $box.html(originalContent);
             }
-        },
-        error: function() {
-            alert('Internet Connection Error');
-            $box.html(originalContent);
-        }
+        });
     });
+}
+
+// [NEW] Helper Function: Resize Image using Canvas
+function resizeImage(file, maxWidth, quality, callback) {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function(event) {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+
+            // Calculate new dimensions
+            if (width > maxWidth) {
+                height *= maxWidth / width;
+                width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Export to Blob (JPEG)
+            canvas.toBlob(function(blob) {
+                callback(blob);
+            }, 'image/jpeg', quality);
+        };
+    };
+    reader.onerror = function(error) {
+        console.log('Error: ', error);
+        // Fallback: ถ้าอ่านไฟล์ไม่ได้ ให้ส่งไฟล์เดิมไปเลย
+        callback(file);
+    };
 }
 
 function showPreview(type, path) {
     const $box = $(`#box_${type}`);
     $box.find('.preview-img').remove();
     
+    // Add timestamp to prevent caching issues
     const img = `<img src="${path}?t=${new Date().getTime()}" class="preview-img rounded">`;
     $box.append(img);
     $box.addClass('has-image');
     
-    $box.find('i').hide(); 
+    $box.find('i, .camera-label').hide(); 
 }
 
 // Helper: Switch Views
@@ -260,7 +316,6 @@ function loadChecklistData() {
         if (res.success) {
             const data = res.data;
             
-            // data structure: { topic_id: { item_index: { result: 'PASS', ... } } }
             for (const [topicId, items] of Object.entries(data)) {
                 let allPass = true;
                 let hasFail = false;
@@ -282,7 +337,6 @@ function loadChecklistData() {
                     if (row.result !== 'PASS') allPass = false;
                 }
                 
-                // Update Topic Header Icon
                 updateTopicIcon(topicId, hasFail, allPass);
             }
         }
@@ -301,10 +355,10 @@ function saveSubItem(topicId, topicName, itemIndex, itemName) {
     $.post(API_URL, {
         action: 'save_checklist_item',
         report_id: reportId,
-        topic_id: topicId,
+        topic_id: topicId,      // [FIXED] ใช้ topic_id ตาม DB ใหม่
         topic_name: topicName,
-        item_index: itemIndex,
-        item_name: itemName,
+        item_index: itemIndex,  // [FIXED] ส่ง item_index ไปด้วย
+        item_name: itemName,    // [FIXED] ส่ง item_name ไปด้วย
         result: result,
         remark: remark
     }, function(res) {

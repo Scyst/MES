@@ -7,9 +7,10 @@ require_once __DIR__ . '/../db.php';
 if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
 $report_id = $_GET['report_id'];
 
-// 1. ดึงข้อมูล
+// 1. [FIXED] เพิ่มฟิลด์ที่ขาด (driver, inspector, supervisor, cable_seal)
 $sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description, s.invoice_no,
-               s.container_no as plan_container, s.seal_no as plan_seal
+               s.container_no as plan_container, s.seal_no as plan_seal,
+               r.driver_name, r.inspector_name, r.supervisor_name, r.cable_seal
         FROM " . LOADING_REPORTS_TABLE . " r
         LEFT JOIN " . SALES_ORDERS_TABLE . " s ON r.sales_order_id = s.id
         WHERE r.id = ?";
@@ -36,6 +37,117 @@ $stmtC->execute([$report_id]);
 while ($row = $stmtC->fetch(PDO::FETCH_ASSOC)) {
     $checklist_results[$row['topic_id']][$row['item_index']] = $row;
 }
+
+// --- DATA (คงไว้ตามเดิม เพราะเป็น Official Text) ---
+$manual_master = [
+    1 => [
+        'title' => 'Undercarriage before entering facility (ใต้ท้องรถ ก่อนเข้าพื้นที่)',
+        'note'  => "Do not let the container enter the facility, Use a mirror to access hard-to-see areas. ไม่อนุญาตให้นำตู้คอนเทนเนอร์เข้ามาในพื้นที่ และให้ใช้กระจกเพื่อตรวจสอบบริเวณที่เข้าถึงยาก",
+        'items' => [
+            1 => "Support beams are visible. Solid plates should not cover the beams\nคานรับน้ำหนักมองเห็นชัดเจน แผ่นปิดทึบไม่ควรปิดบังคาน",
+            2 => "Wheels and tires look normal\nล้อและยางดูปกติ",
+        ]
+    ],
+    2 => [
+        'title' => 'Doors Inside/Outside (ประตู - ด้านใน/ด้านนอก)',
+        'items' => [
+            1 => "Ribs of doors are visible. Solid plates should not cover standard container cavities\nซี่ประตูด้านในมองเห็นชัดเจน แผ่นปิดทึบไม่ควรปิดบังช่องว่างมาตรฐานของตู้คอนเทนเนอร์",
+            2 => "Secure and reliable locking mechanisms are attached to the container\nกลไกการล็อคแน่นหนาและเชื่อถือได้",
+            3 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
+            4 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
+            5 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
+            6 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
+        ]
+    ],
+    3 => [
+        'title' => 'Right Side (ผนังด้านขวา)',
+        'items' => [
+            1 => "Repairs to walls on insied of container must be visible on outside\nการซ่อมแซมรอยเชื่อมใดๆบนผนังด้านในจะต้องมองเห็นได้จากผนังด้านนอก",
+            2 => "Visible ribs on the interior side of each door\nผนังประตูแต่ละด้านของตู้คอนเทนเนอร์ด้านในควรมีตัวดาม",
+            3 => "Tap side walls. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม)",
+            4 => "Unusual repairs to structural beams\nมีการซ่อมแซมคานที่ดูผิดปกติหรือไม่",
+            5 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
+            6 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
+            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
+            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
+            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
+        ]
+    ],
+    4 => [
+        'title' => 'Left Side (ผนังด้านซ้าย)',
+        'items' => [
+            1 => "Repairs to walls on insied of container must be visible on outside\nการซ่อมแซมรอยเชื่อมใดๆบนผนังด้านในจะต้องมองเห็นได้จากผนังด้านนอก",
+            2 => "Visible ribs on the interior side of each door\nผนังประตูแต่ละด้านของตู้คอนเทนเนอร์ด้านในควรมีตัวดาม",
+            3 => "Tap side walls. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม)",
+            4 => "Unusual repairs to structural beams\nมีการซ่อมแซมคานที่ดูผิดปกติหรือไม่",
+            5 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
+            6 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
+            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
+            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
+            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
+        ]
+    ],
+    5 => [
+        'title' => 'Front Wall (ผนังด้านหน้า)',
+        'items' => [
+            1 => "Use a measuring tape or string to determine the length of container.\nใช้ตลับเมตรหรือเชือกวัดขนาดภายใน ความยาวที่วัดได้ควรตรงกับข้อมูลจำเพาะที่ระบุไว้",
+            2 => "Blocks and vents are visible.\nบล็อคและช่องระบายอากาศสามารถมองเห็นได้",
+            3 => "Tap front wall. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม",
+        ]
+    ],
+    6 => [
+        'title' => 'Ceiling / Roof (เพดาน / หลังคา)',
+        'note'  => "False compartments are common in ceilings, beams, floors, doors and the front wall. If unable to see roof of container, use ladder or a mirror attached to a pole\nช่องลับมักพบได้ในเพดาน, คาน, พื้น, ประตู และผนังด้านหน้า หากไม่สามารถมองเห็นหลังคาของตู้คอนเทนเนอร์ได้ ให้ใช้บันไดหรือกระจกที่ติดปลายไม้",
+        'items' => [
+            1 => "Ceiling is a certain height from floor\nเพดานมีความสูงจากพื้นตามที่กำหนด",
+            2 => "Repairs to the ceiling on the inside of the container must be visible on the outside\nการซ่อมแซมรอยเชื่อมใดๆบนเพดานด้านในจะต้องมองเห็นได้จากเพดานด้านนอก",
+            3 => "Blocks and vents are visible.\nบล็อคและช่องระบายอากาศสามารถมองเห็นได้",
+            4 => "Support beams are visible.\nคานรองรับสามารถมองเห็นได้",
+            5 => "Tap ceiling/roof. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะเพดาน/หลังคาเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม",
+            6 => "Uncomfortable feeling inside\nด้านในคอนเทนเนอร์โปร่ง ไม่อับ",
+            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
+            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
+            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
+        ]
+    ],
+    7 => [
+        'title' => 'Floor (พื้นตู้)',
+        'note'  => "Floor should be flat. Do not need to step up to get inside. พื้นควรเรียบเสมอกัน ไม่ควรมีพื้นยกระดับ",
+        'items' => [
+            1 => "Floor a regulated height from ceiling.\nวัดความสูงระหว่างพื้นและเพดาน ความสูงที่วัดได้ควรตรงกับข้อมูลจำเพาะที่ระบุไว้",
+            2 => "Clean\nพื้นผิวสะอาดและเรียบร้อย",
+            3 => "Dry\nพื้นแห้ง ไม่มีรอยเปื้อนหรือคราบน้ำ และเมื่อสัมผัสแล้วไม่รู้สึกเปียกชื้น",
+            4 => "Different floor heights\nพื้นเรียบเสมอกัน ไม่มีรอยนูนหรือตะปูที่ยื่นออกมา",
+            5 => "Unusual repairs\nไม่มีรอยซ่อมพื้นผิดปกติ",
+            6 => "Oil stain\nไม่มีคราบน้ำมัน",
+        ]
+    ],
+    8 => [
+        'title' => 'Door Lock (การล็อคประตู)',
+        'items' => [
+            1 => "Doors completely seal when closed\nประตูคอนเทนเนอร์ปิดสนิท",
+            2 => "Hinges are secure and reliable\nบานพับแน่นหนาและมั่นคง",
+            3 => "Bar of each door is working properly\nทดสอบอุปกรณ์ล็อคประตูทั้งหมด และตรวจสอบให้แน่ใจว่าทำงานได้ปกติ (ตัวล็อค/ มือจับ/ กลอน ฯลฯ)",
+            4 => "Problems locking door\nกลอนประตูทำงานได้ปกติ ไม่มีปัญหาในการล็อค",
+        ]
+    ],
+    9 => [
+        'title' => 'Seal Verification (ตรวจสอบซีล)',
+        'items' => [
+            1 => "Seal meets or exceeds PAS ISO 17712\nต้องใช้ซีลที่มีฟังก์ชันความปลอดภัยสูงและเป็นไปตามมาตรฐานซีล ISO 17712",
+            2 => "Ensure Seal is not broken/damaged\nซีลไม่ชำรุดหรือเสียหาย",
+            3 => "Verify seal number accuracy\nหมายเลขซีลต้องบันทึกในเอกสารการขนส่งสินค้าอย่างถูกต้อง",
+            4 => "Tug seal to make sure it is properly affixed\nออกแรงดึงและงัดซีลเพื่อตรวจสอบความแน่นหนา",
+            5 => "Twist and turn seal to make sure it does not unscrew\nลองบิดและหมุนซีลด้วยมือ เพื่อยืนยันว่าซีลไม่สามารถคลายเกลียวได้",
+        ]
+    ],
+    10 => [
+        'title' => 'Agricultural Contaminants (สิ่งปนเปื้อน)',
+        'items' => [
+            1 => "No Visible agricultural contaminants such as insects, pests, dirt, plant, or animal matter\nไม่มีสิ่งปนเปื้อนทางการเกษตรที่มองเห็นได้ เช่น แมลง, ศัตรูพืช, ดิน, พืช, หรือสารอินทรีย์จากสัตว์",
+        ]
+    ],
+];
 
 // --- HELPER FUNCTIONS ---
 function renderCheckbox($result, $targetValue) {
@@ -65,86 +177,103 @@ function renderContainerTypeCheck($currentType, $targetType) {
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* 1. ตั้งค่าหน้ากระดาษหลัก (สำหรับหน้า 1) = ขอบ 0 */
-        @page { 
-            size: A4; 
+        /* --- A4 PRINT SETTINGS (Fixed) --- */
+        @page { size: A4; margin: 10mm; } /* ใช้ Margin มาตรฐานเพื่อไม่ให้ Header หลุด */
+
+        /* [UPDATED] แก้ปัญหา Web View ไม่เหมือนกระดาษ */
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            font-size: 12px; 
+            line-height: 1.3; 
+            color: #000; 
+            background: #525659; /* พื้นหลังสีเทาเข้ม (เหมือนโปรแกรม PDF) */
             margin: 0; 
+            padding: 20px 0; /* เพิ่ม Padding บนล่าง */
         }
 
-        /* 2. [เพิ่มใหม่] ตั้งค่าหน้ากระดาษสำหรับ C-TPAT โดยเฉพาะ = มีขอบบนล่าง 20mm ซ้ายขวา 15mm */
-        /* วิธีนี้จะทำให้ทุกหน้าที่เนื้อหาไหลไปถึง มีขอบเว้นอัตโนมัติครับ */
-        @page ctpat_pages {
-            margin: 20mm 15mm; 
+        .page { 
+            width: 210mm; 
+            min-height: 297mm; 
+            padding: 10mm; 
+            margin: 0 auto 20px auto; /* เว้นระยะห่างระหว่างหน้า */
+            background: white; 
+            position: relative; 
+            box-sizing: border-box; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); /* เงากระดาษ */
         }
+
+        /* สำหรับหน้า C-TPAT ที่ยาวๆ บนจอเว็บ */
+        .page.page-ctpat { 
+            min-height: 297mm; 
+            height: auto; /* ให้ยืดตามเนื้อหาบนจอ */
+            padding-bottom: 20mm;
+        }
+
+        /* HEADER & FOOTER STYLES */
+        .doc-header-fixed {
+            font-size: 10px; font-weight: bold; color: #555;
+            display: flex; justify-content: space-between;
+            /* แก้ไขตำแหน่งให้ไม่ทับเนื้อหา */
+            margin-bottom: 10px; 
+        }
+        .doc-footer-fixed {
+            font-size: 10px; color: #555; text-align: right;
+        }
+        .page-number:after { content: "Page " counter(page); }
 
         @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { 
+                background: white; 
+                margin: 0; 
+                padding: 0; 
+                -webkit-print-color-adjust: exact; print-color-adjust: exact; 
+            }
             .no-print { display: none !important; }
             .page-break { page-break-before: always; }
             
-            /* หน้าทั่วไป (หน้า 1) */
             .page { 
+                width: 100% !important; 
                 margin: 0 !important; 
-                border: initial !important; 
-                width: 210mm !important; 
-                min-height: 100% !important; 
                 box-shadow: none !important; 
-                page-break-after: always;
+                border: none !important;
+                padding: 0 !important; /* ให้ @page จัดการ margin */
             }
-
-            /* หน้า 1 (Toolbox) - ล็อคความสูง A4 เพื่อดัน Footer */
-            .page.page-fixed {
-                height: 297mm !important; 
-                overflow: hidden !important; 
-                position: relative !important; 
-            }
-
-            /* [เพิ่มใหม่] หน้า 2+ (C-TPAT) - เรียกใช้กฎ ctpat_pages */
+            
             .page.page-ctpat {
-                page: ctpat_pages; /* สั่งให้ใช้ Margin แบบมีขอบ */
-                width: auto !important; 
-                height: auto !important; 
-                padding: 0 !important; /* ลบ Padding ของ div ออก (เพราะใช้ Margin ของกระดาษแทนแล้ว) */
-                margin: 0 !important;
-                overflow: visible !important; 
+                page-break-inside: auto; /* อนุญาตให้ตัดหน้า */
+            }
+
+            /* [UPDATED] ใช้ thead เพื่อให้หัวตารางซ้ำทุกหน้า (แก้ปัญหา C-TPAT หน้าล้นไม่มีหัว) */
+            thead { display: table-header-group; } 
+            tfoot { display: table-footer-group; }
+            tr { page-break-inside: avoid; }
+            
+            /* ซ่อน Header แบบ div ในหน้า Print เพราะเราจะใช้ Table Header แทนในส่วน C-TPAT */
+            .doc-header-fixed { display: none; } 
+            
+            /* แสดง Footer แบบ Fixed */
+            .doc-footer-fixed {
+                position: fixed; bottom: 0; right: 0;
             }
         }
 
-        /* --- GENERAL STYLES (Screen) --- */
-        body { font-family: 'Sarabun', sans-serif; font-size: 12px; line-height: 1.3; color: #000; background: #555; margin: 0; padding: 0; }
-        
-        .page {
-            width: 210mm; 
-            min-height: 297mm;
-            padding: 10mm 10mm; 
-            margin: 10mm auto; 
-            background: white; 
-            position: relative; 
-            box-sizing: border-box;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
-        }
-
-        /* --- PAGE 1 STYLES --- */
+        /* --- STYLES (LAYOUT เดิมของคุณ) --- */
         .page-1-header { text-align: center; margin-bottom: 2px; margin-top: 5px; }
         .truck-icon { font-size: 24px; color: #2c5aa0; margin-bottom: 2px; }
         .page-1-title { font-size: 14px; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px; }
         .loading-date { font-size: 10px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
-        
         .green-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 5px; }
         .green-table th { background-color: #6dae48; color: black; border: 1px solid #000; padding: 4px 2px; text-align: center; font-weight: bold; vertical-align: middle; }
         .green-table td { border: 1px solid #000; padding: 4px 2px; text-align: center; vertical-align: middle; height: 25px; }
-
         .photo-table { width: 100%; border-collapse: collapse; margin-top: 0px; table-layout: fixed; }
         .photo-table td { border: 1px solid #000; padding: 0; vertical-align: top; width: 25%; height: auto; }
         .photo-label-top { text-align: center; font-size: 8px; font-weight: bold; padding: 2px 0; border-bottom: 1px solid #000; text-transform: uppercase; background-color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .photo-img-box { height: 255px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 5px; box-sizing: border-box; }
         .photo-img-box img { width: 100%; height: 100%; object-fit: cover; }
-
         .page-footer-blue { position: absolute; bottom: 30px; left: 10mm; right: 10mm; height: 40px; background-color: #8faadc; border: 1px solid #000; display: flex; align-items: center; justify-content: center; padding: 0 20px; box-sizing: border-box; }
         .footer-scan { color: red; font-weight: bold; font-size: 16px; font-style: italic; position: absolute; left: 20px; }
         .footer-text { color: black; font-weight: bold; font-size: 12px; text-decoration: underline; }
 
-        /* --- PAGE 2 STYLES --- */
         .ctpat-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; border: 1px solid #000; }
         .ctpat-header-table td { border: 1px solid #000; vertical-align: top; padding: 0 0 2px 2px; }
         .form-label { font-size: 9px; color: #000; font-weight: bold; margin-right: 5px; }
@@ -152,13 +281,51 @@ function renderContainerTypeCheck($currentType, $targetType) {
         .top-brand-row td { border: 1px solid #000; vertical-align: middle; padding: 8px 0; text-align: center; }
         .brand-snc { font-size: 20px; font-weight: bold; font-style: italic; }
         .brand-title { font-size: 11px; font-weight: bold; }
-        .chk-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: -1px; }
-        .chk-table th, .chk-table td { border: 1px solid #000; padding: 2px; vertical-align: middle; }
+        
+        .chk-table { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: -1px; }
+        .chk-table th, .chk-table td { border: 1px solid #000; padding: 2px 2px; vertical-align: middle; }
         .chk-table th { background-color: #e0e0e0; text-align: center; font-weight: bold; border-top: 2px solid #000; }
         .topic-row { background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #000;}
-        .sub-item-row td { border-top: 1px dotted #ccc; }
+        
+        /* [แก้] Padding ปกติ (3px) + ไม่มี padding-left 15px */
+        .sub-item-row td { 
+            border-top: 1px dotted #ccc; 
+            white-space: pre-line; 
+            vertical-align: middle;
+            line-height: 1.3;
+        }
+        
         .col-res { text-align: center; width: 40px; }
-        .col-res span { display: block; line-height: 1; }
+        .col-res span { display: block; line-height: 1; padding-bottom: 1px; }
+
+        .note-row td {
+            background-color: #fff;
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 1px 2px;
+            font-size: 8px;
+            font-style: italic;
+            color: #444;
+            text-align: left;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        
+        /* [ADDED] Header สำหรับ Table ที่จะโชว์เมื่อขึ้นหน้าใหม่ */
+        .print-table-header {
+            display: none; /* ซ่อนในหน้าจอ */
+        }
+        @media print {
+            .print-table-header {
+                display: table-row; /* โชว์ใน Print */
+                background: white;
+                border-bottom: 1px solid #000;
+            }
+            .print-table-header td {
+                border: none;
+                padding: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -170,6 +337,11 @@ function renderContainerTypeCheck($currentType, $targetType) {
     </div>
 
     <div class="page page-fixed">
+        <div class="doc-header-fixed">
+            <div class="company-name">SNC Creativity Anthology Co., Ltd.</div>
+            <div class="doc-no">Document No: QP-QA-001 (Rev.00)</div>
+        </div>
+
         <div class="page-1-header">
             <div class="truck-icon"><i class="fas fa-truck-moving"></i></div>
             <div class="page-1-title">LOADING REPORT TOOLBOX</div>
@@ -207,16 +379,16 @@ function renderContainerTypeCheck($currentType, $targetType) {
         <table class="photo-table">
             <?php 
             $photo_list = [
-                'GUARD_PASS'  => '1. Security Pass',
-                'SEAL_DOC'    => '2. Seal Document',
-                'SEAL_UNLOCK' => '3. Seal Unlocked',
-                'SEAL_LOCK'   => '4. Seal Locked',
-                'CONT_NUM'    => '5. Container No.',
-                'EMPTY'       => '6. Empty Container',
-                'STUFF50'     => '7. Stuffing 50%',
-                'STUFF100'    => '8. Stuffing 100%',
-                'DOOR_R'      => '9. Door Right',
-                'DOOR_FULL'   => '10. Door Closed'
+                'undercarriage' => '1. Undercarriage',
+                'outside_door' => '2. Outside/Doors',
+                'right_side' => '3. Right Side',
+                'left_side' => '4. Left Side',
+                'front_wall' => '5. Front Wall',
+                'ceiling_roof' => '6. Ceiling/Roof',
+                'floor' => '7. Floor',
+                'inside_empty' => '8. Inside Empty',
+                'inside_loaded' => '9. Inside Loaded',
+                'seal_lock' => '10. Seal/Lock'
             ];
             $chunks = array_chunk($photo_list, 4, true);
             foreach ($chunks as $rowItems):
@@ -238,9 +410,7 @@ function renderContainerTypeCheck($currentType, $targetType) {
                 <?php endforeach; ?>
                 <?php 
                 $missing = 4 - count($rowItems);
-                if ($missing > 0) {
-                    for ($i=0; $i < $missing; $i++) echo "<td></td>"; 
-                }
+                if ($missing > 0) { for ($i=0; $i < $missing; $i++) echo "<td></td>"; }
                 ?>
             </tr>
             <?php endforeach; ?>
@@ -248,156 +418,183 @@ function renderContainerTypeCheck($currentType, $targetType) {
 
         <div class="page-footer-blue">
             <span class="footer-scan">SCAN</span>
-            <span class="footer-text">ใบตรวจสอบสภาพตู้สินค้า</span>
+            <span class="footer-text">เอกสารแนบใบตรวจสอบตู้สินค้า</span>
+        </div>
+        
+        <div class="doc-footer-fixed" style="position: absolute; bottom: 10px; right: 10px;">
+            Page 1
         </div>
     </div>
 
     <div class="page page-break page-ctpat">
         
-        <table class="ctpat-header-table">
-            <tr class="top-brand-row">
-                <td width="50%">
-                    <span class="brand-snc">SNC</span>
-                </td>
-                <td width="50%">
-                    <div class="brand-title">C-TPAT 10-Point Container Inspection Checklist</div>
-                </td>
-            </tr>
-        </table>
-
-        <table class="ctpat-header-table" style="margin-top: -1px;">
-            <tr>
-                <td width="62%"> 
-                    <span class="form-label">Loading Location : SNC Creativity Anthology Company (WH-B10) </span>
-                    <span class="form-value">WH ประตู 1</span>
-                </td>
-                <td width="38%">
-                    <span class="form-label">PO Number หมายเลขคำสั่งซื้อ :</span>
-                    <span class="form-value"><?php echo $header['po_number']; ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div style="display:flex;">
-                        <div style="width:40%;">
-                            <span class="form-label">Date วันที่ :</span>
-                            <span class="form-value"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></span>
-                        </div>
-                        <div style="width:60%;">
-                            <span class="form-label">Time เวลา :</span>
-                            <span class="form-value"><?php echo date('H:i', strtotime($header['created_at'])); ?></span>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="form-label">Quantity (Units) จำนวนสินค้า :</span>
-                    <span class="form-value"><?php echo number_format($header['quantity']); ?> PCS</span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="form-label">Container Number หมายเลขตู้คอนเทนเนอร์ :</span>
-                    <span class="form-value"><?php echo $header['container_no']; ?></span>
-                </td>
-                <td>
-                    <span class="form-label">SKU Number หมายเลข SKU :</span>
-                    <span class="form-value"><?php echo $header['sku']; ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="form-label">Container Seal Number หมายเลขซีล :</span>
-                    <span class="form-value"><?php echo $header['seal_no']; ?></span>
-                </td>
-                <td>
-                    <span class="form-label">Car Number ทะเบียนรถ :</span>
-                    <span class="form-value"><?php echo $header['car_license']; ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="form-label">Booking/Bill of Lading Number หมายเลข Booking :</span>
-                    <span class="form-value"><?php echo $header['booking_no']; ?></span>
-                </td>
-                <td>
-                    <span class="form-label">Vender ชื่อขนส่ง :</span>
-                    <span class="form-value"><?php echo $header['driver_name'] ? $header['driver_name'] : '-'; ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" style="vertical-align: middle; padding: 8px 5px;">
-                    <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
-                    <span class="form-label">
-                        <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
-                        <?php echo renderContainerTypeCheck($header['container_type'], "40'ST"); ?>
-                        <?php echo renderContainerTypeCheck($header['container_type'], "40'HC"); ?>
-                        <?php echo renderContainerTypeCheck($header['container_type'], "45'"); ?>
-                    </span>
-                </td>
-            </tr>
-        </table>
-
-        <table class="ctpat-header-table" style="margin-top: -1px;">
-            <tr>
-                <td width="50%">
-                    <span class="form-label">Supervisor / Mini-MD หัวหน้าแผนก หรือ ผู้จัดการ :</span>
-                </td>
-                <td width="50%">
-                    <span class="form-label">Inspector name ผู้ตรวจสอบตู้ :</span>
-                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
-                        <?php echo $_SESSION['user']['name'] ?? '-'; ?>
-                    </span>
-                </td>
-            </tr>
-        </table>
-
-        <table class="chk-table">
+        <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr>
-                    <th rowspan="2" style="width: 50%;">Inspection Point / Result<br>(จุดตรวจสอบ / ผลการตรวจสอบ)</th>
-                    <th colspan="3" style="width: 20%;">Results<br>ผลการตรวจสอบ</th>
-                    <th rowspan="2">Objective evidence & Comment<br>หลักฐาน และข้อคิดเห็น</th>
-                </tr>
-                <tr>
-                    <th class="col-res">Pass<br>ผ่าน</th>
-                    <th class="col-res">Fail<br>ไม่ผ่าน</th>
-                    <th class="col-res">N/A</th>
+                <tr class="print-table-header">
+                    <td colspan="5">
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555;">
+                            <div>SNC Creativity Anthology Co., Ltd.</div>
+                            <div>Document No: QP-QA-001 (Rev.00)</div>
+                        </div>
+                    </td>
                 </tr>
             </thead>
+            
             <tbody>
-                <?php 
-                $master = getCtpatChecklist();
-                foreach ($master as $topicId => $topic): 
-                ?>
-                <tr class="topic-row">
-                    <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
+                <tr>
+                    <td colspan="5">
+                        <table class="ctpat-header-table">
+                            <tr class="top-brand-row">
+                                <td width="50%">
+                                    <span class="brand-snc">SNC</span>
+                                </td>
+                                <td width="50%">
+                                    <div class="brand-title">C-TPAT 10-Point Container Inspection Checklist</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="ctpat-header-table" style="margin-top: -1px;">
+                            <tr>
+                                <td width="62%"> 
+                                    <span class="form-label">Loading Location : SNC Creativity Anthology Company (WH-B10) </span>
+                                    <span class="form-value">WH ประตู 1</span>
+                                </td>
+                                <td width="38%">
+                                    <span class="form-label">PO Number หมายเลขคำสั่งซื้อ :</span>
+                                    <span class="form-value"><?php echo $header['po_number']; ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display:flex;">
+                                        <div style="width:40%;">
+                                            <span class="form-label">Date วันที่ :</span>
+                                            <span class="form-value"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></span>
+                                        </div>
+                                        <div style="width:60%;">
+                                            <span class="form-label">Time เวลา :</span>
+                                            <span class="form-value"><?php echo date('H:i', strtotime($header['created_at'])); ?></span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="form-label">Quantity (Units) จำนวนสินค้า :</span>
+                                    <span class="form-value"><?php echo number_format($header['quantity']); ?> PCS</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="form-label">Container Number หมายเลขตู้คอนเทนเนอร์ :</span>
+                                    <span class="form-value"><?php echo $header['container_no']; ?></span>
+                                </td>
+                                <td>
+                                    <span class="form-label">SKU Number หมายเลข SKU :</span>
+                                    <span class="form-value"><?php echo $header['sku']; ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="form-label">Container Seal Number หมายเลขซีล :</span>
+                                    <span class="form-value"><?php echo $header['seal_no']; ?></span>
+                                </td>
+                                <td>
+                                    <span class="form-label">Car Number ทะเบียนรถ :</span>
+                                    <span class="form-value"><?php echo $header['car_license']; ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="form-label">Booking/Bill of Lading Number หมายเลข Booking :</span>
+                                    <span class="form-value"><?php echo $header['booking_no']; ?></span>
+                                </td>
+                                <td>
+                                    <span class="form-label">Vender ชื่อขนส่ง :</span>
+                                    <span class="form-value"><?php echo $header['driver_name'] ? $header['driver_name'] : '-'; ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="vertical-align: middle; padding-bottom: 2px;">
+                                    <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
+                                    <span class="form-label">
+                                        <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
+                                        <?php echo renderContainerTypeCheck($header['container_type'], "40'ST"); ?>
+                                        <?php echo renderContainerTypeCheck($header['container_type'], "40'HC"); ?>
+                                        <?php echo renderContainerTypeCheck($header['container_type'], "45'"); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="ctpat-header-table" style="margin-top: -1px;">
+                            <tr>
+                                <td width="50%">
+                                    <span class="form-label">Supervisor / Mini-MD หัวหน้าแผนก หรือ ผู้จัดการ :</span>
+                                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
+                                        <?php echo $header['supervisor_name'] ?: '-'; ?>
+                                    </span>
+                                </td>
+                                <td width="50%">
+                                    <span class="form-label">Inspector name ผู้ตรวจสอบตู้ :</span>
+                                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
+                                        <?php echo $header['inspector_name'] ?: '-'; ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="chk-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="width: 50%;">Inspection Point / Result<br>(จุดตรวจสอบ / ผลการตรวจสอบ)</th>
+                                    <th colspan="3" style="width: 20%;">Results<br>ผลการตรวจสอบ</th>
+                                    <th rowspan="2">Objective evidence & Comment<br>หลักฐาน และข้อคิดเห็น</th>
+                                </tr>
+                                <tr>
+                                    <th class="col-res">Pass<br>ผ่าน</th>
+                                    <th class="col-res">Fail<br>ไม่ผ่าน</th>
+                                    <th class="col-res">N/A</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                foreach ($manual_master as $topicId => $topic): 
+                                ?>
+                                <tr class="topic-row">
+                                    <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
+                                </tr>
+
+                                <?php 
+                                if (isset($topic['note']) && !empty($topic['note'])): 
+                                ?>
+                                <tr class="note-row">
+                                    <td colspan="5"><?php echo htmlspecialchars($topic['note']); ?></td>
+                                </tr>
+                                <?php endif; ?>
+
+                                <?php 
+                                    foreach ($topic['items'] as $itemIdx => $itemName): 
+                                        $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
+                                ?>
+                                <tr class="sub-item-row">
+                                    <td><?php echo $itemName; ?></td>
+                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'PASS'); ?></td>
+                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'FAIL'); ?></td>
+                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($data['remark']); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </td>
                 </tr>
-                <?php 
-                    foreach ($topic['items'] as $idx => $itemName): 
-                        $itemIdx = $idx + 1;
-                        $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
-                ?>
-                <tr class="sub-item-row">
-                    <td style="padding-left: 15px;">
-                        <?php echo $itemName; ?>
-                    </td>
-                    <td class="col-res">
-                        <?php echo renderCheckbox($data['result'], 'PASS'); ?>
-                    </td>
-                    <td class="col-res">
-                        <?php echo renderCheckbox($data['result'], 'FAIL'); ?>
-                    </td>
-                    <td class="col-res">
-                        <?php echo renderCheckbox($data['result'], 'N/A'); ?>
-                    </td>
-                    <td>
-                        <?php echo htmlspecialchars($data['remark']); ?>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                <?php endforeach; ?>
             </tbody>
         </table>
+        
+        <div class="doc-footer-fixed print-only">
+            <span class="page-number"></span>
+        </div>
     </div>
 
 </body>
