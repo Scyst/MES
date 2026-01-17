@@ -63,65 +63,95 @@ function renderContainerTypeCheck($currentType, $targetType) {
     <meta charset="UTF-8">
     <title>Report_<?php echo $header['po_number']; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* --- A4 PRINT SETTINGS --- */
-        @page { size: A4; margin: 10mm; }
+        /* 1. ตั้งค่าหน้ากระดาษหลัก (สำหรับหน้า 1) = ขอบ 0 */
+        @page { 
+            size: A4; 
+            margin: 0; 
+        }
+
+        /* 2. [เพิ่มใหม่] ตั้งค่าหน้ากระดาษสำหรับ C-TPAT โดยเฉพาะ = มีขอบบนล่าง 20mm ซ้ายขวา 15mm */
+        /* วิธีนี้จะทำให้ทุกหน้าที่เนื้อหาไหลไปถึง มีขอบเว้นอัตโนมัติครับ */
+        @page ctpat_pages {
+            margin: 20mm 15mm; 
+        }
+
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
             .page-break { page-break-before: always; }
+            
+            /* หน้าทั่วไป (หน้า 1) */
+            .page { 
+                margin: 0 !important; 
+                border: initial !important; 
+                width: 210mm !important; 
+                min-height: 100% !important; 
+                box-shadow: none !important; 
+                page-break-after: always;
+            }
+
+            /* หน้า 1 (Toolbox) - ล็อคความสูง A4 เพื่อดัน Footer */
+            .page.page-fixed {
+                height: 297mm !important; 
+                overflow: hidden !important; 
+                position: relative !important; 
+            }
+
+            /* [เพิ่มใหม่] หน้า 2+ (C-TPAT) - เรียกใช้กฎ ctpat_pages */
+            .page.page-ctpat {
+                page: ctpat_pages; /* สั่งให้ใช้ Margin แบบมีขอบ */
+                width: auto !important; 
+                height: auto !important; 
+                padding: 0 !important; /* ลบ Padding ของ div ออก (เพราะใช้ Margin ของกระดาษแทนแล้ว) */
+                margin: 0 !important;
+                overflow: visible !important; 
+            }
         }
 
-        /* --- GENERAL STYLES --- */
+        /* --- GENERAL STYLES (Screen) --- */
         body { font-family: 'Sarabun', sans-serif; font-size: 12px; line-height: 1.3; color: #000; background: #555; margin: 0; padding: 0; }
-        .page {
-            width: 210mm; min-height: 297mm;
-            padding: 10mm 15mm; margin: 10mm auto;
-            background: white; box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            position: relative; box-sizing: border-box;
-        }
-
-        /* --- STYLES FOR PAGE 1 --- */
-        .company-name { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-        .report-title { font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #000; padding: 5px; margin-bottom: 15px; background: #eee; }
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .info-table td { border: 1px solid #000; padding: 4px 8px; vertical-align: middle; }
-        .label { font-weight: bold; background-color: #f9f9f9; width: 140px; }
-        .val { font-weight: bold; color: #000; }
-        .photo-section-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; margin-bottom: 10px; padding-bottom: 2px; }
-        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .photo-card { border: 1px solid #ccc; padding: 5px; text-align: center; page-break-inside: avoid; }
-        .photo-box { width: 100%; height: 200px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #ddd; }
-        .photo-box img { width: 100%; height: 100%; object-fit: contain; }
-        .photo-caption { margin-top: 5px; font-weight: bold; font-size: 11px; }
-
-        /* --- STYLES FOR PAGE 2 (C-TPAT HEADER) --- */
-        .ctpat-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; border: 1px solid #000; }
-        .ctpat-header-table td { 
-            border: 1px solid #000; 
-            vertical-align: top;
-            padding: 0 0 2px 2px;
-        }
-                
-        /* [แก้ไข] ให้ Label และ Value อยู่บรรทัดเดียวกัน */
-        .form-label { 
-            font-size: 9px; 
-            color: #000; 
-            font-weight: bold;
-            margin-right: 5px; /* เว้นระยะห่างจากคำตอบนิดหน่อย */
-        }
-        .form-value { 
-            font-size: 9px; 
-            font-weight: bold; 
-            color: blue; 
-            font-family: 'Sarabun', sans-serif;
-        }
         
+        .page {
+            width: 210mm; 
+            min-height: 297mm;
+            padding: 10mm 10mm; 
+            margin: 10mm auto; 
+            background: white; 
+            position: relative; 
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+        }
+
+        /* --- PAGE 1 STYLES --- */
+        .page-1-header { text-align: center; margin-bottom: 2px; margin-top: 5px; }
+        .truck-icon { font-size: 24px; color: #2c5aa0; margin-bottom: 2px; }
+        .page-1-title { font-size: 14px; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px; }
+        .loading-date { font-size: 10px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
+        
+        .green-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 5px; }
+        .green-table th { background-color: #6dae48; color: black; border: 1px solid #000; padding: 4px 2px; text-align: center; font-weight: bold; vertical-align: middle; }
+        .green-table td { border: 1px solid #000; padding: 4px 2px; text-align: center; vertical-align: middle; height: 25px; }
+
+        .photo-table { width: 100%; border-collapse: collapse; margin-top: 0px; table-layout: fixed; }
+        .photo-table td { border: 1px solid #000; padding: 0; vertical-align: top; width: 25%; height: auto; }
+        .photo-label-top { text-align: center; font-size: 8px; font-weight: bold; padding: 2px 0; border-bottom: 1px solid #000; text-transform: uppercase; background-color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .photo-img-box { height: 255px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 5px; box-sizing: border-box; }
+        .photo-img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .page-footer-blue { position: absolute; bottom: 30px; left: 10mm; right: 10mm; height: 40px; background-color: #8faadc; border: 1px solid #000; display: flex; align-items: center; justify-content: center; padding: 0 20px; box-sizing: border-box; }
+        .footer-scan { color: red; font-weight: bold; font-size: 16px; font-style: italic; position: absolute; left: 20px; }
+        .footer-text { color: black; font-weight: bold; font-size: 12px; text-decoration: underline; }
+
+        /* --- PAGE 2 STYLES --- */
+        .ctpat-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; border: 1px solid #000; }
+        .ctpat-header-table td { border: 1px solid #000; vertical-align: top; padding: 0 0 2px 2px; }
+        .form-label { font-size: 9px; color: #000; font-weight: bold; margin-right: 5px; }
+        .form-value { font-size: 9px; font-weight: bold; color: blue; font-family: 'Sarabun', sans-serif; }
         .top-brand-row td { border: 1px solid #000; vertical-align: middle; padding: 8px 0; text-align: center; }
         .brand-snc { font-size: 20px; font-weight: bold; font-style: italic; }
         .brand-title { font-size: 11px; font-weight: bold; }
-
-        /* --- CHECKLIST TABLE --- */
         .chk-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: -1px; }
         .chk-table th, .chk-table td { border: 1px solid #000; padding: 2px; vertical-align: middle; }
         .chk-table th { background-color: #e0e0e0; text-align: center; font-weight: bold; border-top: 2px solid #000; }
@@ -129,9 +159,6 @@ function renderContainerTypeCheck($currentType, $targetType) {
         .sub-item-row td { border-top: 1px dotted #ccc; }
         .col-res { text-align: center; width: 40px; }
         .col-res span { display: block; line-height: 1; }
-        
-        /* Signature */
-        .signature-section { margin-top: 30px; display: flex; justify-content: space-around; page-break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -142,77 +169,90 @@ function renderContainerTypeCheck($currentType, $targetType) {
         </button>
     </div>
 
-    <div class="page">
-        <div class="company-name">SNC Creativity Anthology Company</div>
-        <div class="report-title">LOADING INSPECTION REPORT (6-POINT PHOTO)</div>
+    <div class="page page-fixed">
+        <div class="page-1-header">
+            <div class="truck-icon"><i class="fas fa-truck-moving"></i></div>
+            <div class="page-1-title">LOADING REPORT TOOLBOX</div>
+        </div>
 
-        <table class="info-table">
-            <tr>
-                <td class="label">Date (วันที่):</td>
-                <td class="val"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></td>
-                <td class="label">Time (เวลา):</td>
-                <td class="val"><?php echo date('H:i', strtotime($header['created_at'])); ?></td>
-            </tr>
-            <tr>
-                <td class="label">PO Number:</td>
-                <td class="val"><?php echo $header['po_number']; ?></td>
-                <td class="label">Qty (จำนวน):</td>
-                <td class="val"><?php echo number_format($header['quantity']); ?> PCS</td>
-            </tr>
-            <tr>
-                <td class="label">Container No:</td>
-                <td class="val"><?php echo $header['container_no']; ?></td>
-                <td class="label">Seal No:</td>
-                <td class="val"><?php echo $header['seal_no']; ?></td>
-            </tr>
-            <tr>
-                <td class="label">Car License:</td>
-                <td class="val"><?php echo $header['car_license']; ?></td>
-                <td class="label">Size / Type:</td>
-                <td class="val"><?php echo $header['container_type']; ?></td>
-            </tr>
-            <tr>
-                <td class="label">Booking No:</td>
-                <td class="val" colspan="3"><?php echo $header['booking_no']; ?></td>
-            </tr>
-            <tr>
-                <td class="label">Inspector:</td>
-                <td class="val" colspan="3">
-                    <?php echo $_SESSION['user']['name'] ?? '-'; ?> 
-                    (Emp ID: <?php echo $_SESSION['user']['username'] ?? '-'; ?>)
-                </td>
-            </tr>
+        <div class="loading-date">LOADING DATE: <?php echo date('d/m/Y', strtotime($header['created_at'])); ?></div>
+
+        <table class="green-table">
+            <thead>
+                <tr>
+                    <th width="12%">INVOICE</th>
+                    <th width="12%">BOOKING NO.</th>
+                    <th width="12%">PO.</th>
+                    <th width="12%">CONTAINER NO</th>
+                    <th width="12%">SEAL NO</th>
+                    <th width="12%">CABLE SEAL</th>
+                    <th width="16%">DESCRIPTION</th>
+                    <th width="8%">QTY</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><?php echo $header['invoice_no']; ?></td>
+                    <td><?php echo $header['booking_no']; ?></td>
+                    <td><?php echo $header['po_number']; ?></td>
+                    <td><?php echo $header['container_no']; ?></td>
+                    <td><?php echo $header['seal_no']; ?></td>
+                    <td><?php echo $header['cable_seal'] ?? '-'; ?></td>
+                    <td><?php echo $header['description']; ?></td>
+                    <td><?php echo number_format($header['quantity']); ?></td>
+                </tr>
+            </tbody>
         </table>
 
-        <div class="photo-section-title">PHOTO EVIDENCE (หลักฐานรูปถ่าย)</div>
-        <div class="photo-grid">
+        <table class="photo-table">
             <?php 
-            $photo_config = [
-                'EMPTY' => '1. Empty Container (ตู้เปล่า)',
-                'STUFF50' => '2. Stuffing 50% (บรรจุ 50%)',
-                'STUFF100' => '3. Stuffing 100% (บรรจุเต็ม)',
-                'DOOR50' => '4. Door Left Closed (ปิดประตูซ้าย)',
-                'DOOR100' => '5. Door Fully Closed (ปิดประตูเต็ม)',
-                'SEAL' => '6. Seal Lock (ซีลล็อค)'
+            $photo_list = [
+                'GUARD_PASS'  => '1. Security Pass',
+                'SEAL_DOC'    => '2. Seal Document',
+                'SEAL_UNLOCK' => '3. Seal Unlocked',
+                'SEAL_LOCK'   => '4. Seal Locked',
+                'CONT_NUM'    => '5. Container No.',
+                'EMPTY'       => '6. Empty Container',
+                'STUFF50'     => '7. Stuffing 50%',
+                'STUFF100'    => '8. Stuffing 100%',
+                'DOOR_R'      => '9. Door Right',
+                'DOOR_FULL'   => '10. Door Closed'
             ];
-            foreach ($photo_config as $type => $caption):
-                $src = isset($photos[$type]) ? $photos[$type] : '';
+            $chunks = array_chunk($photo_list, 4, true);
+            foreach ($chunks as $rowItems):
             ?>
-            <div class="photo-card">
-                <div class="photo-box">
-                    <?php if ($src): ?>
-                        <img src="<?php echo $src; ?>">
-                    <?php else: ?>
-                        <span style="color:#aaa;">- No Image -</span>
-                    <?php endif; ?>
-                </div>
-                <div class="photo-caption"><?php echo $caption; ?></div>
-            </div>
+            <tr>
+                <?php foreach ($rowItems as $key => $label): 
+                    $img = isset($photos[$key]) ? $photos[$key] : '';
+                ?>
+                <td>
+                    <div class="photo-label-top"><?php echo $label; ?></div>
+                    <div class="photo-img-box">
+                        <?php if ($img): ?>
+                            <img src="<?php echo $img; ?>">
+                        <?php else: ?>
+                            <span style="color:#ccc; font-size:10px;">No Image</span>
+                        <?php endif; ?>
+                    </div>
+                </td>
+                <?php endforeach; ?>
+                <?php 
+                $missing = 4 - count($rowItems);
+                if ($missing > 0) {
+                    for ($i=0; $i < $missing; $i++) echo "<td></td>"; 
+                }
+                ?>
+            </tr>
             <?php endforeach; ?>
+        </table>
+
+        <div class="page-footer-blue">
+            <span class="footer-scan">SCAN</span>
+            <span class="footer-text">ใบตรวจสอบสภาพตู้สินค้า</span>
         </div>
     </div>
 
-    <div class="page page-break" style="padding-top: 10mm;">
+    <div class="page page-break page-ctpat">
         
         <table class="ctpat-header-table">
             <tr class="top-brand-row">
@@ -285,7 +325,7 @@ function renderContainerTypeCheck($currentType, $targetType) {
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="vertical-align: middle;">
+                <td colspan="2" style="vertical-align: middle; padding: 8px 5px;">
                     <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
                     <span class="form-label">
                         <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
