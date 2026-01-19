@@ -1,24 +1,93 @@
-/* =========================================
-   1. JOB LIST & CARD STYLES
-   ========================================= */
-.job-card { 
-    cursor: pointer; 
-    transition: transform 0.2s; 
-    border: none; 
-    border-left: 5px solid #0d6efd; 
+/* loading_report.css - Modern Industrial Theme */
+
+:root {
+    --card-radius: 12px;
+    --input-radius: 8px;
+    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    --primary-gradient: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
+    --bg-light-gray: #f4f6f9;
+}
+
+body {
+    background-color: var(--bg-light-gray);
+}
+
+/* --- 1. Job List Cards (หน้าแรก) --- */
+.job-card {
+    border: none;
+    border-radius: var(--card-radius);
+    background: #fff;
+    box-shadow: var(--box-shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 5px solid transparent;
+    overflow: hidden;
 }
 .job-card:active { transform: scale(0.98); }
-.job-card.draft { border-left-color: #ffc107; } /* สีเหลืองสำหรับงานค้าง */
-.job-card.done { border-left-color: #198754; }  /* สีเขียวสำหรับงานจบ */
+.job-card.draft { border-left-color: #ffc107; }
+.job-card.done { border-left-color: #198754; }
+.job-card.waiting { border-left-color: #6c757d; } /* Default */
 
-/* =========================================
-   2. CAMERA & PHOTO STYLES
-   ========================================= */
+.job-card .card-body {
+    padding: 1.25rem;
+}
+.job-header-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* --- 2. Report Form (หน้าทำงาน) --- */
+#view-report-form .container {
+    padding-bottom: 80px; /* เผื่อพื้นที่ให้ Sticky Footer */
+}
+
+/* Hero Section (Info Card) */
+.info-card {
+    border: none;
+    border-radius: var(--card-radius);
+    box-shadow: var(--box-shadow);
+    background: #fff;
+    margin-bottom: 1rem;
+}
+.info-card-header {
+    background: var(--primary-gradient);
+    color: #fff;
+    padding: 1rem;
+    border-radius: var(--card-radius) var(--card-radius) 0 0;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #8898aa;
+    margin-bottom: 2px;
+}
+.info-value {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+/* --- 3. Camera / Photo Upload (Modern) --- */
+.photo-section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #555;
+    margin: 1.5rem 0 0.5rem 0;
+    text-transform: uppercase;
+    border-left: 4px solid #0d6efd;
+    padding-left: 10px;
+}
+
 .camera-box {
-    border: 2px dashed #ced4da;
-    border-radius: 10px;
+    border: 2px dashed #cbd5e0;
+    border-radius: var(--card-radius);
     background-color: #fff;
-    height: 180px;
+    height: 160px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -28,74 +97,96 @@
     position: relative;
     transition: all 0.2s;
 }
-.camera-box.has-image { 
-    border-style: solid; 
-    border-color: #198754; 
+.camera-box:hover {
+    border-color: #0d6efd;
+    background-color: #f8fbff;
 }
-.camera-box:active { 
-    background-color: #e9ecef; 
-    transform: scale(0.98); 
+.camera-box i {
+    font-size: 2rem;
+    color: #a0aec0;
+    margin-bottom: 8px;
+    transition: color 0.2s;
 }
-.camera-label { 
-    font-weight: bold; 
-    color: #6c757d; 
-    margin-top: 10px; 
-    font-size: 0.9rem; 
+.camera-box.has-image {
+    border: 2px solid #198754;
+    padding: 0;
+}
+.camera-label {
+    font-size: 0.8rem;
+    color: #718096;
+    font-weight: 500;
     text-align: center;
+    padding: 0 5px;
 }
 
-/* ✅ แก้ไขรูปโดนตัด (Zoom/Crop Issue) */
+/* Image Preview */
 .preview-img {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* สำคัญ: ให้เห็นรูปครบทั้งใบ ไม่โดนตัดขอบ */
-    background-color: #000; /* พื้นหลังดำ เพื่อให้ดูง่ายเวลาสัดส่วนรูปไม่เต็มกล่อง */
+    object-fit: cover; /* เปลี่ยนเป็น cover ให้ดูเต็มตาสวยงาม (ถ้าอยากเห็นครบใช้ contain) */
+    border-radius: calc(var(--card-radius) - 2px);
 }
 
-/* =========================================
-   3. FORM & INPUT STYLES
-   ========================================= */
-.info-card-header { 
-    background-color: #e9ecef; 
-    color: #495057; 
-    font-weight: bold; 
-    font-size: 0.85rem; 
+/* --- 4. Checklist (Card Style) --- */
+.checklist-card {
+    border: none;
+    border-radius: var(--card-radius);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    margin-bottom: 0.8rem;
+    overflow: hidden;
 }
-.form-label-sm { 
-    font-size: 0.8rem; 
-    color: #6c757d; 
-    margin-bottom: 2px; 
+.checklist-header {
+    background-color: #fff;
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f1f1;
 }
-.input-group-text-icon { 
-    width: 40px; 
-    justify-content: center; 
-    background-color: #f8f9fa; 
+.checklist-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #444;
+}
+.checklist-body {
+    background-color: #fff;
+    padding: 1rem;
+}
+.sub-item-row {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+.sub-item-row:last-child { border-bottom: none; }
+
+/* Radio Buttons Custom (ทำให้ปุ่มใหญ่ขึ้น) */
+.btn-group-lg-custom .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
 }
 
-/* =========================================
-   4. CHECKLIST (10-POINT) STYLES
-   ========================================= */
-.checklist-card { 
-    border-left: 4px solid #dee2e6; 
-    transition: all 0.3s; 
+/* --- 5. Sticky Footer Action Bar --- */
+.sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    padding: 15px;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
 }
-.checklist-card.pass { 
-    border-left-color: #198754; 
-    background-color: #f8fff9; 
-}
-.checklist-card.fail { 
-    border-left-color: #dc3545; 
-    background-color: #fff8f8; 
-}
-.checklist-card.na { 
-    border-left-color: #6c757d; 
-    background-color: #f8f9fa; 
+/* ปรับให้ Footer ขยับหลบ Sidebar ถ้าเป็นจอ Desktop */
+@media (min-width: 992px) {
+    .sticky-footer {
+        padding-left: 280px; /* ตามความกว้าง Sidebar */
+    }
 }
 
-/* =========================================
-   5. UTILITIES
-   ========================================= */
-/* ป้องกันการเลื่อนหน้าจอเวลาขึ้น Loading Overlay */
-body.loading { 
-    overflow: hidden; 
+.checklist-header * {
+    pointer-events: none; /* ให้การคลิกทะลุตัวหนังสือ/ไอคอน ไปโดนปุ่ม button เสมอ */
 }

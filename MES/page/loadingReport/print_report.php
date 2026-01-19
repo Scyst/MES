@@ -1,7 +1,7 @@
 <?php
 // page/loading/print_report.php
 require_once __DIR__ . '/../components/init.php';
-// require_once __DIR__ . '/loading_config.php'; 
+require_once __DIR__ . '/loading_config.php';
 require_once __DIR__ . '/../db.php'; 
 
 if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
@@ -53,116 +53,7 @@ while ($row = $stmtC->fetch(PDO::FETCH_ASSOC)) {
     $checklist_results[$row['topic_id']][$row['item_index']] = $row;
 }
 
-// --- DATA: OFFICIAL TEXT FROM OLD VERSION (ข้อความจากเวอร์ชันเก่า) ---
-$manual_master = [
-    1 => [
-        'title' => 'Undercarriage before entering facility (ใต้ท้องรถ ก่อนเข้าพื้นที่)',
-        'note'  => "Do not let the container enter the facility, Use a mirror to access hard-to-see areas. ไม่อนุญาตให้นำตู้คอนเทนเนอร์เข้ามาในพื้นที่ และให้ใช้กระจกเพื่อตรวจสอบบริเวณที่เข้าถึงยาก",
-        'items' => [
-            1 => "Support beams are visible. Solid plates should not cover the beams\nคานรับน้ำหนักมองเห็นชัดเจน แผ่นปิดทึบไม่ควรปิดบังคาน",
-            2 => "Wheels and tires look normal\nล้อและยางดูปกติ",
-        ]
-    ],
-    2 => [
-        'title' => 'Doors Inside/Outside (ประตู - ด้านใน/ด้านนอก)',
-        'items' => [
-            1 => "Ribs of doors are visible. Solid plates should not cover standard container cavities\nซี่ประตูด้านในมองเห็นชัดเจน แผ่นปิดทึบไม่ควรปิดบังช่องว่างมาตรฐานของตู้คอนเทนเนอร์",
-            2 => "Secure and reliable locking mechanisms are attached to the container\nกลไกการล็อคแน่นหนาและเชื่อถือได้",
-            3 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
-            4 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
-            5 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
-            6 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
-        ]
-    ],
-    3 => [
-        'title' => 'Right Side (ผนังด้านขวา)',
-        'items' => [
-            1 => "Repairs to walls on insied of container must be visible on outside\nการซ่อมแซมรอยเชื่อมใดๆบนผนังด้านในจะต้องมองเห็นได้จากผนังด้านนอก",
-            2 => "Visible ribs on the interior side of each door\nผนังประตูแต่ละด้านของตู้คอนเทนเนอร์ด้านในควรมีตัวดาม",
-            3 => "Tap side walls. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม)",
-            4 => "Unusual repairs to structural beams\nมีการซ่อมแซมคานที่ดูผิดปกติหรือไม่",
-            5 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
-            6 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
-            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
-            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
-            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
-        ]
-    ],
-    4 => [
-        'title' => 'Left Side (ผนังด้านซ้าย)',
-        'items' => [
-            1 => "Repairs to walls on insied of container must be visible on outside\nการซ่อมแซมรอยเชื่อมใดๆบนผนังด้านในจะต้องมองเห็นได้จากผนังด้านนอก",
-            2 => "Visible ribs on the interior side of each door\nผนังประตูแต่ละด้านของตู้คอนเทนเนอร์ด้านในควรมีตัวดาม",
-            3 => "Tap side walls. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม)",
-            4 => "Unusual repairs to structural beams\nมีการซ่อมแซมคานที่ดูผิดปกติหรือไม่",
-            5 => "Different color bonding material\nวัสดุเชื่อม/หมุดย้ำ ชนิดและสีผิดปกติหรือไม่)",
-            6 => "Loose bolts\nมีการคลายตัวหรือหายไปของชิ้นส่วนยึดหริอไม่่ (หมุดย้ำ/สกรู/สลักเกลียว/น็อต)",
-            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
-            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
-            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
-        ]
-    ],
-    5 => [
-        'title' => 'Front Wall (ผนังด้านหน้า)',
-        'items' => [
-            1 => "Use a measuring tape or string to determine the length of container.\nใช้ตลับเมตรหรือเชือกวัดขนาดภายใน ความยาวที่วัดได้ควรตรงกับข้อมูลจำเพาะที่ระบุไว้",
-            2 => "Blocks and vents are visible.\nบล็อคและช่องระบายอากาศสามารถมองเห็นได้",
-            3 => "Tap front wall. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะผนังเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม",
-        ]
-    ],
-    6 => [
-        'title' => 'Ceiling / Roof (เพดาน / หลังคา)',
-        'note'  => "False compartments are common in ceilings, beams, floors, doors and the front wall. If unable to see roof of container, use ladder or a mirror attached to a pole\nช่องลับมักพบได้ในเพดาน, คาน, พื้น, ประตู และผนังด้านหน้า หากไม่สามารถมองเห็นหลังคาของตู้คอนเทนเนอร์ได้ ให้ใช้บันไดหรือกระจกที่ติดปลายไม้",
-        'items' => [
-            1 => "Ceiling is a certain height from floor\nเพดานมีความสูงจากพื้นตามที่กำหนด",
-            2 => "Repairs to the ceiling on the inside of the container must be visible on the outside\nการซ่อมแซมรอยเชื่อมใดๆบนเพดานด้านในจะต้องมองเห็นได้จากเพดานด้านนอก",
-            3 => "Blocks and vents are visible.\nบล็อคและช่องระบายอากาศสามารถมองเห็นได้",
-            4 => "Support beams are visible.\nคานรองรับสามารถมองเห็นได้",
-            5 => "Tap ceiling/roof. Listen/feel for a hollow sound\nใช้เครื่องมือเคาะเพดาน/หลังคาเพื่อยืนยันว่ามีเสียงโลหะก้อง แสดงว่าไม่มีผนังปลอม",
-            6 => "Uncomfortable feeling inside\nด้านในคอนเทนเนอร์โปร่ง ไม่อับ",
-            7 => "Hole / Cut\nตรวจสอบว่ามีรูหรือรอยฉีกขาดที่ผิดปกติหรือไม่ (ร่องรอยการรั่วไหล)",
-            8 => "Dented\nรอยบุบ/บิดเบี้ยวผิดปกติหรือไม่",
-            9 => "Rusty\nตรวจสอบว่ามีสนิมเกาะกินโครงสร้างหรือไม่",
-        ]
-    ],
-    7 => [
-        'title' => 'Floor (พื้นตู้)',
-        'note'  => "Floor should be flat. Do not need to step up to get inside. พื้นควรเรียบเสมอกัน ไม่ควรมีพื้นยกระดับ",
-        'items' => [
-            1 => "Floor a regulated height from ceiling.\nวัดความสูงระหว่างพื้นและเพดาน ความสูงที่วัดได้ควรตรงกับข้อมูลจำเพาะที่ระบุไว้",
-            2 => "Clean\nพื้นผิวสะอาดและเรียบร้อย",
-            3 => "Dry\nพื้นแห้ง ไม่มีรอยเปื้อนหรือคราบน้ำ และเมื่อสัมผัสแล้วไม่รู้สึกเปียกชื้น",
-            4 => "Different floor heights\nพื้นเรียบเสมอกัน ไม่มีรอยนูนหรือตะปูที่ยื่นออกมา",
-            5 => "Unusual repairs\nไม่มีรอยซ่อมพื้นผิดปกติ",
-            6 => "Oil stain\nไม่มีคราบน้ำมัน",
-        ]
-    ],
-    8 => [
-        'title' => 'Door Lock (การล็อคประตู)',
-        'items' => [
-            1 => "Doors completely seal when closed\nประตูคอนเทนเนอร์ปิดสนิท",
-            2 => "Hinges are secure and reliable\nบานพับแน่นหนาและมั่นคง",
-            3 => "Bar of each door is working properly\nทดสอบอุปกรณ์ล็อคประตูทั้งหมด และตรวจสอบให้แน่ใจว่าทำงานได้ปกติ (ตัวล็อค/ มือจับ/ กลอน ฯลฯ)",
-            4 => "Problems locking door\nกลอนประตูทำงานได้ปกติ ไม่มีปัญหาในการล็อค",
-        ]
-    ],
-    9 => [
-        'title' => 'Seal Verification (ตรวจสอบซีล)',
-        'items' => [
-            1 => "Seal meets or exceeds PAS ISO 17712\nต้องใช้ซีลที่มีฟังก์ชันความปลอดภัยสูงและเป็นไปตามมาตรฐานซีล ISO 17712",
-            2 => "Ensure Seal is not broken/damaged\nซีลไม่ชำรุดหรือเสียหาย",
-            3 => "Verify seal number accuracy\nหมายเลขซีลต้องบันทึกในเอกสารการขนส่งสินค้าอย่างถูกต้อง",
-            4 => "Tug seal to make sure it is properly affixed\nออกแรงดึงและงัดซีลเพื่อตรวจสอบความแน่นหนา",
-            5 => "Twist and turn seal to make sure it does not unscrew\nลองบิดและหมุนซีลด้วยมือ เพื่อยืนยันว่าซีลไม่สามารถคลายเกลียวได้",
-        ]
-    ],
-    10 => [
-        'title' => 'Agricultural Contaminants (สิ่งปนเปื้อน)',
-        'items' => [
-            1 => "No Visible agricultural contaminants such as insects, pests, dirt, plant, or animal matter\nไม่มีสิ่งปนเปื้อนทางการเกษตรที่มองเห็นได้ เช่น แมลง, ศัตรูพืช, ดิน, พืช, หรือสารอินทรีย์จากสัตว์",
-        ]
-    ],
-];
+$manual_master = getOfficialChecklist();
 
 // Helpers (ใช้ Function เดิมจาก Layout ใหม่ ถ้า Logic เหมือนกัน)
 function renderCheckbox($result, $targetValue) {
@@ -545,25 +436,28 @@ function renderContainerTypeCheck($currentType, $targetType) {
                             </thead>
                             <tbody>
                                 <?php foreach ($manual_master as $topicId => $topic): ?>
-                                <tr class="topic-row">
-                                    <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
-                                </tr>
-                                <?php if (isset($topic['note']) && !empty($topic['note'])): ?>
-                                <tr class="note-row">
-                                    <td colspan="5"><?php echo nl2br(htmlspecialchars($topic['note'])); ?></td>
-                                </tr>
-                                <?php endif; ?>
-                                <?php foreach ($topic['items'] as $itemIdx => $itemName): 
-                                    $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
-                                ?>
-                                <tr class="sub-item-row">
-                                    <td><?php echo nl2br(htmlspecialchars($itemName)); ?></td>
-                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'PASS'); ?></td>
-                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'FAIL'); ?></td>
-                                    <td class="col-res"><?php echo renderCheckbox($data['result'], 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($data['remark']); ?></td>
-                                </tr>
-                                <?php endforeach; ?>
+                                    <tr class="topic-row">
+                                        <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
+                                    </tr>
+                                    <?php if (isset($topic['note']) && !empty($topic['note'])): ?>
+                                    <tr class="note-row">
+                                        <td colspan="5"><?php echo nl2br(htmlspecialchars($topic['note'])); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    <?php 
+                                    $i = 1; 
+                                    foreach ($topic['items'] as $itemName): 
+                                        $itemIdx = $i++;
+                                        $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
+                                    ?>
+                                    <tr class="sub-item-row">
+                                        <td>- <?php echo nl2br(htmlspecialchars($itemName)); ?></td>
+                                        <td class="col-res"><?php echo renderCheckbox($data['result'], 'PASS'); ?></td>
+                                        <td class="col-res"><?php echo renderCheckbox($data['result'], 'FAIL'); ?></td>
+                                        <td class="col-res"><?php echo renderCheckbox($data['result'], 'N/A'); ?></td>
+                                        <td><?php echo htmlspecialchars($data['remark']); ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>

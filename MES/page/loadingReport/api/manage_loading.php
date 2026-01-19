@@ -29,22 +29,39 @@ try {
     }
 
     switch ($action) {
-        // 1. ดึงรายการงาน
+        // 1. ดึงรายการงาน (รองรับ Date Filter หรือ Search Keyword)
         case 'get_jobs':
             $filterDate = $_REQUEST['date'] ?? date('Y-m-d');
+            $keyword = $_REQUEST['search'] ?? ''; // รับค่า keyword มา
             
-            // SQL: ดึงงานตามวันที่ Loading Date ที่เลือก
-            $sql = "SELECT s.id as so_id, s.po_number, s.loading_date, s.container_no, 
-                    s.quantity, s.booking_no,
-                    r.id as report_id, r.status as report_status
-                    FROM " . SALES_ORDERS_TABLE . " s
-                    LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id
-                    WHERE s.loading_date = ?
-                    ORDER BY CASE WHEN r.status = 'DRAFT' THEN 0 ELSE 1 END, s.po_number ASC";
+            // Base SQL (ส่วนที่เหมือนกัน)
+            $sqlBase = "SELECT TOP 50 s.id as so_id, s.po_number, s.loading_date, s.container_no, 
+                        s.quantity, s.booking_no,
+                        r.id as report_id, r.status as report_status
+                        FROM " . SALES_ORDERS_TABLE . " s
+                        LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id ";
+
+            $params = [];
+
+            // [LOGIC] ถ้ามี Keyword ให้ค้นหา (ข้ามวันที่) / ถ้าไม่มี ให้ใช้วันที่
+            if (!empty($keyword)) {
+                // ค้นหาจาก PO, Booking, หรือ Container
+                $sqlBase .= " WHERE s.po_number LIKE ? OR s.booking_no LIKE ? OR s.container_no LIKE ? ";
+                $searchTerm = "%$keyword%";
+                $params = [$searchTerm, $searchTerm, $searchTerm];
+            } else {
+                // กรองตามวันที่ (Logic เดิม)
+                $sqlBase .= " WHERE s.loading_date = ? ";
+                $params = [$filterDate];
+            }
             
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$filterDate]);
+            // Order By: งานค้างขึ้นก่อน -> ตามด้วยเลข PO
+            $sqlBase .= " ORDER BY CASE WHEN r.status = 'DRAFT' THEN 0 ELSE 1 END, s.po_number ASC";
+            
+            $stmt = $pdo->prepare($sqlBase);
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
@@ -276,6 +293,13 @@ try {
                 throw new Exception("Report not found.");
             }
 
+            // สังเกตว่าเราเรียก writeLog() ก่อนทำการ UPDATE เพื่อเก็บหลักฐาน
+            writeLog($pdo, 'FINISH', 'LOADING', $report_id, 
+                ['status' => 'DRAFT'],       // ค่าเก่า (สมมติว่าเป็น Draft)
+                ['status' => 'COMPLETED'],   // ค่าใหม่
+                'Inspection Completed'       // Remark
+            );
+
             // อัปเดตสถานะเป็น COMPLETED
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
                     SET status = 'COMPLETED', updated_at = GETDATE() 
@@ -289,8 +313,7 @@ try {
         case 'reopen_report':
             $report_id = $_POST['report_id'];
             
-            // [SECURITY] เช็คสิทธิ์ก่อน ถ้าไม่ใช่ Admin/Supervisor ห้ามทำ
-            // สมมติว่าใน session เก็บ role ไว้ (ปรับตามโค้ด auth จริงของคุณ)
+            // [SECURITY] เช็คสิทธิ์
             $role = $_SESSION['user']['role'] ?? 'operator';
             if (!in_array($role, ['admin', 'supervisor', 'manager'])) {
                  throw new Exception("Permission Denied: Supervisor level required.");
@@ -300,6 +323,12 @@ try {
             $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
             $check->execute([$report_id]);
             if (!$check->fetch()) throw new Exception("Report not found.");
+
+            writeLog($pdo, 'UNLOCK', 'LOADING', $report_id, 
+                ['status' => 'COMPLETED'], 
+                ['status' => 'DRAFT'], 
+                'Supervisor Re-opened Report'
+            );
 
             // ถอยสถานะกลับเป็น DRAFT
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
