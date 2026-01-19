@@ -1,13 +1,13 @@
 <?php
 // page/loading/print_report.php
 require_once __DIR__ . '/../components/init.php';
-require_once __DIR__ . '/loading_config.php';
+// require_once __DIR__ . '/loading_config.php'; 
 require_once __DIR__ . '/../db.php'; 
 
 if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
 $report_id = $_GET['report_id'];
 
-// 1. [FIXED] เพิ่มฟิลด์ที่ขาด (driver, inspector, supervisor, cable_seal)
+// 1. ดึงข้อมูล (ใช้ Query จากเวอร์ชันเก่า เพื่อให้ได้ field ครบ)
 $sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description, s.invoice_no,
                s.container_no as plan_container, s.seal_no as plan_seal,
                r.driver_name, r.inspector_name, r.supervisor_name, r.cable_seal
@@ -38,7 +38,7 @@ while ($row = $stmtC->fetch(PDO::FETCH_ASSOC)) {
     $checklist_results[$row['topic_id']][$row['item_index']] = $row;
 }
 
-// --- DATA (คงไว้ตามเดิม เพราะเป็น Official Text) ---
+// --- DATA: OFFICIAL TEXT FROM OLD VERSION (ข้อความจากเวอร์ชันเก่า) ---
 $manual_master = [
     1 => [
         'title' => 'Undercarriage before entering facility (ใต้ท้องรถ ก่อนเข้าพื้นที่)',
@@ -149,24 +149,19 @@ $manual_master = [
     ],
 ];
 
-// --- HELPER FUNCTIONS ---
+// Helpers (ใช้ Function เดิมจาก Layout ใหม่ ถ้า Logic เหมือนกัน)
 function renderCheckbox($result, $targetValue) {
     $isChecked = ($result === $targetValue);
     $symbol = $isChecked ? '&#9745;' : '&#9744;'; 
     $style = $isChecked ? 'font-weight:bold; color:black;' : 'color:#999;';
     return "<span style='font-size: 16px; $style'>{$symbol}</span>";
 }
-
 function renderContainerTypeCheck($currentType, $targetType) {
     $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
     $dbValue = isset($map[$currentType]) ? $map[$currentType] : $currentType;
     $isMatch = ($dbValue === $targetType);
     $mark = $isMatch ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
-    
-    return "<span style='display:inline-block; margin-right:10px; position:relative;'>
-        <span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>$mark</span> 
-        $targetType
-    </span>";
+    return "<span style='display:inline-block; margin-right:10px; position:relative;'><span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>$mark</span> $targetType</span>";
 }
 ?>
 <!DOCTYPE html>
@@ -176,170 +171,111 @@ function renderContainerTypeCheck($currentType, $targetType) {
     <title>Report_<?php echo $header['po_number']; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <style>
-        /* --- A4 PRINT SETTINGS (Fixed) --- */
-        @page { size: A4; margin: 10mm; } /* ใช้ Margin มาตรฐานเพื่อไม่ให้ Header หลุด */
+        /* === A4 SETTINGS === */
+        @page { size: A4; margin: 10mm; }
 
-        /* [UPDATED] แก้ปัญหา Web View ไม่เหมือนกระดาษ */
         body { 
             font-family: 'Sarabun', sans-serif; 
             font-size: 12px; 
             line-height: 1.3; 
             color: #000; 
-            background: #525659; /* พื้นหลังสีเทาเข้ม (เหมือนโปรแกรม PDF) */
+            background: #525659; /* Web View BG */
             margin: 0; 
-            padding: 20px 0; /* เพิ่ม Padding บนล่าง */
+            padding: 20px 0;
         }
 
         .page { 
             width: 210mm; 
             min-height: 297mm; 
             padding: 10mm; 
-            margin: 0 auto 20px auto; /* เว้นระยะห่างระหว่างหน้า */
+            margin: 0 auto 20px auto; 
             background: white; 
             position: relative; 
             box-sizing: border-box; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.5); /* เงากระดาษ */
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
         }
 
-        /* สำหรับหน้า C-TPAT ที่ยาวๆ บนจอเว็บ */
-        .page.page-ctpat { 
-            min-height: 297mm; 
-            height: auto; /* ให้ยืดตามเนื้อหาบนจอ */
-            padding-bottom: 20mm;
-        }
+        .no-print { position: fixed; top: 10px; right: 10px; z-index: 9999; }
 
-        /* HEADER & FOOTER STYLES */
-        .doc-header-fixed {
-            font-size: 10px; font-weight: bold; color: #555;
-            display: flex; justify-content: space-between;
-            /* แก้ไขตำแหน่งให้ไม่ทับเนื้อหา */
-            margin-bottom: 10px; 
-        }
-        .doc-footer-fixed {
-            font-size: 10px; color: #555; text-align: right;
-        }
+        /* === GLOBAL FOOTER (Page Number) === */
         .page-number:after { content: "Page " counter(page); }
 
+        /* === PRINT MODE === */
         @media print {
-            body { 
-                background: white; 
-                margin: 0; 
-                padding: 0; 
-                -webkit-print-color-adjust: exact; print-color-adjust: exact; 
-            }
+            body { background: white; padding: 0; margin: 0; }
             .no-print { display: none !important; }
-            .page-break { page-break-before: always; }
             
             .page { 
-                width: 100% !important; 
-                margin: 0 !important; 
-                box-shadow: none !important; 
-                border: none !important;
-                padding: 0 !important; /* ให้ @page จัดการ margin */
+                width: 100% !important; margin: 0 !important; padding: 0 !important;
+                box-shadow: none !important; border: none !important; 
+                min-height: auto !important; page-break-after: always;
             }
-            
-            .page.page-ctpat {
-                page-break-inside: auto; /* อนุญาตให้ตัดหน้า */
-            }
+            .page:last-child { page-break-after: auto; }
+            #page-1 { page-break-after: always; } /* บังคับตัดหน้า 1 */
 
-            /* [UPDATED] ใช้ thead เพื่อให้หัวตารางซ้ำทุกหน้า (แก้ปัญหา C-TPAT หน้าล้นไม่มีหัว) */
-            thead { display: table-header-group; } 
+            /* Layout Fixes */
+            thead { display: table-header-group; }
             tfoot { display: table-footer-group; }
             tr { page-break-inside: avoid; }
-            
-            /* ซ่อน Header แบบ div ในหน้า Print เพราะเราจะใช้ Table Header แทนในส่วน C-TPAT */
-            .doc-header-fixed { display: none; } 
-            
-            /* แสดง Footer แบบ Fixed */
-            .doc-footer-fixed {
-                position: fixed; bottom: 0; right: 0;
-            }
         }
 
-        /* --- STYLES (LAYOUT เดิมของคุณ) --- */
-        .page-1-header { text-align: center; margin-bottom: 2px; margin-top: 5px; }
+        /* --- STYLES --- */
+        .header-simple { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555; margin-bottom: 10px; }
+        .page-1-header { text-align: center; margin-bottom: 5px; }
         .truck-icon { font-size: 24px; color: #2c5aa0; margin-bottom: 2px; }
-        .page-1-title { font-size: 14px; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px; }
-        .loading-date { font-size: 10px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
+        .page-1-title { font-size: 14px; font-weight: bold; color: #333; text-transform: uppercase; }
+        .loading-date { font-size: 10px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+        
         .green-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 5px; }
-        .green-table th { background-color: #6dae48; color: black; border: 1px solid #000; padding: 4px 2px; text-align: center; font-weight: bold; vertical-align: middle; }
-        .green-table td { border: 1px solid #000; padding: 4px 2px; text-align: center; vertical-align: middle; height: 25px; }
-        .photo-table { width: 100%; border-collapse: collapse; margin-top: 0px; table-layout: fixed; }
-        .photo-table td { border: 1px solid #000; padding: 0; vertical-align: top; width: 25%; height: auto; }
-        .photo-label-top { text-align: center; font-size: 8px; font-weight: bold; padding: 2px 0; border-bottom: 1px solid #000; text-transform: uppercase; background-color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .photo-img-box { height: 255px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 5px; box-sizing: border-box; }
-        .photo-img-box img { width: 100%; height: 100%; object-fit: cover; }
-        .page-footer-blue { position: absolute; bottom: 30px; left: 10mm; right: 10mm; height: 40px; background-color: #8faadc; border: 1px solid #000; display: flex; align-items: center; justify-content: center; padding: 0 20px; box-sizing: border-box; }
+        .green-table th { background-color: #6dae48; color: black; border: 1px solid #000; padding: 3px; text-align: center; }
+        .green-table td { border: 1px solid #000; padding: 3px; text-align: center; height: 20px; }
+
+        .photo-table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        .photo-table td { border: 1px solid #000; padding: 0; vertical-align: top; width: 25%; }
+        .photo-label-top { text-align: center; font-size: 8px; font-weight: bold; padding: 2px 0; border-bottom: 1px solid #000; background: #eee; }
+        /* ลดความสูงรูปเพื่อกันล้น A4 */
+        .photo-img-box { height: 250px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; }
+        .photo-img-box img { width: 100%; height: 100%; object-fit: contain; }
+
+        .page-footer-blue { margin-top: 10px; height: 35px; background-color: #8faadc; border: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
         .footer-scan { color: red; font-weight: bold; font-size: 16px; font-style: italic; position: absolute; left: 20px; }
         .footer-text { color: black; font-weight: bold; font-size: 12px; text-decoration: underline; }
 
-        .ctpat-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; border: 1px solid #000; }
+        .ctpat-header-table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 0; }
         .ctpat-header-table td { border: 1px solid #000; vertical-align: top; padding: 0 0 2px 2px; }
-        .form-label { font-size: 9px; color: #000; font-weight: bold; margin-right: 5px; }
-        .form-value { font-size: 9px; font-weight: bold; color: blue; font-family: 'Sarabun', sans-serif; }
         .top-brand-row td { border: 1px solid #000; vertical-align: middle; padding: 8px 0; text-align: center; }
-        .brand-snc { font-size: 20px; font-weight: bold; font-style: italic; }
-        .brand-title { font-size: 11px; font-weight: bold; }
-        
-        .chk-table { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: -1px; }
-        .chk-table th, .chk-table td { border: 1px solid #000; padding: 2px 2px; vertical-align: middle; }
-        .chk-table th { background-color: #e0e0e0; text-align: center; font-weight: bold; border-top: 2px solid #000; }
-        .topic-row { background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #000;}
-        
-        /* [แก้] Padding ปกติ (3px) + ไม่มี padding-left 15px */
-        .sub-item-row td { 
-            border-top: 1px dotted #ccc; 
-            white-space: pre-line; 
-            vertical-align: middle;
-            line-height: 1.3;
-        }
-        
-        .col-res { text-align: center; width: 40px; }
-        .col-res span { display: block; line-height: 1; padding-bottom: 1px; }
+        .form-label { font-size: 9px; font-weight: bold; }
+        .form-value { font-size: 9px; font-weight: bold; color: blue; margin-left: 5px; }
+        .brand-snc { font-size: 18px; font-weight: bold; font-style: italic; }
+        .brand-title { font-size: 11px; font-weight: bold; text-align: center;}
 
-        .note-row td {
-            background-color: #fff;
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
-            padding: 1px 2px;
-            font-size: 8px;
-            font-style: italic;
-            color: #444;
-            text-align: left;
-            line-height: 1.4;
-            white-space: pre-wrap;
-        }
+        .chk-table { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: -1px; }
+        .chk-table th, .chk-table td { border: 1px solid #000;padding: 2px 0 3px 2px; vertical-align: middle; }
+        .chk-table th { background-color: #e0e0e0; text-align: center; }
+        .topic-row td { background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #000; }
+        .col-res { text-align: center; width: 35px; }
+        .note-row td { background: #fff; font-style: italic; color: #444; padding: 2px; }
+        .sub-item-row td { border-top: 1px dotted #ccc; }
         
-        /* [ADDED] Header สำหรับ Table ที่จะโชว์เมื่อขึ้นหน้าใหม่ */
-        .print-table-header {
-            display: none; /* ซ่อนในหน้าจอ */
-        }
-        @media print {
-            .print-table-header {
-                display: table-row; /* โชว์ใน Print */
-                background: white;
-                border-bottom: 1px solid #000;
-            }
-            .print-table-header td {
-                border: none;
-                padding: 5px;
-            }
-        }
+        /* Ghost Header Styling */
+        .repeat-header-content { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="no-print" style="position: fixed; top: 10px; right: 10px; z-index: 999;">
-        <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+    <div class="no-print">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">
             🖨️ PRINT REPORT
         </button>
+        <div style="margin-top:5px; color:white; font-size:10px;">*แนะนำ: ปิด 'Headers and footers' ของ Browser</div>
     </div>
 
-    <div class="page page-fixed">
-        <div class="doc-header-fixed">
-            <div class="company-name">SNC Creativity Anthology Co., Ltd.</div>
-            <div class="doc-no">Document No: QP-QA-001 (Rev.00)</div>
+    <div class="page" id="page-1">
+        <div class="header-simple">
+            <div>SNC Creativity Anthology Co., Ltd.</div>
+            <div>InspectionOOCU4988902</div>
         </div>
 
         <div class="page-1-header">
@@ -408,9 +344,20 @@ function renderContainerTypeCheck($currentType, $targetType) {
                     </div>
                 </td>
                 <?php endforeach; ?>
+
                 <?php 
+                // --- ส่วนที่ปรับปรุง: สร้างช่องว่างให้มี Layout เหมือนช่องปกติ ---
                 $missing = 4 - count($rowItems);
-                if ($missing > 0) { for ($i=0; $i < $missing; $i++) echo "<td></td>"; }
+                if ($missing > 0) { 
+                    for ($i=0; $i < $missing; $i++) { 
+                ?>
+                    <td>
+                        <div class="photo-label-top">-</div>
+                        <div class="photo-img-box"></div>
+                    </td>
+                <?php 
+                    } 
+                } 
                 ?>
             </tr>
             <?php endforeach; ?>
@@ -420,35 +367,33 @@ function renderContainerTypeCheck($currentType, $targetType) {
             <span class="footer-scan">SCAN</span>
             <span class="footer-text">เอกสารแนบใบตรวจสอบตู้สินค้า</span>
         </div>
-        
-        <div class="doc-footer-fixed" style="position: absolute; bottom: 10px; right: 10px;">
-            Page 1
-        </div>
     </div>
 
-    <div class="page page-break page-ctpat">
+    <div class="page" id="page-ctpat">
         
-        <table style="width: 100%; border-collapse: collapse;">
+        <table style="width: 100%; border-collapse: collapse; border: none;">
+            
             <thead>
-                <tr class="print-table-header">
-                    <td colspan="5">
-                        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555;">
+                <tr>
+                    <td style="border: none; padding-bottom: 10px;">
+                        <div class="repeat-header-content">
                             <div>SNC Creativity Anthology Co., Ltd.</div>
-                            <div>Document No: QP-QA-001 (Rev.00)</div>
+                            <div>C-TPAT 10-Point กรอก</div>
                         </div>
                     </td>
                 </tr>
             </thead>
-            
+
             <tbody>
                 <tr>
-                    <td colspan="5">
+                    <td style="border: none;">
+                        
                         <table class="ctpat-header-table">
                             <tr class="top-brand-row">
-                                <td width="50%">
+                                <td width="50%" style="text-align:center; padding:8px;">
                                     <span class="brand-snc">SNC</span>
                                 </td>
-                                <td width="50%">
+                                <td width="50%" style="text-align:center;">
                                     <div class="brand-title">C-TPAT 10-Point Container Inspection Checklist</div>
                                 </td>
                             </tr>
@@ -456,11 +401,11 @@ function renderContainerTypeCheck($currentType, $targetType) {
 
                         <table class="ctpat-header-table" style="margin-top: -1px;">
                             <tr>
-                                <td width="62%"> 
+                                <td width="60%"> 
                                     <span class="form-label">Loading Location : SNC Creativity Anthology Company (WH-B10) </span>
                                     <span class="form-value">WH ประตู 1</span>
                                 </td>
-                                <td width="38%">
+                                <td width="40%">
                                     <span class="form-label">PO Number หมายเลขคำสั่งซื้อ :</span>
                                     <span class="form-value"><?php echo $header['po_number']; ?></span>
                                 </td>
@@ -510,11 +455,11 @@ function renderContainerTypeCheck($currentType, $targetType) {
                                 </td>
                                 <td>
                                     <span class="form-label">Vender ชื่อขนส่ง :</span>
-                                    <span class="form-value"><?php echo $header['driver_name'] ? $header['driver_name'] : '-'; ?></span>
+                                    <span class="form-value"><?php echo $header['driver_name'] ?: '-'; ?></span>
                                 </td>
                             </tr>
                             <tr>
-                                <td colspan="2" style="vertical-align: middle; padding-bottom: 2px;">
+                                <td colspan="2">
                                     <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
                                     <span class="form-label">
                                         <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
@@ -530,15 +475,11 @@ function renderContainerTypeCheck($currentType, $targetType) {
                             <tr>
                                 <td width="50%">
                                     <span class="form-label">Supervisor / Mini-MD หัวหน้าแผนก หรือ ผู้จัดการ :</span>
-                                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
-                                        <?php echo $header['supervisor_name'] ?: '-'; ?>
-                                    </span>
+                                    <span class="form-value"><?php echo $header['supervisor_name'] ?: '-'; ?></span>
                                 </td>
                                 <td width="50%">
                                     <span class="form-label">Inspector name ผู้ตรวจสอบตู้ :</span>
-                                    <span class="form-value" style="font-size:12px; margin-left: 10px;">
-                                        <?php echo $header['inspector_name'] ?: '-'; ?>
-                                    </span>
+                                    <span class="form-value"><?php echo $header['inspector_name'] ?: '-'; ?></span>
                                 </td>
                             </tr>
                         </table>
@@ -557,27 +498,20 @@ function renderContainerTypeCheck($currentType, $targetType) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php 
-                                foreach ($manual_master as $topicId => $topic): 
-                                ?>
+                                <?php foreach ($manual_master as $topicId => $topic): ?>
                                 <tr class="topic-row">
                                     <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
                                 </tr>
-
-                                <?php 
-                                if (isset($topic['note']) && !empty($topic['note'])): 
-                                ?>
+                                <?php if (isset($topic['note']) && !empty($topic['note'])): ?>
                                 <tr class="note-row">
-                                    <td colspan="5"><?php echo htmlspecialchars($topic['note']); ?></td>
+                                    <td colspan="5"><?php echo nl2br(htmlspecialchars($topic['note'])); ?></td>
                                 </tr>
                                 <?php endif; ?>
-
-                                <?php 
-                                    foreach ($topic['items'] as $itemIdx => $itemName): 
-                                        $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
+                                <?php foreach ($topic['items'] as $itemIdx => $itemName): 
+                                    $data = $checklist_results[$topicId][$itemIdx] ?? ['result'=>'', 'remark'=>''];
                                 ?>
                                 <tr class="sub-item-row">
-                                    <td><?php echo $itemName; ?></td>
+                                    <td><?php echo nl2br(htmlspecialchars($itemName)); ?></td>
                                     <td class="col-res"><?php echo renderCheckbox($data['result'], 'PASS'); ?></td>
                                     <td class="col-res"><?php echo renderCheckbox($data['result'], 'FAIL'); ?></td>
                                     <td class="col-res"><?php echo renderCheckbox($data['result'], 'N/A'); ?></td>
@@ -587,14 +521,11 @@ function renderContainerTypeCheck($currentType, $targetType) {
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
                     </td>
                 </tr>
             </tbody>
         </table>
-        
-        <div class="doc-footer-fixed print-only">
-            <span class="page-number"></span>
-        </div>
     </div>
 
 </body>
