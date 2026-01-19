@@ -132,8 +132,8 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                                         <option value="">Select...</option>
                                         <option value="40'HC">40' HC</option>
                                         <option value="40'ST">40' ST</option>
-                                        <option value="20'">20' General</option>
-                                        <option value="45'">45' High</option>
+                                        <option value="20'">20'</option>
+                                        <option value="45'">45'</option>
                                     </select>
                                 </div>
 
@@ -171,12 +171,12 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                                     <input type="text" id="input_inspector" class="form-control" placeholder="ผู้ตรวจสอบ">
                                 </div>
                                 <div class="col-6 col-md-4">
-                                    <label class="form-label-sm">Supervisor</label>
+                                    <label class="form-label-sm">Supervisor / Mini-MD</label>
                                     <input type="text" id="input_supervisor" class="form-control" placeholder="หัวหน้างาน">
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label-sm">Location</label>
-                                    <input type="text" id="input_location" class="form-control text-muted" readonly>
+                                    <input type="text" id="input_location" class="form-control" placeholder="ระบุสถานที่โหลดสินค้า">
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label-sm">Start Time</label>
@@ -288,31 +288,42 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                                 </div>
                             </div>
 
-                        <div class="sticky-footer d-flex flex-column align-items-stretch">
-                            
-                            <div class="form-check mb-2 align-self-center">
-                                <input class="form-check-input border-primary" type="checkbox" id="confirm_all_pass" 
-                                       onchange="toggleFinishButton(this)" disabled> 
-                                <label class="form-check-label fw-bold text-primary" for="confirm_all_pass">
-                                    <i class="fas fa-check-double me-1"></i> Confirm all items Passed
-                                </label>
+                        <div class="sticky-footer bg-white shadow-lg border-top px-3 py-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                
+                                <div class="form-check form-switch mb-0 d-flex align-items-center" style="padding-left: 2.5em;">
+                                    <input class="form-check-input border-secondary" type="checkbox" role="switch" 
+                                           id="confirm_all_pass" 
+                                           style="width: 2.5em; height: 1.25em; margin-left: -2.5em; cursor: pointer;" 
+                                           onchange="toggleFinishButton(this)" disabled>
+                                    <label class="form-check-label fw-bold text-dark small ms-2 lh-1" for="confirm_all_pass" style="font-size: 0.85rem; cursor: pointer;">
+                                        Confirm<br>Pass All
+                                    </label>
+                                </div>
+
+                                <button id="btn_finish" class="btn btn-secondary shadow-sm py-2 px-3 flex-grow-1" 
+                                        style="max-width: 200px; border-radius: 8px;" 
+                                        onclick="finishInspection()" disabled>
+                                    <i class="fas fa-lock me-1"></i> Finish
+                                </button>
                             </div>
 
-                            <div class="text-muted small text-center mb-1" id="scroll_hint">
-                                <i class="fas fa-arrow-down animate-bounce"></i> Scroll down to accept
+                            <div id="scroll_hint" class="position-absolute top-0 start-50 translate-middle-x mt-n4 text-center w-100" style="pointer-events: none; margin-top: -20px;">
+                                <span class="badge bg-dark opacity-75 shadow-sm" style="font-size: 0.7rem;">
+                                    <i class="fas fa-arrow-down animate-bounce"></i> Scroll
+                                </span>
                             </div>
-
-                            <button id="btn_finish" class="btn btn-secondary w-100 btn-lg shadow-sm" onclick="finishInspection()" disabled>
-                                <i class="fas fa-lock me-2"></i> Please Complete Checklist
-                            </button>
                         </div>
-
-                    </div> </div> </div> </div> </div> <input type="hidden" id="current_so_id">
+                    </div>
+                </div>
+            </div>
+        </div>
+     </div>
+    <input type="hidden" id="current_so_id">
     <input type="hidden" id="current_report_id">
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script src="script/loading_report.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

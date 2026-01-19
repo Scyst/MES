@@ -1,56 +1,76 @@
-from websocket import create_connection
+import requests
 import json
-import time
 from datetime import datetime
 
-url = "ws://172.16.1.125:1881/mes/b9/prod/ws/v1/utils"
+# ==========================================
+# 1. SETUP
+# ==========================================
+URL = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
+HEADERS = {'Content-Type': 'application/json'}
 
-def format_row(w_center, status, process, count, desc):
-    # จัดรูปแบบการแสดงผลให้ตรงแถว (String formatting)
-    return f"{w_center:<12} | {status:<8} | {process:<10} | {count:>7} | {desc}"
+# เอาเวลาเริ่มต้นของวันนี้ (00:00:00) เพื่อดึงข้อมูลที่มีอยู่จริงออกมาดู
+now = datetime.now()
+start_time = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
+# Payload (Scenario: Today -> Now)
+payload = {
+    "start": start_time,
+    "end": None
+}
+
+print(f"🚀 Sending Request...")
+print(f"URL: {URL}")
+print(f"Payload: {payload}")
+print("-" * 50)
+
+# ==========================================
+# 2. EXECUTE & INSPECT
+# ==========================================
 try:
-    print(f"กำลังเชื่อมต่อ: {url} ...")
-    ws = create_connection(url)
-    print("เชื่อมต่อสำเร็จ กำลังรอข้อมูล...\n")
-
-    while True:
-        result = ws.recv()
+    response = requests.post(URL, headers=HEADERS, json=payload, timeout=10)
+    
+    print(f"Status Code: {response.status_code}")
+    
+    if response.status_code == 200:
+        data = response.json()
         
-        # 1. แปลงข้อความดิบ (String) ให้เป็น Object (Dictionary)
-        try:
-            data = json.loads(result)
+        # 2.1 แสดงโครงสร้าง JSON เต็มๆ (Pretty Print)
+        print("\n📄 [FULL JSON RESPONSE]")
+        print(json.dumps(data, indent=4, ensure_ascii=False))
+        
+        # 2.2 เจาะดู Data Structure เพื่อออกแบบ Database
+        # สมมติว่าข้อมูลเนื้อๆ อยู่ใน data -> result (ตามแพทเทิร์นปกติของ SNC)
+        # ปรับแก้ path ตรงนี้ได้ถ้าโครงสร้างเปลี่ยน
+        result_list = data.get("data", {}).get("result", [])
+        
+        if result_list and isinstance(result_list, list) and len(result_list) > 0:
+            first_item = result_list[0]
             
-            # เจาะเข้าไปเอาข้อมูลดิบของเครื่องจักร
-            machine_list = data.get("latest", {}).get("raw_data", [])
+            print("\n🛠 [DATABASE SCHEMA ANALYSIS]")
+            print(f"Found {len(result_list)} records. Analyzing the first record for table creation:")
+            print("-" * 60)
+            print(f"{'KEY (Column Name)':<25} | {'TYPE':<10} | {'EXAMPLE VALUE'}")
+            print("-" * 60)
             
-            print(f"\n🔁 ได้รับข้อมูลเมื่อ: {datetime.now().strftime('%H:%M:%S')}")
-            print("="*80)
-            print(format_row("Work Center", "Status", "Process", "Counter", "Description"))
-            print("-" * 80)
-            
-            # 2. วนลูปดึงข้อมูลทีละเครื่อง
-            for machine in machine_list:
-                w_center = machine.get("work_center", "-")
-                status = machine.get("status", "Unknown")
-                process = machine.get("actual_process", "-")
-                count = machine.get("counter", 0)
-                desc = machine.get("description", "")
+            for key, value in first_item.items():
+                value_type = type(value).__name__
+                # ตัดข้อความยาวๆ เพื่อการแสดงผล
+                str_val = str(value)
+                if len(str_val) > 50:
+                    str_val = str_val[:47] + "..."
                 
-                # แสดงผล
-                print(format_row(w_center, status, process, count, desc))
+                print(f"{key:<25} | {value_type:<10} | {str_val}")
                 
-            print("="*80)
-            print(f"รวมทั้งหมด {len(machine_list)} เครื่อง\n")
+            print("-" * 60)
+            print("✅ ใช้รายชื่อ Column ด้านบนไปสร้าง Table ใน Database ได้เลยครับ")
+            
+        else:
+            print("\n⚠️ Warning: No data found in 'data.result' or list is empty.")
+            print("ลองเปลี่ยนช่วงเวลา start/end ดูครับ")
+            
+    else:
+        print(f"\n❌ Error: API returned {response.status_code}")
+        print(response.text)
 
-        except json.JSONDecodeError:
-            print(f"ได้รับข้อมูลที่ไม่ใช่ JSON: {result}")
-
-except KeyboardInterrupt:
-    print("\n หยุดการทำงาน")
 except Exception as e:
-    print(f"\n เกิดข้อผิดพลาด: {e}")
-finally:
-    if 'ws' in locals() and ws.connected:
-        ws.close()
-        print(" ปิดการเชื่อมต่อ")
+    print(f"\n❌ Exception: {e}")

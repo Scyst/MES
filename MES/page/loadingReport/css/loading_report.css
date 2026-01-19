@@ -38,7 +38,7 @@ body {
 
 /* --- 2. Report Form (หน้าทำงาน) --- */
 #view-report-form .container {
-    padding-bottom: 80px; /* เผื่อพื้นที่ให้ Sticky Footer */
+    padding-bottom: 90px; 
 }
 
 /* Hero Section (Info Card) */
@@ -172,14 +172,12 @@ body {
     left: 0;
     width: 100%;
     background: #fff;
-    padding: 15px;
-    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
-    z-index: 1000;
-    display: flex;
-    gap: 10px;
-    justify-content: space-between;
-    align-items: center;
+    padding: 10px 15px; /* ลด Padding ลง */
+    z-index: 1030;
+    /* ป้องกัน Footer บังเนื้อหาด้านล่าง */
+    padding-bottom: env(safe-area-inset-bottom, 10px); 
 }
+
 /* ปรับให้ Footer ขยับหลบ Sidebar ถ้าเป็นจอ Desktop */
 @media (min-width: 992px) {
     .sticky-footer {
@@ -189,4 +187,8 @@ body {
 
 .checklist-header * {
     pointer-events: none; /* ให้การคลิกทะลุตัวหนังสือ/ไอคอน ไปโดนปุ่ม button เสมอ */
+}
+
+.form-control, .form-select {
+    font-size: 0.85rem;
 }

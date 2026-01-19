@@ -29,6 +29,26 @@ $(document).ready(function() {
     $(window).on('scroll', function() {
         checkScrollPosition();
     });
+
+    const $footer = $('.sticky-footer');
+    $('input[type="text"], input[type="number"], textarea').on('focus', function() {
+        if ($(window).width() < 768) { // ทำเฉพาะบนมือถือ
+            $footer.slideUp(200); // ซ่อน Footer
+        }
+    }).on('blur', function() {
+        if ($(window).width() < 768) {
+            $footer.slideDown(200); // โชว์ Footer กลับมา
+        }
+    });
+
+    // Auto-save & Validate trigger
+    const inputSelectors = '#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor';
+    
+    $(inputSelectors).on('change keyup', function() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveHeader, 1000); 
+        validateCompletion(); // [เพิ่มตรงนี้] เช็คปุ่ม Finish ทุกครั้งที่พิมพ์
+    });
 });
 
 // ==========================================
@@ -82,46 +102,93 @@ function saveSubItem(topicId, topicName, itemIndex, itemName) {
     setTimeout(validateCompletion, 100); 
 }
 
-// ตรวจสอบความครบถ้วน (Validation)
 function validateCompletion() {
-    // นับจำนวนหัวข้อทั้งหมดที่มีในหน้าจอ
+    const btn = $('#btn_finish');
+    const switchBtn = $('#confirm_all_pass');
+    const errors = [];
+
+    // 1. Check Mandatory Inputs (ข้อมูลสำคัญ)
+    const requiredInputs = {
+        '#input_container': 'Container No.',
+        '#input_seal': 'Seal No.',
+        '#input_car_license': 'License Plate',
+        '#input_driver': 'Driver Name',
+        '#input_inspector': 'Inspector',
+        '#input_supervisor': 'Supervisor',
+        '#input_location': 'Location',
+        '#input_container_type': 'Container Size'
+    };
+
+    let infoComplete = true;
+    for (const [id, label] of Object.entries(requiredInputs)) {
+        if (!$(id).val() || $(id).val().trim() === '') {
+            infoComplete = false;
+            break;
+        }
+    }
+    if (!infoComplete) errors.push('Info');
+
+    // 2. Check Photos (รูปภาพ)
+    const totalPhotos = 10; 
+    const currentPhotos = $('.camera-box.has-image').length;
+    if (currentPhotos < totalPhotos) {
+        errors.push('Photos');
+    }
+
+    // 3. Check Checklist (Quality Check)
     const totalItems = $('.sub-item-row').length;
-    
-    // นับจำนวนข้อที่ติ๊กแล้ว
     let checkedCount = 0;
+    let passCount = 0; // [NEW] ตัวนับจำนวนข้อที่ผ่าน
     const checkedGroups = {};
-    
-    // วนลูปหา Radio ทั้งหมดที่ checked
+
     $('input[type=radio]:checked').each(function() {
-        const name = $(this).attr('name'); // เช่น res_1_1
-        // นับเฉพาะชื่อที่ไม่ซ้ำ (เพราะ radio group เดียวกันนับเป็น 1 ข้อ)
+        const name = $(this).attr('name');
         if (!checkedGroups[name]) {
             checkedGroups[name] = true;
             checkedCount++;
+            
+            // [NEW] เช็คว่าเป็น PASS หรือไม่?
+            if ($(this).val() === 'PASS') {
+                passCount++;
+            }
         }
     });
 
-    const btn = $('#btn_finish');
+    // เงื่อนไขความครบถ้วน (เพื่อปลดล็อกปุ่ม Finish)
+    const isChecklistComplete = (checkedCount >= totalItems && totalItems > 0);
+    if (!isChecklistComplete) {
+        errors.push('Checklist');
+    }
+
+    // ===============================================
+    // LOGIC 1: จัดการสวิตช์ (Switch Behavior)
+    // ===============================================
+    // สวิตช์จะเปิดได้ก็ต่อเมื่อ: ครบทุกข้อ AND เป็น PASS ทุกข้อ (passCount == totalItems)
+    const isAllPass = (passCount === totalItems && totalItems > 0);
     
-    // เปรียบเทียบ
-    if (checkedCount >= totalItems && totalItems > 0) {
-        // ครบแล้ว -> เปิดปุ่ม
-        btn.prop('disabled', false);
-        btn.removeClass('btn-secondary').addClass('btn-success');
-        btn.html('<i class="fas fa-save me-2"></i> Finish & Save');
-        
-        // ติ๊กช่อง Confirm ให้อัตโนมัติ (ถ้ามันปลดล็อกแล้ว)
-        if (!$('#confirm_all_pass').prop('disabled')) {
-            $('#confirm_all_pass').prop('checked', true);
+    if (isAllPass) {
+        // ถ้าทุกข้อเป็น PASS จริงๆ ค่อยสั่งเปิดสวิตช์
+        if (!switchBtn.prop('disabled') && !switchBtn.prop('checked')) {
+            switchBtn.prop('checked', true);
         }
     } else {
-        // ยังไม่ครบ -> ล็อกปุ่ม
+        // ถ้ามีแม้แต่ข้อเดียวที่ไม่ใช่ PASS (เช่น FAIL, N/A) -> ปิดสวิตช์ทันที
+        if (switchBtn.prop('checked')) {
+            switchBtn.prop('checked', false);
+        }
+    }
+
+    // ===============================================
+    // LOGIC 2: จัดการปุ่ม Finish (Button Behavior)
+    // ===============================================
+    if (errors.length === 0) {
+        btn.prop('disabled', false);
+        btn.removeClass('btn-secondary').addClass('btn-success');
+        btn.html('<i class="fas fa-save me-1"></i> Finish');
+    } else {
         btn.prop('disabled', true);
         btn.removeClass('btn-success').addClass('btn-secondary');
-        btn.html(`<i class="fas fa-lock me-2"></i> Complete Checklist (${checkedCount}/${totalItems})`);
-        
-        // เอาติ๊ก Confirm ออก
-        $('#confirm_all_pass').prop('checked', false);
+        btn.html(`<i class="fas fa-lock me-1"></i> Missing: ${errors.join(', ')}`);
     }
 }
 
@@ -257,7 +324,9 @@ async function openReport(soId) {
         $('#input_cable_seal').val(h.cable_seal || '');
         $('#input_driver').val(h.driver_name || '');
         $('#input_inspector').val(h.inspector_name || '');
-        $('#input_supervisor').val(h.supervisor_name || '');
+
+        const DEFAULT_SUPERVISOR = 'ลลิต์ภัทร สุทธิธรรมสกุล'; 
+        $('#input_supervisor').val(h.supervisor_name || DEFAULT_SUPERVISOR);
         $('#input_location').val(h.loading_location || 'SNC Creativity Anthology Company (WH-B10)');
         
         if (h.loading_start_time) $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
@@ -287,21 +356,32 @@ async function openReport(soId) {
         } else {
             $('#view-report-form input, #view-report-form select, #view-report-form textarea').prop('disabled', false);
             $('.camera-box').css('pointer-events', 'auto').css('opacity', '1');
-            $('#input_location, #input_container_readonly, #input_seal_readonly').prop('readonly', true);
+            $('#input_container_readonly, #input_seal_readonly').prop('readonly', true);
+            $('#input_location').prop('readonly', false);
             
             // Render Footer with Checkbox
             $('.sticky-footer').html(`
-                <div class="form-check mb-2 align-self-center">
-                    <input class="form-check-input border-primary" type="checkbox" id="confirm_all_pass" onchange="toggleFinishButton(this)" disabled>
-                    <label class="form-check-label fw-bold text-primary" for="confirm_all_pass">
-                        <i class="fas fa-check-double me-1"></i> Confirm all items Passed
-                    </label>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                    <div class="form-check form-switch mb-0 d-flex align-items-center" style="padding-left: 2.5em;">
+                        <input class="form-check-input border-secondary" type="checkbox" role="switch" 
+                               id="confirm_all_pass" 
+                               style="width: 2.5em; height: 1.25em; margin-left: -2.5em; cursor: pointer;" 
+                               onchange="toggleFinishButton(this)" disabled>
+                        <label class="form-check-label fw-bold text-dark small ms-2 lh-1" for="confirm_all_pass" style="font-size: 0.85rem; cursor: pointer;">
+                            Confirm<br>Pass All
+                        </label>
+                    </div>
+                    <button id="btn_finish" class="btn btn-secondary shadow-sm py-2 px-3 flex-grow-1" 
+                            style="max-width: 200px; border-radius: 8px;" 
+                            onclick="finishInspection()" disabled>
+                        <i class="fas fa-lock me-1"></i> Finish
+                    </button>
                 </div>
-                <div class="text-muted small text-center mb-1" id="scroll_hint"><i class="fas fa-arrow-down animate-bounce"></i> Scroll down</div>
-                <button id="btn_finish" class="btn btn-secondary w-100 btn-lg shadow-sm" onclick="finishInspection()" disabled>
-                    <i class="fas fa-lock me-2"></i> Please Complete Checklist
-                </button>
+                <div id="scroll_hint" class="position-absolute top-0 start-50 translate-middle-x text-center w-100" style="margin-top: -20px; pointer-events: none;">
+                    <span class="badge bg-dark opacity-75 shadow-sm" style="font-size: 0.7rem;"><i class="fas fa-arrow-down animate-bounce"></i> Scroll</span>
+                </div>
             `);
+            
             setTimeout(checkScrollPosition, 500);
         }
         switchView('form'); 
@@ -442,8 +522,10 @@ function uploadPhoto(file, type) {
         $.ajax({
             url: API_URL, type: 'POST', data: fd, contentType: false, processData: false,
             success: function(res) {
-                if (res.success) showPreview(type, res.path);
-                else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
+            if (res.success) {
+                showPreview(type, res.path);
+                setTimeout(validateCompletion, 200); // [เพิ่มตรงนี้] อัพรูปเสร็จให้เช็คปุ่มใหม่
+            } else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
             },
             error: function() { Swal.fire('Error', 'Connection failed', 'error'); $box.html(originalContent); }
         });
