@@ -20,6 +20,21 @@ $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$header) die("Error: Report not found");
 
+$location_show = !empty($header['loading_location']) ? $header['loading_location'] : 'SNC Creativity Anthology Company (WH-B10)';
+$time_str = "";
+$date_show = "";
+
+if (!empty($header['loading_start_time']) && !empty($header['loading_end_time'])) {
+    $t_start = date('H:i', strtotime($header['loading_start_time']));
+    $t_end   = date('H:i', strtotime($header['loading_end_time']));
+    $date_show = date('d/m/Y', strtotime($header['loading_start_time'])); // ใช้วันที่เริ่มงาน
+    $time_str = "$t_start - $t_end";
+} else {
+    // Fallback: ใช้ข้อมูล Created_at เดิม ถ้ายังไม่ได้กรอกใหม่
+    $date_show = date('d/m/Y', strtotime($header['created_at']));
+    $time_str = date('H:i', strtotime($header['created_at']));
+}
+
 // 2. ดึงรูป
 $photos = [];
 $sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ?";
@@ -160,7 +175,7 @@ function renderContainerTypeCheck($currentType, $targetType) {
     $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
     $dbValue = isset($map[$currentType]) ? $map[$currentType] : $currentType;
     $isMatch = ($dbValue === $targetType);
-    $mark = $isMatch ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
+    $mark = $isMatch ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
     return "<span style='display:inline-block; margin-right:10px; position:relative;'><span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>$mark</span> $targetType</span>";
 }
 ?>
@@ -260,16 +275,15 @@ function renderContainerTypeCheck($currentType, $targetType) {
         .sub-item-row td { border-top: 1px dotted #ccc; }
         
         /* Ghost Header Styling */
-        .repeat-header-content { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555; margin-bottom: 10px; }
+        .repeat-header-content { display: flex; justify-content: space-between; font-size: 8px; font-weight: bold; color: #555; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="no-print">
-        <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">
+        <button onclick="window.print()" style="padding: 10px 20px 10px 15px; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">
             🖨️ PRINT REPORT
         </button>
-        <div style="margin-top:5px; color:white; font-size:10px;">*แนะนำ: ปิด 'Headers and footers' ของ Browser</div>
     </div>
 
     <div class="page" id="page-1">
@@ -389,7 +403,7 @@ function renderContainerTypeCheck($currentType, $targetType) {
                     <td style="border: none;">
                         
                         <table class="ctpat-header-table">
-                            <tr class="top-brand-row">
+                            <tr class="top-brand-row" style="background-color: #e0e0e0;">
                                 <td width="50%" style="text-align:center; padding:8px;">
                                     <span class="brand-snc">SNC</span>
                                 </td>
@@ -402,8 +416,8 @@ function renderContainerTypeCheck($currentType, $targetType) {
                         <table class="ctpat-header-table" style="margin-top: -1px;">
                             <tr>
                                 <td width="60%"> 
-                                    <span class="form-label">Loading Location : SNC Creativity Anthology Company (WH-B10) </span>
-                                    <span class="form-value">WH ประตู 1</span>
+                                    <span class="form-label">Loading Location : </span>
+                                    <span class="form-value"><?php echo htmlspecialchars($location_show); ?></span>
                                 </td>
                                 <td width="40%">
                                     <span class="form-label">PO Number หมายเลขคำสั่งซื้อ :</span>
@@ -412,14 +426,14 @@ function renderContainerTypeCheck($currentType, $targetType) {
                             </tr>
                             <tr>
                                 <td>
-                                    <div style="display:flex;">
-                                        <div style="width:40%;">
+                                    <div style="display: flex; align-items: center; width: 100%;">
+                                        <div style="width: 40%;">
                                             <span class="form-label">Date วันที่ :</span>
-                                            <span class="form-value"><?php echo date('d/m/Y', strtotime($header['created_at'])); ?></span>
+                                            <span class="form-value"><?php echo $date_show; ?></span>
                                         </div>
-                                        <div style="width:60%;">
+                                        <div style="width: 60%;">
                                             <span class="form-label">Time เวลา :</span>
-                                            <span class="form-value"><?php echo date('H:i', strtotime($header['created_at'])); ?></span>
+                                            <span class="form-value"><?php echo $time_str; ?></span>
                                         </div>
                                     </div>
                                 </td>
@@ -462,10 +476,32 @@ function renderContainerTypeCheck($currentType, $targetType) {
                                 <td colspan="2">
                                     <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
                                     <span class="form-label">
-                                        <?php echo renderContainerTypeCheck($header['container_type'], "20'"); ?>
-                                        <?php echo renderContainerTypeCheck($header['container_type'], "40'ST"); ?>
-                                        <?php echo renderContainerTypeCheck($header['container_type'], "40'HC"); ?>
-                                        <?php echo renderContainerTypeCheck($header['container_type'], "45'"); ?>
+                                        <?php 
+                                        // 1. เช็ค 4 แบบมาตรฐานก่อน
+                                        echo renderContainerTypeCheck($header['container_type'], "20'");
+                                        echo renderContainerTypeCheck($header['container_type'], "40'ST");
+                                        echo renderContainerTypeCheck($header['container_type'], "40'HC");
+                                        echo renderContainerTypeCheck($header['container_type'], "45'"); 
+
+                                        // 2. Logic สำหรับ "Others" (อื่นๆ)
+                                        // ถ้าค่าที่มี ไม่ตรงกับ 4 แบบข้างบน ให้ถือเป็น Others
+                                        $standardTypes = ["20'", "40'ST", "40'HC", "45'"];
+                                        
+                                        // แปลงค่า DB ให้เป็น Standard Format ก่อนเทียบ (เหมือนใน function render)
+                                        $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
+                                        $dbValue = isset($map[$header['container_type']]) ? $map[$header['container_type']] : $header['container_type'];
+
+                                        $isOther = !in_array($dbValue, $standardTypes) && !empty($header['container_type']);
+                                        $markOther = $isOther ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
+                                        $otherText = $isOther ? htmlspecialchars($header['container_type']) : '';
+                                        ?>
+
+                                        <span style='display:inline-block; margin-right:10px; position:relative;'>
+                                            <span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>
+                                                <?php echo $markOther; ?>
+                                            </span> 
+                                            Others: <span style="border-bottom: 1px dotted #000; min-width: 50px; display: inline-block; color: blue;"><?php echo $otherText; ?></span>
+                                        </span>
                                     </span>
                                 </td>
                             </tr>
@@ -473,13 +509,23 @@ function renderContainerTypeCheck($currentType, $targetType) {
 
                         <table class="ctpat-header-table" style="margin-top: -1px;">
                             <tr>
-                                <td width="50%">
+                                <td width="50%" style="vertical-align: bottom; padding-bottom: 10px;">
                                     <span class="form-label">Supervisor / Mini-MD หัวหน้าแผนก หรือ ผู้จัดการ :</span>
-                                    <span class="form-value"><?php echo $header['supervisor_name'] ?: '-'; ?></span>
+                                    <div style="text-align: center; margin-top: 5px;">
+                                        <span class="form-value" style="font-size: 12px; display: inline-block; border-bottom: 1px dotted #000; min-width: 150px; text-align: center;">
+                                            <?php echo $header['supervisor_name'] ?: '&nbsp;'; ?>
+                                        </span>
+                                        <div style="font-size: 8px; color: #666; margin-top: 2px;">(Signature / Printed Name)</div>
+                                    </div>
                                 </td>
-                                <td width="50%">
+                                <td width="50%" style="vertical-align: bottom; padding-bottom: 10px;">
                                     <span class="form-label">Inspector name ผู้ตรวจสอบตู้ :</span>
-                                    <span class="form-value"><?php echo $header['inspector_name'] ?: '-'; ?></span>
+                                    <div style="text-align: center; margin-top: 5px;">
+                                        <span class="form-value" style="font-size: 12px; display: inline-block; border-bottom: 1px dotted #000; min-width: 150px; text-align: center;">
+                                            <?php echo $header['inspector_name'] ?: '&nbsp;'; ?>
+                                        </span>
+                                        <div style="font-size: 8px; color: #666; margin-top: 2px;">(Signature / Printed Name)</div>
+                                    </div>
                                 </td>
                             </tr>
                         </table>

@@ -33,11 +33,18 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                 <div class="container-fluid">
                     
                     <div id="view-job-list">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="text-muted fw-bold mb-0"><i class="far fa-calendar-alt me-2"></i>PLAN TODAY (<?php echo date('d/m/Y'); ?>)</h6>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="loadJobList()">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
+                        <div class="row align-items-center mb-3">
+                            <div class="col-6">
+                                <h6 class="text-muted fw-bold mb-0">
+                                    <i class="far fa-calendar-alt me-2"></i>JOB LIST
+                                </h6>
+                            </div>
+                            <div class="col-6 text-end">
+                                <input type="date" id="filter_date" class="form-control form-control-sm d-inline-block w-auto" value="<?php echo date('Y-m-d'); ?>" onchange="loadJobList()">
+                                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="loadJobList()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
                         </div>
                         
                         <div id="jobListContainer" class="row g-2">
@@ -106,13 +113,41 @@ $pageHeaderSubtitle = "ใบตรวจสอบสภาพตู้สิน
                                             </div>
                                             <div class="col-4">
                                                 <label class="form-label-sm">Size</label>
-                                                <input type="text" id="input_container_type" class="form-control form-control-sm" list="container_sizes">
+                                                <input type="text" id="input_container_type" class="form-control form-control-sm" list="container_sizes" placeholder="เลือกขนาด...">
                                                 <datalist id="container_sizes">
-                                                    <option value="20'GP">
-                                                    <option value="40'GP">
+                                                    <option value="20'">
+                                                    <option value="40'ST">
                                                     <option value="40'HC">
+                                                    <option value="45'">
                                                 </datalist>
                                             </div>
+
+                                            <div class="col-12"><hr class="my-1"></div>
+
+                                            <div class="col-12">
+                                                <label class="form-label-sm fw-bold text-primary">Loading Location</label>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-white"><i class="fas fa-map-marker-alt text-danger"></i></span>
+                                                    <input type="text" id="input_location" class="form-control" list="location_list" placeholder="ระบุสถานที่โหลดสินค้า...">
+                                                    <datalist id="location_list">
+                                                        <option value="SNC Creativity Anthology Company (WH-B10)">
+                                                        <option value="SNC Former Public Company Limited">
+                                                        <option value="SNC Cooling Supply Co., Ltd.">
+                                                        <option value="Infinity Part Co., Ltd.">
+                                                        </datalist>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-6">
+                                                <label class="form-label-sm fw-bold">Start Time</label>
+                                                <input type="datetime-local" id="input_start_time" class="form-control form-control-sm">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label-sm fw-bold">End Time</label>
+                                                <input type="datetime-local" id="input_end_time" class="form-control form-control-sm">
+                                            </div>
+
+                                            <div class="col-12"><hr class="my-1"></div>
 
                                             <div class="col-6">
                                                 <label class="form-label-sm">Seal No.</label>

@@ -31,18 +31,19 @@ try {
     switch ($action) {
         // 1. ดึงรายการงาน
         case 'get_jobs':
-            $today = date('Y-m-d');
-            // ใช้ SALES_ORDERS_TABLE และ LOADING_REPORTS_TABLE แทนชื่อตรงๆ
+            $filterDate = $_REQUEST['date'] ?? date('Y-m-d');
+            
+            // SQL: ดึงงานตามวันที่ Loading Date ที่เลือก
             $sql = "SELECT s.id as so_id, s.po_number, s.loading_date, s.container_no, 
                     s.quantity, s.booking_no,
                     r.id as report_id, r.status as report_status
                     FROM " . SALES_ORDERS_TABLE . " s
                     LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id
-                    WHERE (s.loading_date = ? OR r.status = 'DRAFT')
+                    WHERE s.loading_date = ?
                     ORDER BY CASE WHEN r.status = 'DRAFT' THEN 0 ELSE 1 END, s.po_number ASC";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$today]);
+            $stmt->execute([$filterDate]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -70,8 +71,11 @@ try {
                         r.container_type,
                         r.car_license,
                         r.driver_name,
-                        r.inspector_name,  /* <--- เพิ่ม */
-                        r.supervisor_name  /* <--- เพิ่ม */
+                        r.inspector_name,
+                        r.supervisor_name,
+                        r.loading_location,
+                        FORMAT(r.loading_start_time, 'yyyy-MM-dd HH:mm') as loading_start_time,
+                        FORMAT(r.loading_end_time, 'yyyy-MM-dd HH:mm') as loading_end_time
                         FROM " . SALES_ORDERS_TABLE . " s
                         LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id
                         WHERE s.id = ?";
@@ -94,18 +98,21 @@ try {
             break;
 
         // 3. Save Header
-        // page/loading/api/manage_loading.php
-
         case 'save_header':
             $so_id = $_POST['sales_order_id'];
             $seal = $_POST['seal_no'] ?? '';
-            $cable_seal = $_POST['cable_seal'] ?? ''; // New
+            $cable_seal = $_POST['cable_seal'] ?? '';
             $container = $_POST['container_no'] ?? '';
             $type = $_POST['container_type'] ?? '';
             $license = $_POST['car_license'] ?? '';
-            $driver = $_POST['driver_name'] ?? ''; // New
-            $inspector = $_POST['inspector_name'] ?? ''; // New
-            $supervisor = $_POST['supervisor_name'] ?? ''; // New
+            $driver = $_POST['driver_name'] ?? '';
+            $inspector = $_POST['inspector_name'] ?? '';
+            $supervisor = $_POST['supervisor_name'] ?? '';
+            $location = $_POST['loading_location'] ?? null;
+            
+            // [FIXED] ตัดตัว T ออกจาก string วันที่ เพื่อให้ SQL Server รับค่าได้
+            $start_time = !empty($_POST['loading_start_time']) ? str_replace('T', ' ', $_POST['loading_start_time']) : null;
+            $end_time = !empty($_POST['loading_end_time']) ? str_replace('T', ' ', $_POST['loading_end_time']) : null;
             
             // 1. ตรวจสอบว่ามี Report อยู่แล้วหรือยัง
             $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE sales_order_id = ?");
@@ -113,27 +120,30 @@ try {
             $existing = $check->fetch();
 
             if ($existing) {
-                // UPDATE
-                $report_id = $existing['id'];
+                // UPDATE SQL (ต้องใส่ parameter ให้ครบตามลำดับเครื่องหมาย ?)
                 $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
-                        SET seal_no = ?, cable_seal = ?, container_no = ?, container_type = ?, 
+                        SET loading_location = ?, loading_start_time = ?, loading_end_time = ?,
+                            seal_no = ?, cable_seal = ?, container_no = ?, container_type = ?, 
                             car_license = ?, driver_name = ?, inspector_name = ?, supervisor_name = ?,
                             updated_at = GETDATE()
                         WHERE id = ?";
                 $pdo->prepare($sql)->execute([
-                    $seal, $cable_seal, $container, $type, 
-                    $license, $driver, $inspector, $supervisor, 
-                    $report_id
+                    $location, $start_time, $end_time, // 1, 2, 3
+                    $seal, $cable_seal, $container, $type, // 4, 5, 6, 7
+                    $license, $driver, $inspector, $supervisor, // 8, 9, 10, 11
+                    $existing['id'] // 12 (WHERE id) - ต้องใช้ ID ของ Report ไม่ใช่ report_id ที่อาจจะยังไม่ถูก set
                 ]);
+                $report_id = $existing['id']; // set report_id เพื่อส่งกลับ
             } else {
-                // INSERT
-                // ... (Logic Insert เดิม อาจต้องเพิ่ม field ถ้าจำเป็น แต่ปกติ Update จะทำงานก่อนเสมอถ้า UI flow ถูกต้อง) ...
-                // เพื่อความชัวร์ ให้ Insert ฟิลด์ใหม่ไปด้วยเลย
+                // INSERT SQL
                 $sql = "INSERT INTO " . LOADING_REPORTS_TABLE . " 
-                        (sales_order_id, seal_no, cable_seal, container_no, container_type, car_license, driver_name, inspector_name, supervisor_name, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', GETDATE())";
+                        (sales_order_id, loading_location, loading_start_time, loading_end_time,
+                        seal_no, cable_seal, container_no, container_type, car_license, 
+                        driver_name, inspector_name, supervisor_name, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', GETDATE())";
                 $pdo->prepare($sql)->execute([
-                    $so_id, $seal, $cable_seal, $container, $type, 
+                    $so_id, $location, $start_time, $end_time,
+                    $seal, $cable_seal, $container, $type, 
                     $license, $driver, $inspector, $supervisor
                 ]);
                 $report_id = $pdo->lastInsertId();

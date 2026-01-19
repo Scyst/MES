@@ -6,15 +6,14 @@ let saveTimer;
 $(document).ready(function() {
     loadJobList();
 
-    // Auto Save Header Info
-    $('#input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor').on('change keyup', function() {
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(saveHeader, 1000); 
-    });
-
     // Prevent file input click propagation
     $(document).on('click', 'input[type="file"]', function(e) {
         e.stopPropagation();
+    });
+
+    $('#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor').on('change keyup', function() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveHeader, 1000); 
     });
 });
 
@@ -22,12 +21,19 @@ $(document).ready(function() {
 function loadJobList() {
     $('#jobListContainer').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>');
     
-    $.getJSON(API_URL, { action: 'get_jobs' }, function(res) {
+    // [UPDATED] ดึงค่าจาก Date Picker
+    const selectedDate = $('#filter_date').val();
+
+    $.getJSON(API_URL, { action: 'get_jobs', date: selectedDate }, function(res) {
         if (!res.success) { alert(res.message); return; }
         
         let html = '';
         if (res.data.length === 0) {
-            html = '<div class="col-12 text-center text-muted py-5"><i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>No loading plan for today</div>';
+            html = `
+            <div class="col-12 text-center text-muted py-5">
+                <i class="fas fa-search fa-3x mb-3 text-secondary opacity-50"></i><br>
+                No jobs found on ${selectedDate}
+            </div>`;
         } else {
             res.data.forEach(job => {
                 let statusClass = 'job-card';
@@ -41,6 +47,7 @@ function loadJobList() {
                     statusClass += ' done';
                     badge = '<span class="badge bg-success">Completed</span>';
                     
+                    // ปุ่ม Print จะโผล่มาตรงนี้แหละ ทำให้เขากดพิมพ์ย้อนหลังได้
                     printButton = `
                         <a href="print_report.php?report_id=${job.report_id}" target="_blank" 
                            class="btn btn-sm btn-outline-secondary ms-2" 
@@ -127,6 +134,24 @@ function openReport(soId) {
         let showContainer = h.report_container || h.master_container || '';
         $('#input_container').val(showContainer);
 
+        // 1. Location
+        $('#input_location').val(h.loading_location || 'SNC Creativity Anthology Company (WH-B10)'); // Default Value
+
+        // 2. Time (Format for datetime-local input: YYYY-MM-DDTHH:mm)
+        if (h.loading_start_time) {
+            $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
+        } else {
+            // ถ้าไม่มีค่า ให้ Default เป็นเวลาปัจจุบัน หรือ เวลา Loading Date 08:00
+            // $('#input_start_time').val( ...logic... ); 
+            $('#input_start_time').val(''); // ปล่อยว่างให้ user เลือกเองดีกว่า
+        }
+
+        if (h.loading_end_time) {
+            $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
+        } else {
+            $('#input_end_time').val('');
+        }
+
         // 4. Seal No
         let showSeal = h.report_seal || h.master_seal || '';
         $('#input_seal').val(showSeal);
@@ -160,14 +185,17 @@ function saveHeader() {
     const data = {
         action: 'save_header',
         sales_order_id: soId,
+        loading_location: $('#input_location').val(),
+        loading_start_time: $('#input_start_time').val(),
+        loading_end_time: $('#input_end_time').val(),
         seal_no: $('#input_seal').val(),
-        cable_seal: $('#input_cable_seal').val(), // New
+        cable_seal: $('#input_cable_seal').val(),
         container_no: $('#input_container').val(),
         container_type: $('#input_container_type').val(),
         car_license: $('#input_car_license').val(),
-        driver_name: $('#input_driver').val(),    // New
-        inspector_name: $('#input_inspector').val(), // New
-        supervisor_name: $('#input_supervisor').val() // New
+        driver_name: $('#input_driver').val(),
+        inspector_name: $('#input_inspector').val(),
+        supervisor_name: $('#input_supervisor').val()
     };
 
     $.post(API_URL, data, function(res) {
@@ -381,7 +409,9 @@ function updateTopicIcon(topicId, hasFail, allPass) {
 // 7. Finish Inspection
 function finishInspection() {
     const reportId = $('#current_report_id').val();
+    const soId = $('#current_so_id').val(); // ต้องใช้ soId สำหรับการ save header
     
+    // Validation เบื้องต้น
     if (!$('#input_seal').val()) {
         alert('Please enter Seal No. before finishing.');
         return;
@@ -393,18 +423,47 @@ function finishInspection() {
 
     $('#loadingOverlay').css('display', 'flex'); 
 
-    $.post(API_URL, { action: 'finish_report', report_id: reportId }, function(res) {
-        $('#loadingOverlay').hide();
-        
-        if (res.success) {
-            alert('Inspection Completed Successfully!');
-            switchView('list');
-            loadJobList();
+    // 1. เตรียมข้อมูล Header ทั้งหมดเพื่อ Force Save
+    const headerData = {
+        action: 'save_header',
+        sales_order_id: soId,
+        loading_location: $('#input_location').val(),
+        loading_start_time: $('#input_start_time').val(),
+        loading_end_time: $('#input_end_time').val(),
+        seal_no: $('#input_seal').val(),
+        cable_seal: $('#input_cable_seal').val(),
+        container_no: $('#input_container').val(),
+        container_type: $('#input_container_type').val(),
+        car_license: $('#input_car_license').val(),
+        driver_name: $('#input_driver').val(),
+        inspector_name: $('#input_inspector').val(),
+        supervisor_name: $('#input_supervisor').val()
+    };
+
+    // 2. ส่งคำสั่ง Save Header ก่อน
+    $.post(API_URL, headerData, function(saveRes) {
+        if (saveRes.success) {
+            // 3. ถ้า Save ผ่าน ค่อยส่งคำสั่ง Finish
+            $.post(API_URL, { action: 'finish_report', report_id: reportId }, function(res) {
+                $('#loadingOverlay').hide();
+                
+                if (res.success) {
+                    alert('Inspection Completed Successfully!');
+                    switchView('list');
+                    loadJobList();
+                } else {
+                    alert('Error finishing report: ' + res.message);
+                }
+            }, 'json').fail(function() {
+                $('#loadingOverlay').hide();
+                alert('Server Error: Cannot finish inspection.');
+            });
         } else {
-            alert('Error: ' + res.message);
+            $('#loadingOverlay').hide();
+            alert('Error saving data before finish: ' + saveRes.message);
         }
     }, 'json').fail(function() {
         $('#loadingOverlay').hide();
-        alert('Server Error: Cannot finish inspection.');
+        alert('Server Error: Cannot save data before finish.');
     });
 }
