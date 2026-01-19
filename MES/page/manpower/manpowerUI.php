@@ -215,7 +215,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                                 <tr>
                                     <th class="ps-3">Group / Line</th>
                                     <th class="text-center">HC</th>
-                                    <th class="text-center">Plan</th>
+                                    <th class="text-center" style="display: none;">Plan</th>
                                     <th class="text-center text-success">Present</th>
                                     <th class="text-center text-warning">Late</th>
                                     <th class="text-center text-danger">Absent</th>

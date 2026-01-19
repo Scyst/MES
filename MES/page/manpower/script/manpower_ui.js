@@ -354,7 +354,7 @@ const UI = {
             <tr class="${rowClass}">
                 <td class="ps-3 text-truncate" style="max-width: 300px;">${nameHtml}</td>
                 <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
-                <td class="text-center fw-bold ${hoverClass}" ${clickAttr('ALL')}>${stats.plan}</td>
+                <td class="text-center fw-bold ${hoverClass}" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
                 <td class="text-center text-success ${hoverClass}" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
                 <td class="text-center text-warning text-dark ${hoverClass}" ${clickAttr('LATE')}>${stats.late || '-'}</td>
                 <td class="text-center text-danger ${hoverClass}" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
