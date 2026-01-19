@@ -11,17 +11,38 @@ $(document).ready(function() {
         e.stopPropagation();
     });
 
+    // Auto-save trigger
     $('#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor').on('change keyup', function() {
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveHeader, 1000); 
     });
 });
 
+// [NEW] Function to Reset Form (Fixes UI Persistence Bug)
+function resetInspectionForm() {
+    // 1. Clear all radio buttons
+    $('input[type="radio"]').prop('checked', false);
+    
+    // 2. Clear text inputs (except hidden ones) & textareas
+    $('textarea').val('');
+    // Note: Inputs in header will be overwritten by openReport, so no need to clear explicitly except specific ones if needed
+    
+    // 3. Reset Topic Icons to default (Gray)
+    $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
+
+    // 4. Reset Camera Boxes
+    $('.camera-box').removeClass('has-image');
+    $('.preview-img').remove();
+    $('.camera-box i, .camera-box .camera-label').show();
+
+    // 5. Close all accordions
+    $('.collapse').removeClass('show');
+}
+
 // 1. Load Job List
 function loadJobList() {
     $('#jobListContainer').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>');
     
-    // [UPDATED] ดึงค่าจาก Date Picker
     const selectedDate = $('#filter_date').val();
 
     $.getJSON(API_URL, { action: 'get_jobs', date: selectedDate }, function(res) {
@@ -47,7 +68,6 @@ function loadJobList() {
                     statusClass += ' done';
                     badge = '<span class="badge bg-success">Completed</span>';
                     
-                    // ปุ่ม Print จะโผล่มาตรงนี้แหละ ทำให้เขากดพิมพ์ย้อนหลังได้
                     printButton = `
                         <a href="print_report.php?report_id=${job.report_id}" target="_blank" 
                            class="btn btn-sm btn-outline-secondary ms-2" 
@@ -85,100 +105,159 @@ function loadJobList() {
     });
 }
 
-// 2. Open Report Detail
-function openReport(soId) {
+// 2. Open Report Detail [FIXED & ROBUST]
+async function openReport(soId) {
+    // 1. Reset Form First
+    resetInspectionForm();
+
     $('#loadingOverlay').css('display', 'flex');
     
-    $.post(API_URL, { action: 'get_report_detail', so_id: soId }, function(res) {
-        $('#loadingOverlay').hide();
-        if (!res.success) { alert(res.message); return; }
+    try {
+        const res = await $.post(API_URL, { action: 'get_report_detail', so_id: soId }, null, 'json');
+        
+        if (!res.success) throw new Error(res.message);
 
         const h = res.header;
         
-        // Setup Hidden Fields
-        $('#current_so_id').val(h.so_id);
-        $('#current_report_id').val(h.report_id || '');
+        // [DEBUG] เช็คค่าจริงที่ได้จาก Server (กด F12 ดูใน Console ได้เลย)
+        console.log('API Header Data:', h); 
 
-        // === Card 1: PO Info ===
+        // Setup Header Fields
+        $('#current_so_id').val(h.so_id);
+
+        // ... (ส่วนแสดงผล PO Info / Form Input เหมือนเดิม ไม่ต้องแก้) ...
         $('#disp_po_head').text(h.po_number); 
         $('#disp_sku').text(h.sku || '-');    
         $('#disp_qty').text(Number(h.quantity).toLocaleString());
         $('#disp_booking').text(h.booking_no || '-');
         
-        // === Card 2: Form Input ===
-        
-        // 1. Car License
         $('#input_car_license').val(h.car_license || '');
-        // 2. Container info
         $('#input_container_type').val(h.container_type || h.ctn_size || '');
         $('#input_container').val(h.report_container || h.master_container || '');
         $('#input_seal').val(h.report_seal || h.master_seal || '');
-
-        // --- NEW FIELDS ---
         $('#input_cable_seal').val(h.cable_seal || '');
         $('#input_driver').val(h.driver_name || '');
-        $('#input_inspector').val(h.inspector_name || ''); // คนตรวจ
-        $('#input_supervisor').val(h.supervisor_name || ''); // หัวหน้า
+        $('#input_inspector').val(h.inspector_name || '');
+        $('#input_supervisor').val(h.supervisor_name || '');
         
-        // 2. Container Size
         let targetSize = h.container_type || h.ctn_size || '';
         if(targetSize === '40HQ') targetSize = "40'HC"; 
-        
-        // Dynamic Option Check
         if (targetSize && $(`#input_container_type option[value="${targetSize}"]`).length === 0) {
             $('#input_container_type').append(new Option(targetSize, targetSize));
         }
         $('#input_container_type').val(targetSize);
 
-        // 3. Container No
-        let showContainer = h.report_container || h.master_container || '';
-        $('#input_container').val(showContainer);
-
-        // 1. Location
-        $('#input_location').val(h.loading_location || 'SNC Creativity Anthology Company (WH-B10)'); // Default Value
-
-        // 2. Time (Format for datetime-local input: YYYY-MM-DDTHH:mm)
-        if (h.loading_start_time) {
-            $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
-        } else {
-            // ถ้าไม่มีค่า ให้ Default เป็นเวลาปัจจุบัน หรือ เวลา Loading Date 08:00
-            // $('#input_start_time').val( ...logic... ); 
-            $('#input_start_time').val(''); // ปล่อยว่างให้ user เลือกเองดีกว่า
-        }
-
-        if (h.loading_end_time) {
-            $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
-        } else {
-            $('#input_end_time').val('');
-        }
-
-        // 4. Seal No
-        let showSeal = h.report_seal || h.master_seal || '';
-        $('#input_seal').val(showSeal);
+        $('#input_location').val(h.loading_location || 'SNC Creativity Anthology Company (WH-B10)');
+        if (h.loading_start_time) $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
+        else $('#input_start_time').val('');
         
-        // Reset Photo Boxes
-        $('.camera-box').removeClass('has-image');
-        $('.preview-img').remove();
-        $('.camera-box i, .camera-box .camera-label').show(); 
+        if (h.loading_end_time) $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
+        else $('#input_end_time').val('');
 
-        // Load Existing Photos
-        if (res.photos) {
-            for (const [type, path] of Object.entries(res.photos)) {
-                showPreview(type, path);
+        // Handle Report ID & Photos
+        if (h.report_id) {
+            $('#current_report_id').val(h.report_id);
+            if (res.photos) {
+                for (const [type, path] of Object.entries(res.photos)) {
+                    showPreview(type, path);
+                }
+            }
+            loadChecklistData();
+        } else {
+            const saveRes = await saveHeaderPromise(); 
+            if(saveRes.success && saveRes.report_id) {
+                $('#current_report_id').val(saveRes.report_id);
             }
         }
 
-        // Auto Init Report if New
-        if (!h.report_id) {
-            saveHeader(); 
+        // ------------------------------------------------------------------
+        // [CRITICAL FIX] จุดแก้ไขสำคัญ: ตรวจสอบสถานะแบบครอบคลุม
+        // ------------------------------------------------------------------
+        
+        // 1. ดึงค่าสถานะมา (รองรับทั้ง key 'status' และ 'report_status' และค่า null)
+        const rawStatus = h.status || h.report_status || '';
+        const currentStatus = rawStatus.toString().toUpperCase().trim();
+
+        console.log('Checked Status:', currentStatus); // ดูว่าสถานะจริงๆ คืออะไร
+
+        if (currentStatus === 'COMPLETED') {
+            $('#view-report-form input, #view-report-form select, #view-report-form textarea').prop('disabled', true);
+            $('button[onclick="finishInspection()"]').hide();
+            $('.camera-box').css('pointer-events', 'none').css('opacity', '0.7');
+
+            $('#locked_badge').remove(); 
+            $('#btn_reopen').remove();
+
+            const badgeHtml = '<span class="badge bg-danger ms-2 shadow-sm" id="locked_badge"><i class="fas fa-lock me-1"></i> LOCKED (Completed)</span>';
+            
+            // สร้างปุ่ม Unlock (เรียกฟังก์ชัน reopenReport)
+            const unlockBtnHtml = `
+                <button id="btn_reopen" class="btn btn-sm btn-outline-warning ms-2" onclick="reopenReport()">
+                    <i class="fas fa-unlock-alt me-1"></i> Re-open
+                </button>`;
+
+            $('#view-report-form .card-header').first().append(badgeHtml + unlockBtnHtml);
+            
+        } else {
+            $('#view-report-form input, #view-report-form select, #view-report-form textarea').prop('disabled', false);
+            $('button[onclick="finishInspection()"]').show();
+            $('.camera-box').css('pointer-events', 'auto').css('opacity', '1');
+            $('#current_so_id, #current_report_id').prop('readonly', true); 
+
+            // เอาป้ายและปุ่มออก
+            $('#locked_badge').remove();
+            $('#btn_reopen').remove();
         }
 
         switchView('form'); 
 
-    }, 'json');
+    } catch (err) {
+        console.error(err); // ดู Error เต็มๆ
+        alert('Error loading report: ' + err.message);
+    } finally {
+        $('#loadingOverlay').hide();
+    }
 }
 
-// 3. Save Header Info
+// [NEW] ฟังก์ชันสำหรับปลดล็อกงาน
+function reopenReport() {
+    const reportId = $('#current_report_id').val();
+    
+    // ถามย้ำให้แน่ใจ
+    if (!confirm('Warning: Re-opening this report will allow modifications.\nAre you sure you want to unlock it?')) {
+        return;
+    }
+
+    // เรียกรหัสลับ (ถ้าไม่อยากเช็ค Role ฝั่ง Server ก็ใช้ Password ง่ายๆ ตรงนี้แทนได้ แต่ไม่แนะนำ)
+    // let pwd = prompt("Enter Supervisor Password:");
+    // if (pwd !== "1234") return alert("Wrong Password");
+
+    $('#loadingOverlay').css('display', 'flex');
+
+    $.post(API_URL, { action: 'reopen_report', report_id: reportId }, function(res) {
+        if (res.success) {
+            alert('Report Unlocked!');
+            // โหลดหน้าใหม่เพื่อให้สถานะเปลี่ยนกลับเป็น DRAFT
+            const soId = $('#current_so_id').val();
+            openReport(soId); 
+        } else {
+            $('#loadingOverlay').hide();
+            alert('Cannot Unlock: ' + res.message);
+        }
+    }, 'json').fail(function() {
+        $('#loadingOverlay').hide();
+        alert('Server Error');
+    });
+}
+
+// [NEW] Wrapper for SaveHeader to work with Await
+function saveHeaderPromise() {
+    return new Promise((resolve, reject) => {
+        saveHeader().then(resolve).fail(reject);
+    });
+}
+
+// 3. Save Header Info (Returns jQuery Promise)
 function saveHeader() {
     const soId = $('#current_so_id').val();
     
@@ -198,11 +277,12 @@ function saveHeader() {
         supervisor_name: $('#input_supervisor').val()
     };
 
-    $.post(API_URL, data, function(res) {
+    // Return the AJAX object so we can use .then() or await
+    return $.post(API_URL, data, function(res) {
         if (res.success) {
             if(res.report_id) { $('#current_report_id').val(res.report_id); }
             
-            // Visual Feedback (Add new inputs)
+            // Visual Feedback
             const inputs = '#input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor';
             $(inputs).addClass('is-valid');
             setTimeout(() => { $(inputs).removeClass('is-valid'); }, 1000);
@@ -210,7 +290,7 @@ function saveHeader() {
     }, 'json');
 }
 
-// 4. Photo Upload Logic (with Compression)
+// 4. Photo Upload Logic
 function triggerCamera(type) {
     if ($(`#box_${type}`).hasClass('has-image')) {
         if (!confirm('Replace existing photo?')) return;
@@ -224,12 +304,11 @@ function handleFileSelect(input, type) {
     }
 }
 
-// [MODIFIED] Client-side Image Compression & Upload
 function uploadPhoto(file, type) {
     const reportId = $('#current_report_id').val();
     
     if (!reportId) { 
-        alert('System Error: Report ID Missing. Please refresh.'); 
+        alert('Report ID not ready. Please wait a moment or refresh.'); 
         return; 
     }
 
@@ -237,14 +316,11 @@ function uploadPhoto(file, type) {
     const originalContent = $box.html(); 
     $box.html('<div class="spinner-border text-primary spinner-border-sm"></div><div class="small text-muted mt-1">Compressing...</div>');
 
-    // เรียกใช้ฟังก์ชันย่อรูป (Max width 1280px, Quality 0.7)
     resizeImage(file, 1280, 0.7, function(compressedBlob) {
-        
         $box.html('<div class="spinner-border text-primary spinner-border-sm"></div><div class="small text-muted mt-1">Uploading...</div>');
 
         const fd = new FormData();
         fd.append('action', 'upload_photo');
-        // ส่งไฟล์ที่บีบอัดแล้วไปแทน (ตั้งชื่อไฟล์ให้ถูกต้องเพื่อให้ PHP รู้ว่าเป็น jpg)
         fd.append('file', compressedBlob, file.name.replace(/\.[^/.]+$/, "") + ".jpg"); 
         fd.append('report_id', reportId);
         fd.append('photo_type', type);
@@ -264,16 +340,14 @@ function uploadPhoto(file, type) {
                     $box.html(originalContent); 
                 }
             },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error(textStatus, errorThrown);
-                alert('Connection Error. Please check your internet or file size.');
+            error: function() {
+                alert('Connection Error.');
                 $box.html(originalContent);
             }
         });
     });
 }
 
-// [NEW] Helper Function: Resize Image using Canvas
 function resizeImage(file, maxWidth, quality, callback) {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -283,46 +357,32 @@ function resizeImage(file, maxWidth, quality, callback) {
         img.onload = function() {
             let width = img.width;
             let height = img.height;
-
-            // Calculate new dimensions
             if (width > maxWidth) {
                 height *= maxWidth / width;
                 width = maxWidth;
             }
-
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
-
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-
-            // Export to Blob (JPEG)
             canvas.toBlob(function(blob) {
                 callback(blob);
             }, 'image/jpeg', quality);
         };
     };
-    reader.onerror = function(error) {
-        console.log('Error: ', error);
-        // Fallback: ถ้าอ่านไฟล์ไม่ได้ ให้ส่งไฟล์เดิมไปเลย
-        callback(file);
-    };
+    reader.onerror = function() { callback(file); };
 }
 
 function showPreview(type, path) {
     const $box = $(`#box_${type}`);
     $box.find('.preview-img').remove();
-    
-    // Add timestamp to prevent caching issues
     const img = `<img src="${path}?t=${new Date().getTime()}" class="preview-img rounded">`;
     $box.append(img);
     $box.addClass('has-image');
-    
     $box.find('i, .camera-label').hide(); 
 }
 
-// Helper: Switch Views
 function switchView(view) {
     if (view === 'list') {
         $('#view-job-list').fadeIn();
@@ -335,7 +395,7 @@ function switchView(view) {
     }
 }
 
-// 5. Load Detailed Checklist Data (10-Point)
+// 5. Load Checklist Data
 function loadChecklistData() {
     const reportId = $('#current_report_id').val();
     if (!reportId) return;
@@ -343,35 +403,23 @@ function loadChecklistData() {
     $.getJSON(API_URL, { action: 'get_checklist', report_id: reportId }, function(res) {
         if (res.success) {
             const data = res.data;
-            
             for (const [topicId, items] of Object.entries(data)) {
-                let allPass = true;
-                let hasFail = false;
-
                 for (const [itemIndex, row] of Object.entries(items)) {
                     const itemKey = topicId + '_' + itemIndex;
-                    
-                    // Set Radio
                     $(`input[name="res_${itemKey}"][value="${row.result}"]`).prop('checked', true);
-                    
-                    // Set Remark
                     if (row.remark) {
                         $(`#remark_${itemKey}`).val(row.remark);
                         $(`#collapse_remark_${itemKey}`).addClass('show'); 
                     }
-
-                    // Check Status
-                    if (row.result === 'FAIL') hasFail = true;
-                    if (row.result !== 'PASS') allPass = false;
                 }
-                
-                updateTopicIcon(topicId, hasFail, allPass);
+                // Recalculate icon after loading all items for this topic
+                recalcTopicStatus(topicId);
             }
         }
     });
 }
 
-// 6. Save Sub-Item Checklist Result
+// 6. Save Sub-Item & Update Icon Real-time
 function saveSubItem(topicId, topicName, itemIndex, itemName) {
     const reportId = $('#current_report_id').val();
     const itemKey = topicId + '_' + itemIndex;
@@ -380,38 +428,66 @@ function saveSubItem(topicId, topicName, itemIndex, itemName) {
 
     if (!reportId || !result) return;
 
+    // Visual feedback
+    // Optionally: add loading spinner or highlight row
+    
     $.post(API_URL, {
         action: 'save_checklist_item',
         report_id: reportId,
-        topic_id: topicId,      // [FIXED] ใช้ topic_id ตาม DB ใหม่
+        topic_id: topicId,
         topic_name: topicName,
-        item_index: itemIndex,  // [FIXED] ส่ง item_index ไปด้วย
-        item_name: itemName,    // [FIXED] ส่ง item_name ไปด้วย
+        item_index: itemIndex,
+        item_name: itemName,
         result: result,
         remark: remark
     }, function(res) {
-        if(res.success && result === 'FAIL') {
-            $(`#topic_icon_${topicId}`).removeClass('text-white-50 text-success').addClass('text-warning'); 
+        if(res.success) {
+            // [FIX] Always recalculate status to update Green/Yellow/White instantly
+            recalcTopicStatus(topicId);
         }
     }, 'json');
 }
 
-// Helper: Update Topic Icon Style
-function updateTopicIcon(topicId, hasFail, allPass) {
-    const $icon = $(`#topic_icon_${topicId}`);
-    $icon.removeClass('text-white-50 text-success text-warning');
+// [NEW] Logic to calculate Topic Status Icon
+function recalcTopicStatus(topicId) {
+    // Select all radio buttons belonging to this topic
+    // Pattern: name="res_{topicId}_{itemIndex}"
+    const $inputs = $(`input[name^="res_${topicId}_"]:checked`);
     
-    if (hasFail) $icon.addClass('text-warning'); 
-    else if (allPass) $icon.addClass('text-white'); 
-    else $icon.addClass('text-white-50'); 
+    let hasFail = false;
+    let allPass = true;
+    let checkedCount = $inputs.length;
+
+    // We can't easily know "total items" in JS without DOM lookup, 
+    // so we rely on: IF any Fail -> Yellow. IF no Fail & has Checked -> Green.
+    // (You can improve this if you know exactly how many items per topic)
+
+    $inputs.each(function() {
+        const val = $(this).val();
+        if (val === 'FAIL') hasFail = true;
+        if (val !== 'PASS') allPass = false;
+    });
+
+    const $icon = $(`#topic_icon_${topicId}`);
+    $icon.removeClass('text-white-50 text-success text-warning text-white');
+    
+    if (hasFail) {
+        $icon.addClass('text-warning'); // Priority 1: Warning
+    } else if (checkedCount > 0 && allPass) {
+        $icon.addClass('text-success'); // Priority 2: Success (Pass)
+    } else {
+        $icon.addClass('text-white-50'); // Priority 3: Default/Incomplete
+    }
 }
 
 // 7. Finish Inspection
 function finishInspection() {
+    // [FIX] Clear Auto-save timer first to prevent collision
+    clearTimeout(saveTimer);
+
     const reportId = $('#current_report_id').val();
-    const soId = $('#current_so_id').val(); // ต้องใช้ soId สำหรับการ save header
+    const soId = $('#current_so_id').val();
     
-    // Validation เบื้องต้น
     if (!$('#input_seal').val()) {
         alert('Please enter Seal No. before finishing.');
         return;
@@ -423,7 +499,7 @@ function finishInspection() {
 
     $('#loadingOverlay').css('display', 'flex'); 
 
-    // 1. เตรียมข้อมูล Header ทั้งหมดเพื่อ Force Save
+    // Force Save Header one last time
     const headerData = {
         action: 'save_header',
         sales_order_id: soId,
@@ -440,13 +516,10 @@ function finishInspection() {
         supervisor_name: $('#input_supervisor').val()
     };
 
-    // 2. ส่งคำสั่ง Save Header ก่อน
     $.post(API_URL, headerData, function(saveRes) {
         if (saveRes.success) {
-            // 3. ถ้า Save ผ่าน ค่อยส่งคำสั่ง Finish
             $.post(API_URL, { action: 'finish_report', report_id: reportId }, function(res) {
                 $('#loadingOverlay').hide();
-                
                 if (res.success) {
                     alert('Inspection Completed Successfully!');
                     switchView('list');

@@ -65,6 +65,7 @@ try {
                         s.seal_no as master_seal,
                         
                         r.id as report_id, 
+                        r.status,   /* <--- [CRITICAL FIX] ต้องเพิ่มบรรทัดนี้ครับ! */
                         r.seal_no as report_seal, 
                         r.cable_seal, 
                         r.container_no as report_container,
@@ -160,17 +161,30 @@ try {
             $type = $_POST['photo_type'];
             $file = $_FILES['file'];
             
-            // --- Copy Logic Resize เดิมมาวางตรงนี้ได้เลย ---
-            $allowed = ['jpg', 'jpeg', 'png'];
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed)) throw new Exception("Invalid file type");
+            // 1. [SECURITY] เช็ค MIME Type ของจริง (ห้ามเชื่อแค่นามสกุลไฟล์)
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $realMimeType = $finfo->file($file['tmp_name']);
+            
+            $allowedMimeTypes = [
+                'image/jpeg', 
+                'image/png', 
+                'image/gif'
+            ];
+            
+            if (!in_array($realMimeType, $allowedMimeTypes)) {
+                // ถ้าไฟล์เป็น .php หรือ .exe จะถูกดีดออกตรงนี้ทันที
+                throw new Exception("Security Warning: Invalid file format detected ($realMimeType).");
+            }
+
+            // 2. ตั้งชื่อไฟล์
             $newFilename = "R{$report_id}_{$type}_" . time() . ".jpg";
             $targetPath = $baseUploadDir . $newFilename;
             $webPath = "../../uploads/loading_reports/" . $newFilename; 
             
-            // ... (Image Processing Code) ...
-            $source = imagecreatefromstring(file_get_contents($file['tmp_name']));
-            if ($source === false) throw new Exception("Image Error");
+            // 3. Image Processing (Resize & Validate content)
+            $source = @imagecreatefromstring(file_get_contents($file['tmp_name']));
+            if ($source === false) throw new Exception("Invalid Image Content");
+
             $exif = @exif_read_data($file['tmp_name']);
             if(!empty($exif['Orientation'])) {
                 switch($exif['Orientation']) {
@@ -179,9 +193,11 @@ try {
                     case 6: $source = imagerotate($source,-90,0); break;
                 }
             }
+
             $width = imagesx($source);
             $height = imagesy($source);
-            $maxWidth = 1000;
+            $maxWidth = 1280; // แนะนำ 1280px (1000 เล็กไปนิดสำหรับดูรายละเอียด Seal)
+            
             if ($width > $maxWidth) {
                 $newWidth = $maxWidth;
                 $newHeight = floor($height * ($maxWidth / $width));
@@ -190,11 +206,12 @@ try {
                 imagedestroy($source);
                 $source = $temp;
             }
-            imagejpeg($source, $targetPath, 80);
+            
+            // Save as JPG (Quality 85 กำลังดี)
+            imagejpeg($source, $targetPath, 85);
             imagedestroy($source);
-            // ---------------------------------------------
 
-            // Save to DB (ใช้ LOADING_PHOTOS_TABLE)
+            // 4. Save to DB
             $pdo->prepare("DELETE FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ? AND photo_type = ?")->execute([$report_id, $type]);
             $pdo->prepare("INSERT INTO " . LOADING_PHOTOS_TABLE . " (report_id, photo_type, file_path) VALUES (?, ?, ?)")
                 ->execute([$report_id, $type, $webPath]);
@@ -262,6 +279,31 @@ try {
             // อัปเดตสถานะเป็น COMPLETED
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
                     SET status = 'COMPLETED', updated_at = GETDATE() 
+                    WHERE id = ?";
+            $pdo->prepare($sql)->execute([$report_id]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        // 8. ปลดล็อกงาน (Re-open) - เฉพาะ Supervisor/Admin
+        case 'reopen_report':
+            $report_id = $_POST['report_id'];
+            
+            // [SECURITY] เช็คสิทธิ์ก่อน ถ้าไม่ใช่ Admin/Supervisor ห้ามทำ
+            // สมมติว่าใน session เก็บ role ไว้ (ปรับตามโค้ด auth จริงของคุณ)
+            $role = $_SESSION['user']['role'] ?? 'operator';
+            if (!in_array($role, ['admin', 'supervisor', 'manager'])) {
+                 throw new Exception("Permission Denied: Supervisor level required.");
+            }
+
+            // ตรวจสอบว่ามีงานอยู่จริง
+            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
+            $check->execute([$report_id]);
+            if (!$check->fetch()) throw new Exception("Report not found.");
+
+            // ถอยสถานะกลับเป็น DRAFT
+            $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
+                    SET status = 'DRAFT', updated_at = GETDATE() 
                     WHERE id = ?";
             $pdo->prepare($sql)->execute([$report_id]);
 
