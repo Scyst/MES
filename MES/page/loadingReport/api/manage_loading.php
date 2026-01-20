@@ -75,14 +75,16 @@ try {
                         s.description, 
                         s.quantity, 
                         s.booking_no, 
-                        s.invoice_no, 
+                        s.snc_ci_no,  
+                        s.invoice_no,
+
                         s.sku,
                         s.ctn_size,
                         s.container_no as master_container,
                         s.seal_no as master_seal,
                         
                         r.id as report_id, 
-                        r.status,   /* <--- [CRITICAL FIX] ต้องเพิ่มบรรทัดนี้ครับ! */
+                        r.status,
                         r.seal_no as report_seal, 
                         r.cable_seal, 
                         r.container_no as report_container,

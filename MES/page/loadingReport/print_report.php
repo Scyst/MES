@@ -8,7 +8,7 @@ if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
 $report_id = $_GET['report_id'];
 
 // 1. ดึงข้อมูล (ใช้ Query จากเวอร์ชันเก่า เพื่อให้ได้ field ครบ)
-$sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description, s.invoice_no,
+$sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description, s.invoice_no, s.snc_ci_no,
                s.container_no as plan_container, s.seal_no as plan_seal,
                r.driver_name, r.inspector_name, r.supervisor_name, r.cable_seal
         FROM " . LOADING_REPORTS_TABLE . " r
@@ -62,12 +62,19 @@ function renderCheckbox($result, $targetValue) {
     $style = $isChecked ? 'font-weight:bold; color:black;' : 'color:#999;';
     return "<span style='font-size: 16px; $style'>{$symbol}</span>";
 }
-function renderContainerTypeCheck($currentType, $targetType) {
-    $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
-    $dbValue = isset($map[$currentType]) ? $map[$currentType] : $currentType;
-    $isMatch = ($dbValue === $targetType);
-    $mark = $isMatch ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
-    return "<span style='display:inline-block; margin-right:10px; position:relative;'><span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>$mark</span> $targetType</span>";
+// ฟังก์ชัน Helper (ถ้ายังไม่มี หรือแก้ของเดิมให้ยืดหยุ่นขึ้น)
+function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = null) {
+    if ($displayLabel === null) $displayLabel = $targetLabel;
+    $isChecked = ($currentValue === $targetLabel);
+    
+    $mark = $isChecked ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
+    
+    return "
+    <span style='display:inline-block; margin-right:15px; position:relative;'>
+        <span style='display:inline-block; border-bottom:1px solid #000; width:20px; height:12px; position:relative;'>
+            {$mark}
+        </span> {$displayLabel}
+    </span>";
 }
 ?>
 <!DOCTYPE html>
@@ -205,7 +212,7 @@ function renderContainerTypeCheck($currentType, $targetType) {
             </thead>
             <tbody>
                 <tr>
-                    <td><?php echo $header['invoice_no']; ?></td>
+                    <td><?php echo $header['snc_ci_no']; ?></td>
                     <td><?php echo $header['booking_no']; ?></td>
                     <td><?php echo $header['po_number']; ?></td>
                     <td><?php echo $header['container_no']; ?></td>
@@ -220,16 +227,16 @@ function renderContainerTypeCheck($currentType, $targetType) {
         <table class="photo-table">
             <?php 
             $photo_list = [
-                'undercarriage' => '1. Undercarriage',
-                'outside_door' => '2. Outside/Doors',
-                'right_side' => '3. Right Side',
-                'left_side' => '4. Left Side',
-                'front_wall' => '5. Front Wall',
-                'ceiling_roof' => '6. Ceiling/Roof',
-                'floor' => '7. Floor',
-                'inside_empty' => '8. Inside Empty',
-                'inside_loaded' => '9. Inside Loaded',
-                'seal_lock' => '10. Seal/Lock'
+                'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)',
+                'outside_door' => '2. Seal Condition (สภาพซีล)',
+                'right_side' => '3. Container No. (เบอร์ตู้)',
+                'left_side' => '4. Empty Container (ตู้เปล่า)',
+                'front_wall' => '5. Half Loaded (ครึ่งตู้)',
+                'ceiling_roof' => '6. Full Loaded (เต็มตู้)',
+                'floor' => '7. Right Door Closed (ปิดขวา)',
+                'inside_empty' => '8. All Doors Closed (ปิด 2 ฝั่ง)',
+                'inside_loaded' => '9. Seal Lock (ล็อคซีล)',
+                'seal_lock' => '10. Shipping Doc (ใบของออก)'
             ];
             $chunks = array_chunk($photo_list, 4, true);
             foreach ($chunks as $rowItems):
@@ -368,23 +375,38 @@ function renderContainerTypeCheck($currentType, $targetType) {
                                     <span class="form-label">Container Type ขนาดตู้คอนเทนเนอร์ :</span>
                                     <span class="form-label">
                                         <?php 
-                                        // 1. เช็ค 4 แบบมาตรฐานก่อน
-                                        echo renderContainerTypeCheck($header['container_type'], "20'");
-                                        echo renderContainerTypeCheck($header['container_type'], "40'ST");
-                                        echo renderContainerTypeCheck($header['container_type'], "40'HC");
-                                        echo renderContainerTypeCheck($header['container_type'], "45'"); 
+                                        // 1. สร้าง Map แปลงชื่อจาก Database -> ชื่อใน Form
+                                        // ฝั่งซ้าย = ค่าใน Database ของคุณ
+                                        // ฝั่งขวา = ชื่อตัวเลือกในแบบฟอร์มเอกสารนี้
+                                        $typeMapping = [
+                                            '20GP' => "20'",
+                                            '20HQ' => "20'", // หรือจะ Map ไป Others ก็ได้แล้วแต่ Logic
+                                            '40GP' => "40'ST",
+                                            '40HQ' => "40'HC",
+                                            '40HC' => "40'HC",
+                                            '45HQ' => "45'",
+                                            // เพิ่ม Mapping อื่นๆ ตามต้องการ
+                                        ];
 
-                                        // 2. Logic สำหรับ "Others" (อื่นๆ)
-                                        // ถ้าค่าที่มี ไม่ตรงกับ 4 แบบข้างบน ให้ถือเป็น Others
-                                        $standardTypes = ["20'", "40'ST", "40'HC", "45'"];
+                                        // 2. หาค่าที่แท้จริงที่จะใช้เทียบกับ Form
+                                        $dbRawValue = trim($header['container_type']);
+                                        $mappedValue = isset($typeMapping[$dbRawValue]) ? $typeMapping[$dbRawValue] : $dbRawValue;
+
+                                        // 3. Render Checkbox 4 ตัวหลัก (เทียบกับ $mappedValue ที่แปลงร่างแล้ว)
+                                        echo renderContainerTypeCheck($mappedValue, "20'", "20'"); // ส่งค่า $mappedValue ไปเช็ค
+                                        echo renderContainerTypeCheck($mappedValue, "40'ST", "40'ST");
+                                        echo renderContainerTypeCheck($mappedValue, "40'HC", "40'HC");
+                                        echo renderContainerTypeCheck($mappedValue, "45'", "45'"); 
+
+                                        // 4. Logic สำหรับ "Others" (กรณีแปลงแล้วก็ยังไม่ตรงกับ 4 ตัวหลัก)
+                                        $standardFormTypes = ["20'", "40'ST", "40'HC", "45'"];
                                         
-                                        // แปลงค่า DB ให้เป็น Standard Format ก่อนเทียบ (เหมือนใน function render)
-                                        $map = ["20'" => "20'", "40'" => "40'ST", "40'HC" => "40'HC", "45'" => "45'"];
-                                        $dbValue = isset($map[$header['container_type']]) ? $map[$header['container_type']] : $header['container_type'];
-
-                                        $isOther = !in_array($dbValue, $standardTypes) && !empty($header['container_type']);
+                                        // ถ้าค่าที่แปลงแล้ว ไม่อยู่ใน 4 ตัวหลัก -> ถือเป็น Others
+                                        $isOther = !in_array($mappedValue, $standardFormTypes) && !empty($dbRawValue);
+                                        
                                         $markOther = $isOther ? '<span style="color:blue; font-weight:bold; position:absolute; bottom:0px; left:50%; transform:translateX(-50%);">&#10003;</span>' : '';
-                                        $otherText = $isOther ? htmlspecialchars($header['container_type']) : '';
+                                        // ถ้าเป็น Others ให้โชว์ค่าเดิมจาก DB (เช่น Open Top, Flat Rack)
+                                        $otherText = $isOther ? htmlspecialchars($dbRawValue) : '';
                                         ?>
 
                                         <span style='display:inline-block; margin-right:10px; position:relative;'>

@@ -1,6 +1,5 @@
 "use strict";
 
-// [CORRECTION] คืนค่า Path ให้ถูกต้องตามโครงสร้างเดิมของคุณ
 const API_URL = 'api/manage_loading.php'; 
 let saveTimer;
 
@@ -16,9 +15,12 @@ $(document).ready(function() {
     });
 
     // Auto-save trigger
-    $('#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor').on('change keyup', function() {
+    const inputSelectors = '#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_container_type_other, #input_driver, #input_inspector, #input_supervisor';
+    
+    $(inputSelectors).on('change keyup', function() {
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveHeader, 1000); 
+        validateCompletion(); // เช็คปุ่ม Finish ทุกครั้งที่พิมพ์
     });
 
     $('#filter_search').on('keypress', function(e) {
@@ -41,24 +43,23 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-save & Validate trigger
-    const inputSelectors = '#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_driver, #input_inspector, #input_supervisor';
-    
-    $(inputSelectors).on('change keyup', function() {
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(saveHeader, 1000); 
-        validateCompletion(); // [เพิ่มตรงนี้] เช็คปุ่ม Finish ทุกครั้งที่พิมพ์
-    });
+    // [ADD] ดักจับปุ่ม Back ของ Browser
+    window.onpopstate = function(event) {
+        // ถ้า URL ไม่มี #report (คือย้อนกลับมาหน้าแรกแล้ว) หรือ State ว่างเปล่า
+        if (!location.hash || location.hash !== '#report') {
+            // ถ้าหน้า Form เปิดอยู่ ให้สลับกลับไปหน้า List
+            if ($('#view-report-form').is(':visible')) {
+                switchView('list');
+            }
+        }
+    };
 });
 
 // ==========================================
 // 1. SCROLL POLICY LOGIC
 // ==========================================
 function checkScrollPosition() {
-    // ถ้าไม่มีปุ่ม Finish (เช่น ดูงานเก่า) ให้ข้ามไป
     if ($('#btn_finish').length === 0) return;
-
-    // Logic: จุดที่เลื่อนมา + ความสูงจอ >= ความสูงเอกสาร - 50px
     if ($(window).scrollTop() + $(window).height() >= $(document).height() - 50) {
         $('#confirm_all_pass').prop('disabled', false);
         $('#scroll_hint').fadeOut();
@@ -68,21 +69,14 @@ function checkScrollPosition() {
 // ==========================================
 // 2. CHECKLIST LOGIC (Core)
 // ==========================================
-
-// ฟังก์ชันนี้รับค่าจาก HTML: onchange="saveSubItem(1, 'Title', 1, 'SubItem')"
 function saveSubItem(topicId, topicName, itemIndex, itemName) {
     const reportId = $('#current_report_id').val();
-    
-    // สร้าง Key ให้ตรงกับ HTML name="res_1_1"
     const itemKey = topicId + '_' + itemIndex;
-    
-    // หาค่า Radio ที่ถูกติ๊ก
     const result = $(`input[name="res_${itemKey}"]:checked`).val();
     const remark = $(`#remark_${itemKey}`).val();
 
     if (!reportId || !result) return;
 
-    // บันทึกลง Database
     $.post(API_URL, {
         action: 'save_checklist_item',
         report_id: reportId,
@@ -94,11 +88,10 @@ function saveSubItem(topicId, topicName, itemIndex, itemName) {
         remark: remark
     }, function(res) {
         if(res.success) {
-            recalcTopicStatus(topicId); // อัพเดตสีไอคอน
+            recalcTopicStatus(topicId);
         }
     }, 'json');
     
-    // ตรวจสอบว่าครบทุกข้อหรือยัง (เพื่อปลดล็อกปุ่ม Finish)
     setTimeout(validateCompletion, 100); 
 }
 
@@ -107,7 +100,7 @@ function validateCompletion() {
     const switchBtn = $('#confirm_all_pass');
     const errors = [];
 
-    // 1. Check Mandatory Inputs (ข้อมูลสำคัญ)
+    // 1. Check Mandatory Inputs
     const requiredInputs = {
         '#input_container': 'Container No.',
         '#input_seal': 'Seal No.',
@@ -115,30 +108,34 @@ function validateCompletion() {
         '#input_driver': 'Driver Name',
         '#input_inspector': 'Inspector',
         '#input_supervisor': 'Supervisor',
-        '#input_location': 'Location',
-        '#input_container_type': 'Container Size'
+        '#input_location': 'Location'
+        // Container Size เช็คแยก เพราะมี Logic Others
     };
 
     let infoComplete = true;
     for (const [id, label] of Object.entries(requiredInputs)) {
         if (!$(id).val() || $(id).val().trim() === '') {
-            infoComplete = false;
-            break;
+            infoComplete = false; break;
         }
     }
-    if (!infoComplete) errors.push('Info');
-
-    // 2. Check Photos (รูปภาพ)
-    const totalPhotos = 10; 
-    const currentPhotos = $('.camera-box.has-image').length;
-    if (currentPhotos < totalPhotos) {
-        errors.push('Photos');
+    
+    // Check Container Size (Dropdown or Text)
+    const ctnType = $('#input_container_type').val();
+    if (!ctnType || (ctnType === 'OTHER' && !$('#input_container_type_other').val())) {
+        infoComplete = false;
     }
 
-    // 3. Check Checklist (Quality Check)
+    if (!infoComplete) errors.push('Info');
+
+    // 2. Check Photos
+    const totalPhotos = 10; 
+    const currentPhotos = $('.camera-box.has-image').length;
+    if (currentPhotos < totalPhotos) errors.push('Photos');
+
+    // 3. Check Checklist
     const totalItems = $('.sub-item-row').length;
     let checkedCount = 0;
-    let passCount = 0; // [NEW] ตัวนับจำนวนข้อที่ผ่าน
+    let passCount = 0;
     const checkedGroups = {};
 
     $('input[type=radio]:checked').each(function() {
@@ -146,41 +143,22 @@ function validateCompletion() {
         if (!checkedGroups[name]) {
             checkedGroups[name] = true;
             checkedCount++;
-            
-            // [NEW] เช็คว่าเป็น PASS หรือไม่?
-            if ($(this).val() === 'PASS') {
-                passCount++;
-            }
+            if ($(this).val() === 'PASS') passCount++;
         }
     });
 
-    // เงื่อนไขความครบถ้วน (เพื่อปลดล็อกปุ่ม Finish)
     const isChecklistComplete = (checkedCount >= totalItems && totalItems > 0);
-    if (!isChecklistComplete) {
-        errors.push('Checklist');
-    }
+    if (!isChecklistComplete) errors.push('Checklist');
 
-    // ===============================================
-    // LOGIC 1: จัดการสวิตช์ (Switch Behavior)
-    // ===============================================
-    // สวิตช์จะเปิดได้ก็ต่อเมื่อ: ครบทุกข้อ AND เป็น PASS ทุกข้อ (passCount == totalItems)
+    // Logic 1: Switch Behavior
     const isAllPass = (passCount === totalItems && totalItems > 0);
-    
     if (isAllPass) {
-        // ถ้าทุกข้อเป็น PASS จริงๆ ค่อยสั่งเปิดสวิตช์
-        if (!switchBtn.prop('disabled') && !switchBtn.prop('checked')) {
-            switchBtn.prop('checked', true);
-        }
+        if (!switchBtn.prop('disabled') && !switchBtn.prop('checked')) switchBtn.prop('checked', true);
     } else {
-        // ถ้ามีแม้แต่ข้อเดียวที่ไม่ใช่ PASS (เช่น FAIL, N/A) -> ปิดสวิตช์ทันที
-        if (switchBtn.prop('checked')) {
-            switchBtn.prop('checked', false);
-        }
+        if (switchBtn.prop('checked')) switchBtn.prop('checked', false);
     }
 
-    // ===============================================
-    // LOGIC 2: จัดการปุ่ม Finish (Button Behavior)
-    // ===============================================
+    // Logic 2: Button Behavior
     if (errors.length === 0) {
         btn.prop('disabled', false);
         btn.removeClass('btn-secondary').addClass('btn-success');
@@ -192,28 +170,20 @@ function validateCompletion() {
     }
 }
 
-// ทำงานเมื่อกด Checkbox "Confirm All"
 function toggleFinishButton(checkbox) {
     if (checkbox.checked) {
-        // Auto-Check PASS สำหรับข้อที่ยังว่างอยู่
         $('input[value="PASS"]').each(function() {
             const groupName = $(this).attr('name');
-            // ถ้า Group นี้ยังไม่มีใครติ๊กเลย
             if (!$(`input[name="${groupName}"]:checked`).length) {
                 $(this).prop('checked', true);
-                $(this).trigger('change'); // สั่งให้ saveSubItem ทำงาน
+                $(this).trigger('change'); 
             }
         });
-        
-        // เปิด Accordion ทั้งหมดให้ดู
         $('.collapse').collapse('show');
     }
-    
-    // เรียก validate อีกรอบเพื่ออัพเดตปุ่ม
     setTimeout(validateCompletion, 200);
 }
 
-// อัพเดตสีไอคอนหน้าหัวข้อ
 function recalcTopicStatus(topicId) {
     const $inputs = $(`input[name^="res_${topicId}_"]:checked`);
     let hasFail = false;
@@ -237,7 +207,6 @@ function recalcTopicStatus(topicId) {
     }
 }
 
-// เปิด-ปิด Accordion ด้วยมือ (แก้ปัญหาเด้ง)
 function toggleAccordion(elementId) {
     $('#' + elementId).collapse('toggle');
 }
@@ -248,12 +217,15 @@ function toggleAccordion(elementId) {
 
 function resetInspectionForm() {
     $('input[type="radio"]').prop('checked', false);
-    $('textarea').val('');
+    $('textarea, input[type="text"], input[type="datetime-local"], select').val(''); // Clear all inputs
     $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
     $('.camera-box').removeClass('has-image');
     $('.preview-img').remove();
     $('.camera-box i, .camera-box .camera-label').show();
     $('.collapse').removeClass('show');
+    
+    // Reset Logic Fields
+    $('#input_container_type_other').addClass('d-none');
     
     // Reset Footer
     $('#confirm_all_pass').prop('checked', false).prop('disabled', true);
@@ -311,6 +283,10 @@ async function openReport(soId) {
 
         // Map Data
         $('#disp_po_head').text(h.po_number || '-');
+        
+        // [UPDATE] แสดง SNC Invoice
+        $('#disp_invoice').text(h.snc_ci_no || '-'); 
+
         $('#disp_po_nav').text('PO: ' + (h.po_number || '-'));
         $('#disp_sku').text(h.sku || '-');    
         $('#disp_qty').text(Number(h.quantity).toLocaleString());
@@ -331,6 +307,22 @@ async function openReport(soId) {
         
         if (h.loading_start_time) $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
         if (h.loading_end_time) $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
+
+        // [UPDATE] Logic โหลดข้อมูล Container Type (รองรับ Others)
+        const dbCtnType = h.ctn_size || h.container_type || '';
+        
+        // เช็คว่าค่าใน DB มีอยู่ใน Dropdown ไหม?
+        if ($(`#input_container_type option[value='${dbCtnType}']`).length > 0) {
+            $('#input_container_type').val(dbCtnType);
+            $('#input_container_type_other').addClass('d-none');
+        } else if (dbCtnType !== '') {
+            // ไม่มีใน Dropdown -> เลือก Others แล้วใส่ค่าจริง
+            $('#input_container_type').val('OTHER');
+            $('#input_container_type_other').val(dbCtnType).removeClass('d-none');
+        } else {
+            $('#input_container_type').val('');
+            $('#input_container_type_other').addClass('d-none');
+        }
 
         // Photos & ID
         if (h.report_id) {
@@ -359,7 +351,7 @@ async function openReport(soId) {
             $('#input_container_readonly, #input_seal_readonly').prop('readonly', true);
             $('#input_location').prop('readonly', false);
             
-            // Render Footer with Checkbox
+            // Render Footer with Checkbox (Slim Version)
             $('.sticky-footer').html(`
                 <div class="d-flex align-items-center justify-content-between gap-2">
                     <div class="form-check form-switch mb-0 d-flex align-items-center" style="padding-left: 2.5em;">
@@ -384,6 +376,10 @@ async function openReport(soId) {
             
             setTimeout(checkScrollPosition, 500);
         }
+        
+        // [ADD] สร้างประวัติการเข้าชม (History State)
+        history.pushState({page: 'report'}, 'Report View', '#report');
+        
         switchView('form'); 
     } catch (err) {
         Swal.fire('Error', 'Failed to load report: ' + err.message, 'error');
@@ -433,6 +429,12 @@ function saveHeaderPromise() {
 }
 
 function saveHeader() {
+    // [UPDATE] Logic เลือกค่าที่จะบันทึก (Container Type)
+    let finalCtnType = $('#input_container_type').val();
+    if (finalCtnType === 'OTHER') {
+        finalCtnType = $('#input_container_type_other').val();
+    }
+
     const data = {
         action: 'save_header',
         sales_order_id: $('#current_so_id').val(),
@@ -442,7 +444,7 @@ function saveHeader() {
         seal_no: $('#input_seal').val(),
         cable_seal: $('#input_cable_seal').val(),
         container_no: $('#input_container').val(),
-        container_type: $('#input_container_type').val(),
+        container_type: finalCtnType, // ใช้ค่าที่คำนวณใหม่
         car_license: $('#input_car_license').val(),
         driver_name: $('#input_driver').val(),
         inspector_name: $('#input_inspector').val(),
@@ -524,7 +526,7 @@ function uploadPhoto(file, type) {
             success: function(res) {
             if (res.success) {
                 showPreview(type, res.path);
-                setTimeout(validateCompletion, 200); // [เพิ่มตรงนี้] อัพรูปเสร็จให้เช็คปุ่มใหม่
+                setTimeout(validateCompletion, 200); 
             } else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
             },
             error: function() { Swal.fire('Error', 'Connection failed', 'error'); $box.html(originalContent); }
@@ -554,4 +556,17 @@ function showPreview(type, path) {
     $box.empty();
     $box.append(`<img src="${path}?t=${new Date().getTime()}" class="preview-img rounded">`);
     $box.addClass('has-image');
+}
+
+function goBackToList() {
+    history.back();
+}
+
+function toggleContainerOther() {
+    const val = $('#input_container_type').val();
+    if (val === 'OTHER') {
+        $('#input_container_type_other').removeClass('d-none').focus();
+    } else {
+        $('#input_container_type_other').addClass('d-none');
+    }
 }

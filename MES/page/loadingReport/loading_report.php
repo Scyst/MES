@@ -59,14 +59,25 @@ $pageTitle = "Loading Inspection";
                             </div>
                         </nav>
 
+                        <div class="d-none d-lg-block pt-3 pb-2">
+                            <button class="btn btn-white border shadow-sm text-secondary fw-bold px-3 py-2 rounded-pill hover-scale" onclick="goBackToList()">
+                                <i class="fas fa-arrow-left me-2"></i> ย้อนกลับ (Back to List)
+                            </button>
+                        </div>
+
                         <div class="row g-4">
                             
                             <div class="col-12 col-lg-8">
                                 
                                 <div class="info-card mb-3 shadow-sm bg-white">
                                     <div class="info-card-header bg-primary text-white p-3 rounded-top d-flex justify-content-between align-items-center">
-                                        <div><i class="fas fa-box-open me-2"></i><span id="disp_po_head" class="fw-bold">LOADING...</span></div>
-                                        <span class="badge bg-white text-primary" id="disp_sku">-</span>
+                                        <div>
+                                            <i class="fas fa-box-open me-2"></i>
+                                            <span id="disp_po_head" class="fw-bold">LOADING...</span>
+                                        </div>
+                                        <span class="badge bg-white text-primary fw-bold">
+                                            INV: <span id="disp_invoice">-</span>
+                                        </span>
                                     </div>
                                     <div class="card-body p-3">
                                         <div class="row g-2">
@@ -91,15 +102,22 @@ $pageTitle = "Loading Inspection";
                                                             <input type="text" id="input_container" class="form-control fw-bold" placeholder="ระบุเบอร์ตู้">
                                                         </div>
                                                     </div>
-                                                    <div class="col-7">
+                                                    <div class="col-6">
                                                         <label class="form-label-sm mb-0">Size</label>
-                                                        <select id="input_container_type" class="form-select form-select-sm fw-bold">
-                                                            <option value="">Select...</option>
-                                                            <option value="40'HC">40' HC</option>
-                                                            <option value="40'ST">40' ST</option>
-                                                            <option value="20'">20'</option>
-                                                            <option value="45'">45'</option>
-                                                        </select>
+                                                        <div class="d-flex flex-column">
+                                                            <select id="input_container_type" class="form-select form-select-sm fw-bold" onchange="toggleContainerOther()">
+                                                                <option value="">Select...</option>
+                                                                <option value="20GP">20' GP</option>
+                                                                <option value="40GP">40' GP</option>
+                                                                <option value="40HQ">40' HQ</option>
+                                                                <option value="45HQ">45' HQ</option>
+                                                                <option value="OTHER" class="text-primary fw-bold">-- Others (ระบุเอง) --</option>
+                                                            </select>
+
+                                                            <input type="text" id="input_container_type_other" 
+                                                                class="form-control form-select-sm mt-1 d-none text-primary" 
+                                                                placeholder="ระบุประเภทตู้...">
+                                                        </div>
                                                     </div>
                                                     <div class="col-5">
                                                         <label class="form-label-sm mb-0">License</label>
@@ -144,18 +162,26 @@ $pageTitle = "Loading Inspection";
                                         <div class="row g-3">
                                             <?php 
                                             $photoPoints = [
-                                                'undercarriage' => '1. Undercarriage', 'outside_door' => '2. Outside/Doors',
-                                                'right_side' => '3. Right Side', 'left_side' => '4. Left Side',
-                                                'front_wall' => '5. Front Wall', 'ceiling_roof' => '6. Ceiling/Roof',
-                                                'floor' => '7. Floor', 'inside_empty' => '8. Inside Empty',
-                                                'inside_loaded' => '9. Inside Loaded', 'seal_lock' => '10. Seal/Lock'
+                                                'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)',
+                                                'outside_door' => '2. Seal Condition (สภาพซีล)',
+                                                'right_side' => '3. Container No. (เบอร์ตู้)',
+                                                'left_side' => '4. Empty Container (ตู้เปล่า)',
+                                                'front_wall' => '5. Half Loaded (ครึ่งตู้)',
+                                                'ceiling_roof' => '6. Full Loaded (เต็มตู้)',
+                                                'floor' => '7. Right Door Closed (ปิดขวา)',
+                                                'inside_empty' => '8. All Doors Closed (ปิด 2 ฝั่ง)',
+                                                'inside_loaded' => '9. Seal Lock (ล็อคซีล)',
+                                                'seal_lock' => '10. Shipping Doc (ใบของออก)'
                                             ];
+                                            
                                             foreach ($photoPoints as $key => $label): 
                                             ?>
                                             <div class="col-6 col-md-4 col-lg-20"> 
                                                 <div class="camera-box shadow-sm border bg-white" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')" style="min-height: 110px; cursor:pointer;">
                                                     <i class="fas fa-camera fa-2x text-secondary mb-2 opacity-50"></i>
-                                                    <div class="camera-label text-truncate px-1 small text-muted"><?php echo $label; ?></div>
+                                                    <div class="camera-label px-1 small text-muted" style="line-height: 1.2; font-size: 0.75rem; word-wrap: break-word;">
+                                                        <?php echo $label; ?>
+                                                    </div>
                                                 </div>
                                                 <input type="file" id="file_<?php echo $key; ?>" accept="image/*" capture="environment" hidden onchange="handleFileSelect(this, '<?php echo $key; ?>')">
                                             </div>
