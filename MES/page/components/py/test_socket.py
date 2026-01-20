@@ -8,11 +8,11 @@ from datetime import datetime
 URL = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
 HEADERS = {'Content-Type': 'application/json'}
 
-# เอาเวลาเริ่มต้นของวันนี้ (00:00:00) เพื่อดึงข้อมูลที่มีอยู่จริงออกมาดู
+# เอาเวลาเริ่มต้นของวันนี้ (00:00:00)
 now = datetime.now()
 start_time = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
-# Payload (Scenario: Today -> Now)
+# Payload
 payload = {
     "start": start_time,
     "end": None
@@ -20,7 +20,6 @@ payload = {
 
 print(f"🚀 Sending Request...")
 print(f"URL: {URL}")
-print(f"Payload: {payload}")
 print("-" * 50)
 
 # ==========================================
@@ -31,30 +30,29 @@ try:
     
     print(f"Status Code: {response.status_code}")
     
-    if response.status_code == 200:
+    # ✅ แก้ไขตรงนี้: ยอมรับทั้ง 200 (OK) และ 201 (Created)
+    if response.status_code in [200, 201]:
         data = response.json()
         
-        # 2.1 แสดงโครงสร้าง JSON เต็มๆ (Pretty Print)
+        # 2.1 แสดงโครงสร้าง JSON เต็มๆ
         print("\n📄 [FULL JSON RESPONSE]")
-        print(json.dumps(data, indent=4, ensure_ascii=False))
+        # print(json.dumps(data, indent=4, ensure_ascii=False)) # ปิดไว้ก่อนจะได้ไม่รก
+        print(f"Status Msg: {data.get('message', 'No Message')}")
         
-        # 2.2 เจาะดู Data Structure เพื่อออกแบบ Database
-        # สมมติว่าข้อมูลเนื้อๆ อยู่ใน data -> result (ตามแพทเทิร์นปกติของ SNC)
-        # ปรับแก้ path ตรงนี้ได้ถ้าโครงสร้างเปลี่ยน
+        # 2.2 เจาะดู Data Structure
         result_list = data.get("data", {}).get("result", [])
         
         if result_list and isinstance(result_list, list) and len(result_list) > 0:
             first_item = result_list[0]
             
             print("\n🛠 [DATABASE SCHEMA ANALYSIS]")
-            print(f"Found {len(result_list)} records. Analyzing the first record for table creation:")
+            print(f"Found {len(result_list)} records. Analyzing structure:")
             print("-" * 60)
             print(f"{'KEY (Column Name)':<25} | {'TYPE':<10} | {'EXAMPLE VALUE'}")
             print("-" * 60)
             
             for key, value in first_item.items():
                 value_type = type(value).__name__
-                # ตัดข้อความยาวๆ เพื่อการแสดงผล
                 str_val = str(value)
                 if len(str_val) > 50:
                     str_val = str_val[:47] + "..."
@@ -62,11 +60,10 @@ try:
                 print(f"{key:<25} | {value_type:<10} | {str_val}")
                 
             print("-" * 60)
-            print("✅ ใช้รายชื่อ Column ด้านบนไปสร้าง Table ใน Database ได้เลยครับ")
+            print("✅ Data Structure พร้อมสำหรับการออกแบบ Table แล้วครับ")
             
         else:
-            print("\n⚠️ Warning: No data found in 'data.result' or list is empty.")
-            print("ลองเปลี่ยนช่วงเวลา start/end ดูครับ")
+            print("\n⚠️ Warning: No data found in 'data.result'.")
             
     else:
         print(f"\n❌ Error: API returned {response.status_code}")

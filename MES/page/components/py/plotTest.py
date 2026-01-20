@@ -10,9 +10,7 @@ from datetime import datetime, timedelta
 URL = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
 HEADERS = {'Content-Type': 'application/json'}
 
-# ย้อนหลังกี่วัน?
-DAYS_BACK = 1
-# ความถี่ (ชั่วโมง)
+DAYS_BACK = 2
 HOURS_STEP = 1
 
 # ==========================================
@@ -69,6 +67,10 @@ if not all_records:
 
 print("\n📊 Processing Data with Pandas...")
 df = pd.DataFrame(all_records)
+
+# Ensure Timestamp is datetime object
+df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+
 pivot_df = df.pivot_table(index="Timestamp", columns="Machine", values="Counter")
 pivot_df = pivot_df.fillna(0)
 
@@ -77,14 +79,16 @@ pivot_df = pivot_df.fillna(0)
 # ==========================================
 plt.figure(figsize=(14, 8))
 
-# 4.1 พล็อตเส้น
-pivot_df.plot(ax=plt.gca(), marker='.', alpha=0.6, colormap='tab20', linewidth=1)
+# 4.1 พล็อตเส้น (เพิ่ม x_compat=True เพื่อปิดโหมดแกนเวลาพิเศษของ Pandas)
+# วิธีนี้จะทำให้ Pandas ใช้แกนเวลามาตรฐานของ Matplotlib ซึ่งจะตรงกับ Scatter
+pivot_df.plot(ax=plt.gca(), marker='.', alpha=0.6, colormap='tab20', linewidth=1, x_compat=True)
 
-# 4.2 🔥 ไฮไลท์จุดตาย (แก้ Type Error แล้ว)
+# 4.2 🔥 ไฮไลท์จุดตาย (แก้ Type Error และ Time Axis แล้ว)
 negatives = df[df['Counter'] < 0]
+
 if not negatives.empty:
-    neg_times = mdates.date2num(negatives['Timestamp'])
-    plt.scatter(neg_times, negatives['Counter'], 
+    # 💡 แก้ไข: ไม่ต้องแปลงเป็น date2num ให้ใส่ Timestamp ตรงๆ
+    plt.scatter(negatives['Timestamp'], negatives['Counter'], 
                 color='red', s=100, zorder=5, label='BUG (Negative Value)', edgecolors='black')
     
     print("\n🚨🚨🚨 FOUND BAD MACHINES (NEGATIVE VALUES) 🚨🚨🚨")
@@ -98,8 +102,13 @@ plt.xlabel('Time Timeline', fontsize=12)
 plt.ylabel('Counter Value', fontsize=12)
 plt.axhline(0, color='black', linewidth=1, linestyle='--')
 plt.grid(True, linestyle='--', alpha=0.5)
+
+# Format แกนเวลา
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=4)) # โชว์ทุกๆ 4 ชม. เพื่อไม่ให้รก
 plt.gcf().autofmt_xdate()
+
+# Legend
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0., title="Machine ID")
 plt.tight_layout()
 
@@ -107,7 +116,7 @@ plt.tight_layout()
 # 5. SAVE FIRST -> THEN SHOW
 # ==========================================
 filename = f"machine_analysis_{datetime.now().strftime('%Y%m%d_%H%M')}.png"
-plt.savefig(filename)  # <--- สลับเอาบรรทัดนี้ขึ้นมาก่อน
+plt.savefig(filename)
 print(f"\n💾 Saved Evidence to: {filename}")
 
-plt.show() # <--- แสดงผลทีหลังสุด
+plt.show()

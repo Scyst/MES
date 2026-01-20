@@ -1,4 +1,4 @@
-/* loading_report.css - Modern Industrial Theme */
+/* loading_report.css - Modern Industrial Theme (Optimized) */
 
 :root {
     --card-radius: 12px;
@@ -6,13 +6,15 @@
     --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     --primary-gradient: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
     --bg-light-gray: #f4f6f9;
+    --sidebar-width: 0px; /* Default mobile value */
+    --top-header-height: 60px;
 }
 
 body {
     background-color: var(--bg-light-gray);
 }
 
-/* --- 1. Job List Cards (หน้าแรก) --- */
+/* --- 1. Job List Cards --- */
 .job-card {
     border: none;
     border-radius: var(--card-radius);
@@ -25,29 +27,24 @@ body {
 .job-card:active { transform: scale(0.98); }
 .job-card.draft { border-left-color: #ffc107; }
 .job-card.done { border-left-color: #198754; }
-.job-card.waiting { border-left-color: #6c757d; } /* Default */
+.job-card.waiting { border-left-color: #6c757d; }
 
-.job-card .card-body {
-    padding: 1.25rem;
-}
-.job-header-text {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #2c3e50;
-}
+.job-card .card-body { padding: 1.25rem; }
+.job-header-text { font-size: 1.1rem; font-weight: 700; color: #2c3e50; }
 
-/* --- 2. Report Form (หน้าทำงาน) --- */
-#view-report-form .container {
-    padding-bottom: 90px; 
+/* --- 2. Report Form Components --- */
+#view-report-form {
+    padding-bottom: 80px !important; /* Space for sticky footer */
 }
 
-/* Hero Section (Info Card) */
+/* Info Card (Hero) */
 .info-card {
     border: none;
     border-radius: var(--card-radius);
     box-shadow: var(--box-shadow);
     background: #fff;
     margin-bottom: 1rem;
+    border: 1px solid #eef2f6;
 }
 .info-card-header {
     background: var(--primary-gradient);
@@ -60,27 +57,24 @@ body {
     align-items: center;
 }
 .info-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #8898aa;
-    margin-bottom: 2px;
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #8898aa; margin-bottom: 2px;
 }
 .info-value {
-    font-weight: 600;
-    color: #333;
-    font-size: 0.95rem;
+    font-weight: 600; color: #333; font-size: 0.95rem;
 }
 
-/* --- 3. Camera / Photo Upload (Modern) --- */
+/* General Card Styling */
+.card {
+    border-radius: 8px;
+    border: 1px solid #eef2f6;
+}
+
+/* --- 3. Camera & Photos --- */
 .photo-section-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #555;
-    margin: 1.5rem 0 0.5rem 0;
-    text-transform: uppercase;
-    border-left: 4px solid #0d6efd;
-    padding-left: 10px;
+    font-size: 0.9rem; font-weight: 700; color: #555;
+    margin: 1.5rem 0 0.5rem 0; text-transform: uppercase;
+    border-left: 4px solid #0d6efd; padding-left: 10px;
 }
 
 .camera-box {
@@ -97,98 +91,95 @@ body {
     position: relative;
     transition: all 0.2s;
 }
-.camera-box:hover {
-    border-color: #0d6efd;
-    background-color: #f8fbff;
-}
-.camera-box i {
-    font-size: 2rem;
-    color: #a0aec0;
-    margin-bottom: 8px;
-    transition: color 0.2s;
-}
-.camera-box.has-image {
-    border: 2px solid #198754;
-    padding: 0;
-}
-.camera-label {
-    font-size: 0.8rem;
-    color: #718096;
-    font-weight: 500;
-    text-align: center;
-    padding: 0 5px;
-}
+.camera-box:hover { border-color: #0d6efd; background-color: #f8fbff; }
+.camera-box i { font-size: 2rem; color: #a0aec0; margin-bottom: 8px; transition: color 0.2s; }
+.camera-box.has-image { border: 2px solid #198754; padding: 0; }
+.camera-label { font-size: 0.8rem; color: #718096; font-weight: 500; text-align: center; padding: 0 5px; }
 
-/* Image Preview */
 .preview-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* เปลี่ยนเป็น cover ให้ดูเต็มตาสวยงาม (ถ้าอยากเห็นครบใช้ contain) */
+    width: 100%; height: 100%; object-fit: cover;
     border-radius: calc(var(--card-radius) - 2px);
 }
 
-/* --- 4. Checklist (Card Style) --- */
+/* --- 4. Checklist --- */
 .checklist-card {
-    border: none;
-    border-radius: var(--card-radius);
+    border: none; border-radius: var(--card-radius);
     box-shadow: 0 2px 5px rgba(0,0,0,0.03);
-    margin-bottom: 0.8rem;
-    overflow: hidden;
+    margin-bottom: 0.8rem; overflow: hidden;
+    border: 1px solid #eef2f6;
 }
 .checklist-header {
-    background-color: #fff;
-    padding: 1rem;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background-color: #fff; padding: 1rem; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid #f1f1f1;
 }
-.checklist-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: #444;
-}
-.checklist-body {
-    background-color: #fff;
-    padding: 1rem;
-}
-.sub-item-row {
-    padding: 0.8rem 0;
-    border-bottom: 1px solid #f1f1f1;
-}
+.checklist-header * { pointer-events: none; } /* Click pass-through */
+.checklist-title { font-weight: 600; font-size: 0.95rem; color: #444; }
+.checklist-body { background-color: #fff; padding: 1rem; }
+.sub-item-row { padding: 0.8rem 0; border-bottom: 1px solid #f1f1f1; }
 .sub-item-row:last-child { border-bottom: none; }
 
-/* Radio Buttons Custom (ทำให้ปุ่มใหญ่ขึ้น) */
-.btn-group-lg-custom .btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-}
+.btn-group-lg-custom .btn { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+.form-control, .form-select { font-size: 0.85rem; }
 
-/* --- 5. Sticky Footer Action Bar --- */
+/* --- 5. Sticky Footer (Base Style) --- */
 .sticky-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 10px 15px; /* ลด Padding ลง */
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: #fff; padding: 10px 15px;
     z-index: 1030;
-    /* ป้องกัน Footer บังเนื้อหาด้านล่าง */
-    padding-bottom: env(safe-area-inset-bottom, 10px); 
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1); /* เพิ่มเงาให้ชัดขึ้น */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
 }
 
-/* ปรับให้ Footer ขยับหลบ Sidebar ถ้าเป็นจอ Desktop */
+/* Scrollbar Tweaks */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* --- 6. PC / Large Screen Layout Tweaks (Combined) --- */
 @media (min-width: 992px) {
+    :root {
+        --sidebar-width: 70px; /* Adjust based on your actual sidebar width */
+    }
+
+    /* Grid for Photos (5 items per row) */
+    .col-lg-20 {
+        flex: 0 0 20%;
+        max-width: 20%;
+    }
+
+    /* Footer Offset for Sidebar */
     .sticky-footer {
-        padding-left: 280px; /* ตามความกว้าง Sidebar */
+        left: var(--sidebar-width) !important;
+        width: calc(100% - var(--sidebar-width)) !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        z-index: 900 !important;
+    }
+
+    /* Sticky Header Offset */
+    .sticky-top-offset {
+        top: var(--top-header-height) !important;
+        z-index: 800;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    /* Scrollable Checklist Area */
+    .checklist-scroll-area {
+        /* max-height: 80vh; */ /* Disable fixed height to allow natural flow if preferred */
+        padding-bottom: 120px !important; /* Space for footer */
+        padding-right: 5px;
     }
 }
 
-.checklist-header * {
-    pointer-events: none; /* ให้การคลิกทะลุตัวหนังสือ/ไอคอน ไปโดนปุ่ม button เสมอ */
-}
-
-.form-control, .form-select {
-    font-size: 0.85rem;
+@media (max-width: 991px) {
+    #view-report-form {
+        padding-bottom: 80px !important; /* เผื่อ iPhone Home Bar + Browser Bar */
+    }
+    
+    .checklist-card:last-child {
+        margin-bottom: 20px !important;
+    }
 }
