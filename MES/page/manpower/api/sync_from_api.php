@@ -108,40 +108,46 @@ try {
     foreach ($empInfoMap as $apiEmpId => $info) {
         $deptApi = $info['DEPARTMENT'] ?? '';
         
-        // 🔥 STATUS LOGIC: 
-        // ถ้าเป็น Team1 -> Active (1)
-        // ถ้าเป็น Team อื่นๆ (แต่ยังอยู่ใน Toolbox) -> Inactive (0)
-        $isActive = (stripos($deptApi, 'Team1') !== false) ? 1 : 0;
+        // 1. คำนวณสถานะตามเงื่อนไขของ API ต้นทาง (Team1)
+        $apiCalculatedActive = (stripos($deptApi, 'Team1') !== false) ? 1 : 0;
 
         if (isset($existingEmployees[$apiEmpId])) {
-            // มีชื่อเดิมอยู่แล้ว -> อัปเดตข้อมูลและสถานะ (เผื่อเขาย้ายทีม)
+            // 2. 🔥 ดึงสถานะปัจจุบันใน Database ของ MES มาตรวจสอบ
+            $currentDbActive = (int)$existingEmployees[$apiEmpId]['is_active'];
+
+            // 3. 🔥 Logic พิเศษ: 
+            // ถ้าสถานะในระบบเราคือ 0 (Inactive/ลาออก) แล้ว 
+            // ให้ "ล็อค" เป็น 0 ต่อไป ห้ามอัปเดตกลับเป็น 1 แม้ API จะส่งมาว่าอยู่ Team1 ก็ตาม
+            $finalStatus = ($currentDbActive === 0) ? 0 : $apiCalculatedActive;
+
+            // อัปเดตข้อมูลพนักงาน (ยึดตาม $finalStatus)
             $stmtUpdateEmp->execute([
                 $info['POSITION'] ?? '-', 
                 $deptApi, 
-                $isActive, 
+                $finalStatus, // ใช้ค่าที่ตัดสินใจแล้ว
                 $apiEmpId
             ]);
             
-            // อัปเดตสถานะในตัวแปร array ด้วย (เพื่อให้ Loop ข้างล่างรู้ว่าคนนี้ Active/Inactive)
-            $existingEmployees[$apiEmpId]['is_active'] = $isActive;
+            // อัปเดตสถานะในตัวแปร array เพื่อใช้ในกระบวนการถัดไป (เช่น การสร้าง Log)
+            $existingEmployees[$apiEmpId]['is_active'] = $finalStatus;
             
-            if ($isActive == 0) $stats['deactivated']++;
+            if ($finalStatus == 0) $stats['deactivated']++;
             else $stats['updated']++;
 
         } else {
-            // ชื่อใหม่ -> เพิ่มเข้าไปตามสถานะที่เช็คได้
+            // กรณีพนักงานใหม่ (ยังไม่มีในระบบ) ให้ใช้ค่าตาม API ได้เลย
             $stmtInsertEmp->execute([
                 $apiEmpId, 
                 $info['NAME'] ?? '-', 
                 $info['POSITION'] ?? '-', 
                 $deptApi, 
-                $isActive, 
+                $apiCalculatedActive, 
                 $defaultShiftId
             ]);
             
             $existingEmployees[$apiEmpId] = [
                 'emp_id' => $apiEmpId, 'line' => 'TOOLBOX_POOL', 'default_shift_id' => $defaultShiftId,
-                'team_group' => null, 'is_active' => $isActive, 'emp_type' => 'Other'
+                'team_group' => null, 'is_active' => $apiCalculatedActive, 'emp_type' => 'Other'
             ];
             $stats['new']++;
         }
@@ -184,7 +190,6 @@ try {
                 continue; // ข้ามคนนี้ไปเลย ไม่ต้องหาเวลาสแกน
             }
 
-            // ... (Logic หาเวลาเข้าออก เหมือนเดิมเป๊ะ) ...
             $stmtCheckLog->execute([$empId, $procDate]);
             $logExist = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
             if ($logExist && $logExist['is_verified'] == 1) continue; 

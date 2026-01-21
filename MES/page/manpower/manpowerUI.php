@@ -65,6 +65,10 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <i class="fas fa-cloud-download-alt me-1"></i> Sync
                     </button>
 
+                    <button class="btn btn-outline-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="Actions.openEmployeeManager()" title="จัดการพนักงาน">
+                        <i class="fas fa-users-cog me-1"></i> Staff
+                    </button>
+
                     <div class="dropdown ms-1">
                         <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="More Actions">
                             <i class="fas fa-ellipsis-v"></i>

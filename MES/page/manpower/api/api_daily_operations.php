@@ -33,6 +33,7 @@ try {
         
         $lineFilter = isset($_GET['line']) ? trim($_GET['line']) : ''; 
         $empTypeFilter = isset($_GET['type']) ? trim($_GET['type']) : '';
+        $empIdFilter = isset($_GET['emp_id']) ? trim($_GET['emp_id']) : '';
 
         // SQL Logic: คำนวณ 8 ชม. + OT Step + ตัดคนลืมสแกน
         $sql = "SELECT 
@@ -49,7 +50,7 @@ try {
                     END as status,
                     
                     L.remark, 
-                    E.emp_id, E.name_th, E.position, 
+                    E.emp_id, E.name_th, E.position, E.is_active,
                     
                     -- Shift & Line Info (Priority: Snapshot > Master)
                     ISNULL(L.actual_line, E.line) as line, 
@@ -175,6 +176,11 @@ try {
                 $sql .= " AND (CM.category_name = :empType)";
                 $params[':empType'] = $empTypeFilter;
             }
+        }
+
+        if (!empty($empIdFilter)) {
+            $sql .= " AND E.emp_id = :empIdFilter";
+            $params[':empIdFilter'] = $empIdFilter;
         }
 
         $sql .= " ORDER BY line ASC, E.emp_id ASC";
@@ -436,6 +442,45 @@ try {
         }
 
         echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+
+    // ==================================================================================
+    // 6. ACTION: delete_log (ลบ Log รายตัว - สำหรับเคลียร์คนลาออกในอดีต)
+    // ==================================================================================
+    } elseif ($action === 'delete_log') {
+        if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+
+        $logId = $input['log_id'] ?? '';
+        if (empty($logId)) throw new Exception("Missing Log ID");
+
+        // ตรวจสอบก่อนลบ (เพื่อความปลอดภัย)
+        $stmtCheck = $pdo->prepare("SELECT status, log_date FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+        $stmtCheck->execute([$logId]);
+        $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if (!$log) throw new Exception("Record not found.");
+        
+        // กฎเหล็ก: ห้ามลบคนที่มีเวลาสแกนแล้ว (PRESENT/LATE) ยกเว้น Admin ระดับสูงจริงๆ
+        // แต่ถ้าเป็น WAITING/ABSENT ลบได้เลย
+        if (in_array($log['status'], ['PRESENT', 'LATE']) && !hasRole('admin')) {
+            throw new Exception("ไม่สามารถลบรายการที่มีการสแกนเข้างานแล้วได้ (ต้องเคลียร์เวลาออกก่อน)");
+        }
+
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+        $stmt->execute([$logId]);
+
+        // บันทึก Log การกระทำ
+        $stmtLog = $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_DELETE_LOG', ?, GETDATE())");
+        $stmtLog->execute([$updatedBy, "Deleted Log ID: $logId Date: {$log['log_date']}"]);
+
+        $pdo->commit();
+        
+        // คำนวณเงินใหม่ของวันนั้น
+        $stmtCalc = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
+        $stmtCalc->execute([$log['log_date'], $log['log_date']]);
+
+        echo json_encode(['success' => true, 'message' => 'Record deleted successfully']);
 
     } else {
         throw new Exception("Invalid Action: " . htmlspecialchars($action));

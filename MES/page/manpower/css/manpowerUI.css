@@ -233,3 +233,74 @@ body {
 .animate-fade-in {
     animation: fadeInRow 0.3s ease-out forwards;
 }
+
+/* =================================================================== */
+/* 6. ADDITIONAL ADMIN TOOLS UI */
+/* =================================================================== */
+
+/* ปรับแต่งกลุ่มปุ่ม Action ใน Modal ให้ดูเป็นระเบียบ ไม่เบียดกัน */
+#detailModalTable .btn-sm {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important; /* ทำปุ่มให้เป็นวงกลมตามสไตล์เดิมของคุณ */
+    transition: all 0.2s;
+}
+
+/* ปุ่มดูประวัติ (History) */
+.btn-outline-secondary {
+    border-color: #d1d3e2;
+    color: #858796;
+}
+.btn-outline-secondary:hover {
+    background-color: #858796;
+    color: #fff;
+    border-color: #858796;
+    transform: scale(1.1);
+}
+
+/* ปุ่มแจ้งลาออก (Terminate) */
+.btn-outline-dark {
+    border-color: #5a5c69;
+    color: #5a5c69;
+}
+.btn-outline-dark:hover {
+    background-color: #3a3b45;
+    color: #fff;
+    border-color: #3a3b45;
+    transform: scale(1.1);
+}
+
+/* ปรับแต่ง Dropdown Menu ในตาราง (เมนูลา) */
+#detailModalTable .dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 8px;
+}
+
+#detailModalTable .dropdown-item {
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+}
+
+#detailModalTable .dropdown-item:hover {
+    background-color: #f8f9fc;
+    color: var(--mp-primary);
+}
+
+/* สถานะตัวหนาในตารางรายละเอียด */
+#detailModalTable select.fw-bold {
+    color: var(--mp-primary) !important;
+}
+
+/* Highlight แถวเวลา Hover */
+#detailModalTable tr:hover {
+    background-color: rgba(78, 115, 223, 0.05) !important;
+}

@@ -184,6 +184,18 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$name, $pos, $line, $shift, $team, $active, $empId]);
 
+        // 🔥 [เพิ่มใหม่] ถ้าถูกสั่งปิดใช้งาน (Inactive) ให้ลบ Plan/Log ที่ยังไม่ Verify ทิ้ง
+        if ($active === 0) {
+            $sqlCleanLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
+                            WHERE emp_id = ? 
+                              AND log_date >= CAST(GETDATE() AS DATE) -- ลบเฉพาะวันนี้และอนาคต (อดีตห้ามยุ่ง)
+                              AND is_verified = 0 -- เฉพาะที่ยังไม่ถูกตรวจ
+                              AND (status = 'WAITING' OR status = 'ABSENT')"; // เฉพาะสถานะที่ยังไม่มา
+                              
+            $stmtClean = $pdo->prepare($sqlCleanLog);
+            $stmtClean->execute([$empId]);
+        }
+
         echo json_encode(['success' => true, 'message' => 'Updated successfully']);
     }
 
@@ -234,6 +246,31 @@ try {
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
+    }
+
+    elseif ($action === 'terminate_employee') {
+        if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+        
+        $empId = $input['emp_id'] ?? '';
+        $resignDate = $input['resign_date'] ?? date('Y-m-d'); // ถ้าไม่ส่งมาให้ใช้วันนี้
+
+        $pdo->beginTransaction();
+        
+        // 1. ปิดการใช้งานพนักงาน
+        $stmt = $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET is_active = 0, last_sync_at = GETDATE() WHERE emp_id = ?");
+        $stmt->execute([$empId]);
+        
+        // 2. [เพิ่มใหม่] Update สถานะใน Log ของวันนี้ให้เป็น RESIGNED ทันที
+        $stmtToday = $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " SET status = 'RESIGNED' WHERE emp_id = ? AND log_date = CAST(GETDATE() AS DATE)");
+        $stmtToday->execute([$empId]);
+        
+        // 3. ลบ Log ล่วงหน้า (เหมือนเดิม)
+        $stmtDelete = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date > ? AND is_verified = 0");
+        $stmtDelete->execute([$empId, $resignDate]);
+        
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Terminated and Logs updated']);
+        exit;
     }
 
     // หากไม่เจอ Action

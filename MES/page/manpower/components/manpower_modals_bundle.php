@@ -355,8 +355,10 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary me-auto text-danger border-danger" id="btnDeleteEmp" onclick="Actions.deleteEmployee()" title="ปรับสถานะเป็นพ้นสภาพ (Inactive)">
-                    <i class="fas fa-user-slash"></i> Set Inactive
+                <button type="button" class="btn btn-outline-danger me-auto" id="btnDeleteEmp" 
+                        onclick="const id=document.getElementById('empEditId').value; const name=document.getElementById('empEditName').value; Actions.terminateStaff(id, name);" 
+                        title="ปรับสถานะเป็นพ้นสภาพและลบแผนงานในอนาคต">
+                    <i class="fas fa-user-slash me-1"></i> แจ้งลาออก (Resign)
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="Actions.saveEmployee()">

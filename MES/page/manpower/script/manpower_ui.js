@@ -467,6 +467,179 @@ const Actions = {
         }
     },
 
+    async deleteLog(logId, empName) {
+        if (!logId || logId == '0') {
+            alert('รายการนี้ยังไม่มีในระบบ (เป็นแค่ Plan ลอยๆ) ไม่สามารถลบได้\n(หากต้องการลบถาวร ให้ไปปิด Active ที่ตัวพนักงาน)');
+            return;
+        }
+
+        if (!confirm(`⚠️ ยืนยันการลบรายการของ: ${empName}?\n\nการกระทำนี้จะลบ Log ของวันนั้นทิ้ง และทำให้ยอด Plan ลดลง`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'delete_log',
+                    log_id: logId
+                })
+            });
+
+            const json = await res.json();
+            
+            if (json.success) {
+                // รีโหลดตารางใน Modal และ Dashboard
+                await Actions.fetchDetailData(); 
+                App.loadData();
+                // UI.showToast("ลบรายการเรียบร้อย", "success"); // ถ้ามี function showToast
+            } else {
+                alert('Error: ' + json.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed: ' + err.message);
+        }
+    },
+
+    async deleteEmployee() {
+        const empId = document.getElementById('empEditId').value;
+        const name = document.getElementById('empEditName').value;
+
+        if (!confirm(`⚠️ ยืนยันการปิดสถานะพนักงาน: ${name}?\n\n(ระบบจะลบข้อมูล Plan/Log ในอนาคตทิ้ง เพื่อไม่ให้นับยอดเกิน)`)) {
+            return;
+        }
+
+        try {
+            const payload = {
+                action: 'update_employee',
+                emp_id: empId,
+                name_th: name,
+                position: document.getElementById('empEditPos').value,
+                line: document.getElementById('empEditLine').value,
+                shift_id: document.getElementById('empEditShift').value,
+                team_group: document.getElementById('empEditTeam').value,
+                is_active: 0 // ❌ Force Inactive
+            };
+
+            const res = await fetch('api/api_master_data.php', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
+            
+            const json = await res.json();
+            
+            if(json.success) { 
+                bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide(); 
+                App.loadData(); 
+                if(document.getElementById('empListModal').classList.contains('show')) {
+                    Actions.openEmployeeManager();
+                }
+                alert('✅ ปิดใช้งานเรียบร้อย (ลบ Plan วันนี้ออกแล้ว)');
+            } else { 
+                alert('Error: ' + json.message); 
+            }
+        } catch(e) { 
+            alert('Failed: ' + e.message); 
+        }
+    },
+
+    async terminateStaff(empId, name) {
+        const resignDate = prompt(`ระบุวันที่ลาออกของ [${name}] (YYYY-MM-DD):`, new Date().toISOString().split('T')[0]);
+        if (!resignDate) return;
+
+        if (confirm(`⚠️ ยืนยันการแจ้งลาออกของ ${name}?\nระบบจะปิดพนักงานและลบข้อมูลหลังจากวันที่ ${resignDate} ทั้งหมด`)) {
+            try {
+                const res = await fetch('api/api_master_data.php', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json' // 🚩 สำคัญมาก: ต้องมีบรรทัดนี้เพื่อให้ PHP อ่าน $input ออก
+                    },
+                    body: JSON.stringify({ 
+                        action: 'terminate_employee', 
+                        emp_id: empId, 
+                        resign_date: resignDate 
+                    })
+                });
+                const json = await res.json();
+                if(json.success) { 
+                    // 1. ปิด Modal แก้ไขพนักงาน (ถ้าเปิดค้างอยู่)
+                    const editModalEl = document.getElementById('empEditModal');
+                    const editModal = bootstrap.Modal.getInstance(editModalEl);
+                    if (editModal) editModal.hide();
+
+                    // 2. อัปเดตข้อมูลหน้าจอ
+                    await App.loadData(); 
+                    await Actions.fetchDetailData(); 
+                    if(document.getElementById('empListModal').classList.contains('show')) {
+                        Actions.openEmployeeManager(); 
+                    }
+                    alert('✅ แจ้งลาออกและปิดสถานะพนักงานเรียบร้อย'); 
+                } else {
+                    alert('❌ Error: ' + json.message);
+                }
+            } catch (err) {
+                alert('❌ Failed to connect API');
+            }
+        }
+    },
+
+    async setLeaveRecord(empId, date, type) {
+        if (!confirm(`บันทึกสถานะการลา [${type}] สำหรับพนักงาน ${empId} วันที่ ${date}?`)) return;
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'update_log', 
+                    log_id: 0, 
+                    emp_id: empId, 
+                    log_date: date,
+                    status: type,
+                    remark: `ลา${type} (บันทึกโดย Admin)`
+                })
+            });
+            const json = await res.json();
+            if (json.success) {
+                await App.loadData();
+                await Actions.fetchDetailData();
+            }
+        } catch (err) { console.error(err); }
+    },
+
+    async viewEmployeeHistory(empId, name) {
+        const today = new Date().toISOString().split('T')[0];
+        const lastMonth = new Date();
+        lastMonth.setDate(lastMonth.getDate() - 30);
+        const startDate = lastMonth.toISOString().split('T')[0];
+
+        // เราใช้ Detail Modal ตัวเดิมในการแสดงผลได้เลย เพื่อความรวดเร็ว
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-history me-2"></i> ประวัติ 30 วัน: ${name} (${empId})`;
+        
+        // แสดง Loading
+        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+        modal.show();
+
+        try {
+            // เรียก API เดิมที่มีอยู่แล้ว แต่ระบุช่วงวันที่ (startDate ถึง today)
+            // และใช้ emp_id เป็นฟิลเตอร์ (ต้องปรับปรุง API เล็กน้อยในขั้นตอนถัดไป)
+            const url = `api/api_daily_operations.php?action=read_daily&startDate=${startDate}&endDate=${today}&emp_id=${empId}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            
+            if (json.success) {
+                // กรองเอาเฉพาะของพนักงานคนนี้ (กรณี API ส่งมาหมด)
+                const history = json.data.filter(r => r.emp_id === empId);
+                this.renderDetailTable(history); // ใช้ฟังก์ชันวาดตารางเดิมได้เลย
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    },
+
     renderDetailTable(list) {
         const tbody = document.getElementById('detailModalBody');
         
@@ -513,8 +686,15 @@ const Actions = {
                 forgotOutHtml = `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>`;
             }
 
-            const masterJson = encodeURIComponent(JSON.stringify({ emp_id: row.emp_id, name_th: row.name_th, position: row.position, line: row.line, team_group: row.team_group, default_shift_id: row.default_shift_id, is_active: 1 }));
-
+            const masterJson = encodeURIComponent(JSON.stringify({ 
+                emp_id: row.emp_id, 
+                name_th: row.name_th, 
+                position: row.position, 
+                line: row.line, 
+                team_group: row.team_group, 
+                default_shift_id: row.default_shift_id, 
+                is_active: row.is_active
+            }));
             // Return HTML String of ONE row
             return `
                 <tr class="${trClass}">
@@ -543,13 +723,34 @@ const Actions = {
                     <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
                     <td class="text-end pe-3 align-middle">${costHtml}</td>
                     <td class="text-center text-nowrap">
-                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
-                        <button class="btn btn-sm btn-primary shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
+                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')" title="Edit Employee Master"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
+                        
+                        <div class="btn-group me-1">
+                            <button class="btn btn-sm btn-outline-info shadow-sm rounded-circle" style="width: 28px; height: 28px;" data-bs-toggle="dropdown" title="ลงบันทึกการลา">
+                                <i class="fas fa-calendar-minus" style="font-size: 0.7rem;"></i>
+                            </button>
+                            <ul class="dropdown-menu shadow border-0" style="font-size: 0.8rem;">
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'SICK')">🤢 ลาป่วย (SICK)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'BUSINESS')">👜 ลากิจ (BUSINESS)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'VACATION')">🏖️ พักร้อน (VACATION)</a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm btn-outline-dark shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.terminateStaff('${uid}', '${row.name_th}')" title="แจ้งพนักงานลาออก"><i class="fas fa-user-slash" style="font-size: 0.7rem;"></i></button>
+
+                        <button class="btn btn-sm btn-outline-secondary shadow-sm rounded-circle me-1" 
+                                style="width: 28px; height: 28px;" 
+                                onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')" 
+                                title="ดูประวัติการเข้างาน">
+                            <i class="fas fa-history" style="font-size: 0.7rem;"></i>
+                        </button>
+
+                        <button class="btn btn-sm btn-primary shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" title="Save Daily Status"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
+                        
+                        <button class="btn btn-sm btn-outline-danger shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.deleteLog('${row.log_id}', '${row.name_th}')" title="ลบรายการเฉพาะวันนี้"><i class="fas fa-trash-alt" style="font-size: 0.7rem;"></i></button>
                     </td>
                 </tr>`;
-        }).join(''); // 🔥 รวม Array เป็น String ก้อนเดียว
-
-        // แปะ DOM ทีเดียวจบ (Render เร็วมาก)
+        }).join('');
         tbody.innerHTML = rowsHTML;
     },
 
@@ -770,6 +971,7 @@ const Actions = {
     },
 
     async saveEmployee() {
+        const isActive = document.getElementById('empEditActive').checked ? 1 : 0;
         const isEdit = document.getElementById('isEditMode').value === '1';
         const payload = {
             action: isEdit ? 'update_employee' : 'create_employee',
