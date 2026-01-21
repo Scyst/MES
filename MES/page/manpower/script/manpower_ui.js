@@ -282,77 +282,176 @@ const UI = {
 
     _calculateDiff(obj) { obj.diff = obj.actual - obj.plan; },
 
+    /**
+     * [REFACTOR V2] Multi-level Drilldown (Nested Grouping)
+     * Level 1 (Line) -> Level 2 (Shift/Sub) -> Level 3 (Employees)
+     */
     renderTable(data, viewMode = 'LINE') {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; return; }
+        if (!data || data.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; 
+            return; 
+        }
         
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
+        // Grand Total (Level 0 - โชว์เสมอ)
         tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
         
         const sortedKeys = Object.keys(groups).sort();
-        sortedKeys.forEach(key => {
+        
+        // Loop Level 1: Group (Line)
+        sortedKeys.forEach((key, gIndex) => {
             const group = groups[key];
-            tbody.innerHTML += this._createRowHtml(group.name, group.total, { isParent: true, viewMode, rawName: group.name });
+            const groupId = `lvl1-${gIndex}`;
+            const groupTarget = `target-${groupId}`;
+
+            // 1. Render Level 1 (Line)
+            tbody.innerHTML += this._createRowHtml(group.name, group.total, { 
+                isParent: true, 
+                viewMode, 
+                rawName: group.name,
+                toggleTarget: groupTarget // กดแล้วไป Toggle Class นี้
+            });
             
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
-            sortedSubs.forEach(sub => {
-                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { isChild: true, meta: sub.meta });
+            
+            // Loop Level 2: Sub (Shift)
+            sortedSubs.forEach((sub, sIndex) => {
+                const subId = `lvl2-${gIndex}-${sIndex}`; // ID ของแถวลูก
+                const subTarget = `target-${subId}`;      // Class เป้าหมายที่จะให้ลูกสั่งเปิด/ปิด (คือหลาน Level 3)
+
+                // 2. Render Level 2 (Shift) -> เป็นลูกของ Level 1 แต่เป็นแม่ของ Level 3
+                tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
+                    isChild: true, 
+                    meta: sub.meta,
+                    rowClass: groupTarget, // เป็นลูกของ Level 1 (ซ่อนตามแม่)
+                    isHidden: true,        // เริ่มต้นซ่อนไว้
+                    toggleTarget: subTarget // **สำคัญ** กดแล้วไป Toggle Class นี้ (Level 3)
+                });
                 
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Loop Level 3: Item (Employee)
                 sortedItems.forEach(item => {
-                    tbody.innerHTML += this._createRowHtml(item.name, item, { isGrandChild: true, meta: item.meta });
+                    // 3. Render Level 3 (Employee) -> เป็นลูกของ Level 2
+                    tbody.innerHTML += this._createRowHtml(item.name, item, { 
+                        isGrandChild: true, 
+                        meta: item.meta,
+                        rowClass: subTarget, // เป็นลูกของ Level 2 (ซ่อนตามแม่ระดับ 2)
+                        isHidden: true 
+                    });
                 });
             });
         });
     },
 
+    // [UPDATED] รองรับการ Toggle ซ้อนชั้น (กด Level 2 แล้วหมุนลูกศรได้ด้วย)
+    toggleRows(targetClass, btnElement) {
+        // หาแถวลูกเป้าหมาย
+        const rows = document.getElementsByClassName(targetClass);
+        const icon = btnElement.querySelector('.fa-chevron-right');
+        
+        if (rows.length === 0) return;
+
+        // เช็คสถานะจากแถวแรก
+        const isCurrentlyHidden = rows[0].style.display === 'none';
+        
+        for (let row of rows) {
+            if (isCurrentlyHidden) {
+                row.style.display = 'table-row';
+            } else {
+                row.style.display = 'none';
+                
+                // [Logic พิเศษ] ถ้าปิด Level 1 ต้องไปสั่งปิด Level 3 ที่ค้างอยู่ด้วย (เพื่อความเนียน)
+                // เช็คว่าแถวนี้เป็นตัวเปิด Level ถัดไปไหม (มี toggleTarget)
+                const nextTarget = row.getAttribute('onclick')?.match(/UI\.toggleRows\('([^']+)'/);
+                if (nextTarget && nextTarget[1]) {
+                    // รีเซ็ต icon ของ Level 2 กลับเป็นแนวนอน
+                    const subIcon = row.querySelector('.fa-chevron-right');
+                    if(subIcon) subIcon.style.transform = 'rotate(0deg)';
+                    
+                    // สั่งซ่อนหลาน (Level 3)
+                    const grandChildren = document.getElementsByClassName(nextTarget[1]);
+                    for(let gc of grandChildren) gc.style.display = 'none';
+                }
+            }
+        }
+
+        // หมุน Icon ตัวแม่
+        if (icon) {
+            icon.style.transition = 'transform 0.2s';
+            icon.style.transform = isCurrentlyHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+        }
+    },
+
+    // [UPDATED] เพิ่ม Icon ให้ Level 2 (isChild) เพื่อให้รู้ว่ากดได้
     _createRowHtml(label, stats, options = {}) {
-        const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta } = options;
+        const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta, toggleTarget, rowClass, isHidden } = options;
         
         let diffClass = 'text-muted opacity-50', diffPrefix = '';
         if (stats.diff < 0) diffClass = 'text-danger fw-bold';
         else if (stats.diff > 0) { diffClass = 'text-warning fw-bold text-dark'; diffPrefix = '+'; }
         else if (stats.plan > 0) diffClass = 'text-success fw-bold';
 
-        let rowClass = '', nameHtml = label;
+        let rowStyle = isHidden ? 'display: none;' : ''; 
+        let rowHtmlClass = rowClass || ''; 
+        let rowBg = '';
+        let nameHtml = label;
         let tLine = '', tShift = '', tType = 'ALL';
         let canClick = false;
+        let toggleAttr = ''; 
+
+        // สร้างปุ่มลูกศร (Chevron) เตรียมไว้
+        const chevron = `<i class="fas fa-chevron-right me-2 text-muted transition-icon" style="font-size: 0.8em;"></i>`;
 
         if (isGrand) {
-            rowClass = 'table-dark fw-bold border-bottom-0';
+            rowBg = 'table-dark fw-bold border-bottom-0';
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
             canClick = true; 
         } 
-        else if (isParent) {
-            rowClass = 'table-secondary fw-bold border-top border-white';
+        else if (isParent) { // Level 1
+            rowBg = 'table-secondary fw-bold border-top border-white cursor-pointer'; 
             let icon = viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group');
-            nameHtml = `<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
+            
+            nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`; // ใส่ Chevron
 
             if (viewMode === 'LINE') { tLine = rawName; canClick = true; }
             else if (viewMode === 'TYPE') { tType = rawName; canClick = true; }
             
-            if (canClick) nameHtml = `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`;
+            if (toggleTarget) toggleAttr = `onclick="UI.toggleRows('${toggleTarget}', this)"`;
         } 
-        else if (isChild) {
-            rowClass = 'bg-light fw-bold';
-            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;"><span class="text-dark small"><i class="fas fa-angle-right me-1 text-muted"></i>${label}</span></div>`;
+        else if (isChild) { // Level 2 (แก้ตรงนี้ให้มี Chevron และกดได้)
+            rowBg = 'bg-light fw-bold cursor-pointer'; // เพิ่ม cursor-pointer
+            
+            // ขยับ Indent เข้ามา 25px
+            nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;">${chevron}${label}</div>`;
+            
             if (meta) { tLine = meta.line || ''; tShift = meta.shift || ''; tType = meta.type || 'ALL'; canClick = true; }
+            
+            // ใส่ onclick ให้ Level 2 ด้วย
+            if (toggleTarget) toggleAttr = `onclick="UI.toggleRows('${toggleTarget}', this)"`;
         } 
-        else if (isGrandChild) {
-            rowClass = 'bg-white';
-            nameHtml = `<div style="padding-left: 50px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
+        else if (isGrandChild) { // Level 3
+            rowBg = 'bg-white';
+            // ขยับ Indent เข้ามา 55px (ลึกกว่า Level 2)
+            nameHtml = `<div style="padding-left: 55px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
             if (meta) { tLine = meta.line; tShift = meta.shift; tType = meta.type; canClick = true; }
         }
 
+        // Action Filter Logic (คงเดิม)
         const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
         const hoverClass = canClick ? 'cursor-pointer-cell' : '';
         const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
 
         return `
-            <tr class="${rowClass}">
-                <td class="ps-3 text-truncate" style="max-width: 300px;">${nameHtml}</td>
+            <tr class="${rowBg} ${rowHtmlClass}" style="${rowStyle}" ${toggleAttr}>
+                <td class="ps-3 text-truncate" style="max-width: 300px;">
+                    ${(isParent || isChild) ? nameHtml : // ถ้าเป็น Parent/Child ให้คลิกทั้งช่องได้ (เพื่อ Toggle)
+                      (isGrand ? nameHtml : `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`)
+                    }
+                </td>
                 <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
                 <td class="text-center fw-bold ${hoverClass}" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
                 <td class="text-center text-success ${hoverClass}" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
@@ -713,41 +812,52 @@ const Actions = {
                         <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
                     </td>
                     <td class="p-1 text-center cursor-pointer-cell">
-                         ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
-                         <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
-                         ${forgotOutHtml}
+                        ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
+                        <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
+                        ${forgotOutHtml}
                     </td>
                     <td class="p-1">
                         <select class="form-select form-select-sm border-0 bg-transparent fw-bold shadow-none text-uppercase" id="status_${uid}" style="font-size: 0.75rem;">${statusOptsHtml}</select>
                     </td>
                     <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
                     <td class="text-end pe-3 align-middle">${costHtml}</td>
-                    <td class="text-center text-nowrap">
-                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.openEmpEdit('${masterJson}')" title="Edit Employee Master"><i class="fas fa-pen text-secondary" style="font-size: 0.7rem;"></i></button>
+                    
+                    <td class="text-center text-nowrap align-middle">
                         
-                        <div class="btn-group me-1">
-                            <button class="btn btn-sm btn-outline-info shadow-sm rounded-circle" style="width: 28px; height: 28px;" data-bs-toggle="dropdown" title="ลงบันทึกการลา">
-                                <i class="fas fa-calendar-minus" style="font-size: 0.7rem;"></i>
+                        <button class="btn btn-sm btn-primary rounded-circle shadow-sm me-1" 
+                                style="width: 32px; height: 32px;" 
+                                onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" 
+                                title="บันทึกข้อมูล">
+                            <i class="fas fa-save"></i>
+                        </button>
+
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-light text-secondary rounded-circle" 
+                                    style="width: 32px; height: 32px;" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
                             </button>
-                            <ul class="dropdown-menu shadow border-0" style="font-size: 0.8rem;">
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'SICK')">🤢 ลาป่วย (SICK)</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'BUSINESS')">👜 ลากิจ (BUSINESS)</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'VACATION')">🏖️ พักร้อน (VACATION)</a></li>
+                            
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.85rem; min-width: 180px;">
+                                
+                                <li><h6 class="dropdown-header text-uppercase small my-0">Quick Actions</h6></li>
+                                
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'SICK')"><i class="fas fa-procedures text-warning me-2"></i>ลาป่วย (Sick)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'BUSINESS')"><i class="fas fa-briefcase text-info me-2"></i>ลากิจ (Business)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'VACATION')"><i class="fas fa-umbrella-beach text-success me-2"></i>พักร้อน (Vacation)</a></li>
+                                
+                                <li><hr class="dropdown-divider"></li>
+                                
+                                <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')"><i class="fas fa-history text-secondary me-2"></i>ดูประวัติย้อนหลัง</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-user-edit text-secondary me-2"></i>แก้ไขข้อมูลหลัก</a></li>
+
+                                <li><hr class="dropdown-divider"></li>
+                                
+                                <li><a class="dropdown-item text-danger" href="#" onclick="Actions.deleteLog('${row.log_id}', '${row.name_th}')"><i class="fas fa-trash-alt me-2"></i>ลบรายการวันนี้</a></li>
                             </ul>
                         </div>
 
-                        <button class="btn btn-sm btn-outline-dark shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.terminateStaff('${uid}', '${row.name_th}')" title="แจ้งพนักงานลาออก"><i class="fas fa-user-slash" style="font-size: 0.7rem;"></i></button>
-
-                        <button class="btn btn-sm btn-outline-secondary shadow-sm rounded-circle me-1" 
-                                style="width: 28px; height: 28px;" 
-                                onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')" 
-                                title="ดูประวัติการเข้างาน">
-                            <i class="fas fa-history" style="font-size: 0.7rem;"></i>
-                        </button>
-
-                        <button class="btn btn-sm btn-primary shadow-sm rounded-circle me-1" style="width: 28px; height: 28px;" onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" title="Save Daily Status"><i class="fas fa-save" style="font-size: 0.7rem;"></i></button>
-                        
-                        <button class="btn btn-sm btn-outline-danger shadow-sm rounded-circle" style="width: 28px; height: 28px;" onclick="Actions.deleteLog('${row.log_id}', '${row.name_th}')" title="ลบรายการเฉพาะวันนี้"><i class="fas fa-trash-alt" style="font-size: 0.7rem;"></i></button>
                     </td>
                 </tr>`;
         }).join('');
