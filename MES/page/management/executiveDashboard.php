@@ -23,8 +23,8 @@ $pageHelpId = "execHelpModal";
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
+    <?php include_once '../components/chart_head.php'; ?>
+    <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
 </head>
 <body class="layout-top-header">
     

@@ -30,7 +30,6 @@ if (defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === true && !$isApiRequest) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
             <style>body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; }</style>
         </head>
         <body>

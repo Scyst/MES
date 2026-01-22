@@ -6,4 +6,4 @@
 <script src="../../utils/libs/chartjs-plugin-zoom.min.js"></script>
 <script src="../../utils/libs/chartjs-plugin-annotation.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="../../utils/libs/flatpickr.min.js"></script>

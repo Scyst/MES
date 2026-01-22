@@ -65,8 +65,8 @@
             
             <div class="modal-footer bg-light py-1 justify-content-between">
                 <div class="small text-muted fst-italic">
-                    <i class="bi bi-tag me-1"></i>Price: <span id="finUnitPrice">-</span> | 
-                    <i class="bi bi-layers me-1"></i>Cost: <span id="finUnitCost">-</span>
+                    <i class="fas fa-tag me-1"></i>Price: <span id="finUnitPrice">-</span> | 
+                    <i class="fas fa-layer-group me-1"></i>Cost: <span id="finUnitCost">-</span>
                 </div>
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>

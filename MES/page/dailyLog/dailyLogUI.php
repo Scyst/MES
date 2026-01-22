@@ -184,7 +184,6 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
     <?php include __DIR__ . '/components/logModals.php'; ?>
     <?php include __DIR__ . '/components/avgMoodModal.php'; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="script/dailyLog.js?v=<?php echo time(); ?>"></script>
+    <script src="script/dailyLog.js?v=<?php echo filemtime(__DIR__ . '/script/dailyLog.js'); ?>"></script>
 </body>
 </html>

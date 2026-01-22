@@ -12,7 +12,6 @@ $pageTitle = "Loading Inspection";
     <?php include_once __DIR__ . '/../components/common_head.php'; ?> 
     
     <link href="css/loading_report.css?v=<?php echo time(); ?>" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 </head>
 <body class="layout-top-header">

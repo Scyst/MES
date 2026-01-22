@@ -25,11 +25,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
-    
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    
+    <script src="../../utils/libs/fullcalendar.global.min.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="css/managementDashboard.css?v=<?php echo time(); ?>">
@@ -110,7 +106,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                                 
                                                 <div class="vr mx-1 opacity-25"></div>
                                                 <a href="executiveDashboard.php" class="btn btn-sm btn-light border text-dark fw-bold" title="Go to Executive Dashboard" style="font-size: 0.8rem;">
-                                                <i class="bi bi-speedometer2 me-1" style="font-size: 1rem;"></i>
+                                                <i class="fas fa-tachometer-alt me-1" style="font-size: 1rem;"></i>
                                                 </a>
 
                                             </div>
@@ -132,7 +128,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                     <div class="card-header bg-white py-2 border-bottom d-flex align-items-center justify-content-between"> 
                                         <div class="d-flex gap-1">
                                             <button id="calendar-prev-button" class="btn btn-sm btn-light border text-muted" title="Previous">
-                                                <i class="bi bi-chevron-left"></i>
+                                                <i class="fas fa-chevron-left"></i>
                                             </button>
                                             <button id="calendar-today-button" class="btn btn-sm btn-light border text-dark fw-bold px-3">
                                                 Today
@@ -150,7 +146,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                             </div>
                                             
                                             <button id="calendar-next-button" class="btn btn-sm btn-light border text-muted" title="Next">
-                                                <i class="bi bi-chevron-right"></i>
+                                                <i class="fas fa-chevron-right"></i>
                                             </button>
                                         </div>
                                     </div>

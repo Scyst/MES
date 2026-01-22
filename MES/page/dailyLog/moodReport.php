@@ -384,7 +384,6 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script/moodReport.js?v=<?php echo time(); ?>"></script>
     
 </body>
