@@ -454,3 +454,68 @@ div[style*="border-left"] {
 #tableBody td.text-center {
     font-weight: 600; /* ตัวเลขหนาขึ้นนิดนึง */
 }
+
+/* =================================================================== */
+/* 10. UX IMPROVEMENTS: STICKY HEADER, SKELETON & EMPTY STATE */
+/* =================================================================== */
+
+/* --- A. STICKY HEADER (หัวตารางลอย) --- */
+.table-responsive {
+    max-height: 75vh; /* ปรับความสูงตามต้องการ */
+    overflow-y: auto;
+    box-shadow: 0 0 15px rgba(0,0,0,0.05);
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #eaecf4 !important; /* ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
+    box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
+}
+
+/* Scrollbar สวยๆ (Webkit) */
+.table-responsive::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-responsive::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+
+/* --- B. SKELETON LOADING (Animation โหลด) --- */
+.skeleton-box {
+    display: inline-block;
+    height: 1em;
+    position: relative;
+    overflow: hidden;
+    background-color: #dddbdd;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.skeleton-box::after {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 2s infinite;
+    content: '';
+}
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+
+/* --- C. FIX DROPDOWN CLIPPING (แก้เมนูโดนบังในตาราง) --- */
+/* ปัญหา: เวลาตารางมี overflow:auto เมนู Dropdown มักจะถูกซ่อน */
+.table-responsive {
+    /* ถ้าตารางสูงพอ Dropdown จะไม่โดนบัง แต่ถ้าตารางเตี้ยต้องระวัง */
+    /* วิธีแก้ที่ดีที่สุดคือใช้ JS ย้าย Dropdown ไปที่ Body หรือเพิ่มความสูงขั้นต่ำ */
+    min-height: 300px; 
+}

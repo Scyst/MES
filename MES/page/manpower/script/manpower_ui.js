@@ -282,17 +282,45 @@ const UI = {
 
     _calculateDiff(obj) { obj.diff = obj.actual - obj.plan; },
 
-    /**
-     * [REFACTOR V2] Multi-level Drilldown (Nested Grouping)
-     * Level 1 (Line) -> Level 2 (Shift/Sub) -> Level 3 (Employees)
-     */
+    getSkeletonRow(colCount = 10) {
+        // สร้างแถวจำลอง 5 แถว
+        let html = '';
+        for(let i=0; i<5; i++) {
+            html += `
+                <tr>
+                    <td class="ps-4"><span class="skeleton-box" style="width: 150px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 80px;"></span></td>
+                </tr>
+            `;
+        }
+        return html;
+    },
+    
     renderTable(data, viewMode = 'LINE') {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        if (!data || data.length === 0) { 
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; 
-            return; 
-        }
+        if (!data || data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center justify-content-center opacity-50">
+                        <i class="fas fa-folder-open fa-3x mb-3 text-gray-300"></i>
+                        <h6 class="fw-bold text-secondary">ไม่พบข้อมูลตามเงื่อนไข</h6>
+                        <small class="text-muted">ลองเปลี่ยนวันที่ หรือตัวกรองข้อมูลใหม่</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
         
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
@@ -478,13 +506,12 @@ const Actions = {
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
 
     async openDetailModal(line, shiftId, empType = 'ALL', filterStatus = 'ALL') {
-        // Handle arguments
         if (arguments.length === 3 && (empType === 'ALL' || empType === 'PRESENT' || empType === 'LATE' || empType === 'ABSENT')) {
              filterStatus = empType; empType = 'ALL';
         }
         this._lastDetailParams = { line, shiftId, empType, filterStatus };
         
-        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        const modalEl = document.getElementById('detailModal');
         
         // Setup Title
         let title = line ? `${line}` : 'รายละเอียดทั้งหมด';
@@ -493,8 +520,8 @@ const Actions = {
         if (filterStatus !== 'ALL') title += ` - ${filterStatus}`;
         
         document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
-        
-        // 🔥 [PERFORMANCE FIX] Reset ตารางให้เป็น Loading ทันที
+
+        // Set Skeleton
         document.getElementById('detailModalTable').innerHTML = `
             <thead>
                 <tr class="table-light text-secondary small text-center">
@@ -504,25 +531,25 @@ const Actions = {
                 </tr>
             </thead>
             <tbody id="detailModalBody">
-                <tr><td colspan="10" class="text-center py-5">
-                    <div class="spinner-border text-primary mb-2"></div>
-                    <div>Loading Data...</div>
-                </td></tr>
+                ${UI.getSkeletonRow(10)}
             </tbody>`;
         
         // Reset Search Input
         const searchInput = document.getElementById('searchDetail');
         if(searchInput) {
             searchInput.value = '';
-            this.initSearch(); // Bind Search Event
+            this.initSearch(); 
         }
 
-        // 🔥 [KEY FIX] แสดง Modal ให้เสร็จก่อน แล้วค่อยโหลดข้อมูล (แก้ Modal ค้าง)
-        modal.show();
-        
+        if (!modalEl.classList.contains('show')) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } 
+
+        // โหลดข้อมูล
         setTimeout(() => {
             this.fetchDetailData();
-        }, 300); // รอ 0.3 วิ ให้ Animation Modal เล่นจบก่อนค่อยโหลด
+        }, 300);
     },
 
     async fetchDetailData() {
@@ -714,29 +741,66 @@ const Actions = {
         lastMonth.setDate(lastMonth.getDate() - 30);
         const startDate = lastMonth.toISOString().split('T')[0];
 
-        // เราใช้ Detail Modal ตัวเดิมในการแสดงผลได้เลย เพื่อความรวดเร็ว
-        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-history me-2"></i> ประวัติ 30 วัน: ${name} (${empId})`;
+        const modalEl = document.getElementById('detailModal');
         
-        // แสดง Loading
-        document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
-        modal.show();
+        // ---------------------------------------------------------------------
+        // 🔥 [FIX] เช็คก่อนว่า Modal เปิดอยู่ไหม เพื่อแก้บัคจอดำ (Backdrop ซ้อน)
+        // ---------------------------------------------------------------------
+        const isAlreadyOpen = modalEl.classList.contains('show');
+        
+        // เปลี่ยน Title
+        const titleEl = document.getElementById('detailModalTitle');
+        
+        // เพิ่มปุ่ม "ย้อนกลับ" (Back) เพื่อให้ User กลับไปหน้ารายชื่อได้โดยไม่ต้องปิด Modal
+        if (isAlreadyOpen) {
+            // จำ Title เดิมไว้ (ถ้าอยาก Advance เก็บใส่ตัวแปร global ได้ แต่นี่เอาแบบง่ายก่อน)
+            if (!this._originalTitle) this._originalTitle = titleEl.innerHTML;
+            
+            titleEl.innerHTML = `
+                <button class="btn btn-sm btn-outline-secondary me-2 rounded-circle" 
+                        onclick="Actions.backToDailyList()" title="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <i class="fas fa-history me-2 text-muted"></i> ประวัติ: ${name}
+            `;
+        } else {
+            titleEl.innerHTML = `<i class="fas fa-history me-2"></i> ประวัติ 30 วัน: ${name}`;
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        // แสดง Loading Skeleton
+        document.getElementById('detailModalBody').innerHTML = UI.getSkeletonRow(10);
 
         try {
-            // เรียก API เดิมที่มีอยู่แล้ว แต่ระบุช่วงวันที่ (startDate ถึง today)
-            // และใช้ emp_id เป็นฟิลเตอร์ (ต้องปรับปรุง API เล็กน้อยในขั้นตอนถัดไป)
             const url = `api/api_daily_operations.php?action=read_daily&startDate=${startDate}&endDate=${today}&emp_id=${empId}`;
             const res = await fetch(url);
             const json = await res.json();
             
             if (json.success) {
-                // กรองเอาเฉพาะของพนักงานคนนี้ (กรณี API ส่งมาหมด)
                 const history = json.data.filter(r => r.emp_id === empId);
-                this.renderDetailTable(history); // ใช้ฟังก์ชันวาดตารางเดิมได้เลย
+                // เรียงวันที่ล่าสุดขึ้นก่อน
+                history.sort((a, b) => new Date(b.log_date) - new Date(a.log_date));
+                
+                this.renderDetailTable(history); 
             }
         } catch (err) {
             console.error(err);
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load history</td></tr>`;
         }
+    },
+
+    backToDailyList() {
+        // คืนค่า Title เดิม (ถ้ามี) หรือ Default
+        const titleEl = document.getElementById('detailModalTitle');
+        // รีเซ็ต Title กลับเป็นแบบ Daily List (ดึงจาก function openDetailModal เดิมแบบ manual)
+        // หรือเรียก openDetailModal ซ้ำด้วย Params ล่าสุดที่ cached ไว้
+        this.openDetailModal(
+            this._lastDetailParams.line, 
+            this._lastDetailParams.shiftId, 
+            this._lastDetailParams.empType, 
+            this._lastDetailParams.filterStatus
+        );
     },
 
     renderDetailTable(list) {
@@ -835,7 +899,7 @@ const Actions = {
                             <button class="btn btn-sm btn-light text-secondary rounded-circle" 
                                     style="width: 32px; height: 32px;" 
                                     data-bs-toggle="dropdown" 
-                                    aria-expanded="false">
+                                    data-bs-boundary="viewport"  aria-expanded="false">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             
@@ -907,12 +971,23 @@ const Actions = {
             });
             const json = await res.json();
             if (json.success) {
-                btn.classList.replace('btn-primary', 'btn-success'); btn.innerHTML = '<i class="fas fa-check"></i>';
+                btn.classList.replace('btn-primary', 'btn-success'); 
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                
                 setTimeout(async () => {
-                    btn.classList.replace('btn-success', 'btn-primary'); btn.innerHTML = originalIcon; btn.disabled = false;
-                    await Actions.fetchDetailData(); App.loadData();
-                }, 500);
-            } else { alert('Error: ' + json.message); btn.innerHTML = originalIcon; btn.disabled = false; }
+                    btn.classList.replace('btn-success', 'btn-primary'); 
+                    btn.innerHTML = originalIcon; 
+                    btn.disabled = false;
+
+                    if(typeof App !== 'undefined') App.loadData(true);
+
+                }, 1000);
+
+            } else { 
+                alert('Error: ' + json.message); 
+                btn.innerHTML = originalIcon; 
+                btn.disabled = false; 
+            }
         } catch (err) { alert('Failed: ' + err.message); btn.innerHTML = originalIcon; btn.disabled = false; }
     },
 
@@ -1005,7 +1080,7 @@ const Actions = {
     _employeeCache: [],
     async openEmployeeManager() {
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
-        document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+        document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(8);
         if(!document.getElementById('empListModal').classList.contains('show')) modal.show();
         
         try {

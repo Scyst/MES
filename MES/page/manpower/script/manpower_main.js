@@ -34,25 +34,6 @@ const App = {
         }
     },
 
-    async loadData() {
-        UI.showLoader(); 
-        try {
-            // เรียก API
-            const data = await API.getSummary(this.currentDate);
-            
-            // ส่งข้อมูลให้ UI วาด
-            if (data) {
-                UI.renderKPI(data);
-                UI.renderCharts(data);
-                UI.renderTable(data, this.viewMode);
-            }
-        } catch (error) {
-            console.error('Load Data Failed:', error);
-        } finally {
-            UI.hideLoader();
-        }
-    },
-
     async syncNow() {
         UI.showLoader();
         try {
@@ -77,16 +58,47 @@ const App = {
 
     startAutoRefresh() {
         if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
+        
         this.autoRefreshTimer = setInterval(() => {
-            const today = new Date().toISOString().split('T')[0];
-            const dateInput = document.getElementById('filterDate');
-            const selectedDate = dateInput ? dateInput.value : this.currentDate;
-
-            if (selectedDate === today) {
-                console.log("Auto refreshing data...");
-                this.loadData();
+            // 🔥 [FIXED] เช็คก่อนว่า User กำลังเปิด Modal ทำงานอยู่ไหม?
+            const isModalOpen = document.getElementById('detailModal')?.classList.contains('show');
+            const isEmpModalOpen = document.getElementById('empListModal')?.classList.contains('show');
+            
+            // ถ้ามี Modal เปิดอยู่ "ห้าม Refresh" เดี๋ยวงาน User หาย
+            if (isModalOpen || isEmpModalOpen) {
+                console.log("Auto-refresh skipped (User is working)");
+                return; 
             }
-        }, 300000); // 5 นาที
+
+            // ถ้าไม่มีใครทำงาน ค่อยโหลดแบบ Silent
+            this.loadData(true); 
+
+        }, 300000); // 5 นาที (300,000 ms)
+    },
+
+    // ปรับปรุง loadData ให้รองรับ Silent Mode (ไม่ขึ้น Loading บังหน้าจอ)
+    async loadData(isSilent = false) {
+        // ถ้าไม่ใช่ Silent (เช่น กดเปลี่ยนวันที่เอง) ให้โชว์ Loader
+        if (!isSilent) UI.showLoader(); 
+        
+        try {
+            const data = await API.getSummary(this.currentDate);
+            
+            if (data) {
+                UI.renderKPI(data);
+                UI.renderCharts(data);
+                
+                // ถ้าเป็น Silent Mode และ User ไม่ได้เปิด Modal ค่อยอัปเดตตารางหลัก
+                const isModalOpen = document.getElementById('detailModal')?.classList.contains('show');
+                if (!isModalOpen) {
+                    UI.renderTable(data, this.viewMode);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            if (!isSilent) UI.hideLoader();
+        }
     },
 
     async resetDailyData() {
