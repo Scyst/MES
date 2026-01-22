@@ -14,7 +14,7 @@ $pageHelpId = "helpModal";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script> 
+    <script src="../../utils/libs/Sortable.min.js"></script> 
     
     <style>
         /* Interactive Sort Header Style */
@@ -305,7 +305,7 @@ $pageHelpId = "helpModal";
     ?>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
     <script src="script/salesDashboard.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

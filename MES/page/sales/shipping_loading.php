@@ -22,7 +22,6 @@ $pageHelpId = "helpModal";
     <?php include_once '../components/common_head.php'; ?> 
     
     <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     
     <?php if ($isLocked): ?>
     <style>
@@ -309,8 +308,7 @@ $pageHelpId = "helpModal";
         const isCustomer = <?php echo json_encode($isCustomer); ?>;
     </script>
     
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/shipping_loading.js?v=<?php echo time(); ?>"></script>
 </body>

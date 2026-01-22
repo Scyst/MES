@@ -266,8 +266,7 @@ $pageTitle = "Loading Inspection";
                     </div> </div> </div> </div> </div> <input type="hidden" id="current_so_id">
     <input type="hidden" id="current_report_id">
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
     <script src="script/loading_report.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

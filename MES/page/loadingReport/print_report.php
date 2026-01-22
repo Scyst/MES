@@ -83,7 +83,7 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
     <meta charset="UTF-8">
     <title>Report_<?php echo $header['po_number']; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
     
     <style>
         /* === A4 SETTINGS === */

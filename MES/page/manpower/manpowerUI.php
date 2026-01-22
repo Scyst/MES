@@ -251,7 +251,6 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script/manpower_api.js?v=<?php echo time(); ?>"></script>
     <script src="script/manpower_ui.js?v=<?php echo time(); ?>"></script>
     <script src="script/manpower_main.js?v=<?php echo time(); ?>"></script>

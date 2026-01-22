@@ -19,6 +19,7 @@
 
 <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
 <script src="../../utils/libs/sweetalert2.all.min.js"></script>
+<script src="../../utils/libs/flatpickr.min.js"></script>
 
 <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
 <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
