@@ -79,22 +79,38 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
 
         <div class="portal-container">
             <div class="portal-col">
+                
                 <div class="welcome-box">
-                    <h1>สวัสดี คุณ <?php echo htmlspecialchars($fullName); ?> 👋</h1>
-                    <div class="welcome-info mt-2">
-                        <?php if ($isLoggedIn): ?>
-                            <span class="badge bg-light text-secondary border me-1 fw-normal">
-                                <i class="fas fa-id-badge me-1"></i> <?php echo htmlspecialchars($user['emp_id'] ?? '-'); ?>
-                            </span>
-                            <span class="badge bg-light text-secondary border me-1 fw-normal">
-                                <i class="fas fa-industry me-1"></i> Line: <?php echo htmlspecialchars($user['line'] ?? '-'); ?>
-                            </span>
-                            <span class="badge bg-primary bg-opacity-10 text-primary border">
-                                <?php echo htmlspecialchars($user['position'] ?? $user['role']); ?>
-                            </span>
-                        <?php else: ?>
-                            <span class="text-muted"><i class="fas fa-info-circle me-1"></i> กรุณาเข้าสู่ระบบเพื่อใช้งานฟังก์ชันพนักงาน</span>
-                        <?php endif; ?>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h1>สวัสดี คุณ <?php echo htmlspecialchars($fullName); ?> 👋</h1>
+                            <div class="welcome-info mt-2">
+                                <?php if ($isLoggedIn): ?>
+                                    <span class="badge bg-light text-secondary border me-1 fw-normal">
+                                        <i class="fas fa-id-badge me-1"></i> <?php echo htmlspecialchars($user['emp_id'] ?? '-'); ?>
+                                    </span>
+                                    <span class="badge bg-light text-secondary border me-1 fw-normal">
+                                        <i class="fas fa-industry me-1"></i> Line: <?php echo htmlspecialchars($user['line'] ?? '-'); ?>
+                                    </span>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border">
+                                        <?php echo htmlspecialchars($user['position'] ?? $user['role']); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted"><i class="fas fa-info-circle me-1"></i> กรุณาเข้าสู่ระบบเพื่อใช้งานฟังก์ชันพนักงาน</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="position-relative d-none" id="notificationWrapper">
+                            <button class="btn btn-white shadow-sm border rounded-circle position-relative p-2" style="width: 45px; height: 45px;" onclick="openNotificationModal()">  
+                                <i class="fas fa-bell text-secondary fa-lg"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" 
+                                    id="notificationBadge" 
+                                    style="font-size: 0.7rem;">
+                                    0
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -183,6 +199,7 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
 
     <?php include __DIR__ . '/components/logModals.php'; ?>
     <?php include __DIR__ . '/components/avgMoodModal.php'; ?>
+    <?php include __DIR__ . '/components/notificationModal.php'; ?>
 
     <script src="script/dailyLog.js?v=<?php echo filemtime(__DIR__ . '/script/dailyLog.js'); ?>"></script>
 </body>

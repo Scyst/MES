@@ -247,6 +247,17 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
                             <button class="btn btn-outline-success btn-sm" onclick="exportTableToExcel()">
                                 <i class="fas fa-file-excel me-2"></i>Export
                             </button>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-2">Rows:</small>
+                                <select class="form-select form-select-sm border-0 bg-light fw-bold" 
+                                        style="width: 70px;" 
+                                        onchange="changePageSize(this.value)">
+                                    <option value="20">20</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -255,13 +266,16 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0" id="issueTable">
                                     <thead class="bg-white border-bottom">
-                                        <tr class="text-uppercase small">
-                                            <th style="width: 10%;" class="py-3 ps-3">Date</th>
-                                            <th style="width: 10%;" class="text-center">Line</th>
-                                            <th style="width: 25%;">Employee</th>
-                                            <th style="width: 10%;" class="text-center">Period</th>
-                                            <th style="width: 10%;" class="text-center">Score</th>
-                                            <th style="width: 35%;">Note / Issue</th>
+                                        <tr class="text-uppercase small text-secondary">
+                                            <th class="py-3 px-4 text-nowrap" style="width: 1%; white-space: nowrap;">Date</th>
+                                            
+                                            <th class="text-center text-nowrap px-3" style="width: 1%; white-space: nowrap;">Line</th>
+                                            
+                                            <th class="px-4 text-center text-nowrap" style="width: 1%; white-space: nowrap;">Employee</th>
+                                            
+                                            <th class="text-center text-nowrap px-4" style="width: 1%; white-space: nowrap;">Mood Timeline</th>
+                                            
+                                            <th class="ps-3 text-center">Notes & Feedback</th>
                                         </tr>
                                     </thead>
                                     <tbody id="issueTableBody" class="border-top-0"></tbody>
@@ -384,6 +398,7 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
         </div>
     </div>
 
+    <?php include_once __DIR__ . '/components/replyModal.php'; ?>
     <script src="script/moodReport.js?v=<?php echo time(); ?>"></script>
     
 </body>

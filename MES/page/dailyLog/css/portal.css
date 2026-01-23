@@ -292,3 +292,16 @@ body.modal-open {
 .report-header {
     padding-right: 1.5rem !important; /* ค่าเดิมตาม Design ของคุณ */
 }
+
+/* Unread Notification Pulse in Calendar */
+.snc-cal-day.unread-pulse {
+    border: 1px solid #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.05);
+    animation: border-pulse 2s infinite;
+}
+
+@keyframes border-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}

@@ -7,12 +7,13 @@ const API_URL = 'api/moodReportAPI.php';
 let chartInstances = {}; 
 let isPrivacyMode = true; 
 let passwordModalInstance = null;
-let currentMissingData = []; // เก็บข้อมูล Missing ของหน้าปัจจุบัน
-let tableDataCache = [];     // เก็บข้อมูล Issues ของหน้าปัจจุบัน (สำคัญสำหรับ Negative Modal)
+let replyModalInstance = null; // [NEW]
+let currentMissingData = [];
+let tableDataCache = []; 
 
 // Pagination State
-let issueState = { page: 1, limit: 10, total: 0 };
-let missingState = { page: 1, limit: 10, total: 0 };
+let issueState = { page: 1, limit: 50, total: 0 };
+let missingState = { page: 1, limit: 50, total: 0 };
 
 // Modal Instances
 let missingModalInstance = null;
@@ -41,22 +42,16 @@ function getAvatarChar(name) {
 // ฟังก์ชันสลับโหมด พร้อมถามรหัสผ่าน
 window.togglePrivacyMode = function() {
     if (!isPrivacyMode) {
-        // ถ้าจะปิดข้อมูล (Hide) -> ทำได้เลย
         isPrivacyMode = true;
         updatePrivacyUI();
         refreshAllTables();
         return;
     }
-
-    // ถ้าจะเปิดข้อมูล (Show) -> เปิด Modal ถามรหัส
     if (!passwordModalInstance) {
         passwordModalInstance = new bootstrap.Modal(document.getElementById('passwordModal'));
     }
-    
-    // เคลียร์ค่าเก่า
     document.getElementById('confirmPasswordInput').value = '';
     document.getElementById('passwordErrorMsg').classList.add('d-none');
-    
     passwordModalInstance.show();
     setTimeout(() => document.getElementById('confirmPasswordInput').focus(), 500);
 }
@@ -96,16 +91,12 @@ window.submitPasswordVerification = async function() {
             passwordInput.value = '';
             passwordInput.focus();
         }
-
         btn.disabled = false;
         btn.innerHTML = originalText;
-
     } catch (err) {
         console.error(err);
         errorMsg.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
         errorMsg.classList.remove('d-none');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
     }
 }
 
@@ -128,16 +119,8 @@ function updatePrivacyUI() {
 }
 
 function refreshAllTables() {
-    // รีโหลดเฉพาะข้อมูลของหน้าปัจจุบัน (ไม่ต้อง reset page เป็น 1)
     loadIssuesTable(issueState.page);
     loadMissingTable(missingState.page);
-    
-    // ถ้า Modal เปิดอยู่ ให้วาดใหม่ด้วย
-    const missingModalEl = document.getElementById('missingModal');
-    if (missingModalEl && missingModalEl.classList.contains('show')) window.openMissingModal();
-    
-    const negModalEl = document.getElementById('negativeModal');
-    if (negModalEl && negModalEl.classList.contains('show')) window.openNegativeModal();
 }
 
 // ===== 2. Helper Functions (Common) =====
@@ -191,7 +174,6 @@ async function initPage() {
     if (!startEl.value) startEl.value = formatDate(firstDay);
     if (!endEl.value) endEl.value = formatDate(today);
 
-    // Load Filter Options
     try {
         const formData = new FormData();
         formData.append('action', 'get_filters');
@@ -202,14 +184,15 @@ async function initPage() {
         }
     } catch (err) { console.error(err); }
 
+    // Init Modal
+    replyModalInstance = new bootstrap.Modal(document.getElementById('replyModal'));
+
     handleFilterChange();
 }
 
 async function handleFilterChange() {
-    // เมื่อเปลี่ยน Filter ให้รีเซ็ตกลับไปหน้า 1
     issueState.page = 1;
     missingState.page = 1;
-
     toggleLoading(true);
     try {
         await Promise.all([
@@ -236,16 +219,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') submitPasswordVerification();
         });
     }
+
+    // Char Count for Reply
+    const replyInput = document.getElementById('replyInputMessage');
+    if (replyInput) {
+        replyInput.addEventListener('input', function() {
+            document.getElementById('replyCharCount').innerText = this.value.length + " chars";
+        });
+    }
 });
 
-// --- 3.1 Load Overview (KPI & Charts) ---
+// --- 3.1 Load Overview ---
 async function loadOverviewStats() {
     const formData = getFilterParams();
     formData.append('action', 'get_overview_stats');
-
     const res = await fetch(API_URL, { method: 'POST', body: formData });
     const data = await res.json();
-
     if (data.success) {
         renderKPI(data.kpi);
         renderTrendChart(data.trend);
@@ -254,7 +243,7 @@ async function loadOverviewStats() {
     }
 }
 
-// --- 3.2 Load Issues Table (Pagination) ---
+// --- 3.2 Load Issues Table ---
 async function loadIssuesTable(page = 1) {
     issueState.page = page;
     const formData = getFilterParams();
@@ -267,16 +256,13 @@ async function loadIssuesTable(page = 1) {
 
     if (result.success) {
         issueState.total = result.pagination.total;
-        
-        // [FIXED] ต้องอัปเดต cache เพื่อใช้ใน Negative Modal
         tableDataCache = result.data; 
-
         renderTable(result.data);
         renderPagination('issuePagination', issueState, loadIssuesTable, 'issuePaginationInfo');
     }
 }
 
-// --- 3.3 Load Missing Table (Pagination) ---
+// --- 3.3 Load Missing Table ---
 async function loadMissingTable(page = 1) {
     missingState.page = page;
     const formData = getFilterParams();
@@ -289,14 +275,10 @@ async function loadMissingTable(page = 1) {
 
     if (result.success) {
         missingState.total = result.pagination.total;
-        
-        // เก็บ data ชุดนี้ไว้เปิด Modal (จะได้เฉพาะหน้าปัจจุบัน)
         currentMissingData = result.data;
-
         renderMissingTable(result.data);
         renderPagination('missingPagination', missingState, loadMissingTable, 'missingPaginationInfo');
         
-        // Update Tabs Count & KPI Text
         document.getElementById('tabMissingCount').innerText = missingState.total;
         const kpiText = document.getElementById('kpiResponseText');
         const kpiBadge = document.getElementById('kpiMissingCountBadge');
@@ -311,8 +293,7 @@ async function loadMissingTable(page = 1) {
     }
 }
 
-// ===== 4. Pagination Renderer =====
-
+// ===== 4. Pagination Renderer (No Change) =====
 function renderPagination(elementId, state, callback, infoId) {
     const ul = document.getElementById(elementId);
     const info = document.getElementById(infoId);
@@ -338,29 +319,24 @@ function renderPagination(elementId, state, callback, infoId) {
     };
 
     ul.appendChild(createLi('<i class="fas fa-chevron-left"></i>', state.page - 1, false, state.page === 1));
-
     let startPage = Math.max(1, state.page - 2);
     let endPage = Math.min(totalPages, startPage + 4);
     if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-
     if (startPage > 1) {
         ul.appendChild(createLi('1', 1));
         if (startPage > 2) ul.appendChild(createLi('...', state.page, false, true));
     }
-
     for (let i = startPage; i <= endPage; i++) {
         ul.appendChild(createLi(i, i, i === state.page));
     }
-
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) ul.appendChild(createLi('...', state.page, false, true));
         ul.appendChild(createLi(totalPages, totalPages));
     }
-
     ul.appendChild(createLi('<i class="fas fa-chevron-right"></i>', state.page + 1, false, state.page === totalPages));
 }
 
-// ===== 5. Rendering Functions (Tables & Charts) =====
+// ===== 5. Rendering Functions =====
 
 function renderKPI(kpi) {
     const setText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
@@ -378,61 +354,20 @@ function renderKPI(kpi) {
     }
 }
 
+// (Chart Functions: renderTrendChart, renderLineChart, renderDistChart -> Same as original)
 function renderTrendChart(data) {
     const ctx = document.getElementById('trendChart').getContext('2d');
     const labels = data.map(d => formatDateShort(d.log_date));
     const values = data.map(d => d.daily_avg);
     const volumes = data.map(d => d.daily_vol);
-    
     if (chartInstances.trend) chartInstances.trend.destroy();
-    
     chartInstances.trend = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: 'Avg Mood Score', 
-                    data: values, 
-                    borderColor: '#0d6efd',
-                    backgroundColor: (context) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-                        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)'); 
-                        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
-                        return gradient;
-                    },
-                    yAxisID: 'y', 
-                    tension: 0.4, 
-                    fill: true, 
-                    pointRadius: 4, 
-                    pointBackgroundColor: '#fff', 
-                    pointBorderColor: '#0d6efd', 
-                    pointBorderWidth: 2
-                },
-                {
-                    label: 'Responses', 
-                    data: volumes, 
-                    type: 'bar', 
-                    backgroundColor: 'rgba(200, 200, 200, 0.2)', 
-                    hoverBackgroundColor: 'rgba(200, 200, 200, 0.4)',
-                    yAxisID: 'y1', 
-                    barThickness: 12, 
-                    borderRadius: 4
-                }
-            ]
+            datasets: [{ label: 'Avg Mood Score', data: values, borderColor: '#0d6efd', backgroundColor: (context) => { const ctx = context.chart.ctx; const gradient = ctx.createLinearGradient(0, 0, 0, 300); gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)'); gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)'); return gradient; }, yAxisID: 'y', tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#0d6efd', pointBorderWidth: 2 }, { label: 'Responses', data: volumes, type: 'bar', backgroundColor: 'rgba(200, 200, 200, 0.2)', hoverBackgroundColor: 'rgba(200, 200, 200, 0.4)', yAxisID: 'y1', barThickness: 12, borderRadius: 4 }]
         },
-        options: {
-            responsive: true, 
-            maintainAspectRatio: false, 
-            interaction: { mode: 'index', intersect: false },
-            scales: { 
-                y: { min: 1, max: 5, title: { display: true, text: 'Score' }, grid: { borderDash: [2, 2], color: '#f0f0f0' } }, 
-                y1: { position: 'right', grid: { display: false }, beginAtZero: true }, 
-                x: { grid: { display: false } } 
-            },
-            plugins: { tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8, displayColors: true } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { min: 1, max: 5, title: { display: true, text: 'Score' }, grid: { borderDash: [2, 2], color: '#f0f0f0' } }, y1: { position: 'right', grid: { display: false }, beginAtZero: true }, x: { grid: { display: false } } }, plugins: { tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8, displayColors: true } } }
     });
 }
 
@@ -440,111 +375,189 @@ function renderLineChart(data) {
     const ctx = document.getElementById('lineBarChart').getContext('2d');
     const labels = data.map(d => d.line || 'Unknown');
     const values = data.map(d => d.line_avg);
-    
     if (chartInstances.byLine) chartInstances.byLine.destroy();
-    
     const colors = values.map(v => v >= 4 ? '#198754' : (v >= 3 ? '#ffc107' : '#dc3545'));
-    
-    chartInstances.byLine = new Chart(ctx, {
-        type: 'bar', 
-        data: { 
-            labels: labels, 
-            datasets: [{ 
-                label: 'Avg Mood Score', 
-                data: values, 
-                backgroundColor: colors, 
-                borderRadius: 6, 
-                barThickness: 30 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { y: { beginAtZero: true, max: 5, grid: { borderDash: [2, 2], color: '#f0f0f0' } }, x: { grid: { display: false } } }, 
-            plugins: { legend: { display: false } } 
-        }
-    });
+    chartInstances.byLine = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Avg Mood Score', data: values, backgroundColor: colors, borderRadius: 6, barThickness: 30 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 5, grid: { borderDash: [2, 2], color: '#f0f0f0' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } } });
 }
 
 function renderDistChart(data) {
     const ctx = document.getElementById('distPieChart').getContext('2d');
     const map = {1:0, 2:0, 3:0, 4:0, 5:0};
     data.forEach(d => map[d.mood_score] = d.count_val);
-    
     if (chartInstances.dist) chartInstances.dist.destroy();
-    
-    chartInstances.dist = new Chart(ctx, {
-        type: 'doughnut', 
-        data: { 
-            labels: ['😤 Frustrated (1)', '😓 Stressed (2)', '😐 Neutral (3)', '🙂 Happy (4)', '🤩 Excited (5)'], 
-            datasets: [{ 
-                data: [map[1], map[2], map[3], map[4], map[5]], 
-                backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#0d6efd'], 
-                borderWidth: 2, 
-                borderColor: '#ffffff' 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            cutout: '75%', 
-            plugins: { legend: { position: 'right', labels: { boxWidth: 15, padding: 15, font: { size: 11 } } } } 
-        }
-    });
+    chartInstances.dist = new Chart(ctx, { type: 'doughnut', data: { labels: ['😤 Frustrated', '😓 Stressed', '😐 Neutral', '🙂 Happy', '🤩 Excited'], datasets: [{ data: [map[1], map[2], map[3], map[4], map[5]], backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#0d6efd'], borderWidth: 2, borderColor: '#ffffff' }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 15, padding: 15, font: { size: 11 } } } } } });
 }
 
-// ===== Tables Rendering =====
+// ===== 6. Table Rendering with Reply Button [UPDATED] =====
 
 function renderTable(data) {
     const tbody = document.getElementById('issueTableBody');
     tbody.innerHTML = '';
+    
     const emojis = {1:'😤', 2:'😓', 3:'😐', 4:'🙂', 5:'🤩'};
-    const periods = {1:'Start', 2:'Break', 3:'End'};
-
+    const periodLabels = {1:'Start', 2:'Break', 3:'End'};
+    
+    // 1. Group Data
+    const groupedData = {};
     data.forEach(row => {
-        const score = parseInt(row.mood_score);
-        const scoreClass = score <= 2 ? 'text-danger fw-bold' : 'text-body';
-        const displayName = getDisplayName(row);
-        const displayId = getEmpId(row.emp_id);
-        const avatarChar = getAvatarChar(row.name_th || row.username);
-        const clickAttr = isPrivacyMode ? '' : `onclick="openHistoryModal('${row.emp_id}', '${displayName}')" style="cursor:pointer;"`;
+        const key = `${row.log_date}_${row.emp_id}`;
+        if (!groupedData[key]) groupedData[key] = { info: row, periods: {} };
+        groupedData[key].periods[row.period_id] = row;
+    });
 
+    const keys = Object.keys(groupedData);
+    if (keys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-3x mb-3 text-success opacity-25"></i><br>ไม่พบรายการในช่วงเวลานี้</td></tr>';
+        return;
+    }
+
+    keys.forEach(key => {
+        const group = groupedData[key];
+        const mainRow = group.info;
+        
+        const displayName = getDisplayName(mainRow);
+        const displayId = getEmpId(mainRow.emp_id);
+        const avatarChar = getAvatarChar(mainRow.name_th || mainRow.username);
+        const clickAttr = isPrivacyMode ? '' : `onclick="openHistoryModal('${mainRow.emp_id}', '${displayName}')" style="cursor:pointer;"`;
+
+        // ตัวแปรเก็บ HTML
+        let moodTimelineHtml = '<div class="d-flex align-items-center justify-content-center gap-2">';
+        let periodCols = {1: '', 2: '', 3: ''}; // เก็บ HTML ของ Note 3 ช่องแนวนอน
+
+        // วนลูป 3 ช่วงเวลา
+        [1, 2, 3].forEach(pid => {
+            const pData = group.periods[pid];
+            
+            // ------------------------------------------------------------------
+            // PART 1: MOOD TIMELINE (ใช้โค้ดของคุณ: มีวงกลม + Text Label ด้านล่าง)
+            // ------------------------------------------------------------------
+            if (pData) {
+                const score = parseInt(pData.mood_score);
+                const isNegative = score <= 2;
+                const borderClass = isNegative ? 'border-danger bg-danger bg-opacity-10' : 'border-light bg-light';
+                
+                moodTimelineHtml += `
+                    <div class="text-center" style="width: 45px;">
+                        <div class="rounded-circle border ${borderClass} d-flex align-items-center justify-content-center mx-auto mb-1" 
+                             style="width: 38px; height: 38px; font-size: 1.2rem;" 
+                             title="${periodLabels[pid]}: Score ${score}">
+                            ${emojis[score]}
+                        </div>
+                        <div class="text-muted" style="font-size: 0.65rem;">${periodLabels[pid]}</div>
+                    </div>
+                `;
+            } else {
+                moodTimelineHtml += `
+                    <div class="text-center opacity-25" style="width: 45px;">
+                        <div class="rounded-circle border bg-light d-flex align-items-center justify-content-center mx-auto mb-1" style="width: 38px; height: 38px;">-</div>
+                        <div class="text-muted" style="font-size: 0.65rem;">${periodLabels[pid]}</div>
+                    </div>
+                `;
+            }
+
+            // ------------------------------------------------------------------
+            // PART 2: NOTES (ใช้แบบแนวนอน 3 ช่อง ที่คุณชอบ)
+            // ------------------------------------------------------------------
+            let blockContent = '';
+            let blockClass = 'bg-light bg-opacity-25 border-start-0 border-end'; 
+
+            if (pData && (pData.note || pData.reply_message)) {
+                blockClass = 'bg-white shadow-sm border rounded'; // ถ้ามีข้อมูล ให้เป็นกล่องขาว
+                
+                let actionBtn = '';
+                if (!isPrivacyMode) {
+                    const rowDataSafe = btoa(unescape(encodeURIComponent(JSON.stringify(pData))));
+                    actionBtn = `
+                        <button class="btn btn-link p-0 ms-auto text-secondary opacity-50 hover-opacity-100" onclick="openReplyModal('${rowDataSafe}')">
+                            <i class="fas ${pData.reply_message ? 'fa-pen' : 'fa-reply'}"></i>
+                        </button>`;
+                }
+
+                const replyDisplay = pData.reply_message 
+                    ? `<div class="mt-1 pt-1 border-top border-light text-success small fst-italic"><i class="fas fa-check me-1"></i>${pData.reply_message}</div>` 
+                    : '';
+
+                blockContent = `
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.65rem;">${periodLabels[pid]}</span>
+                        ${actionBtn}
+                    </div>
+                    <div class="text-dark small text-break" style="line-height: 1.3;">
+                        ${pData.note || '<span class="text-muted opacity-50">-</span>'}
+                    </div>
+                    ${replyDisplay}
+                `;
+            } else {
+                // ว่าง
+                blockContent = `
+                    <div class="text-muted opacity-25 text-center pt-2" style="font-size: 0.7rem;">
+                        ${periodLabels[pid]}
+                    </div>
+                `;
+            }
+
+            // ใส่ลงใน Array เพื่อรอประกอบร่างแนวนอน
+            periodCols[pid] = `
+                <div style="flex: 1; min-width: 0;" class="p-2 mx-1 ${blockClass}">
+                    ${blockContent}
+                </div>
+            `;
+        });
+
+        moodTimelineHtml += '</div>';
+
+        // รวม Note 3 ช่องเป็นแนวนอน (Horizontal Layout)
+        const notesRowHtml = `
+            <div class="d-flex align-items-stretch" style="min-height: 60px;">
+                ${periodCols[1]}
+                ${periodCols[2]}
+                ${periodCols[3]}
+            </div>
+        `;
+
+        // --- Render Row ---
         const html = `
             <tr>
-                <td class="ps-3 text-nowrap"><i class="far fa-calendar me-2 text-muted"></i>${formatDateShort(row.log_date)}</td>
-                <td class="text-center"><span class="badge bg-light text-dark border px-3 py-2 rounded-pill">${row.line || '-'}</span></td>
-                <td ${clickAttr} title="${isPrivacyMode ? 'Locked' : 'View History'}">
+                <td class="align-middle px-4 text-nowrap">
+                    <div class="fw-bold text-dark" style="font-size: 0.95rem;">${formatDateShort(mainRow.log_date)}</div>
+                </td>
+                
+                <td class="text-center align-middle text-nowrap px-3">
+                    <span class="badge bg-light text-dark border px-2 py-1 rounded-pill">${mainRow.line || '-'}</span>
+                </td>
+                
+                <td class="align-middle px-4 text-nowrap" ${clickAttr} title="${isPrivacyMode ? 'Locked' : 'View History'}">
                     <div class="d-flex align-items-center">
-                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width:35px; height:35px; font-weight:bold; flex-shrink:0;">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" 
+                             style="width:40px; height:40px; font-weight:bold; flex-shrink:0; font-size: 1rem;">
                             ${avatarChar}
                         </div>
-                        <div class="text-truncate" style="max-width: 200px;">
-                            <div class="fw-bold text-primary ${isPrivacyMode ? '' : 'text-decoration-underline'}" style="font-size:0.95rem;">${displayName}</div>
+                        <div>
+                            <div class="fw-bold text-dark ${isPrivacyMode ? '' : 'text-decoration-underline'}" style="font-size:0.9rem;">${displayName}</div>
                             <small class="text-muted" style="font-size:0.75rem;">${displayId}</small>
                         </div>
                     </div>
                 </td>
-                <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal">${periods[row.period_id] || '-'}</span></td>
-                <td class="text-center fs-5 ${scoreClass}">${emojis[score]}</td>
-                <td class="text-wrap" style="word-break: break-word;">
-                    ${row.note ? `<div class="bg-warning bg-opacity-10 text-dark p-2 rounded small border border-warning border-opacity-25"><i class="fas fa-comment-dots me-2 text-warning"></i>${row.note}</div>` : '<span class="text-muted opacity-25">-</span>'}
+
+                <td class="align-middle text-nowrap px-4">
+                    ${moodTimelineHtml}
+                </td>
+
+                <td class="align-middle py-2 ps-3">
+                    ${notesRowHtml}
                 </td>
             </tr>
         `;
         tbody.innerHTML += html;
     });
-
-    if (data.length === 0) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-3x mb-3 text-success opacity-25"></i><br>เยี่ยมมาก! ไม่พบรายงานปัญหาในช่วงเวลานี้</td></tr>';
 }
 
 function renderMissingTable(data) {
     const tbody = document.getElementById('missingTableBody');
     tbody.innerHTML = '';
-    
     data.forEach(row => {
         const displayName = getDisplayName(row);
         const displayId = getEmpId(row.emp_id);
-
         const html = `
             <tr>
                 <td class="ps-3"><span class="badge bg-light text-dark border">${row.line || '-'}</span></td>
@@ -555,34 +568,82 @@ function renderMissingTable(data) {
         `;
         tbody.innerHTML += html;
     });
-
     if (data.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-success"><i class="fas fa-check-circle fa-2x mb-2"></i><br>สุดยอด! ส่งครบทุกคน</td></tr>';
 }
 
-// ===== 6. Modal Functions =====
+// ===== 7. Reply Modal Logic [NEW] =====
+
+window.openReplyModal = function(rowBase64) {
+    if(!rowBase64) return;
+    
+    // Decode Data
+    const row = JSON.parse(decodeURIComponent(escape(atob(rowBase64))));
+    
+    // Set Values to Form
+    document.getElementById('replyLogDate').value = row.log_date;
+    document.getElementById('replyUserId').value = row.user_id; 
+    document.getElementById('replyPeriodId').value = row.period_id;
+    
+    document.getElementById('replyUserMessage').innerText = row.note || '-';
+    document.getElementById('replyInputMessage').value = row.reply_message || '';
+    document.getElementById('replyCharCount').innerText = (row.reply_message ? row.reply_message.length : 0) + " chars";
+
+    replyModalInstance.show();
+}
+
+window.submitReply = async function() {
+    const form = document.getElementById('replyForm');
+    const btn = document.querySelector('#replyModal .btn-primary');
+    
+    if(!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: formData
+        });
+        const res = await response.json();
+
+        if (res.success) {
+            replyModalInstance.hide();
+            loadIssuesTable(issueState.page); // Reload Table
+        } else {
+            alert(res.message);
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error sending reply');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> ส่งข้อความ';
+    }
+}
+
+// ===== 8. Other Modals (Missing / Negative / History) =====
 
 window.openMissingModal = function() {
     if (!missingModalInstance) missingModalInstance = new bootstrap.Modal(document.getElementById('missingModal'));
     const list = document.getElementById('missingModalList');
     list.innerHTML = '';
-
     if (currentMissingData.length === 0) {
         list.innerHTML = `<div class="p-5 text-center text-muted"><i class="fas fa-check-circle fa-3x text-success mb-3 opacity-50"></i><br>ส่งข้อมูลครบทุกคน (ในหน้านี้)</div>`;
     } else {
         currentMissingData.forEach(row => {
             const displayName = getDisplayName(row);
             const displayId = getEmpId(row.emp_id);
-            
             list.innerHTML += `
                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                     <div class="d-flex align-items-center">
-                        <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold text-dark">${displayName}</div>
-                            <small class="text-muted"><i class="fas fa-id-badge me-1"></i>${displayId} • Line ${row.line}</small>
-                        </div>
+                        <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;"><i class="fas fa-user"></i></div>
+                        <div><div class="fw-bold text-dark">${displayName}</div><small class="text-muted"><i class="fas fa-id-badge me-1"></i>${displayId} • Line ${row.line}</small></div>
                     </div>
                     <span class="badge bg-warning text-dark border border-warning bg-opacity-25 rounded-pill px-3">ยังไม่บันทึก</span>
                 </div>
@@ -597,7 +658,7 @@ window.openNegativeModal = function() {
     const list = document.getElementById('negativeModalList');
     list.innerHTML = '';
     
-    // กรองหาค่าที่ score <= 2 จากข้อมูลที่โหลดมาหน้าปัจจุบัน
+    // กรองหาค่าที่ score <= 2
     const negatives = tableDataCache.filter(r => parseInt(r.mood_score) <= 2);
 
     if (negatives.length === 0) {
@@ -606,19 +667,50 @@ window.openNegativeModal = function() {
         negatives.forEach(row => {
             const displayName = getDisplayName(row);
             const emojis = {1:'😤', 2:'😓'};
+            // คลิกที่แถวเพื่อดูประวัติ
             const clickAttr = isPrivacyMode ? '' : `onclick="openHistoryModal('${row.emp_id}', '${displayName}')" style="cursor:pointer;"`;
             
+            // [NEW] เตรียมปุ่ม Reply
+            let actionBtn = '';
+            if (!isPrivacyMode) {
+                const rowDataSafe = btoa(unescape(encodeURIComponent(JSON.stringify(row))));
+                actionBtn = `
+                    <button class="btn btn-sm ${row.reply_message ? 'btn-success bg-opacity-10 text-success border-0' : 'btn-light text-secondary border'} ms-2 rounded-circle shadow-sm" 
+                        onclick="event.stopPropagation(); openReplyModal('${rowDataSafe}')" 
+                        style="width: 32px; height: 32px;"
+                        title="${row.reply_message ? 'แก้ไขคำตอบ' : 'ตอบกลับ'}">
+                        <i class="fas ${row.reply_message ? 'fa-pen' : 'fa-reply'}"></i>
+                    </button>
+                `;
+            }
+
+            // [NEW] ส่วนแสดงข้อความตอบกลับ
+            const replyDisplay = row.reply_message 
+                ? `<div class="mt-2 small text-success bg-success bg-opacity-10 border border-success border-opacity-25 rounded p-2">
+                     <i class="fas fa-user-tie me-1"></i><strong>Admin:</strong> ${row.reply_message}
+                   </div>` 
+                : '';
+
             list.innerHTML += `
-                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" ${clickAttr}>
-                    <div class="d-flex align-items-center">
-                        <div class="fs-1 me-3">${emojis[row.mood_score]}</div>
-                        <div>
-                            <div class="fw-bold text-dark">${displayName}</div>
-                            <small class="text-muted">Line ${row.line} • ${formatDateShort(row.log_date)}</small>
-                            ${row.note ? `<div class="text-danger small mt-1"><i class="fas fa-comment"></i> ${row.note}</div>` : ''}
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start py-3" ${clickAttr}>
+                    <div class="d-flex align-items-start w-100">
+                        <div class="fs-1 me-3 lh-1">${emojis[row.mood_score]}</div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="fw-bold text-dark">${displayName}</div>
+                                <small class="text-muted ms-2 text-nowrap">Line ${row.line} • ${formatDateShort(row.log_date)}</small>
+                            </div>
+                            
+                            ${row.note ? `<div class="text-danger small mt-1"><i class="fas fa-comment me-1"></i>${row.note}</div>` : ''}
+                            
+                            ${replyDisplay}
                         </div>
                     </div>
-                    ${!isPrivacyMode ? '<i class="fas fa-chevron-right text-muted opacity-50"></i>' : ''}
+                    
+                    <div class="d-flex flex-column align-items-end ms-2">
+                        ${actionBtn}
+                        ${!isPrivacyMode ? '<i class="fas fa-chevron-right text-muted opacity-25 mt-2"></i>' : ''}
+                    </div>
                 </div>
             `;
         });
@@ -626,7 +718,6 @@ window.openNegativeModal = function() {
     negModalInstance.show();
 }
 
-// History & Export
 window.openHistoryModal = async function(empId, empName) {
     if (!empId || empId === '-' || isPrivacyMode) return;
     if(negModalInstance) negModalInstance.hide();
@@ -651,9 +742,7 @@ function renderHistoryChart(historyData) {
     const labels = sortedData.map(d => formatDateShort(d.log_date));
     const dataPoints = sortedData.map(d => parseInt(d.mood_score));
     const ctx = document.getElementById('historyChart').getContext('2d');
-    
     if (histChartInstance) histChartInstance.destroy();
-    
     histChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -672,7 +761,12 @@ function renderHistoryChart(historyData) {
     const listDiv = document.getElementById('historyList');
     if(listDiv) {
         listDiv.innerHTML = '';
-        sortedData.slice().reverse().forEach(d => { if(d.note) { listDiv.innerHTML += `<div class="mb-1"><span class="fw-bold">${formatDateShort(d.log_date)}:</span> ${d.note}</div>`; } });
+        sortedData.slice().reverse().forEach(d => { 
+            let html = '';
+            if(d.note) html += `<div class="mb-1"><span class="fw-bold">${formatDateShort(d.log_date)}:</span> ${d.note}</div>`; 
+            if(d.reply_message) html += `<div class="ms-3 small text-success fst-italic"><i class="fas fa-reply me-1"></i>Reply: ${d.reply_message}</div>`;
+            listDiv.innerHTML += html;
+        });
     }
 }
 
@@ -680,12 +774,25 @@ function exportTableToExcel() {
     const isMissingTab = document.getElementById('tab-missing').classList.contains('active');
     const tableId = isMissingTab ? "missingTable" : "issueTable";
     const fileName = isMissingTab ? "Missing_Staff_" : "Mood_Issues_";
-    
     let table = document.getElementById(tableId);
     let html = table.outerHTML.replace(/ /g, '%20');
-    
     let a = document.createElement('a');
     a.href = 'data:application/vnd.ms-excel,' + html;
     a.download = fileName + new Date().toISOString().slice(0,10) + '.xls';
     a.click();
+}
+
+// ฟังก์ชันเปลี่ยนจำนวนแถว
+window.changePageSize = function(newLimit) {
+    const limit = parseInt(newLimit);
+    
+    // อัปเดต State ทั้งสองตาราง
+    issueState.limit = limit;
+    issueState.page = 1; // รีเซ็ตกลับไปหน้า 1
+    
+    missingState.limit = limit;
+    missingState.page = 1;
+    
+    // โหลดข้อมูลใหม่
+    refreshAllTables();
 }
