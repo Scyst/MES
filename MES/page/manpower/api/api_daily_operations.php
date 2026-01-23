@@ -375,6 +375,49 @@ try {
             break;
 
         // ======================================================================
+        // CASE: export_history (ดึงข้อมูลสรุปแยก Line/Shift ตามช่วงเวลา)
+        // ======================================================================
+        case 'export_history':
+            $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
+            $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
+            $funcName     = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+
+            // Query นี้จะดึงข้อมูลละเอียดระดับ Line/Shift/Team ของทุกวันในช่วงเวลา
+            $sql = "
+                WITH DateRange AS (
+                    SELECT CAST(:start AS DATE) AS SummaryDate
+                    UNION ALL
+                    SELECT DATEADD(DAY, 1, SummaryDate)
+                    FROM DateRange
+                    WHERE SummaryDate < CAST(:end AS DATE)
+                )
+                SELECT 
+                    CONVERT(VARCHAR(10), d.SummaryDate, 120) as [Date],
+                    f.display_section as [Line],
+                    f.shift_name as [Shift],
+                    f.team_group as [Team],
+                    f.Total_Registered as [Plan (HC)],
+                    f.Count_Present as [Present],
+                    f.Count_Late as [Late],
+                    f.Count_Absent as [Absent],
+                    f.Count_Leave as [Leave],
+                    f.Count_Actual as [Actual (Present+Late)],
+                    (f.Count_Present + f.Count_Late + f.Count_Absent + f.Count_Leave) as [Total_Accounted],
+                    f.Total_Cost as [Est_Cost]
+                FROM DateRange d
+                CROSS APPLY $funcName(d.SummaryDate) f
+                ORDER BY d.SummaryDate DESC, f.section_id ASC, f.shift_name ASC
+                OPTION (MAXRECURSION 366);
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':start' => $startDateStr, ':end' => $endDateStr]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        // ======================================================================
         // DEFAULT: Error
         // ======================================================================
         default:

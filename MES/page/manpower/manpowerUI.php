@@ -82,7 +82,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
                             <li><h6 class="dropdown-header">Export</h6></li>
-                            <li><a class="dropdown-item" href="#" onclick="Actions.exportExcel()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
+                            
+                            <li><a class="dropdown-item" href="#" onclick="Actions.exportDailyRaw()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
                             
                             <?php if (hasRole(['admin', 'creator'])): ?>
                                 <li><hr class="dropdown-divider"></li>
@@ -179,53 +180,70 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
             </div>
 
             <div class="row g-3 mb-3">
-                
+    
                 <div class="col-lg-8">
-                    <div class="chart-card">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="chart-card h-100 d-flex flex-column"> 
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
                             <h4 id="chart-title"><i class="fas fa-chart-line text-primary me-2"></i>Manpower Analytics</h4>
-                            
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary chart-toggle-btn active" id="btn-chart-daily" 
-                                        onclick="UI.switchChartView('daily')">
-                                    Daily
-                                </button>
-                                <button type="button" class="btn btn-outline-primary chart-toggle-btn" id="btn-chart-trend" 
-                                        onclick="UI.switchChartView('trend')">
-                                    Trend (7D)
-                                </button>
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn active" id="btn-chart-daily" onclick="UI.switchChartView('daily')">Daily</button>
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn" id="btn-chart-trend" onclick="UI.switchChartView('trend')">Trend</button>
                             </div>
                         </div>
                         
-                        <div id="view-chart-daily">
-                            <div class="chart-scroll-container" style="height: 240px; overflow-x: auto; overflow-y: hidden;">
-                                <div id="barChartInnerWrapper" style="height: 100%; position: relative; width: 100%;">
-                                    <canvas id="barChart"></canvas>
+                        <div style="height: 250px; position: relative; width: 100%;" class="flex-shrink-0">
+                            
+                            <div id="view-chart-daily" style="height: 100%; width: 100%;">
+                                <div class="chart-scroll-container" style="height: 100%; overflow-x: auto; overflow-y: hidden;">
+                                    <div id="barChartInnerWrapper" style="height: 100%; position: relative; width: 100%;">
+                                        <canvas id="barChart"></canvas>
+                                    </div>
                                 </div>
                             </div>
-                            <small class="text-muted d-block text-end mt-1" style="font-size: 0.7rem;">* Scroll horizontal to view all lines</small>
-                        </div>
 
-                        <div id="view-chart-trend" style="display: none;">
-                            <div style="height: 240px; width: 100%; position: relative;">
+                            <div id="view-chart-trend" style="height: 100%; width: 100%; display: none;">
                                 <canvas id="trendChart"></canvas>
                             </div>
-                            <div class="d-flex justify-content-end gap-1 mt-1">
-                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(7)">7 Days</button>
-                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(14)">14 Days</button>
-                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(30)">30 Days</button>
-                            </div>
                         </div>
 
+                        <div class="mt-2 w-100 d-flex align-items-center" style="height: 40px;">
+                            
+                            <div id="footer-daily" class="w-100 text-end">
+                                <small class="text-muted" style="font-size: 0.7rem;">* Scroll horizontal to view all lines</small>
+                            </div>
+
+                            <div id="footer-trend" class="w-100 d-flex justify-content-between align-items-center" style="display: none !important;">
+                                <div>
+                                     <button class="btn btn-xs btn-success text-white shadow-sm" style="font-size: 0.65rem;" onclick="exportCurrentTrend()">
+                                        <i class="fas fa-file-excel me-1"></i> Export Data
+                                    </button>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(7)">7 Days</button>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(14)">14 Days</button>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(30)">30 Days</button>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
+                    <script>
+                        function exportCurrentTrend() {
+                            const activeBtn = document.querySelector('#footer-trend .btn-group button.active') || document.querySelector('#view-chart-trend .btn-group button.active'); // เผื่อหาไม่เจอ
+                            let days = 7;
+                            if (activeBtn) days = parseInt(activeBtn.innerText) || 7;
+                            Actions.exportTrendExcel(days);
+                        }
+                    </script>
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="chart-card">
+                    <div class="chart-card h-100 d-flex flex-column">
                         <div class="mb-2">
                             <h4><i class="fas fa-chart-pie text-primary me-2"></i>Distribution</h4>
                         </div>
-                        <div class="chart-container-box d-flex justify-content-center">
+                        <div class="chart-container-box d-flex justify-content-center align-items-center flex-grow-1">
                             <canvas id="pieChart"></canvas>
                         </div>
                     </div>

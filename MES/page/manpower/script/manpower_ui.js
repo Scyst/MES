@@ -113,11 +113,9 @@ const UI = {
             dataActual.push(val.actual);
         }
 
-        // Bar Chart
         const ctxBar = document.getElementById('barChart').getContext('2d');
         if (this.charts.bar) this.charts.bar.destroy();
 
-        // คำนวณความกว้าง Dynamic Scroll
         const scrollContainer = document.querySelector('.chart-scroll-container');
         const chartWrapper = document.getElementById('barChartInnerWrapper');
         if(scrollContainer && chartWrapper) {
@@ -148,10 +146,6 @@ const UI = {
                 plugins: { 
                     legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 12 } } },
                     tooltip: { bodyFont: { size: 13 }, titleFont: { size: 13 } },
-                    zoom: {
-                        pan: { enabled: true, mode: 'x' },
-                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-                    }
                 },
                 scales: { 
                     y: { beginAtZero: true, border: { display: false }, grid: { color: '#f3f6f9' }, ticks: { font: { family: 'Prompt', size: 11 } } },
@@ -160,102 +154,116 @@ const UI = {
             }
         });
 
-        // Pie Chart
-        const ctxPie = document.getElementById('pieChart').getContext('2d');
-        if (this.charts.pie) this.charts.pie.destroy();
-
-        this.charts.pie = new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['Present', 'Late', 'Absent', 'Leave'],
-                datasets: [{
-                    data: [sumPresent, sumLate, sumAbsent, sumLeave],
-                    backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
-                    borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
-                }]
-            },
-            options: {
-                onClick: (e, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const statuses = ['PRESENT', 'LATE', 'ABSENT', 'LEAVE']; 
-                        Actions.openDetailModal('', '', 'ALL', statuses[index]);
-                    }
+        const newData = [sumPresent, sumLate, sumAbsent, sumLeave];
+        
+        if (this.charts.pie) {
+            this.charts.pie.data.datasets[0].data = newData;
+            this.charts.pie.update(); 
+        } else {
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            this.charts.pie = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Late', 'Absent', 'Leave'],
+                    datasets: [{
+                        data: newData,
+                        backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
+                        borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
+                    }]
                 },
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: { 
-                    legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 11 } } }
-                },
-                layout: { padding: 0 }
-            }
-        });
+                options: {
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const statuses = ['PRESENT', 'LATE', 'ABSENT', 'LEAVE']; 
+                            Actions.openDetailModal('', '', 'ALL', statuses[index]);
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { 
+                        legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 11 } } }
+                    },
+                    layout: { padding: 0 }
+                }
+            });
+        }
     },
 
     renderTrendChart(data) {
         const ctx = document.getElementById('trendChart');
         if (!ctx) return;
 
-        if (this.charts.trend) this.charts.trend.destroy();
-
+        // 1. เตรียมข้อมูล
         const labels = data.map(r => r.display_date);
         const planData = data.map(r => parseInt(r.total_plan));
         const actualData = data.map(r => parseInt(r.total_actual));
-        
-        // 🔥 [ADJUSTED] รวม Absent + Leave เข้าด้วยกันตาม Requirement หัวหน้า
         const absentData = data.map(r => parseInt(r.total_absent) + parseInt(r.total_leave));
 
-        this.charts.trend = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Plan',
-                        data: planData,
-                        borderColor: '#4e73df',
-                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true
-                    },
-                    {
-                        label: 'Actual',
-                        data: actualData,
-                        borderColor: '#1cc88a',
-                        backgroundColor: 'rgba(28, 200, 138, 0.05)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true
-                    },
-                    {
-                        // ปรับ Label ให้ชัดเจนขึ้น (หรือจะใช้คำว่า 'Absent' เหมือนเดิมก็ได้)
-                        label: 'Absent & Leave', 
-                        data: absentData,
-                        borderColor: '#e74a3b',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        tension: 0.3,
-                        fill: false,
-                        // hidden: true // ⚠️ Comment ออก เพื่อให้โชว์เส้นนี้เลย (ถ้าหัวหน้าอยากเห็นทันที)
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 12 } } },
-                    tooltip: { mode: 'index', intersect: false }
+        // 2. เช็คว่ามีกราฟเดิมอยู่ไหม?
+        if (this.charts.trend) {
+            const chart = this.charts.trend;
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = planData;   // Plan
+            chart.data.datasets[1].data = actualData; // Actual
+            chart.data.datasets[2].data = absentData; // Absent & Leave
+            
+            chart.update();
+        } else {
+            this.charts.trend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Plan',
+                            data: planData,
+                            borderColor: '#4e73df', // Blue
+                            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'Actual',
+                            data: actualData,
+                            borderColor: '#1cc88a', // Green
+                            backgroundColor: 'rgba(28, 200, 138, 0.05)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'Absent & Leave',
+                            data: absentData,
+                            borderColor: '#e74a3b', // Red
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5], // เส้นประ
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
                 },
-                scales: {
-                    y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f6f9' } },
-                    x: { grid: { display: false } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 800
+                    },
+                    plugins: {
+                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 12 } } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f6f9' } },
+                        x: { grid: { display: false } }
+                    }
                 }
-            }
-        });
+            });
+        }
     },
 
     // =========================================================================
@@ -535,10 +543,14 @@ const UI = {
     switchChartView(mode) {
         const btnDaily = document.getElementById('btn-chart-daily');
         const btnTrend = document.getElementById('btn-chart-trend');
+        
         const viewDaily = document.getElementById('view-chart-daily');
         const viewTrend = document.getElementById('view-chart-trend');
+        
+        const footerDaily = document.getElementById('footer-daily');
+        const footerTrend = document.getElementById('footer-trend');
 
-        if (!btnDaily || !viewDaily) return; // Error Check
+        if (!btnDaily || !viewDaily) return;
 
         if (mode === 'daily') {
             btnDaily.classList.add('active');
@@ -546,6 +558,10 @@ const UI = {
             
             viewDaily.style.display = 'block';
             viewTrend.style.display = 'none';
+            
+            if(footerDaily) footerDaily.style.display = 'block';
+            if(footerTrend) footerTrend.style.setProperty('display', 'none', 'important'); // Force hide
+
         } else {
             btnDaily.classList.remove('active');
             btnTrend.classList.add('active');
@@ -553,7 +569,9 @@ const UI = {
             viewDaily.style.display = 'none';
             viewTrend.style.display = 'block';
             
-            // Trigger resize เพื่อให้กราฟวาดขนาดถูกต้องตอนเปิดมา
+            if(footerDaily) footerDaily.style.display = 'none';
+            if(footerTrend) footerTrend.style.setProperty('display', 'flex', 'important'); // Force flex
+            
             if (this.charts && this.charts.trend) {
                 this.charts.trend.resize();
             }
@@ -1130,6 +1148,166 @@ const Actions = {
     },
 
     exportExcel() { window.location.href = `api/api_export.php?date=${document.getElementById('filterDate').value}`; },
+
+    async exportTrendExcel(days) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - (days - 1));
+        const sStr = start.toISOString().split('T')[0];
+        const eStr = end.toISOString().split('T')[0];
+
+        UI.showLoader();
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=export_history&startDate=${sStr}&endDate=${eStr}`);
+            const json = await res.json();
+
+            if (json.success && json.data.length > 0) {
+                const wb = XLSX.utils.book_new();
+                const rawData = json.data;
+                const autoFitColumns = (jsonArray, worksheet) => {
+                    if (!jsonArray || jsonArray.length === 0) return;
+                    
+                    const objectMaxLength = []; 
+                    const keys = Object.keys(jsonArray[0]);
+                    
+                    // 1. วนลูปหาความกว้างของ Header
+                    keys.forEach(col => {
+                        objectMaxLength.push({ wch: col.length + 5 });
+                    });
+
+                    // 2. วนลูปข้อมูลทุกแถว เพื่อหาคำที่ยาวที่สุดในคอลัมน์นั้น
+                    jsonArray.forEach(row => {
+                        keys.forEach((key, i) => {
+                            const value = (row[key] || '').toString();
+                            if (value.length > objectMaxLength[i].wch - 5) {
+                                objectMaxLength[i].wch = value.length + 5;
+                            }
+                        });
+                    });
+
+                    // 3. กำหนดค่าความกว้างให้ Worksheet
+                    worksheet['!cols'] = objectMaxLength;
+                };
+
+                // =========================================================
+                // 1. FACTORY SUMMARY
+                // =========================================================
+                const summaryMap = {};
+                rawData.forEach(row => {
+                    const date = row['Date'];
+                    if (!summaryMap[date]) {
+                        summaryMap[date] = { 'Date': date, 'Plan (Total)': 0, 'Present': 0, 'Late': 0, 'Actual (Total)': 0, 'Absent': 0, 'Leave': 0, 'Diff': 0, 'Est. Cost (THB)': 0 };
+                    }
+                    const item = summaryMap[date];
+                    item['Plan (Total)'] += parseInt(row['Plan (HC)'] || 0);
+                    item['Present'] += parseInt(row['Present'] || 0);
+                    item['Late'] += parseInt(row['Late'] || 0);
+                    item['Actual (Total)'] += parseInt(row['Actual (Present+Late)'] || 0);
+                    item['Absent'] += parseInt(row['Absent'] || 0);
+                    item['Leave'] += parseInt(row['Leave'] || 0);
+                    item['Est. Cost (THB)'] += parseFloat(row['Est_Cost'] || 0);
+                });
+                const summaryData = Object.values(summaryMap).map(d => { d['Diff'] = d['Actual (Total)'] - d['Plan (Total)']; return d; });
+                summaryData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+                const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+                autoFitColumns(summaryData, wsSummary);
+                XLSX.utils.book_append_sheet(wb, wsSummary, "Factory_Summary");
+
+                // =========================================================
+                // 2. SHIFT TABS
+                // =========================================================
+                const dayData = rawData.filter(r => r['Shift'] && r['Shift'].toUpperCase().includes('DAY'));
+                if (dayData.length > 0) {
+                    const wsDay = XLSX.utils.json_to_sheet(dayData);
+                    autoFitColumns(dayData, wsDay);
+                    XLSX.utils.book_append_sheet(wb, wsDay, "Only_Day");
+                }
+
+                const nightData = rawData.filter(r => r['Shift'] && r['Shift'].toUpperCase().includes('NIGHT'));
+                if (nightData.length > 0) {
+                    const wsNight = XLSX.utils.json_to_sheet(nightData);
+                    autoFitColumns(nightData, wsNight);
+                    XLSX.utils.book_append_sheet(wb, wsNight, "Only_Night");
+                }
+
+                // =========================================================
+                // 3. LINE TABS
+                // =========================================================
+                const uniqueLines = [...new Set(rawData.map(item => item['Line']))].sort();
+                uniqueLines.forEach(lineName => {
+                    if (lineName) {
+                        const lineData = rawData.filter(item => item['Line'] === lineName);
+                        const ws = XLSX.utils.json_to_sheet(lineData);
+                        autoFitColumns(lineData, ws);
+                        
+                        let safeName = lineName.toString().replace(/[\/\\\?\*\[\]]/g, '_').substring(0, 30);
+                        XLSX.utils.book_append_sheet(wb, ws, safeName || "Unknown");
+                    }
+                });
+
+                // =========================================================
+                // 4. RAW DATA ALL
+                // =========================================================
+                const wsAll = XLSX.utils.json_to_sheet(rawData);
+                autoFitColumns(rawData, wsAll);
+                XLSX.utils.book_append_sheet(wb, wsAll, "Raw_Data_All");
+
+                // SAVE FILE
+                const fileName = `Manpower_Report_${days}Days_${eStr}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+
+            } else {
+                alert("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Export Failed: " + err.message);
+        } finally {
+            UI.hideLoader();
+        }
+    },
+
+    async exportDailyRaw() {
+        const date = document.getElementById('filterDate').value;
+        UI.showLoader();
+        
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=read_daily&date=${date}&line=ALL`);
+            const json = await res.json();
+
+            if (json.success && json.data.length > 0) {
+                const exportData = json.data.map(row => ({
+                    'Date': row.log_date,
+                    'Emp ID': row.emp_id,
+                    'Name': row.name_th,
+                    'Position': row.position,
+                    'Line': row.actual_line || row.line,
+                    'Team': row.actual_team || row.team_group,
+                    'Shift': row.shift_id == 1 ? 'Day' : 'Night',
+                    'Time In': row.in_time || '',
+                    'Time Out': row.out_time || '',
+                    'Status': row.status,
+                    'Remark': row.remark,
+                    'Cost (Est)': parseFloat(row.est_cost || 0)
+                }));
+
+                // สร้าง Excel
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Daily_Raw_Data");
+
+                XLSX.writeFile(wb, `Manpower_Daily_${date}.xlsx`);
+            } else {
+                alert("ไม่พบข้อมูลสำหรับวันที่เลือก");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Export Error: " + err.message);
+        } finally {
+            UI.hideLoader();
+        }
+    },
     
     // -------------------------------------------------------------------------
     // 6. EMPLOYEE MANAGER

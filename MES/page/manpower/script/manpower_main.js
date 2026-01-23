@@ -53,26 +53,35 @@ const App = {
     startAutoRefresh() {
         if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
         
+        const REFRESH_INTERVAL = 600000; 
+
+        console.log(`[System] Auto-refresh started: Every ${REFRESH_INTERVAL/60000} minutes.`);
+
         this.autoRefreshTimer = setInterval(() => {
-            // 🔥 [FIXED] เช็คก่อนว่า User กำลังเปิด Modal ทำงานอยู่ไหม?
             const isModalOpen = document.getElementById('detailModal')?.classList.contains('show');
             const isEmpModalOpen = document.getElementById('empListModal')?.classList.contains('show');
+            const isEditModalOpen = document.getElementById('empEditModal')?.classList.contains('show');
             
-            // ถ้ามี Modal เปิดอยู่ "ห้าม Refresh" เดี๋ยวงาน User หาย
-            if (isModalOpen || isEmpModalOpen) {
-                console.log("Auto-refresh skipped (User is working)");
+            if (isModalOpen || isEmpModalOpen || isEditModalOpen) {
+                console.log("[Auto-refresh] Skipped (User is working in modal)");
                 return; 
             }
 
-            // ถ้าไม่มีใครทำงาน ค่อยโหลดแบบ Silent
-            this.loadData(true); 
+            console.log("[Auto-refresh] Updating data...");
+            this.loadData(true);
 
-        }, 300000); // 5 นาที (300,000 ms)
+            const activeBtn = document.querySelector('#view-chart-trend .btn-group button.active');
+            let days = 7;
+            if (activeBtn) {
+                const txt = activeBtn.innerText;
+                days = parseInt(txt) || 7;
+            }
+            this.loadTrend(days);
+
+        }, REFRESH_INTERVAL);
     },
 
-    // ปรับปรุง loadData ให้รองรับ Silent Mode (ไม่ขึ้น Loading บังหน้าจอ)
     async loadData(isSilent = false) {
-        // ถ้าไม่ใช่ Silent (เช่น กดเปลี่ยนวันที่เอง) ให้โชว์ Loader
         if (!isSilent) UI.showLoader(); 
         
         try {
