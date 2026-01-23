@@ -128,7 +128,7 @@ function validateCompletion() {
     if (!infoComplete) errors.push('Info');
 
     // 2. Check Photos
-    const totalPhotos = 10; 
+    const totalPhotos = 12; 
     const currentPhotos = $('.camera-box.has-image').length;
     if (currentPhotos < totalPhotos) errors.push('Photos');
 

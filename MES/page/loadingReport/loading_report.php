@@ -66,7 +66,7 @@ $pageTitle = "Loading Inspection";
 
                         <div class="row g-4">
                             
-                            <div class="col-12 col-lg-8">
+                            <div class="col-12 col-lg-7">
                                 
                                 <div class="info-card mb-3 shadow-sm bg-white">
                                     <div class="info-card-header bg-primary text-white p-3 rounded-top d-flex justify-content-between align-items-center">
@@ -156,7 +156,7 @@ $pageTitle = "Loading Inspection";
                                 </div>
 
                                 <div class="card shadow-sm mb-3 border">
-                                    <div class="card-header bg-white fw-bold text-primary py-2 small"><i class="fas fa-camera me-2"></i>Photo Evidence (10 Points)</div>
+                                    <div class="card-header bg-white fw-bold text-primary py-2 small"><i class="fas fa-camera me-2"></i>Photo Evidence (12 Points)</div>
                                     <div class="card-body p-3">
                                         <div class="row g-3">
                                             <?php 
@@ -170,13 +170,15 @@ $pageTitle = "Loading Inspection";
                                                 'floor' => '7. Right Door Closed (ปิดขวา)',
                                                 'inside_empty' => '8. All Doors Closed (ปิด 2 ฝั่ง)',
                                                 'inside_loaded' => '9. Seal Lock (ล็อคซีล)',
-                                                'seal_lock' => '10. Shipping Doc (ใบของออก)'
+                                                'seal_lock' => '10. Shipping Doc (ใบของออก)',
+                                                'floor_moisture' => '11. Floor Moisture (ความชื้นพื้นตู้)',
+                                                'cargo_moisture' => '12. Cargo Moisture (ความชื้นสินค้า)'
                                             ];
                                             
                                             foreach ($photoPoints as $key => $label): 
                                             ?>
-                                            <div class="col-6 col-md-4 col-lg-20"> 
-                                                <div class="camera-box shadow-sm border bg-white" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')" style="min-height: 110px; cursor:pointer;">
+                                            <div class="col-6 col-md-4 col-lg-3"> 
+                                                <div class="camera-box shadow-sm border bg-white" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')" style="min-height: 200px; cursor:pointer;">
                                                     <i class="fas fa-camera fa-2x text-secondary mb-2 opacity-50"></i>
                                                     <div class="camera-label px-1 small text-muted" style="line-height: 1.2; font-size: 0.75rem; word-wrap: break-word;">
                                                         <?php echo $label; ?>
@@ -188,8 +190,9 @@ $pageTitle = "Loading Inspection";
                                         </div>
                                     </div>
                                 </div>
-
-                            </div> <div class="col-12 col-lg-4">
+                            </div>
+                            
+                            <div class="col-12 col-lg-5">
                                 <div class="d-flex justify-content-between align-items-center mb-2 bg-white py-2 px-3 rounded shadow-sm sticky-top-offset border d-none d-lg-flex">
                                     <div class="fw-bold text-dark"><i class="fas fa-tasks me-2 text-primary"></i>Checklist</div>
                                     <button class="btn btn-sm btn-outline-primary" onclick="$('.collapse').collapse('show')">Expand All</button>
