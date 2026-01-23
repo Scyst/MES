@@ -328,6 +328,53 @@ try {
             break;
 
         // ======================================================================
+        // CASE: read_trend (ดึงข้อมูลกราฟย้อนหลัง)
+        // ======================================================================
+        case 'read_trend':
+            // 1. รับค่า Date Range (Default ย้อนหลัง 7 วัน)
+            $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
+            $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
+            
+            // 2. ชื่อฟังก์ชัน SQL (ตาม Environment)
+            $funcName = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+
+            // 3. SQL Query: ใช้ Recursive CTE สร้างวันที่ แล้ว Cross Apply ฟังก์ชัน
+            // หมายเหตุ: ใช้ WITH (NOLOCK) ในฟังก์ชันไม่ได้โดยตรง แต่ Table ในฟังก์ชันควรมีอยู่แล้ว 
+            // หรือเรายอมรับ Dirty Read ได้เล็กน้อยสำหรับ Dashboard
+            $sql = "
+                WITH DateRange AS (
+                    SELECT CAST(:start AS DATE) AS SummaryDate
+                    UNION ALL
+                    SELECT DATEADD(DAY, 1, SummaryDate)
+                    FROM DateRange
+                    WHERE SummaryDate < CAST(:end AS DATE)
+                )
+                SELECT 
+                    FORMAT(d.SummaryDate, 'dd/MM') as display_date,
+                    d.SummaryDate as raw_date,
+                    SUM(f.Total_Registered) as total_plan,
+                    SUM(f.Count_Actual) as total_actual,
+                    SUM(f.Count_Absent) as total_absent,
+                    SUM(f.Count_Late) as total_late,
+                    SUM(f.Count_Leave) as total_leave
+                FROM DateRange d
+                CROSS APPLY $funcName(d.SummaryDate) f
+                GROUP BY d.SummaryDate
+                ORDER BY d.SummaryDate ASC
+                OPTION (MAXRECURSION 366); -- ป้องกัน Infinite Loop
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':start' => $startDateStr, 
+                ':end'   => $endDateStr
+            ]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        // ======================================================================
         // DEFAULT: Error
         // ======================================================================
         default:

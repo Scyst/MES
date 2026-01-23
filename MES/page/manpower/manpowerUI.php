@@ -11,7 +11,7 @@ if (!isset($_SESSION['user'])) {
 // 1. ตั้งค่า Header Variable
 $currentUser = $_SESSION['user'];
 $pageTitle = "Manpower Management";
-$pageHeaderTitle = "Manpower Dashboard"; // ค่านี้จะไปโชว์ที่ Top Header
+$pageHeaderTitle = "Manpower Dashboard"; 
 $pageHeaderSubtitle = "ติดตามสถานะพนักงานและการเข้ากะ (Real-time)";
 ?>
 
@@ -23,8 +23,16 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     
     <link href="css/manpowerUI.css?v=<?php echo time(); ?>" rel="stylesheet">
-
     <script src="../../utils/libs/xlsx.full.min.js"></script>
+    
+    <style>
+        /* เพิ่ม Style สำหรับปุ่ม Toggle กราฟให้ดู Modern ขึ้น */
+        .chart-toggle-btn {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+        }
+    </style>
 </head>
 
 <body class="dashboard-page layout-top-header">
@@ -33,8 +41,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
     <main id="main-content">
         <div class="container-fluid p-3">
+            
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                
                 <div class="d-flex align-items-center">
                     <div id="last-update-time" class="d-flex align-items-center gap-2 text-secondary bg-white px-3 py-2 rounded shadow-sm border" style="font-size: 0.9rem;">
                         <span class="position-relative d-flex h-2 w-2">
@@ -47,7 +55,6 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                 </div>
 
                 <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
-                    
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Date:</span>
                         <input type="date" id="filterDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
@@ -91,7 +98,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                 </div>
             </div>
 
-            <div class="row g-2 mb-3"> <div class="col-xl-3 col-md-6">
+            <div class="row g-2 mb-3"> 
+                <div class="col-xl-3 col-md-6">
                     <div class="card shadow-sm kpi-card border-primary h-100" id="card-plan" style="cursor: pointer;">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
@@ -171,19 +179,47 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
             </div>
 
             <div class="row g-3 mb-3">
+                
                 <div class="col-lg-8">
                     <div class="chart-card">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h4><i class="fas fa-chart-bar text-primary me-2"></i>Plan vs Actual</h4>
-                            <small class="text-muted" style="font-size: 0.7rem;">Scroll to view more</small>
-                        </div>
-                        <div class="chart-scroll-container" style="height: 240px; overflow-x: auto; overflow-y: hidden;">
-                            <div id="barChartInnerWrapper" style="height: 100%; position: relative; width: 100%;">
-                                <canvas id="barChart"></canvas>
+                            <h4 id="chart-title"><i class="fas fa-chart-line text-primary me-2"></i>Manpower Analytics</h4>
+                            
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn active" id="btn-chart-daily" 
+                                        onclick="UI.switchChartView('daily')">
+                                    Daily
+                                </button>
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn" id="btn-chart-trend" 
+                                        onclick="UI.switchChartView('trend')">
+                                    Trend (7D)
+                                </button>
                             </div>
                         </div>
+                        
+                        <div id="view-chart-daily">
+                            <div class="chart-scroll-container" style="height: 240px; overflow-x: auto; overflow-y: hidden;">
+                                <div id="barChartInnerWrapper" style="height: 100%; position: relative; width: 100%;">
+                                    <canvas id="barChart"></canvas>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block text-end mt-1" style="font-size: 0.7rem;">* Scroll horizontal to view all lines</small>
+                        </div>
+
+                        <div id="view-chart-trend" style="display: none;">
+                            <div style="height: 240px; width: 100%; position: relative;">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                            <div class="d-flex justify-content-end gap-1 mt-1">
+                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(7)">7 Days</button>
+                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(14)">14 Days</button>
+                                <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(30)">30 Days</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
+
                 <div class="col-lg-4">
                     <div class="chart-card">
                         <div class="mb-2">

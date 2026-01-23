@@ -28,6 +28,25 @@ const API = {
         }
     },
 
+    async getTrend(days = 7) {
+        try {
+            // คำนวณวันที่ Start/End ใน JS
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - (days - 1)); // ย้อนหลัง X วันรวมวันนี้
+            
+            const sStr = start.toISOString().split('T')[0];
+            const eStr = end.toISOString().split('T')[0];
+
+            const response = await fetch(`api/api_daily_operations.php?action=read_trend&startDate=${sStr}&endDate=${eStr}`);
+            const json = await response.json();
+            return json.success ? json.data : [];
+        } catch (error) {
+            console.error("Trend API Error:", error);
+            return [];
+        }
+    },
+
     async triggerSync(dateString) {
         try {
             const secretKey = "SNC_TOOLBOX_SECURE_KEY_998877";

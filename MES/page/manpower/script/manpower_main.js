@@ -2,17 +2,14 @@
 "use strict";
 
 const App = {
-    // State
     currentDate: null,
     viewMode: 'LINE', // LINE or SHIFT
     autoRefreshTimer: null,
 
     init() {
-        // 1. ตั้งค่าเริ่มต้น
         const dateInput = document.getElementById('filterDate');
         if (dateInput) {
             this.currentDate = dateInput.value;
-            // 2. Bind Events
             dateInput.addEventListener('change', (e) => {
                 this.currentDate = e.target.value;
                 this.loadData();
@@ -22,13 +19,10 @@ const App = {
             this.currentDate = new Date().toISOString().split('T')[0];
         }
 
-        // 3. เริ่มโหลดข้อมูลครั้งแรก
         this.loadData();
-
-        // 4. ตั้ง Auto Refresh ทุก 5 นาที (300,000 ms)
+        this.loadTrend(7);
         this.startAutoRefresh();
 
-        // 5. 🔥 เริ่มนาฬิกา Live Clock (เรียกจาก UI หรือฟังก์ชัน global)
         if (typeof startLiveClock === 'function') {
             startLiveClock();
         }
@@ -124,6 +118,25 @@ const App = {
         } finally {
             UI.hideLoader();
         }
+    },
+
+    async loadTrend(days = 7) {
+        if (typeof event !== 'undefined' && event && event.type === 'click' && event.target && event.target.classList) {
+            
+            // หาปุ่มพี่น้องใน Group เดียวกันเพื่อเอา active ออก
+            const btn = event.target.closest('button'); // กันพลาดกรณีกดโดน icon ข้างใน
+            if (btn) {
+                const parent = btn.parentElement;
+                if (parent) {
+                    parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                }
+                btn.classList.add('active');
+            }
+        }
+
+        // ดึงข้อมูลและเรนเดอร์กราฟตามปกติ
+        const data = await API.getTrend(days);
+        UI.renderTrendChart(data);
     }
 };
 

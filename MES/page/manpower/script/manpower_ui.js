@@ -32,7 +32,6 @@ const UI = {
         this.animateNumber('kpi-cost', parseInt(totalCost));
         this.animateNumber('kpi-absent', totalAbsent);
         
-        // Update Sub-text
         const elLate = document.getElementById('kpi-late');
         if(elLate) elLate.innerText = totalLate;
         
@@ -42,10 +41,6 @@ const UI = {
         const rate = totalPlan > 0 ? ((totalActual / totalPlan) * 100).toFixed(1) : 0;
         const elRate = document.getElementById('kpi-rate');
         if(elRate) elRate.innerText = `${rate}% Rate`;
-
-        // --------------------------------------------------------
-        // 🔥 Event Bindings (Cards)
-        // --------------------------------------------------------
         
         // 1. Plan Card
         const cardPlan = document.getElementById('card-plan');
@@ -198,6 +193,71 @@ const UI = {
         });
     },
 
+    renderTrendChart(data) {
+        const ctx = document.getElementById('trendChart');
+        if (!ctx) return;
+
+        if (this.charts.trend) this.charts.trend.destroy();
+
+        const labels = data.map(r => r.display_date);
+        const planData = data.map(r => parseInt(r.total_plan));
+        const actualData = data.map(r => parseInt(r.total_actual));
+        
+        // 🔥 [ADJUSTED] รวม Absent + Leave เข้าด้วยกันตาม Requirement หัวหน้า
+        const absentData = data.map(r => parseInt(r.total_absent) + parseInt(r.total_leave));
+
+        this.charts.trend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Plan',
+                        data: planData,
+                        borderColor: '#4e73df',
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Actual',
+                        data: actualData,
+                        borderColor: '#1cc88a',
+                        backgroundColor: 'rgba(28, 200, 138, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        // ปรับ Label ให้ชัดเจนขึ้น (หรือจะใช้คำว่า 'Absent' เหมือนเดิมก็ได้)
+                        label: 'Absent & Leave', 
+                        data: absentData,
+                        borderColor: '#e74a3b',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        fill: false,
+                        // hidden: true // ⚠️ Comment ออก เพื่อให้โชว์เส้นนี้เลย (ถ้าหัวหน้าอยากเห็นทันที)
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Prompt', size: 12 } } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f6f9' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    },
+
     // =========================================================================
     // 3. MAIN TABLE
     // =========================================================================
@@ -283,7 +343,6 @@ const UI = {
     _calculateDiff(obj) { obj.diff = obj.actual - obj.plan; },
 
     getSkeletonRow(colCount = 10) {
-        // สร้างแถวจำลอง 5 แถว
         let html = '';
         for(let i=0; i<5; i++) {
             html += `
@@ -324,50 +383,42 @@ const UI = {
         
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
-        // Grand Total (Level 0 - โชว์เสมอ)
         tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
         
         const sortedKeys = Object.keys(groups).sort();
         
-        // Loop Level 1: Group (Line)
         sortedKeys.forEach((key, gIndex) => {
             const group = groups[key];
             const groupId = `lvl1-${gIndex}`;
             const groupTarget = `target-${groupId}`;
 
-            // 1. Render Level 1 (Line)
             tbody.innerHTML += this._createRowHtml(group.name, group.total, { 
                 isParent: true, 
                 viewMode, 
                 rawName: group.name,
-                toggleTarget: groupTarget // กดแล้วไป Toggle Class นี้
+                toggleTarget: groupTarget
             });
             
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
             
-            // Loop Level 2: Sub (Shift)
             sortedSubs.forEach((sub, sIndex) => {
-                const subId = `lvl2-${gIndex}-${sIndex}`; // ID ของแถวลูก
-                const subTarget = `target-${subId}`;      // Class เป้าหมายที่จะให้ลูกสั่งเปิด/ปิด (คือหลาน Level 3)
-
-                // 2. Render Level 2 (Shift) -> เป็นลูกของ Level 1 แต่เป็นแม่ของ Level 3
+                const subId = `lvl2-${gIndex}-${sIndex}`;
+                const subTarget = `target-${subId}`;
                 tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
                     isChild: true, 
                     meta: sub.meta,
-                    rowClass: groupTarget, // เป็นลูกของ Level 1 (ซ่อนตามแม่)
-                    isHidden: true,        // เริ่มต้นซ่อนไว้
-                    toggleTarget: subTarget // **สำคัญ** กดแล้วไป Toggle Class นี้ (Level 3)
+                    rowClass: groupTarget,
+                    isHidden: true,
+                    toggleTarget: subTarget
                 });
                 
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Loop Level 3: Item (Employee)
                 sortedItems.forEach(item => {
-                    // 3. Render Level 3 (Employee) -> เป็นลูกของ Level 2
                     tbody.innerHTML += this._createRowHtml(item.name, item, { 
                         isGrandChild: true, 
                         meta: item.meta,
-                        rowClass: subTarget, // เป็นลูกของ Level 2 (ซ่อนตามแม่ระดับ 2)
+                        rowClass: subTarget,
                         isHidden: true 
                     });
                 });
@@ -375,15 +426,12 @@ const UI = {
         });
     },
 
-    // [UPDATED] รองรับการ Toggle ซ้อนชั้น (กด Level 2 แล้วหมุนลูกศรได้ด้วย)
     toggleRows(targetClass, btnElement) {
-        // หาแถวลูกเป้าหมาย
         const rows = document.getElementsByClassName(targetClass);
         const icon = btnElement.querySelector('.fa-chevron-right');
         
         if (rows.length === 0) return;
 
-        // เช็คสถานะจากแถวแรก
         const isCurrentlyHidden = rows[0].style.display === 'none';
         
         for (let row of rows) {
@@ -392,29 +440,23 @@ const UI = {
             } else {
                 row.style.display = 'none';
                 
-                // [Logic พิเศษ] ถ้าปิด Level 1 ต้องไปสั่งปิด Level 3 ที่ค้างอยู่ด้วย (เพื่อความเนียน)
-                // เช็คว่าแถวนี้เป็นตัวเปิด Level ถัดไปไหม (มี toggleTarget)
                 const nextTarget = row.getAttribute('onclick')?.match(/UI\.toggleRows\('([^']+)'/);
                 if (nextTarget && nextTarget[1]) {
-                    // รีเซ็ต icon ของ Level 2 กลับเป็นแนวนอน
                     const subIcon = row.querySelector('.fa-chevron-right');
                     if(subIcon) subIcon.style.transform = 'rotate(0deg)';
                     
-                    // สั่งซ่อนหลาน (Level 3)
                     const grandChildren = document.getElementsByClassName(nextTarget[1]);
                     for(let gc of grandChildren) gc.style.display = 'none';
                 }
             }
         }
 
-        // หมุน Icon ตัวแม่
         if (icon) {
             icon.style.transition = 'transform 0.2s';
             icon.style.transform = isCurrentlyHidden ? 'rotate(90deg)' : 'rotate(0deg)';
         }
     },
 
-    // [UPDATED] เพิ่ม Icon ให้ Level 2 (isChild) เพื่อให้รู้ว่ากดได้
     _createRowHtml(label, stats, options = {}) {
         const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta, toggleTarget, rowClass, isHidden } = options;
         
@@ -431,7 +473,6 @@ const UI = {
         let canClick = false;
         let toggleAttr = ''; 
 
-        // สร้างปุ่มลูกศร (Chevron) เตรียมไว้
         const chevron = `<i class="fas fa-chevron-right me-2 text-muted transition-icon" style="font-size: 0.8em;"></i>`;
 
         if (isGrand) {
@@ -439,36 +480,31 @@ const UI = {
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
             canClick = true; 
         } 
-        else if (isParent) { // Level 1
+        else if (isParent) {
             rowBg = 'table-secondary fw-bold border-top border-white cursor-pointer'; 
             let icon = viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group');
             
-            nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`; // ใส่ Chevron
+            nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
 
             if (viewMode === 'LINE') { tLine = rawName; canClick = true; }
             else if (viewMode === 'TYPE') { tType = rawName; canClick = true; }
             
             if (toggleTarget) toggleAttr = `onclick="UI.toggleRows('${toggleTarget}', this)"`;
         } 
-        else if (isChild) { // Level 2 (แก้ตรงนี้ให้มี Chevron และกดได้)
-            rowBg = 'bg-light fw-bold cursor-pointer'; // เพิ่ม cursor-pointer
-            
-            // ขยับ Indent เข้ามา 25px
+        else if (isChild) {
+            rowBg = 'bg-light fw-bold cursor-pointer';
             nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;">${chevron}${label}</div>`;
             
             if (meta) { tLine = meta.line || ''; tShift = meta.shift || ''; tType = meta.type || 'ALL'; canClick = true; }
             
-            // ใส่ onclick ให้ Level 2 ด้วย
             if (toggleTarget) toggleAttr = `onclick="UI.toggleRows('${toggleTarget}', this)"`;
         } 
-        else if (isGrandChild) { // Level 3
+        else if (isGrandChild) {
             rowBg = 'bg-white';
-            // ขยับ Indent เข้ามา 55px (ลึกกว่า Level 2)
             nameHtml = `<div style="padding-left: 55px; border-left: 3px solid #dee2e6;"><span class="text-secondary small" style="font-size: 0.85rem;">• ${label}</span></div>`;
             if (meta) { tLine = meta.line; tShift = meta.shift; tType = meta.type; canClick = true; }
         }
 
-        // Action Filter Logic (คงเดิม)
         const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
         const hoverClass = canClick ? 'cursor-pointer-cell' : '';
         const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
@@ -476,7 +512,7 @@ const UI = {
         return `
             <tr class="${rowBg} ${rowHtmlClass}" style="${rowStyle}" ${toggleAttr}>
                 <td class="ps-3 text-truncate" style="max-width: 300px;">
-                    ${(isParent || isChild) ? nameHtml : // ถ้าเป็น Parent/Child ให้คลิกทั้งช่องได้ (เพื่อ Toggle)
+                    ${(isParent || isChild) ? nameHtml :
                       (isGrand ? nameHtml : `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`)
                     }
                 </td>
@@ -495,6 +531,34 @@ const UI = {
     showToast(message, type) { alert(message); },
     showLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
     hideLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },
+
+    switchChartView(mode) {
+        const btnDaily = document.getElementById('btn-chart-daily');
+        const btnTrend = document.getElementById('btn-chart-trend');
+        const viewDaily = document.getElementById('view-chart-daily');
+        const viewTrend = document.getElementById('view-chart-trend');
+
+        if (!btnDaily || !viewDaily) return; // Error Check
+
+        if (mode === 'daily') {
+            btnDaily.classList.add('active');
+            btnTrend.classList.remove('active');
+            
+            viewDaily.style.display = 'block';
+            viewTrend.style.display = 'none';
+        } else {
+            btnDaily.classList.remove('active');
+            btnTrend.classList.add('active');
+            
+            viewDaily.style.display = 'none';
+            viewTrend.style.display = 'block';
+            
+            // Trigger resize เพื่อให้กราฟวาดขนาดถูกต้องตอนเปิดมา
+            if (this.charts && this.charts.trend) {
+                this.charts.trend.resize();
+            }
+        }
+    }
 };
 
 // =============================================================================
@@ -681,7 +745,7 @@ const Actions = {
                 const res = await fetch('api/api_master_data.php', {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json' // 🚩 สำคัญมาก: ต้องมีบรรทัดนี้เพื่อให้ PHP อ่าน $input ออก
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ 
                         action: 'terminate_employee', 
@@ -742,18 +806,11 @@ const Actions = {
         const startDate = lastMonth.toISOString().split('T')[0];
 
         const modalEl = document.getElementById('detailModal');
-        
-        // ---------------------------------------------------------------------
-        // 🔥 [FIX] เช็คก่อนว่า Modal เปิดอยู่ไหม เพื่อแก้บัคจอดำ (Backdrop ซ้อน)
-        // ---------------------------------------------------------------------
         const isAlreadyOpen = modalEl.classList.contains('show');
         
-        // เปลี่ยน Title
         const titleEl = document.getElementById('detailModalTitle');
         
-        // เพิ่มปุ่ม "ย้อนกลับ" (Back) เพื่อให้ User กลับไปหน้ารายชื่อได้โดยไม่ต้องปิด Modal
         if (isAlreadyOpen) {
-            // จำ Title เดิมไว้ (ถ้าอยาก Advance เก็บใส่ตัวแปร global ได้ แต่นี่เอาแบบง่ายก่อน)
             if (!this._originalTitle) this._originalTitle = titleEl.innerHTML;
             
             titleEl.innerHTML = `
