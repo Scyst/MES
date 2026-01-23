@@ -6,15 +6,14 @@ let debounceTimer;
 document.addEventListener('DOMContentLoaded', async () => {
     await initData();
     
-    // ตั้งค่า Default Status
+    // 1. ตั้งค่า Default Status
     if (typeof IS_STORE_ROLE !== 'undefined' && IS_STORE_ROLE) {
         const filterEl = document.getElementById('filterStatus');
         if (filterEl) filterEl.value = 'PENDING';
     }
 
+    // 2. โหลดข้อมูลครั้งแรก
     loadRequests();
-
-    // Event Listener Search Box
     const filterSearch = document.getElementById('filterSearch');
     if (filterSearch) {
         filterSearch.addEventListener('input', () => {
@@ -22,6 +21,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             debounceTimer = setTimeout(loadRequests, 600); 
         });
     }
+
+    // เปลี่ยนวันที่เริ่มต้น
+    document.getElementById('filterStartDate')?.addEventListener('change', () => {
+        loadRequests();
+    });
+
+    // เปลี่ยนวันที่สิ้นสุด
+    document.getElementById('filterEndDate')?.addEventListener('change', () => {
+        loadRequests();
+    });
+
+    // เปลี่ยนสถานะ (Pending, Completed, Rejected)
+    document.getElementById('filterStatus')?.addEventListener('change', () => {
+        loadRequests();
+    });
 });
 
 // --- LOAD REQUESTS (Parallel Mode) ---
