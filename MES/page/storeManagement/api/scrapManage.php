@@ -1,12 +1,13 @@
 <?php
+// MES/page/storeManagement/api/scrapManage.php
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
 header('Content-Type: application/json');
 
-// ตรวจสอบสิทธิ์พื้นฐาน
-if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
+// Security Check
+if (!hasRole(['operator', 'supervisor', 'admin', 'creator', 'planner'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
@@ -18,13 +19,12 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        // 1. ดึงข้อมูลเบื้องต้น (Item List + Locations)
+        // 1. ดึงข้อมูล Master Data
         case 'get_initial_data':
-            // ดึง Items สำหรับ Autocomplete
-            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " WHERE is_active = 1 ORDER BY sap_no");
+            // Optimization: Select only necessary columns
+            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE is_active = 1 ORDER BY sap_no");
             
-            // ดึง Locations
-            $locStmt = $pdo->query("SELECT location_id, location_name, location_type, production_line FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
+            $locStmt = $pdo->query("SELECT location_id, location_name, location_type, production_line FROM " . LOCATIONS_TABLE . " WITH (NOLOCK) WHERE is_active = 1 ORDER BY location_name");
             
             echo json_encode([
                 'success' => true,
@@ -35,8 +35,12 @@ try {
             ]);
             break;
 
-        // 2. บันทึกของเสียและขอเบิก (สำหรับ Production)
+        // 2. Create Request (Scrap & Replace)
         case 'create_request':
+            if (empty($input['item_id']) || empty($input['store_location_id'])) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (Item หรือ Store)");
+            }
+
             $pdo->beginTransaction();
             
             $item_id = $input['item_id'];
@@ -44,50 +48,111 @@ try {
             $wip_loc = $input['wip_location_id'];
             $store_loc = $input['store_location_id'];
             $defect_source = $input['defect_source'] ?? 'SNC';
-            $raw_reason = $input['reason'];
+            $raw_reason = trim($input['reason']);
             
-            // รวม Source เข้ากับเหตุผล
+            if ($qty <= 0) throw new Exception("จำนวนต้องมากกว่า 0");
+
+            // Format Reason
             $full_reason = "[$defect_source] $raw_reason"; 
             $timestamp = date('Y-m-d H:i:s');
 
-            // 2.1 ตัดสต็อกของเสีย (SCRAP) ออกจาก WIP
+            // 2.1 ตัดสต็อกของเสียออกจาก WIP (SCRAP Transaction)
             $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
             $spStock->execute([$item_id, $wip_loc, -$qty]);
 
-            // Log Transaction (SCRAP) - ใช้ $full_reason
             $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'SCRAP', ?, ?, ?, ?)";
             $pdo->prepare($transSql)->execute([$item_id, -$qty, $wip_loc, $currentUser['id'], "Defect: $full_reason", $timestamp]);
 
-            // 2.2 สร้างใบขอเบิก (Transfer Request) - ใช้ $full_reason
+            // 2.2 สร้าง Transfer Request (Replacement)
             $uuid = 'REQ-' . strtoupper(uniqid());
-            $sqlReq = "INSERT INTO " . TRANSFER_ORDERS_TABLE . " (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)";
-            $pdo->prepare($sqlReq)->execute([$uuid, $item_id, $qty, $store_loc, $wip_loc, $currentUser['id'], "Replacement: $full_reason"]);
+            $sqlReq = "INSERT INTO " . TRANSFER_ORDERS_TABLE . " (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)";
+            $pdo->prepare($sqlReq)->execute([$uuid, $item_id, $qty, $store_loc, $wip_loc, $currentUser['id'], "Replacement: $full_reason", $timestamp]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'บันทึกของเสียและส่งคำขอเบิกแล้ว']);
             break;
 
-        // 3. ดึงรายการคำขอ (ตาม Role)
-        case 'get_requests':
-            // รับค่า status จากหน้าบ้าน ถ้าไม่ส่งมา ให้เป็น 'ALL'
+        //ดึงเฉพาะยอดสรุป (เบาและเร็วกว่านิดหน่อย)
+        case 'get_request_summary':
+            // copy logic รับค่า Filter มาเหมือนเดิมเป๊ะๆ
             $status = $_GET['status'] ?? 'ALL'; 
+            $search = trim($_GET['search'] ?? '');
+            $startDate = $_GET['start_date'] ?? date('Y-m-01');
+            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+            $startDateTime = $startDate . ' 00:00:00';
+            $endDateTime = $endDate . ' 23:59:59';
+
+            $conditions = ["t.created_at BETWEEN ? AND ?"];
+            $params = [$startDateTime, $endDateTime];
+
+            if ($status !== 'ALL') {
+                $conditions[] = "t.status = ?";
+                $params[] = $status;
+            }
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ? OR t.transfer_uuid LIKE ?)";
+                $likeTerm = "%$search%";
+                array_push($params, $likeTerm, $likeTerm, $likeTerm, $likeTerm);
+            }
+            if ($currentUser['role'] === 'operator') {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            // Query Summary อย่างเดียว
+            $sqlSummary = "SELECT 
+                                COUNT(t.transfer_id) as total_count,
+                                ISNULL(SUM(t.quantity), 0) as total_qty,
+                                ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                           FROM " . TRANSFER_ORDERS_TABLE . " t WITH (NOLOCK)
+                           JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.item_id = i.item_id
+                           JOIN " . LOCATIONS_TABLE . " loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                           LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id 
+                           $whereClause";
             
+            $stmt = $pdo->prepare($sqlSummary);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'summary' => $stmt->fetch(PDO::FETCH_ASSOC)]);
+            break;
+
+        // 3. Get Requests (Server-side Search Implemented)
+        case 'get_requests':
+            $status = $_GET['status'] ?? 'ALL'; 
+            $search = trim($_GET['search'] ?? '');
+            $startDate = $_GET['start_date'] ?? date('Y-m-01');
+            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+
+            // เติมเวลาให้ครอบคลุมทั้งวัน (00:00:00 - 23:59:59)
+            $startDateTime = $startDate . ' 00:00:00';
+            $endDateTime = $endDate . ' 23:59:59';
+
             $conditions = [];
             $params = [];
 
-            $conditions[] = "t.transfer_uuid LIKE 'REQ-%'"; // กรองเฉพาะคำขอเบิกที่สร้างจาก Production
+            // 1. Base Condition (Filter ตามวันที่สร้าง)
+            $conditions[] = "t.created_at BETWEEN ? AND ?";
+            $params[] = $startDateTime;
+            $params[] = $endDateTime;
 
-            // ถ้าไม่ได้ขอ 'ALL' ให้กรองตามสถานะ (เช่น PENDING)
+            // 2. Status Filter
             if ($status !== 'ALL') {
                 $conditions[] = "t.status = ?";
                 $params[] = $status;
             }
 
-            // --- Role Logic ---
+            // 3. Search Filter
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ? OR t.transfer_uuid LIKE ?)";
+                $likeTerm = "%$search%";
+                array_push($params, $likeTerm, $likeTerm, $likeTerm, $likeTerm);
+            }
+
+            // 4. Role Security
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
-                $params[] = $currentUser['line'];
-                $params[] = $currentUser['id'];
+                array_push($params, $currentUser['line'], $currentUser['id']);
             } 
             elseif ($currentUser['role'] === 'operator') {
                 $conditions[] = "t.created_by_user_id = ?";
@@ -96,76 +161,84 @@ try {
 
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             
-            // เพิ่ม TOP 100 เพื่อไม่ให้โหลดหนักเกินไปในอนาคต
-            $sql = "SELECT TOP 100 t.*, i.sap_no, i.part_no, i.part_description,
+            $sqlData = "SELECT TOP 500 t.*, i.sap_no, i.part_no, i.part_description,
+                           ISNULL(i.Cost_Total, 0) as unit_cost, 
                            loc_from.location_name as from_loc, loc_to.location_name as to_loc,
-                           
-                           -- [CHANGE] ใช้ชื่อไทย (name_th) ถ้าไม่มีให้ใช้ username แทน
                            ISNULL(e.name_th, u.username) as requester
-
-                    FROM " . TRANSFER_ORDERS_TABLE . " t
-                    JOIN " . ITEMS_TABLE . " i ON t.item_id = i.item_id
-                    JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                    JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                    LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                    
-                    -- [CHANGE] เพิ่มบรรทัดนี้เพื่อดึงชื่อพนักงาน
-                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " e ON u.emp_id = e.emp_id
-                    
+                    FROM " . TRANSFER_ORDERS_TABLE . " t WITH (NOLOCK)
+                    JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.item_id = i.item_id
+                    JOIN " . LOCATIONS_TABLE . " loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                    JOIN " . LOCATIONS_TABLE . " loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " e WITH (NOLOCK) ON u.emp_id = e.emp_id
                     $whereClause
-                    ORDER BY t.created_at DESC"; 
+                    ORDER BY t.created_at DESC";
 
-            $stmt = $pdo->prepare($sql);
+            $stmt = $pdo->prepare($sqlData);
             $stmt->execute($params);
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                'success' => true, 
+                'data' => $rows
+            ]);
             break;
 
-        // 4. อนุมัติคำขอ (สำหรับ Store)
+        // 4. Approve Request
         case 'approve_request':
-            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized"); // Store Only
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
             $pdo->beginTransaction();
             $transfer_id = $input['transfer_id'];
             
-            // ดึงข้อมูล
-            $req = $pdo->query("SELECT * FROM " . TRANSFER_ORDERS_TABLE . " WHERE transfer_id = $transfer_id")->fetch(PDO::FETCH_ASSOC);
-            if ($req['status'] !== 'PENDING') throw new Exception("รายการนี้ถูกดำเนินการไปแล้ว");
+            // Check status with Lock to prevent double approval
+            $reqStmt = $pdo->prepare("SELECT * FROM " . TRANSFER_ORDERS_TABLE . " WITH (UPDLOCK) WHERE transfer_id = ?");
+            $reqStmt->execute([$transfer_id]);
+            $req = $reqStmt->fetch(PDO::FETCH_ASSOC);
 
-            $qty = $req['quantity'];
+            if (!$req) throw new Exception("ไม่พบรายการ");
+            if ($req['status'] !== 'PENDING') throw new Exception("รายการนี้สถานะไม่ใช่ Pending (อาจถูกอนุมัติไปแล้ว)");
+
+            $qty = floatval($req['quantity']);
             $timestamp = date('Y-m-d H:i:s');
 
-            // ตัดสต็อก Store -> เพิ่มสต็อก WIP
+            // Movement: ตัด Store -> เพิ่ม WIP
             $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-            $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); // Store Out
-            $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);    // WIP In
+            $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
+            $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
 
-            // อัปเดต Status
+            // Update Status
             $updateSql = "UPDATE " . TRANSFER_ORDERS_TABLE . " SET status = 'COMPLETED', confirmed_by_user_id = ?, confirmed_at = ? WHERE transfer_id = ?";
             $pdo->prepare($updateSql)->execute([$currentUser['id'], $timestamp, $transfer_id]);
 
-            // Log Transaction (Internal Transfer)
-            $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, transaction_timestamp) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?)";
-            $pdo->prepare($transSql)->execute([$req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], $currentUser['id'], $req['transfer_uuid'], $timestamp]);
+            // Transaction Log
+            $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, transaction_timestamp, notes) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?)";
+            $pdo->prepare($transSql)->execute([$req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], $currentUser['id'], $req['transfer_uuid'], $timestamp, "Approved Replacement"]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'อนุมัติจ่ายของเรียบร้อย']);
             break;
             
-         // 5. ปฏิเสธคำขอ
+         // 5. Reject Request
          case 'reject_request':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
             
             $transfer_id = $input['transfer_id'];
-            $reason = $input['reject_reason'];
+            $reason = trim($input['reject_reason']);
+            $timestamp = date('Y-m-d H:i:s');
             
-            $sql = "UPDATE " . TRANSFER_ORDERS_TABLE . " SET status = 'REJECTED', notes = CONCAT(notes, ' | Rejected: $reason'), confirmed_by_user_id = ? WHERE transfer_id = ?";
-            $pdo->prepare($sql)->execute([$currentUser['id'], $transfer_id]);
+            $sql = "UPDATE " . TRANSFER_ORDERS_TABLE . " SET status = 'REJECTED', notes = CONCAT(notes, ' | Rejected: $reason'), confirmed_by_user_id = ?, confirmed_at = ? WHERE transfer_id = ?";
+            $pdo->prepare($sql)->execute([$currentUser['id'], $timestamp, $transfer_id]);
             
             echo json_encode(['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อย']);
             break;
+
+        default:
+            throw new Exception("Invalid Action");
     }
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>

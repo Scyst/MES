@@ -38,37 +38,72 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
             <div class="dashboard-header-sticky">
                 
                 <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-body p-2">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-
-                            <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                <div class="input-group input-group-sm" style="max-width: 300px;">
-                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="filterSearch" class="form-control border-start-0 ps-0" placeholder="Search Part No, SAP...">
+                    <div class="card-body p-3">
+                        <form id="filterForm" onsubmit="return false;">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small text-muted">ตั้งแต่วันที่</label>
+                                    <input type="date" class="form-control form-control-sm" id="filterStartDate" 
+                                        value="<?php echo date('Y-m-01'); ?>"> </div>
+                                
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small text-muted">ถึงวันที่</label>
+                                    <input type="date" class="form-control form-control-sm" id="filterEndDate" 
+                                        value="<?php echo date('Y-m-d'); ?>">
                                 </div>
-                                
-                                <select id="filterStatus" class="form-select form-select-sm" style="max-width: 150px;" onchange="loadRequests()">
-                                    <option value="ALL">Status: All</option>
-                                    <option value="PENDING">Status: Pending</option>
-                                    <option value="COMPLETED">Status: Completed</option>
-                                    <option value="REJECTED">Status: Rejected</option>
-                                </select>
-                            </div>
 
-                            <div class="d-flex align-items-center gap-2">
-                                <button class="btn btn-light border text-secondary btn-sm d-none d-md-inline-block" onclick="loadRequests()" data-bs-toggle="tooltip" title="Refresh">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                                
-                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm d-none d-md-inline-block" onclick="openRequestModal()">
-                                    <i class="fas fa-plus-circle me-1"></i> แจ้งของเสีย / เบิก
-                                </button>
-                            </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small text-muted">สถานะ</label>
+                                    <select class="form-select form-select-sm" id="filterStatus">
+                                        <option value="ALL">ทั้งหมด (All)</option>
+                                        <option value="PENDING" <?php echo $isStore ? 'selected' : ''; ?>>รออนุมัติ</option>
+                                        <option value="COMPLETED">อนุมัติแล้ว</option>
+                                        <option value="REJECTED">ปฏิเสธ</option>
+                                    </select>
+                                </div>
 
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label small text-muted">ค้นหา (SAP/Part/Req ID)</label>
+                                    <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Search...">
+                                </div>
+
+                                <div class="col-12 col-md-2 d-grid">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="loadRequests()">
+                                        <i class="fas fa-search me-1"></i> ค้นหา / คำนวณ
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-3 bg-primary bg-opacity-10">
+                    <div class="card-body p-2">
+                        <div class="row text-center row-cols-3 divider-vertical">
+                            <div class="col">
+                                <small class="text-muted d-block">รายการแจ้ง</small>
+                                <span class="fw-bold fs-5 text-primary" id="sumCount">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                </span>
+                                <span class="small"> รายการ</span>
+                            </div>
+                            <div class="col border-start border-end border-secondary border-opacity-25">
+                                <small class="text-muted d-block">จำนวนชิ้นงานเสีย</small>
+                                <span class="fw-bold fs-5 text-danger" id="sumQty">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                </span>
+                                <span class="small"> ชิ้น</span>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted d-block">มูลค่าความเสียหาย (Est.)</small>
+                                <span class="fw-bold fs-5 text-dark" id="sumCost">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                </span>
+                                <span class="small"> บาท</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
             <div class="content-wrapper p-3">
                 <div class="card shadow-sm border-0 d-none d-md-block">
@@ -81,6 +116,7 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
                                     <th style="width: 12%">Part No.</th>
                                     <th style="width: 20%">Description</th>
                                     <th class="text-center" style="width: 8%">Qty</th>
+                                    <th class="text-center" style="width: 8%">Unit Cost</th>
                                     <th style="width: 15%">Reason</th>
                                     <th class="text-center" style="width: 12%">Requester</th>
                                     <th class="text-center" style="width: 8%">Status</th>
