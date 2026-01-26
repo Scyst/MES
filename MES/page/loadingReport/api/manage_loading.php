@@ -32,14 +32,14 @@ try {
         // 1. ดึงรายการงาน (รองรับ Date Filter หรือ Search Keyword)
         case 'get_jobs':
             $filterDate = $_REQUEST['date'] ?? date('Y-m-d');
-            $keyword = $_REQUEST['search'] ?? ''; // รับค่า keyword มา
+            $keyword = $_REQUEST['search'] ?? ''; 
             
-            // Base SQL (ส่วนที่เหมือนกัน)
+            // [UPDATE] เพิ่ม s.snc_ci_no (Invoice) เข้าไปใน SQL
             $sqlBase = "SELECT TOP 50 s.id as so_id, s.po_number, s.loading_date, s.container_no, 
-                        s.quantity, s.booking_no,
+                        s.quantity, s.booking_no, s.snc_ci_no,
                         r.id as report_id, r.status as report_status
-                        FROM " . SALES_ORDERS_TABLE . " s
-                        LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id ";
+                        FROM " . SALES_ORDERS_TABLE . " s WITH (NOLOCK) 
+                        LEFT JOIN " . LOADING_REPORTS_TABLE . " r WITH (NOLOCK) ON s.id = r.sales_order_id ";
 
             $params = [];
 

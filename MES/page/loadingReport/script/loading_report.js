@@ -254,8 +254,12 @@ function loadJobList() {
                                 <h5 class="fw-bold text-primary mb-0">${job.po_number}</h5>
                                 <div>${badge}${printBtn}</div>
                             </div>
-                            <div class="small text-muted"><i class="fas fa-truck-loading me-1"></i> ${job.container_no || '-'}</div>
-                            <div class="small text-muted"><i class="fas fa-box me-1"></i> Qty: ${Number(job.quantity).toLocaleString()}</div>
+                            
+                            <div class="small text-muted text-truncate"><i class="fas fa-file-invoice me-2 text-secondary" style="width:16px;"></i>Inv: <span class="text-dark fw-bold">${job.snc_ci_no || '-'}</span></div>
+                            <div class="small text-muted text-truncate"><i class="fas fa-ticket-alt me-2 text-secondary" style="width:16px;"></i>Booking: <span class="text-dark">${job.booking_no || '-'}</span></div>
+                            
+                            <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
+                            <div class="small text-muted"><i class="fas fa-box me-2 text-secondary" style="width:16px;"></i>Qty: ${Number(job.quantity).toLocaleString()}</div>
                         </div>
                     </div>
                 </div>`;
