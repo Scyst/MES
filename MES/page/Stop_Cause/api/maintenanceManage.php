@@ -4,13 +4,14 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-require_once __DIR__ . '/../../../utils/libs/phpmailer/src/Exception.php';
-require_once __DIR__ . '/../../../utils/libs/phpmailer/src/PHPMailer.php';
-require_once __DIR__ . '/../../../utils/libs/phpmailer/src/SMTP.php';
-require_once __DIR__ . '/generate_job_pdf.php';
+// ปิดการใช้ PDF และ Mailer ชั่วคราวเพื่อเพิ่ม Performance
+// require_once __DIR__ . '/../../../utils/libs/phpmailer/src/Exception.php';
+// require_once __DIR__ . '/../../../utils/libs/phpmailer/src/PHPMailer.php';
+// require_once __DIR__ . '/../../../utils/libs/phpmailer/src/SMTP.php';
+// require_once __DIR__ . '/generate_job_pdf.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+// use PHPMailer\PHPMailer\PHPMailer;
+// use PHPMailer\PHPMailer\Exception;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
@@ -24,6 +25,10 @@ $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $currentUser = $_SESSION['user'];
 
+/**
+ * [DISABLED] ฟังก์ชันส่ง Email ถูกปิดใช้งานชั่วคราวเพื่อแก้ปัญหา Latency และ Network Firewall
+ */
+/*
 function sendEmailReport($pdo, $jobId) {
     $mail = new PHPMailer(true); 
     try {
@@ -106,6 +111,7 @@ function sendEmailReport($pdo, $jobId) {
         return false;
     }
 }
+*/
 
 try {
     switch ($action) {
@@ -128,14 +134,15 @@ try {
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
             
+            // ใช้ WITH (NOLOCK) เพื่อไม่ให้บล็อกการทำงานของระบบบันทึกข้อมูลหลัก
             $sql = "SELECT M.*, 
                            COALESCE(E1.name_th, U1.username, M.request_by) as requester_name,
                            COALESCE(E2.name_th, U2.username, M.resolved_by) as resolver_name
-                    FROM " . MAINTENANCE_REQUESTS_TABLE . " M
-                    LEFT JOIN " . USERS_TABLE . " U1 ON M.request_by = U1.username
-                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E1 ON U1.emp_id = E1.emp_id
-                    LEFT JOIN " . USERS_TABLE . " U2 ON M.resolved_by = U2.username
-                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E2 ON U2.emp_id = E2.emp_id
+                    FROM " . MAINTENANCE_REQUESTS_TABLE . " M WITH (NOLOCK)
+                    LEFT JOIN " . USERS_TABLE . " U1 WITH (NOLOCK) ON M.request_by = U1.username
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E1 WITH (NOLOCK) ON U1.emp_id = E1.emp_id
+                    LEFT JOIN " . USERS_TABLE . " U2 WITH (NOLOCK) ON M.resolved_by = U2.username
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E2 WITH (NOLOCK) ON U2.emp_id = E2.emp_id
                     $whereClause 
                     ORDER BY CASE WHEN M.status = 'Pending' THEN 1 WHEN M.status = 'In Progress' THEN 2 ELSE 3 END, M.request_date DESC";
             
@@ -164,16 +171,22 @@ try {
                 }
             }
 
-            $sql = "INSERT INTO " . MAINTENANCE_REQUESTS_TABLE . " (request_by, line, machine, issue_description, priority, photo_before_path) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $priority = $input['priority'] ?? 'Normal';
-            $line = !empty($input['line']) ? $input['line'] : ($currentUser['line'] ?? 'Unknown');
+            $pdo->beginTransaction(); // เริ่ม Transaction
+            try {
+                $sql = "INSERT INTO " . MAINTENANCE_REQUESTS_TABLE . " (request_by, line, machine, issue_description, priority, photo_before_path) VALUES (?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $priority = $input['priority'] ?? 'Normal';
+                $line = !empty($input['line']) ? $input['line'] : ($currentUser['line'] ?? 'Unknown');
 
-            if ($stmt->execute([$currentUser['username'], $line, $input['machine'], $input['issue_description'], $priority, $photoPath])) {
+                $stmt->execute([$currentUser['username'], $line, $input['machine'], $input['issue_description'], $priority, $photoPath]);
+                
                 logAction($pdo, $currentUser['username'], 'ADD_MT_REQ', $line, "Machine: {$input['machine']}, Issue: {$input['issue_description']}");
+                
+                $pdo->commit(); // บันทึกสำเร็จ
                 echo json_encode(['success' => true, 'message' => 'Maintenance request submitted.']);
-            } else {
-                throw new Exception("Failed to save request.");
+            } catch (Exception $e) {
+                $pdo->rollBack(); // ยกเลิกหากมี Error
+                throw $e;
             }
             break;
 
@@ -188,55 +201,62 @@ try {
 
             if (!$id) throw new Exception("Invalid ID.");
 
-            $updateFields = [];
-            $params = [];
-            $uploadDir = __DIR__ . '/../../uploads/maintenance/';
+            $pdo->beginTransaction(); // เริ่ม Transaction
+            try {
+                $updateFields = [];
+                $params = [];
+                $uploadDir = __DIR__ . '/../../uploads/maintenance/';
 
-            $updateFields[] = "status = ?";
-            $params[] = $status;
+                $updateFields[] = "status = ?";
+                $params[] = $status;
 
-            if ($techNote !== null) { $updateFields[] = "technician_note = ?"; $params[] = $techNote; }
-            if ($spareParts !== null) { $updateFields[] = "spare_parts_list = ?"; $params[] = $spareParts; }
-            if (!empty($startedAt)) { $updateFields[] = "started_at = ?"; $params[] = str_replace('T', ' ', $startedAt); }
-            
-            if ($status === 'Completed') {
-                $updateFields[] = "resolved_by = ?";
-                $params[] = $currentUser['username'];
-                $updateFields[] = "resolved_at = ?";
-                $params[] = !empty($resolvedAt) ? str_replace('T', ' ', $resolvedAt) : date('Y-m-d H:i:s');
-            }
-            
-            if (!empty($_FILES['photo_after']['name'])) {
-                $ext = pathinfo($_FILES['photo_after']['name'], PATHINFO_EXTENSION);
-                $newFilename = "after_{$id}_" . time() . "." . $ext;
-                if (move_uploaded_file($_FILES['photo_after']['tmp_name'], $uploadDir . $newFilename)) {
-                    $updateFields[] = "photo_after_path = ?";
-                    $params[] = '../uploads/maintenance/' . $newFilename;
+                if ($techNote !== null) { $updateFields[] = "technician_note = ?"; $params[] = $techNote; }
+                if ($spareParts !== null) { $updateFields[] = "spare_parts_list = ?"; $params[] = $spareParts; }
+                if (!empty($startedAt)) { $updateFields[] = "started_at = ?"; $params[] = str_replace('T', ' ', $startedAt); }
+                
+                if ($status === 'Completed') {
+                    $updateFields[] = "resolved_by = ?";
+                    $params[] = $currentUser['username'];
+                    $updateFields[] = "resolved_at = ?";
+                    $params[] = !empty($resolvedAt) ? str_replace('T', ' ', $resolvedAt) : date('Y-m-d H:i:s');
                 }
-            }
+                
+                if (!empty($_FILES['photo_after']['name'])) {
+                    $ext = pathinfo($_FILES['photo_after']['name'], PATHINFO_EXTENSION);
+                    $newFilename = "after_{$id}_" . time() . "." . $ext;
+                    if (move_uploaded_file($_FILES['photo_after']['tmp_name'], $uploadDir . $newFilename)) {
+                        $updateFields[] = "photo_after_path = ?";
+                        $params[] = '../uploads/maintenance/' . $newFilename;
+                    }
+                }
 
-            $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " SET " . implode(", ", $updateFields) . " WHERE id = ?";
-            $params[] = $id;
+                $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " SET " . implode(", ", $updateFields) . " WHERE id = ?";
+                $params[] = $id;
 
-            $stmt = $pdo->prepare($sql);
-            if ($stmt->execute($params)) {
-                if ($status === 'Completed') sendEmailReport($pdo, $id);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+
+                // [DISABLED] ปิดการส่ง Email เพื่อความเร็ว
+                // if ($status === 'Completed') sendEmailReport($pdo, $id);
+                
+                $pdo->commit(); // บันทึกสำเร็จ
                 echo json_encode(['success' => true, 'message' => 'Status updated successfully.']);
-            } else {
-                throw new Exception("Database update failed.");
+            } catch (Exception $e) {
+                $pdo->rollBack(); // ยกเลิกหากมี Error
+                throw $e;
             }
             break;
 
         case 'resend_email':
-             $id = $input['id'] ?? null;
-             if(sendEmailReport($pdo, $id)) echo json_encode(['success'=>true]);
-             else echo json_encode(['success'=>false]);
-             break;
+            // ปิดฟังก์ชันนี้เนื่องจากปิดระบบ Email
+            echo json_encode(['success' => false, 'message' => 'Email system is currently disabled.']);
+            break;
 
         default:
             throw new Exception("Invalid Action");
     }
 } catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack(); // Safe Check
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
