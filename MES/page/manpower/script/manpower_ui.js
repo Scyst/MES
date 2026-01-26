@@ -1147,8 +1147,6 @@ const Actions = {
         };
     },
 
-    exportExcel() { window.location.href = `api/api_export.php?date=${document.getElementById('filterDate').value}`; },
-
     async exportTrendExcel(days) {
         const end = new Date();
         const start = new Date();

@@ -231,14 +231,14 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
                 'outside_door' => '2. Seal Condition (สภาพซีล)',
                 'right_side' => '3. Container No. (เบอร์ตู้)',
                 'left_side' => '4. Empty Container (ตู้เปล่า)',
-                'front_wall' => '5. Half Loaded (ครึ่งตู้)',
-                'ceiling_roof' => '6. Full Loaded (เต็มตู้)',
-                'floor' => '7. Right Door Closed (ปิดขวา)',
-                'inside_empty' => '8. All Doors Closed (ปิด 2 ฝั่ง)',
-                'inside_loaded' => '9. Seal Lock (ล็อคซีล)',
-                'seal_lock' => '10. Shipping Doc (ใบของออก)',
-                'floor_moisture' => '11. Floor Moisture (ความชื้นพื้นตู้)',
-                'cargo_moisture' => '12. Cargo Moisture (ความชื้นสินค้า)'
+                'floor_moisture' => '5. Floor Moisture (ความชื้นพื้นตู้)',
+                'front_wall' => '6. Half Loaded (ครึ่งตู้)',
+                'cargo_moisture' => '7. Cargo Moisture (ความชื้นสินค้า)',
+                'ceiling_roof' => '8. Full Loaded (เต็มตู้)',
+                'floor' => '9. Right Door Closed (ปิดขวา)',
+                'inside_empty' => '10. All Doors Closed (ปิด 2 ฝั่ง)',
+                'inside_loaded' => '11. Seal Lock (ล็อคซีล)',
+                'seal_lock' => '12. Shipping Doc (ใบของออก)'
             ];
             $chunks = array_chunk($photo_list, 4, true);
             foreach ($chunks as $rowItems):
