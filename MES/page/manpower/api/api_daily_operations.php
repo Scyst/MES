@@ -169,34 +169,41 @@ try {
         case 'read_summary':
             $date = $_GET['date'] ?? date('Y-m-d');
             
-            // ใช้ Logic เดียวกับ read_daily แต่ Group By เพื่อหาผลรวม
             $sql = "SELECT 
                         ISNULL(L.actual_line, E.line) as line_name,
                         ISNULL(S.shift_name, S_Master.shift_name) as shift_name,
                         ISNULL(L.actual_team, E.team_group) as team_group,
                         ISNULL(CM.category_name, 'General') as emp_type,
-                        ISNULL(CM.rate_type, 'DAILY') as rate_type, -- ✅ ส่ง Rate Type (รายวัน/เดือน)
+                        ISNULL(CM.rate_type, 'DAILY') as rate_type,
 
-                        -- นับจำนวนคน (Headcount)
                         COUNT(E.emp_id) as total_hc,
-                        SUM(CASE WHEN E.is_active = 1 THEN 1 ELSE 0 END) as plan_count, -- หรือใช้ Logic Plan ของคุณ
+                        SUM(CASE WHEN E.is_active = 1 THEN 1 ELSE 0 END) as plan_count,
                         
-                        -- นับสถานะ
                         SUM(CASE WHEN L.status = 'PRESENT' THEN 1 ELSE 0 END) as present,
                         SUM(CASE WHEN L.status = 'LATE' THEN 1 ELSE 0 END) as late,
                         SUM(CASE WHEN L.status = 'ABSENT' THEN 1 ELSE 0 END) as absent,
                         SUM(CASE WHEN L.status IN ('SICK','BUSINESS','VACATION') THEN 1 ELSE 0 END) as leave,
                         SUM(CASE WHEN L.status IN ('PRESENT','LATE') THEN 1 ELSE 0 END) as actual,
 
-                        -- ✅ คำนวณเงินแยกประเภท (DL / OT) --
                         SUM(CAST(
                             CASE 
                                 WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END)
+                                    CASE 
+                                        WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN (CM.hourly_rate / 30.0)
+                                        WHEN CM.rate_type LIKE 'MONTHLY%' THEN 
+                                            (CM.hourly_rate / 30.0) + 
+                                            (CASE WHEN Cal.day_type = 'HOLIDAY' THEN (Rate.Hourly_Base * 8.0 * (Rate.Work_Multiplier - 1.0)) ELSE 0 END)
+                                        ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) 
+                                    END
+
                                 WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0) END)
+                                    CASE 
+                                        WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) 
+                                        ELSE (Rate.Hourly_Base * 8.0) 
+                                    END
+
                                 ELSE 
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
+                                    CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END
                             END
                         AS DECIMAL(10,2))) as normal_cost,
 
@@ -208,15 +215,28 @@ try {
                             END
                         AS DECIMAL(10,2))) as ot_cost,
 
-                        -- ยอดรวม (DL + OT)
                         SUM(CAST(
-                            (CASE 
-                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END) +
-                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
-                                ELSE 
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
-                            END)
+                            (
+                                CASE 
+                                    WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                        CASE 
+                                            WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN (CM.hourly_rate / 30.0)
+                                            WHEN CM.rate_type LIKE 'MONTHLY%' THEN 
+                                                (CM.hourly_rate / 30.0) + (CASE WHEN Cal.day_type = 'HOLIDAY' THEN (Rate.Hourly_Base * 8.0 * (Rate.Work_Multiplier - 1.0)) ELSE 0 END)
+                                            ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) 
+                                        END
+                                    WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
+                                        CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0) END
+                                    ELSE 
+                                        CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END
+                                END
+                            ) + 
+                            (
+                                CASE 
+                                    WHEN L.status IN ('PRESENT', 'LATE') THEN (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
+                                    ELSE 0
+                                END
+                            )
                         AS DECIMAL(10,2))) as total_cost
 
                     FROM " . MANPOWER_EMPLOYEES_TABLE . " E
@@ -229,8 +249,30 @@ try {
                     LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
                         ON E.emp_id = L.emp_id AND L.log_date = :date
                     LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
+                    
                     LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
-                    CROSS APPLY (SELECT CASE WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 WHEN Cal.day_type='HOLIDAY' THEN 3.0 ELSE 1.5 END AS OT_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 ELSE 1.0 END AS Work_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 ELSE COALESCE(CM.hourly_rate,0) END AS Hourly_Base) AS Rate
+                    
+                    CROSS APPLY (
+                        SELECT 
+                            CASE 
+                                WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 
+                                WHEN Cal.day_type='HOLIDAY' THEN ISNULL(Cal.ot_rate_holiday, 3.0) 
+                                ELSE 1.5 
+                            END AS OT_Multiplier, 
+                            
+                            CASE 
+                                WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0
+                                WHEN Cal.day_type='HOLIDAY' THEN ISNULL(Cal.work_rate_holiday, 2.0) 
+                                ELSE 1.0 
+                            END AS Work_Multiplier, 
+                            
+                            CASE 
+                                WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 
+                                WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 
+                                ELSE COALESCE(CM.hourly_rate,0) 
+                            END AS Hourly_Base
+                    ) AS Rate
+
                     CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
                     CROSS APPLY (
                         SELECT CASE 
@@ -264,91 +306,26 @@ try {
             ]);
             $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Mapping key ให้ตรงกับที่ JS ต้องการ (เผื่อ SQL Alias ไม่ตรงเป๊ะ)
             $finalData = array_map(function($row) {
                 return [
                     'line_name' => $row['line_name'],
                     'shift_name' => $row['shift_name'],
                     'team_group' => $row['team_group'],
                     'emp_type' => $row['emp_type'],
-                    'rate_type' => $row['rate_type'], // ✅ สำคัญมาก
+                    'rate_type' => $row['rate_type'],
                     'total_hc' => $row['total_hc'],
-                    'plan' => $row['total_hc'], // ใช้ HC เป็น Plan ชั่วคราว หรือใช้ $row['plan_count']
+                    'plan' => $row['total_hc'],
                     'present' => $row['present'],
                     'late' => $row['late'],
                     'absent' => $row['absent'],
                     'leave' => $row['leave'],
                     'total_cost' => $row['total_cost'],
-                    'normal_cost' => $row['normal_cost'], // ✅ DL
-                    'ot_cost' => $row['ot_cost'] // ✅ OT
+                    'normal_cost' => $row['normal_cost'],
+                    'ot_cost' => $row['ot_cost']
                 ];
             }, $rawData);
 
             echo json_encode(['success' => true, 'raw_data' => $finalData, 'last_update' => date('d/m/Y H:i:s')]);
-            break;
-            
-        // ======================================================================
-        // CASE: update_log (Strict Update Only & Correct Columns)
-        // ======================================================================
-        case 'update_log':
-            $empId = $input['emp_id'] ?? '';
-            $logDate = $input['log_date'] ?? date('Y-m-d');
-            
-            if (!$empId) throw new Exception("Employee ID is required.");
-
-            $pdo->beginTransaction();
-
-            // 1. Verify existence
-            $stmtCheck = $pdo->prepare("SELECT log_id FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date = ?");
-            $stmtCheck->execute([$empId, $logDate]);
-            $existingLog = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-            if (!$existingLog) {
-                $pdo->rollBack();
-                http_response_code(404);
-                echo json_encode(['success' => false, 'message' => "ไม่พบข้อมูลในระบบ (Sync Required). กรุณากด Sync ข้อมูลใหม่"]);
-                exit;
-            }
-
-            // 2. Perform Update
-            $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " SET updated_by = ?, updated_at = GETDATE(), is_verified = 1 ";
-            $params = [$updatedBy];
-
-            // Map inputs to query [FIXED COLUMN NAMES: scan_in_time, scan_out_time]
-            $fields = [
-                'status'        => 'status', 
-                'remark'        => 'remark', 
-                'scan_in_time'  => 'scan_in_time', 
-                'scan_out_time' => 'scan_out_time', 
-                'actual_line'   => 'actual_line', 
-                'actual_team'   => 'actual_team', 
-                'shift_id'      => 'shift_id'
-            ];
-
-            foreach ($fields as $inputKey => $dbCol) {
-                // Check if key exists in input (allowing empty string but checking for existence)
-                if (array_key_exists($inputKey, $input)) {
-                    $val = $input[$inputKey];
-                    // Convert empty string to null for date/time columns if needed, or allow strings for status/remark
-                    if ($val === '') $val = null; 
-                    
-                    $sql .= ", $dbCol = ?";
-                    $params[] = $val;
-                }
-            }
-
-            $sql .= " WHERE log_id = ?";
-            $params[] = $existingLog['log_id'];
-
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-
-            // 3. Recalculate
-            $stmtCalc = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
-            $stmtCalc->execute([$logDate, $logDate]);
-
-            $pdo->commit();
-            echo json_encode(['success' => true, 'message' => 'Updated successfully', 'log_id' => $existingLog['log_id']]);
             break;
 
         // ======================================================================
