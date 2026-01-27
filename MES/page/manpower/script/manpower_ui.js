@@ -29,7 +29,7 @@ const UI = {
 
         this.animateNumber('kpi-plan', totalPlan);
         this.animateNumber('kpi-actual', totalActual);
-        this.animateNumber('kpi-cost', parseInt(totalCost));
+        this.animateNumber('kpi-cost', Math.round(totalCost));
         this.animateNumber('kpi-absent', totalAbsent);
         
         const elLate = document.getElementById('kpi-late');

@@ -1,5 +1,5 @@
 <?php
-// MES/page/components/php/top_header.
+// MES/page/components/php/top_header.php
 
 if (!function_exists('getThaiDateHeader')) {
     function getThaiDateHeader() {
@@ -14,11 +14,11 @@ if (!function_exists('getThaiDateHeader')) {
     }
 }
 
-// กำหนดค่า Default หากหน้าไหนลืมประกาศตัวแปรมา
-$headerIcon = isset($pageIcon) ? $pageIcon : 'fas fa-cube'; // ไอคอนเริ่มต้น
-$headerTitle = isset($pageHeaderTitle) ? $pageHeaderTitle : 'MES System'; // ชื่อระบบเริ่มต้น
-$headerSubtitle = isset($pageHeaderSubtitle) ? $pageHeaderSubtitle : 'Manufacturing Execution System'; // คำอธิบายเริ่มต้น
-$helpModalId = isset($pageHelpId) ? $pageHelpId : ''; // ID ของ Modal คู่มือ (ถ้ามี)
+$headerIcon = isset($pageIcon) ? $pageIcon : 'fas fa-cube';
+$headerTitle = isset($pageHeaderTitle) ? $pageHeaderTitle : 'MES System';
+$headerSubtitle = isset($pageHeaderSubtitle) ? $pageHeaderSubtitle : 'Manufacturing Execution System';
+$helpModalId = isset($pageHelpId) ? $pageHelpId : '';
+$backLink = isset($pageBackLink) ? $pageBackLink : ''; 
 ?>
 
 <header class="portal-top-header">
@@ -28,9 +28,15 @@ $helpModalId = isset($pageHelpId) ? $pageHelpId : ''; // ID ของ Modal ค�
             <i class="fas fa-bars fa-lg"></i>
         </button>
 
-        <div class="header-logo-box bg-primary bg-opacity-10 text-primary">
-            <i class="<?php echo $headerIcon; ?> fa-lg"></i>
-        </div>
+        <?php if($backLink): ?>
+            <a href="<?php echo $backLink; ?>" class="btn btn-light bg-white border text-secondary shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;" title="Go Back">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+        <?php else: ?>
+            <div class="header-logo-box bg-primary bg-opacity-10 text-primary">
+                <i class="<?php echo $headerIcon; ?> fa-lg"></i>
+            </div>
+        <?php endif; ?>
         
         <div class="d-flex flex-column justify-content-center">
             <h5 class="fw-bold mb-0 text-body" style="line-height: 1.2;">
@@ -57,7 +63,6 @@ $helpModalId = isset($pageHelpId) ? $pageHelpId : ''; // ID ของ Modal ค�
         </span>
 
         <?php 
-            // ใช้ __DIR__ เพื่อให้อ้างอิง path ได้ถูกต้องเสมอไม่ว่าจะ include มาจากไหน
             include_once __DIR__ . '/nav_dropdown.php'; 
         ?>
     </div>

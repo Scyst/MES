@@ -88,9 +88,16 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             <?php if (hasRole(['admin', 'creator'])): ?>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Management</h6></li>
+                                
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openShiftPlanner()">Shift Planner</a></li>
+                                
+                                <li>
+                                    <a class="dropdown-item" href="holidayUI.php">Holiday Settings</a>
+                                </li>
+
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openMappingManager()">Maps Config</a></li>
+                                
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Daily Data</a></li>
                             <?php endif; ?>
