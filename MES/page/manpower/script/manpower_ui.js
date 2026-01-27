@@ -269,46 +269,69 @@ const UI = {
     // =========================================================================
     // 3. MAIN TABLE
     // =========================================================================
-    processGroupedData(rawData, viewMode) {
+    processGroupedData(rawData = [], viewMode) {
         const groups = {};
-        const grandTotal = { name: 'GRAND TOTAL', hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 };
+        const grandTotal = { name: 'GRAND TOTAL', hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, dl: 0, ot: 0, dlot: 0 };
 
         rawData.forEach(row => {
             let mainKey, subKeyName, itemKeyName;
             let metaLine = '', metaShift = '', metaType = '';
             let shiftId = (row.shift_name && row.shift_name.includes('Day')) ? '1' : '2';
 
-            if (viewMode === 'TYPE') {
-                mainKey = row.emp_type || 'Uncategorized';
-                subKeyName = row.line_name || '-';
-                itemKeyName = `${row.shift_name} (${row.team_group})`;
-                metaLine = row.line_name; metaType = mainKey;
-            } else if (viewMode === 'SHIFT') {
-                mainKey = row.shift_name || 'Unassigned';
-                subKeyName = row.line_name || '-';
-                itemKeyName = row.emp_type || 'General';
-                metaLine = row.line_name; metaShift = shiftId;
-            } else { // LINE (Default)
-                mainKey = row.line_name || 'Unassigned';
-                subKeyName = `${row.shift_name} ${row.team_group ? '('+row.team_group+')' : ''}`;
-                itemKeyName = row.emp_type || 'General';
-                metaLine = mainKey; metaShift = shiftId;
+            // =================================================================
+            // 🔥 CASE: PAYMENT (จัดกลุ่มแบบใหม่ตามที่ขอ)
+            // =================================================================
+            if (viewMode === 'PAYMENT') {
+                // 1. Level 1 (แม่): รายวัน vs รายเดือน
+                const rType = (row.rate_type || 'DAILY').toUpperCase();
+                if (rType.includes('MONTHLY')) {
+                    mainKey = '💰 Monthly Staff (รายเดือน)';
+                    metaType = 'Monthly'; 
+                } else {
+                    mainKey = '👷 Daily Staff (รายวัน)';
+                    metaType = 'Daily';
+                }
+
+                // 2. Level 2 (ลูก): ประเภทพนักงาน (Category)
+                // ดึงจาก field 'emp_type' ที่ API ส่งมา (เช่น นักศึกษาฝึกงาน, Acting Mini MD)
+                subKeyName = row.emp_type || 'General';
+                
+                // 3. Level 3 (หลาน): ไลน์ผลิต (Line)
+                // แสดงชื่อ Line คู่กับกะ เพื่อให้เห็นภาพรวมของไลน์นั้นๆ
+                itemKeyName = `${row.line_name} (${row.shift_name})`;
+                
+                // ค่าสำหรับส่งไปหน้า Modal เวลากด
+                metaLine = row.line_name; 
+                metaShift = shiftId;
             }
+            // =================================================================
+            
+            else if (viewMode === 'TYPE') {
+                 mainKey = row.emp_type || 'Uncategorized'; subKeyName = row.line_name || '-'; itemKeyName = `${row.shift_name} (${row.team_group})`; metaLine = row.line_name; metaType = mainKey;
+            } else if (viewMode === 'SHIFT') {
+                 mainKey = row.shift_name || 'Unassigned'; subKeyName = row.line_name || '-'; itemKeyName = row.emp_type || 'General'; metaLine = row.line_name; metaShift = shiftId;
+            } else { // LINE Default
+                 mainKey = row.line_name || 'Unassigned'; subKeyName = `${row.shift_name} ${row.team_group ? '('+row.team_group+')' : ''}`; itemKeyName = row.emp_type || 'General'; metaLine = mainKey; metaShift = shiftId;
+            }
+
+            // คำนวณ Cost
+            const dl = parseFloat(row.normal_cost || 0);
+            const ot = parseFloat(row.ot_cost || 0);
+            const dlot = dl + ot;
 
             const stats = {
                 hc: parseInt(row.total_hc || 0), plan: parseInt(row.plan || 0),
                 present: parseInt(row.present || 0), late: parseInt(row.late || 0),
                 absent: parseInt(row.absent || 0), leave: parseInt(row.leave || 0),
-                cost: parseFloat(row.total_cost || 0)
+                dl: dl, ot: ot, dlot: dlot, cost: dlot
             };
             stats.actual = stats.present + stats.late;
 
-            // Parent
+            // Logic การรวมยอด (เหมือนเดิม)
             if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
 
-            // Sub
-            if (!groups[mainKey].subs[subKeyName]) {
+            if (!groups[mainKey].subs[subKeyName]) { 
                 groups[mainKey].subs[subKeyName] = { 
                     name: subKeyName, items: {}, total: this._initStats(),
                     meta: { line: metaLine, shift: metaShift, type: metaType }
@@ -316,7 +339,6 @@ const UI = {
             }
             this._accumulateStats(groups[mainKey].subs[subKeyName].total, stats);
 
-            // Item
             if (!groups[mainKey].subs[subKeyName].items[itemKeyName]) {
                 groups[mainKey].subs[subKeyName].items[itemKeyName] = { 
                     name: itemKeyName, 
@@ -340,12 +362,15 @@ const UI = {
         return { groups, grandTotal };
     },
 
-    _initStats() { return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, cost: 0 }; },
+    _initStats() { return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, dl: 0, ot: 0, dlot: 0 }; },
 
     _accumulateStats(target, source) {
         target.hc += source.hc; target.plan += source.plan; target.present += source.present;
         target.late += source.late; target.absent += source.absent; target.leave += source.leave;
-        target.actual += source.actual; target.cost += source.cost;
+        target.actual += source.actual; 
+        target.dl += source.dl; 
+        target.ot += source.ot; 
+        target.dlot += source.dlot;
     },
 
     _calculateDiff(obj) { obj.diff = obj.actual - obj.plan; },
@@ -373,25 +398,54 @@ const UI = {
     
     renderTable(data, viewMode = 'LINE') {
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="10" class="text-center py-5">
-                    <div class="d-flex flex-column align-items-center justify-content-center opacity-50">
-                        <i class="fas fa-folder-open fa-3x mb-3 text-gray-300"></i>
-                        <h6 class="fw-bold text-secondary">ไม่พบข้อมูลตามเงื่อนไข</h6>
-                        <small class="text-muted">ลองเปลี่ยนวันที่ หรือตัวกรองข้อมูลใหม่</small>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
         
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center py-5">
+                        <div class="d-flex flex-column align-items-center justify-content-center opacity-50">
+                            <i class="fas fa-folder-open fa-3x mb-3 text-gray-300"></i>
+                            <h6 class="fw-bold text-secondary">ไม่พบข้อมูล</h6>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return; // จบการทำงานทันที ไม่ให้ไปต่อ
+        }
+        // ----------------------------------------
+
+        const thead = document.querySelector('#manpowerTable thead tr');
+        
+        // 1. ปรับ Header ตาม View Mode
+        if (viewMode === 'PAYMENT') {
+            thead.innerHTML = `
+                <th class="ps-3">Payment / Line</th>
+                <th class="text-center">Actual</th>
+                <th class="text-end text-primary bg-light border-start">DL (ปกติ)</th>
+                <th class="text-end text-danger bg-light">OT (ล่วงเวลา)</th>
+                <th class="text-end fw-bold bg-light border-end pe-3">DLOT (รวม)</th>
+            `;
+        } else {
+            // Header เดิม
+            thead.innerHTML = `
+                <th class="ps-3">Group / Line</th>
+                <th class="text-center">HC</th>
+                <th class="text-center" style="display: none;">Plan</th>
+                <th class="text-center text-success">Present</th>
+                <th class="text-center text-warning">Late</th>
+                <th class="text-center text-danger">Absent</th>
+                <th class="text-center text-info">Leave</th>
+                <th class="text-center border-start bg-light">Actual</th>
+                <th class="text-center">Diff</th>
+                <th class="text-end pe-3">Cost</th>
+            `;
+        }
+        
+        // เรียก Process Data (ตอนนี้ data จะไม่เป็น undefined แล้ว)
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
-        tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true });
+        tbody.innerHTML = ''; // เคลียร์ของเก่า
+        tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true, viewMode }); // ส่ง viewMode ไปด้วย
         
         const sortedKeys = Object.keys(groups).sort();
         
@@ -407,13 +461,14 @@ const UI = {
                 toggleTarget: groupTarget
             });
             
+            // ... (ลูป Subs / Items เหมือนเดิม) ...
             const sortedSubs = Object.values(group.subs).sort((a, b) => a.name.localeCompare(b.name));
-            
             sortedSubs.forEach((sub, sIndex) => {
                 const subId = `lvl2-${gIndex}-${sIndex}`;
                 const subTarget = `target-${subId}`;
                 tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
                     isChild: true, 
+                    viewMode, // ส่ง viewMode
                     meta: sub.meta,
                     rowClass: groupTarget,
                     isHidden: true,
@@ -421,10 +476,10 @@ const UI = {
                 });
                 
                 const sortedItems = Object.values(sub.items).sort((a, b) => a.name.localeCompare(b.name));
-                
                 sortedItems.forEach(item => {
                     tbody.innerHTML += this._createRowHtml(item.name, item, { 
                         isGrandChild: true, 
+                        viewMode, // ส่ง viewMode
                         meta: item.meta,
                         rowClass: subTarget,
                         isHidden: true 
@@ -466,23 +521,22 @@ const UI = {
     },
 
     _createRowHtml(label, stats, options = {}) {
+        // 1. รับค่า Options
         const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta, toggleTarget, rowClass, isHidden } = options;
         
-        let diffClass = 'text-muted opacity-50', diffPrefix = '';
-        if (stats.diff < 0) diffClass = 'text-danger fw-bold';
-        else if (stats.diff > 0) { diffClass = 'text-warning fw-bold text-dark'; diffPrefix = '+'; }
-        else if (stats.plan > 0) diffClass = 'text-success fw-bold';
-
+        // Helper จัดรูปแบบตัวเลข
+        const fmt = (n) => new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(n);
+        
+        // 2. ตั้งค่าสีและไอคอนพื้นฐาน
         let rowStyle = isHidden ? 'display: none;' : ''; 
-        let rowHtmlClass = rowClass || ''; 
         let rowBg = '';
         let nameHtml = label;
         let tLine = '', tShift = '', tType = 'ALL';
         let canClick = false;
         let toggleAttr = ''; 
-
         const chevron = `<i class="fas fa-chevron-right me-2 text-muted transition-icon" style="font-size: 0.8em;"></i>`;
 
+        // กำหนด Style ตามลำดับชั้น (Parent/Child)
         if (isGrand) {
             rowBg = 'table-dark fw-bold border-bottom-0';
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
@@ -490,10 +544,16 @@ const UI = {
         } 
         else if (isParent) {
             rowBg = 'table-secondary fw-bold border-top border-white cursor-pointer'; 
-            let icon = viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group');
+            
+            // เลือกไอคอน
+            let icon = 'fa-layer-group';
+            if (viewMode === 'TYPE') icon = 'fa-user-tag';
+            else if (viewMode === 'SHIFT') icon = 'fa-clock';
+            else if (viewMode === 'PAYMENT') icon = 'fa-coins text-warning'; // 💰 ไอคอนเหรียญ
             
             nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
 
+            // กำหนด Filter สำหรับ Drilldown
             if (viewMode === 'LINE') { tLine = rawName; canClick = true; }
             else if (viewMode === 'TYPE') { tType = rawName; canClick = true; }
             
@@ -504,7 +564,6 @@ const UI = {
             nameHtml = `<div style="padding-left: 25px; border-left: 3px solid #dee2e6;">${chevron}${label}</div>`;
             
             if (meta) { tLine = meta.line || ''; tShift = meta.shift || ''; tType = meta.type || 'ALL'; canClick = true; }
-            
             if (toggleTarget) toggleAttr = `onclick="UI.toggleRows('${toggleTarget}', this)"`;
         } 
         else if (isGrandChild) {
@@ -513,29 +572,56 @@ const UI = {
             if (meta) { tLine = meta.line; tShift = meta.shift; tType = meta.type; canClick = true; }
         }
 
-        const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
-        const hoverClass = canClick ? 'cursor-pointer-cell' : '';
-        const costDisplay = stats.cost > 0 ? new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(stats.cost) : '-';
+        // =====================================================================
+        // 🔥 CASE A: โหมด PAYMENT (แสดงยอดเงิน DL, OT, DLOT) - 5 Columns
+        // =====================================================================
+        if (viewMode === 'PAYMENT') {
+            return `
+                <tr class="${rowBg} ${rowClass || ''}" style="${rowStyle}" ${toggleAttr || ''}>
+                    <td class="ps-3 text-truncate" style="max-width: 300px;">
+                        ${(isParent || isChild) ? nameHtml : (isGrand ? nameHtml : `<span class="ms-4">${nameHtml}</span>`)}
+                    </td>
+                    <td class="text-center fw-bold">${stats.actual}</td>
+                    
+                    <td class="text-end text-primary bg-light bg-opacity-25 border-start font-monospace">${fmt(stats.dl)}</td>
+                    <td class="text-end text-danger bg-light bg-opacity-25 font-monospace">${fmt(stats.ot)}</td>
+                    <td class="text-end fw-bold border-end pe-3 font-monospace">${fmt(stats.dlot)}</td>
+                </tr>`;
+        }
 
-        return `
-            <tr class="${rowBg} ${rowHtmlClass}" style="${rowStyle}" ${toggleAttr}>
-                <td class="ps-3 text-truncate" style="max-width: 300px;">
-                    ${(isParent || isChild) ? nameHtml :
-                      (isGrand ? nameHtml : `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`)
-                    }
-                </td>
-                <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
-                <td class="text-center fw-bold ${hoverClass}" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
-                <td class="text-center text-success ${hoverClass}" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
-                <td class="text-center text-warning text-dark ${hoverClass}" ${clickAttr('LATE')}>${stats.late || '-'}</td>
-                <td class="text-center text-danger ${hoverClass}" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
-                <td class="text-center text-info text-dark ${hoverClass}" ${clickAttr('LEAVE')}>${stats.leave || '-'}</td>
-                <td class="text-center fw-bold border-start border-end ${hoverClass}" style="background-color: rgba(0,0,0,0.02);" ${clickAttr('PRESENT_AND_LATE')}>${stats.actual}</td>
-                <td class="text-center ${diffClass}">${diffPrefix}${stats.diff}</td>
-                <td class="text-end pe-4 text-secondary small">${costDisplay}</td>
-            </tr>`;
+        // =====================================================================
+        // 🔥 CASE B: โหมดปกติ (Line, Shift, Type) (แสดง HC, Present, Late...) - 10 Columns
+        // =====================================================================
+        else {
+            // คำนวณ Diff Color
+            let diffClass = 'text-muted opacity-50', diffPrefix = '';
+            if (stats.diff < 0) diffClass = 'text-danger fw-bold';
+            else if (stats.diff > 0) { diffClass = 'text-warning fw-bold text-dark'; diffPrefix = '+'; }
+            else if (stats.plan > 0) diffClass = 'text-success fw-bold';
+
+            const clickAttr = (status) => canClick ? `onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', '${status}')" title="Filter: ${status}" style="cursor: pointer;"` : '';
+            const hoverClass = canClick ? 'cursor-pointer-cell' : '';
+            const costDisplay = stats.cost > 0 ? fmt(stats.cost) : '-';
+
+            return `
+                <tr class="${rowBg} ${rowClass || ''}" style="${rowStyle}" ${toggleAttr || ''}>
+                    <td class="ps-3 text-truncate" style="max-width: 300px;">
+                        ${(isParent || isChild) ? nameHtml :
+                          (isGrand ? nameHtml : `<span onclick="event.stopPropagation(); Actions.openDetailModal('${tLine}', '${tShift}', '${tType}', 'ALL')" class="cursor-pointer text-decoration-underline">${nameHtml}</span>`)
+                        }
+                    </td>
+                    <td class="text-center text-primary border-end border-light opacity-75 small">${stats.hc || '-'}</td>
+                    <td class="text-center fw-bold ${hoverClass}" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
+                    <td class="text-center text-success ${hoverClass}" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
+                    <td class="text-center text-warning text-dark ${hoverClass}" ${clickAttr('LATE')}>${stats.late || '-'}</td>
+                    <td class="text-center text-danger ${hoverClass}" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
+                    <td class="text-center text-info text-dark ${hoverClass}" ${clickAttr('LEAVE')}>${stats.leave || '-'}</td>
+                    <td class="text-center fw-bold border-start border-end ${hoverClass}" style="background-color: rgba(0,0,0,0.02);" ${clickAttr('PRESENT_AND_LATE')}>${stats.actual}</td>
+                    <td class="text-center ${diffClass}">${diffPrefix}${stats.diff}</td>
+                    <td class="text-end pe-4 text-secondary small">${costDisplay}</td>
+                </tr>`;
+        }
     },
-
     showToast(message, type) { alert(message); },
     showLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
     hideLoader() { if(document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },

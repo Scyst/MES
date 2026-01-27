@@ -263,6 +263,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewType" onchange="App.setView('TYPE')">
                         <label class="btn btn-outline-secondary" for="viewType">Type</label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="viewPayment" onchange="App.setView('PAYMENT')">
+                        <label class="btn btn-outline-secondary" for="viewPayment">Payment</label>
                     </div>
                 </div>
                 

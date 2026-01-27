@@ -42,11 +42,13 @@ try {
                         ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), :startDateDisp) as log_date,
                         CONVERT(VARCHAR(5), L.scan_in_time, 108) as in_time,   
                         CONVERT(VARCHAR(5), L.scan_out_time, 108) as out_time, 
+                        
                         CASE 
                             WHEN L.status IS NOT NULL THEN L.status
                             WHEN :startDateCheck < CAST(GETDATE() AS DATE) THEN 'ABSENT'
                             ELSE 'WAITING'
                         END as status,
+
                         L.remark, 
                         E.emp_id, E.name_th, E.position, E.is_active,
                         ISNULL(L.actual_line, E.line) as line, 
@@ -54,24 +56,34 @@ try {
                         ISNULL(L.shift_id, E.default_shift_id) as shift_id,
                         ISNULL(S.shift_name, S_Master.shift_name) as shift_name,
                         E.default_shift_id,
-                        L.actual_line, L.actual_team, E.line as master_line, E.team_group as master_team,
-                        CASE 
-                            WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1 
-                            ELSE 0 
-                        END as is_forgot_out,
+                        
+                        ISNULL(CM.rate_type, 'DAILY') as rate_type,
+
                         CAST(
                             CASE 
                                 WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END) +
-                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
-                                WHEN L.status IN ('SICK', 'VACATION') THEN
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END)
+                                WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
                                     (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0) END)
-                                WHEN L.status = 'BUSINESS' THEN
-                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
                                 ELSE 
                                     (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
                             END
-                        AS DECIMAL(10,2)) as est_cost
+                        AS DECIMAL(10,2)) as normal_cost,
+
+                        CAST(
+                            CASE 
+                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
+                                ELSE 0
+                            END
+                        AS DECIMAL(10,2)) as ot_cost,
+
+                        L.actual_line, L.actual_team, E.line as master_line, E.team_group as master_team,
+                        
+                        CASE 
+                            WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1 
+                            ELSE 0 
+                        END as is_forgot_out
 
                     FROM " . MANPOWER_EMPLOYEES_TABLE . " E
                     LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
@@ -99,14 +111,13 @@ try {
                     CROSS APPLY (SELECT CASE WHEN L.log_date < CAST(GETDATE() AS DATE) AND L.scan_out_time IS NULL THEN 0 WHEN Step_OT.OT_Hours > 6 THEN 6 ELSE Step_OT.OT_Hours END AS OT_Capped) AS Final_OT
                     WHERE (E.is_active = 1 OR L.log_id IS NOT NULL)
                         AND (L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= :createDateCheck))
-                    "; // 🔥 [FIXED] ตัด ORDER BY ออกไปจากตรงนี้
+                    ";
             
             $params = [
                 ':startDateDisp' => $startDate, ':startDateCheck' => $startDate, ':start' => $startDate, ':end' => $endDate,
                 ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
             ];
 
-            // Append Filters (AND ...)
             if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
                 $sql .= " AND ISNULL(L.actual_line, E.line) = :line";
                 $params[':line'] = $lineFilter;
@@ -153,26 +164,129 @@ try {
             break;
 
         // ======================================================================
-        // CASE: read_summary (Dashboard Graph)
+        // CASE: read_summary (Dashboard Graph & Table) - อัปเกรดใหม่รองรับ Payment
         // ======================================================================
         case 'read_summary':
             $date = $_GET['date'] ?? date('Y-m-d');
-            $funcName = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+            
+            // ใช้ Logic เดียวกับ read_daily แต่ Group By เพื่อหาผลรวม
+            $sql = "SELECT 
+                        ISNULL(L.actual_line, E.line) as line_name,
+                        ISNULL(S.shift_name, S_Master.shift_name) as shift_name,
+                        ISNULL(L.actual_team, E.team_group) as team_group,
+                        ISNULL(CM.category_name, 'General') as emp_type,
+                        ISNULL(CM.rate_type, 'DAILY') as rate_type, -- ✅ ส่ง Rate Type (รายวัน/เดือน)
 
-            $sql = "SELECT display_section as line_name, shift_name, team_group, category_name as emp_type, section_id,
-                        Master_Headcount as [total_hc], Total_Registered as [plan], Count_Present as [present], 
-                        Count_Late as [late], Count_Absent as [absent], Count_Leave as [leave], 
-                        Count_Actual as [actual], (Count_Actual - Total_Registered) as [diff], Total_Cost as [total_cost]
-                    FROM $funcName(:date)
-                    ORDER BY section_id, display_section, shift_name, team_group";
+                        -- นับจำนวนคน (Headcount)
+                        COUNT(E.emp_id) as total_hc,
+                        SUM(CASE WHEN E.is_active = 1 THEN 1 ELSE 0 END) as plan_count, -- หรือใช้ Logic Plan ของคุณ
+                        
+                        -- นับสถานะ
+                        SUM(CASE WHEN L.status = 'PRESENT' THEN 1 ELSE 0 END) as present,
+                        SUM(CASE WHEN L.status = 'LATE' THEN 1 ELSE 0 END) as late,
+                        SUM(CASE WHEN L.status = 'ABSENT' THEN 1 ELSE 0 END) as absent,
+                        SUM(CASE WHEN L.status IN ('SICK','BUSINESS','VACATION') THEN 1 ELSE 0 END) as leave,
+                        SUM(CASE WHEN L.status IN ('PRESENT','LATE') THEN 1 ELSE 0 END) as actual,
+
+                        -- ✅ คำนวณเงินแยกประเภท (DL / OT) --
+                        SUM(CAST(
+                            CASE 
+                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END)
+                                WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0) END)
+                                ELSE 
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
+                            END
+                        AS DECIMAL(10,2))) as normal_cost,
+
+                        SUM(CAST(
+                            CASE 
+                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
+                                ELSE 0
+                            END
+                        AS DECIMAL(10,2))) as ot_cost,
+
+                        -- ยอดรวม (DL + OT)
+                        SUM(CAST(
+                            (CASE 
+                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) END) +
+                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
+                                ELSE 
+                                    (CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END)
+                            END)
+                        AS DECIMAL(10,2))) as total_cost
+
+                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E
+                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
+                    OUTER APPLY (
+                        SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                        WHERE E.position LIKE '%' + M.keyword + '%' 
+                        ORDER BY LEN(M.keyword) DESC
+                    ) CM
+                    LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
+                        ON E.emp_id = L.emp_id AND L.log_date = :date
+                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
+                    LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
+                    CROSS APPLY (SELECT CASE WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 WHEN Cal.day_type='HOLIDAY' THEN 3.0 ELSE 1.5 END AS OT_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 ELSE 1.0 END AS Work_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 ELSE COALESCE(CM.hourly_rate,0) END AS Hourly_Base) AS Rate
+                    CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
+                    CROSS APPLY (
+                        SELECT CASE 
+                            WHEN L.scan_out_time IS NOT NULL THEN L.scan_out_time 
+                            WHEN L.log_date < CAST(GETDATE() AS DATE) THEN T0.Shift_Start 
+                            ELSE GETDATE() 
+                        END AS Calc_End_Time
+                    ) AS T1
+                    CROSS APPLY (SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Total_Minutes) AS T2
+                    CROSS APPLY (SELECT CASE WHEN T2.Total_Minutes > 570 THEN FLOOR((T2.Total_Minutes - 570) / 30.0) * 0.5 ELSE 0 END AS OT_Hours) AS Step_OT
+                    CROSS APPLY (SELECT CASE WHEN L.log_date < CAST(GETDATE() AS DATE) AND L.scan_out_time IS NULL THEN 0 WHEN Step_OT.OT_Hours > 6 THEN 6 ELSE Step_OT.OT_Hours END AS OT_Capped) AS Final_OT
+                    
+                    WHERE (E.is_active = 1 OR L.log_id IS NOT NULL)
+                      AND (L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= :createDateCheck))
+                    
+                    GROUP BY 
+                        ISNULL(L.actual_line, E.line),
+                        ISNULL(S.shift_name, S_Master.shift_name),
+                        ISNULL(L.actual_team, E.team_group),
+                        ISNULL(CM.category_name, 'General'),
+                        ISNULL(CM.rate_type, 'DAILY')
+                    
+                    ORDER BY line_name, shift_name";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([':date' => $date]);
+            $stmt->execute([
+                ':date' => $date, 
+                ':calDate' => $date, 
+                ':t0Date' => $date, 
+                ':createDateCheck' => $date
+            ]);
             $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'raw_data' => $rawData, 'last_update' => date('d/m/Y H:i:s')]);
-            break;
+            // Mapping key ให้ตรงกับที่ JS ต้องการ (เผื่อ SQL Alias ไม่ตรงเป๊ะ)
+            $finalData = array_map(function($row) {
+                return [
+                    'line_name' => $row['line_name'],
+                    'shift_name' => $row['shift_name'],
+                    'team_group' => $row['team_group'],
+                    'emp_type' => $row['emp_type'],
+                    'rate_type' => $row['rate_type'], // ✅ สำคัญมาก
+                    'total_hc' => $row['total_hc'],
+                    'plan' => $row['total_hc'], // ใช้ HC เป็น Plan ชั่วคราว หรือใช้ $row['plan_count']
+                    'present' => $row['present'],
+                    'late' => $row['late'],
+                    'absent' => $row['absent'],
+                    'leave' => $row['leave'],
+                    'total_cost' => $row['total_cost'],
+                    'normal_cost' => $row['normal_cost'], // ✅ DL
+                    'ot_cost' => $row['ot_cost'] // ✅ OT
+                ];
+            }, $rawData);
 
+            echo json_encode(['success' => true, 'raw_data' => $finalData, 'last_update' => date('d/m/Y H:i:s')]);
+            break;
+            
         // ======================================================================
         // CASE: update_log (Strict Update Only & Correct Columns)
         // ======================================================================
