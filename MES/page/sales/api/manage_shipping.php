@@ -276,9 +276,22 @@ try {
                     foreach ($fieldsToSet as $col => $val) {
                         $colNames[] = $col;
                         $bindParams[] = $val;
-                        
+
                         if ($col !== 'remark') {
-                            $updatePairs[] = "T.$col = S.$col";
+                            // [LOGIC ป้องกันเขียนทับอดีต]
+                            if ($col === 'loading_date') {
+                                // ถ้าวันที่เดิม (T.loading_date) น้อยกว่า วันนี้ (CAST(GETDATE() AS DATE)) 
+                                // ให้คงค่าเดิมไว้ (THEN T.loading_date)
+                                // ถ้าเป็นวันนี้หรืออนาคต หรือค่าเดิมว่าง ให้ใช้ค่าใหม่จาก CSV (ELSE S.loading_date)
+                                $updatePairs[] = "T.loading_date = CASE 
+                                                    WHEN T.loading_date IS NOT NULL AND T.loading_date < CAST(GETDATE() AS DATE) 
+                                                    THEN T.loading_date 
+                                                    ELSE S.loading_date 
+                                                  END";
+                            } else {
+                                // คอลัมน์อื่นๆ อัปเดตตามปกติ
+                                $updatePairs[] = "T.$col = S.$col";
+                            }
                         }
                     }
 
@@ -413,8 +426,22 @@ try {
                     foreach ($fieldsToSet as $col => $val) {
                         $colNames[] = $col;
                         $bindParams[] = $val;
+
                         if ($col !== 'remark') {
-                            $updatePairs[] = "T.$col = S.$col";
+                            // [LOGIC ป้องกันเขียนทับอดีต]
+                            if ($col === 'loading_date') {
+                                // ถ้าวันที่เดิม (T.loading_date) น้อยกว่า วันนี้ (CAST(GETDATE() AS DATE)) 
+                                // ให้คงค่าเดิมไว้ (THEN T.loading_date)
+                                // ถ้าเป็นวันนี้หรืออนาคต หรือค่าเดิมว่าง ให้ใช้ค่าใหม่จาก CSV (ELSE S.loading_date)
+                                $updatePairs[] = "T.loading_date = CASE 
+                                                    WHEN T.loading_date IS NOT NULL AND T.loading_date < CAST(GETDATE() AS DATE) 
+                                                    THEN T.loading_date 
+                                                    ELSE S.loading_date 
+                                                  END";
+                            } else {
+                                // คอลัมน์อื่นๆ อัปเดตตามปกติ
+                                $updatePairs[] = "T.$col = S.$col";
+                            }
                         }
                     }
 

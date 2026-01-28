@@ -1,6 +1,6 @@
 <?php
 // page/sales/api/manage_sales_orders.php
-// [REFACTORED] Use SWITCH CASE for consistency
+// [REFACTORED V2] - Fixed Date Parsing & Prevent Overwriting Past Dates
 
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
@@ -25,22 +25,26 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    // Helper Functions
+    // --- [UPDATED] Helper Functions (ฉลาดขึ้นและแม่นยำ) ---
     $fnDate = function($val) {
         if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
-        $val = explode(' ', $val)[0]; 
+        $val = explode(' ', $val)[0]; // ตัดเวลาทิ้ง
 
-        // 1. กรณีเป็นตัวเลข Excel Serial Date
-        if (is_numeric($val) && $val > 20000) return gmdate("Y-m-d", ($val - 25569) * 86400);
-
-        // 2. กรณีเจอ / ให้เปลี่ยนเป็น - ก่อนเสมอ เพื่อบังคับเป็น d-m-y
-        if (strpos($val, '/') !== false) {
-            $val = str_replace('/', '-', $val);
+        // 1. เช็ค Excel Serial Date (ต้องมากกว่า 40000 เพื่อกันเลข PO 38xxx หลุดเข้ามา)
+        if (is_numeric($val)) {
+            if ($val > 40000) return gmdate("Y-m-d", ($val - 25569) * 86400);
+            return null; // ถ้าเลขน้อยกว่านี้ ตีว่าเป็นขยะ ไม่ใช่วันที่
         }
 
-        // 3. แปลงวันที่ตามปกติ
-        $ts = strtotime($val);
+        // 2. บังคับอ่านแบบ d/m/Y (วัน/เดือน/ปี) เท่านั้น
+        $d = DateTime::createFromFormat('d/m/Y', $val);
+        if ($d && $d->format('d/m/Y') === $val) {
+            return $d->format('Y-m-d');
+        }
+
+        // 3. กรณีสุดท้าย (เผื่อไฟล์มาเป็น Y-m-d หรืออื่นๆ)
+        $ts = strtotime(str_replace('/', '-', $val));
         if ($ts !== false) return date('Y-m-d', $ts);
         
         return null; 
@@ -166,6 +170,7 @@ try {
             $maxOrder = $pdo->query($sqlMax)->fetchColumn();
             $currentOrder = ($maxOrder) ? (int)$maxOrder : 0; 
 
+            // [UPDATED SQL] เพิ่ม Logic ป้องกันการเขียนทับวันที่ที่เป็นอดีต
             $sql = "MERGE INTO $table AS T 
                     USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
                     AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder)
@@ -178,10 +183,21 @@ try {
                         T.dc_location = S.dc,
                         T.loading_week = S.lweek, 
                         T.shipping_week = S.sweek,
-                        T.production_date = S.pdate, 
+                        
+                        -- Logic: ถ้า Production Date เป็นอดีต ห้ามทับ
+                        T.production_date = CASE 
+                            WHEN T.production_date IS NOT NULL AND T.production_date < CAST(GETDATE() AS DATE) THEN T.production_date 
+                            ELSE S.pdate 
+                        END,
                         T.is_production_done = S.pdone,
-                        T.loading_date = S.ldate, 
+                        
+                        -- Logic: ถ้า Loading Date เป็นอดีต ห้ามทับ
+                        T.loading_date = CASE 
+                            WHEN T.loading_date IS NOT NULL AND T.loading_date < CAST(GETDATE() AS DATE) THEN T.loading_date 
+                            ELSE S.ldate 
+                        END,
                         T.is_loading_done = S.ldone,
+                        
                         T.ticket_number = S.ticket, 
                         T.inspection_date = S.idate, 
                         T.inspection_status = S.istat, 
@@ -260,7 +276,7 @@ try {
             }
             $pdo->commit();
             echo json_encode([
-                'success' => true, 'imported_count' => $count, 'skipped_count' => $skippedCount,
+                'success' => true, 'imported_count' => $count-1, 'skipped_count' => $skippedCount,
                 'errors' => array_slice($errorLogs, 0, 10)
             ]);
             break;
@@ -369,6 +385,13 @@ try {
                 return (in_array($v, ['pass', 'ok', 'done', 'yes', '1', 'true'])) ? 'Yes' : 'No';
             };
 
+            // [NEW] Helper: ล้างข้อความให้เรียบร้อย (ลบ Enter ออก)
+            $clean = function($str) {
+                if (empty($str)) return '';
+                $str = str_replace(["\r\n", "\r", "\n"], ' ', $str);
+                return trim(preg_replace('/\s+/', ' ', $str));
+            };
+
             $sql = "SELECT s.*, COALESCE(i.Price_USD, i.StandardPrice, 0) as unit_price 
                     FROM $table s 
                     LEFT JOIN $itemsTable i ON s.sku = i.sku
@@ -383,7 +406,10 @@ try {
 
                 fputcsv($output, [
                     $row['custom_order'], 
-                    $row['po_number'], $row['sku'], $row['description'], $row['color'], $qty, $row['dc_location'],
+                    $row['po_number'], $row['sku'], 
+                    $clean($row['description']), 
+                    $row['color'], $qty, 
+                    $clean($row['dc_location']),
                     $dt($row['order_date']), $row['loading_week'], $row['shipping_week'],
                     $dt($row['production_date']), $dt($row['loading_date']), $dt($row['inspection_date']),
                     $yn($row['is_production_done']), 
@@ -393,7 +419,7 @@ try {
                     $row['ticket_number'], 
                     number_format($totalUSD, 2, '.', ''), 
                     number_format($totalTHB, 2, '.', ''), 
-                    $row['remark']
+                    $clean($row['remark'])
                 ]);
             }
             fclose($output);
