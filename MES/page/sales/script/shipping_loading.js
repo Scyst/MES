@@ -461,8 +461,19 @@ function changePage(page) {
 // ============================================================
 
 // Helpers
+// แทนที่ฟังก์ชันเดิม
 function getDateObj(dateStr) {
     if (!dateStr || dateStr === '0000-00-00') return null;
+    
+    // Support yyyy-mm-dd format
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        // Construct date using local time explicitly
+        // Month is 0-indexed in JS Date
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+    
+    // Fallback if format is weird, but try to keep logic consistent
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
@@ -482,7 +493,8 @@ const fnDateDisplay = (d) => {
     }
 
     // ถ้าเป็นสตริง (จากฐานข้อมูล) ให้ทำเหมือนเดิม
-    const datePart = d.split(' ')[0];
+    let datePart = d.split(' ')[0];
+    if (datePart.includes('/')) return datePart; // ถ้ามี / อยู่แล้วก็คืนค่าไปเลย หรือจะจัด format ใหม่ก็ได้
     const parts = datePart.split('-');
     if (parts.length !== 3) return d; 
     const [y, m, day] = parts;
@@ -559,7 +571,6 @@ function exportToCSV() {
     window.location.href = `${API_URL}?action=export`;
 }
 
-// FULL IMPORT LOGIC (Client-side Parse -> Send JSON)
 async function uploadFile() {
     const fileInput = document.getElementById('csv_file'); 
     if (!fileInput || !fileInput.files[0]) return;
@@ -569,46 +580,32 @@ async function uploadFile() {
     const file = fileInput.files[0];
     showSpinner();
 
+    // สร้าง FormData เพื่อส่งไฟล์ไปทั้งก้อน
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('action', 'import_file'); // เปลี่ยน action เป็น import_file
+
     try {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        let rawData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-
-        // Clean Keys (ลบช่องว่างหัวตาราง)
-        let cleanedData = rawData.map(row => {
-            let newRow = {};
-            for (let key in row) {
-                let cleanKey = key.trim().replace(/\s+/g, ' '); 
-                newRow[cleanKey] = row[key];
-            }
-            return newRow;
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: formData 
         });
-
-        // Filter empty rows
-        cleanedData = cleanedData.filter(row => row['PO'] || row['po_number'] || row['PO Number']);
         
-        $.post(API_URL, {
-            action: 'import_json',
-            data: JSON.stringify(cleanedData)
-        }, function(res) {
-            hideSpinner();
-            if (res.success) {
-                showImportResult(res);
-                loadData(); // Reload ข้อมูลใหม่
-            } else {
-                alert('Import Error: ' + res.message);
-            }
-        }, 'json').fail(function() {
-            hideSpinner();
-            alert('Server Connection Error');
-        });
+        const json = await res.json();
+        hideSpinner();
+
+        if (json.success) {
+            showImportResult(json);
+            loadData();
+        } else {
+            alert('Import Error: ' + json.message);
+        }
     } catch (e) {
         hideSpinner();
-        alert("Error reading file: " + e.message);
+        console.error(e);
+        alert("Server Connection Error: " + e.message);
     }
     
-    // Clear Input
     fileInput.value = '';
 }
 

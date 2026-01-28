@@ -56,9 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
 });
 
-// --- Helper Functions ---
+// --- Helper Functions [FIXED TIMEZONE ISSUES] ---
+
 function getDateObj(dateStr) {
     if (!dateStr || dateStr === '0000-00-00') return null;
+    
+    // Support yyyy-mm-dd format specifically to avoid timezone shifts
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        // Note: Month is 0-indexed
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
+    // Fallback
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
@@ -69,9 +79,19 @@ function formatDate(dateStr) {
     if (!dateStr || dateStr === '' || dateStr === '0000-00-00') {
         return '<span class="text-muted fw-light">-</span>'; 
     }
+    
+    // [FIX] Manual string parsing for consistent dd/mm/yyyy display
+    // This prevents "new Date()" from shifting the day due to timezone
+    let datePart = dateStr.split(' ')[0];
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+        const [y, m, d] = parts;
+        return `${d}/${m}/${y}`;
+    }
+
+    // Fallback logic
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    
     return new Intl.DateTimeFormat('en-GB').format(d);
 }
 
@@ -107,11 +127,9 @@ async function fetchExchangeRate() {
 async function loadData() {
     showSpinner();
     try {
-        // [NEW] Get Date Values
         const startDate = document.getElementById('filterStartDate')?.value || '';
         const endDate = document.getElementById('filterEndDate')?.value || '';
 
-        // ส่งค่าไปพร้อมกับ Query String
         const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}&start_date=${startDate}&end_date=${endDate}`);
         const json = await res.json();
 
@@ -131,7 +149,7 @@ async function loadData() {
 function clearDateFilter() {
     document.getElementById('filterStartDate').value = '';
     document.getElementById('filterEndDate').value = '';
-    loadData(); // โหลดข้อมูลใหม่แบบไม่กรองวันที่
+    loadData(); 
 }
 
 function updateKPI(summary) {
@@ -155,7 +173,7 @@ function renderTable(searchTerm) {
     const tbody = document.getElementById('tableBody');
     if (!tbody) return;
 
-    // 1. Filtering (เหมือนเดิม)
+    // 1. Filtering
     const keywords = searchTerm ? searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0) : [];
     let filtered = allData.filter(item => {
         if (keywords.length === 0) return true;
@@ -163,7 +181,7 @@ function renderTable(searchTerm) {
         return keywords.every(k => text.includes(k));
     });
 
-    // 2. Sorting (เหมือนเดิม)
+    // 2. Sorting
     if (sortState.length > 0) {
         isManualSortMode = false;
         if(sortableInstance) sortableInstance.option("disabled", true);
@@ -177,9 +195,14 @@ function renderTable(searchTerm) {
                 if (col === 'quantity' || col === 'price') { 
                     valA = parseFloat(valA) || 0; valB = parseFloat(valB) || 0; 
                 }
+                // Check string 'date' in column name to handle date sorting
                 if (col.includes('date')) { 
-                    valA = new Date(valA || '1970-01-01').getTime(); 
-                    valB = new Date(valB || '1970-01-01').getTime(); 
+                    // Use simple string comparison for YYYY-MM-DD if possible, else Date
+                    if(valA && valA.match(/^\d{4}-\d{2}-\d{2}/)) { /* standard string compare works */ }
+                    else {
+                        valA = new Date(valA || '1970-01-01').getTime(); 
+                        valB = new Date(valB || '1970-01-01').getTime();
+                    }
                 }
                 
                 if (valA < valB) return -1 * dir;
@@ -198,7 +221,7 @@ function renderTable(searchTerm) {
         if(sortableInstance) sortableInstance.option("disabled", false);
     }
 
-    // 3. Summary (เหมือนเดิม)
+    // 3. Summary
     const totalContainers = filtered.length;
     let totalQty = 0;
     let totalAmountTHB = 0;
@@ -221,7 +244,6 @@ function renderTable(searchTerm) {
     const todayDate = new Date();
     todayDate.setHours(0,0,0,0);
 
-    // ★ Helper สำหรับแสดงข้อความ: ถ้าว่างให้โชว์ขีด
     const showTxt = (val) => {
         return (val && val.toString().trim() !== '') 
             ? val 
@@ -229,35 +251,29 @@ function renderTable(searchTerm) {
     };
 
     tbody.innerHTML = filtered.map(item => {
-        // -- Logic Helper --
         const isPrd = item.is_production_done == 1;
         const isLoad = item.is_loading_done == 1;
         const isConf = item.is_confirmed == 1;
         
-        // Inspection Check
         const inspRaw = (item.inspection_status || '').toLowerCase();
         const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
 
-        // Delay Calculation
+        // [FIXED] Use safe getDateObj
         const loadDateObj = getDateObj(item.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
 
         const stickyClass = 'bg-white';
         
-        // [MODIFIED] -- PO Number & Delete Button --
         let poContent = '';
-        
-        // 1. สร้างเนื้อหา PO (เหมือนเดิม แต่เปลี่ยนชื่อตัวแปรเป็น poContent)
         if (isDelay) {
             poContent = `<div class="d-flex align-items-center text-danger" title="Late Delivery">
-                        <i class="fas fa-exclamation-triangle me-2 blink"></i>
-                        <span>${item.po_number}</span>
-                      </div>`;
+                            <i class="fas fa-exclamation-triangle me-2 blink"></i>
+                            <span>${item.po_number}</span>
+                          </div>`;
         } else {
             poContent = `<span class="text-primary font-monospace">${item.po_number}</span>`;
         }
 
-        // 2. [NEW] เอา poContent มารวมกับ "ปุ่มลบ" ใส่ใน poHtml
         const poHtml = `
             <div class="d-flex justify-content-between align-items-center w-100 group-action">
                 ${poContent}
@@ -270,7 +286,6 @@ function renderTable(searchTerm) {
             </div>
         `;
 
-        // -- Icon Buttons --
         const btnPrdClass = isPrd ? 'status-done' : 'status-wait';
         const btnPrdIcon = isPrd ? '<i class="fas fa-check"></i>' : '<i class="fas fa-industry"></i>';
         const btnLoadClass = isLoad ? 'status-done' : 'status-wait';
@@ -280,7 +295,6 @@ function renderTable(searchTerm) {
 
         const priceTHB = (parseFloat(item.price || 0) * currentExchangeRate).toFixed(2);
 
-        // ★ ใช้ showTxt() ในทุกช่องที่เป็น Text เพื่อใส่ขีด
         return `<tr data-id="${item.id}">
             
             <td class="text-center drag-handle sticky-col-left-1 ${stickyClass}" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'};">
@@ -339,7 +353,7 @@ function renderTable(searchTerm) {
 // --- Inline Editing (Visual Feedback) ---
 
 function makeEditable(td, id, field, currentVal, type = 'text') {
-    if (td.querySelector('input')) return; // ป้องกันการสร้างซ้ำ
+    if (td.querySelector('input')) return; 
     if (currentVal === 'null' || currentVal === 'undefined') currentVal = '';
 
     const originalHtml = td.innerHTML;
@@ -349,7 +363,6 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
     input.className = 'form-control form-control-sm p-1 text-center';
     input.style.width = '100%';
     
-    // 1. Visual Feedback: กำลังแก้ไข (สีเหลืองอ่อน)
     input.style.backgroundColor = '#fff3cd'; 
     input.style.borderColor = '#ffc107';
 
@@ -368,18 +381,16 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
                 const json = await res.json();
                 
                 if (json.success) {
-                    // 2. Success Feedback: สีเขียววูบหนึ่ง
                     input.style.backgroundColor = '#d1e7dd';
                     input.style.borderColor = '#198754';
                     input.style.transition = 'all 0.5s';
                     
-                    // Update Local Data
                     const row = allData.find(d => d.id == id);
                     if (row) row[field] = newValue;
 
                     setTimeout(() => {
                         renderTable(document.getElementById('universalSearch').value);
-                    }, 500); // รอให้ User เห็นสีเขียวนิดนึงค่อย Render คืน
+                    }, 500); 
                 } else { 
                     alert('Update failed: ' + json.message); 
                     td.innerHTML = originalHtml; 
@@ -390,7 +401,6 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
                 alert('Connection failed');
             }
         } else { 
-            // ค่าเหมือนเดิม ก็แค่คืนค่าเดิม (ไม่ต้องโหลดใหม่)
             td.innerHTML = originalHtml; 
         }
     };
@@ -402,13 +412,7 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
 // --- Toggle Status (Buttons/Checkboxes) ---
 
 async function toggleCheck(id, field, val) {
-    // val รับเข้ามาเป็น Boolean (true/false) หรือ 0/1 แล้วแต่กรณี
-    // แปลงให้เป็น 1 หรือ 0 สำหรับ Database
     const dbVal = (val === true || val === 1 || val === '1') ? 1 : 0;
-
-    // Visual Feedback: Show spinner globally or locally?
-    // เพื่อความไว เราจะ update UI ก่อนเลย (Optimistic UI) แล้วค่อยส่ง req
-    // แต่ถ้าพลาดต้อง rollback... เอาแบบชัวร์คือ showSpinner ดีกว่า
     showSpinner();
 
     try {
@@ -419,10 +423,8 @@ async function toggleCheck(id, field, val) {
         const json = await res.json();
         
         if (json.success) {
-            // Update Local Data
             const row = allData.find(d => d.id == id);
             if (row) {
-                // Map field name กลับไปเป็น column name
                 if(field === 'confirm') row.is_confirmed = dbVal;
                 else if(field === 'prod') row.is_production_done = dbVal;
                 else if(field === 'load') row.is_loading_done = dbVal;
@@ -556,9 +558,8 @@ async function submitCreateOrder() {
     } catch (err) { alert('Failed to create order'); } finally { hideSpinner(); }
 }
 
-// [NEW] Delete Order Function
+// [UPDATED] Delete Order Function (Simplified)
 async function deleteOrder(id, poNum) {
-    // 1. Confirm ก่อนลบ
     if (!confirm(`Are you sure you want to delete PO: ${poNum}?`)) return;
 
     showSpinner();
@@ -571,16 +572,8 @@ async function deleteOrder(id, poNum) {
         const json = await res.json();
 
         if (json.success) {
-            showToast('Order deleted successfully', '#198754'); // สีเขียว
-            
-            // ลบออกจากตัวแปร allData โดยไม่ต้องโหลดใหม่จาก Server (เพื่อความเร็ว)
-            allData = allData.filter(item => item.id != id);
-            
-            // Render ตารางใหม่
-            renderTable(document.getElementById('universalSearch').value);
-            
-            // Update KPI (คำนวณใหม่จาก allData ที่เหลืออยู่)
-            // (หรือจะสั่ง loadData() ใหม่เลยก็ได้ถ้าอยากให้ชัวร์สุดๆ)
+            showToast('Order deleted successfully', '#198754');
+            // Reload data to ensure KPI summary and table are in sync
             loadData(); 
         } else {
             alert('Error: ' + json.message);
@@ -598,16 +591,13 @@ async function uploadFile(e) {
     if (!file) return;
     showToast("Uploading...", "#0dcaf0");
     
-    // Simple FormData upload (Let backend handle parsing if possible, or use frontend lib)
-    // Here we assume backend handles CSV. If you want frontend XLSX parsing like shipping_loading, we can add it.
-    // For now, let's keep consistent with your previous structure but handle both.
-    
     const ext = file.name.split('.').pop().toLowerCase();
     if (ext === 'xlsx' || ext === 'xls') {
         const reader = new FileReader();
         reader.onload = async function(event) {
             const data = new Uint8Array(event.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
+            // Convert to CSV with specific date format to ensure backend consistency
             const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'dd/mm/yyyy', defval: '' });
             const blob = new Blob([csvOutput], { type: 'text/csv' });
             const formData = new FormData();
@@ -650,7 +640,5 @@ function showImportResultModal(json) {
 }
 
 function exportData() {
-    // [UPDATED] เรียกใช้ API หลังบ้านโดยตรง เพื่อ Export ข้อมูล "ทั้งหมด" (เหมือนหน้า Shipping)
-    // ไม่สนใจ Filter หน้าจอ และไม่ต้องใช้ JS คำนวณให้หนักเครื่อง
     window.location.href = `${API_URL}?action=export`;
 }

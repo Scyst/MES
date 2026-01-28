@@ -466,6 +466,64 @@ try {
             break;
 
         // ======================================================================
+        // CASE: update_log (แก้ไขข้อมูลรายวัน)
+        // ======================================================================
+        case 'update_log':
+            // 1. ตรวจสอบสิทธิ์ (Admin, Creator, Supervisor แก้ได้)
+            if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'supervisor'])) {
+                throw new Exception("Unauthorized: คุณไม่มีสิทธิ์แก้ไขข้อมูล");
+            }
+
+            // 2. รับค่า
+            $logId  = $input['log_id'] ?? '';
+            $status = $input['status'] ?? '';
+            $remark = $input['remark'] ?? '';
+            // รับค่าเวลา (ถ้ามี) - ส่งเป็น null ถ้าเป็นค่าว่าง
+            $scanIn  = !empty($input['scan_in_time']) ? $input['scan_in_time'] : null;
+            $scanOut = !empty($input['scan_out_time']) ? $input['scan_out_time'] : null;
+
+            if (empty($logId)) throw new Exception("Missing Log ID");
+
+            $pdo->beginTransaction();
+
+            // 3. ดึงข้อมูลเดิมเพื่อเอาวันที่ (สำหรับ Recalculate)
+            $stmtCheck = $pdo->prepare("SELECT log_date FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+            $stmtCheck->execute([$logId]);
+            $currentLog = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if (!$currentLog) throw new Exception("Record not found");
+
+            // 4. อัปเดตข้อมูล (ใช้ ISNULL เพื่อคงค่าเดิมถ้าไม่ได้ส่งค่าใหม่มา)
+            $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
+                    SET status = ?, 
+                        remark = ?, 
+                        scan_in_time = ISNULL(?, scan_in_time), 
+                        scan_out_time = ISNULL(?, scan_out_time),
+                        updated_by = ?, 
+                        updated_at = GETDATE(),
+                        is_verified = 1 
+                    WHERE log_id = ?";
+            
+            $stmtUpdate = $pdo->prepare($sql);
+            $stmtUpdate->execute([
+                $status, 
+                $remark, 
+                $scanIn, 
+                $scanOut, 
+                $updatedBy, 
+                $logId
+            ]);
+
+            // 5. คำนวณเงินใหม่ทันที (Trigger SP)
+            $recalcStmt = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
+            $recalcStmt->execute([$currentLog['log_date'], $currentLog['log_date']]);
+
+            $pdo->commit();
+
+            echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+            break;
+
+        // ======================================================================
         // CASE: export_history (ดึงข้อมูลสรุปแยก Line/Shift ตามช่วงเวลา)
         // ======================================================================
         case 'export_history':

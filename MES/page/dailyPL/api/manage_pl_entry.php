@@ -15,17 +15,31 @@ $section = $_REQUEST['section'] ?? $_SESSION['user']['line'] ?? 'Team 1';
 try {
     switch ($action) {
         case 'read':
-            // ------------------------------------------------------------------
-            // ENGINE: ดึงโครงสร้าง + ข้อมูลที่บันทึก + ข้อมูล Auto Real-time
-            // ------------------------------------------------------------------
-            // ใช้ Constants จาก config.php เพื่อรองรับ Test/Prod Mode
             $tblTransactions = TRANSACTIONS_TABLE;
             $tblItems = ITEMS_TABLE;
             $tblLocations = LOCATIONS_TABLE;
-            // $tblLabor = IS_DEVELOPMENT ? 'MES_MANUAL_DAILY_COSTS_TEST' : 'MES_MANUAL_DAILY_COSTS'; // ถ้ามีตาราง Test
-            $tblLabor = 'MES_MANUAL_DAILY_COSTS'; // สมมติใช้ตารางเดียว
+            $tblLabor = 'MES_MANUAL_DAILY_COSTS'; 
 
             $sql = "
+                WITH PL_Tree AS (
+                    SELECT 
+                        id, item_name, account_code, item_type, data_source, parent_id, row_order, is_active,
+                        0 AS item_level,
+                        CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
+                    FROM PL_STRUCTURE 
+                    WHERE parent_id IS NULL AND is_active = 1
+
+                    UNION ALL
+
+                    SELECT 
+                        c.id, c.item_name, c.account_code, c.item_type, c.data_source, c.parent_id, c.row_order, c.is_active,
+                        p.item_level + 1,
+                        p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
+                    FROM PL_STRUCTURE c
+                    INNER JOIN PL_Tree p ON c.parent_id = p.id
+                    WHERE c.is_active = 1
+                )
+
                 SELECT 
                     s.id as item_id, 
                     s.item_name, 
@@ -33,17 +47,12 @@ try {
                     s.item_type, 
                     s.data_source, 
                     s.parent_id,
-                    s.row_order,
+                    s.item_level,
                     
-                    -- [Smart Logic] เลือกค่าที่จะแสดง
                     CASE 
-                        -- 1. HEADER: ไม่แสดงค่า
                         WHEN s.data_source = 'SECTION' THEN NULL
-
-                        -- 2. MANUAL: ถ้ามีค่าที่บันทึกไว้ ให้ใช้ค่านั้น (Manual Override)
                         WHEN s.data_source = 'MANUAL' THEN ISNULL(e.actual_amount, 0)
                         
-                        -- 3. AUTO REVENUE: ดึงจากยอดผลิต (FG) * StandardPrice
                         WHEN s.data_source = 'AUTO_STOCK' THEN (
                             SELECT ISNULL(SUM(t.quantity * i.StandardPrice), 0)
                             FROM $tblTransactions t
@@ -51,21 +60,17 @@ try {
                             LEFT JOIN $tblLocations l ON t.to_location_id = l.location_id
                             WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = :date1
                               AND t.transaction_type = 'PRODUCTION_FG'
-                              -- AND (@section1 = 'ALL' OR l.production_line = @section1) -- เปิดใช้ถ้าต้องการกรอง Line
                         )
 
-                        -- 4. AUTO LABOR: ดึงจากค่าแรงที่คำนวณไว้
                         WHEN s.data_source = 'AUTO_LABOR' THEN (
                             SELECT ISNULL(SUM(cost_value), 0)
                             FROM $tblLabor
                             WHERE entry_date = :date2 
-                              -- AND line = :section2 
                               AND cost_category = 'LABOR'
-                              -- Mapping Account Code อย่างง่าย
                               AND (
                                   (s.account_code = '522001' AND cost_type = 'DIRECT_LABOR') OR
                                   (s.account_code = '522002' AND cost_type = 'OVERTIME') OR
-                                  (cost_type = 'DIRECT_LABOR') -- Default
+                                  (cost_type = 'DIRECT_LABOR')
                               )
                         )
 
@@ -74,23 +79,20 @@ try {
                     
                     e.updated_at
 
-                FROM PL_STRUCTURE s WITH (NOLOCK)
+                FROM PL_Tree s
                 LEFT JOIN DAILY_PL_ENTRIES e WITH (NOLOCK) 
                     ON s.id = e.item_id 
                     AND e.entry_date = :dateMain 
                     AND e.section_name = :sectMain
-                WHERE s.is_active = 1
-                ORDER BY s.row_order ASC, s.account_code ASC
+                
+                ORDER BY s.SortPath
             ";
             
             $stmt = $pdo->prepare($sql);
             
-            // Parameter Binding
             $params = [
                 ':date1' => $entry_date,
-                // ':section1' => $section,
                 ':date2' => $entry_date,
-                // ':section2' => $section,
                 ':dateMain' => $entry_date,
                 ':sectMain' => $section
             ];

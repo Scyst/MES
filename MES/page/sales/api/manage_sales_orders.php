@@ -30,12 +30,19 @@ try {
         if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
         $val = explode(' ', $val)[0]; 
+
+        // 1. กรณีเป็นตัวเลข Excel Serial Date
         if (is_numeric($val) && $val > 20000) return gmdate("Y-m-d", ($val - 25569) * 86400);
+
+        // 2. กรณีเจอ / ให้เปลี่ยนเป็น - ก่อนเสมอ เพื่อบังคับเป็น d-m-y
+        if (strpos($val, '/') !== false) {
+            $val = str_replace('/', '-', $val);
+        }
+
+        // 3. แปลงวันที่ตามปกติ
         $ts = strtotime($val);
         if ($ts !== false) return date('Y-m-d', $ts);
-        $cleanVal = str_replace('/', '-', $val);
-        $ts = strtotime($cleanVal);
-        if ($ts !== false) return date('Y-m-d', $ts);
+        
         return null; 
     };
 
