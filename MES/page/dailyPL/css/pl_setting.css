@@ -1,0 +1,96 @@
+/* ทำให้ Toolbar ติดหนึบ */
+.sticky-toolbar {
+    position: -webkit-sticky; /* สำหรับ Safari */
+    position: sticky;
+    top: 0; 
+    z-index: 1020; /* ให้ลอยอยู่เหนือตาราง */
+    background-color: #f8f9fa; /* ⚠️ สำคัญ: ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
+    padding-top: 0rem; /* เว้นระยะด้านบนนิดนึง */
+    margin-bottom: 0.5rem;
+    border-radius: 0 0 10px 10px; /* มนนิดๆ ให้ดูสวย */
+}
+
+.sticky-toolbar + .card .table-custom thead th {
+    top: 0px; /* ค่านี้ต้องกะให้พอดีกับความสูงของ Toolbar ครับ */
+}
+/* แถม: ทำให้หัวตารางติดหนึบด้วย (เวลาเลื่อนดูข้อมูลยาวๆ) */
+.table-custom thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1010;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* เงาใต้หัวตาราง */
+}
+
+/* Table Header */
+.table-custom thead th {
+    background-color: #f1f3f5;
+    border-bottom: 2px solid #dee2e6;
+    color: #495057;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+/* --- Tree View Logic --- */
+
+/* Level 0: Root Header */
+.tree-l0 td {
+    background-color: #e3f2fd !important; /* ฟ้าอ่อน */
+    border-top: 2px solid #fff;
+    color: #0d47a1;
+    font-weight: 800;
+    font-size: 1.05em;
+}
+
+/* Level 1: Sub-Header */
+.tree-l1 td {
+    background-color: #f8f9fa !important; /* เทาจางๆ */
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Level 2+: Items */
+.tree-item td {
+    background-color: #fff !important;
+    color: #495057;
+}
+
+/* Connector Line (เส้นโยง L-Shape) */
+.tree-connector {
+    position: relative;
+    height: 100%;
+    display: inline-block;
+}
+
+/* เส้นแนวตั้ง | */
+.tree-line-v {
+    position: absolute;
+    left: -18px; /* ขยับซ้ายตาม Indent */
+    top: -20px;  /* ลากจากบรรทัดบน */
+    bottom: 0;
+    width: 1px;
+    background-color: #cbd3da;
+    height: 45px; /* ความสูงพอดีบรรทัด */
+}
+
+/* เส้นแนวนอน _ */
+.tree-line-h {
+    position: absolute;
+    left: -18px;
+    top: 50%;
+    width: 12px;
+    height: 1px;
+    background-color: #cbd3da;
+}
+
+/* Action Buttons */
+.action-btn {
+    width: 28px; height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }

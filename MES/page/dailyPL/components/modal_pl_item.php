@@ -48,40 +48,38 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <label class="form-label small fw-bold text-secondary mb-2">Data Source</label>
+                            <label class="form-label small fw-bold text-secondary mb-2">Data Source (ที่มาของข้อมูล)</label>
                             <div class="card bg-body-tertiary border-0">
                                 <div class="card-body p-3">
                                     <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="data_source" id="srcSection" value="SECTION" onchange="toggleFormulaInput()">
-                                                <label class="form-check-label" for="srcSection"><span class="badge bg-secondary me-1">HEADER</span> Header Only</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="data_source" id="srcManual" value="MANUAL" checked onchange="toggleFormulaInput()">
-                                                <label class="form-check-label" for="srcManual"><span class="badge bg-light text-dark border me-1">MANUAL</span> Manual Input</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="data_source" id="srcAutoStock" value="AUTO_STOCK" onchange="toggleFormulaInput()">
-                                                <label class="form-check-label" for="srcAutoStock"><span class="badge bg-info text-dark me-1">AUTO</span> ยอดผลิต FG</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="data_source" id="srcAutoLabor" value="AUTO_LABOR" onchange="toggleFormulaInput()">
-                                                <label class="form-check-label" for="srcAutoLabor"><span class="badge bg-info text-dark me-1">AUTO</span> ค่าแรง (Manpower)</label>
-                                            </div>
-                                        </div>
+                                        
                                         <div class="col-12">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="data_source" id="srcCalculated" value="CALCULATED" onchange="toggleFormulaInput()">
-                                                <label class="form-check-label" for="srcCalculated"><span class="badge bg-primary me-1">FORMULA</span> สูตรคำนวณ (Calculated)</label>
+                                                <input class="form-check-input" type="radio" name="data_source_mode" id="srcCalculated" value="CALCULATED" onchange="toggleSourceOptions()">
+                                                <label class="form-check-label" for="srcCalculated">
+                                                    <span class="badge bg-primary me-1">FORMULA</span> สูตรคำนวณ / ยอดรวม (Total)
+                                                </label>
                                             </div>
                                         </div>
+
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="data_source_mode" id="srcAuto" value="AUTO" onchange="toggleSourceOptions()">
+                                                <label class="form-check-label" for="srcAuto">
+                                                    <span class="badge bg-info text-dark me-1">AUTO</span> เชื่อมต่อระบบอัตโนมัติ
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="data_source_mode" id="srcManual" value="MANUAL" checked onchange="toggleSourceOptions()">
+                                                <label class="form-check-label" for="srcManual">
+                                                    <span class="badge bg-light text-dark border me-1">MANUAL</span> Manual Input (คีย์มือ)
+                                                </label>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -92,24 +90,36 @@
                                 <label class="small fw-bold text-primary mb-0">
                                     <i class="fas fa-calculator me-1"></i>Calculation Formula
                                 </label>
-                                
                                 <div class="position-relative">
                                     <input type="text" class="form-control font-monospace fw-bold" 
                                            name="calculation_formula" id="calculationFormula" 
                                            placeholder="e.g. [4001] + [4002] หรือ SUM_CHILDREN"
                                            oninput="validateFormula(this)">
-                                    <div class="invalid-feedback fw-bold" id="formulaErrorMsg">
-                                        รูปแบบสูตรไม่ถูกต้อง
-                                    </div>
-                                    <div class="valid-feedback fw-bold">
-                                        <i class="fas fa-check-circle me-1"></i>สูตรถูกต้อง (Valid Syntax)
-                                    </div>
+                                    <div class="invalid-feedback fw-bold" id="formulaErrorMsg">รูปแบบสูตรไม่ถูกต้อง</div>
+                                    <div class="valid-feedback fw-bold"><i class="fas fa-check-circle me-1"></i>สูตรถูกต้อง</div>
                                 </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted" style="font-size: 0.75rem;">รองรับ: <code>+ - * / ( )</code> และ <code>[Code]</code></small>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                        รองรับ: <code>+ - * / ( )</code> และ <code>[Code]</code>
-                                    </small>
+                        <div class="col-12 d-none" id="autoOptionSection">
+                            <div class="alert alert-info border-0 d-flex flex-column gap-2 mb-0 mt-2">
+                                <label class="small fw-bold text-info-emphasis mb-0">
+                                    <i class="fas fa-network-wired me-1"></i>Select Data Source
+                                </label>
+                                <div>
+                                    <select class="form-select fw-bold text-dark" id="autoSystemSelect" style="background-color: rgba(255,255,255,0.7);">
+                                        <option value="AUTO_STOCK">📦 Production FG (ยอดผลิตสินค้า)</option>
+                                        <option value="AUTO_LABOR">👷 Manpower (ค่าแรง/OT)</option>
+                                        <option disabled>──────────</option>
+                                        <option value="AUTO_SAP" disabled>🏢 SAP Integration (Coming Soon)</option>
+                                        <option value="AUTO_IOT" disabled>⚡ IoT Meter (Coming Soon)</option>
+                                    </select>
+                                    <div class="form-text small text-muted mt-1">
+                                        ระบบจะดึงข้อมูลจากแหล่งที่เลือกให้อัตโนมัติทุกสิ้นวัน
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -129,72 +139,65 @@
 </div>
 
 <script>
-    function toggleFormulaInput() {
+    document.addEventListener('DOMContentLoaded', () => {
+        const modalEl = document.getElementById('plItemModal');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                const form = document.getElementById('plItemForm');
+                if(form) form.reset();
+                toggleSourceOptions(); 
+                
+                // Clear Validation
+                const input = document.getElementById('calculationFormula');
+                if(input) {
+                    input.classList.remove('is-valid', 'is-invalid');
+                    input.setCustomValidity("");
+                }
+            });
+        }
+    });
+
+    function toggleSourceOptions() {
+        // เช็คสถานะ Radio
         const isCalc = document.getElementById('srcCalculated').checked;
-        const section = document.getElementById('formulaSection');
-        const input = document.getElementById('calculationFormula');
-        
+        const isAuto = document.getElementById('srcAuto').checked;
+
+        // Elements
+        const formulaSec = document.getElementById('formulaSection');
+        const autoSec = document.getElementById('autoOptionSection');
+        const formulaInput = document.getElementById('calculationFormula');
+
+        // 1. Formula Section Control
         if (isCalc) {
-            section.classList.remove('d-none');
-            setTimeout(() => input.focus(), 150);
-            // ตรวจสอบทันทีที่เปิด
-            validateFormula(input);
+            formulaSec.classList.remove('d-none');
+            // Auto Focus
+            if(document.getElementById('plItemModal').classList.contains('show')) {
+                 setTimeout(() => formulaInput.focus(), 150);
+            }
+            validateFormula(formulaInput);
         } else {
-            section.classList.add('d-none');
-            // ถ้าปิดไปแล้ว ให้ถือว่าผ่าน (เอา invalid ออก)
-            input.classList.remove('is-invalid');
-            input.setCustomValidity("");
+            formulaSec.classList.add('d-none');
+            formulaInput.classList.remove('is-invalid');
+            formulaInput.setCustomValidity("");
+        }
+
+        // 2. Auto Section Control (ตอนนี้แสดงเป็น Box เหมือนกันแล้ว)
+        if (isAuto) {
+            autoSec.classList.remove('d-none');
+        } else {
+            autoSec.classList.add('d-none');
         }
     }
 
+    // ... (Validation Functions เหมือนเดิม) ...
     function validateFormula(input) {
         let val = input.value.trim();
-        const errorMsg = document.getElementById('formulaErrorMsg');
-
-        // 1. ถ้าว่าง -> ให้ผ่าน (หรือจะบังคับใส่ก็ได้)
-        if (val === '') {
-            input.classList.remove('is-invalid', 'is-valid');
-            input.setCustomValidity(""); // Reset
-            return;
-        }
-
-        // 2. Keyword พิเศษ
-        if (val === 'SUM_CHILDREN') {
-            setValid(input);
-            return;
-        }
-
-        // 3. จำลองการแทนค่า [CODE] -> 1
-        // (เราแค่เช็ค Syntax ทางคณิตศาสตร์ ไม่ได้เช็คว่า Code มีจริงไหม)
+        if (val === '') { input.classList.remove('is-invalid', 'is-valid'); input.setCustomValidity(""); return; }
+        if (val === 'SUM_CHILDREN') { setValid(input); return; }
         let testFormula = val.replace(/\[.*?\]/g, '1');
-
-        // 4. ตรวจตัวอักษรต้องห้าม (อนุญาตแค่ ตัวเลข จุด และเครื่องหมาย + - * / ( ) )
-        // ถ้ามีตัวหนังสือหลงเหลืออยู่ (เช่น ABC) ถือว่าผิด
-        if (/[^0-9+\-*/(). ]/.test(testFormula)) {
-            setInvalid(input, "มีตัวอักษรที่ไม่ได้รับอนุญาต (ใช้ได้เฉพาะ [Code], ตัวเลข และ +-*/)");
-            return;
-        }
-
-        // 5. Test Run (ลองคำนวณจริง)
-        try {
-            // ใช้ new Function เพื่อลองรันดูว่า Crash ไหม
-            new Function('return ' + testFormula)();
-            setValid(input);
-        } catch (e) {
-            setInvalid(input, "รูปแบบคณิตศาสตร์ไม่ถูกต้อง (เช่น วงเล็บไม่ครบ)");
-        }
+        if (/[^0-9+\-*/(). ]/.test(testFormula)) { setInvalid(input, "มีตัวอักษรที่ไม่ได้รับอนุญาต"); return; }
+        try { new Function('return ' + testFormula)(); setValid(input); } catch (e) { setInvalid(input, "รูปแบบสูตรไม่ถูกต้อง"); }
     }
-
-    function setValid(input) {
-        input.classList.remove('is-invalid');
-        input.classList.add('is-valid');
-        input.setCustomValidity(""); // ผ่าน
-    }
-
-    function setInvalid(input, msg) {
-        input.classList.remove('is-valid');
-        input.classList.add('is-invalid');
-        document.getElementById('formulaErrorMsg').innerText = msg;
-        input.setCustomValidity(msg); // Block form submission
-    }
+    function setValid(input) { input.classList.remove('is-invalid'); input.classList.add('is-valid'); input.setCustomValidity(""); }
+    function setInvalid(input, msg) { input.classList.remove('is-valid'); input.classList.add('is-invalid'); document.getElementById('formulaErrorMsg').innerText = msg; input.setCustomValidity(msg); }
 </script>

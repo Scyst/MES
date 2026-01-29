@@ -5,139 +5,124 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
-// Check Logic: เฉพาะ Supervisor ขึ้นไปถึงจะบันทึกได้
-$canEdit = hasRole(['admin', 'creator', 'supervisor']);
+// Check Auth
+if (!hasRole(['admin', 'creator', 'supervisor'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access Denied']);
+    exit;
+}
 
 $action = $_REQUEST['action'] ?? 'read';
-$entry_date = $_REQUEST['entry_date'] ?? date('Y-m-d');
-$section = $_REQUEST['section'] ?? $_SESSION['user']['line'] ?? 'Team 1';
 
 try {
-    switch ($action) {
-        case 'read':
-            $tblTransactions = TRANSACTIONS_TABLE;
-            $tblItems = ITEMS_TABLE;
-            $tblLocations = LOCATIONS_TABLE;
-            $tblLabor = 'MES_MANUAL_DAILY_COSTS'; 
+    if ($action === 'read') {
+        // =========================================================
+        // READ: ดึงโครงสร้าง + ข้อมูลที่บันทึกไว้ (Left Join)
+        // =========================================================
+        $date = $_GET['entry_date'] ?? date('Y-m-d');
+        $section = $_GET['section'] ?? 'Team 1';
 
-            $sql = "
-                WITH PL_Tree AS (
-                    SELECT 
-                        id, item_name, account_code, item_type, data_source, parent_id, row_order, is_active,
-                        0 AS item_level,
-                        CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
-                    FROM PL_STRUCTURE 
-                    WHERE parent_id IS NULL AND is_active = 1
+        // ใช้ Recursive CTE เหมือนหน้า Master เพื่อเรียงลำดับ Tree ให้ถูกต้องเป๊ะๆ
+        $sql = "
+            WITH PL_Tree AS (
+                SELECT 
+                    id, item_name, account_code, item_type, data_source, calculation_formula, parent_id, row_order,
+                    0 AS item_level,
+                    CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
+                FROM PL_STRUCTURE 
+                WHERE parent_id IS NULL AND is_active = 1
 
-                    UNION ALL
-
-                    SELECT 
-                        c.id, c.item_name, c.account_code, c.item_type, c.data_source, c.parent_id, c.row_order, c.is_active,
-                        p.item_level + 1,
-                        p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
-                    FROM PL_STRUCTURE c
-                    INNER JOIN PL_Tree p ON c.parent_id = p.id
-                    WHERE c.is_active = 1
-                )
+                UNION ALL
 
                 SELECT 
-                    s.id as item_id, 
-                    s.item_name, 
-                    s.account_code, 
-                    s.item_type, 
-                    s.data_source, 
-                    s.parent_id,
-                    s.item_level,
-                    
-                    CASE 
-                        WHEN s.data_source = 'SECTION' THEN NULL
-                        WHEN s.data_source = 'MANUAL' THEN ISNULL(e.actual_amount, 0)
-                        
-                        WHEN s.data_source = 'AUTO_STOCK' THEN (
-                            SELECT ISNULL(SUM(t.quantity * i.StandardPrice), 0)
-                            FROM $tblTransactions t
-                            JOIN $tblItems i ON t.parameter_id = i.item_id
-                            LEFT JOIN $tblLocations l ON t.to_location_id = l.location_id
-                            WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = :date1
-                              AND t.transaction_type = 'PRODUCTION_FG'
-                        )
+                    c.id, c.item_name, c.account_code, c.item_type, c.data_source, c.calculation_formula, c.parent_id, c.row_order,
+                    p.item_level + 1,
+                    p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
+                FROM PL_STRUCTURE c
+                INNER JOIN PL_Tree p ON c.parent_id = p.id
+                WHERE c.is_active = 1
+            )
+            SELECT 
+                T.id AS item_id, 
+                T.account_code, 
+                T.item_name, 
+                T.item_type, 
+                T.data_source, 
+                T.calculation_formula,
+                T.item_level,
+                T.parent_id,
+                -- ดึงยอดเงินจากตาราง Entry (ถ้าไม่มีให้เป็น NULL)
+                E.amount AS actual_amount,
+                E.remark
+            FROM PL_Tree T
+            LEFT JOIN PL_DAILY_ENTRY E ON T.id = E.pl_item_id AND E.entry_date = :date AND E.section_name = :section
+            ORDER BY T.SortPath
+        ";
 
-                        WHEN s.data_source = 'AUTO_LABOR' THEN (
-                            SELECT ISNULL(SUM(cost_value), 0)
-                            FROM $tblLabor
-                            WHERE entry_date = :date2 
-                              AND cost_category = 'LABOR'
-                              AND (
-                                  (s.account_code = '522001' AND cost_type = 'DIRECT_LABOR') OR
-                                  (s.account_code = '522002' AND cost_type = 'OVERTIME') OR
-                                  (cost_type = 'DIRECT_LABOR')
-                              )
-                        )
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':date' => $date, ':section' => $section]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                        ELSE ISNULL(e.actual_amount, 0)
-                    END as actual_amount,
-                    
-                    e.updated_at
+        echo json_encode(['success' => true, 'data' => $data]);
 
-                FROM PL_Tree s
-                LEFT JOIN DAILY_PL_ENTRIES e WITH (NOLOCK) 
-                    ON s.id = e.item_id 
-                    AND e.entry_date = :dateMain 
-                    AND e.section_name = :sectMain
-                
-                ORDER BY s.SortPath
+    } elseif ($action === 'save') {
+        // =========================================================
+        // SAVE: บันทึกข้อมูล (รองรับการแก้ไขทีละหลายรายการ)
+        // =========================================================
+        $date = $_POST['entry_date'];
+        $section = $_POST['section'];
+        $items = json_decode($_POST['items'], true); // รับ JSON Array [{item_id, amount}, ...]
+
+        if (!$date || !$section || !is_array($items)) {
+            throw new Exception("Invalid input data");
+        }
+
+        $pdo->beginTransaction();
+        try {
+            // ใช้ MERGE (Upsert) เพื่อความรวดเร็ว
+            // ถ้ามีแล้ว Update, ถ้าไม่มี Insert
+            $sql = "
+                MERGE INTO PL_DAILY_ENTRY AS Target
+                USING (VALUES (:item_id, :date, :section, :amount, :user)) AS Source (item_id, entry_date, section_name, amount, updated_by)
+                ON Target.pl_item_id = Source.item_id 
+                   AND Target.entry_date = Source.entry_date 
+                   AND Target.section_name = Source.section_name
+                WHEN MATCHED THEN
+                    UPDATE SET amount = Source.amount, updated_by = Source.updated_by, updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (pl_item_id, entry_date, section_name, amount, created_by)
+                    VALUES (Source.item_id, Source.entry_date, Source.section_name, Source.amount, Source.updated_by);
             ";
             
             $stmt = $pdo->prepare($sql);
-            
-            $params = [
-                ':date1' => $entry_date,
-                ':date2' => $entry_date,
-                ':dateMain' => $entry_date,
-                ':sectMain' => $section
-            ];
+            $userId = $_SESSION['user_id'] ?? 0;
 
-            $stmt->execute($params);
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $data]);
-            break;
+            foreach ($items as $item) {
+                // ข้ามรายการที่ค่าเป็น NULL หรือว่าง (ถ้าต้องการ)
+                // หรือบันทึก 0 ก็ได้ตาม Business Logic
+                $amount = floatval($item['amount']);
 
-        case 'save':
-            if (!$canEdit) throw new Exception("Access Denied");
-
-            $items = json_decode($_POST['items'], true);
-            $user = $_SESSION['user']['username'];
-            
-            if (!is_array($items)) throw new Exception("Invalid Data Format");
-
-            $pdo->beginTransaction();
-            try {
-                // ใช้ SP Upsert ที่เราเตรียมไว้ (ปลอดภัยที่สุด)
-                $sql = "{CALL sp_UpsertDailyPLEntry(?, ?, ?, ?, ?)}";
-                $stmt = $pdo->prepare($sql);
-
-                foreach ($items as $item) {
-                    $amount = floatval(str_replace(',', '', $item['amount']));
-                    $stmt->execute([
-                        $entry_date,
-                        $section,
-                        $item['item_id'],
-                        $amount,
-                        $user
-                    ]);
-                }
-                
-                $pdo->commit();
-                echo json_encode(['success' => true]);
-            } catch (Exception $ex) {
-                $pdo->rollBack();
-                throw $ex;
+                $stmt->execute([
+                    ':item_id' => $item['item_id'],
+                    ':date'    => $date,
+                    ':section' => $section,
+                    ':amount'  => $amount,
+                    ':user'    => $userId
+                ]);
             }
-            break;
-            
-        default:
-            throw new Exception("Action not found");
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Saved successfully']);
+
+        } catch (Exception $ex) {
+            $pdo->rollBack();
+            throw $ex;
+        }
+
+    } else {
+        throw new Exception("Unknown Action");
     }
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

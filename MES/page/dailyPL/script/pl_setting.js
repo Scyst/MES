@@ -13,9 +13,17 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
 });
 
-async function loadData() {
+async function loadData(isUpdate = false) {
     const tbody = document.getElementById('masterTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+    
+    // 1. จำตำแหน่ง Scroll ปัจจุบันไว้
+    const currentScroll = window.scrollY;
+
+    // 2. ถ้าเป็นการ Update ไม่ต้องโชว์ Spinner (จะได้ไม่กระพริบ)
+    // แต่ถ้าเปิดหน้ามาครั้งแรก (isUpdate = false) ให้โชว์ Spinner ตามปกติ
+    if (!isUpdate) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+    }
 
     try {
         const res = await fetch('api/manage_pl_master.php?action=read');
@@ -25,7 +33,12 @@ async function loadData() {
             allData = json.data;
             renderTable(allData);
             updateParentOptions(allData);
-            initSortable(); // Init Drag & Drop
+            initSortable();
+
+            // 3. คืนตำแหน่ง Scroll กลับไปที่เดิม (เฉพาะตอน Update)
+            if (isUpdate) {
+                window.scrollTo(0, currentScroll);
+            }
         }
     } catch (err) {
         console.error(err);
@@ -42,45 +55,58 @@ function renderTable(data) {
 
     let html = '';
     data.forEach(item => {
-        // --- 1. Identify Level & Style ---
+        // 1. ดึงค่าตัวแปร (ลบ isSection ทิ้งไปแล้ว)
         const level = parseInt(item.item_level) || 0;
-        const isSection = item.data_source === 'SECTION';
         const isAuto = item.data_source.includes('AUTO');
-
-        let rowClass = 'tree-item'; // Level 2+
-        if (level === 0) rowClass = 'tree-l0'; // Root
-        else if (level === 1) rowClass = 'tree-l1'; // Group
-
-        // --- 2. Indentation Logic ---
-        let nameContent = '';
-        let indentPx = level * 30; // ย่อหน้าทีละ 30px
+        const isCalc = item.data_source === 'CALCULATED';
         
+        // 2. Class Logic: ใช้ Level เป็นตัวคุมความเข้ม (Hierarchy Coloring)
+        let rowClass = '';
+        if (level === 0) rowClass = 'level-0';
+        else if (level === 1) rowClass = 'level-1';
+        else rowClass = 'level-deep';
+
+        // 3. Icon Logic
+        let icon = 'far fa-file-alt text-muted'; // Default Icon
+        if (level === 0) icon = 'fas fa-folder text-primary'; // Root ใช้ Folder
+        else if (isCalc) icon = 'fas fa-calculator text-primary'; // Formula ใช้เครื่องคิดเลข
+        else if (isAuto) icon = 'fas fa-robot text-info'; // Auto ใช้หุ่นยนต์
+
+        // 4. Indent & Connector Logic
+        let nameContent = '';
+        let indentPx = level * 30;
+
         if (level === 0) {
-            nameContent = `<i class="fas fa-folder text-primary me-2"></i>${item.item_name}`;
+            nameContent = `<i class="${icon} me-2"></i>${item.item_name}`;
         } else {
-            // L-Shape Line
             nameContent = `
                 <div style="padding-left: ${indentPx}px; position: relative;">
                     <span class="tree-line-v" style="left: ${indentPx - 18}px;"></span>
                     <span class="tree-line-h" style="left: ${indentPx - 18}px;"></span>
-                    <i class="${isSection ? 'fas fa-folder-open' : 'far fa-file-alt'} text-muted me-2 fa-sm"></i>
+                    <i class="${icon} me-2 fa-sm"></i>
                     ${item.item_name}
                 </div>
             `;
         }
 
-        // --- 3. Badges ---
+        // 5. Type Badge
         let typeBadge = '';
         if(item.item_type === 'REVENUE') typeBadge = '<span class="text-success fw-bold small">REV</span>';
         else if(item.item_type === 'COGS') typeBadge = '<span class="text-warning fw-bold small">COGS</span>';
         else typeBadge = '<span class="text-danger fw-bold small">EXP</span>';
 
+        // 6. Source Badge (จุดที่เคย Error เพราะมี isSection)
         let sourceBadge = '';
-        if (isSection) sourceBadge = '<span class="badge bg-secondary opacity-75 rounded-pill px-3">HEADER</span>';
-        else if (isAuto) sourceBadge = '<span class="badge bg-info text-dark rounded-pill px-3"><i class="fas fa-robot me-1"></i>AUTO</span>';
-        else sourceBadge = '<span class="badge bg-light text-dark border rounded-pill px-3">MANUAL</span>';
+        // แก้ไข: เช็คแค่ Auto, Calc, หรือ Manual เท่านั้น (ตัด Section ทิ้ง)
+        if (isAuto) {
+            sourceBadge = '<span class="badge bg-info text-dark rounded-pill px-3"><i class="fas fa-robot me-1"></i>AUTO</span>';
+        } else if (isCalc) {
+            sourceBadge = '<span class="badge bg-primary rounded-pill px-3"><i class="fas fa-calculator me-1"></i>FORMULA</span>';
+        } else {
+            sourceBadge = '<span class="badge bg-light text-dark border rounded-pill px-3">MANUAL</span>';
+        }
 
-        // --- 4. Render Row ---
+        // 7. Render Row
         html += `
             <tr data-id="${item.id}" class="${rowClass}">
                 <td>
@@ -94,20 +120,14 @@ function renderTable(data) {
                 <td class="text-center">${sourceBadge}</td>
                 <td class="text-center text-muted small">${item.row_order}</td>
                 <td class="text-center">
-                    <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})' title="Edit">
-                        <i class="fas fa-pen fa-xs"></i>
-                    </button>
-                    <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})" title="Delete">
-                        <i class="fas fa-trash fa-xs"></i>
-                    </button>
+                    <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})'><i class="fas fa-pen fa-xs"></i></button>
+                    <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})"><i class="fas fa-trash fa-xs"></i></button>
                 </td>
             </tr>
         `;
     });
-
     tbody.innerHTML = html;
 }
-
 // --- Drag & Drop ---
 function initSortable() {
     const el = document.getElementById('masterTableBody');
@@ -134,7 +154,7 @@ async function saveReorder() {
         const json = await res.json();
 
         if (json.success) {
-            loadData(); // Reload to refresh index
+            loadData(true);
             Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 })
                 .fire({ icon: 'success', title: 'Reordered' });
         }
@@ -146,11 +166,31 @@ async function saveReorder() {
 // --- Modal Functions ---
 function updateParentOptions(data) {
     const select = document.getElementById('parentId');
-    select.innerHTML = '<option value="">-- Main Header --</option>';
-    const parents = data.filter(item => !item.parent_id || item.data_source === 'SECTION');
+    if (!select) {
+        console.warn('Element #parentId not found in DOM');
+        return; 
+    }
+    const currentVal = select.value; 
+
+    select.innerHTML = '<option value="">-- เป็นรายการหลัก (No Parent) --</option>';
+
+    // กรองเอาเฉพาะตัวที่น่าจะเป็นแม่ได้ (คือพวกที่เป็นสูตรคำนวณ หรือไม่มีแม่)
+    const parents = data.filter(item => 
+        !item.parent_id || // เป็น Root
+        item.data_source === 'CALCULATED' // เป็นสูตร (ซึ่งส่วนใหญ่คือหัวข้อรวม)
+    );
+
     parents.forEach(p => {
-        select.innerHTML += `<option value="${p.id}">${p.account_code} - ${p.item_name}</option>`;
+        let prefix = '';
+        if (parseInt(p.item_level) > 0) {
+            prefix = '&nbsp;&nbsp;'.repeat(parseInt(p.item_level)) + '└─ ';
+        }
+        
+        // แสดง Formula เป็นค่า Default
+        select.innerHTML += `<option value="${p.id}">${prefix}${p.account_code} : ${p.item_name}</option>`;
     });
+
+    if (currentVal) select.value = currentVal;
 }
 
 function openModal() {
@@ -162,42 +202,93 @@ function openModal() {
 }
 
 window.editItem = function(item) {
+    document.getElementById('modalAction').value = 'save';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>แก้ไขรายการบัญชี';
+    
+    // Fill Basic Data
     document.getElementById('itemId').value = item.id;
     document.getElementById('accountCode').value = item.account_code;
     document.getElementById('itemName').value = item.item_name;
-    document.getElementById('itemType').value = item.item_type;
     document.getElementById('rowOrder').value = item.row_order;
+    document.getElementById('itemType').value = item.item_type;
     document.getElementById('parentId').value = item.parent_id || '';
-    
-    const radios = document.getElementsByName('data_source');
-    radios.forEach(r => { if (r.value === item.data_source) r.checked = true; });
 
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Item';
+    // 🔥 Fill Formula (แก้ปัญหาเปิดมาแล้วสูตรหาย)
+    const formulaInput = document.getElementById('calculationFormula');
+    formulaInput.value = item.calculation_formula || '';
+
+    // 🔥 Handle Data Source Selection
+    const src = item.data_source;
+
+    if (src === 'CALCULATED') {
+        document.getElementById('srcCalculated').checked = true;
+    } 
+    else if (src.startsWith('AUTO')) {
+        document.getElementById('srcAuto').checked = true;
+        document.getElementById('autoSystemSelect').value = src; // เลือก Dropdown ให้ตรงค่าเก่า
+    } 
+    else {
+        // Manual หรืออื่นๆ
+        document.getElementById('srcManual').checked = true;
+    }
+
+    // Trigger UI Change (เพื่อให้ช่อง Formula หรือ Dropdown เด้งขึ้นมา)
+    // เราต้องเรียกฟังก์ชันนี้หลังจาก Set Checked แล้ว
+    // (ฟังก์ชันนี้อยู่ใน scope ของ Modal HTML แต่เราเรียกผ่าน window หรือ event ได้)
+    // วิธีง่ายสุดคือ manually trigger event
+    const radio = document.querySelector('input[name="data_source_mode"]:checked');
+    if(radio) radio.onchange(); 
+
     myModal.show();
 }
 
 window.saveItem = async function() {
     const form = document.getElementById('plItemForm');
-    if (!form.checkValidity()) { form.reportValidity(); return; }
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
 
+    // เตรียม FormData
     const formData = new FormData(form);
-    const btn = document.querySelector('button[onclick="saveItem()"]');
-    btn.disabled = true;
+    
+    // 🔥 Logic รวมร่าง Data Source
+    // 1. ดูว่าเลือก Mode ไหน (CALCULATED, AUTO, MANUAL)
+    const mode = formData.get('data_source_mode'); 
+    let finalSource = 'MANUAL';
 
+    if (mode === 'CALCULATED') {
+        finalSource = 'CALCULATED';
+    } else if (mode === 'AUTO') {
+        // ถ้าเลือก Auto ให้ไปเอาค่าจาก Dropdown แทน
+        finalSource = document.getElementById('autoSystemSelect').value;
+    } else {
+        finalSource = 'MANUAL';
+    }
+
+    // ยัดค่าที่ถูกต้องกลับเข้าไปใน FormData เพื่อส่งไปหลังบ้าน
+    formData.append('data_source', finalSource);
+    
+    // (ค่า data_source_mode ไม่ต้องส่งไปก็ได้ หรือส่งไปก็ไม่เป็นไร หลังบ้านไม่ใช้)
+
+    // ส่งข้อมูล
     try {
-        const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
+        const res = await fetch('api/manage_pl_master.php', {
+            method: 'POST',
+            body: formData
+        });
         const json = await res.json();
+
         if (json.success) {
             myModal.hide();
-            loadData();
+            loadData(true); // Refresh table
             Swal.fire({ icon: 'success', title: 'Saved', timer: 1000, showConfirmButton: false });
         } else {
             Swal.fire('Error', json.message, 'error');
         }
     } catch (err) {
-        Swal.fire('Error', 'Connection Failed', 'error');
-    } finally {
-        btn.disabled = false;
+        console.error(err);
+        Swal.fire('Error', 'Connection Error', 'error');
     }
 }
 
@@ -210,7 +301,8 @@ window.deleteItem = async function(id) {
     
     const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
     const json = await res.json();
-    if(json.success) loadData(); else Swal.fire('Error', json.message, 'error');
+    if(json.success) loadData(true);
+    else Swal.fire('Error', json.message, 'error');
 }
 
 // =========================================================
@@ -227,6 +319,7 @@ function exportTemplate() {
             "Item Name": item.item_name,
             "Type": item.item_type,
             "Source": item.data_source,
+            "Formula": item.calculation_formula || '', // 🔥 เพิ่มช่องนี้
             "Parent Code": parent ? parent.account_code : '', 
             "Account Code": item.account_code,
             "Order": item.row_order
@@ -240,8 +333,9 @@ function exportTemplate() {
         { wch: 50 }, // Name
         { wch: 15 }, // Type
         { wch: 15 }, // Source
-        { wch: 15 }, // Parent Code
-        { wch: 15 }, // Account Code
+        { wch: 20 }, // Formula
+        { wch: 15 }, // Parent
+        { wch: 15 }, // Code
         { wch: 10 }  // Order
     ];
 
@@ -285,12 +379,12 @@ async function handleFileUpload(input) {
 async function processImport(rows) {
     Swal.fire({ title: 'Importing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    // 🔥 Key Mapping ต้องตรงกับตอน Export เป๊ะๆ
     const mappedData = rows.map(row => ({
-        account_code: row["Account Code"] || '', // Key ต้องตรงกับ Excel Header
+        account_code: row["Account Code"] || '',
         item_name: row["Item Name"] || '',
         item_type: row["Type"] || 'EXPENSE',
         data_source: row["Source"] || 'MANUAL',
+        calculation_formula: row["Formula"] || '',
         parent_code: row["Parent Code"] || null, 
         row_order: row["Order"] || 10
     }));
@@ -305,7 +399,7 @@ async function processImport(rows) {
 
         if (res.success) {
             Swal.fire('Success', `Imported ${res.count} items`, 'success');
-            loadData();
+            loadData(true);
         } else {
             Swal.fire('Error', res.message, 'error');
         }

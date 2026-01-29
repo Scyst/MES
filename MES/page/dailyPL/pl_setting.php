@@ -19,90 +19,17 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <style>
-        /* Table Header */
-        .table-custom thead th {
-            background-color: #f1f3f5;
-            border-bottom: 2px solid #dee2e6;
-            color: #495057;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-        }
-
-        /* --- Tree View Logic --- */
-        
-        /* Level 0: Root Header */
-        .tree-l0 td {
-            background-color: #e3f2fd !important; /* ฟ้าอ่อน */
-            border-top: 2px solid #fff;
-            color: #0d47a1;
-            font-weight: 800;
-            font-size: 1.05em;
-        }
-
-        /* Level 1: Sub-Header */
-        .tree-l1 td {
-            background-color: #f8f9fa !important; /* เทาจางๆ */
-            color: #2c3e50;
-            font-weight: 600;
-        }
-
-        /* Level 2+: Items */
-        .tree-item td {
-            background-color: #fff !important;
-            color: #495057;
-        }
-
-        /* Connector Line (เส้นโยง L-Shape) */
-        .tree-connector {
-            position: relative;
-            height: 100%;
-            display: inline-block;
-        }
-        
-        /* เส้นแนวตั้ง | */
-        .tree-line-v {
-            position: absolute;
-            left: -18px; /* ขยับซ้ายตาม Indent */
-            top: -20px;  /* ลากจากบรรทัดบน */
-            bottom: 0;
-            width: 1px;
-            background-color: #cbd3da;
-            height: 45px; /* ความสูงพอดีบรรทัด */
-        }
-        
-        /* เส้นแนวนอน _ */
-        .tree-line-h {
-            position: absolute;
-            left: -18px;
-            top: 50%;
-            width: 12px;
-            height: 1px;
-            background-color: #cbd3da;
-        }
-
-        /* Action Buttons */
-        .action-btn {
-            width: 28px; height: 28px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center; justify-content: center;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    </style>
+    
+    <link rel="stylesheet" href="css/pl_setting.css?v=<?php echo $v; ?>">
 </head>
 <body class="layout-top-header">
     <?php include_once '../components/php/top_header.php'; ?>
 
     <div id="main-content">
-        <div class="container-fluid py-4">
+        <div class="container-fluid py-2">
             
-            <div class="card border-0 shadow-sm mb-4 rounded-3">
-                <div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="card border-0 shadow-sm rounded-3 sticky-toolbar">
+                <div class="card-body py-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h6 class="fw-bold text-primary mb-0"><i class="fas fa-list-alt me-2"></i>Account Hierarchy</h6>
                         <span class="text-muted small">โครงสร้างบัญชีแบบลำดับชั้น</span>
@@ -130,15 +57,16 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
                             <thead>
                                 <tr>
                                     <th style="width: 45%; padding-left: 1.5rem;">Account Name (Tree View)</th>
-                                    <th style="width: 12%; text-center">Code</th>
-                                    <th style="width: 10%; text-center">Type</th>
-                                    <th style="width: 12%; text-center">Source</th>
-                                    <th style="width: 8%; text-center">Order</th>
-                                    <th style="width: 13%; text-center">Actions</th>
+                                    
+                                    <th class="text-center" style="width: 12%;">Code</th>
+                                    <th class="text-center" style="width: 10%;">Type</th>
+                                    <th class="text-center" style="width: 12%;">Source</th>
+                                    <th class="text-center" style="width: 8%;">Order</th>
+                                    <th class="text-center" style="width: 13%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="masterTableBody">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>

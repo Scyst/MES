@@ -17,13 +17,14 @@ $action = $_REQUEST['action'] ?? 'read';
 try {
     switch ($action) {
         case 'read':
-            // 🔥 UPGRADE: ใช้ Recursive CTE เพื่อแสดงผลแบบ Tree View เหมือนหน้า Entry
-            // เพื่อให้ลำดับการเรียงในหน้า Setting ตรงกับหน้าใช้งานจริงเป๊ะๆ
+            // 🔥 UPGRADE: แก้ไข SQL ให้ดึง calculation_formula ออกมาด้วย
             $sql = "
                 WITH PL_Tree AS (
-                    -- Anchor: Level 0
+                    -- Anchor: Level 0 (เพิ่ม calculation_formula)
                     SELECT 
-                        id, item_name, account_code, item_type, data_source, parent_id, row_order, is_active, updated_at,
+                        id, item_name, account_code, item_type, data_source, 
+                        calculation_formula,
+                        parent_id, row_order, is_active, updated_at,
                         0 AS item_level,
                         CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
                     FROM PL_STRUCTURE 
@@ -31,9 +32,11 @@ try {
 
                     UNION ALL
 
-                    -- Recursive: Children
+                    -- Recursive: Children (เพิ่ม calculation_formula)
                     SELECT 
-                        c.id, c.item_name, c.account_code, c.item_type, c.data_source, c.parent_id, c.row_order, c.is_active, c.updated_at,
+                        c.id, c.item_name, c.account_code, c.item_type, c.data_source, 
+                        c.calculation_formula,
+                        c.parent_id, c.row_order, c.is_active, c.updated_at,
                         p.item_level + 1,
                         p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
                     FROM PL_STRUCTURE c
@@ -126,13 +129,13 @@ try {
                 // ใช้ MERGE เพื่อ Update ของเดิม หรือ Insert ของใหม่
                 $sqlUpsert = "
                     MERGE INTO PL_STRUCTURE AS T
-                    USING (SELECT :code as code, :name as name, :type as type, :src as src, :order as ord) AS S
+                    USING (SELECT :code as code, :name as name, :type as type, :src as src, :formula as formula, :order as ord) AS S
                     ON (T.account_code = S.code)
                     WHEN MATCHED THEN
-                        UPDATE SET item_name = S.name, item_type = S.type, data_source = S.src, row_order = S.ord, updated_at = GETDATE()
+                        UPDATE SET item_name = S.name, item_type = S.type, data_source = S.src, calculation_formula = S.formula, row_order = S.ord, updated_at = GETDATE()
                     WHEN NOT MATCHED THEN
-                        INSERT (account_code, item_name, item_type, data_source, row_order, is_active)
-                        VALUES (S.code, S.name, S.type, S.src, S.ord, 1);
+                        INSERT (account_code, item_name, item_type, data_source, calculation_formula, row_order, is_active)
+                        VALUES (S.code, S.name, S.type, S.src, S.formula, S.ord, 1);
                 ";
                 $stmtUpsert = $pdo->prepare($sqlUpsert);
 
@@ -143,18 +146,40 @@ try {
                     // Skip ถ้ารหัสว่าง
                     if (empty($row['account_code'])) continue;
 
-                    // Auto-fix Data Source (เผื่อ User พิมพ์มาผิด)
+                    // 1. จัดการ Data Source (แก้ไข Logic ตรงนี้)
                     $src = strtoupper(trim($row['data_source']));
-                    if (strpos($src, 'AUTO') !== false && strpos($src, 'STOCK') !== false) $src = 'AUTO_STOCK';
-                    elseif (strpos($src, 'AUTO') !== false) $src = 'AUTO_LABOR';
-                    elseif (strpos($src, 'HEAD') !== false || strpos($src, 'SEC') !== false) $src = 'SECTION';
-                    else $src = 'MANUAL';
+
+                    // ตรวจสอบ Keyword และจัดระเบียบ
+                    if (strpos($src, 'CALC') !== false) {
+                        $src = 'CALCULATED';
+                    }
+                    elseif (strpos($src, 'AUTO') !== false && strpos($src, 'STOCK') !== false) {
+                        $src = 'AUTO_STOCK';
+                    }
+                    elseif (strpos($src, 'AUTO') !== false) {
+                        $src = 'AUTO_LABOR';
+                    }
+                    // ตัด SECTION ทิ้งไปเลย ตามที่เราตกลงกันว่าไม่ใช้แล้ว
+
+                    // Validation สุดท้าย: ต้องอยู่ในรายชื่อที่อนุญาตเท่านั้น
+                    $allowedSources = ['MANUAL', 'AUTO_STOCK', 'AUTO_LABOR', 'CALCULATED'];
+                    if (!in_array($src, $allowedSources)) {
+                        $src = 'MANUAL'; // ถ้าค่าแปลกประหลาดหลุดมา ให้ตีเป็น Manual
+                    }
+
+                    // 2. จัดการ Formula (Smart Default)
+                    // Logic นี้จะทำงานถูกต้องแล้ว เพราะ $src เป็น CALCULATED แล้ว
+                    $formula = trim($row['calculation_formula'] ?? '');
+                    if ($src === 'CALCULATED' && $formula === '') {
+                        $formula = 'SUM_CHILDREN';
+                    }
 
                     $stmtUpsert->execute([
                         ':code' => strtoupper(trim($row['account_code'])),
                         ':name' => trim($row['item_name']),
                         ':type' => strtoupper(trim($row['item_type'])),
                         ':src'  => $src,
+                        ':formula' => $formula,
                         ':order'=> (int)$row['row_order']
                     ]);
                     $importedCount++;

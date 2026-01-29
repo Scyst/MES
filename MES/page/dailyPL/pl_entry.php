@@ -2,15 +2,18 @@
 // page/pl_daily/pl_entry.php
 require_once __DIR__ . '/../components/init.php';
 
+// Check Permissions
 if (!hasRole(['admin', 'creator', 'supervisor'])) {
     header("Location: ../../auth/access_denied.php");
     exit;
 }
 
+// Config Header
 $pageTitle = "Daily P&L Entry";
 $pageHeaderTitle = "Daily P&L Entry";
 $pageHeaderSubtitle = "บันทึกและตรวจสอบค่าใช้จ่ายรายวัน";
 
+// Cache Busting
 $v = filemtime(__DIR__ . '/script/pl_entry.js');
 ?>
 <!DOCTYPE html>
@@ -19,211 +22,14 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <style>
-        /* =========================================
-           1. APP-LIKE LAYOUT (เลียนแบบ SalesDashboard)
-           ========================================= */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* ล็อคไม่ให้ Scroll ที่ Body */
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f8f9fa;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-        .page-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #main-content {
-            flex: 1;
-            height: 100%; /* สำคัญมาก */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .content-wrapper {
-            flex: 1;
-            overflow-y: auto; /* Scroll เฉพาะตรงนี้ */
-            overflow-x: hidden;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        /* =========================================
-           2. METRIC CARDS (สไตล์ Executive)
-           ========================================= */
-        .metric-card {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-            padding: 1rem 1.25rem;
-            height: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .metric-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6c757d;
-            margin-bottom: 0.5rem;
-        }
-        .metric-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            line-height: 1.2;
-            color: #2c3e50;
-        }
-        .metric-icon-bg {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 4rem;
-            opacity: 0.05;
-            transform: rotate(-15deg);
-        }
-
-        /* =========================================
-           3. TABLE DESIGN (สไตล์ SalesDashboard)
-           ========================================= */
-        .card-table {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            flex: 1; /* ยืดให้เต็มพื้นที่ที่เหลือ */
-            min-height: 0; /* ป้องกัน Flex item ล้น */
-            overflow: hidden;
-        }
-
-        .table-custom {
-            margin-bottom: 0;
-        }
-        
-        .table-custom thead th {
-            background-color: #f1f3f5; /* เทาอ่อนสะอาดตา */
-            color: #495057;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            padding: 12px 16px;
-            border-bottom: 1px solid #dee2e6;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            white-space: nowrap;
-        }
-
-        .table-custom tbody td {
-            padding: 8px 16px;
-            vertical-align: middle;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.95rem;
-            color: #333;
-        }
-
-        /* Row Styling */
-        .row-section {
-            background-color: #f8f9fa;
-        }
-        .row-section td {
-            font-weight: 700;
-            color: #495057;
-            padding-top: 15px;
-            padding-bottom: 15px;
-        }
-
-        /* Connector Line Effect */
-        .child-item {
-            position: relative;
-            padding-left: 2.5rem !important;
-        }
-        .child-item::before {
-            content: '';
-            position: absolute;
-            left: 1.2rem;
-            top: -12px;
-            height: 35px;
-            width: 15px;
-            border-left: 2px solid #dee2e6;
-            border-bottom: 2px solid #dee2e6;
-            border-bottom-left-radius: 8px;
-        }
-
-        /* =========================================
-           4. SOFT BADGES & INPUTS
-           ========================================= */
-        .badge-soft-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .badge-soft-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .badge-soft-danger  { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .badge-soft-info    { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
-        .badge-soft-secondary { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
-
-        /* Modern Input: ดูเหมือน Text ธรรมดาจนกว่าจะ Focus */
-        .input-seamless {
-            border: 1px solid transparent;
-            background: transparent;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-weight: 600;
-            color: #212529;
-            width: 100%;
-            transition: all 0.2s;
-        }
-        .input-seamless:hover:not([readonly]) {
-            background-color: #f8f9fa;
-            border-color: #e9ecef;
-        }
-        .input-seamless:focus {
-            background-color: #fff;
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
-            outline: 0;
-        }
-        .input-seamless[readonly] {
-            color: #6c757d;
-            background-color: transparent;
-            cursor: default;
-        }
-        .input-seamless.is-valid {
-            background-color: #d1e7dd !important;
-            color: #0f5132 !important;
-        }
-
-        /* Toolbar Styling */
-        .toolbar-container {
-            background: #fff;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 0.75rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0; /* ห้ามหด */
-        }
-    </style>
+    <link rel="stylesheet" href="css/pl_entry.css?v=<?php echo $v; ?>">
 </head>
 <body class="layout-top-header">
     
     <div class="page-container">
+        
         <?php include_once '../components/php/top_header.php'; ?>
 
         <div id="main-content">
@@ -232,14 +38,14 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                 <div class="d-flex align-items-center gap-3">
                     <div class="d-flex align-items-center bg-light rounded px-2 py-1 border">
                         <i class="far fa-calendar-alt text-secondary me-2"></i>
-                        <input type="date" id="targetDate" class="form-control form-control-sm border-0 bg-transparent p-0 fw-bold text-dark" style="width: 130px;">
+                        <input type="date" id="targetDate" class="form-control form-control-sm border-0 bg-transparent p-0 fw-bold text-dark" style="width: 130px; cursor: pointer;">
                     </div>
                     
                     <div class="vr mx-1"></div>
 
                     <div class="d-flex align-items-center bg-light rounded px-2 py-1 border">
                         <i class="fas fa-industry text-secondary me-2"></i>
-                        <select id="sectionFilter" class="form-select form-select-sm border-0 bg-transparent p-0 fw-bold text-dark" style="width: 150px; box-shadow: none;">
+                        <select id="sectionFilter" class="form-select form-select-sm border-0 bg-transparent p-0 fw-bold text-dark" style="width: 150px; box-shadow: none; cursor: pointer;">
                             <option value="Team 1">Team 1</option>
                             <option value="Team 2">Team 2</option>
                         </select>
@@ -247,7 +53,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="loadEntryData()">
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadEntryData()" title="Reload Data">
                         <i class="fas fa-sync-alt me-1"></i> Refresh
                     </button>
                 </div>
@@ -255,8 +61,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
 
             <div class="content-wrapper">
                 
-                <div class="row g-3">
-                    <div class="col-md-4">
+                <div class="row g-3 mb-3"> <div class="col-md-4">
                         <div class="metric-card border-start border-4 border-success">
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -302,25 +107,30 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                     </div>
                 </div>
 
-                <div class="card-table">
-                    <div class="overflow-auto custom-scrollbar h-100"> <table class="table table-custom table-hover w-100">
+                <div class="card-table flex-grow-1 overflow-hidden"> 
+                    <div class="overflow-auto custom-scrollbar h-100">
+                        <table class="table table-custom table-hover w-100 mb-0">
                             <thead>
                                 <tr>
                                     <th style="width: 80px;" class="text-center">Code</th>
                                     <th style="width: 40%;">Account Item</th>
                                     <th style="width: 100px;" class="text-center">Type</th>
-                                    <th style="width: 100px;" class="text-center">Source</th>
+                                    <th style="width: 120px;" class="text-center">Source</th>
                                     <th class="text-end pe-4">Amount (THB)</th>
                                 </tr>
                             </thead>
                             <tbody id="entryTableBody">
-                                </tbody>
+                                <tr>
+                                    <td colspan="5" class="text-center align-middle" style="height: 200px;">
+                                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                                        <div class="text-muted small">Loading Data...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
 
-            </div> </div> </div>
-
-    <script src="script/pl_entry.js?v=<?php echo $v; ?>"></script>
+            </div> </div> </div> <script src="script/pl_entry.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>
