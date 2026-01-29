@@ -1,96 +1,128 @@
-/* ทำให้ Toolbar ติดหนึบ */
-.sticky-toolbar {
-    position: -webkit-sticky; /* สำหรับ Safari */
-    position: sticky;
-    top: 0; 
-    z-index: 1020; /* ให้ลอยอยู่เหนือตาราง */
-    background-color: #f8f9fa; /* ⚠️ สำคัญ: ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
-    padding-top: 0rem; /* เว้นระยะด้านบนนิดนึง */
-    margin-bottom: 0.5rem;
-    border-radius: 0 0 10px 10px; /* มนนิดๆ ให้ดูสวย */
+/* css/pl_setting.css */
+
+/* =========================================
+   1. APP-LIKE LAYOUT
+   ========================================= */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* ล็อค Scroll หลัก */
+    font-family: 'Sarabun', sans-serif;
+    background-color: #f8f9fa;
 }
 
-.sticky-toolbar + .card .table-custom thead th {
-    top: 0px; /* ค่านี้ต้องกะให้พอดีกับความสูงของ Toolbar ครับ */
+.page-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
-/* แถม: ทำให้หัวตารางติดหนึบด้วย (เวลาเลื่อนดูข้อมูลยาวๆ) */
+
+#main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Toolbar Fixed */
+.toolbar-container {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 1020;
+}
+
+/* Scrollable Content */
+.content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   2. TABLE STYLES
+   ========================================= */
+.card-table {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .table-custom thead th {
+    position: -webkit-sticky;
     position: sticky;
-    top: 0;
+    top: 0; /* Sticky เทียบกับ Content Wrapper */
     z-index: 1010;
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* เงาใต้หัวตาราง */
+    background-color: #f1f3f5;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
 }
 
-/* Table Header */
-.table-custom thead th {
-    background-color: #f1f3f5;
-    border-bottom: 2px solid #dee2e6;
+.table-custom tbody td {
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+    color: #333;
+    height: 45px;
+}
+
+/* =========================================
+   3. HIERARCHY COLORS (Tree View)
+   ========================================= */
+tr.level-0 td {
+    background-color: #e7f1ff !important;
+    color: #084298;
+    font-weight: 800;
+    border-top: 2px solid #fff;
+}
+tr.level-0 td:first-child { border-left: 5px solid #0d6efd !important; }
+
+tr.level-1 td {
+    background-color: #f8f9fa !important;
     color: #495057;
     font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
+}
+tr.level-1 td:first-child { border-left: 4px solid #adb5bd !important; }
+
+tr.level-deep:hover td {
+    background-color: #fff8e1 !important;
 }
 
-/* --- Tree View Logic --- */
-
-/* Level 0: Root Header */
-.tree-l0 td {
-    background-color: #e3f2fd !important; /* ฟ้าอ่อน */
-    border-top: 2px solid #fff;
-    color: #0d47a1;
-    font-weight: 800;
-    font-size: 1.05em;
-}
-
-/* Level 1: Sub-Header */
-.tree-l1 td {
-    background-color: #f8f9fa !important; /* เทาจางๆ */
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-/* Level 2+: Items */
-.tree-item td {
-    background-color: #fff !important;
-    color: #495057;
-}
-
-/* Connector Line (เส้นโยง L-Shape) */
-.tree-connector {
-    position: relative;
-    height: 100%;
-    display: inline-block;
-}
-
-/* เส้นแนวตั้ง | */
+/* Connector Lines */
 .tree-line-v {
-    position: absolute;
-    left: -18px; /* ขยับซ้ายตาม Indent */
-    top: -20px;  /* ลากจากบรรทัดบน */
-    bottom: 0;
-    width: 1px;
-    background-color: #cbd3da;
-    height: 45px; /* ความสูงพอดีบรรทัด */
+    position: absolute; top: -15px; bottom: 0; width: 1px; background-color: #dee2e6;
 }
-
-/* เส้นแนวนอน _ */
 .tree-line-h {
-    position: absolute;
-    left: -18px;
-    top: 50%;
-    width: 12px;
-    height: 1px;
-    background-color: #cbd3da;
+    position: absolute; top: 50%; width: 15px; height: 1px; background-color: #dee2e6;
 }
 
-/* Action Buttons */
-.action-btn {
-    width: 28px; height: 28px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center; justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-.action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+/* =========================================
+   4. SCROLLBAR
+   ========================================= */
+.content-wrapper::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar { width: 8px; height: 8px; }
+.content-wrapper::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
+.content-wrapper::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.content-wrapper::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }

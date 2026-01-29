@@ -8,10 +8,6 @@ if (!hasRole(['admin', 'creator'])) {
 }
 
 $pageTitle = "P&L Structure Setup";
-$pageIcon = "fas fa-sitemap"; 
-$pageHeaderTitle = "P&L Master Data";
-$pageHeaderSubtitle = "จัดการผังบัญชีและลำดับชั้น (Hierarchy)";
-
 $v = filemtime(__DIR__ . '/script/pl_setting.js');
 ?>
 <!DOCTYPE html>
@@ -19,63 +15,61 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/pl_setting.css?v=<?php echo $v; ?>">
 </head>
-<body class="layout-top-header">
-    <?php include_once '../components/php/top_header.php'; ?>
+<body class="layout-top-header bg-light">
+    
+    <div class="page-container">
+        <?php include_once '../components/php/top_header.php'; ?>
 
-    <div id="main-content">
-        <div class="container-fluid py-2">
+        <div id="main-content">
             
-            <div class="card border-0 shadow-sm rounded-3 sticky-toolbar">
-                <div class="card-body py-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="toolbar-container shadow-sm z-2">
+                <div class="d-flex align-items-center gap-3">
                     <div>
-                        <h6 class="fw-bold text-primary mb-0"><i class="fas fa-list-alt me-2"></i>Account Hierarchy</h6>
-                        <span class="text-muted small">โครงสร้างบัญชีแบบลำดับชั้น</span>
+                        <h6 class="fw-bold text-primary mb-0"><i class="fas fa-sitemap me-2"></i>P&L Structure</h6>
+                        <span class="text-muted small">ผังบัญชีและลำดับชั้น</span>
                     </div>
-                    
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportTemplate()">
-                            <i class="fas fa-file-excel me-1"></i> Export
-                        </button>
-                        <input type="file" id="importFile" accept=".xlsx, .xls" class="d-none" onchange="handleFileUpload(this)">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="document.getElementById('importFile').click()">
-                            <i class="fas fa-file-import me-1"></i> Import
-                        </button>
-                        <button class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm" onclick="openModal()">
-                            <i class="fas fa-plus me-1"></i> Add Item
-                        </button>
-                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportTemplate()">
+                        <i class="fas fa-file-excel me-1"></i> Export
+                    </button>
+                    <input type="file" id="importFile" accept=".xlsx, .xls" class="d-none" onchange="handleFileUpload(this)">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="document.getElementById('importFile').click()">
+                        <i class="fas fa-file-import me-1"></i> Import
+                    </button>
+                    <div class="vr text-muted opacity-25 mx-1"></div>
+                    <button class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold" onclick="openModal()">
+                        <i class="fas fa-plus me-1"></i> Add Item
+                    </button>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table mb-0 align-middle table-hover table-custom">
+            <div class="content-wrapper">
+                
+                <div class="card-table"> 
+                    <div class="table-responsive h-100 custom-scrollbar">
+                        <table class="table table-hover table-custom mb-0 align-middle w-100">
                             <thead>
                                 <tr>
-                                    <th style="width: 45%; padding-left: 1.5rem;">Account Name (Tree View)</th>
-                                    
-                                    <th class="text-center" style="width: 12%;">Code</th>
-                                    <th class="text-center" style="width: 10%;">Type</th>
-                                    <th class="text-center" style="width: 12%;">Source</th>
+                                    <th class="text-start ps-4" style="width: 40%;">Account Name (Tree View)</th>
+                                    <th class="text-start px-3" style="width: 15%;">Code</th>
+                                    <th class="text-start" style="width: 10%;">Type</th>
+                                    <th class="text-start" style="width: 15%;">Source</th>
                                     <th class="text-center" style="width: 8%;">Order</th>
-                                    <th class="text-center" style="width: 13%;">Actions</th>
+                                    <th class="text-end pe-4" style="width: 12%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="masterTableBody">
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </div>
-
-    <?php include 'components/modal_pl_item.php'; ?>
+            </div> </div> </div> <?php include 'components/modal_pl_item.php'; ?>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="../../utils/libs/Sortable.min.js"></script>

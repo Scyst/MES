@@ -15,12 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadData(isUpdate = false) {
     const tbody = document.getElementById('masterTableBody');
-    
-    // 1. จำตำแหน่ง Scroll ปัจจุบันไว้
     const currentScroll = window.scrollY;
 
-    // 2. ถ้าเป็นการ Update ไม่ต้องโชว์ Spinner (จะได้ไม่กระพริบ)
-    // แต่ถ้าเปิดหน้ามาครั้งแรก (isUpdate = false) ให้โชว์ Spinner ตามปกติ
     if (!isUpdate) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
     }
@@ -35,10 +31,7 @@ async function loadData(isUpdate = false) {
             updateParentOptions(allData);
             initSortable();
 
-            // 3. คืนตำแหน่ง Scroll กลับไปที่เดิม (เฉพาะตอน Update)
-            if (isUpdate) {
-                window.scrollTo(0, currentScroll);
-            }
+            if (isUpdate) window.scrollTo(0, currentScroll);
         }
     } catch (err) {
         console.error(err);
@@ -55,71 +48,59 @@ function renderTable(data) {
 
     let html = '';
     data.forEach(item => {
-        // 1. ดึงค่าตัวแปร (ลบ isSection ทิ้งไปแล้ว)
         const level = parseInt(item.item_level) || 0;
         const isAuto = item.data_source.includes('AUTO');
         const isCalc = item.data_source === 'CALCULATED';
         
-        // 2. Class Logic: ใช้ Level เป็นตัวคุมความเข้ม (Hierarchy Coloring)
-        let rowClass = '';
-        if (level === 0) rowClass = 'level-0';
-        else if (level === 1) rowClass = 'level-1';
-        else rowClass = 'level-deep';
+        // --- Row Styling ---
+        let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
+        let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 2rem;' : `padding-left: ${2 + (level * 1.5)}rem;`);
+        
+        // --- Icons ---
+        let iconHtml = '';
+        if (level === 0) iconHtml = `<i class="fas fa-folder text-primary me-2 fa-lg"></i>`;
+        else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
+        else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // 3. Icon Logic
-        let icon = 'far fa-file-alt text-muted'; // Default Icon
-        if (level === 0) icon = 'fas fa-folder text-primary'; // Root ใช้ Folder
-        else if (isCalc) icon = 'fas fa-calculator text-primary'; // Formula ใช้เครื่องคิดเลข
-        else if (isAuto) icon = 'fas fa-robot text-info'; // Auto ใช้หุ่นยนต์
-
-        // 4. Indent & Connector Logic
-        let nameContent = '';
-        let indentPx = level * 30;
-
-        if (level === 0) {
-            nameContent = `<i class="${icon} me-2"></i>${item.item_name}`;
-        } else {
-            nameContent = `
-                <div style="padding-left: ${indentPx}px; position: relative;">
-                    <span class="tree-line-v" style="left: ${indentPx - 18}px;"></span>
-                    <span class="tree-line-h" style="left: ${indentPx - 18}px;"></span>
-                    <i class="${icon} me-2 fa-sm"></i>
-                    ${item.item_name}
-                </div>
-            `;
-        }
-
-        // 5. Type Badge
+        // --- Badges (ใช้ Mini Badge แบบหน้า Entry) ---
         let typeBadge = '';
-        if(item.item_type === 'REVENUE') typeBadge = '<span class="text-success fw-bold small">REV</span>';
-        else if(item.item_type === 'COGS') typeBadge = '<span class="text-warning fw-bold small">COGS</span>';
-        else typeBadge = '<span class="text-danger fw-bold small">EXP</span>';
+        if (item.item_type === 'REVENUE') typeBadge = `<span class="badge-mini badge-type-rev" title="Revenue">R</span>`;
+        else if (item.item_type === 'COGS') typeBadge = `<span class="badge-mini badge-type-cogs" title="Cost of Goods Sold">C</span>`;
+        else typeBadge = `<span class="badge-mini badge-type-exp" title="Expense">E</span>`;
 
-        // 6. Source Badge (จุดที่เคย Error เพราะมี isSection)
         let sourceBadge = '';
-        // แก้ไข: เช็คแค่ Auto, Calc, หรือ Manual เท่านั้น (ตัด Section ทิ้ง)
-        if (isAuto) {
-            sourceBadge = '<span class="badge bg-info text-dark rounded-pill px-3"><i class="fas fa-robot me-1"></i>AUTO</span>';
-        } else if (isCalc) {
-            sourceBadge = '<span class="badge bg-primary rounded-pill px-3"><i class="fas fa-calculator me-1"></i>FORMULA</span>';
-        } else {
-            sourceBadge = '<span class="badge bg-light text-dark border rounded-pill px-3">MANUAL</span>';
-        }
+        if (isAuto) sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System: ${item.data_source}">A</span>`;
+        else if (isCalc) {
+            const formulaDesc = item.calculation_formula === 'SUM_CHILDREN' ? 'Sum Children' : item.calculation_formula;
+            sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${formulaDesc}">F</span>`;
+        } else sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input">M</span>`;
 
-        // 7. Render Row
+        // --- Build Row ---
         html += `
             <tr data-id="${item.id}" class="${rowClass}">
-                <td>
-                    <div class="d-flex align-items-center">
+                <td style="${indentStyle}" class="pe-3">
+                    <div class="d-flex align-items-center text-nowrap">
                         <i class="fas fa-grip-vertical text-muted cursor-move me-2 drag-handle opacity-25" style="cursor: grab;"></i>
-                        <span class="w-100">${nameContent}</span>
+                        ${iconHtml}
+                        <span class="text-truncate">${item.item_name}</span>
                     </div>
                 </td>
-                <td class="text-center"><code class="text-muted bg-light px-2 rounded">${item.account_code}</code></td>
-                <td class="text-center">${typeBadge}</td>
-                <td class="text-center">${sourceBadge}</td>
+
+                <td class="text-start px-3">
+                    <code class="text-muted small bg-light px-1 rounded">${item.account_code}</code>
+                </td>
+
+                <td class="text-start">
+                    ${typeBadge} <small class="text-muted ms-1" style="font-size: 0.75rem;">${item.item_type}</small>
+                </td>
+
+                <td class="text-start">
+                    ${sourceBadge} <small class="text-muted ms-1" style="font-size: 0.75rem;">${isAuto ? 'AUTO' : (isCalc ? 'FORMULA' : 'MANUAL')}</small>
+                </td>
+
                 <td class="text-center text-muted small">${item.row_order}</td>
-                <td class="text-center">
+
+                <td class="text-end pe-4">
                     <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})'><i class="fas fa-pen fa-xs"></i></button>
                     <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})"><i class="fas fa-trash fa-xs"></i></button>
                 </td>
@@ -128,6 +109,9 @@ function renderTable(data) {
     });
     tbody.innerHTML = html;
 }
+
+// ... (ส่วน Drag & Drop, Modal, Export, Import ยังคงเดิมครับ Logic ไม่เปลี่ยน) ...
+
 // --- Drag & Drop ---
 function initSortable() {
     const el = document.getElementById('masterTableBody');
@@ -166,18 +150,14 @@ async function saveReorder() {
 // --- Modal Functions ---
 function updateParentOptions(data) {
     const select = document.getElementById('parentId');
-    if (!select) {
-        console.warn('Element #parentId not found in DOM');
-        return; 
-    }
+    if (!select) return;
     const currentVal = select.value; 
 
     select.innerHTML = '<option value="">-- เป็นรายการหลัก (No Parent) --</option>';
 
-    // กรองเอาเฉพาะตัวที่น่าจะเป็นแม่ได้ (คือพวกที่เป็นสูตรคำนวณ หรือไม่มีแม่)
     const parents = data.filter(item => 
-        !item.parent_id || // เป็น Root
-        item.data_source === 'CALCULATED' // เป็นสูตร (ซึ่งส่วนใหญ่คือหัวข้อรวม)
+        !item.parent_id || 
+        item.data_source === 'CALCULATED' 
     );
 
     parents.forEach(p => {
@@ -185,8 +165,6 @@ function updateParentOptions(data) {
         if (parseInt(p.item_level) > 0) {
             prefix = '&nbsp;&nbsp;'.repeat(parseInt(p.item_level)) + '└─ ';
         }
-        
-        // แสดง Formula เป็นค่า Default
         select.innerHTML += `<option value="${p.id}">${prefix}${p.account_code} : ${p.item_name}</option>`;
     });
 
@@ -205,7 +183,6 @@ window.editItem = function(item) {
     document.getElementById('modalAction').value = 'save';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>แก้ไขรายการบัญชี';
     
-    // Fill Basic Data
     document.getElementById('itemId').value = item.id;
     document.getElementById('accountCode').value = item.account_code;
     document.getElementById('itemName').value = item.item_name;
@@ -213,29 +190,16 @@ window.editItem = function(item) {
     document.getElementById('itemType').value = item.item_type;
     document.getElementById('parentId').value = item.parent_id || '';
 
-    // 🔥 Fill Formula (แก้ปัญหาเปิดมาแล้วสูตรหาย)
     const formulaInput = document.getElementById('calculationFormula');
     formulaInput.value = item.calculation_formula || '';
 
-    // 🔥 Handle Data Source Selection
     const src = item.data_source;
-
-    if (src === 'CALCULATED') {
-        document.getElementById('srcCalculated').checked = true;
-    } 
+    if (src === 'CALCULATED') document.getElementById('srcCalculated').checked = true;
     else if (src.startsWith('AUTO')) {
         document.getElementById('srcAuto').checked = true;
-        document.getElementById('autoSystemSelect').value = src; // เลือก Dropdown ให้ตรงค่าเก่า
-    } 
-    else {
-        // Manual หรืออื่นๆ
-        document.getElementById('srcManual').checked = true;
-    }
+        document.getElementById('autoSystemSelect').value = src;
+    } else document.getElementById('srcManual').checked = true;
 
-    // Trigger UI Change (เพื่อให้ช่อง Formula หรือ Dropdown เด้งขึ้นมา)
-    // เราต้องเรียกฟังก์ชันนี้หลังจาก Set Checked แล้ว
-    // (ฟังก์ชันนี้อยู่ใน scope ของ Modal HTML แต่เราเรียกผ่าน window หรือ event ได้)
-    // วิธีง่ายสุดคือ manually trigger event
     const radio = document.querySelector('input[name="data_source_mode"]:checked');
     if(radio) radio.onchange(); 
 
@@ -249,39 +213,23 @@ window.saveItem = async function() {
         return;
     }
 
-    // เตรียม FormData
     const formData = new FormData(form);
-    
-    // 🔥 Logic รวมร่าง Data Source
-    // 1. ดูว่าเลือก Mode ไหน (CALCULATED, AUTO, MANUAL)
     const mode = formData.get('data_source_mode'); 
     let finalSource = 'MANUAL';
 
-    if (mode === 'CALCULATED') {
-        finalSource = 'CALCULATED';
-    } else if (mode === 'AUTO') {
-        // ถ้าเลือก Auto ให้ไปเอาค่าจาก Dropdown แทน
-        finalSource = document.getElementById('autoSystemSelect').value;
-    } else {
-        finalSource = 'MANUAL';
-    }
+    if (mode === 'CALCULATED') finalSource = 'CALCULATED';
+    else if (mode === 'AUTO') finalSource = document.getElementById('autoSystemSelect').value;
+    else finalSource = 'MANUAL';
 
-    // ยัดค่าที่ถูกต้องกลับเข้าไปใน FormData เพื่อส่งไปหลังบ้าน
     formData.append('data_source', finalSource);
     
-    // (ค่า data_source_mode ไม่ต้องส่งไปก็ได้ หรือส่งไปก็ไม่เป็นไร หลังบ้านไม่ใช้)
-
-    // ส่งข้อมูล
     try {
-        const res = await fetch('api/manage_pl_master.php', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
             myModal.hide();
-            loadData(true); // Refresh table
+            loadData(true);
             Swal.fire({ icon: 'success', title: 'Saved', timer: 1000, showConfirmButton: false });
         } else {
             Swal.fire('Error', json.message, 'error');
@@ -305,9 +253,7 @@ window.deleteItem = async function(id) {
     else Swal.fire('Error', json.message, 'error');
 }
 
-// =========================================================
-// EXCEL EXPORT (FIXED KEY NAMES)
-// =========================================================
+// ... (Export/Import Functions คงเดิม) ...
 function exportTemplate() {
     if (allData.length === 0) {
         Swal.fire('Info', 'No Data', 'info'); return;
@@ -319,7 +265,7 @@ function exportTemplate() {
             "Item Name": item.item_name,
             "Type": item.item_type,
             "Source": item.data_source,
-            "Formula": item.calculation_formula || '', // 🔥 เพิ่มช่องนี้
+            "Formula": item.calculation_formula || '', 
             "Parent Code": parent ? parent.account_code : '', 
             "Account Code": item.account_code,
             "Order": item.row_order
@@ -327,29 +273,14 @@ function exportTemplate() {
     });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Manual Width Config
-    ws['!cols'] = [
-        { wch: 50 }, // Name
-        { wch: 15 }, // Type
-        { wch: 15 }, // Source
-        { wch: 20 }, // Formula
-        { wch: 15 }, // Parent
-        { wch: 15 }, // Code
-        { wch: 10 }  // Order
-    ];
-
+    ws['!cols'] = [{ wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "PL_Master");
     XLSX.writeFile(wb, `PL_Structure_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-// =========================================================
-// EXCEL IMPORT (FIXED KEY MAPPING)
-// =========================================================
 async function handleFileUpload(input) {
     if (!input.files || input.files.length === 0) return;
-    
     const file = input.files[0];
     const reader = new FileReader();
     input.value = '';
