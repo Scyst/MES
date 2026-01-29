@@ -22,7 +22,6 @@ try {
         $date = $_GET['entry_date'] ?? date('Y-m-d');
         $section = $_GET['section'] ?? 'Team 1';
 
-        // ใช้ Recursive CTE เหมือนหน้า Master เพื่อเรียงลำดับ Tree ให้ถูกต้องเป๊ะๆ
         $sql = "
             WITH PL_Tree AS (
                 SELECT 
@@ -51,7 +50,7 @@ try {
                 T.calculation_formula,
                 T.item_level,
                 T.parent_id,
-                -- ดึงยอดเงินจากตาราง Entry (ถ้าไม่มีให้เป็น NULL)
+                -- ดึงยอดเงินจากตาราง Entry
                 E.amount AS actual_amount,
                 E.remark
             FROM PL_Tree T
@@ -63,15 +62,24 @@ try {
         $stmt->execute([':date' => $date, ':section' => $section]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // 🔥 Fix Type: แปลง String เป็น Float/Int เพื่อให้ JS คำนวณสูตรได้แม่นยำ
+        foreach ($data as &$row) {
+            if ($row['actual_amount'] !== null) {
+                $row['actual_amount'] = (float)$row['actual_amount'];
+            }
+            // แปลง Level เป็น Int ด้วย
+            $row['item_level'] = (int)$row['item_level'];
+        }
+
         echo json_encode(['success' => true, 'data' => $data]);
 
     } elseif ($action === 'save') {
         // =========================================================
-        // SAVE: บันทึกข้อมูล (รองรับการแก้ไขทีละหลายรายการ)
+        // SAVE: บันทึกข้อมูล (รองรับทั้ง Amount และ Remark)
         // =========================================================
         $date = $_POST['entry_date'];
         $section = $_POST['section'];
-        $items = json_decode($_POST['items'], true); // รับ JSON Array [{item_id, amount}, ...]
+        $items = json_decode($_POST['items'], true); // [{item_id, amount, remark?}, ...]
 
         if (!$date || !$section || !is_array($items)) {
             throw new Exception("Invalid input data");
@@ -79,34 +87,42 @@ try {
 
         $pdo->beginTransaction();
         try {
-            // ใช้ MERGE (Upsert) เพื่อความรวดเร็ว
-            // ถ้ามีแล้ว Update, ถ้าไม่มี Insert
+            // 🔥 ปรับ SQL MERGE ให้รองรับ Remark ด้วย
             $sql = "
                 MERGE INTO PL_DAILY_ENTRY AS Target
-                USING (VALUES (:item_id, :date, :section, :amount, :user)) AS Source (item_id, entry_date, section_name, amount, updated_by)
+                USING (VALUES (:item_id, :date, :section, :amount, :remark, :user)) 
+                AS Source (item_id, entry_date, section_name, amount, remark, updated_by)
                 ON Target.pl_item_id = Source.item_id 
                    AND Target.entry_date = Source.entry_date 
                    AND Target.section_name = Source.section_name
                 WHEN MATCHED THEN
-                    UPDATE SET amount = Source.amount, updated_by = Source.updated_by, updated_at = GETDATE()
+                    UPDATE SET 
+                        amount = Source.amount, 
+                        remark = ISNULL(Source.remark, Target.remark), -- อัปเดต Remark ถ้ามีการส่งค่ามา
+                        updated_by = Source.updated_by, 
+                        updated_at = GETDATE()
                 WHEN NOT MATCHED THEN
-                    INSERT (pl_item_id, entry_date, section_name, amount, created_by)
-                    VALUES (Source.item_id, Source.entry_date, Source.section_name, Source.amount, Source.updated_by);
+                    INSERT (pl_item_id, entry_date, section_name, amount, remark, created_by)
+                    VALUES (Source.item_id, Source.entry_date, Source.section_name, Source.amount, Source.remark, Source.updated_by);
             ";
             
             $stmt = $pdo->prepare($sql);
             $userId = $_SESSION['user_id'] ?? 0;
 
             foreach ($items as $item) {
-                // ข้ามรายการที่ค่าเป็น NULL หรือว่าง (ถ้าต้องการ)
-                // หรือบันทึก 0 ก็ได้ตาม Business Logic
-                $amount = floatval($item['amount']);
+                $amount = isset($item['amount']) ? floatval($item['amount']) : 0;
+                
+                // รับค่า Remark (ถ้าไม่มีให้ส่ง NULL เพื่อให้ SQL ใช้ ISNULL)
+                $remark = isset($item['remark']) ? trim($item['remark']) : null;
+                // แต่ถ้าส่งมาเป็น Empty String แปลว่าUserลบข้อความ ให้บันทึกเป็นค่าว่าง
+                if (isset($item['remark']) && $item['remark'] === '') $remark = '';
 
                 $stmt->execute([
                     ':item_id' => $item['item_id'],
                     ':date'    => $date,
                     ':section' => $section,
                     ':amount'  => $amount,
+                    ':remark'  => $remark,
                     ':user'    => $userId
                 ]);
             }

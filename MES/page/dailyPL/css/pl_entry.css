@@ -1,11 +1,11 @@
 /* =========================================
-    1. APP-LIKE LAYOUT (เลียนแบบ SalesDashboard)
-    ========================================= */
+   1. APP-LIKE LAYOUT (Fixed Header & Toolbar)
+   ========================================= */
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* ล็อคไม่ให้ Scroll ที่ Body */
+    overflow: hidden; /* 🔒 ล็อคหน้าจอหลัก */
     font-family: 'Sarabun', sans-serif;
     background-color: #f8f9fa;
 }
@@ -16,18 +16,31 @@ html, body {
     flex-direction: column;
 }
 
+/* พื้นที่ส่วนเนื้อหา (Content) */
 #main-content {
     flex: 1;
-    height: 100%; /* สำคัญมาก */
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden; /* ห้าม Scroll ตรงนี้ */
     position: relative;
 }
 
+/* Toolbar: ยึดติดอยู่ด้านบน (ไม่ต้อง Sticky เพราะอยู่นอกพื้นที่ Scroll) */
+.toolbar-container {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0; /* ห้ามหด */
+    z-index: 1020;
+}
+
+/* พื้นที่ Scroll ได้ (เฉพาะส่วนตารางและ Metrics) */
 .content-wrapper {
     flex: 1;
-    overflow-y: auto; /* Scroll เฉพาะตรงนี้ */
+    overflow-y: auto; /* ✅ Scroll ตรงนี้แทน Body */
     overflow-x: hidden;
     padding: 1.25rem;
     display: flex;
@@ -36,8 +49,27 @@ html, body {
 }
 
 /* =========================================
-    2. METRIC CARDS (สไตล์ Executive)
-    ========================================= */
+   2. STICKY TABLE HEADER (ใน Content Wrapper)
+   ========================================= */
+.table-custom thead th {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0; /* ✅ ต้องเป็น 0 เพราะเทียบกับ Content Wrapper */
+    z-index: 1010;
+    background-color: #f1f3f5; /* เทาอ่อนตัดกับสีขาวของตาราง */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* เงาบางๆ ให้รู้ว่าลอย */
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-bottom: 2px solid #dee2e6; /* เส้นใต้หนาหน่อย */
+    white-space: nowrap;
+}
+
+/* =========================================
+   3. METRIC CARDS (Executive Style)
+   ========================================= */
 .metric-card {
     background: #fff;
     border-radius: 12px;
@@ -77,8 +109,8 @@ html, body {
 }
 
 /* =========================================
-    3. TABLE DESIGN (สไตล์ SalesDashboard)
-    ========================================= */
+   4. TABLE & INPUT DESIGN
+   ========================================= */
 .card-table {
     background: #fff;
     border-radius: 12px;
@@ -86,83 +118,31 @@ html, body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     display: flex;
     flex-direction: column;
-    flex: 1; /* ยืดให้เต็มพื้นที่ที่เหลือ */
-    min-height: 0; /* ป้องกัน Flex item ล้น */
+    flex: 1; /* ยืดเต็มพื้นที่ */
+    min-height: 0;
     overflow: hidden;
 }
 
-.table-custom {
-    margin-bottom: 0;
-}
-
-.table-custom thead th {
-    background-color: #f1f3f5; /* เทาอ่อนสะอาดตา */
-    color: #495057;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    padding: 12px 16px;
-    border-bottom: 1px solid #dee2e6;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    white-space: nowrap;
-}
-
 .table-custom tbody td {
-    padding: 8px 16px;
+    padding: 4px 12px; /* ลด Padding ให้บรรทัดชิดกันขึ้นนิดนึง */
     vertical-align: middle;
     border-bottom: 1px solid #f0f0f0;
     font-size: 0.95rem;
     color: #333;
+    height: 45px; /* ความสูงขั้นต่ำต่อแถว */
 }
 
-/* Row Styling */
-.row-section {
-    background-color: #f8f9fa;
-}
-.row-section td {
-    font-weight: 700;
-    color: #495057;
-    padding-top: 15px;
-    padding-bottom: 15px;
-}
-
-/* Connector Line Effect */
-.child-item {
-    position: relative;
-    padding-left: 2.5rem !important;
-}
-.child-item::before {
-    content: '';
-    position: absolute;
-    left: 1.2rem;
-    top: -12px;
-    height: 35px;
-    width: 15px;
-    border-left: 2px solid #dee2e6;
-    border-bottom: 2px solid #dee2e6;
-    border-bottom-left-radius: 8px;
-}
-
-/* =========================================
-    4. SOFT BADGES & INPUTS
-    ========================================= */
-.badge-soft-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-.badge-soft-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-.badge-soft-danger  { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-.badge-soft-info    { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
-.badge-soft-secondary { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
-
-/* Modern Input: ดูเหมือน Text ธรรมดาจนกว่าจะ Focus */
+/* Input Seamless (แบบไร้ขอบ จนกว่าจะ Focus) */
 .input-seamless {
     border: 1px solid transparent;
     background: transparent;
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 6px 10px;
+    font-family: 'Courier New', monospace;
     font-weight: 600;
     color: #212529;
     width: 100%;
+    text-align: right;
     transition: all 0.2s;
 }
 .input-seamless:hover:not([readonly]) {
@@ -177,7 +157,7 @@ html, body {
 }
 .input-seamless[readonly] {
     color: #6c757d;
-    background-color: transparent;
+    background-color: transparent; /* โปร่งใส */
     cursor: default;
 }
 .input-seamless.is-valid {
@@ -185,82 +165,101 @@ html, body {
     color: #0f5132 !important;
 }
 
-/* Toolbar Styling */
-.toolbar-container {
-    background: #fff;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 0.75rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0; /* ห้ามหด */
-}
-
 /* =========================================
-    HIERARCHY COLORING (ไล่สีตาม Level)
-    ========================================= */
-
-/* Level 0: Root Header (ใหญ่สุด) - สีฟ้าอ่อน */
+   5. HIERARCHY COLORS (สำคัญมาก)
+   ========================================= */
+/* Level 0: Root Header */
 tr.level-0 td {
-    background-color: #e7f1ff !important; /* ฟ้าอ่อน */
-    color: #004085;
-    font-weight: 800; /* หนาพิเศษ */
-    font-size: 0.95rem;
+    background-color: #e7f1ff !important;
+    color: #084298;
+    font-weight: 800;
     border-top: 2px solid #fff;
 }
 tr.level-0 td:first-child {
-    border-left: 5px solid #0d6efd !important; /* แถบซ้ายน้ำเงินเข้ม */
+    border-left: 5px solid #0d6efd !important;
 }
 
-/* Level 1: Sub-Group (หัวข้อย่อย) - สีเทาอ่อน */
+/* Level 1: Sub-Group */
 tr.level-1 td {
-    background-color: #f8f9fa !important; /* เทาอ่อน */
+    background-color: #f8f9fa !important;
     color: #495057;
-    font-weight: 700; /* ตัวหนา */
-    font-size: 0.9rem;
+    font-weight: 700;
 }
 tr.level-1 td:first-child {
-    border-left: 4px solid #adb5bd !important; /* แถบซ้ายเทา */
+    border-left: 4px solid #adb5bd !important;
 }
 
-/* Level 2+: Items (รายการย่อย) - พื้นขาว */
+/* Level Deep: Items */
 tr.level-deep td {
     background-color: #ffffff !important;
-    color: #212529;
-    font-weight: 400; /* ตัวปกติ */
+}
+tr.level-deep:hover td {
+    background-color: #fff8e1 !important; /* Highlight สีเหลืองอ่อน */
 }
 
-/* Hover Effect สำหรับรายการย่อย */
-tr.level-deep:hover td {
-    background-color: #fff8e1 !important; /* เหลืองอ่อนเวลาชี้ */
+/* เส้นเชื่อมโยง (Connector) */
+.child-item {
+    position: relative;
+    padding-left: 2.5rem !important;
+}
+.child-item::before {
+    content: '';
+    position: absolute;
+    left: 1.2rem;
+    top: -15px;
+    height: 40px;
+    width: 15px;
+    border-left: 2px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6;
+    border-bottom-left-radius: 8px;
+    opacity: 0.6;
 }
 
 /* =========================================
-   5. CUSTOM SCROLLBAR (ทำให้ดู Modern)
+   6. SCROLLBAR (Modern)
    ========================================= */
-/* แกน Y และ X */
 .content-wrapper::-webkit-scrollbar,
 .table-responsive::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
 }
-
-/* Track (พื้นหลังรางเลื่อน) */
 .content-wrapper::-webkit-scrollbar-track,
 .table-responsive::-webkit-scrollbar-track {
     background: #f1f1f1;
-    border-radius: 4px;
 }
-
-/* Handle (ตัวเลื่อน) */
 .content-wrapper::-webkit-scrollbar-thumb,
 .table-responsive::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+    background: #c1c1c1; border-radius: 4px;
 }
-
-/* Handle Hover */
-.content-wrapper::-webkit-scrollbar-thumb:hover,
-.table-responsive::-webkit-scrollbar-thumb:hover {
+.content-wrapper::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Utilities */
+.transition-fade { transition: opacity 0.5s ease; }
+.cursor-pointer { cursor: pointer; }
+
+/* Mini Badges (สำหรับ Type/Source ตัวย่อ) */
+.badge-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;       /* ความกว้างคงที่ เพื่อให้ชื่อรายการตรงกันแนวตั้ง */
+    height: 20px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    margin-right: 4px; /* ระยะห่างระหว่างป้าย */
+    text-transform: uppercase;
+    line-height: 1;
+    cursor: help;      /* เมาส์ชี้แล้วเป็นรูปเครื่องหมายคำถาม */
+}
+
+/* สีสำหรับ Type */
+.badge-type-rev { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; } /* R - Revenue */
+.badge-type-cogs { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; } /* C - COGS */
+.badge-type-exp { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; } /* E - Expense */
+
+/* สีสำหรับ Source */
+.badge-src-auto { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; } /* A - Auto */
+.badge-src-calc { background-color: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; } /* F - Formula */
+.badge-src-manual { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; } /* M - Manual */

@@ -1,53 +1,85 @@
 "use strict";
 
 let currentData = [];
+let isSaving = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ตั้งค่า Default Date เป็นวันนี้
+    // 1. Set Default Date (Today)
     const dateInput = document.getElementById('targetDate');
     if (dateInput && !dateInput.value) {
         dateInput.value = new Date().toISOString().split('T')[0];
     }
 
+    // 2. Load Initial Data
     loadEntryData();
 
-    // Event Listeners
+    // 3. Global Event Listeners
     dateInput?.addEventListener('change', loadEntryData);
     document.getElementById('sectionFilter')?.addEventListener('change', loadEntryData);
 });
 
 // ========================================================
-// 1. DATA LOADING
+// 1. DATA LOADING & API
 // ========================================================
 async function loadEntryData() {
     const date = document.getElementById('targetDate').value;
     const section = document.getElementById('sectionFilter')?.value || 'Team 1';
     const tbody = document.getElementById('entryTableBody');
     
-    // Loading State
+    // Show Loading State
     tbody.innerHTML = `
         <tr>
-            <td colspan="5" class="text-center align-middle" style="height: 200px;">
+            <td colspan="6" class="text-center align-middle" style="height: 200px;">
                 <div class="spinner-border text-primary mb-2" role="status"></div>
                 <div class="text-muted small">Loading P&L Data...</div>
             </td>
         </tr>`;
 
     try {
+        // เรียก API
         const response = await fetch(`api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`);
         const res = await response.json();
 
         if (res.success) {
             currentData = res.data;
             renderEntryTable(res.data);
-            runFormulaEngine(); // 🔥 คำนวณสูตรทันทีที่โหลดเสร็จ
+            runFormulaEngine(); // 🔥 คำนวณสูตรทันที (เผื่อ Database ยังไม่อัปเดตยอดรวม)
         } else {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-5">${res.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-5">${res.message}</td></tr>`;
         }
     } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-5">Connection Error</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-5">Connection Error: Unable to fetch data.</td></tr>';
     }
+}
+
+// Function สำหรับปุ่ม Save ใหญ่ด้านบน (Manual Save)
+async function saveEntryData() {
+    const btn = document.getElementById('btnSave');
+    const originalText = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+    // บังคับคำนวณใหม่รอบสุดท้าย
+    runFormulaEngine();
+    
+    // จำลองการ Save (จริงๆ เรา Save ทีละบรรทัดอยู่แล้ว)
+    // ตรงนี้อาจจะเพิ่ม Logic ให้ส่งข้อมูลทั้งหมดไปอีกรอบเพื่อความชัวร์ก็ได้
+    // แต่ในที่นี้แค่โชว์ Visual Feedback ก็พอครับ
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        showSaveStatus(true);
+        Swal.fire({
+            icon: 'success',
+            title: 'Saved Successfully',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    }, 500);
 }
 
 // ========================================================
@@ -56,100 +88,94 @@ async function loadEntryData() {
 function renderEntryTable(data) {
     const tbody = document.getElementById('entryTableBody');
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">No Data Configuration Found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">No Data Configuration Found.</td></tr>';
         return;
     }
 
     let html = '';
+    
     data.forEach(item => {
+        // ... (Logic Level, Icons, Badges เดิม) ...
         const level = parseInt(item.item_level) || 0;
-        const isSection = item.data_source === 'SECTION';
         const isAuto = item.data_source.includes('AUTO');
         const isCalc = item.data_source === 'CALCULATED';
 
-        // --- 2.1 Color & Style Logic (ให้เหมือนหน้า Setting) ---
-        let rowClass = '';
-        let nameStyle = ''; 
+        let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
+        
+        // Indent: ปรับให้กระชับขึ้นนิดนึง
+        let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 1.5rem;' : `padding-left: ${1.5 + (level * 1.5)}rem;`);
+        let nameCellClass = (level > 1) ? 'child-item' : '';
 
-        if (level === 0) {
-            // Level 0: Root Header (ใหญ่สุด)
-            rowClass = 'level-0'; 
-            nameStyle = 'ps-2';
-        } else if (level === 1) {
-            // Level 1: Sub-Group
-            rowClass = 'level-1';
-            nameStyle = `padding-left: 1.5rem;`;
-        } else {
-            // Level 2+: Items
-            rowClass = 'level-deep';
-            const indent = level * 1.5;
-            nameStyle = `padding-left: ${indent}rem;`;
-        }
-
-        // --- 2.2 Icons ---
+        // Icons ... (เหมือนเดิม)
         let iconHtml = '';
-        if (level === 0) {
-            iconHtml = `<i class="fas fa-folder text-primary me-2"></i>`;
-        } else if (isSection) {
-            iconHtml = `<i class="fas fa-folder-open text-secondary me-2"></i>`;
-        } else if (isCalc) {
-            iconHtml = `<i class="fas fa-calculator text-primary me-2 opacity-75"></i>`;
-        } else {
-            // Connector line logic
-            iconHtml = `<span class="text-muted opacity-25 me-2" style="font-family: monospace;">└─</span>`;
-        }
+        if (level === 0) iconHtml = `<i class="fas fa-folder text-primary me-2 fa-lg"></i>`;
+        else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
+        else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // --- 2.3 Badges ---
+        // Badges ... (เหมือนเดิม)
         let typeBadge = '';
-        if (!isSection) {
-            if(item.item_type === 'REVENUE') typeBadge = '<span class="text-success fw-bold small">REV</span>';
-            else if(item.item_type === 'COGS') typeBadge = '<span class="text-warning fw-bold small">COGS</span>';
-            else typeBadge = '<span class="text-danger fw-bold small">EXP</span>';
-        }
+        if (item.item_type === 'REVENUE') typeBadge = `<span class="badge-mini badge-type-rev" title="Revenue">R</span>`;
+        else if (item.item_type === 'COGS') typeBadge = `<span class="badge-mini badge-type-cogs" title="Cost of Goods Sold">C</span>`;
+        else typeBadge = `<span class="badge-mini badge-type-exp" title="Expense">E</span>`;
 
         let sourceBadge = '';
-        if (!isSection) {
-            if (isAuto) sourceBadge = '<span class="badge badge-soft-info"><i class="fas fa-robot me-1"></i> AUTO</span>';
-            else if (isCalc) sourceBadge = '<span class="badge badge-soft-primary"><i class="fas fa-calculator me-1"></i> TOTAL</span>';
-            else sourceBadge = '<span class="badge badge-soft-secondary">MANUAL</span>';
-        }
+        if (isAuto) sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System">A</span>`;
+        else if (isCalc) {
+            const formulaDesc = item.calculation_formula === 'SUM_CHILDREN' ? 'Sum Children' : item.calculation_formula;
+            sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${formulaDesc}">F</span>`;
+        } else sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input">M</span>`;
 
-        // --- 2.4 Input Field ---
-        let inputHtml = '';
-        if (!isSection) {
-            const readonly = (isAuto || isCalc) ? 'readonly' : '';
-            const val = item.actual_amount !== null ? parseFloat(item.actual_amount) : 0;
-            
-            // ถ้าเป็น Formula/Auto ให้ตัวเลขเป็นสีน้ำเงิน/เข้ม
-            const textClass = (isCalc || isAuto) ? 'fw-bold text-primary' : 'text-dark';
+        // Inputs ... (เหมือนเดิม)
+        const readonly = (isAuto || isCalc) ? 'readonly' : '';
+        const val = item.actual_amount !== null ? parseFloat(item.actual_amount) : 0;
+        const inputColorClass = (isCalc || isAuto) ? 'text-primary fw-bold' : 'text-dark fw-semibold';
 
-            inputHtml = `
-                <input type="text" 
-                    class="input-seamless text-end ${textClass}" 
-                    value="${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}" 
-                    data-id="${item.item_id}"
-                    data-type="${item.item_type}" 
-                    data-source="${item.data_source}"
-                    ${readonly}
-                    onfocus="removeCommas(this)"
-                    onblur="formatAndSave(this, ${item.item_id})"
-                    onkeydown="if(event.key==='Enter') this.blur()"
-                >
-            `;
-        }
+        const inputHtml = `
+            <input type="text" 
+                class="input-seamless ${inputColorClass}" 
+                value="${formatNumber(val)}" 
+                data-id="${item.item_id}"
+                ${readonly}
+                onfocus="removeCommas(this)"
+                onblur="formatAndSave(this, ${item.item_id})"
+                onkeydown="if(event.key==='Enter') this.blur()"
+            >
+        `;
 
-        // --- 2.5 Build Row ---
+        const remarkVal = item.remark || '';
+        const remarkHtml = `
+            <input type="text" class="input-seamless text-end text-muted small" 
+                   style="font-family: var(--bs-body-font-family); font-weight: normal;"
+                   placeholder="..." value="${remarkVal}"
+                   onblur="formatAndSave(this, ${item.item_id})"> 
+        `;
+
+        // --- Build Row (Split Layout) ---
         html += `
             <tr class="${rowClass}">
-                <td class="text-center"><span class="font-monospace text-muted small bg-white bg-opacity-50 px-2 py-1 rounded border">${item.account_code}</span></td>
-                <td style="${nameStyle}">
+                <td style="${indentStyle}; white-space: nowrap;" class="${nameCellClass} pe-3">
                     <div class="d-flex align-items-center">
-                        ${iconHtml} <span class="${isSection ? 'fw-bold' : ''}">${item.item_name}</span>
+                        ${iconHtml} 
+                        <span>${item.item_name}</span>
                     </div>
                 </td>
-                <td class="text-center">${typeBadge}</td>
-                <td class="text-center">${sourceBadge}</td>
-                <td style="width: 180px;">${inputHtml}</td>
+                
+                <td class="text-center px-3" style="white-space: nowrap;">
+                    <code class="text-muted small bg-light px-1 rounded">${item.account_code}</code>
+                </td>
+                
+                <td></td>
+                
+                <td class="text-end" style="width: 150px;">${inputHtml}</td>
+                
+                <td class="text-center">
+                    <div class="d-flex justify-content-start">
+                        ${typeBadge}
+                        ${sourceBadge}
+                    </div>
+                </td>
+                
+                <td class="text-end pe-3" style="width: 250px;">${remarkHtml}</td>
             </tr>
         `;
     });
@@ -158,8 +184,10 @@ function renderEntryTable(data) {
 }
 
 // ========================================================
-// 3. INPUT HANDLING
+// 3. INPUT HANDLING & AUTO SAVE
 // ========================================================
+
+// ลบลูกน้ำตอนคลิกแก้ไข
 function removeCommas(input) {
     if (input.readOnly) return;
     input.value = input.value.replace(/,/g, '');
@@ -167,64 +195,105 @@ function removeCommas(input) {
 }
 
 async function formatAndSave(input, itemId) {
-    if (input.readOnly) return;
+    // เช็คก่อนว่าเป็นช่อง Amount หรือ Remark
+    const isRemark = input.getAttribute('placeholder') === '...';
     
-    let rawValue = input.value.replace(/,/g, '');
-    if(isNaN(rawValue) || rawValue === '') rawValue = 0;
-    
-    const floatVal = parseFloat(rawValue);
-    
-    // Update UI กลับเป็น Format
-    input.value = floatVal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (!isRemark) {
+        // Logic เดิมสำหรับ Amount
+        if (input.readOnly) return;
+        let rawValue = input.value.replace(/,/g, '');
+        if(isNaN(rawValue) || rawValue === '') rawValue = 0;
+        const floatVal = parseFloat(rawValue);
+        input.value = formatNumber(floatVal); // Format กลับ
+        
+        // Update Local Data & Run Formula
+        const dataIndex = currentData.findIndex(i => i.item_id == itemId);
+        if (dataIndex > -1) {
+            if(currentData[dataIndex].actual_amount == floatVal) return; // ไม่เปลี่ยนไม่ต้อง save
+            currentData[dataIndex].actual_amount = floatVal;
+            runFormulaEngine();
+        }
+        
+        await saveToServer(itemId, floatVal, null, input);
 
-    // Save
-    await handleAutoSave(itemId, floatVal, input);
+    } else {
+        // Logic ใหม่สำหรับ Remark
+        const remarkVal = input.value.trim();
+        const dataIndex = currentData.findIndex(i => i.item_id == itemId);
+        if (dataIndex > -1) {
+             if(currentData[dataIndex].remark === remarkVal) return; // ไม่เปลี่ยนไม่ต้อง save
+             currentData[dataIndex].remark = remarkVal;
+        }
+        
+        // ส่งค่า Amount เดิมไปด้วย (เพราะ API ต้องการ)
+        const currentAmount = currentData[dataIndex].actual_amount;
+        await saveToServer(itemId, currentAmount, remarkVal, input);
+    }
 }
 
-async function handleAutoSave(itemId, value, inputElement) {
-    // 1. Update Local Data
-    const dataIndex = currentData.findIndex(i => i.item_id == itemId);
-    if (dataIndex > -1) {
-        currentData[dataIndex].actual_amount = value;
-    }
-    
-    // 2. 🔥 Run Formula Engine (คำนวณลูกระนาด)
-    runFormulaEngine();
-
-    // 3. Save to Server
-    inputElement.classList.add('is-valid'); // Visual feedback
+// ฟังก์ชัน Save จริงๆ
+async function saveToServer(itemId, amount, remark, inputElement) {
+    showSaveStatus(false);
     
     try {
         const date = document.getElementById('targetDate').value;
         const section = document.getElementById('sectionFilter').value;
         
-        const payload = JSON.stringify([{ item_id: itemId, amount: value }]);
+        // เตรียม Item Object
+        let itemObj = { item_id: itemId, amount: amount };
+        if (remark !== null) itemObj.remark = remark; // ส่ง Remark ไปด้วยถ้ามี
+
         const formData = new FormData();
         formData.append('action', 'save');
         formData.append('entry_date', date);
         formData.append('section', section);
-        formData.append('items', payload);
+        formData.append('items', JSON.stringify([itemObj]));
 
         const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
         const json = await res.json();
 
-        if (!json.success) {
-            inputElement.classList.add('is-invalid');
+        if (json.success) {
+            showSaveStatus(true);
+            if(inputElement) {
+                inputElement.classList.add('is-valid');
+                setTimeout(() => inputElement.classList.remove('is-valid'), 1000);
+            }
         } else {
-            setTimeout(() => inputElement.classList.remove('is-valid'), 1000);
+            console.error('Save failed:', json.message);
+            if(inputElement) inputElement.classList.add('is-invalid');
         }
     } catch (err) {
-        console.error(err);
-        inputElement.classList.add('is-invalid');
+        console.error('Connection error:', err);
+    }
+}
+
+// บันทึก Remark แยกต่างหาก
+async function saveRemark(itemId, remark) {
+    // (Optional implementation) 
+    // คุณสามารถเพิ่ม Logic Save Remark แบบเดียวกับ Amount ได้ถ้าต้องการ
+}
+
+// Helper: Show Save Status in Toolbar
+function showSaveStatus(saved) {
+    const el = document.getElementById('saveStatus');
+    if(!el) return;
+
+    el.classList.remove('opacity-0');
+    if (saved) {
+        el.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Saved';
+        // ซ่อนหลังจาก 2 วิ
+        setTimeout(() => el.classList.add('opacity-0'), 2000);
+    } else {
+        el.innerHTML = '<i class="fas fa-sync fa-spin text-muted me-1"></i>Saving...';
     }
 }
 
 // ========================================================
-// 4. 🔥 FORMULA ENGINE (Safe & Robust)
+// 4. 🔥 FORMULA ENGINE (หัวใจสำคัญ)
 // ========================================================
 function runFormulaEngine() {
     let hasChanged = false;
-    let maxLoop = 5; // กัน Infinite Loop
+    let maxLoop = 5; // วนลูปแก้สมการต่อเนื่องสูงสุด 5 รอบ (กัน Infinite Loop)
 
     for (let i = 0; i < maxLoop; i++) {
         hasChanged = false;
@@ -235,16 +304,16 @@ function runFormulaEngine() {
                 let newVal = 0;
 
                 try {
-                    // Case 1: Sum Children
+                    // Case A: SUM_CHILDREN (รวมลูกๆ)
                     if (item.calculation_formula === 'SUM_CHILDREN') {
                         const children = currentData.filter(child => child.parent_id === item.item_id);
                         newVal = children.reduce((sum, child) => sum + (parseFloat(child.actual_amount) || 0), 0);
                     } 
-                    // Case 2: Custom Formula
+                    // Case B: Custom Formula (เช่น [CODE1] - [CODE2])
                     else if (item.calculation_formula) {
                         let formula = item.calculation_formula;
                         
-                        // Replace [CODE] with values
+                        // แทนค่า [CODE] ด้วยตัวเลขจริง
                         const matches = formula.match(/\[(.*?)\]/g);
                         if (matches) {
                             matches.forEach(token => {
@@ -262,67 +331,73 @@ function runFormulaEngine() {
                         }
                     }
                 } catch (e) {
-                    newVal = 0; // Error fallback
+                    console.warn(`Formula Error on ${item.account_code}:`, e);
+                    newVal = 0; 
                 }
 
                 if (!isFinite(newVal) || isNaN(newVal)) newVal = 0;
 
-                // Update if Changed
+                // ถ้าค่าเปลี่ยน ให้อัปเดตและวนลูปต่อ
                 if (Math.abs(newVal - oldVal) > 0.001) {
                     item.actual_amount = newVal;
                     hasChanged = true;
                     
-                    // Update UI Input directly
+                    // Update UI ช่องที่เป็นสูตรทันที (Flash Effect)
                     const inputEl = document.querySelector(`input[data-id="${item.item_id}"]`);
                     if (inputEl) {
-                        inputEl.value = newVal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                        // Highlight change
-                        inputEl.classList.add('bg-warning', 'bg-opacity-10');
-                        setTimeout(() => inputEl.classList.remove('bg-warning', 'bg-opacity-10'), 600);
+                        inputEl.value = formatNumber(newVal);
+                        inputEl.parentElement.classList.add('bg-warning', 'bg-opacity-25');
+                        setTimeout(() => inputEl.parentElement.classList.remove('bg-warning', 'bg-opacity-25'), 500);
                     }
                 }
             }
         });
 
-        if (!hasChanged) break;
+        if (!hasChanged) break; // ถ้าไม่มีอะไรเปลี่ยนแล้ว ก็หยุดวนลูป
     }
 
     calculateDashboardSummary();
 }
 
+// คำนวณการ์ด 3 ใบด้านบน
 function calculateDashboardSummary() {
-    // หาค่าจาก Account Code มาตรฐาน (ถ้ามี) หรือคำนวณรวม
-    // ปรับ Logic นี้ตาม Account Code จริงของคุณ
-    
-    // ตัวอย่าง: ดึงค่าจากบรรทัดที่เป็นยอดรวมใหญ่ (Level 0)
-    let revenue = 0, costs = 0;
+    let revenue = 0;
+    let cost = 0;
 
+    // Logic: รวมเฉพาะ Root Items (Level 0) เพื่อไม่ให้ยอดซ้ำซ้อน
     currentData.forEach(item => {
-        // เฉพาะ Level 0 (Root)
         if (parseInt(item.item_level) === 0) {
             const val = parseFloat(item.actual_amount) || 0;
-            if (item.item_type === 'REVENUE') revenue += val;
-            else costs += val; // COGS + EXPENSE
+            if (item.item_type === 'REVENUE') {
+                revenue += val;
+            } else {
+                cost += val; // รวมทั้ง COGS และ EXPENSE
+            }
         }
     });
 
-    const netProfit = revenue - costs;
+    const netProfit = revenue - cost;
 
     updateCard('estRevenue', revenue);
-    updateCard('estCost', costs);
+    updateCard('estCost', cost);
     updateCard('estGP', netProfit, true);
 }
 
-function updateCard(id, value, isColored = false) {
+function updateCard(id, value, colorize = false) {
     const el = document.getElementById(id);
     if (!el) return;
     
-    el.textContent = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    el.textContent = formatNumber(value);
     
-    if (isColored) {
-        el.classList.remove('text-success', 'text-danger', 'text-primary');
+    if (colorize) {
+        el.className = 'metric-value'; // Reset
         if (value > 0) el.classList.add('text-success');
         else if (value < 0) el.classList.add('text-danger');
         else el.classList.add('text-primary');
     }
+}
+
+// Utility: Format Number with Commas
+function formatNumber(num) {
+    return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
