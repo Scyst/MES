@@ -126,6 +126,121 @@ try {
             break;
 
         // =================================================================
+        // CASE 5: GET TARGET DATA (ดึงเป้าหมายของเดือนที่ระบุ เพื่ออัปเดต Modal)
+        // =================================================================
+        case 'get_target_data':
+            $year = $_GET['year'];
+            $month = $_GET['month'];
+            $section = $_GET['section'];
+
+            // ดึงเฉพาะ Item ID และ Amount ของเดือนนั้น
+            $sql = "SELECT item_id, target_amount 
+                    FROM dbo.MONTHLY_PL_TARGETS 
+                    WHERE year_val = :year AND month_val = :month AND section_name = :section";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':year' => $year, ':month' => $month, ':section' => $section]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // แปลงให้เป็น Key-Value Pair เพื่อให้ JS ใช้ง่ายๆ { item_id: amount }
+            $result = [];
+            foreach ($rows as $r) {
+                $result[$r['item_id']] = (float)$r['target_amount'];
+            }
+
+            echo json_encode(['success' => true, 'data' => $result]);
+            break;
+
+        // =================================================================
+        // CASE 6: CALENDAR - EVENTS
+        // =================================================================
+
+        case 'report_range':
+            $start = $_GET['start_date'];
+            $end = $_GET['end_date'];
+            $section = $_GET['section'];
+
+            // เรียก SP ตัวใหม่ที่เพิ่งสร้าง
+            $stmt = $pdo->prepare("EXEC dbo.sp_GetPLReport_Range :start, :end, :section");
+            $stmt->execute([':start' => $start, ':end' => $end, ':section' => $section]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fix Types (แปลงตัวเลขให้ JS เอาไปคำนวณต่อได้ง่ายๆ)
+            foreach ($data as &$row) {
+                $row['actual_amount'] = (float)$row['actual_amount'];
+                $row['daily_target']  = (float)$row['daily_target']; // ในโหมดนี้คือ "Period Target"
+                $row['item_level']    = (int)$row['item_level'];
+                // ในโหมด Report เราไม่ส่ง monthly_budget ไป เพราะมันจะสับสน
+            }
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'calendar_read':
+            $start = $_GET['start']; // FullCalendar ส่งมาให้เอง
+            $end = $_GET['end'];
+
+            $stmt = $pdo->prepare("SELECT calendar_date, description, day_type, work_rate_holiday, ot_rate_holiday 
+                                   FROM MANPOWER_CALENDAR 
+                                   WHERE calendar_date BETWEEN :start AND :end");
+            $stmt->execute([':start' => $start, ':end' => $end]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $events = [];
+            foreach ($rows as $row) {
+                // กำหนดสีตามประเภทวันหยุด
+                $color = ($row['day_type'] === 'OFFDAY') ? '#ffc107' : '#e74a3b'; // เหลือง หรือ แดง
+                $textColor = ($row['day_type'] === 'OFFDAY') ? '#000' : '#fff';
+
+                $events[] = [
+                    'title' => $row['description'],
+                    'start' => $row['calendar_date'],
+                    'color' => $color,
+                    'textColor' => $textColor,
+                    'extendedProps' => [ // ส่งข้อมูลเสริมไปใช้ใน Modal
+                        'work_rate' => $row['work_rate_holiday'],
+                        'ot_rate' => $row['ot_rate_holiday'],
+                        'day_type' => $row['day_type']
+                    ]
+                ];
+            }
+            echo json_encode($events);
+            break;
+
+        case 'calendar_save':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $date = $data['date'];
+            $desc = $data['description'];
+            $type = $data['day_type'];
+            $wRate = $data['work_rate'];
+            $oRate = $data['ot_rate'];
+
+            // ใช้ MERGE (Upsert)
+            $stmt = $pdo->prepare("MERGE INTO MANPOWER_CALENDAR AS Target
+                                   USING (VALUES (:date, :type, :desc, :wRate, :oRate)) AS Source (d, t, de, w, o)
+                                   ON Target.calendar_date = Source.d
+                                   WHEN MATCHED THEN
+                                       UPDATE SET day_type = Source.t, description = Source.de, work_rate_holiday = Source.w, ot_rate_holiday = Source.o
+                                   WHEN NOT MATCHED THEN
+                                       INSERT (calendar_date, day_type, description, work_rate_holiday, ot_rate_holiday)
+                                       VALUES (Source.d, Source.t, Source.de, Source.w, Source.o);");
+            $stmt->execute([':date'=>$date, ':type'=>$type, ':desc'=>$desc, ':wRate'=>$wRate, ':oRate'=>$oRate]);
+            echo json_encode(['success' => true]);
+            break;
+
+        // =================================================================
+        // CASE 7: CALENDAR - DELETE HOLIDAY
+        // =================================================================
+        case 'calendar_delete':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $date = $data['date'];
+            
+            $stmt = $pdo->prepare("DELETE FROM MANPOWER_CALENDAR WHERE calendar_date = :date");
+            $stmt->execute([':date' => $date]);
+            echo json_encode(['success' => true]);
+            break;
+
+        // =================================================================
         // DEFAULT: Unknown Action
         // =================================================================
         default:
