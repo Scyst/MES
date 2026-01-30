@@ -263,3 +263,16 @@ tr.level-deep:hover td {
 .badge-src-auto { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; } /* A - Auto */
 .badge-src-calc { background-color: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; } /* F - Formula */
 .badge-src-manual { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; } /* M - Manual */
+
+
+/* CSS เพิ่มเติมสำหรับการสลับหน้า */
+.view-section { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
+.view-section.active { display: block; opacity: 1; }
+
+/* Dashboard Card Styles */
+.dashboard-card { transition: transform 0.2s; border-radius: 12px; cursor: default; }
+.dashboard-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+.progress-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+.value-mtd { font-size: 1.4rem; font-weight: 800; }
+.text-target { font-size: 0.8rem; color: #6c757d; }
+.progress { height: 10px; border-radius: 6px; }

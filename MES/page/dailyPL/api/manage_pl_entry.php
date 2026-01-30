@@ -241,6 +241,72 @@ try {
             break;
 
         // =================================================================
+        // CASE 8: DASHBOARD STATS (Range Filter Version)
+        // =================================================================
+        case 'dashboard_stats':
+            $startDate = $_GET['start_date'];
+            $endDate = $_GET['end_date'];
+            $section = $_GET['section'];
+            
+            $sql = "
+                SELECT 
+                    T.item_name,
+                    T.item_type,
+                    T.account_code,
+                    T.row_order,
+                    
+                    COALESCE((
+                        SELECT SUM(target_amount) 
+                        FROM dbo.MONTHLY_PL_TARGETS 
+                        WHERE item_id = T.id 
+                          AND section_name = :tgt_sec
+                          AND DATEFROMPARTS(year_val, month_val, 1) >= DATEFROMPARTS(YEAR(:tgt_start_1), MONTH(:tgt_start_2), 1)
+                          AND DATEFROMPARTS(year_val, month_val, 1) <= DATEFROMPARTS(YEAR(:tgt_end_1), MONTH(:tgt_end_2), 1)
+                    ), 0) AS target_monthly,
+                    
+                    COALESCE((
+                        SELECT SUM(amount) 
+                        FROM dbo.PL_DAILY_ENTRY 
+                        WHERE pl_item_id = T.id 
+                          AND entry_date BETWEEN :act_start AND :act_end 
+                          AND section_name = :act_sec
+                    ), 0) AS actual_mtd
+
+                FROM dbo.PL_STRUCTURE T
+                WHERE T.is_active = 1 
+                  AND (T.parent_id IS NULL OR T.parent_id = 0)
+                ORDER BY T.row_order
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            
+            $stmt->execute([
+                // Target Params
+                ':tgt_sec'     => $section,
+                ':tgt_start_1' => $startDate, // ใช้ใน YEAR()
+                ':tgt_start_2' => $startDate, // ใช้ใน MONTH()
+                ':tgt_end_1'   => $endDate,   // ใช้ใน YEAR()
+                ':tgt_end_2'   => $endDate,   // ใช้ใน MONTH()
+                
+                // Actual Params
+                ':act_start'   => $startDate,
+                ':act_end'     => $endDate,
+                ':act_sec'     => $section
+            ]);
+            
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // คำนวณ Progress %
+            foreach ($data as &$row) {
+                $tgt = (float)$row['target_monthly'];
+                $act = (float)$row['actual_mtd'];
+                $row['progress_percent'] = ($tgt > 0) ? ($act / $tgt * 100) : 0;
+            }
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        // =================================================================
         // DEFAULT: Unknown Action
         // =================================================================
         default:
