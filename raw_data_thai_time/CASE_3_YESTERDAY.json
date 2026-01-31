@@ -1,0 +1,126 @@
+{
+    "status": "success",
+    "statusCode": 201,
+    "message": "สำเร็จ",
+    "data": {
+        "startAt": "2026-01-29T17:00:00.000Z",
+        "endAt": "2026-01-30T17:00:00.000Z",
+        "result": [
+            {
+                "work_center": "SCEASA01",
+                "counter": 320,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA03",
+                "counter": 2023,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA04",
+                "counter": 0,
+                "status": "OFFLINE"
+            },
+            {
+                "work_center": "SCEBEA05",
+                "counter": 2612,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA06",
+                "counter": 1883,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA07",
+                "counter": 5062,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA08",
+                "counter": 2266,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA09",
+                "counter": 1426,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA10",
+                "counter": 2541,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA11",
+                "counter": 0,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCEBEA12",
+                "counter": 2516,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA01",
+                "counter": 37,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA02",
+                "counter": 829,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA03",
+                "counter": 109,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA04",
+                "counter": 88,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA05",
+                "counter": 470,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA06",
+                "counter": 0,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA07",
+                "counter": 0,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA08",
+                "counter": 1307,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA09",
+                "counter": 114,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA10",
+                "counter": 932,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESBA11",
+                "counter": 0,
+                "status": "ONLINE"
+            },
+            {
+                "work_center": "SCESPA00",
+                "counter": 0,
+                "status": "OFFLINE"
+            }
+        ]
+    }
+}

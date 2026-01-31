@@ -1,12 +1,13 @@
 # --- Configuration Files ---
 # ไม่ควรเก็บไฟล์ตั้งค่าที่มีข้อมูลสำคัญ (เช่น รหัสผ่านฐานข้อมูล) ไว้ใน Git
-MES/config/config.php
+MES/config/
+MES/documents/
 
 # --- Third-Party Libraries ---
 # ไม่ควรเก็บไลบรารีของโปรแกรมอื่นไว้ใน Git ควรติดตั้งแยกต่างหาก
 MES/utils/libs/
 MES/utils/BOM/
-
+raw_data_evidence/
 # --- Old Versions ---
 # ไม่ควรเก็บโค้ดเวอร์ชันเก่าที่ไม่ใช้งานแล้วไว้ใน Repository
 oldVer/

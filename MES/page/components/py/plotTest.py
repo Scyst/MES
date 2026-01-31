@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 URL = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
 HEADERS = {'Content-Type': 'application/json'}
 
-DAYS_BACK = 7
+DAYS_BACK = 14
 HOURS_STEP = 1
 
 # ==========================================

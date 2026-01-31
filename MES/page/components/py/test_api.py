@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 url = "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all"
-payload = {"start": None, "end": None}
+payload = {"start": "2026-01-31T01:00:00" , "end": "2026-01-31T02:00:00"}
 headers = {'Content-Type': 'application/json'}
 
 def format_row(w_center, count_str):

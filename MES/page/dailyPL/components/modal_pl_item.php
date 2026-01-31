@@ -189,15 +189,79 @@
         }
     }
 
-    // ... (Validation Functions เหมือนเดิม) ...
+    // อัปเกรดตัวตรวจสอบสูตร (Advanced Validation)
     function validateFormula(input) {
         let val = input.value.trim();
-        if (val === '') { input.classList.remove('is-invalid', 'is-valid'); input.setCustomValidity(""); return; }
-        if (val === 'SUM_CHILDREN') { setValid(input); return; }
-        let testFormula = val.replace(/\[.*?\]/g, '1');
-        if (/[^0-9+\-*/(). ]/.test(testFormula)) { setInvalid(input, "มีตัวอักษรที่ไม่ได้รับอนุญาต"); return; }
-        try { new Function('return ' + testFormula)(); setValid(input); } catch (e) { setInvalid(input, "รูปแบบสูตรไม่ถูกต้อง"); }
+        const saveBtn = document.getElementById('btnSaveItem'); // อ้างอิงปุ่ม Save
+
+        // 1. กรณีค่าว่าง
+        if (val === '') { 
+            input.classList.remove('is-invalid', 'is-valid'); 
+            input.setCustomValidity(""); 
+            return true; 
+        }
+
+        // 2. กรณีสูตรมาตรฐาน SUM_CHILDREN
+        if (val === 'SUM_CHILDREN') { 
+            setValid(input); 
+            return true; 
+        }
+
+        // 3. ตรวจสอบรหัสบัญชีที่อยู่ใน [ ]
+        const accountMatches = val.match(/\[(.*?)\]/g);
+        if (accountMatches) {
+            for (let match of accountMatches) {
+                let code = match.replace('[', '').replace(']', '');
+                // ตรวจสอบว่า Code นี้มีตัวตนอยู่ในผังบัญชีหรือไม่ (allData คือตัวแปร Global ใน pl_setting.js)
+                let exists = allData.some(item => item.account_code === code);
+                if (!exists) {
+                    setInvalid(input, `ไม่พบรหัสบัญชี: ${code}`);
+                    return false;
+                }
+                
+                // ตรวจสอบ Self-Reference (ห้ามอ้างอิงรหัสตัวเอง)
+                let currentMyCode = document.getElementById('accountCode').value;
+                if (code === currentMyCode) {
+                    setInvalid(input, "ห้ามใส่รหัสของตัวเองในสูตรคำนวณ");
+                    return false;
+                }
+            }
+        }
+
+        // 4. ตรวจสอบ Syntax คณิตศาสตร์พื้นฐาน
+        // เปลี่ยน [Code] เป็นเลข 1 เพื่อทดสอบโครงสร้างสูตร
+        let testFormula = val.replace(/\[.*?\\]/g, '1');
+        if (/[^0-9+\-*/(). ]/.test(testFormula)) { 
+            setInvalid(input, "สูตรมีตัวอักษรที่ไม่ได้รับอนุญาต (ใช้ได้เฉพาะ [Code] และเครื่องหมายคำนวณ)"); 
+            return false; 
+        }
+
+        try { 
+            // ทดสอบการรันสูตรจำลอง
+            new Function('return ' + testFormula)(); 
+            setValid(input); 
+            return true;
+        } catch (e) { 
+            setInvalid(input, "รูปแบบสูตรทางคณิตศาสตร์ไม่ถูกต้อง"); 
+            return false;
+        }
     }
-    function setValid(input) { input.classList.remove('is-invalid'); input.classList.add('is-valid'); input.setCustomValidity(""); }
-    function setInvalid(input, msg) { input.classList.remove('is-valid'); input.classList.add('is-invalid'); document.getElementById('formulaErrorMsg').innerText = msg; input.setCustomValidity(msg); }
+
+    // Helper เสริมสำหรับเปลี่ยนสถานะ UI
+    function setInvalid(input, msg) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        input.setCustomValidity(msg);
+        // แสดง Tooltip หรือ Feedback
+        let feedback = input.nextElementSibling;
+        if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.innerText = msg;
+        }
+    }
+
+    function setValid(input) {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        input.setCustomValidity("");
+    }
 </script>
