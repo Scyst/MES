@@ -5,17 +5,21 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
+// ---------------------------------------------------------------------
 // 1. Security & Auth Check
+// ---------------------------------------------------------------------
 if (!hasRole(['admin', 'creator', 'supervisor'])) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Access Denied']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Insufficient Permissions']);
     exit;
 }
 
 $action = $_REQUEST['action'] ?? 'read';
-$user_id = $_SESSION['user']['id'] ?? 0; // หรือ username ตามระบบคุณ
 $user_name = $_SESSION['user']['username'] ?? 'System';
 
+// ---------------------------------------------------------------------
+// 2. Main Logic Execution
+// ---------------------------------------------------------------------
 try {
     switch ($action) {
 
@@ -26,11 +30,12 @@ try {
             $date = $_GET['entry_date'] ?? date('Y-m-d');
             $section = $_GET['section'] ?? 'Team 1';
 
+            // ใช้ SP ในการดึงข้อมูลเพื่อลด Logic ฝั่ง PHP
             $stmt = $pdo->prepare("EXEC dbo.sp_GetPLEntryData_WithTargets :date, :section");
             $stmt->execute([':date' => $date, ':section' => $section]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Type Casting เพื่อความปลอดภัยของ JS
+            // Type Casting ให้ JS นำไปคำนวณต่อได้ทันทีไม่ต้องแปลง
             foreach ($data as &$row) {
                 $row['actual_amount'] = (float)$row['actual_amount'];
                 $row['daily_target']  = (float)$row['daily_target'];
@@ -40,21 +45,24 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        case 'save': // Refactored: ใช้ SP + Transaction
-            $date = $_POST['entry_date'];
-            $section = $_POST['section'];
-            $items = json_decode($_POST['items'], true);
+        case 'save': 
+            // Refactored: ใช้ Transaction + Prepared Statement Loop
+            $date = $_POST['entry_date'] ?? null;
+            $section = $_POST['section'] ?? null;
+            $items_json = $_POST['items'] ?? '[]';
+            $items = json_decode($items_json, true);
 
-            if (!$date || !$section || !is_array($items)) throw new Exception("Invalid input");
+            if (!$date || !$section || !is_array($items)) {
+                throw new Exception("Invalid Input Data");
+            }
 
             $pdo->beginTransaction();
             try {
-                // Prepare ครั้งเดียว ใช้ซ้ำใน Loop เพื่อ Performance
+                // Prepare ครั้งเดียว ใช้วนซ้ำใน Loop (Performance Optimization)
                 $stmt = $pdo->prepare("EXEC dbo.sp_UpsertDailyPLEntry @EntryDate=:date, @Section=:sect, @ItemID=:id, @Amount=:amt, @InputBy=:user");
                 
                 foreach ($items as $item) {
                     $amount = isset($item['amount']) ? floatval($item['amount']) : 0;
-                    // Note: Remark ถ้าจะเก็บต้องเพิ่ม parameter ใน SP, ในที่นี้ผมยึดตาม SP เดิมที่มีแค่ InputBy
                     
                     $stmt->execute([
                         ':date' => $date,
@@ -64,11 +72,12 @@ try {
                         ':user' => $user_name
                     ]);
                 }
+                
                 $pdo->commit();
-                echo json_encode(['success' => true]);
+                echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             } catch (Exception $ex) {
                 $pdo->rollBack();
-                throw $ex;
+                throw $ex; // โยนให้ Catch ใหญ่ข้างล่างจัดการ
             }
             break;
 
@@ -76,19 +85,23 @@ try {
         // GROUP 2: TARGETS (Budgeting)
         // =================================================================
         case 'save_target':
-            $stmt = $pdo->prepare("EXEC dbo.sp_SaveMonthlyTarget :year, :month, :section, :items");
+            // ส่ง JSON ก้อนใหญ่ให้ SP จัดการด้วย OPENJSON (SQL Server 2016+)
+            $stmt = $pdo->prepare("EXEC dbo.sp_SaveMonthlyTarget :year, :month, :section, :items, :user");
             $stmt->execute([
-                ':year' => $_POST['year'],
-                ':month' => $_POST['month'],
+                ':year'    => $_POST['year'],
+                ':month'   => $_POST['month'],
                 ':section' => $_POST['section'],
-                ':items' => $_POST['items'] // JSON String
+                ':items'   => $_POST['items'], // ส่ง JSON String ไปเลย
+                ':user'    => $user_name
             ]);
+            
+            // SP ควร return result set กลับมาบอกสถานะ
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($result && $result['success'] == 1) {
+            if ($result && isset($result['success']) && $result['success'] == 1) {
                 echo json_encode(['success' => true, 'message' => 'Budget saved.', 'working_days' => $result['working_days_used']]);
             } else {
-                throw new Exception($result['message'] ?? 'Save failed');
+                throw new Exception($result['message'] ?? 'Save failed at Database level');
             }
             break;
 
@@ -96,14 +109,7 @@ try {
             $stmt = $pdo->prepare("EXEC dbo.sp_GetWorkingDays :year, :month");
             $stmt->execute([':year' => $_GET['year'], ':month' => $_GET['month']]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'days' => (int)$result['working_days']]);
-            break;
-
-        case 'get_target_data': // ควรทำเป็น SP เล็กๆ หรือ Query สั้นๆ
-            $stmt = $pdo->prepare("SELECT item_id, target_amount FROM dbo.MONTHLY_PL_TARGETS WHERE year_val = :y AND month_val = :m AND section_name = :s");
-            $stmt->execute([':y' => $_GET['year'], ':m' => $_GET['month'], ':s' => $_GET['section']]);
-            $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Fetch แบบ [id => amount] โดยตรง
-            echo json_encode(['success' => true, 'data' => $rows]);
+            echo json_encode(['success' => true, 'days' => (int)($result['working_days'] ?? 25)]);
             break;
 
         // =================================================================
@@ -112,8 +118,8 @@ try {
         case 'report_range':
             $stmt = $pdo->prepare("EXEC dbo.sp_GetPLReport_Range :start, :end, :section");
             $stmt->execute([
-                ':start' => $_GET['start_date'],
-                ':end'   => $_GET['end_date'],
+                ':start'   => $_GET['start_date'],
+                ':end'     => $_GET['end_date'],
                 ':section' => $_GET['section']
             ]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -125,16 +131,17 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        case 'dashboard_stats': // Refactored: ย้าย Logic ซับซ้อนไปไว้ใน SP
+        case 'dashboard_stats':
+            // ดึงข้อมูลสรุปสำหรับ Pie Chart / Gauge Chart
             $stmt = $pdo->prepare("EXEC dbo.sp_GetDashboardStats :start, :end, :section");
             $stmt->execute([
-                ':start' => $_GET['start_date'],
-                ':end'   => $_GET['end_date'],
+                ':start'   => $_GET['start_date'],
+                ':end'     => $_GET['end_date'],
                 ':section' => $_GET['section']
             ]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Logic การคำนวณ % สามารถทำใน PHP หรือ SP ก็ได้ (ทำใน PHP ยืดหยุ่นกว่าสำหรับการแสดงผล)
+            // คำนวณ % Progress (ปลอดภัยกว่าทำใน SQL ถ้าตัวหารเป็น 0)
             foreach ($data as &$row) {
                 $tgt = (float)$row['target_monthly'];
                 $act = (float)$row['actual_mtd'];
@@ -144,26 +151,31 @@ try {
             break;
 
         // =================================================================
-        // GROUP 4: CALENDAR
+        // GROUP 4: CALENDAR (Manpower)
         // =================================================================
         case 'calendar_read':
-            // Logic นี้ง่าย พออนุโลมให้ใช้ SQL ใน PHP ได้ แต่ถ้าให้ดีควรเป็น sp_GetCalendarEvents
-            $stmt = $pdo->prepare("SELECT calendar_date as start, description as title, day_type, work_rate_holiday, ot_rate_holiday FROM MANPOWER_CALENDAR WHERE calendar_date BETWEEN :start AND :end");
+            // ใช้ Table Name ตรงๆ เพราะยังไม่มี Constant ใน config.php (แต่ควรเพิ่มในอนาคต)
+            // ใช้ WITH (NOLOCK) เพื่อ Performance
+            $stmt = $pdo->prepare("
+                SELECT calendar_date as start, description as title, day_type, work_rate_holiday, ot_rate_holiday 
+                FROM MANPOWER_CALENDAR WITH (NOLOCK)
+                WHERE calendar_date BETWEEN :start AND :end
+            ");
             $stmt->execute([':start' => $_GET['start'], ':end' => $_GET['end']]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Format ให้ตรงกับ FullCalendar
+            // Map ให้ตรง format FullCalendar
             $events = array_map(function($r) {
                 $isOff = ($r['day_type'] === 'OFFDAY');
                 return [
                     'title' => $r['title'],
                     'start' => $r['start'],
-                    'color' => $isOff ? '#ffc107' : '#e74a3b',
+                    'color' => $isOff ? '#ffc107' : '#e74a3b', // เหลือง หรือ แดง
                     'textColor' => $isOff ? '#000' : '#fff',
                     'extendedProps' => [
                         'work_rate' => $r['work_rate_holiday'],
-                        'ot_rate' => $r['ot_rate_holiday'],
-                        'day_type' => $r['day_type']
+                        'ot_rate'   => $r['ot_rate_holiday'],
+                        'day_type'  => $r['day_type']
                     ]
                 ];
             }, $rows);
@@ -172,14 +184,14 @@ try {
 
         case 'calendar_save':
             $in = json_decode(file_get_contents('php://input'), true);
-            // เรียก SP แทนการเขียน MERGE ยาวๆ
-            $stmt = $pdo->prepare("EXEC dbo.sp_SaveCalendarEvent :date, :type, :desc, :wRate, :oRate");
+            $stmt = $pdo->prepare("EXEC dbo.sp_SaveCalendarEvent :date, :type, :desc, :wRate, :oRate, :user");
             $stmt->execute([
-                ':date' => $in['date'],
-                ':type' => $in['day_type'],
-                ':desc' => $in['description'],
-                ':wRate'=> $in['work_rate'],
-                ':oRate'=> $in['ot_rate']
+                ':date'  => $in['date'],
+                ':type'  => $in['day_type'],
+                ':desc'  => $in['description'],
+                ':wRate' => $in['work_rate'],
+                ':oRate' => $in['ot_rate'],
+                ':user'  => $user_name
             ]);
             echo json_encode(['success' => true]);
             break;
@@ -192,14 +204,15 @@ try {
             break;
 
         // =================================================================
-        // CASE 9: GET ACTIVE LINES (ดึงรายชื่อไลน์ผลิตสำหรับ Dropdown)
+        // GROUP 5: UTILITIES
         // =================================================================
         case 'get_active_lines':
-            // ใช้ Constant LOCATIONS_TABLE จาก config.php เพื่อรองรับ Test/Prod Mode
+            // ใช้ Constant LOCATIONS_TABLE เพื่อรองรับ Test Mode
+            $table = defined('LOCATIONS_TABLE') ? LOCATIONS_TABLE : 'LOCATIONS';
+            
             $sql = "SELECT DISTINCT production_line 
-                    FROM " . LOCATIONS_TABLE . " 
-                    WHERE production_line IS NOT NULL 
-                      AND production_line <> '' 
+                    FROM $table WITH (NOLOCK)
+                    WHERE production_line IS NOT NULL AND production_line <> '' 
                     ORDER BY production_line";
             
             $stmt = $pdo->prepare($sql);
@@ -209,19 +222,14 @@ try {
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
 
-        // =================================================================
-        // CASE 10: EXCHANGE RATE (Calendar Based)
-        // =================================================================
         case 'get_exchange_rate':
-            // ดึงเรทของเดือนนั้นมาโชว์
             $stmt = $pdo->prepare("EXEC dbo.sp_ManageExchangeRate 'GET', :y, :m");
             $stmt->execute([':y' => $_GET['year'], ':m' => $_GET['month']]);
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'rate' => (float)$res['rate']]);
+            echo json_encode(['success' => true, 'rate' => (float)($res['rate'] ?? 32.0)]);
             break;
 
         case 'save_exchange_rate':
-            // บันทึกเรท (SP จะไป update ทุกวันในเดือนนั้นให้เอง)
             $input = json_decode(file_get_contents('php://input'), true);
             $stmt = $pdo->prepare("EXEC dbo.sp_ManageExchangeRate 'SAVE', :y, :m, :r, :u");
             $stmt->execute([
@@ -238,7 +246,18 @@ try {
     }
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    // หากมี Transaction ค้างอยู่ ให้ Rollback ก่อน
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    
+    // Log Error (ถ้ามีระบบ Log)
+    // error_log($e->getMessage());
+
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Server Error: ' . $e->getMessage()
+    ]);
 }
+?>

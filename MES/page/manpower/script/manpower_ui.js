@@ -1045,7 +1045,7 @@ const Actions = {
                                 <li><hr class="dropdown-divider"></li>
                                 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')"><i class="fas fa-history text-secondary me-2"></i>ดูประวัติย้อนหลัง</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${masterJson}')"><i class="fas fa-user-edit text-secondary me-2"></i>แก้ไขข้อมูลหลัก</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${row.emp_id}')"><i class="fas fa-user-edit text-secondary me-2"></i>แก้ไขข้อมูลหลัก</a></li>
 
                                 <li><hr class="dropdown-divider"></li>
                                 
@@ -1076,11 +1076,14 @@ const Actions = {
 
         let scanInFull = timeIn ? `${dateStr} ${timeIn}:00` : null;
         let scanOutFull = null;
+
         if (timeOut) {
             let outDate = dateStr;
             const hourOut = parseInt(timeOut.split(':')[0]);
+            
             if ((timeIn && timeOut < timeIn) || (hourOut >= 0 && hourOut <= 7)) {
-                const d = new Date(dateStr); d.setDate(d.getDate() + 1);
+                const d = new Date(dateStr + 'T12:00:00');
+                d.setDate(d.getDate() + 1);
                 outDate = d.toISOString().split('T')[0];
             }
             scanOutFull = `${outDate} ${timeOut}:00`;
@@ -1110,10 +1113,14 @@ const Actions = {
                     btn.innerHTML = originalIcon; 
                     btn.disabled = false;
 
+                    // 1. อัปเดตตัวเลขหน้า Dashboard หลัง
                     if(typeof App !== 'undefined') App.loadData(true);
 
-                }, 1000);
+                    // 2. 🔥 เพิ่มบรรทัดนี้: สั่งให้ Modal ดึงข้อมูลใหม่และวาดตารางใหม่
+                    // หากพนักงานถูกย้ายไลน์ไปแล้ว เขาจะหายไปจากตารางใน Modal นี้ทันที
+                    await Actions.fetchDetailData(); 
 
+                }, 1000);
             } else { 
                 alert('Error: ' + json.message); 
                 btn.innerHTML = originalIcon; 
@@ -1417,25 +1424,53 @@ const Actions = {
         this.renderEmployeeTable(filtered);
     },
 
-    openEmpEdit(data) {
-        const modal = new bootstrap.Modal(document.getElementById('empEditModal'));
-        const isEdit = !!data;
+    // --- วางทับ openEmpEdit เดิม ---
+    openEmpEdit: async function(dataOrEmpId) {
+        const modalEl = document.getElementById('empEditModal');
+        const modal = new bootstrap.Modal(modalEl);
+        const isEdit = !!dataOrEmpId;
+        
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
-        document.getElementById('empEditTitle').innerHTML = isEdit ? 'Edit Employee' : 'New Employee';
-        if(this._structureCache.lines.length === 0) this.initDropdowns();
+        document.getElementById('empEditTitle').innerHTML = isEdit ? '<i class="fas fa-user-edit"></i> Edit Employee' : '<i class="fas fa-user-plus"></i> New Employee';
+        
+        // โหลด Dropdown (Line/Team) ถ้ายังไม่มีใน Cache
+        if(this._structureCache.lines.length === 0) await this.initDropdowns();
 
         if(isEdit) {
-            const emp = JSON.parse(decodeURIComponent(data));
-            document.getElementById('empEditId').value = emp.emp_id; document.getElementById('empEditId').readOnly = true;
-            document.getElementById('empEditName').value = emp.name_th; document.getElementById('empEditPos').value = emp.position;
+            let emp;
+            // ตรวจสอบ: ถ้าส่งมาแค่ ID (string สั้นๆ) ให้ดึงจาก API สดๆ
+            if (typeof dataOrEmpId === 'string' && dataOrEmpId.length < 20) {
+                UI.showLoader();
+                try {
+                    const res = await fetch(`api/api_master_data.php?action=read_employees&emp_id=${dataOrEmpId}`);
+                    const json = await res.json();
+                    emp = (json.success && json.data.length > 0) ? json.data[0] : null;
+                } catch(e) { console.error(e); }
+                finally { UI.hideLoader(); }
+            } else {
+                // ถ้าส่งมาเป็น JSON String (แบบเก่า) ให้ Parse ปกติ
+                emp = JSON.parse(decodeURIComponent(dataOrEmpId));
+            }
+
+            if (!emp) { alert('ไม่พบข้อมูลพนักงานในระบบหลัก'); return; }
+
+            // ใส่ข้อมูลลง Form
+            document.getElementById('empEditId').value = emp.emp_id; 
+            document.getElementById('empEditId').readOnly = true;
+            document.getElementById('empEditName').value = emp.name_th || ''; 
+            document.getElementById('empEditPos').value = emp.position || '';
+            
+            // ใช้เวลาเล็กน้อยให้ Select Option render เสร็จก่อนเลือกค่า
             setTimeout(() => {
-                document.getElementById('empEditLine').value = emp.line; 
-                document.getElementById('empEditShift').value = emp.default_shift_id;
-                document.getElementById('empEditTeam').value = emp.team_group; 
-            }, 100);
-            document.getElementById('empEditActive').checked = (emp.is_active==1);
+                document.getElementById('empEditLine').value = emp.line || ''; 
+                document.getElementById('empEditShift').value = emp.default_shift_id || emp.shift_id || '';
+                document.getElementById('empEditTeam').value = emp.team_group || ''; 
+                document.getElementById('empEditActive').checked = (parseInt(emp.is_active) === 1);
+            }, 80);
+
             if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
         } else {
+            // กรณีเพิ่มพนักงานใหม่
             document.getElementById('empEditForm').reset(); 
             document.getElementById('empEditId').readOnly = false; 
             document.getElementById('empEditActive').checked = true;
@@ -1444,11 +1479,17 @@ const Actions = {
         modal.show();
     },
 
+    // --- วางทับ saveEmployee เดิม ---
     async saveEmployee() {
-        const isActive = document.getElementById('empEditActive').checked ? 1 : 0;
-        const isEdit = document.getElementById('isEditMode').value === '1';
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        
+        // ป้องกันการกดซ้ำ (Operator Proofing)
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
         const payload = {
-            action: isEdit ? 'update_employee' : 'create_employee',
+            action: document.getElementById('isEditMode').value === '1' ? 'update_employee' : 'create_employee',
             emp_id: document.getElementById('empEditId').value,
             name_th: document.getElementById('empEditName').value,
             position: document.getElementById('empEditPos').value,
@@ -1457,17 +1498,49 @@ const Actions = {
             team_group: document.getElementById('empEditTeam').value,
             is_active: document.getElementById('empEditActive').checked ? 1 : 0
         };
-        if(!payload.emp_id || !payload.name_th) { alert('Please fill in required fields'); return; }
+
+        if(!payload.emp_id || !payload.name_th) { 
+            alert('กรุณากรอกรหัสและชื่อพนักงาน'); 
+            btn.disabled = false; btn.innerHTML = originalHtml;
+            return; 
+        }
 
         try {
-            const res = await fetch('api/api_master_data.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const res = await fetch('api/api_master_data.php', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
             const json = await res.json();
+            
             if(json.success) { 
-                bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide(); 
-                if(document.getElementById('empListModal').classList.contains('show')) Actions.openEmployeeManager();
-                App.loadData(); 
-            } else alert('Error: ' + json.message);
-        } catch(e) { alert('Failed: ' + e.message); }
+                // ปิด Modal แก้ไข
+                const editModal = bootstrap.Modal.getInstance(document.getElementById('empEditModal'));
+                if (editModal) editModal.hide();
+
+                // รีโหลดข้อมูลทุกส่วนให้เป็นปัจจุบัน
+                await App.loadData(true); // อัปเดต Dashboard
+                
+                // ถ้ารายหน้าต่างรายชื่อพนักงาน (Detail Modal) เปิดอยู่ ให้โหลดใหม่ด้วย
+                if (typeof this.fetchDetailData === 'function') {
+                    await this.fetchDetailData(); 
+                }
+                
+                // ถ้าหน้าจัดการพนักงานรวมเปิดอยู่ ให้โหลดใหม่
+                if(document.getElementById('empListModal')?.classList.contains('show')) {
+                    this.openEmployeeManager();
+                }
+                
+                alert('✅ บันทึกข้อมูลพนักงานเรียบร้อยแล้ว');
+            } else {
+                alert('❌ Error: ' + json.message);
+            }
+        } catch(e) {
+            alert('❌ Failed: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
     },
 
     // -------------------------------------------------------------------------

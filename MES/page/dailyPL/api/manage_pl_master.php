@@ -1,88 +1,96 @@
 <?php
+// page/pl_daily/api/manage_pl_master.php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
+// 1. Security Check
 if (!hasRole(['admin', 'creator'])) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Access Denied']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Insufficient Permissions']);
     exit;
 }
+
+// 2. Determine Table Name (Dev vs Prod)
+$tableName = defined('PL_STRUCTURE_TABLE') ? PL_STRUCTURE_TABLE : 'PL_STRUCTURE';
 
 $action = $_REQUEST['action'] ?? 'read';
 
 try {
     switch ($action) {
         // ======================================================================
-        // CASE: READ (เพิ่ม Logic กรอง is_active)
+        // CASE: READ (Recursive CTE for Tree View)
         // ======================================================================
         case 'read':
-            // รับค่าจากหน้าบ้าน ว่าจะให้โชว์ตัวที่ลบไหม (ส่งมาเป็น 1 หรือ true)
             $showInactive = isset($_REQUEST['show_inactive']) && $_REQUEST['show_inactive'] == 1;
 
-            // สร้างเงื่อนไข SQL
-            $activeCondition = $showInactive ? "1=1" : "is_active = 1"; // ถ้า showInactive=1 ให้เอาหมด, ถ้าไม่ ให้เอาแค่ Active
+            // Logic: ถ้า Show Inactive = True ให้เอาหมด (1=1), ถ้า False ให้เอาแค่ active=1
+            $activeCondition  = $showInactive ? "1=1" : "is_active = 1"; 
             $activeConditionC = $showInactive ? "1=1" : "c.is_active = 1"; 
 
+            // Recursive CTE Query
             $sql = "
                 WITH PL_Tree AS (
+                    -- Anchor Member (Root Nodes)
                     SELECT 
                         id, item_name, account_code, item_type, data_source, 
-                        calculation_formula,
-                        parent_id, row_order, is_active, updated_at,
+                        calculation_formula, parent_id, row_order, is_active, updated_at,
                         0 AS item_level,
                         CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
-                    FROM PL_STRUCTURE 
+                    FROM $tableName 
                     WHERE parent_id IS NULL 
-                      AND $activeCondition -- 🔥 กรอง Root Node
+                      AND $activeCondition
 
                     UNION ALL
 
+                    -- Recursive Member (Child Nodes)
                     SELECT 
                         c.id, c.item_name, c.account_code, c.item_type, c.data_source, 
-                        c.calculation_formula,
-                        c.parent_id, c.row_order, c.is_active, c.updated_at,
+                        c.calculation_formula, c.parent_id, c.row_order, c.is_active, c.updated_at,
                         p.item_level + 1,
                         p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
-                    FROM PL_STRUCTURE c
+                    FROM $tableName c
                     INNER JOIN PL_Tree p ON c.parent_id = p.id
-                    WHERE $activeConditionC -- 🔥 กรอง Child Node
+                    WHERE $activeConditionC
                 )
                 SELECT * FROM PL_Tree ORDER BY SortPath
             ";
+            
             $stmt = $pdo->query($sql);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         // ======================================================================
-        // CASE: SAVE (Regex รองรับ _ แล้ว)
+        // CASE: SAVE (Insert / Update)
         // ======================================================================
         case 'save':
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             $parent_id = !empty($_POST['parent_id']) ? $_POST['parent_id'] : null;
             $formula = trim($_POST['calculation_formula'] ?? '');
+            $code = strtoupper(trim($_POST['account_code']));
             
-            if (empty($_POST['account_code']) || empty($_POST['item_name'])) throw new Exception("Incomplete Data");
+            if (empty($code) || empty($_POST['item_name'])) throw new Exception("Incomplete Data");
 
+            // --- Formula Validation Security ---
             if (!empty($formula)) {
-                // ✅ Regex นี้รองรับ A-Z, 0-9, และ _ เรียบร้อยแล้ว
+                // อนุญาต A-Z, 0-9, _, [], +, -, *, /, (), ., และ space
                 if (!preg_match('/^[A-Z0-9_\[\]\+\-\*\/\(\)\.\s]+$/i', $formula)) {
                     throw new Exception("Security Alert: Invalid characters in formula.");
                 }
-                
-                if (strpos($formula, '--') !== false || strpos($formula, '/*') !== false || strpos($formula, '//') !== false) {
-                    throw new Exception("Security Alert: Comments are not allowed in formula.");
+                // ป้องกัน Comment Injection
+                if (strpos($formula, '--') !== false || strpos($formula, '/*') !== false) {
+                    throw new Exception("Security Alert: Comments not allowed.");
                 }
-
+                // เช็ควงเล็บก้ามปู [ ]
                 if (substr_count($formula, '[') !== substr_count($formula, ']')) {
                     throw new Exception("Syntax Error: Mismatched brackets []");
                 }
             }
 
             $params = [
-                ':code'   => strtoupper(trim($_POST['account_code'])),
+                ':code'   => $code,
                 ':name'   => trim($_POST['item_name']),
                 ':parent' => $parent_id,
                 ':type'   => $_POST['item_type'],
@@ -93,42 +101,45 @@ try {
 
             if ($id) {
                 // Update
-                $sql = "UPDATE PL_STRUCTURE SET account_code=:code, item_name=:name, parent_id=:parent, 
-                        item_type=:type, data_source=:source, calculation_formula=:formula, row_order=:order, updated_at=GETDATE() WHERE id=:id";
+                $sql = "UPDATE $tableName SET 
+                        account_code=:code, item_name=:name, parent_id=:parent, 
+                        item_type=:type, data_source=:source, calculation_formula=:formula, 
+                        row_order=:order, updated_at=GETDATE() 
+                        WHERE id=:id";
                 $params[':id'] = $id;
             } else {
-                // Insert (Default is_active = 1)
-                $sql = "INSERT INTO PL_STRUCTURE (account_code, item_name, parent_id, item_type, data_source, calculation_formula, row_order, is_active)
+                // Insert
+                $sql = "INSERT INTO $tableName (account_code, item_name, parent_id, item_type, data_source, calculation_formula, row_order, is_active)
                         VALUES (:code, :name, :parent, :type, :source, :formula, :order, 1)";
             }
+            
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             break;
 
         // ======================================================================
-        // CASE: DELETE (เปลี่ยนเป็น Soft Delete)
+        // CASE: DELETE (Soft Delete)
         // ======================================================================
         case 'delete':
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) throw new Exception("Invalid ID");
             
-            // 🔥 เปลี่ยนจาก DELETE เป็น UPDATE is_active = 0
-            // ไม่ต้องเช็ค Child แล้ว เพราะเราแค่ซ่อนแม่ ลูกก็จะหายไปจาก Tree view เอง (ตาม Logic ใน case read)
-            $stmt = $pdo->prepare("UPDATE PL_STRUCTURE SET is_active = 0, updated_at = GETDATE() WHERE id = ?");
+            // Soft Delete: แค่ซ่อน แม่หายลูกก็หายจาก Tree View (เพราะ CTE Join ไม่เจอแม่)
+            $stmt = $pdo->prepare("UPDATE $tableName SET is_active = 0, updated_at = GETDATE() WHERE id = ?");
             $stmt->execute([$id]);
             
             echo json_encode(['success' => true, 'message' => 'Item soft deleted']);
             break;
 
         // ======================================================================
-        // CASE: RESTORE (กู้คืนชีพ)
+        // CASE: RESTORE
         // ======================================================================
         case 'restore':
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) throw new Exception("Invalid ID");
             
-            $stmt = $pdo->prepare("UPDATE PL_STRUCTURE SET is_active = 1, updated_at = GETDATE() WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE $tableName SET is_active = 1, updated_at = GETDATE() WHERE id = ?");
             $stmt->execute([$id]);
             
             echo json_encode(['success' => true, 'message' => 'Item restored']);
@@ -143,11 +154,11 @@ try {
 
             $pdo->beginTransaction();
             try {
-                $sql = "UPDATE PL_STRUCTURE SET row_order = :order WHERE id = :id";
+                $sql = "UPDATE $tableName SET row_order = :order WHERE id = :id";
                 $stmt = $pdo->prepare($sql);
 
                 foreach ($items as $index => $itemId) {
-                    $newOrder = ($index + 1) * 10;
+                    $newOrder = ($index + 1) * 10; // เว้นช่วงทีละ 10 เพื่อให้แทรกง่ายในอนาคต
                     $stmt->execute([':order' => $newOrder, ':id' => $itemId]);
                 }
 
@@ -160,7 +171,7 @@ try {
             break;
 
         // ======================================================================
-        // CASE: IMPORT BATCH
+        // CASE: IMPORT BATCH (Excel Import)
         // ======================================================================
         case 'import_batch':
             $rawData = json_decode($_POST['data'], true);
@@ -168,13 +179,13 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // เพิ่ม is_active ใน Insert ด้วย
+                // 1. Upsert Data (ใช้ MERGE)
                 $sqlUpsert = "
-                    MERGE INTO PL_STRUCTURE AS T
+                    MERGE INTO $tableName AS T
                     USING (SELECT :code as code, :name as name, :type as type, :src as src, :formula as formula, :order as ord) AS S
                     ON (T.account_code = S.code)
                     WHEN MATCHED THEN
-                        UPDATE SET item_name = S.name, item_type = S.type, data_source = S.src, calculation_formula = S.formula, row_order = S.ord, updated_at = GETDATE()
+                        UPDATE SET item_name = S.name, item_type = S.type, data_source = S.src, calculation_formula = S.formula, row_order = S.ord, updated_at = GETDATE(), is_active = 1
                     WHEN NOT MATCHED THEN
                         INSERT (account_code, item_name, item_type, data_source, calculation_formula, row_order, is_active)
                         VALUES (S.code, S.name, S.type, S.src, S.formula, S.ord, 1);
@@ -186,26 +197,20 @@ try {
                 foreach ($rawData as $row) {
                     if (empty($row['account_code'])) continue;
 
+                    // Mapping Data Source ให้ตรงกับ System Logic
                     $rawSrc = strtoupper(trim($row['data_source']));
                     $src = 'MANUAL';
-
-                    // Logic เดิมของการ Map Data Source
                     if (strpos($rawSrc, 'CALC') !== false) $src = 'CALCULATED';
                     elseif (strpos($rawSrc, 'STOCK') !== false) $src = 'AUTO_STOCK';
                     elseif (strpos($rawSrc, 'LABOR') !== false) $src = 'AUTO_LABOR';
                     elseif (strpos($rawSrc, 'MAT') !== false) $src = 'AUTO_MAT';
                     elseif (strpos($rawSrc, 'SCRAP') !== false) $src = 'AUTO_SCRAP';
                     elseif (strpos($rawSrc, 'MACHINE') !== false) $src = 'AUTO_OH_MACHINE';
-                    elseif ($rawSrc === 'MANUAL') $src = 'MANUAL';
-
-                    $formula = trim($row['calculation_formula'] ?? '');
                     
-                    if ($src === 'CALCULATED' && empty($formula)) {
-                        $formula = 'SUM_CHILDREN';
-                    }
-                    if (in_array($src, ['AUTO_STOCK', 'AUTO_LABOR', 'AUTO_MAT', 'AUTO_SCRAP', 'AUTO_OH_MACHINE'])) {
-                        $formula = '';
-                    }
+                    $formula = trim($row['calculation_formula'] ?? '');
+                    if ($src === 'CALCULATED' && empty($formula)) $formula = 'SUM_CHILDREN';
+                    // Clear formula if Auto (ป้องกัน Human Error)
+                    if (strpos($src, 'AUTO_') === 0) $formula = '';
 
                     $stmtUpsert->execute([
                         ':code' => strtoupper(trim($row['account_code'])),
@@ -218,12 +223,12 @@ try {
                     $importedCount++;
                 }
 
-                // Fix Parent ID Logic (คงเดิม)
+                // 2. Fix Parent ID Logic (Re-link Parent-Child based on Codes)
                 $sqlFixParents = "
                     UPDATE Child
                     SET Child.parent_id = Parent.id
-                    FROM PL_STRUCTURE Child
-                    JOIN PL_STRUCTURE Parent ON Parent.account_code = :parent_code
+                    FROM $tableName Child
+                    JOIN $tableName Parent ON Parent.account_code = :parent_code
                     WHERE Child.account_code = :child_code
                 ";
                 $stmtFix = $pdo->prepare($sqlFixParents);
@@ -250,6 +255,7 @@ try {
             throw new Exception("Unknown Action");
     }
 } catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
