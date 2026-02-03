@@ -9,7 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('plItemModal');
     if(modalEl) myModal = new bootstrap.Modal(modalEl);
 
-    // 2. Load Data
+    // 2. Bind Toggle Event (สำหรับปุ่ม Show Inactive)
+    const toggle = document.getElementById('showInactiveToggle');
+    if (toggle) {
+        toggle.addEventListener('change', () => loadData());
+    }
+
+    // 3. Load Data
     loadData();
 });
 
@@ -17,12 +23,16 @@ async function loadData(isUpdate = false) {
     const tbody = document.getElementById('masterTableBody');
     const currentScroll = window.scrollY;
 
+    // เช็คสถานะปุ่ม Show Inactive
+    const showInactive = document.getElementById('showInactiveToggle')?.checked ? 1 : 0;
+
     if (!isUpdate) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
     }
 
     try {
-        const res = await fetch('api/manage_pl_master.php?action=read');
+        // 🔥 ส่ง param show_inactive ไปด้วย
+        const res = await fetch(`api/manage_pl_master.php?action=read&show_inactive=${showInactive}`);
         const json = await res.json();
 
         if (json.success) {
@@ -51,38 +61,70 @@ function renderTable(data) {
         const level = parseInt(item.item_level) || 0;
         const isAuto = item.data_source.includes('AUTO');
         const isCalc = item.data_source === 'CALCULATED';
+        const isActive = parseInt(item.is_active) === 1; // เช็คสถานะ
         
         // --- Row Styling ---
         let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
         let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 2rem;' : `padding-left: ${2 + (level * 1.5)}rem;`);
         
+        // 🔥 ถ้าถูกลบ ให้ทำสีจางๆ
+        let rowStyle = isActive ? '' : 'opacity: 0.6; background-color: #f8f9fa;'; 
+
         // --- Icons ---
         let iconHtml = '';
         if (level === 0) iconHtml = `<i class="fas fa-folder text-primary me-2 fa-lg"></i>`;
         else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
         else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // --- Badges (ใช้ Mini Badge แบบหน้า Entry) ---
+        // --- Badges ---
         let typeBadge = '';
         if (item.item_type === 'REVENUE') typeBadge = `<span class="badge-mini badge-type-rev" title="Revenue">R</span>`;
         else if (item.item_type === 'COGS') typeBadge = `<span class="badge-mini badge-type-cogs" title="Cost of Goods Sold">C</span>`;
         else typeBadge = `<span class="badge-mini badge-type-exp" title="Expense">E</span>`;
 
+        // Status Badge (Deleted)
+        let statusBadge = isActive ? '' : '<span class="badge bg-danger ms-2" style="font-size: 0.6rem;">DELETED</span>';
+
         let sourceBadge = '';
-        if (isAuto) sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System: ${item.data_source}">A</span>`;
+        if (isAuto) {
+            let title = item.data_source;
+            if (title === 'AUTO_MAT') title = 'Auto: Material Cost';
+            else if (title === 'AUTO_SCRAP') title = 'Auto: Scrap Cost';
+            else if (title === 'AUTO_OH_MACHINE') title = 'Auto: Machine OH';
+            
+            sourceBadge = `<span class="badge-mini badge-src-auto" title="${title}">A</span>`;
+        } 
         else if (isCalc) {
             const formulaDesc = item.calculation_formula === 'SUM_CHILDREN' ? 'Sum Children' : item.calculation_formula;
             sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${formulaDesc}">F</span>`;
         } else sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input">M</span>`;
 
+        // --- Action Buttons ---
+        let actionButtons = '';
+        if (isActive) {
+            // ปกติ: ปุ่ม Edit / Delete
+            actionButtons = `
+                <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})'><i class="fas fa-pen fa-xs"></i></button>
+                <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})"><i class="fas fa-trash fa-xs"></i></button>
+            `;
+        } else {
+            // ถูกลบ: ปุ่ม Restore
+            actionButtons = `
+                <button class="action-btn btn-light text-success border fw-bold px-3" onclick="restoreItem(${item.id})" title="กู้คืนรายการนี้">
+                    <i class="fas fa-trash-restore me-1"></i> Restore
+                </button>
+            `;
+        }
+
         // --- Build Row ---
         html += `
-            <tr data-id="${item.id}" class="${rowClass}">
+            <tr data-id="${item.id}" class="${rowClass}" style="${rowStyle}">
                 <td style="${indentStyle}" class="pe-3">
                     <div class="d-flex align-items-center text-nowrap">
                         <i class="fas fa-grip-vertical text-muted cursor-move me-2 drag-handle opacity-25" style="cursor: grab;"></i>
                         ${iconHtml}
                         <span class="text-truncate">${item.item_name}</span>
+                        ${statusBadge}
                     </div>
                 </td>
 
@@ -101,16 +143,13 @@ function renderTable(data) {
                 <td class="text-center text-muted small">${item.row_order}</td>
 
                 <td class="text-end pe-4">
-                    <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})'><i class="fas fa-pen fa-xs"></i></button>
-                    <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})"><i class="fas fa-trash fa-xs"></i></button>
+                    ${actionButtons}
                 </td>
             </tr>
         `;
     });
     tbody.innerHTML = html;
 }
-
-// ... (ส่วน Drag & Drop, Modal, Export, Import ยังคงเดิมครับ Logic ไม่เปลี่ยน) ...
 
 // --- Drag & Drop ---
 function initSortable() {
@@ -155,9 +194,10 @@ function updateParentOptions(data) {
 
     select.innerHTML = '<option value="">-- เป็นรายการหลัก (No Parent) --</option>';
 
+    // กรองเอาเฉพาะตัวที่ Active มาเป็นพ่อ (ไม่ควรเอาตัวที่ถูกลบมาเป็นพ่อ)
     const parents = data.filter(item => 
-        !item.parent_id || 
-        item.data_source === 'CALCULATED' 
+        (item.is_active == 1) && 
+        (!item.parent_id || item.data_source === 'CALCULATED')
     );
 
     parents.forEach(p => {
@@ -176,6 +216,14 @@ function openModal() {
     document.getElementById('itemId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Add New Item';
     document.getElementById('srcManual').checked = true;
+    
+    // Reset Validation
+    const formulaInput = document.getElementById('calculationFormula');
+    if(formulaInput) {
+        formulaInput.classList.remove('is-invalid', 'is-valid');
+        formulaInput.setCustomValidity("");
+    }
+
     myModal.show();
 }
 
@@ -192,22 +240,35 @@ window.editItem = function(item) {
 
     const formulaInput = document.getElementById('calculationFormula');
     formulaInput.value = item.calculation_formula || '';
+    
+    // Reset Validation visual
+    formulaInput.classList.remove('is-invalid', 'is-valid');
+    formulaInput.setCustomValidity("");
 
     const src = item.data_source;
-    if (src === 'CALCULATED') document.getElementById('srcCalculated').checked = true;
+    if (src === 'CALCULATED') {
+        document.getElementById('srcCalculated').checked = true;
+    } 
     else if (src.startsWith('AUTO')) {
         document.getElementById('srcAuto').checked = true;
         document.getElementById('autoSystemSelect').value = src;
-    } else document.getElementById('srcManual').checked = true;
+    } 
+    else {
+        document.getElementById('srcManual').checked = true;
+    }
 
+    // Trigger radio change to update UI
     const radio = document.querySelector('input[name="data_source_mode"]:checked');
-    if(radio) radio.onchange(); 
+    if(radio && typeof toggleSourceOptions === 'function') toggleSourceOptions(); 
 
     myModal.show();
 }
 
 window.saveItem = async function() {
     const form = document.getElementById('plItemForm');
+    
+    // Manual Check for custom validity logic inside toggleSourceOptions scope
+    // But since validation logic is inside modal file, we rely on checkValidity here
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
@@ -240,21 +301,71 @@ window.saveItem = async function() {
     }
 }
 
+// 🔥 ฟังก์ชันลบ (Soft Delete)
 window.deleteItem = async function(id) {
-    if (!await Swal.fire({ title: 'Delete?', icon: 'warning', showCancelButton: true }).then(r => r.isConfirmed)) return;
+    const result = await Swal.fire({ 
+        title: 'Move to Trash?', 
+        text: 'รายการนี้จะถูกย้ายไปถังขยะและซ่อนจากรายงาน',
+        icon: 'warning', 
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it',
+        confirmButtonColor: '#d33'
+    });
+    
+    if (!result.isConfirmed) return;
     
     const formData = new FormData();
     formData.append('action', 'delete');
     formData.append('id', id);
     
-    const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
-    const json = await res.json();
-    if(json.success) loadData(true);
-    else Swal.fire('Error', json.message, 'error');
+    try {
+        const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if(json.success) {
+            loadData(true);
+            Swal.fire('Deleted', 'รายการถูกย้ายไปถังขยะแล้ว', 'success');
+        } else {
+            Swal.fire('Error', json.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Error', 'Connection Failed', 'error');
+    }
+}
+
+// 🔥 ฟังก์ชันกู้คืน (Restore)
+window.restoreItem = async function(id) {
+    const result = await Swal.fire({ 
+        title: 'Restore Item?', 
+        text: 'กู้คืนรายการนี้กลับมาใช้งาน?',
+        icon: 'question', 
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Restore',
+        confirmButtonColor: '#198754'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    const formData = new FormData();
+    formData.append('action', 'restore');
+    formData.append('id', id);
+    
+    try {
+        const res = await fetch('api/manage_pl_master.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if(json.success) {
+            loadData(true);
+            Swal.fire('Restored', 'กู้คืนรายการสำเร็จ', 'success');
+        } else {
+            Swal.fire('Error', json.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Error', 'Connection Failed', 'error');
+    }
 }
 
 // ... (Export/Import Functions คงเดิม) ...
 function exportTemplate() {
+    // ... (Code เดิม) ...
     if (allData.length === 0) {
         Swal.fire('Info', 'No Data', 'info'); return;
     }

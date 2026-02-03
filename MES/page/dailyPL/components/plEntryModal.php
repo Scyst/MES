@@ -1,4 +1,4 @@
-<div class="modal fade" id="targetModal" tabindex="-1" data-bs-backdrop="static">
+<div class="modal fade" id="targetModal" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             
@@ -22,17 +22,26 @@
                                 style="width: 160px;" value="<?php echo date('Y-m'); ?>">
                         </div>
                         
-                        <div class="col-auto ms-auto">
-                            <span class="badge bg-success text-white shadow-sm user-select-none position-relative" 
+                        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+                            <div class="input-group input-group-sm shadow-sm">
+                                <span class="input-group-text bg-warning text-dark border-warning fw-bold">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </span>
+                                <input type="text" id="currentRateDisplay" class="form-control text-center fw-bold text-warning bg-white" 
+                                    style="width: 70px; border-color: var(--bs-warning);" 
+                                    value="--" readonly title="Current Exchange Rate">
+                                <button class="btn btn-warning text-dark fw-bold" onclick="openRateModal()" type="button">
+                                    Edit
+                                </button>
+                            </div>
+
+                            <span class="badge bg-success text-white shadow-sm user-select-none position-relative p-2" 
                                 id="workingDaysBadge"
                                 onclick="openCalendarModal()"
-                                title="Click to manage holiday calendar"
-                                style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;"
-                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.1)';"
-                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-                                
-                                <i class="far fa-calendar-check me-1"></i>Working Days: --
+                                style="cursor: pointer; transition: transform 0.2s ease;">
+                                <i class="far fa-calendar-check me-1"></i> Days: --
                             </span>
+
                         </div>
                     </div>
                 </div>

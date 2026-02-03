@@ -3,8 +3,8 @@
     "statusCode": 201,
     "message": "สำเร็จ",
     "data": {
-        "startAt": "2026-01-31T09:57:10.000Z",
-        "endAt": "2026-01-31T09:57:10.000Z",
+        "startAt": "2026-02-02T01:27:20.000Z",
+        "endAt": "2026-02-02T01:27:20.000Z",
         "result": [
             {
                 "work_center": "SCEASA01",
@@ -14,7 +14,7 @@
             {
                 "work_center": "SCEBEA03",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCEBEA04",
@@ -24,17 +24,17 @@
             {
                 "work_center": "SCEBEA05",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCEBEA06",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCEBEA07",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCEBEA08",
@@ -49,7 +49,7 @@
             {
                 "work_center": "SCEBEA10",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCEBEA11",
@@ -89,17 +89,17 @@
             {
                 "work_center": "SCESBA06",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCESBA07",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCESBA08",
                 "counter": 0,
-                "status": "ONLINE"
+                "status": "OFFLINE"
             },
             {
                 "work_center": "SCESBA09",
@@ -119,7 +119,7 @@
             {
                 "work_center": "SCESPA00",
                 "counter": 0,
-                "status": "OFFLINE"
+                "status": "ONLINE"
             }
         ]
     }

@@ -19,20 +19,59 @@ let chartStructure = null;
 // ========================================================
 // INITIALIZATION
 // ========================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Set default date
     const dateInput = document.getElementById('targetDate');
     if (dateInput && !dateInput.value) {
         dateInput.value = new Date().toISOString().split('T')[0];
     }
 
+    await loadSectionList();
+
     // Initial Load
     loadEntryData();
 
     // Event Listeners
     dateInput?.addEventListener('change', loadEntryData);
-    document.getElementById('sectionFilter')?.addEventListener('change', loadEntryData);
+    document.getElementById('sectionFilter')?.addEventListener('change', handleSectionChange);
 });
+
+async function loadSectionList() {
+    const select = document.getElementById('sectionFilter');
+    if (!select) return;
+
+    const savedSection = localStorage.getItem('last_selected_section');
+
+    try {
+        const res = await fetch('api/manage_pl_entry.php?action=get_active_lines');
+        const json = await res.json();
+
+        if (json.success && json.data.length > 0) {
+            select.innerHTML = '';
+            
+            // เพิ่ม Option "All Lines"
+            select.innerHTML += '<option value="ALL">-- All Lines --</option>';
+
+            json.data.forEach(line => {
+                const option = document.createElement('option');
+                option.value = line;
+                option.textContent = line;
+                select.appendChild(option);
+            });
+
+            // คืนค่าที่เคยเลือกไว้ (ถ้ามีในรายการใหม่)
+            if (savedSection && json.data.includes(savedSection)) {
+                select.value = savedSection;
+            } else {
+                // ถ้าไม่มีค่าเดิม ให้เลือกตัวแรก (หรือกำหนด Default เช่น 'ASSEMBLY')
+                if (json.data.includes('ASSEMBLY')) select.value = 'ASSEMBLY';
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load sections:", e);
+        // ถ้าโหลดไม่ได้ ให้คงค่า Team 1 ไว้เป็น Fallback
+    }
+}
 
 // ========================================================
 // 1. UNIFIED MODE SWITCHER
@@ -41,12 +80,10 @@ function switchMode(mode) {
     currentMode = mode;
     
     // 1. จัดการ Picker Group
-    // ซ่อนทุกอันก่อน
     document.getElementById('dailyPickerGroup').classList.add('d-none');
     document.getElementById('rangePickerGroup').classList.remove('d-flex');
     document.getElementById('rangePickerGroup').classList.add('d-none');
     
-    // ปุ่ม Go จะโชว์เฉพาะหน้า Dashboard
     const btnDashGo = document.getElementById('btnDashUpdate');
     if(btnDashGo) btnDashGo.classList.add('d-none');
 
@@ -65,19 +102,18 @@ function switchMode(mode) {
         loadEntryData();
 
     } else if (mode === 'dashboard') {
-        // --- Mode: Dashboard (ใช้ Range Picker) ---
+        // --- Mode: Dashboard ---
         const rangeGroup = document.getElementById('rangePickerGroup');
         rangeGroup.classList.remove('d-none');
         rangeGroup.classList.add('d-flex');
         
-        // โชว์ปุ่ม Go เพื่อให้ user กด update กราฟเอง (จะได้ไม่โหลดรัวๆ ตอนเลือกวันที่)
         if(btnDashGo) btnDashGo.classList.remove('d-none');
         
         document.getElementById('view-dashboard').classList.add('active');
         loadDashboardData();
 
     } else if (mode === 'report') {
-        // --- Mode: Report (ใช้ Range Picker เหมือนเดิม) ---
+        // --- Mode: Report ---
         const rangeGroup = document.getElementById('rangePickerGroup');
         rangeGroup.classList.remove('d-none');
         rangeGroup.classList.add('d-flex');
@@ -87,8 +123,10 @@ function switchMode(mode) {
     }
 }
 
-// เรียกเมื่อเปลี่ยน Section Filter (เพราะมันใช้ร่วมกันทุกหน้า)
 function handleSectionChange() {
+    const section = document.getElementById('sectionFilter').value;
+    localStorage.setItem('last_selected_section', section);
+    
     if (currentMode === 'dashboard') loadDashboardData();
     else loadEntryData();
 }
@@ -108,16 +146,12 @@ async function loadEntryData() {
             </td>
         </tr>`;
 
-    // Prepare Parameters
     const section = document.getElementById('sectionFilter')?.value || 'Team 1';
     let url = '';
 
     if (currentMode === 'daily') {
         const date = document.getElementById('targetDate').value;
         url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`;
-        
-        // ถ้ามีฟังก์ชันนี้ ให้เรียกเพื่ออัปเดต Badge ใน Modal (ถ้า Modal เปิดอยู่)
-        // แต่จะไม่ไปยุ่งกับปุ่มหน้าหลัก
         if(typeof fetchWorkingDays === 'function') fetchWorkingDays(); 
     } else {
         const start = document.getElementById('startDate').value;
@@ -134,8 +168,9 @@ async function loadEntryData() {
             renderEntryTable(res.data);
 
             if(typeof updateCharts === 'function') updateCharts(currentData);
-
             if(typeof calculateSummary === 'function') calculateSummary(currentData);
+            
+            // รันสูตรเฉพาะโหมด Daily
             if (currentMode === 'daily') runFormulaEngine(); 
         } else {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-5">${res.message}</td></tr>`;
@@ -151,14 +186,11 @@ function calculateSummary(data) {
     let totalExpense = 0;
 
     data.forEach(item => {
-        // เฉพาะ Level 0 (หัวข้อใหญ่) เพื่อไม่ให้บวกซ้ำซ้อนกับลูกย่อย
         if (parseInt(item.item_level) === 0) {
             let amount = parseFloat(item.actual_amount) || 0;
-            
             if (item.item_type === 'REVENUE') {
                 totalRevenue += amount;
             } else {
-                // ประเภทอื่นๆ (COGS, EXPENSE, OH, etc.) นับเป็นรายจ่ายหมด
                 totalExpense += amount;
             }
         }
@@ -167,22 +199,16 @@ function calculateSummary(data) {
     let netProfit = totalRevenue - totalExpense;
     let margin = (totalRevenue > 0) ? (netProfit / totalRevenue * 100) : 0;
 
-    // 1. Update Revenue
     updateCardValue('cardRevenue', totalRevenue);
-
-    // 2. Update Expense
     updateCardValue('cardExpense', totalExpense);
 
-    // 3. Update Net Profit (เปลี่ยนสีตามบวก/ลบ)
     const elProfit = document.getElementById('cardProfit');
     if (elProfit) {
         elProfit.innerText = formatNumber(netProfit);
         elProfit.className = `mb-0 fw-bold ${netProfit >= 0 ? 'text-success' : 'text-danger'}`;
-        // เปลี่ยนสีขอบการ์ดด้วย (Optional)
         elProfit.closest('.card').className = `card border-0 shadow-sm h-100 border-start border-4 ${netProfit >= 0 ? 'border-success' : 'border-danger'}`;
     }
 
-    // 4. Update Margin
     const elMargin = document.getElementById('cardProfitMargin');
     if (elMargin) {
         elMargin.innerText = formatNumber(margin) + '%';
@@ -196,12 +222,11 @@ function updateCardValue(elementId, value) {
 }
 
 // ========================================================
-// 2. RENDERING (Table UI)
+// 2. RENDERING (Table UI) - 🔥 UPDATED LOGIC
 // ========================================================
 function renderEntryTable(data) {
     const tbody = document.getElementById('entryTableBody');
     
-    // Update Header Text
     const targetHeader = document.querySelector('th.text-uppercase'); 
     if(targetHeader) {
         targetHeader.innerText = (currentMode === 'daily') ? 'Daily Target' : 'Period Target';
@@ -216,9 +241,10 @@ function renderEntryTable(data) {
     
     data.forEach(item => {
         const level = parseInt(item.item_level) || 0;
-        const isAuto = item.data_source.includes('AUTO');
+        const isAuto = item.data_source.includes('AUTO'); // AUTO_STOCK, AUTO_LABOR
         const isCalc = item.data_source === 'CALCULATED';
 
+        // Row Styling
         let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
         let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 1.5rem;' : `padding-left: ${1.5 + (level * 1.5)}rem;`);
         let nameCellClass = (level > 1) ? 'child-item' : '';
@@ -229,15 +255,14 @@ function renderEntryTable(data) {
         else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
         else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // Badges
+        // Badges & Status
         let typeBadge = item.item_type === 'REVENUE' ? `<span class="badge-mini badge-type-rev">R</span>` :
                         item.item_type === 'COGS' ? `<span class="badge-mini badge-type-cogs">C</span>` :
                         `<span class="badge-mini badge-type-exp">E</span>`;
 
-        // 🔥 FIX Tooltip: เพิ่ม title และ data-bs-toggle
         let sourceBadge = '';
         if (isAuto) {
-            sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto (Sum Children)" data-bs-toggle="tooltip">A</span>`;
+            sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System (Read-Only)" data-bs-toggle="tooltip">A</span>`;
         } else if (isCalc) {
             sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${item.calculation_formula || ''}" data-bs-toggle="tooltip" style="cursor:help;">F</span>`;
         } else {
@@ -263,26 +288,40 @@ function renderEntryTable(data) {
             diffHtml = `<span class="${colorClass}" style="font-size: 0.8rem;" title="Diff: ${formatNumber(diff)}">${arrow} ${Math.abs(percent).toFixed(0)}%</span>`;
         }
 
-        // Input Logic (Mode Check)
+        // --- Input Logic (Highlighting) ---
         let inputHtml = '';
         let remarkHtml = '';
 
         if (currentMode === 'report') {
-            // Report Mode: Read-only Text
             inputHtml = `<span class="fw-bold text-dark">${formatNumber(actual)}</span>`;
             remarkHtml = `<span class="text-muted small">-</span>`;
         } else {
-            // Daily Mode: Inputs
-            const readonly = (isAuto || isCalc) ? 'readonly' : '';
-            const inputColorClass = (isCalc || isAuto) ? 'text-primary fw-bold' : 'text-dark fw-semibold';
+            const readonlyAttr = (isAuto || isCalc) ? 'readonly' : '';
+            
+            // 🔥 Logic สี Input
+            let inputClass = 'input-seamless fw-semibold ';
+            if (isAuto) {
+                // สีเทา สำหรับ Auto System
+                inputClass += 'text-secondary bg-secondary bg-opacity-10 cursor-not-allowed'; 
+            } else if (isCalc) {
+                // สีฟ้า สำหรับ Formula
+                inputClass += 'text-primary bg-info bg-opacity-10 cursor-default'; 
+            } else {
+                // สีปกติ สำหรับ Manual
+                inputClass += 'text-dark bg-white'; 
+            }
 
             inputHtml = `
-                <input type="text" class="input-seamless ${inputColorClass}" 
+                <input type="text" class="${inputClass}" 
                     value="${formatNumber(actual)}" 
-                    data-id="${item.item_id}" ${readonly}
-                    onfocus="removeCommas(this)" onblur="formatAndSave(this, ${item.item_id})"
+                    data-id="${item.item_id}" ${readonlyAttr}
+                    inputmode="decimal" 
+                    oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\\..*)\\./g, '$1');"
+                    onfocus="removeCommas(this)" 
+                    onblur="formatAndSave(this, ${item.item_id})"
                     onkeydown="if(event.key==='Enter') this.blur()">`;
             
+            // Remark (Auto System ไม่ควรให้แก้ Remark หรือเปล่า? ปกติให้แก้ได้ แต่ถ้าจะปิดก็เพิ่ม readonly ได้)
             remarkHtml = `
                 <input type="text" class="input-seamless text-end text-muted small" 
                        style="font-family: var(--bs-body-font-family); font-weight: normal;"
@@ -290,7 +329,6 @@ function renderEntryTable(data) {
                        onblur="formatAndSave(this, ${item.item_id})">`;
         }
 
-        // 🔥 FIX Code Column: เพิ่ม style="white-space: nowrap;"
         html += `
             <tr class="${rowClass}">
                 <td style="${indentStyle}; white-space: nowrap;" class="${nameCellClass} pe-3">
@@ -317,13 +355,12 @@ function renderEntryTable(data) {
 
     tbody.innerHTML = html;
 
-    // 🔥 FIX: Initialize Tooltips (สำคัญมากสำหรับ Bootstrap 5)
-    if (typeof bootstrap !== 'undefined') {
+    /*if (typeof bootstrap !== 'undefined') {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
-    }
+    }*/
 }
 
 // ========================================================
@@ -344,6 +381,9 @@ function formatNumber(num) {
 }
 
 async function formatAndSave(input, itemId) {
+    // 🔥 Safety Check: ถ้าเป็น Readonly ห้ามเซฟ (ป้องกันเคส Formula เผลอไปแก้)
+    if (input.readOnly) return;
+
     const isRemarkField = input.getAttribute('placeholder') === '...';
     const row = input.closest('tr');
     const amountInput = row.querySelector('input:not([placeholder="..."])');
@@ -445,14 +485,16 @@ function runFormulaEngine() {
 // ========================================================
 
 function openTargetModal() {
+    const modalEl = document.getElementById('targetModal');
+    
+    // 🔥 [FIX] บังคับลบ tabindex ด้วย JS เพื่อแก้ปัญหาพิมพ์ไม่ได้ 100%
+    modalEl.removeAttribute('tabindex');
     if (!targetModal) targetModal = new bootstrap.Modal(document.getElementById('targetModal'));
     
-    // Sync Month
     const mainDate = document.getElementById('targetDate').value;
     const monthInput = document.getElementById('budgetMonth');
     monthInput.value = mainDate.slice(0, 7); 
 
-    // Render & Load
     renderTargetStructure(); 
     monthInput.onchange = loadModalData;
     loadModalData(); 
@@ -461,7 +503,33 @@ function openTargetModal() {
 }
 
 async function loadModalData() {
-    await Promise.all([ fetchWorkingDays(), fetchMonthlyBudgets() ]);
+    await Promise.all([ 
+        fetchWorkingDays(), 
+        fetchMonthlyBudgets(),
+        fetchCurrentRate()
+    ]);
+}
+
+async function fetchCurrentRate() {
+    const monthStr = document.getElementById('budgetMonth')?.value;
+    if(!monthStr) return;
+    const [year, month] = monthStr.split('-');
+    
+    const displayEl = document.getElementById('currentRateDisplay');
+    if(!displayEl) return;
+
+    try {
+        const res = await fetch(`api/manage_pl_entry.php?action=get_exchange_rate&year=${year}&month=${month}`);
+        const json = await res.json();
+        if(json.success) {
+            displayEl.value = json.rate.toFixed(2); // แสดงทศนิยม 2 ตำแหน่ง
+        } else {
+            displayEl.value = '32.00'; // Default
+        }
+    } catch(e) {
+        console.error(e);
+        displayEl.value = 'Err';
+    }
 }
 
 async function fetchWorkingDays() {
@@ -469,9 +537,9 @@ async function fetchWorkingDays() {
     if(!monthStr) return;
 
     const [year, month] = monthStr.split('-');
-    const badge = document.getElementById('workingDaysBadge'); // 🔥 Badge นี้อยู่ใน Modal (plEntryModal.php)
+    const badge = document.getElementById('workingDaysBadge');
     
-    if(!badge) return; // ถ้าไม่เจอ Badge (กรณี Modal ยังไม่โหลด) ก็จบ
+    if(!badge) return;
 
     badge.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Counting...';
     badge.className = 'badge bg-secondary text-white shadow-sm user-select-none position-relative';
@@ -482,14 +550,12 @@ async function fetchWorkingDays() {
         if (json.success) {
             currentWorkingDays = json.days;
             badge.className = 'badge bg-success text-white shadow-sm user-select-none position-relative';
-            // Render Badge HTML (Green)
             badge.innerHTML = `
                 <i class="far fa-calendar-check me-1"></i>Working Days: ${currentWorkingDays} 
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning border border-light" style="font-size: 0.5rem; padding: 0.3em 0.5em;">
                     <i class="fas fa-pen"></i>
                 </span>
             `;
-            // Recalculate Previews in Modal
             document.querySelectorAll('.budget-input').forEach(inp => calcPreview(inp));
         }
     } catch (e) { 
@@ -617,7 +683,7 @@ function openCalendarModal() {
     }, 200);
 
     document.getElementById('calendarModal').addEventListener('hidden.bs.modal', () => {
-        fetchWorkingDays(); // Refresh Badge in Modal
+        fetchWorkingDays(); 
     });
 }
 
@@ -651,7 +717,6 @@ async function saveHoliday() {
     const dateVal = document.getElementById('hDate').value;
     const typeVal = document.getElementById('hType').value;
     
-    // Check Normal Day -> Delete
     if (typeVal === 'NORMAL') {
         await apiCalendarAction('calendar_delete', {date: dateVal});
         return;
@@ -685,7 +750,7 @@ async function apiCalendarAction(action, payload) {
 }
 
 // ========================================================
-// 6. EXPORT LOGIC (NEW)
+// 6. EXPORT LOGIC
 // ========================================================
 function exportToExcel() {
     const section = document.getElementById('sectionFilter').value;
@@ -699,205 +764,20 @@ function exportToExcel() {
         const end = document.getElementById('endDate').value;
         params += `&mode=report&start_date=${start}&end_date=${end}`;
     }
-
-    // ยิงไปที่หน้า Export โดยตรง (Browser จะเริ่ม Download ทันที)
     window.location.href = `api/export_pl_excel.php?${params}`;
 }
 
 // ========================================================
 // 7. DASHBOARD CHARTS
 // ========================================================
-function updateCharts(data) {
-    if (typeof Chart === 'undefined') return; // กัน Error ถ้าไม่มี Lib
-
-    // 1. Calculate Summary Data
-    let revenue = { actual: 0, target: 0 };
-    let cogs = { actual: 0, target: 0 };
-    let expense = { actual: 0, target: 0 };
-
-    data.forEach(item => {
-        // ใช้ Level 0 ในการสรุปยอด (หรือปรับตาม Structure ของคุณ)
-        if (parseInt(item.item_level) === 0) {
-            let act = parseFloat(item.actual_amount) || 0;
-            let tgt = parseFloat(item.daily_target) || 0;
-
-            if (item.item_type === 'REVENUE') {
-                revenue.actual += act; revenue.target += tgt;
-            } else if (item.item_type === 'COGS') {
-                cogs.actual += act; cogs.target += tgt;
-            } else { // EXPENSE
-                expense.actual += act; expense.target += tgt;
-            }
-        }
-    });
-
-    const netProfit = revenue.actual - cogs.actual - expense.actual;
-    const netProfitTarget = revenue.target - cogs.target - expense.target;
-
-    // 2. Performance Chart (Bar)
-    const ctxBar = document.getElementById('chartPerformance');
-    if(ctxBar) {
-        if (chartPerformance) chartPerformance.destroy();
-        chartPerformance = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: ['Revenue', 'COGS', 'Expense', 'Net Profit'],
-                datasets: [
-                    {
-                        label: 'Target',
-                        data: [revenue.target, cogs.target, expense.target, netProfitTarget],
-                        backgroundColor: 'rgba(200, 200, 200, 0.3)',
-                        borderColor: 'rgba(150, 150, 150, 1)',
-                        borderWidth: 1,
-                        barPercentage: 0.6
-                    },
-                    {
-                        label: 'Actual',
-                        data: [revenue.actual, cogs.actual, expense.actual, netProfit],
-                        backgroundColor: [
-                            'rgba(13, 110, 253, 0.8)', // Blue
-                            'rgba(255, 193, 7, 0.8)',  // Yellow
-                            'rgba(220, 53, 69, 0.8)',  // Red
-                            (netProfit >= 0 ? 'rgba(25, 135, 84, 0.8)' : 'rgba(220, 53, 69, 0.8)') // Green/Red
-                        ],
-                        borderWidth: 0,
-                        barPercentage: 0.6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' },
-                    datalabels: {
-                        anchor: 'end', align: 'top',
-                        formatter: (val) => val === 0 ? '' : formatShort(val),
-                        font: { size: 11, weight: 'bold' }
-                    }
-                },
-                scales: { y: { beginAtZero: true, grid: { display: false } } }
-            },
-            plugins: [ChartDataLabels]
-        });
-    }
-
-    // 3. Structure Chart (Doughnut)
-    const ctxPie = document.getElementById('chartStructure');
-    if(ctxPie) {
-        if (chartStructure) chartStructure.destroy();
-        chartStructure = new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['COGS', 'Expense', 'Profit'],
-                datasets: [{
-                    data: [cogs.actual, expense.actual, (netProfit > 0 ? netProfit : 0)],
-                    backgroundColor: ['#ffc107', '#dc3545', '#198754'],
-                    borderWidth: 2,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 12 } },
-                    datalabels: {
-                        color: '#fff',
-                        formatter: (val, ctx) => {
-                            let sum = 0;
-                            ctx.chart.data.datasets[0].data.map(d => sum += d);
-                            if(sum === 0) return '';
-                            let pct = (val*100 / sum).toFixed(0) + "%";
-                            return pct === '0%' ? '' : pct;
-                        }
-                    }
-                }
-            },
-            plugins: [ChartDataLabels]
-        });
-    }
-}
-
-function formatShort(num) {
-    if(Math.abs(num) >= 1000000) return (num/1000000).toFixed(1) + 'M';
-    if(Math.abs(num) >= 1000) return (num/1000).toFixed(1) + 'k';
-    return num.toLocaleString();
-}
-
-// ========================================================
-// 8. VIEW SWITCHER & DASHBOARD LOGIC
-// ========================================================
-
-function switchView(viewName) {
-    // 1. Toggle Buttons
-    document.getElementById('btnViewTable').classList.remove('active');
-    document.getElementById('btnViewDash').classList.remove('active');
-    
-    if (viewName === 'table') {
-        document.getElementById('btnViewTable').classList.add('active');
-    } else {
-        document.getElementById('btnViewDash').classList.add('active');
-        loadDashboardData(); // โหลดข้อมูลเมื่อเปิดหน้า Dashboard
-    }
-
-    // 2. Toggle Sections with Fade
-    const tableSection = document.getElementById('view-table');
-    const dashSection = document.getElementById('view-dashboard');
-
-    // ซ่อนตัวปัจจุบันก่อน
-    document.querySelectorAll('.view-section').forEach(el => el.style.opacity = '0');
-
-    setTimeout(() => {
-        // ปิด display:none สลับกัน
-        if (viewName === 'table') {
-            tableSection.style.display = 'block';
-            dashSection.style.display = 'none';
-            setTimeout(() => tableSection.style.opacity = '1', 50); // Fade In
-        } else {
-            tableSection.style.display = 'none';
-            dashSection.style.display = 'block';
-            setTimeout(() => dashSection.style.opacity = '1', 50); // Fade In
-        }
-    }, 300); // รอให้ Fade Out จบก่อน (ตรงกับ css transition 0.3s)
-}
-
-async function loadDashboardData() {
-    // เปลี่ยนไปดึงค่าจาก startDate / endDate แทน
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    const section = document.getElementById('sectionFilter').value;
-    const container = document.getElementById('dashboardGrid');
-
-    // แสดง Loading
-    if(container) container.innerHTML = '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Loading Dashboard...</div>';
-
-    try {
-        // ส่ง start_date, end_date ไปที่ API
-        const res = await fetch(`api/manage_pl_entry.php?action=dashboard_stats&start_date=${startDate}&end_date=${endDate}&section=${section}`);
-        const json = await res.json();
-
-        if (json.success) {
-            renderDashboardCards(json.data);
-            if(typeof updateDashboardCharts === 'function') updateDashboardCharts(json.data);
-        } else {
-            if(container) container.innerHTML = `<div class="col-12 text-danger text-center">Error: ${json.message}</div>`;
-        }
-    } catch (e) { console.error(e); }
-}
-
-// 🔥 ฟังก์ชันวาดกราฟสำหรับหน้า Dashboard (คำนวณจากยอด MTD)
 function updateDashboardCharts(data) {
     if (typeof Chart === 'undefined') return;
 
-    // 1. Calculate Summary (Revenue/COGS/Expense) from Dashboard Data
     let revenue = { actual: 0, target: 0 };
     let cogs = { actual: 0, target: 0 };
     let expense = { actual: 0, target: 0 };
 
     data.forEach(item => {
-        // ข้อมูลชุดนี้เป็น Actual MTD และ Target Monthly อยู่แล้ว เอามาบวกกันได้เลย
         let act = parseFloat(item.actual_mtd) || 0;
         let tgt = parseFloat(item.target_monthly) || 0;
 
@@ -905,7 +785,7 @@ function updateDashboardCharts(data) {
             revenue.actual += act; revenue.target += tgt;
         } else if (item.item_type === 'COGS') {
             cogs.actual += act; cogs.target += tgt;
-        } else { // EXPENSE / OH-VC
+        } else { 
             expense.actual += act; expense.target += tgt;
         }
     });
@@ -913,7 +793,6 @@ function updateDashboardCharts(data) {
     const netProfit = revenue.actual - cogs.actual - expense.actual;
     const netProfitTarget = revenue.target - cogs.target - expense.target;
 
-    // 2. Draw Bar Chart
     const ctxBar = document.getElementById('chartPerformance');
     if(ctxBar) {
         if (chartPerformance) chartPerformance.destroy();
@@ -923,7 +802,7 @@ function updateDashboardCharts(data) {
                 labels: ['Revenue', 'COGS', 'Expense', 'Net Profit'],
                 datasets: [
                     {
-                        label: 'Target (Month)', // เปลี่ยน Label ให้ชัดเจน
+                        label: 'Target (Month)',
                         data: [revenue.target, cogs.target, expense.target, netProfitTarget],
                         backgroundColor: 'rgba(200, 200, 200, 0.3)',
                         borderColor: 'rgba(150, 150, 150, 1)',
@@ -931,7 +810,7 @@ function updateDashboardCharts(data) {
                         barPercentage: 0.6
                     },
                     {
-                        label: 'Actual (MTD)', // เปลี่ยน Label ให้ชัดเจน
+                        label: 'Actual (MTD)',
                         data: [revenue.actual, cogs.actual, expense.actual, netProfit],
                         backgroundColor: [
                             'rgba(13, 110, 253, 0.8)',
@@ -961,7 +840,6 @@ function updateDashboardCharts(data) {
         });
     }
 
-    // 3. Draw Pie Chart
     const ctxPie = document.getElementById('chartStructure');
     if(ctxPie) {
         if (chartStructure) chartStructure.destroy();
@@ -1007,20 +885,17 @@ function renderDashboardCards(data) {
     }
 
     grid.innerHTML = data.map(item => {
-        // Logic สี (เกินเป้า/ต่ำกว่าเป้า)
         const pct = parseFloat(item.progress_percent);
         const isRev = item.item_type === 'REVENUE';
         
-        let colorClass = 'bg-primary'; // Default
+        let colorClass = 'bg-primary';
         let textClass = 'text-primary';
 
         if (isRev) {
-            // รายได้: น้อยกว่า 100% ไม่ดี (เหลือง/แดง), เกิน 100% ดี (เขียว)
             if (pct >= 100) { colorClass = 'bg-success'; textClass = 'text-success'; }
             else if (pct >= 80) { colorClass = 'bg-warning'; textClass = 'text-warning'; }
             else { colorClass = 'bg-danger'; textClass = 'text-danger'; }
         } else {
-            // รายจ่าย: เกิน 100% แย่ (แดง), น้อยกว่า ดี (เขียว)
             if (pct > 100) { colorClass = 'bg-danger'; textClass = 'text-danger'; }
             else { colorClass = 'bg-success'; textClass = 'text-success'; }
         }
@@ -1047,25 +922,57 @@ function renderDashboardCards(data) {
     }).join('');
 }
 
-// ========================================================
-// HELPER FUNCTIONS
-// ========================================================
-
 function formatNumberShort(num) {
-    // แปลง string เป็น float ก่อนเผื่อค่ามาเป็น string
     num = parseFloat(num) || 0; 
+    if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (Math.abs(num) >= 1000) return (num / 1000).toFixed(1) + 'k';
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-    // ถ้าเกินล้าน ให้โชว์เป็น M (เช่น 1.5M)
-    if (Math.abs(num) >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'M';
-    }
-    // ถ้าเกินพัน ให้โชว์เป็น k (เช่น 25.5k)
-    if (Math.abs(num) >= 1000) {
-        return (num / 1000).toFixed(1) + 'k';
-    }
-    // ถ้าตัวเลขน้อยๆ ให้โชว์ลูกน้ำปกติ และทศนิยม 2 ตำแหน่ง
-    return num.toLocaleString('en-US', {
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2
+async function openRateModal() {
+    const dateVal = document.getElementById('targetDate').value;
+    const [year, month] = dateVal.split('-');
+    
+    let currentRate = 32.0;
+    try {
+        const res = await fetch(`api/manage_pl_entry.php?action=get_exchange_rate&year=${year}&month=${month}`);
+        const json = await res.json();
+        if(json.success) currentRate = json.rate;
+    } catch(e) {}
+
+    // 2. เปิด Popup
+    const { value: newRate } = await Swal.fire({
+        title: `Exchange Rate (${month}/${year})`,
+        text: "กำหนดอัตราแลกเปลี่ยน (USD -> THB)",
+        input: 'number',
+        inputValue: currentRate,
+        
+        target: document.getElementById('targetModal'), 
+        didOpen: () => document.querySelector('.swal2-input')?.focus(),
+
+        showCancelButton: true,
+        confirmButtonText: 'Save Rate',
+        confirmButtonColor: '#ffc107',
+        inputValidator: (value) => {
+            if (!value || value <= 0) return 'กรุณาระบุตัวเลขที่ถูกต้อง';
+        }
     });
+
+    // 3. บันทึก
+    if (newRate) {
+        try {
+            const res = await fetch('api/manage_pl_entry.php?action=save_exchange_rate', {
+                method: 'POST',
+                body: JSON.stringify({ year, month, rate: newRate })
+            });
+            const json = await res.json();
+            if(json.success) {
+                Swal.fire('Saved', `Exchange Rate: ${newRate} THB/USD`, 'success');
+                loadEntryData();
+                fetchCurrentRate();
+            }
+        } catch(e) {
+            Swal.fire('Error', 'Connection failed', 'error');
+        }
+    }
 }

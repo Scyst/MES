@@ -111,8 +111,12 @@
                                 </label>
                                 <div>
                                     <select class="form-select fw-bold text-dark" id="autoSystemSelect" style="background-color: rgba(255,255,255,0.7);">
-                                        <option value="AUTO_STOCK">📦 Production FG (ยอดผลิตสินค้า)</option>
-                                        <option value="AUTO_LABOR">👷 Manpower (ค่าแรง/OT)</option>
+                                        <option value="AUTO_STOCK">📦 Revenue (ยอดขายจากการผลิต FG)</option>
+                                        <option value="AUTO_LABOR">👷 Manpower (ค่าแรง DL+OT)</option>
+                                        
+                                        <option value="AUTO_MAT">🧱 Material Cost (ต้นทุนวัตถุดิบ)</option>
+                                        <option value="AUTO_SCRAP">🗑️ Scrap Cost (มูลค่าของเสีย)</option>
+                                        <option value="AUTO_OH_MACHINE">⚙️ Machine Overhead (ค่าโสหุ้ยเครื่องจักร)</option>
                                         <option disabled>──────────</option>
                                         <option value="AUTO_SAP" disabled>🏢 SAP Integration (Coming Soon)</option>
                                         <option value="AUTO_IOT" disabled>⚡ IoT Meter (Coming Soon)</option>
@@ -189,10 +193,10 @@
         }
     }
 
-    // อัปเกรดตัวตรวจสอบสูตร (Advanced Validation)
+    // อัปเกรดตัวตรวจสอบสูตร (Corrected Version)
     function validateFormula(input) {
         let val = input.value.trim();
-        const saveBtn = document.getElementById('btnSaveItem'); // อ้างอิงปุ่ม Save
+        const saveBtn = document.getElementById('btnSaveItem'); 
 
         // 1. กรณีค่าว่าง
         if (val === '') { 
@@ -212,14 +216,14 @@
         if (accountMatches) {
             for (let match of accountMatches) {
                 let code = match.replace('[', '').replace(']', '');
-                // ตรวจสอบว่า Code นี้มีตัวตนอยู่ในผังบัญชีหรือไม่ (allData คือตัวแปร Global ใน pl_setting.js)
+                
+                // ตรวจสอบว่ามี Code นี้จริงไหม (ถ้าเพิ่งแก้ DB มา อย่าลืม Refresh หน้าเว็บนะครับ ไม่งั้น JS จะจำค่าเก่า)
                 let exists = allData.some(item => item.account_code === code);
                 if (!exists) {
-                    setInvalid(input, `ไม่พบรหัสบัญชี: ${code}`);
+                    setInvalid(input, `ไม่พบรหัสบัญชี: ${code} (ลอง Refresh หน้าเว็บ)`);
                     return false;
                 }
                 
-                // ตรวจสอบ Self-Reference (ห้ามอ้างอิงรหัสตัวเอง)
                 let currentMyCode = document.getElementById('accountCode').value;
                 if (code === currentMyCode) {
                     setInvalid(input, "ห้ามใส่รหัสของตัวเองในสูตรคำนวณ");
@@ -229,15 +233,15 @@
         }
 
         // 4. ตรวจสอบ Syntax คณิตศาสตร์พื้นฐาน
-        // เปลี่ยน [Code] เป็นเลข 1 เพื่อทดสอบโครงสร้างสูตร
-        let testFormula = val.replace(/\[.*?\\]/g, '1');
+        // 🔥 [FIX] แก้ Regex ตรงนี้: เอา \\ ออก ให้เหลือแค่ \] หรือ ] 
+        let testFormula = val.replace(/\[.*?\]/g, '1'); 
+        
         if (/[^0-9+\-*/(). ]/.test(testFormula)) { 
             setInvalid(input, "สูตรมีตัวอักษรที่ไม่ได้รับอนุญาต (ใช้ได้เฉพาะ [Code] และเครื่องหมายคำนวณ)"); 
             return false; 
         }
 
         try { 
-            // ทดสอบการรันสูตรจำลอง
             new Function('return ' + testFormula)(); 
             setValid(input); 
             return true;

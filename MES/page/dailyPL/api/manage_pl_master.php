@@ -1,11 +1,9 @@
 <?php
-// page/pl_daily/api/manage_pl_master.php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
-// Check Auth
 if (!hasRole(['admin', 'creator'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Access Denied']);
@@ -16,11 +14,19 @@ $action = $_REQUEST['action'] ?? 'read';
 
 try {
     switch ($action) {
+        // ======================================================================
+        // CASE: READ (เพิ่ม Logic กรอง is_active)
+        // ======================================================================
         case 'read':
-            // 🔥 UPGRADE: แก้ไข SQL ให้ดึง calculation_formula ออกมาด้วย
+            // รับค่าจากหน้าบ้าน ว่าจะให้โชว์ตัวที่ลบไหม (ส่งมาเป็น 1 หรือ true)
+            $showInactive = isset($_REQUEST['show_inactive']) && $_REQUEST['show_inactive'] == 1;
+
+            // สร้างเงื่อนไข SQL
+            $activeCondition = $showInactive ? "1=1" : "is_active = 1"; // ถ้า showInactive=1 ให้เอาหมด, ถ้าไม่ ให้เอาแค่ Active
+            $activeConditionC = $showInactive ? "1=1" : "c.is_active = 1"; 
+
             $sql = "
                 WITH PL_Tree AS (
-                    -- Anchor: Level 0 (เพิ่ม calculation_formula)
                     SELECT 
                         id, item_name, account_code, item_type, data_source, 
                         calculation_formula,
@@ -28,11 +34,11 @@ try {
                         0 AS item_level,
                         CAST(RIGHT('00000' + CAST(row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX)) AS SortPath
                     FROM PL_STRUCTURE 
-                    WHERE parent_id IS NULL
+                    WHERE parent_id IS NULL 
+                      AND $activeCondition -- 🔥 กรอง Root Node
 
                     UNION ALL
 
-                    -- Recursive: Children (เพิ่ม calculation_formula)
                     SELECT 
                         c.id, c.item_name, c.account_code, c.item_type, c.data_source, 
                         c.calculation_formula,
@@ -41,6 +47,7 @@ try {
                         p.SortPath + '.' + CAST(RIGHT('00000' + CAST(c.row_order AS VARCHAR(20)), 5) AS VARCHAR(MAX))
                     FROM PL_STRUCTURE c
                     INNER JOIN PL_Tree p ON c.parent_id = p.id
+                    WHERE $activeConditionC -- 🔥 กรอง Child Node
                 )
                 SELECT * FROM PL_Tree ORDER BY SortPath
             ";
@@ -49,12 +56,30 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
+        // ======================================================================
+        // CASE: SAVE (Regex รองรับ _ แล้ว)
+        // ======================================================================
         case 'save':
-            // (Logic เดิมของคุณ ดีอยู่แล้ว)
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             $parent_id = !empty($_POST['parent_id']) ? $_POST['parent_id'] : null;
+            $formula = trim($_POST['calculation_formula'] ?? '');
             
-            if (empty($_POST['account_code']) || empty($_POST['item_name'])) throw new Exception("ข้อมูลไม่ครบถ้วน");
+            if (empty($_POST['account_code']) || empty($_POST['item_name'])) throw new Exception("Incomplete Data");
+
+            if (!empty($formula)) {
+                // ✅ Regex นี้รองรับ A-Z, 0-9, และ _ เรียบร้อยแล้ว
+                if (!preg_match('/^[A-Z0-9_\[\]\+\-\*\/\(\)\.\s]+$/i', $formula)) {
+                    throw new Exception("Security Alert: Invalid characters in formula.");
+                }
+                
+                if (strpos($formula, '--') !== false || strpos($formula, '/*') !== false || strpos($formula, '//') !== false) {
+                    throw new Exception("Security Alert: Comments are not allowed in formula.");
+                }
+
+                if (substr_count($formula, '[') !== substr_count($formula, ']')) {
+                    throw new Exception("Syntax Error: Mismatched brackets []");
+                }
+            }
 
             $params = [
                 ':code'   => strtoupper(trim($_POST['account_code'])),
@@ -63,45 +88,61 @@ try {
                 ':type'   => $_POST['item_type'],
                 ':source' => $_POST['data_source'],
                 ':order'  => (int)$_POST['row_order'],
-                ':formula'=> trim($_POST['calculation_formula'] ?? '') 
+                ':formula'=> $formula
             ];
 
             if ($id) {
+                // Update
                 $sql = "UPDATE PL_STRUCTURE SET account_code=:code, item_name=:name, parent_id=:parent, 
                         item_type=:type, data_source=:source, calculation_formula=:formula, row_order=:order, updated_at=GETDATE() WHERE id=:id";
                 $params[':id'] = $id;
             } else {
+                // Insert (Default is_active = 1)
                 $sql = "INSERT INTO PL_STRUCTURE (account_code, item_name, parent_id, item_type, data_source, calculation_formula, row_order, is_active)
                         VALUES (:code, :name, :parent, :type, :source, :formula, :order, 1)";
             }
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            echo json_encode(['success' => true, 'message' => 'บันทึกเรียบร้อย']);
+            echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             break;
 
+        // ======================================================================
+        // CASE: DELETE (เปลี่ยนเป็น Soft Delete)
+        // ======================================================================
         case 'delete':
-            // (Logic เดิม)
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) throw new Exception("Invalid ID");
             
-            $check = $pdo->prepare("SELECT COUNT(*) FROM PL_STRUCTURE WHERE parent_id = ?");
-            $check->execute([$id]);
-            if ($check->fetchColumn() > 0) throw new Exception("ลบไม่ได้: มีรายการย่อยอยู่ภายใน");
-
-            $stmt = $pdo->prepare("DELETE FROM PL_STRUCTURE WHERE id = ?");
+            // 🔥 เปลี่ยนจาก DELETE เป็น UPDATE is_active = 0
+            // ไม่ต้องเช็ค Child แล้ว เพราะเราแค่ซ่อนแม่ ลูกก็จะหายไปจาก Tree view เอง (ตาม Logic ใน case read)
+            $stmt = $pdo->prepare("UPDATE PL_STRUCTURE SET is_active = 0, updated_at = GETDATE() WHERE id = ?");
             $stmt->execute([$id]);
-            echo json_encode(['success' => true]);
+            
+            echo json_encode(['success' => true, 'message' => 'Item soft deleted']);
             break;
 
-        // ACTION: Reorder (จัดลำดับใหม่)
+        // ======================================================================
+        // CASE: RESTORE (กู้คืนชีพ)
+        // ======================================================================
+        case 'restore':
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            if (!$id) throw new Exception("Invalid ID");
+            
+            $stmt = $pdo->prepare("UPDATE PL_STRUCTURE SET is_active = 1, updated_at = GETDATE() WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            echo json_encode(['success' => true, 'message' => 'Item restored']);
+            break;
+
+        // ======================================================================
+        // CASE: REORDER
+        // ======================================================================
         case 'reorder':
-            $items = json_decode($_POST['items'], true); // รับ Array ของ ID ที่เรียงแล้ว
+            $items = json_decode($_POST['items'], true);
             if (!is_array($items)) throw new Exception("Invalid Data");
 
             $pdo->beginTransaction();
             try {
-                // Loop อัปเดต row_order ตามลำดับที่ส่งมา
-                // คูณ 10 เพื่อให้มีช่องว่างสำหรับแทรกในอนาคต (10, 20, 30...)
                 $sql = "UPDATE PL_STRUCTURE SET row_order = :order WHERE id = :id";
                 $stmt = $pdo->prepare($sql);
 
@@ -111,22 +152,23 @@ try {
                 }
 
                 $pdo->commit();
-                echo json_encode(['success' => true, 'message' => 'จัดลำดับใหม่เรียบร้อย']);
+                echo json_encode(['success' => true]);
             } catch (Exception $ex) {
                 $pdo->rollBack();
                 throw $ex;
             }
             break;
 
-        // ACTION: Batch Import from Excel
+        // ======================================================================
+        // CASE: IMPORT BATCH
+        // ======================================================================
         case 'import_batch':
             $rawData = json_decode($_POST['data'], true);
             if (!is_array($rawData)) throw new Exception("Invalid JSON Data");
 
             $pdo->beginTransaction();
             try {
-                // 1. เตรียม Statement
-                // ใช้ MERGE เพื่อ Update ของเดิม หรือ Insert ของใหม่
+                // เพิ่ม is_active ใน Insert ด้วย
                 $sqlUpsert = "
                     MERGE INTO PL_STRUCTURE AS T
                     USING (SELECT :code as code, :name as name, :type as type, :src as src, :formula as formula, :order as ord) AS S
@@ -141,37 +183,28 @@ try {
 
                 $importedCount = 0;
 
-                // 2. PASS 1: Upsert ข้อมูลหลัก (ยังไม่สน Parent)
                 foreach ($rawData as $row) {
-                    // Skip ถ้ารหัสว่าง
                     if (empty($row['account_code'])) continue;
 
-                    // 1. จัดการ Data Source (แก้ไข Logic ตรงนี้)
-                    $src = strtoupper(trim($row['data_source']));
+                    $rawSrc = strtoupper(trim($row['data_source']));
+                    $src = 'MANUAL';
 
-                    // ตรวจสอบ Keyword และจัดระเบียบ
-                    if (strpos($src, 'CALC') !== false) {
-                        $src = 'CALCULATED';
-                    }
-                    elseif (strpos($src, 'AUTO') !== false && strpos($src, 'STOCK') !== false) {
-                        $src = 'AUTO_STOCK';
-                    }
-                    elseif (strpos($src, 'AUTO') !== false) {
-                        $src = 'AUTO_LABOR';
-                    }
-                    // ตัด SECTION ทิ้งไปเลย ตามที่เราตกลงกันว่าไม่ใช้แล้ว
+                    // Logic เดิมของการ Map Data Source
+                    if (strpos($rawSrc, 'CALC') !== false) $src = 'CALCULATED';
+                    elseif (strpos($rawSrc, 'STOCK') !== false) $src = 'AUTO_STOCK';
+                    elseif (strpos($rawSrc, 'LABOR') !== false) $src = 'AUTO_LABOR';
+                    elseif (strpos($rawSrc, 'MAT') !== false) $src = 'AUTO_MAT';
+                    elseif (strpos($rawSrc, 'SCRAP') !== false) $src = 'AUTO_SCRAP';
+                    elseif (strpos($rawSrc, 'MACHINE') !== false) $src = 'AUTO_OH_MACHINE';
+                    elseif ($rawSrc === 'MANUAL') $src = 'MANUAL';
 
-                    // Validation สุดท้าย: ต้องอยู่ในรายชื่อที่อนุญาตเท่านั้น
-                    $allowedSources = ['MANUAL', 'AUTO_STOCK', 'AUTO_LABOR', 'CALCULATED'];
-                    if (!in_array($src, $allowedSources)) {
-                        $src = 'MANUAL'; // ถ้าค่าแปลกประหลาดหลุดมา ให้ตีเป็น Manual
-                    }
-
-                    // 2. จัดการ Formula (Smart Default)
-                    // Logic นี้จะทำงานถูกต้องแล้ว เพราะ $src เป็น CALCULATED แล้ว
                     $formula = trim($row['calculation_formula'] ?? '');
-                    if ($src === 'CALCULATED' && $formula === '') {
+                    
+                    if ($src === 'CALCULATED' && empty($formula)) {
                         $formula = 'SUM_CHILDREN';
+                    }
+                    if (in_array($src, ['AUTO_STOCK', 'AUTO_LABOR', 'AUTO_MAT', 'AUTO_SCRAP', 'AUTO_OH_MACHINE'])) {
+                        $formula = '';
                     }
 
                     $stmtUpsert->execute([
@@ -185,8 +218,7 @@ try {
                     $importedCount++;
                 }
 
-                // 3. PASS 2: Re-link Parent (จับคู่ลูกกับแม่)
-                // อัปเดต parent_id โดยการ Join account_code ของแม่
+                // Fix Parent ID Logic (คงเดิม)
                 $sqlFixParents = "
                     UPDATE Child
                     SET Child.parent_id = Parent.id
@@ -204,13 +236,6 @@ try {
                         ]);
                     }
                 }
-                
-                // 4. (Optional) Fix Root Items (ตัวที่ไม่มี Parent Code ให้ Parent ID เป็น NULL)
-                // เพื่อป้องกันขยะตกค้างจากการย้ายกลุ่ม
-                /* $pdo->exec("UPDATE PL_STRUCTURE SET parent_id = NULL WHERE account_code IN (" . 
-                    implode(',', array_map(function($r) { return empty($r['parent_code']) ? "'".$r['account_code']."'" : "''"; }, $rawData)) 
-                . ")");
-                */
 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'count' => $importedCount]);
