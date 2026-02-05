@@ -110,16 +110,35 @@
                                     <i class="fas fa-network-wired me-1"></i>Select Data Source
                                 </label>
                                 <div>
-                                    <select class="form-select fw-bold text-dark" id="autoSystemSelect" style="background-color: rgba(255,255,255,0.7);">
-                                        <option value="AUTO_STOCK">📦 Revenue (ยอดขายจากการผลิต FG)</option>
-                                        <option value="AUTO_LABOR">👷 Manpower (ค่าแรง DL+OT)</option>
+                                    <select class="form-select fw-bold text-dark" name="data_source_auto" id="autoSystemSelect" style="background-color: rgba(255,255,255,0.7);">
                                         
-                                        <option value="AUTO_MAT">🧱 Material Cost (ต้นทุนวัตถุดิบ)</option>
+                                        <option disabled class="bg-light text-secondary small py-1">─── REVENUE ───</option>
+                                        <option value="AUTO_STOCK">📦 Revenue (ยอดขายจากการผลิต FG)</option>
+                                        
+                                        <option disabled class="bg-light text-secondary small py-1">─── LABOR (MANPOWER) ───</option>
+                                        <option value="AUTO_LABOR">👷 Direct Labor (ค่าแรงฝ่ายผลิต - Base)</option>
+                                        <option value="AUTO_LABOR_OT">🕒 Overtime DL (ค่าล่วงเวลาฝ่ายผลิต - OT)</option>
+                                        <option value="AUTO_INDIRECT">👨‍💼 Indirect Labor (ค่าแรงทีมซัพพอร์ต - Base)</option>
+                                        <option value="AUTO_INDIRECT_OT">🌇 Indirect OT (ค่าล่วงเวลาทีมซัพพอร์ต - OT)</option>
+                                        <option value="AUTO_STD_LABOR">📋 Standard DL (ค่าแรงมาตรฐานตาม BOM)</option>
+
+                                        <option disabled class="bg-light text-secondary small py-1">─── MATERIAL & SCRAP ───</option>
+                                        <option value="AUTO_MAT">🧱 Material Cost (Standard - ต้นทุนมาตรฐาน)</option>
+                                        <option value="AUTO_MAT_ACTUAL">🏗️ Material Cost (Actual - เบิกจ่ายจริง)</option>
                                         <option value="AUTO_SCRAP">🗑️ Scrap Cost (มูลค่าของเสีย)</option>
-                                        <option value="AUTO_OH_MACHINE">⚙️ Machine Overhead (ค่าโสหุ้ยเครื่องจักร)</option>
-                                        <option disabled>──────────</option>
-                                        <option value="AUTO_SAP" disabled>🏢 SAP Integration (Coming Soon)</option>
-                                        <option value="AUTO_IOT" disabled>⚡ IoT Meter (Coming Soon)</option>
+                                        
+                                        <option disabled class="bg-light text-secondary small py-1">─── STANDARD OVERHEADS ───</option>
+                                        <option value="AUTO_OH_MACHINE">⚙️ Machine OH (ค่าโสหุ้ยเครื่องจักร)</option>
+                                        <option value="AUTO_OH_UTILITY">⚡ Utilities (ค่าไฟ/น้ำ ตามมาตรฐาน)</option>
+                                        <option value="AUTO_OH_INDIRECT_STD">🏢 Indirect OH (โสหุ้ยทางอ้อม)</option>
+                                        <option value="AUTO_OH_STAFF">👔 Staff Cost (ต้นทุนพนักงานรายเดือน)</option>
+                                        <option value="AUTO_OH_ACCESSORY">🔩 Accessories (วัสดุสิ้นเปลือง)</option>
+                                        <option value="AUTO_OH_OTHER">📦 Other OH (โสหุ้ยอื่นๆ)</option>
+
+                                        <option disabled class="bg-light text-secondary small py-1">─── OTHERS (FUTURE) ───</option>
+                                        <option value="AUTO_LOGISTICS">🚚 Logistics Cost (ค่าขนส่ง/ตู้)</option>
+                                        <option value="AUTO_MAINTENANCE">🔧 Maintenance Cost (ค่าซ่อมบำรุง)</option>
+                                        <option value="AUTO_FORKLIFT">🚜 Forklift Cost (ค่าเช่า/แก๊ส)</option>
                                     </select>
                                     <div class="form-text small text-muted mt-1">
                                         ระบบจะดึงข้อมูลจากแหล่งที่เลือกให้อัตโนมัติทุกสิ้นวัน
@@ -185,7 +204,7 @@
             formulaInput.setCustomValidity("");
         }
 
-        // 2. Auto Section Control (ตอนนี้แสดงเป็น Box เหมือนกันแล้ว)
+        // 2. Auto Section Control
         if (isAuto) {
             autoSec.classList.remove('d-none');
         } else {
@@ -218,10 +237,12 @@
                 let code = match.replace('[', '').replace(']', '');
                 
                 // ตรวจสอบว่ามี Code นี้จริงไหม (ถ้าเพิ่งแก้ DB มา อย่าลืม Refresh หน้าเว็บนะครับ ไม่งั้น JS จะจำค่าเก่า)
-                let exists = allData.some(item => item.account_code === code);
-                if (!exists) {
-                    setInvalid(input, `ไม่พบรหัสบัญชี: ${code} (ลอง Refresh หน้าเว็บ)`);
-                    return false;
+                if (typeof allData !== 'undefined') {
+                    let exists = allData.some(item => item.account_code === code);
+                    if (!exists) {
+                        setInvalid(input, `ไม่พบรหัสบัญชี: ${code} (ลอง Refresh หน้าเว็บ)`);
+                        return false;
+                    }
                 }
                 
                 let currentMyCode = document.getElementById('accountCode').value;

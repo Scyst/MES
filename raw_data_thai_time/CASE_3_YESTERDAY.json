@@ -3,112 +3,112 @@
     "statusCode": 201,
     "message": "สำเร็จ",
     "data": {
-        "startAt": "2026-01-31T17:00:00.000Z",
-        "endAt": "2026-02-01T17:00:00.000Z",
+        "startAt": "2026-02-01T17:00:00.000Z",
+        "endAt": "2026-02-02T17:00:00.000Z",
         "result": [
             {
                 "work_center": "SCEASA01",
-                "counter": 5,
+                "counter": 113,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA03",
                 "counter": 0,
-                "status": "OFFLINE"
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA04",
                 "counter": 0,
-                "status": "OFFLINE"
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA05",
-                "counter": 0,
-                "status": "OFFLINE"
+                "counter": 34,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA06",
-                "counter": 518,
-                "status": "OFFLINE"
+                "counter": 1900,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA07",
-                "counter": 639,
-                "status": "OFFLINE"
+                "counter": 1134,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA08",
-                "counter": 161,
-                "status": "OFFLINE"
+                "counter": 2098,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA09",
-                "counter": 0,
+                "counter": 15,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA10",
-                "counter": 0,
-                "status": "OFFLINE"
+                "counter": 2259,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA11",
-                "counter": 1193,
+                "counter": 17412,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCEBEA12",
-                "counter": 0,
+                "counter": 655,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA01",
-                "counter": 0,
+                "counter": 208,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA02",
-                "counter": 0,
+                "counter": 235,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA03",
-                "counter": 0,
+                "counter": 249,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA04",
-                "counter": 0,
+                "counter": 719,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA05",
-                "counter": 0,
+                "counter": 76,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA06",
                 "counter": 0,
-                "status": "OFFLINE"
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA07",
                 "counter": 0,
-                "status": "OFFLINE"
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA08",
-                "counter": 0,
-                "status": "OFFLINE"
+                "counter": 535,
+                "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA09",
-                "counter": 0,
+                "counter": 843,
                 "status": "ONLINE"
             },
             {
                 "work_center": "SCESBA10",
-                "counter": 0,
+                "counter": 1641,
                 "status": "ONLINE"
             },
             {
@@ -118,7 +118,7 @@
             },
             {
                 "work_center": "SCESPA00",
-                "counter": 0,
+                "counter": 17,
                 "status": "ONLINE"
             }
         ]

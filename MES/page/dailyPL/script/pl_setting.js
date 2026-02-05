@@ -15,9 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
         toggle.addEventListener('change', () => loadData());
     }
 
+    // ❌ ลบส่วน Radio Listener ออก เพราะใน modal_pl_item.php เราใช้ onchange="..." หรือ script ในตัวมันเองแล้ว
+
     // 3. Load Data
     loadData();
 });
+
+// ❌ ลบฟังก์ชัน toggleSourceOptions ออก เพราะย้ายไป modal_pl_item.php แล้ว
 
 async function loadData(isUpdate = false) {
     const tbody = document.getElementById('masterTableBody');
@@ -31,7 +35,6 @@ async function loadData(isUpdate = false) {
     }
 
     try {
-        // 🔥 ส่ง param show_inactive ไปด้วย
         const res = await fetch(`api/manage_pl_master.php?action=read&show_inactive=${showInactive}`);
         const json = await res.json();
 
@@ -223,6 +226,9 @@ function openModal() {
         formulaInput.classList.remove('is-invalid', 'is-valid');
         formulaInput.setCustomValidity("");
     }
+    
+    // 🔥 เรียก toggleSourceOptions() ซึ่งเป็น Global function จาก modal_pl_item.php เพื่อ Reset UI
+    if (typeof toggleSourceOptions === 'function') toggleSourceOptions();
 
     myModal.show();
 }
@@ -257,9 +263,8 @@ window.editItem = function(item) {
         document.getElementById('srcManual').checked = true;
     }
 
-    // Trigger radio change to update UI
-    const radio = document.querySelector('input[name="data_source_mode"]:checked');
-    if(radio && typeof toggleSourceOptions === 'function') toggleSourceOptions(); 
+    // 🔥 เรียก toggleSourceOptions() จาก modal_pl_item.php
+    if (typeof toggleSourceOptions === 'function') toggleSourceOptions(); 
 
     myModal.show();
 }
@@ -267,8 +272,6 @@ window.editItem = function(item) {
 window.saveItem = async function() {
     const form = document.getElementById('plItemForm');
     
-    // Manual Check for custom validity logic inside toggleSourceOptions scope
-    // But since validation logic is inside modal file, we rely on checkValidity here
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;

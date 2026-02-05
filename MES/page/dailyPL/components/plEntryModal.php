@@ -33,6 +33,9 @@
                                 <button class="btn btn-warning text-dark fw-bold" onclick="openRateModal()" type="button">
                                     Edit
                                 </button>
+                                <button class="btn btn-outline-info btn-sm ms-2 shadow-sm" onclick="openContainerRateModal()">
+                                    <i class="fas fa-truck-loading me-1"></i>Shipping Rate
+                                </button>
                             </div>
 
                             <span class="badge bg-success text-white shadow-sm user-select-none position-relative p-2" 

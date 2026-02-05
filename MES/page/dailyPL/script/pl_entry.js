@@ -63,8 +63,10 @@ async function loadSectionList() {
             if (savedSection && json.data.includes(savedSection)) {
                 select.value = savedSection;
             } else {
-                // ถ้าไม่มีค่าเดิม ให้เลือกตัวแรก (หรือกำหนด Default เช่น 'ASSEMBLY')
-                if (json.data.includes('ASSEMBLY')) select.value = 'ASSEMBLY';
+                // [FIXED] ไม่ Fix ชื่อตายตัว ให้เลือกตัวแรกสุดของ List เสมอ
+                if (json.data.length > 0) {
+                    select.value = json.data[0]; 
+                }
             }
         }
     } catch (e) {
@@ -381,10 +383,18 @@ function formatNumber(num) {
 }
 
 async function formatAndSave(input, itemId) {
-    // 🔥 Safety Check: ถ้าเป็น Readonly ห้ามเซฟ (ป้องกันเคส Formula เผลอไปแก้)
+    // 1. Safety Check
     if (input.readOnly) return;
 
+    // [FIXED] เพิ่ม Check ว่าถ้ากำลัง Save อยู่ (ไม่ว่าจะจากปุ่มใหญ่ หรือช่องอื่น) ให้หยุดก่อน
+    // หมายเหตุ: กรณีพิมพ์เร็วมากๆ อาจจะขัดใจนิดหน่อย แต่ปลอดภัยกว่าข้อมูลชนกัน
+    if (isSaving) {
+        console.warn('System is busy saving, skipping auto-save for this field.');
+        return; 
+    }
+
     const isRemarkField = input.getAttribute('placeholder') === '...';
+    // ... (Logic การดึงค่าเหมือนเดิม) ...
     const row = input.closest('tr');
     const amountInput = row.querySelector('input:not([placeholder="..."])');
     const remarkInput = row.querySelector('input[placeholder="..."]');
@@ -394,13 +404,15 @@ async function formatAndSave(input, itemId) {
     const floatAmount = parseFloat(rawAmount);
 
     if (!isRemarkField) input.value = formatNumber(floatAmount);
-
     const remarkValue = remarkInput ? remarkInput.value.trim() : '';
     
     // Update UI Status
     const statusEl = document.getElementById('saveStatus');
     statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> <span class="text-primary">Saving...</span>';
     statusEl.classList.remove('opacity-0');
+
+    // [FIXED] ล็อกสถานะ
+    isSaving = true; 
 
     try {
         const payload = { item_id: itemId, amount: floatAmount, remark: remarkValue };
@@ -415,16 +427,18 @@ async function formatAndSave(input, itemId) {
 
         if (json.success) {
             setTimeout(() => {
-                statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-muted">All changes saved</span>';
+                statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-muted">Saved</span>';
             }, 500);
             
-            // Re-run formula locally to update UI immediately
             if(!isRemarkField) runFormulaEngine(); 
 
         } else { throw new Error(json.message); }
     } catch (err) {
         console.error(err);
-        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> <span class="text-danger">Save Failed!</span>';
+        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> <span class="text-danger">Failed!</span>';
+    } finally {
+        // [FIXED] ปลดล็อกสถานะเสมอ ไม่ว่าจะสำเร็จหรือพัง
+        isSaving = false;
     }
 }
 
@@ -973,6 +987,68 @@ async function openRateModal() {
             }
         } catch(e) {
             Swal.fire('Error', 'Connection failed', 'error');
+        }
+    }
+}
+
+// ฟังก์ชันจัดการ Container Rate
+async function openContainerRateModal() {
+    const dateVal = document.getElementById('targetDate').value;
+    const [year, month] = dateVal.split('-');
+    
+    // 1. ดึงค่าปัจจุบัน
+    let currentRate = 3000;
+    try {
+        const res = await fetch(`api/manage_pl_entry.php?action=get_container_rate&year=${year}&month=${month}`);
+        const json = await res.json();
+        if(json.success) currentRate = json.rate;
+    } catch(e) { console.error(e); }
+
+    // 2. แสดง Popup
+    const { value: newRate } = await Swal.fire({
+        title: `<span class="text-info"><i class="fas fa-ship me-2"></i>Shipping Rate</span>`,
+        html: `
+            <div class="mb-2 text-muted small">กำหนดราคาค่าขนส่งต่อตู้ (Cost per Container)</div>
+            <div class="badge bg-light text-dark border mb-3 px-3 py-2">
+                เดือน: ${month}/${year}
+            </div>
+        `,
+        input: 'number',
+        inputValue: currentRate,
+        inputAttributes: { step: '100', min: '0' },
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-save me-1"></i> Save Rate',
+        confirmButtonColor: '#0dcaf0',
+        cancelButtonText: 'Cancel',
+        inputValidator: (value) => {
+            if (!value || value < 0) return 'กรุณาระบุราคาที่ถูกต้อง';
+        }
+    });
+
+    // 3. บันทึก
+    if (newRate) {
+        try {
+            const res = await fetch('api/manage_pl_entry.php?action=save_container_rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year, month, rate: newRate })
+            });
+            const json = await res.json();
+            
+            if(json.success) {
+                await Swal.fire({
+                    icon: 'success', 
+                    title: 'Saved', 
+                    text: `อัปเดตราคาเป็น ${newRate} บาท/ตู้ เรียบร้อยแล้ว`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                loadEntryData(); // โหลดข้อมูลใหม่เพื่อให้ P&L คำนวณใหม่ทันที
+            } else {
+                throw new Exception(json.message);
+            }
+        } catch(e) {
+            Swal.fire('Error', 'บันทึกไม่สำเร็จ: ' + e.message, 'error');
         }
     }
 }
