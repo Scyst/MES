@@ -62,7 +62,6 @@ try {
                 $conditions[] = "i.is_active = 1";
             }
             if (!empty($searchTerm)) {
-                // [UPDATED] เพิ่มการค้นหาด้วย SKU
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.sku LIKE ? OR i.part_description LIKE ?)";
                 $params = array_merge($params, ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
             }
@@ -89,12 +88,13 @@ try {
                 , Cost_Total, StandardPrice, StandardGP, Price_USD
             ";
 
-            // [UPDATED] เพิ่ม i.sku ใน SELECT
+            // 🔥 [UPDATED] เพิ่ม i.CTN ใน SELECT
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
                         DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
-                        i.is_active, i.min_stock, i.max_stock, i.is_tracking
+                        i.is_active, i.min_stock, i.max_stock, i.is_tracking,
+                        i.CTN -- [NEW]
                         {$costingCols_CTE} 
                         ,
                         STUFF((
@@ -117,7 +117,7 @@ try {
                 )
                 SELECT 
                     item_id, sap_no, part_no, sku, part_description, created_at, is_active, used_in_models,
-                    route_speed_range,min_stock, max_stock, is_tracking
+                    route_speed_range, min_stock, max_stock, is_tracking, CTN -- [NEW]
                 {$costingCols_Final} 
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
@@ -193,7 +193,7 @@ try {
             
             $pdo->beginTransaction();
             try {
-                // [UPDATED] เพิ่ม sku ใน MERGE Statement
+                // [UPDATED] เพิ่ม sku และ CTN ใน MERGE
                 $sql = "
                     MERGE INTO " . ITEMS_TABLE . " AS target
                     USING (VALUES (?)) AS source (sap_no)
@@ -204,10 +204,11 @@ try {
                             sku = ?, 
                             part_description = ?,
                             planned_output = ?, 
-                            is_active = ?
+                            is_active = ?,
+                            CTN = ? -- [NEW]
                     WHEN NOT MATCHED THEN
-                        INSERT (sap_no, part_no, sku, part_description, planned_output, is_active, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, GETDATE());
+                        INSERT (sap_no, part_no, sku, part_description, planned_output, is_active, CTN, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE());
                 ";
                 $stmt = $pdo->prepare($sql);
 
@@ -216,15 +217,16 @@ try {
                     if (empty($sap_no)) continue;
 
                     $part_no = trim($item['part_no'] ?? $sap_no);
-                    $sku = trim($item['sku'] ?? ''); // [NEW] รับค่า SKU
+                    $sku = trim($item['sku'] ?? '');
                     $desc = trim($item['part_description'] ?? '');
                     $planned_output = (int)($item['planned_output'] ?? 0);
                     $is_active = (bool)($item['is_active'] ?? true);
+                    $ctn = (int)($item['ctn'] ?? 0); // [NEW] รับค่า CTN จากไฟล์ Excel
                     
                     $stmt->execute([
                         $sap_no, 
-                        $part_no, $sku, $desc, $planned_output, $is_active, // UPDATE Params
-                        $sap_no, $part_no, $sku, $desc, $planned_output, $is_active // INSERT Params
+                        $part_no, $sku, $desc, $planned_output, $is_active, $ctn, // UPDATE Params
+                        $sap_no, $part_no, $sku, $desc, $planned_output, $is_active, $ctn // INSERT Params
                     ]);
                 }
 
@@ -249,7 +251,7 @@ try {
             if (empty($costingData)) throw new Exception("No costing data received to import.");
 
             function sanitize_cost($val) {
-                if (is_null($val) || trim((string)$val) === '') return 0.0; // ✅ เช็ค trim ว่าว่างจริงไหม
+                if (is_null($val) || trim((string)$val) === '') return 0.0;
                 $clean = str_replace(',', '', (string)$val);
                 if (!is_numeric($clean)) return 0.0;
                 return (float)$clean;
@@ -264,24 +266,19 @@ try {
                         StandardPrice = ?, Price_USD = ?
                     WHERE sap_no = ?";
                 
-                // เตรียม SQL เช็คว่ามี Item อยู่จริงไหม (เพื่อแยก Not Found กับ Unchanged)
                 $checkExistSql = "SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?";
                 $checkStmt = $pdo->prepare($checkExistSql);
 
                 $updatedCount = 0;
-                
-                // สร้าง Array เก็บรายชื่อเพื่อส่งกลับไปรายงาน
                 $notFoundList = [];
                 $unchangedList = [];
                 $skippedList = [];
 
                 foreach ($costingData as $index => $itemCost) {
-                    $rowNum = $index + 2; // +2 เพราะ index เริ่ม 0 และมี Header 1 บรรทัด
+                    $rowNum = $index + 2; 
                     $sap_no = trim($itemCost['sap_no'] ?? '');
                     
-                    // Skip Header หรือแถวว่าง
                     if (empty($sap_no) || strtolower($sap_no) === 'material' || strtolower($sap_no) === 'sap_no') { 
-                        // ไม่ต้องนับ Header เป็น Error
                         continue; 
                     }
 
@@ -307,14 +304,11 @@ try {
                         if ($success && $stmt->rowCount() > 0) {
                             $updatedCount++;
                         } else {
-                            // อัปเดตไม่สำเร็จ (0 rows affected) เป็นได้ 2 กรณี:
-                            // 1. หา SAP ไม่เจอ
-                            // 2. ข้อมูลเหมือนเดิมเป๊ะ
                             $checkStmt->execute([$sap_no]);
                             if ($checkStmt->fetch()) {
-                                $unchangedList[] = $sap_no; // เจอ Item แต่ค่าเดิม
+                                $unchangedList[] = $sap_no; 
                             } else {
-                                $notFoundList[] = $sap_no; // ไม่เจอ Item นี้เลย
+                                $notFoundList[] = $sap_no; 
                             }
                         }
                     } catch (Exception $rowEx) {
@@ -331,7 +325,7 @@ try {
                 echo json_encode([
                     'success' => true, 
                     'message' => $message,
-                    'report' => [ // ส่งรายละเอียดกลับไปด้วย
+                    'report' => [ 
                         'not_found' => $notFoundList,
                         'unchanged_count' => count($unchangedList),
                         'skipped' => $skippedList
@@ -397,7 +391,8 @@ try {
                 $item_id = (int)$item_details['item_id'];
                 $min_stock = !empty($item_details['min_stock']) ? $item_details['min_stock'] : 0;
                 $max_stock = !empty($item_details['max_stock']) ? $item_details['max_stock'] : 0;
-                $sku = trim($item_details['sku'] ?? ''); // [NEW] รับค่า SKU
+                $sku = trim($item_details['sku'] ?? '');
+                $ctn = !empty($item_details['ctn']) ? (int)$item_details['ctn'] : 0; // 🔥 [NEW] รับค่า CTN
 
                 // Costing variables
                 $Cost_RM = !empty($item_details['Cost_RM']) ? $item_details['Cost_RM'] : 0;
@@ -410,15 +405,13 @@ try {
                 $Cost_OH_Staff = !empty($item_details['Cost_OH_Staff']) ? $item_details['Cost_OH_Staff'] : 0;
                 $Cost_OH_Accessory = !empty($item_details['Cost_OH_Accessory']) ? $item_details['Cost_OH_Accessory'] : 0;
                 $Cost_OH_Others = !empty($item_details['Cost_OH_Others']) ? $item_details['Cost_OH_Others'] : 0;
-                //$Cost_Total = !empty($item_details['Cost_Total']) ? $item_details['Cost_Total'] : 0;
                 $StandardPrice = !empty($item_details['StandardPrice']) ? $item_details['StandardPrice'] : 0;
-                //$StandardGP = !empty($item_details['StandardGP']) ? $item_details['StandardGP'] : 0;
                 $Price_USD = !empty($item_details['Price_USD']) ? $item_details['Price_USD'] : 0;
 
                 if ($item_id > 0) {
-                    // [UPDATED] เพิ่ม sku ใน UPDATE Statement Cost_Total = ?,, StandardGP = ?
+                    // 🔥 [UPDATED] เพิ่ม CTN ใน UPDATE
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, min_stock = ?, max_stock = ?, is_tracking = ?,
+                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, min_stock = ?, max_stock = ?, is_tracking = ?, CTN = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
                                 StandardPrice = ?, Price_USD = ?
@@ -427,11 +420,12 @@ try {
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
-                        $sku, // [NEW]
+                        $sku, 
                         $item_details['part_description'],
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
+                        $ctn, // [NEW]
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
                         $StandardPrice, $Price_USD,
@@ -439,27 +433,28 @@ try {
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 } else {
-                    // [UPDATED] เพิ่ม sku ใน INSERT Statement Cost_Total,, StandardGP
+                    // 🔥 [UPDATED] เพิ่ม CTN ใน INSERT
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, sku, part_description, created_at, min_stock, max_stock, is_tracking,
+                                sap_no, part_no, sku, part_description, created_at, min_stock, max_stock, is_tracking, CTN,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 StandardPrice, Price_USD
                             ) VALUES (
-                                ?, ?, ?, ?, GETDATE(), ?, ?, ?,
+                                ?, ?, ?, ?, GETDATE(), ?, ?, ?, ?,
                                 ?, ?, ?, ?, 
                                 ?, ?, ?, ?, ?, ?, 
-                                ?, ?, ?, ?
+                                ?, ?
                             )";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
                         $item_details['sap_no'], 
                         $item_details['part_no'], 
-                        $sku, // [NEW]
+                        $sku, 
                         $item_details['part_description'],  
                         $min_stock,
                         $max_stock,
                         (bool)($item_details['is_tracking'] ?? false),
+                        $ctn, // [NEW]
                         $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
                         $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
                         $StandardPrice, $Price_USD
@@ -468,7 +463,7 @@ try {
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
                 }
 
-                // Handle Routes (เหมือนเดิม)
+                // Handle Routes
                 foreach ($routes_data as $route) {
                     $route_id = (int)$route['route_id'];
                     $status = $route['status'];

@@ -32,13 +32,25 @@
                             <textarea class="form-control" id="part_description" name="part_description" rows="2"></textarea>
                         </div>
                         
-                        <div class="col-md-6"> 
+                        <div class="col-md-4"> 
                             <label for="min_stock" class="form-label">Min Stock</label>
                             <input type="number" step="any" class="form-control" id="min_stock" name="min_stock" placeholder="0.00">
                         </div>
-                        <div class="col-md-6"> 
+                        <div class="col-md-4"> 
                             <label for="max_stock" class="form-label">Max Stock</label>
                             <input type="number" step="any" class="form-control" id="max_stock" name="max_stock" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ctn" class="form-label fw-bold text-primary">
+                                <i class="fas fa-truck-loading me-1"></i> CTN (Qty/Container)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control border-primary" id="ctn" name="ctn" placeholder="e.g. 52">
+                                <span class="input-group-text bg-primary text-white">PCS</span>
+                            </div>
+                            <div class="form-text small text-muted mt-0">
+                                ใช้คำนวณต้นทุนค่าขนส่ง (Logistics Cost)
+                            </div>
                         </div>
                     </div>
 
@@ -130,7 +142,7 @@
                                 </tr>
                             </thead>
                             <tbody id="modalRoutesTableBody">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </form>

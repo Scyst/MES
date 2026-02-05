@@ -411,6 +411,7 @@ async function openItemModal(item = null) {
         document.getElementById('part_description').value = item.part_description;
         document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
         document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
+        document.getElementById('ctn').value = parseInt(item.CTN || 0);
         document.getElementById('deleteItemBtn').style.display = 'inline-block';
 
         setInputValue('Cost_RM', item.Cost_RM);
@@ -436,6 +437,7 @@ async function openItemModal(item = null) {
         modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
         document.getElementById('itemSku').value = '';
+        document.getElementById('ctn').value = 0;
         setInputValue('Cost_RM', 0);
         setInputValue('Cost_PKG', 0);
         setInputValue('Cost_SUB', 0);
@@ -518,6 +520,7 @@ async function handleItemFormSubmit(event) {
         min_stock: form.querySelector('#min_stock').value,
         max_stock: form.querySelector('#max_stock').value,
 
+        ctn: form.querySelector('#ctn').value,
         Cost_RM: form.querySelector('#Cost_RM').value,
         Cost_PKG: form.querySelector('#Cost_PKG').value,
         Cost_SUB: form.querySelector('#Cost_SUB').value,
