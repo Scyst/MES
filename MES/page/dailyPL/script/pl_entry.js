@@ -89,6 +89,12 @@ function switchMode(mode) {
     const btnDashGo = document.getElementById('btnDashUpdate');
     if(btnDashGo) btnDashGo.classList.add('d-none');
 
+    const btnSave = document.getElementById('btnSaveSnapshot');
+    if (btnSave) {
+        // ให้แสดงเฉพาะโหมด Daily เท่านั้น
+        btnSave.style.display = (mode === 'daily') ? 'inline-block' : 'none';
+    }
+
     // 2. จัดการ View Section
     document.getElementById('view-table').classList.remove('active');
     document.getElementById('view-dashboard').classList.remove('active');
@@ -385,59 +391,76 @@ function formatNumber(num) {
 async function formatAndSave(input, itemId) {
     // 1. Safety Check
     if (input.readOnly) return;
+    if (isSaving) return; // ป้องกันการส่งซ้ำรัวๆ
 
-    // [FIXED] เพิ่ม Check ว่าถ้ากำลัง Save อยู่ (ไม่ว่าจะจากปุ่มใหญ่ หรือช่องอื่น) ให้หยุดก่อน
-    // หมายเหตุ: กรณีพิมพ์เร็วมากๆ อาจจะขัดใจนิดหน่อย แต่ปลอดภัยกว่าข้อมูลชนกัน
-    if (isSaving) {
-        console.warn('System is busy saving, skipping auto-save for this field.');
-        return; 
+    // 2. จัดรูปแบบตัวเลขใน Input ให้สวยงาม (ใส่ลูกน้ำ)
+    const isRemarkField = input.getAttribute('placeholder') === '...';
+    let val = input.value.replace(/,/g, '');
+    if (val === '' || isNaN(val)) val = 0;
+    const floatVal = parseFloat(val);
+    
+    if (!isRemarkField) {
+        input.value = formatNumber(floatVal);
+        
+        // 🔥 อัปเดตค่าลงใน currentData (ตัวแปรกลาง) ทันที เพื่อให้พร้อมส่ง
+        const itemIndex = currentData.findIndex(d => d.item_id == itemId);
+        if (itemIndex > -1) {
+            currentData[itemIndex].actual_amount = floatVal;
+        }
+        
+        // รันสูตรคำนวณใหม่ทันที (เพื่อให้ยอดรวมเปลี่ยนก่อน Save)
+        runFormulaEngine();
+    } else {
+        // กรณีแก้ Remark
+        const itemIndex = currentData.findIndex(d => d.item_id == itemId);
+        if (itemIndex > -1) {
+            currentData[itemIndex].remark = input.value;
+        }
     }
 
-    const isRemarkField = input.getAttribute('placeholder') === '...';
-    // ... (Logic การดึงค่าเหมือนเดิม) ...
-    const row = input.closest('tr');
-    const amountInput = row.querySelector('input:not([placeholder="..."])');
-    const remarkInput = row.querySelector('input[placeholder="..."]');
-
-    let rawAmount = amountInput.value.replace(/,/g, '');
-    if (rawAmount === '' || isNaN(rawAmount)) rawAmount = 0;
-    const floatAmount = parseFloat(rawAmount);
-
-    if (!isRemarkField) input.value = formatNumber(floatAmount);
-    const remarkValue = remarkInput ? remarkInput.value.trim() : '';
-    
-    // Update UI Status
+    // 3. แสดงสถานะ "กำลังบันทึก..." (แบบเงียบๆ ไม่รกตา)
     const statusEl = document.getElementById('saveStatus');
-    statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> <span class="text-primary">Saving...</span>';
+    statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving...';
     statusEl.classList.remove('opacity-0');
+    statusEl.style.visibility = 'visible';
+    isSaving = true;
 
-    // [FIXED] ล็อกสถานะ
-    isSaving = true; 
-
+    // ========================================================
+    // 🔥 CORE LOGIC: ส่งข้อมูล "ทั้งหน้า" (Snapshot) ไป Save
+    // ========================================================
     try {
-        const payload = { item_id: itemId, amount: floatAmount, remark: remarkValue };
+        // เตรียม Payload เหมือนปุ่ม Save Day เป๊ะๆ
+        const payload = currentData.map(item => ({
+            item_id: item.item_id,
+            amount: parseFloat(item.actual_amount) || 0,
+            remark: item.remark || ''
+        }));
+
         const formData = new FormData();
         formData.append('action', 'save');
         formData.append('entry_date', document.getElementById('targetDate').value);
         formData.append('section', document.getElementById('sectionFilter').value);
-        formData.append('items', JSON.stringify([payload]));
+        formData.append('items', JSON.stringify(payload));
 
         const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
+            // หน่วงเวลาโชว์คำว่า Saved นิดนึง
             setTimeout(() => {
-                statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-muted">Saved</span>';
+                statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Auto Saved</span>';
+                // ซ่อนสถานะเมื่อผ่านไป 2 วิ
+                setTimeout(() => { 
+                    statusEl.classList.add('opacity-0'); 
+                }, 2000);
             }, 500);
-            
-            if(!isRemarkField) runFormulaEngine(); 
-
-        } else { throw new Error(json.message); }
+        } else {
+            throw new Error(json.message);
+        }
     } catch (err) {
         console.error(err);
-        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> <span class="text-danger">Failed!</span>';
+        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Save Failed';
     } finally {
-        // [FIXED] ปลดล็อกสถานะเสมอ ไม่ว่าจะสำเร็จหรือพัง
         isSaving = false;
     }
 }
@@ -1050,5 +1073,72 @@ async function openContainerRateModal() {
         } catch(e) {
             Swal.fire('Error', 'บันทึกไม่สำเร็จ: ' + e.message, 'error');
         }
+    }
+}
+
+// ========================================================
+// 8. SNAPSHOT LOGIC (SAVE ALL) - 🔥 เพิ่มส่วนนี้ครับ
+// ========================================================
+
+async function saveDailySnapshot() {
+    if (currentMode !== 'daily') return;
+
+    // 1. ถามยืนยันก่อน (เผื่อมือกดพลาด)
+    const result = await Swal.fire({
+        title: 'Confirm Daily Snapshot?',
+        text: "ระบบจะบันทึกค่าทุกช่อง (ทั้ง Manual และ Auto) ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: '<i class="fas fa-save"></i> Confirm Save',
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    // 2. เตรียมข้อมูล (ดึงจาก currentData ซึ่งมีค่าล่าสุดที่คำนวณแล้ว)
+    const payload = currentData.map(item => ({
+        item_id: item.item_id,
+        amount: parseFloat(item.actual_amount) || 0, // เอาค่าที่โชว์อยู่ตอนนี้
+        remark: item.remark || ''
+    }));
+
+    // 3. แสดงสถานะกำลังบันทึก
+    const statusEl = document.getElementById('saveStatus');
+    statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
+    statusEl.classList.remove('opacity-0');
+    isSaving = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'save');
+        formData.append('entry_date', document.getElementById('targetDate').value);
+        formData.append('section', document.getElementById('sectionFilter').value);
+        formData.append('items', JSON.stringify(payload));
+
+        const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+        const json = await res.json();
+
+        if (json.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Snapshot Saved!',
+                text: 'บันทึกข้อมูลประจำวันเรียบร้อยแล้ว',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Snapshot Saved</span>';
+            
+            // โหลดข้อมูลใหม่เพื่อให้มั่นใจว่าดึงจาก DB มาโชว์
+            loadEntryData(); 
+        } else {
+            throw new Error(json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Save Failed', err.message, 'error');
+        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Save Failed';
+    } finally {
+        isSaving = false;
     }
 }

@@ -162,62 +162,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="createEmpModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add New Employee</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="createEmpForm">
-                    <div class="mb-3">
-                        <label class="form-label">Employee ID <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="newEmpId" placeholder="10xxxxxxx" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Name (TH) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="newEmpName" required>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Line / Section</label>
-                            <select class="form-select" id="newEmpLine">
-                                <option value="" disabled selected>Loading...</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Position</label>
-                            <input type="text" class="form-control" id="newEmpPos" value="Operator">
-                        </div>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="form-label">Default Shift</label>
-                            <select class="form-select" id="newEmpShift">
-                                <option value="1">Day (08:00)</option>
-                                <option value="2">Night (20:00)</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Team</label>
-                            <select class="form-select" id="newEmpTeam">
-                                <option value="" disabled selected>Loading...</option>
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" onclick="Actions.createEmployee()">
-                    <i class="fas fa-check me-1"></i> Create
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="syncConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -348,20 +292,45 @@
                         </div>
                     </div>
 
-                    <div class="form-check form-switch bg-light p-2 rounded border">
+                    <div class="form-check form-switch bg-light p-2 rounded border mb-3">
                         <input class="form-check-input ms-0 me-2" type="checkbox" id="empEditActive" checked>
                         <label class="form-check-label fw-bold" for="empEditActive">Active Status (ยังทำงานอยู่)</label>
                     </div>
-                </form>
+
+                    <div id="divRetroUpdate" style="display:none;">
+                        <hr class="border-secondary opacity-10 my-3">
+                        
+                        <div class="bg-warning bg-opacity-10 p-2 rounded border border-warning position-relative">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                NEW
+                            </span>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editMaster_UpdateLogs" onchange="document.getElementById('retroDateBox').style.display = this.checked ? 'block' : 'none'">
+                                <label class="form-check-label fw-bold text-dark small cursor-pointer" for="editMaster_UpdateLogs">
+                                    <i class="fas fa-history text-warning me-1"></i> ต้องการอัปเดตย้อนหลังด้วยหรือไม่?
+                                </label>
+                            </div>
+                            
+                            <div id="retroDateBox" style="display: none;" class="mt-2 ps-4">
+                                <label class="form-label small text-muted mb-1 fw-bold">มีผลตั้งแต่วันที่ (Effective Date):</label>
+                                <input type="date" class="form-control form-control-sm border-warning text-primary fw-bold" id="editMaster_EffectiveDate">
+                                <div class="text-muted small mt-1 lh-sm" style="font-size: 0.75rem;">
+                                    <i class="fas fa-info-circle me-1"></i> ระบบจะเปลี่ยน <u>Line/Team/Shift</u> ในประวัติการเข้างานตั้งแต่วันที่เลือกจนถึงปัจจุบันให้ทันที (ไม่ต้องแก้ทีละวัน)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </form>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-outline-danger me-auto" id="btnDeleteEmp" 
                         onclick="const id=document.getElementById('empEditId').value; const name=document.getElementById('empEditName').value; Actions.terminateStaff(id, name);" 
                         title="ปรับสถานะเป็นพ้นสภาพและลบแผนงานในอนาคต">
                     <i class="fas fa-user-slash me-1"></i> แจ้งลาออก (Resign)
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="Actions.saveEmployee()">
+                <button type="button" class="btn btn-primary px-4" onclick="Actions.saveEmployee()">
                     <i class="fas fa-save me-1"></i> Save Data
                 </button>
             </div>

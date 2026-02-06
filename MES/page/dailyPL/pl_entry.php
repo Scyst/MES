@@ -89,9 +89,15 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <span id="saveStatus" class="me-2 small fw-bold text-muted d-flex align-items-center transition-fade">
+                    <span id="saveStatus" class="me-2 small fw-bold text-muted d-flex align-items-center transition-fade" style="visibility: hidden;">
                         <i class="fas fa-check-circle text-success me-1"></i> Saved
                     </span>
+
+                    <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold" 
+                            onclick="saveDailySnapshot()" title="Save All Data (Freeze)">
+                        <i class="fas fa-save me-1"></i> Save Day
+                    </button>
+
                     <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportToExcel()" title="Download Excel">
                         <i class="fas fa-file-excel me-1"></i> Export
                     </button>

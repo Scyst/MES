@@ -1424,120 +1424,196 @@ const Actions = {
         this.renderEmployeeTable(filtered);
     },
 
-    // --- วางทับ openEmpEdit เดิม ---
+    // --- [FIXED] Force Fetch Fresh Data & Reset Retro UI ---
     openEmpEdit: async function(dataOrEmpId) {
         const modalEl = document.getElementById('empEditModal');
         const modal = new bootstrap.Modal(modalEl);
-        const isEdit = !!dataOrEmpId;
         
+        // 1. Determine Mode & Extract ID
+        let empId = null;
+        let isEdit = false;
+
+        if (dataOrEmpId) {
+            isEdit = true;
+            if (typeof dataOrEmpId === 'string' && dataOrEmpId.length < 20) {
+                // Case A: ส่งมาเป็น ID เพียวๆ (เช่น 'EMP001')
+                empId = dataOrEmpId;
+            } else {
+                // Case B: ส่งมาเป็น JSON (แบบเก่า) -> แกะเอาแค่ ID พอ
+                try {
+                    const tempObj = JSON.parse(decodeURIComponent(dataOrEmpId));
+                    empId = tempObj.emp_id;
+                } catch (e) {
+                    console.error("Parse Error:", e);
+                    alert("Error parsing employee data");
+                    return;
+                }
+            }
+        }
+
+        // 2. Setup UI State
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
         document.getElementById('empEditTitle').innerHTML = isEdit ? '<i class="fas fa-user-edit"></i> Edit Employee' : '<i class="fas fa-user-plus"></i> New Employee';
         
-        // โหลด Dropdown (Line/Team) ถ้ายังไม่มีใน Cache
+        // Reset Form ก่อน
+        document.getElementById('empEditForm').reset();
+
+        // 🔥 [NEW] Reset Retroactive Update Section & Fix Date Format
+        const retroCheck = document.getElementById('editMaster_UpdateLogs');
+        const retroBox = document.getElementById('retroDateBox');
+        const retroDiv = document.getElementById('divRetroUpdate');
+        
+        if (retroCheck) retroCheck.checked = false;
+        if (retroBox) retroBox.style.display = 'none';
+        if (retroDiv) retroDiv.style.display = isEdit ? 'block' : 'none';
+        
+        // ✅ เรียกใช้ Flatpickr เพื่อแสดงวันที่แบบไทย (dd/mm/yyyy)
+        const effDateInput = document.getElementById('editMaster_EffectiveDate');
+        if (effDateInput) {
+            if (typeof flatpickr === 'function') {
+                flatpickr(effDateInput, {
+                    dateFormat: "Y-m-d", // ค่าจริงที่ส่งเข้า Server (เช่น 2026-02-06)
+                    altInput: true,      // สร้างช่องหลอกเพื่อแสดงผล
+                    altFormat: "d/m/Y",  // รูปแบบที่ตาเห็น (เช่น 06/02/2026)
+                    defaultDate: "today", // ตั้งค่าเริ่มต้นเป็นวันนี้
+                    allowInput: true
+                });
+            } else {
+                // Fallback กรณีโหลด Flatpickr ไม่ติด
+                effDateInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        // 3. Load Dropdowns (ถ้ายังไม่มี)
         if(this._structureCache.lines.length === 0) await this.initDropdowns();
 
-        if(isEdit) {
-            let emp;
-            // ตรวจสอบ: ถ้าส่งมาแค่ ID (string สั้นๆ) ให้ดึงจาก API สดๆ
-            if (typeof dataOrEmpId === 'string' && dataOrEmpId.length < 20) {
-                UI.showLoader();
-                try {
-                    const res = await fetch(`api/api_master_data.php?action=read_employees&emp_id=${dataOrEmpId}`);
-                    const json = await res.json();
-                    emp = (json.success && json.data.length > 0) ? json.data[0] : null;
-                } catch(e) { console.error(e); }
-                finally { UI.hideLoader(); }
-            } else {
-                // ถ้าส่งมาเป็น JSON String (แบบเก่า) ให้ Parse ปกติ
-                emp = JSON.parse(decodeURIComponent(dataOrEmpId));
+        // 4. Logic แยกตาม Mode
+        if (isEdit) {
+            UI.showLoader(); // บังหน้าจอไว้กัน User แก้ก่อนข้อมูลมา
+            try {
+                // เรียก API read_single_employee เสมอ
+                const res = await fetch(`api/api_master_data.php?action=read_single_employee&emp_id=${encodeURIComponent(empId)}`);
+                const json = await res.json();
+
+                if (!json.success || !json.data) {
+                    throw new Error(json.message || "ไม่พบข้อมูลพนักงานในฐานข้อมูล (อาจถูกลบไปแล้ว)");
+                }
+
+                const emp = json.data;
+
+                // Populate Form
+                document.getElementById('empEditId').value = emp.emp_id; 
+                document.getElementById('empEditId').readOnly = true;
+                document.getElementById('empEditName').value = emp.name_th || ''; 
+                document.getElementById('empEditPos').value = emp.position || '';
+                
+                // ใช้ setTimeout เล็กน้อยเพื่อให้มั่นใจว่า Dropdown Render เสร็จแล้ว
+                setTimeout(() => {
+                    document.getElementById('empEditLine').value = emp.line || ''; 
+                    // รองรับทั้ง field shift_id และ default_shift_id
+                    document.getElementById('empEditShift').value = emp.default_shift_id || emp.shift_id || '';
+                    document.getElementById('empEditTeam').value = emp.team_group || ''; 
+                    document.getElementById('empEditActive').checked = (parseInt(emp.is_active) === 1);
+                }, 50);
+
+                if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
+
+            } catch (e) {
+                console.error(e);
+                alert("❌ Error loading data: " + e.message);
+                UI.hideLoader();
+                return; // จบการทำงานถ้าดึงข้อมูลไม่ได้
+            } finally {
+                UI.hideLoader();
             }
-
-            if (!emp) { alert('ไม่พบข้อมูลพนักงานในระบบหลัก'); return; }
-
-            // ใส่ข้อมูลลง Form
-            document.getElementById('empEditId').value = emp.emp_id; 
-            document.getElementById('empEditId').readOnly = true;
-            document.getElementById('empEditName').value = emp.name_th || ''; 
-            document.getElementById('empEditPos').value = emp.position || '';
-            
-            // ใช้เวลาเล็กน้อยให้ Select Option render เสร็จก่อนเลือกค่า
-            setTimeout(() => {
-                document.getElementById('empEditLine').value = emp.line || ''; 
-                document.getElementById('empEditShift').value = emp.default_shift_id || emp.shift_id || '';
-                document.getElementById('empEditTeam').value = emp.team_group || ''; 
-                document.getElementById('empEditActive').checked = (parseInt(emp.is_active) === 1);
-            }, 80);
-
-            if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
         } else {
-            // กรณีเพิ่มพนักงานใหม่
-            document.getElementById('empEditForm').reset(); 
+            // New Employee Mode
             document.getElementById('empEditId').readOnly = false; 
             document.getElementById('empEditActive').checked = true;
             if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'none';
         }
+
         modal.show();
     },
 
-    // --- วางทับ saveEmployee เดิม ---
+    // --- [FIXED] Save Logic with Retroactive ---
     async saveEmployee() {
-        const btn = event.currentTarget;
+        const btn = event.currentTarget; // จับปุ่มที่กด
         const originalHtml = btn.innerHTML;
         
-        // ป้องกันการกดซ้ำ (Operator Proofing)
+        // 1. Operator Proofing: Lock ปุ่มทันที
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
-        const payload = {
-            action: document.getElementById('isEditMode').value === '1' ? 'update_employee' : 'create_employee',
-            emp_id: document.getElementById('empEditId').value,
-            name_th: document.getElementById('empEditName').value,
-            position: document.getElementById('empEditPos').value,
-            line: document.getElementById('empEditLine').value,
-            shift_id: document.getElementById('empEditShift').value,
-            team_group: document.getElementById('empEditTeam').value,
-            is_active: document.getElementById('empEditActive').checked ? 1 : 0
-        };
-
-        if(!payload.emp_id || !payload.name_th) { 
-            alert('กรุณากรอกรหัสและชื่อพนักงาน'); 
-            btn.disabled = false; btn.innerHTML = originalHtml;
-            return; 
-        }
-
         try {
+            // 🔥 [NEW] Check Retroactive Values
+            const needRetroUpdate = document.getElementById('editMaster_UpdateLogs').checked;
+            const retroDate = document.getElementById('editMaster_EffectiveDate').value;
+
+            if (needRetroUpdate && !retroDate) {
+                throw new Error('กรุณาระบุ "มีผลตั้งแต่วันที่" หากต้องการอัปเดตย้อนหลัง');
+            }
+
+            // 2. Prepare Payload
+            const payload = {
+                action: document.getElementById('isEditMode').value === '1' ? 'update_employee' : 'create_employee',
+                emp_id: document.getElementById('empEditId').value.trim(),
+                name_th: document.getElementById('empEditName').value.trim(),
+                position: document.getElementById('empEditPos').value.trim(),
+                line: document.getElementById('empEditLine').value,
+                shift_id: document.getElementById('empEditShift').value,
+                team_group: document.getElementById('empEditTeam').value,
+                is_active: document.getElementById('empEditActive').checked ? 1 : 0,
+                
+                // ส่งพารามิเตอร์ใหม่ไปด้วย
+                update_logs: needRetroUpdate ? 1 : 0,
+                effective_date: needRetroUpdate ? retroDate : null
+            };
+
+            // 3. Client-Side Validation
+            if(!payload.emp_id || !payload.name_th) { 
+                throw new Error('กรุณากรอก "รหัสพนักงาน" และ "ชื่อ-นามสกุล" ให้ครบถ้วน');
+            }
+
+            // 4. Call API
             const res = await fetch('api/api_master_data.php', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify(payload) 
             });
+            
             const json = await res.json();
             
             if(json.success) { 
-                // ปิด Modal แก้ไข
+                // 5. Success Flow
+                // ปิด Modal
                 const editModal = bootstrap.Modal.getInstance(document.getElementById('empEditModal'));
                 if (editModal) editModal.hide();
 
-                // รีโหลดข้อมูลทุกส่วนให้เป็นปัจจุบัน
-                await App.loadData(true); // อัปเดต Dashboard
+                // Refresh Data (สำคัญมาก!)
+                // โหลด Dashboard ใหม่
+                if (typeof App !== 'undefined' && App.loadData) await App.loadData(true); 
                 
-                // ถ้ารายหน้าต่างรายชื่อพนักงาน (Detail Modal) เปิดอยู่ ให้โหลดใหม่ด้วย
+                // ถ้าเปิดหน้ารายชื่อพนักงานรวมอยู่ (Employee Manager) ให้รีโหลดตารางนั้นด้วย
+                const empListModal = document.getElementById('empListModal');
+                if(empListModal && empListModal.classList.contains('show')) {
+                    this.openEmployeeManager();
+                }
+                
+                // ถ้าเปิดหน้ารายละเอียดพนักงาน (Detail List) อยู่ ให้รีโหลดด้วย
                 if (typeof this.fetchDetailData === 'function') {
                     await this.fetchDetailData(); 
                 }
                 
-                // ถ้าหน้าจัดการพนักงานรวมเปิดอยู่ ให้โหลดใหม่
-                if(document.getElementById('empListModal')?.classList.contains('show')) {
-                    this.openEmployeeManager();
-                }
-                
-                alert('✅ บันทึกข้อมูลพนักงานเรียบร้อยแล้ว');
-            } else {
-                alert('❌ Error: ' + json.message);
+                alert('✅ บันทึกข้อมูลเรียบร้อย');
+            } else { 
+                throw new Error(json.message);
             }
+
         } catch(e) {
             alert('❌ Failed: ' + e.message);
         } finally {
+            // 6. Restore Button State
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         }
