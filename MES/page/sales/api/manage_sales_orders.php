@@ -67,15 +67,23 @@ try {
             $startDate = $_GET['start_date'] ?? '';
             $endDate   = $_GET['end_date'] ?? '';
             
+            // [ADDED] Date Type Filter Logic
+            $dateType  = $_GET['date_type'] ?? 'loading_date';
+            // Whitelist for security
+            $allowedDateCols = ['loading_date', 'production_date', 'inspection_date'];
+            if (!in_array($dateType, $allowedDateCols)) {
+                $dateType = 'loading_date';
+            }
+
             $dateCondition = "";
             $dateParams = [];
 
             if (!empty($startDate)) {
-                $dateCondition .= " AND s.loading_date >= ? ";
+                $dateCondition .= " AND s.$dateType >= ? ";
                 $dateParams[] = $startDate;
             }
             if (!empty($endDate)) {
-                $dateCondition .= " AND s.loading_date <= ? ";
+                $dateCondition .= " AND s.$dateType <= ? ";
                 $dateParams[] = $endDate;
             }
 

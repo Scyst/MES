@@ -449,3 +449,102 @@ function showToast(msg, color) {
         setTimeout(() => t.style.display = 'none', 3000);
     }
 }
+
+async function exportData() {
+    const status = document.getElementById('filterStatus')?.value || 'ALL';
+    const search = document.getElementById('filterSearch')?.value.trim() || '';
+    const startDate = document.getElementById('filterStartDate')?.value || '';
+    const endDate = document.getElementById('filterEndDate')?.value || '';
+
+    const params = new URLSearchParams({
+        action: 'export',
+        status: status,
+        search: search,
+        start_date: startDate,
+        end_date: endDate
+    });
+
+    showSpinner();
+    try {
+        const res = await fetch(`${API_URL}?${params.toString()}`).then(r => r.json());
+        
+        if (res.success && res.data.length > 0) {
+            
+            // 1. เตรียมข้อมูล
+            const excelData = res.data.map(row => ({
+                'Date/Time': row.created_at ? row.created_at.substring(0, 19) : '',
+                'Req ID': row.transfer_uuid,
+                'SAP No': row.sap_no,
+                'Part No': row.part_no,
+                'Description': row.part_description,
+                'Quantity': parseFloat(row.quantity) || 0,     // แปลงเป็นตัวเลขจริง
+                'Unit Cost': parseFloat(row.unit_cost) || 0,   // แปลงเป็นตัวเลขจริง
+                'Total Cost': (parseFloat(row.quantity) || 0) * (parseFloat(row.unit_cost) || 0),
+                'From Loc': row.from_loc,
+                'To Loc': row.to_loc,
+                'Status': row.status,
+                'Reason/Notes': row.notes,
+                'Requester': row.requester,
+                'Approver': row.approver
+            }));
+
+            // 2. สร้าง Worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+
+            // --- [เทคนิคที่ 1] ปรับความกว้างคอลัมน์ (wch: จำนวนตัวอักษร) ---
+            ws['!cols'] = [
+                { wch: 22 }, // A: Date/Time (เผื่อไว้หน่อย)
+                { wch: 25 }, // B: Req ID (ขยายให้กว้างตามคำขอ)
+                { wch: 18 }, // C: SAP
+                { wch: 20 }, // D: Part
+                { wch: 50 }, // E: Description (ขยายกว้างเพื่อให้เห็นชื่อของชัดๆ)
+                { wch: 12 }, // F: Qty
+                { wch: 15 }, // G: Unit Cost
+                { wch: 15 }, // H: Total Cost
+                { wch: 20 }, // I: From
+                { wch: 20 }, // J: To
+                { wch: 15 }, // K: Status
+                { wch: 50 }, // L: Reason (ขยายกว้างเพื่อให้อ่านสาเหตุรู้เรื่อง)
+                { wch: 20 }, // M: Requester
+                { wch: 20 }  // N: Approver
+            ];
+
+            // --- [เทคนิคที่ 2] จัดรูปแบบตัวเลข (ใส่ลูกน้ำ + ทศนิยม) ---
+            // วนลูปทุก Cell เพื่อใส่ Format ให้ช่องที่เป็นตัวเลข
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) { // เริ่มแถวที่ 2 (ข้าม Header)
+                // คอลัมน์ F (Qty) -> index 5
+                let cellQty = ws[XLSX.utils.encode_cell({r: R, c: 5})];
+                if (cellQty) cellQty.z = '#,##0.00'; 
+
+                // คอลัมน์ G (Unit Cost) -> index 6
+                let cellUnit = ws[XLSX.utils.encode_cell({r: R, c: 6})];
+                if (cellUnit) cellUnit.z = '#,##0.00';
+
+                // คอลัมน์ H (Total Cost) -> index 7
+                let cellTotal = ws[XLSX.utils.encode_cell({r: R, c: 7})];
+                if (cellTotal) cellTotal.z = '#,##0.00';
+            }
+
+            // --- [เทคนิคที่ 3] เปิด Auto Filter (ตัวกรองหัวตาราง) ---
+            // สั่งให้ Excel เปิดโหมด Filter ตั้งแต่ A1 ถึง N1
+            ws['!autofilter'] = { ref: `A1:N${excelData.length + 1}` };
+
+            XLSX.utils.book_append_sheet(wb, ws, "Scrap_Request");
+
+            // 4. Download
+            const fileName = `Scrap_Request_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast('Export สำเร็จ', 'var(--bs-success)');
+        } else {
+            showToast('ไม่พบข้อมูลสำหรับ Export', 'var(--bs-warning)');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Export ผิดพลาด', 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
+    }
+}

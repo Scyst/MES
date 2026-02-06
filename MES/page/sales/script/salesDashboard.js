@@ -29,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
         endDateInput.addEventListener('change', () => loadData());
     }
 
+    // [ADDED] Date Type Filter Change
+    const dateTypeSelect = document.getElementById('filterDateType');
+    if(dateTypeSelect) {
+        dateTypeSelect.addEventListener('change', () => loadData());
+    }
+
     // 2. Event Listeners
     document.getElementById('universalSearch').addEventListener('input', (e) => {
         // Debounce search
@@ -129,8 +135,10 @@ async function loadData() {
     try {
         const startDate = document.getElementById('filterStartDate')?.value || '';
         const endDate = document.getElementById('filterEndDate')?.value || '';
+        // [ADDED] Get date type from new dropdown
+        const dateType = document.getElementById('filterDateType')?.value || 'loading_date';
 
-        const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}&start_date=${startDate}&end_date=${endDate}`);
+        const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}&start_date=${startDate}&end_date=${endDate}&date_type=${dateType}`);
         const json = await res.json();
 
         if (json.success) {

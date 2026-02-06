@@ -233,6 +233,62 @@ try {
             echo json_encode(['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อย']);
             break;
 
+        // 6. Export Data (JSON for Frontend XLSX)
+        case 'export':
+            $status = $_GET['status'] ?? 'ALL'; 
+            $search = trim($_GET['search'] ?? '');
+            $startDate = $_GET['start_date'] ?? date('Y-m-01');
+            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+            $startDateTime = $startDate . ' 00:00:00';
+            $endDateTime = $endDate . ' 23:59:59';
+
+            $conditions = ["t.created_at BETWEEN ? AND ?"];
+            $params = [$startDateTime, $endDateTime];
+
+            if ($status !== 'ALL') {
+                $conditions[] = "t.status = ?";
+                $params[] = $status;
+            }
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ? OR t.transfer_uuid LIKE ?)";
+                $likeTerm = "%$search%";
+                array_push($params, $likeTerm, $likeTerm, $likeTerm, $likeTerm);
+            }
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
+                array_push($params, $currentUser['line'], $currentUser['id']);
+            } elseif ($currentUser['role'] === 'operator') {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
+            // Query Data (เลือก Column เท่าที่จำเป็น)
+            $sql = "SELECT t.created_at, t.transfer_uuid, i.sap_no, i.part_no, i.part_description,
+                           t.quantity, ISNULL(i.Cost_Total, 0) as unit_cost,
+                           loc_from.location_name as from_loc, loc_to.location_name as to_loc,
+                           t.status, t.notes,
+                           ISNULL(e.name_th, u.username) as requester,
+                           ISNULL(approver.username, '-') as approver
+                    FROM " . TRANSFER_ORDERS_TABLE . " t WITH (NOLOCK)
+                    JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.item_id = i.item_id
+                    JOIN " . LOCATIONS_TABLE . " loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                    JOIN " . LOCATIONS_TABLE . " loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                    LEFT JOIN " . USERS_TABLE . " approver WITH (NOLOCK) ON t.confirmed_by_user_id = approver.id
+                    $whereClause
+                    ORDER BY t.created_at DESC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // ส่ง JSON กลับไป
+            echo json_encode(['success' => true, 'data' => $data]);
+            exit;
+
         default:
             throw new Exception("Invalid Action");
     }

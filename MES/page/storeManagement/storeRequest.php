@@ -86,6 +86,10 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
                                     <span class="small text-muted ms-1">฿</span>
                                 </div>
 
+                                <button class="btn btn-light btn-sm border-secondary-subtle shadow-sm" onclick="exportData()" title="Export to Excel">
+                                    <i class="fas fa-file-excel text-success me-1"></i> Export
+                                </button>
+
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openRequestModal()">
                                     <i class="fas fa-plus me-1"></i> New Request
                                 </button>
@@ -163,6 +167,7 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
         function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
         function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
     </script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeRequest.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
