@@ -218,3 +218,17 @@
     color: #fff;
     border-color: #6c757d;
 }
+
+tr:has(td:contains("NIGHT")) {
+    background-color: rgba(13, 110, 253, 0.04) !important; /* สีฟ้าน้ำเงินจางๆ */
+}
+
+/* เน้นเส้นขอบด้านล่างของกะเช้า เพื่อบอกว่าจบ 1 วัน (ถ้ามองย้อนขึ้น) */
+tr:has(td:contains("DAY")) {
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.fc-h-event .fc-event-title {
+    font-size: 0.75rem;
+    vertical-align: middle;
+}

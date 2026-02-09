@@ -98,7 +98,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <i class="fas fa-save me-1"></i> Save Day
                     </button>
 
-                    <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportToExcel()" title="Download Excel">
+                    <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportPLToExcel()" title="Download Excel">
                         <i class="fas fa-file-excel me-1"></i> Export
                     </button>
                     <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="refreshCurrentView()" title="Reload Data">
@@ -225,7 +225,9 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
     </div> 
 
     <?php include 'components/plEntryModal.php'; ?>
+    
     <script src="../../utils/libs/fullcalendar.global.min.js"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script> 
     <script src="script/pl_entry.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>

@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ปุ่ม Export (ถ้ามีใน HTML ถ้าไม่มีให้เพิ่ม ID นี้)
     const btnExportPlan = document.getElementById('btnExportPlan'); 
+    const tableSearchInput = document.getElementById('tableSearchInput');
 
     const planVsActualChartCanvas = document.getElementById('planVsActualChart');
     const planningCalendarContainer = document.getElementById('planningCalendarContainer');
@@ -147,6 +148,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount);
     }
 
+    // [NEW] ฟังก์ชันสำหรับกรองตาราง (Client-side Search)
+    function handleTableSearch(e) {
+        const term = e.target.value.toLowerCase().trim();
+        
+        // ถ้าไม่มีข้อมูล หรือช่องค้นหาว่าง ให้แสดงข้อมูลทั้งหมด (currentPlanData คือข้อมูลดิบที่ fetch มาล่าสุด)
+        if (!currentPlanData || currentPlanData.length === 0) return;
+
+        if (term === '') {
+            renderPlanTable(currentPlanData);
+            updateFooterSummaryClientSide(currentPlanData);
+            return;
+        }
+
+        // กรองข้อมูล
+        const filteredData = currentPlanData.filter(item => {
+            // รวม Field ที่ต้องการค้นหาเข้าด้วยกัน
+            const searchableStr = `
+                ${item.sap_no || ''} 
+                ${item.part_no || ''} 
+                ${item.part_description || ''} 
+                ${item.line || ''} 
+                ${item.note || ''}
+            `.toLowerCase();
+            
+            return searchableStr.includes(term);
+        });
+
+        // Render ตารางและ Footer ใหม่ด้วยข้อมูลที่กรองแล้ว
+        renderPlanTable(filteredData);
+        updateFooterSummaryClientSide(filteredData); 
+    }
     // =================================================================
     // SECTION: EXPORT FUNCTION
     // =================================================================
@@ -1234,11 +1266,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const actualValues = sortedDates.map(d => d.actual);
         const totalTargetValues = sortedDates.map(d => d.original + d.carryOver);
 
-        // ★★★ สีชุดใหม่: เขียว/แดง โปร่งแสง ★★★
         const actualColors = sortedDates.map(d => {
             return (d.actual >= (d.original + d.carryOver) && (d.original + d.carryOver) > 0) 
-                ? 'rgba(75, 192, 192, 0.7)'  // เขียวโปร่ง
-                : 'rgba(255, 99, 132, 0.7)'; // แดงโปร่ง
+                ? 'rgba(75, 192, 192, 0.7)'
+                : 'rgba(255, 99, 132, 0.7)';
         });
         
         const actualHoverColors = sortedDates.map(d => {
@@ -1324,7 +1355,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderItemChart(planData) {
-        // ... (Logic เดิม ไม่ต้องแก้) ...
         const chartWrapper = document.getElementById('planVsActualChartInnerWrapper');
         const ctx = planVsActualChartCanvas.getContext('2d');
         if (!planVsActualChartCanvas || !chartWrapper) return;
@@ -1403,12 +1433,20 @@ document.addEventListener('DOMContentLoaded', () => {
         planningCalendarContainer.innerHTML = '';
         
         fullCalendarInstance = new FullCalendar.Calendar(planningCalendarContainer, {
-            initialView: 'dayGridMonth', headerToolbar: false, editable: false, dayMaxEvents: 2, height: '100%',
+            initialView: 'dayGridMonth', 
+            headerToolbar: false, 
+            editable: false, 
+            dayMaxEvents: 3, 
+            height: '100%',
+            eventOrder: 'displayOrder', 
+
             events: (info, sc, fc) => fetchCalendarEvents(info, sc, fc, todayString),
             eventClick: (info) => { if(info.event.extendedProps.planData) openFinancialDetail(info.event.extendedProps.planData); },
+            
             dateClick: (info) => {
                 const clickedDate = info.dateStr;
                 const plansOnDate = currentPlanData.filter(p => p.plan_date === clickedDate);
+                
                 if (plansOnDate.length > 0) {
                     let totalPlanQty = 0; let totalActualQty = 0; let totalPlanSales = 0; let totalPlanCost = 0;
                     plansOnDate.forEach(p => {
@@ -1440,12 +1478,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = fetchInfo.startStr.substring(0, 10);
         const endDate = fetchInfo.endStr.substring(0, 10);
         
-        // ดึงข้อมูลตาม Filter หน้าเว็บ (Line/Shift)
         const params = { 
             startDate, 
             endDate, 
             line: planLineFilter.value || null, 
-            shift: planShiftFilter.value || null, // เพิ่ม Shift Filter ให้ตรงกับตาราง
             limit: -1 
         };
         
@@ -1453,85 +1489,96 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await sendRequest(PLAN_API, 'get_plans', 'GET', null, params);
             if(result.success) {
                 const events = [];
-                const dailyStats = {}; 
+                const dailyStats = {};
+                const itemAggregator = {};
 
                 result.data.forEach(p => {
-                    // 1. แปลงค่าตัวเลข
                     const original = parseFloat(p.original_planned_quantity || 0);
                     const co = parseFloat(p.carry_over_quantity || 0);
                     const act = parseFloat(p.actual_quantity || 0);
-                    const adj = original + co; // Target รวม
+                    const adj = original + co;
 
-                    // 2. ★ Ghost Filter: ถ้าเป็น 0 หมดเลย ให้ข้าม (ไม่แสดงในปฏิทิน)
                     if (original === 0 && co === 0 && act === 0) return;
 
-                    // 3. ★ Logic สี (Translucent Theme)
-                    let bgColor, bdColor;
+                    const key = `${p.plan_date}_${p.line}_${p.item_id}`;
 
-                    if (adj === 0 && act > 0) { 
-                        // Unplanned (ไม่ได้แพลน แต่มีของ) -> สีม่วงโปร่ง
-                        bgColor = 'rgba(153, 102, 255, 0.7)'; 
-                        bdColor = 'rgba(153, 102, 255, 1)'; 
-                    } 
-                    else if (act >= adj && adj > 0) { 
-                        // Met Target (เข้าเป้า) -> สีเขียวโปร่ง
-                        bgColor = 'rgba(75, 192, 192, 0.7)'; 
-                        bdColor = 'rgba(75, 192, 192, 1)'; 
-                    } 
-                    else { 
-                        // ยังไม่ครบเป้า (adj > act)
-                        if (p.plan_date < todayString) {
-                            // เป็นอดีตแล้ว (ทำไม่ทัน) -> สีแดงโปร่ง
-                            bgColor = 'rgba(255, 99, 132, 0.7)'; 
-                            bdColor = 'rgba(255, 99, 132, 1)';
-                        } else {
-                            // เป็นวันนี้หรืออนาคต (รอผลิต) -> สีฟ้าโปร่ง
-                            bgColor = 'rgba(54, 162, 235, 0.6)'; 
-                            bdColor = 'rgba(54, 162, 235, 1)';
-                        }
+                    if (!itemAggregator[key]) {
+                        itemAggregator[key] = {
+                            ...p,
+                            aggr_original: 0,
+                            aggr_co: 0,
+                            aggr_adj: 0,
+                            aggr_act: 0
+                        };
                     }
-                    
-                    // สร้าง Event Bar
-                    events.push({ 
-                        id: p.plan_id, 
-                        // Title: Line + Part + (Act/Target)
-                        title: `${p.line}: ${p.sap_no} (${parseInt(act)}/${parseInt(adj)})`, 
-                        start: p.plan_date, 
-                        backgroundColor: bgColor, 
-                        borderColor: bdColor, 
-                        textColor: '#fff', // สีตัวอักษร
-                        extendedProps: { planData: p } // เก็บข้อมูลไว้เปิด Modal
-                    });
 
-                    // 4. คำนวณยอดรวมรายวัน (Daily Stats) สำหรับระบายสีพื้นหลังช่องวันที่
+                    itemAggregator[key].aggr_original += original;
+                    itemAggregator[key].aggr_co += co;
+                    itemAggregator[key].aggr_adj += adj;
+                    itemAggregator[key].aggr_act += act;
+
                     if (!dailyStats[p.plan_date]) dailyStats[p.plan_date] = { planRevenue: 0, actualRevenue: 0 };
-                    
                     const priceUSD = parseFloat(p.price_usd || 0);
                     const priceTHB = parseFloat(p.standard_price || 0);
                     const unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
-                    
                     dailyStats[p.plan_date].planRevenue += (adj * unitPrice);
                     dailyStats[p.plan_date].actualRevenue += (act * unitPrice);
                 });
 
-                // 5. สร้าง Background Events (ระบายสีช่องวันที่)
+                Object.values(itemAggregator).forEach(item => {
+                    const target = item.aggr_adj;
+                    const actual = item.aggr_act;
+
+                    let bgColor, bdColor, orderPriority;
+
+                    // Priority 1: งานเสร็จตามเป้า (สีเขียวเดิม)
+                    if (actual >= target && target > 0) { 
+                        bgColor = 'rgba(75, 192, 192, 0.7)'; 
+                        bdColor = 'rgba(75, 192, 192, 1)';
+                        orderPriority = 1;
+                    }
+                    // Priority 2: งานนอกแผน (สีม่วงเดิม)
+                    else if (target === 0 && actual > 0) { 
+                        bgColor = 'rgba(153, 102, 255, 0.7)'; 
+                        bdColor = 'rgba(153, 102, 255, 1)';
+                        orderPriority = 2;
+                    }
+                    // Priority 3: รอผลิต วันนี้หรืออนาคต (สีฟ้าเดิม)
+                    else if (actual < target && item.plan_date >= todayString) { 
+                        bgColor = 'rgba(54, 162, 235, 0.6)'; 
+                        bdColor = 'rgba(54, 162, 235, 1)';
+                        orderPriority = 3;
+                    }
+                    // Priority 4: ผลิตไม่ทัน เป็นอดีต (สีแดงเดิม)
+                    else { 
+                        bgColor = 'rgba(255, 99, 132, 0.7)'; 
+                        bdColor = 'rgba(255, 99, 132, 1)';
+                        orderPriority = 4;
+                    }
+
+                    item.adjusted_planned_quantity = target;
+                    item.original_planned_quantity = item.aggr_original;
+                    item.carry_over_quantity = item.aggr_co;
+                    item.actual_quantity = actual;
+
+                    events.push({ 
+                        id: `cal_${item.plan_id}_${item.item_id}`, 
+                        title: `${item.sap_no} (${parseInt(actual)}/${parseInt(target)})`, 
+                        start: item.plan_date, 
+                        backgroundColor: bgColor, 
+                        borderColor: bdColor, 
+                        textColor: '#fff', 
+                        displayOrder: orderPriority,
+                        extendedProps: { planData: item } 
+                    });
+                });
+
                 Object.keys(dailyStats).forEach(date => {
                     const stat = dailyStats[date];
-                    // เฉพาะวันที่มียอดแผนรายได้ > 0
                     if (stat.planRevenue > 0) {
                         const isTargetMet = stat.actualRevenue >= stat.planRevenue;
-                        
-                        // สีพื้นหลังช่องวันที่ (จางมากๆ เพื่อไม่ให้กวน Event)
-                        // เขียวจาง vs แดงจาง
                         const color = isTargetMet ? 'rgba(75, 192, 192, 0.15)' : 'rgba(255, 99, 132, 0.15)'; 
-                        
-                        events.push({ 
-                            start: date, 
-                            end: date, 
-                            display: 'background', 
-                            backgroundColor: color, 
-                            allDay: true 
-                        });
+                        events.push({ start: date, end: date, display: 'background', backgroundColor: color, allDay: true });
                     }
                 });
 
@@ -1580,11 +1627,14 @@ document.addEventListener('DOMContentLoaded', () => {
             importPlanInput.addEventListener('change', handleFileImport);
         }
 
-        // ★★★ Binding ปุ่ม Export ★★★
         if (btnExportPlan) {
             btnExportPlan.addEventListener('click', exportToExcel);
         }
 
+        if (tableSearchInput) {
+            tableSearchInput.addEventListener('keyup', handleTableSearch);
+            tableSearchInput.addEventListener('search', handleTableSearch);
+        }
         btnAddPlan?.addEventListener('click', () => openPlanModal(null));
 
         fetchDashboardLines()

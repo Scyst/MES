@@ -161,34 +161,46 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                         <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height: 0;"> 
                             
                             <div class="card-header bg-white py-2 border-bottom">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <h6 class="fw-bold text-dark mb-0">
-                                        <i class="fas fa-table me-2 text-primary"></i>Production Plans
-                                    </h6>
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                     
-                                    <div class="d-flex gap-2">
-                                        <div class="btn-group">
-                                            <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">
-                                                <i class="fas fa-file-excel me-1"></i> Export
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                        <h6 class="fw-bold text-dark mb-0 text-nowrap">
+                                            <i class="fas fa-table me-2 text-primary"></i>Production Plans
+                                        </h6>
+                                        
+                                        <div class="input-group input-group-sm" style="max-width: 300px;">
+                                            <span class="input-group-text bg-light border-end-0 text-secondary">
+                                                <i class="fas fa-search"></i>
+                                            </span>
+                                            <input type="text" id="tableSearchInput" class="form-control border-start-0 bg-light ps-0" 
+                                                placeholder="Search Part, SAP, Note...">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                                        
+                                        <div class="btn-group btn-group-sm shadow-sm">
+                                            <button class="btn btn-outline-secondary bg-white text-dark" onclick="exportToExcel()" title="Download Excel">
+                                                <i class="fas fa-file-excel text-success me-1"></i> Export
                                             </button>
-                                            
-                                            <button class="btn btn-sm btn-outline-primary" id="btnImportPlan">
-                                                <i class="fas fa-file-import me-1"></i> Import
+                                            <button class="btn btn-outline-secondary bg-white text-dark" id="btnImportPlan" title="Upload File">
+                                                <i class="fas fa-file-import text-primary me-1"></i> Import
                                             </button>
                                         </div>
-
                                         <input type="file" id="importPlanInput" hidden accept=".xlsx, .xls, .csv">
-                                        
-                                        <div class="vr mx-1 opacity-25"></div>
-                                        
-                                        <button class="btn btn-sm btn-warning text-dark fw-bold" id="btnCalculateCarryOver" title="Auto Calculate C/O from history">
-                                            <i class="fas fa-calculator me-1"></i> Calc C/O
+
+                                        <div class="vr mx-1 opacity-25 d-none d-md-block"></div>
+
+                                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold" id="btnCalculateCarryOver" 
+                                                title="Auto Calculate Carry Over">
+                                            <i class="fas fa-sync-alt me-1"></i> Calc C/O
                                         </button>
                                         
-                                        <button class="btn btn-sm btn-success fw-bold px-3 shadow-sm" id="btnAddPlan">
+                                        <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" id="btnAddPlan">
                                             <i class="fas fa-plus me-1"></i> New Plan
                                         </button>
                                     </div>
+
                                 </div>
                             </div>
                             

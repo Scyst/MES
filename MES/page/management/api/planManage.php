@@ -187,7 +187,15 @@ try {
                     p.updated_at,
                     ISNULL(actual.ActualQty, 0) AS actual_quantity
                 " . $baseQuery . "
-                ORDER BY plan_date DESC, line, shift
+                ORDER BY 
+                    plan_date DESC,
+                    CASE 
+                        WHEN ISNULL(p.shift, actual.ActualShift) = 'NIGHT' THEN 1 
+                        WHEN ISNULL(p.shift, actual.ActualShift) = 'DAY' THEN 2 
+                        ELSE 3 
+                    END ASC,
+                    line ASC, 
+                    i.part_no ASC
             ";
 
             if ($limit > 0) {

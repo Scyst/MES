@@ -13,36 +13,52 @@
             <div class="modal-body bg-light p-0 d-flex flex-column overflow-hidden">
                 
                 <div class="p-3 bg-white border-bottom shadow-sm z-2 flex-shrink-0">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-auto">
-                            <label class="small fw-bold text-muted text-uppercase">Target Month:</label>
-                        </div>
-                        <div class="col-auto">
+                    <div class="row g-2 align-items-center justify-content-between">
+                        
+                        <div class="col-auto d-flex align-items-center gap-2">
+                            <label class="small fw-bold text-muted text-uppercase mb-0">Target Month:</label>
                             <input type="month" id="budgetMonth" class="form-control form-control-sm fw-bold border-info" 
-                                style="width: 160px;" value="<?php echo date('Y-m'); ?>">
+                                style="width: 155px;" value="<?php echo date('Y-m'); ?>">
                         </div>
                         
-                        <div class="col-auto ms-auto d-flex align-items-center gap-2">
-                            <div class="input-group input-group-sm shadow-sm">
+                        <div class="col-auto d-flex align-items-center gap-2">
+                            <div class="input-group input-group-sm shadow-sm" style="width: auto;">
                                 <span class="input-group-text bg-warning text-dark border-warning fw-bold">
                                     <i class="fas fa-dollar-sign"></i>
                                 </span>
-                                <input type="text" id="currentRateDisplay" class="form-control text-center fw-bold text-warning bg-white" 
-                                    style="width: 70px; border-color: var(--bs-warning);" 
-                                    value="--" readonly title="Current Exchange Rate">
-                                <button class="btn btn-warning text-dark fw-bold" onclick="openRateModal()" type="button">
-                                    Edit
-                                </button>
-                                <button class="btn btn-outline-info btn-sm ms-2 shadow-sm" onclick="openContainerRateModal()">
-                                    <i class="fas fa-truck-loading me-1"></i>Shipping Rate
-                                </button>
+                                <input type="text" 
+                                    id="currentRateDisplay" 
+                                    class="form-control text-center fw-bold text-warning-emphasis bg-white" 
+                                    style="width: 100px; border-color: var(--bs-warning); cursor: pointer;" 
+                                    value="--" 
+                                    readonly 
+                                    title="Click to Edit Rate"
+                                    onclick="openRateModal()"> 
                             </div>
 
-                            <span class="badge bg-success text-white shadow-sm user-select-none position-relative p-2" 
-                                id="workingDaysBadge"
-                                onclick="openCalendarModal()"
-                                style="cursor: pointer; transition: transform 0.2s ease;">
-                                <i class="far fa-calendar-check me-1"></i> Days: --
+                            <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+                                <span class="input-group-text bg-info text-white border-info fw-bold" title="Container Rate (THB)">
+                                    <i class="fas fa-truck-loading"></i>
+                                </span>
+                                <input type="number" 
+                                    id="targetContainerRate" 
+                                    class="form-control text-end fw-bold text-info border-info" 
+                                    style="width: 100px;" 
+                                    placeholder="0.00" 
+                                    step="0.01" 
+                                    onchange="saveContainerRate()">
+                            </div>
+
+                            <span class="badge bg-success text-white shadow-sm user-select-none position-relative d-flex align-items-center justify-content-center py-2 px-3" 
+                                id="workingDaysBadge" 
+                                onclick="openCalendarModal()" 
+                                style="cursor: pointer; border: 1px solid #146c43;">
+                                
+                                <i class="far fa-calendar-check me-2"></i>
+                                <span style="font-size: 0.9rem;">Days: 24</span> <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning border border-light shadow-sm" 
+                                    style="font-size: 0.5rem; padding: 0.35em 0.5em;">
+                                    <i class="fas fa-pen text-dark"></i>
+                                </span>
                             </span>
 
                         </div>

@@ -475,8 +475,8 @@ function runFormulaEngine() {
                 const oldVal = parseFloat(item.actual_amount) || 0;
                 let newVal = 0;
                 try {
-                    if (item.calculation_formula === 'SUM_CHILDREN') {
-                        const children = currentData.filter(child => child.parent_id === item.item_id);
+                    if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
+                        const children = currentData.filter(child => child.parent_id == item.item_id);
                         newVal = children.reduce((sum, child) => sum + (parseFloat(child.actual_amount) || 0), 0);
                     } else if (item.calculation_formula) {
                         let formula = item.calculation_formula;
@@ -520,11 +520,8 @@ function runFormulaEngine() {
 // ========================================================
 // 4. BUDGET MODAL & CALENDAR LOGIC
 // ========================================================
-
 function openTargetModal() {
     const modalEl = document.getElementById('targetModal');
-    
-    // 🔥 [FIX] บังคับลบ tabindex ด้วย JS เพื่อแก้ปัญหาพิมพ์ไม่ได้ 100%
     modalEl.removeAttribute('tabindex');
     if (!targetModal) targetModal = new bootstrap.Modal(document.getElementById('targetModal'));
     
@@ -534,10 +531,22 @@ function openTargetModal() {
 
     renderTargetStructure(); 
     monthInput.onchange = loadModalData;
-    loadModalData(); 
     
+    loadModalData(); 
+    loadContainerRate(); 
+    
+    if (!document.getElementById('budgetMonth').value) {
+        document.getElementById('budgetMonth').value = new Date().toISOString().slice(0, 7);
+    }
+
     targetModal.show();
 }
+
+// Event Listener สำหรับเปลี่ยนเดือน
+document.getElementById('budgetMonth').addEventListener('change', () => {
+    loadModalData();
+    loadContainerRate();
+});
 
 async function loadModalData() {
     await Promise.all([ 
@@ -693,6 +702,72 @@ async function saveTarget() {
 }
 
 // ========================================================
+// [เพิ่ม] CONTAINER RATE LOGIC
+// ========================================================
+
+// 1. ฟังก์ชันโหลดราคาตู้ (เรียกเมื่อเปิด Target Modal หรือเปลี่ยนเดือน)
+async function loadContainerRate() {
+    const monthInput = document.getElementById('budgetMonth').value; // format: YYYY-MM
+    if (!monthInput) return;
+
+    const [year, month] = monthInput.split('-');
+    const inputEl = document.getElementById('targetContainerRate');
+
+    // ใส่ Loading ชั่วคราว
+    inputEl.value = '';
+    inputEl.placeholder = 'Loading...';
+    inputEl.disabled = true;
+
+    try {
+        const res = await fetch(`api/manage_pl_entry.php?action=get_container_rate&year=${year}&month=${month}`);
+        const json = await res.json();
+
+        if (json.success) {
+            inputEl.value = parseFloat(json.rate).toFixed(2);
+        }
+    } catch (err) {
+        console.error("Load Container Rate Error:", err);
+    } finally {
+        inputEl.disabled = false;
+        inputEl.placeholder = '0.00';
+    }
+}
+
+// 2. ฟังก์ชันบันทึกราคาตู้ (เรียกเมื่อพิมพ์เสร็จแล้วกด Enter หรือคลิกออก)
+async function saveContainerRate() {
+    const monthInput = document.getElementById('budgetMonth').value;
+    const rateVal = document.getElementById('targetContainerRate').value;
+    const [year, month] = monthInput.split('-');
+
+    if (!rateVal) return;
+
+    try {
+        const res = await fetch('api/manage_pl_entry.php?action=save_container_rate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                year: year,
+                month: month,
+                rate: rateVal
+            })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            // แสดง Toast เล็กๆ ว่าบันทึกแล้ว (Optional)
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 1500,
+                didOpen: (toast) => { toast.addEventListener('mouseenter', Swal.stopTimer); toast.addEventListener('mouseleave', Swal.resumeTimer); }
+            });
+            Toast.fire({ icon: 'success', title: 'Container Rate Saved' });
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Cannot save container rate', 'error');
+    }
+}
+
+// ========================================================
 // 5. CALENDAR (FullCalendar)
 // ========================================================
 
@@ -787,21 +862,98 @@ async function apiCalendarAction(action, payload) {
 }
 
 // ========================================================
-// 6. EXPORT LOGIC
+// 6. EXPORT LOGIC (Client-Side SheetJS)
 // ========================================================
-function exportToExcel() {
+async function exportPLToExcel() {
+    // 1. เตรียม Parameter
     const section = document.getElementById('sectionFilter').value;
-    let params = `section=${encodeURIComponent(section)}`;
+    let url = '';
+    let filename = '';
 
+    // สร้างชื่อไฟล์ให้สวยงาม
+    const timestamp = new Date().toISOString().slice(0,19).replace(/[-:]/g,"").replace("T","_");
+    const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
+
+    // เช็ค Mode ว่าจะเอา Daily หรือ Report Range
     if (currentMode === 'daily') {
         const date = document.getElementById('targetDate').value;
-        params += `&mode=daily&entry_date=${date}`;
+        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`;
+        filename = `PL_Daily_${date}_${safeSection}_${timestamp}.xlsx`;
     } else {
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
-        params += `&mode=report&start_date=${start}&end_date=${end}`;
+        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${section}`;
+        filename = `PL_Report_${start}_to_${end}_${safeSection}_${timestamp}.xlsx`;
     }
-    window.location.href = `api/export_pl_excel.php?${params}`;
+
+    // Show Loading
+    Swal.fire({
+        title: 'Generating Excel...',
+        html: 'Please wait while we process the data.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        // 2. ดึงข้อมูล JSON จาก API
+        const response = await fetch(url);
+        const json = await response.json();
+
+        if (!json.success || !json.data || json.data.length === 0) {
+            Swal.fire('No Data', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'info');
+            return;
+        }
+
+        // 3. จัดเตรียมข้อมูลลง Excel Rows
+        const excelRows = [
+            ["Item Name", "Account Code", "Target", "Actual", "Diff", "Note", "Source"] // Header Row
+        ];
+
+        json.data.forEach(item => {
+            // ย่อหน้าชื่อตาม Level (Visual Indent)
+            let indent = "    ".repeat(parseInt(item.item_level) || 0);
+            
+            // คำนวณ Diff
+            const target = parseFloat(item.daily_target) || 0;
+            const actual = parseFloat(item.actual_amount) || 0;
+            const diff = actual - target;
+
+            excelRows.push([
+                indent + item.item_name,    // A
+                item.account_code,          // B
+                target,                     // C
+                actual,                     // D
+                diff,                       // E
+                item.remark || "",          // F
+                item.data_source            // G
+            ]);
+        });
+
+        // 4. สร้าง Workbook
+        const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "PL_Data");
+
+        // จัดความกว้างคอลัมน์
+        worksheet['!cols'] = [
+            { wch: 40 }, // Name
+            { wch: 15 }, // Code
+            { wch: 15 }, // Target
+            { wch: 15 }, // Actual
+            { wch: 15 }, // Diff
+            { wch: 30 }, // Note
+            { wch: 20 }  // Source
+        ];
+
+        // 5. ดาวน์โหลด
+        XLSX.writeFile(workbook, filename);
+        
+        Swal.close(); // ปิด Loading
+
+    } catch (error) {
+        console.error("Export Error:", error);
+        Swal.fire('Export Failed', error.message, 'error');
+    }
 }
 
 // ========================================================
@@ -1014,70 +1166,8 @@ async function openRateModal() {
     }
 }
 
-// ฟังก์ชันจัดการ Container Rate
-async function openContainerRateModal() {
-    const dateVal = document.getElementById('targetDate').value;
-    const [year, month] = dateVal.split('-');
-    
-    // 1. ดึงค่าปัจจุบัน
-    let currentRate = 3000;
-    try {
-        const res = await fetch(`api/manage_pl_entry.php?action=get_container_rate&year=${year}&month=${month}`);
-        const json = await res.json();
-        if(json.success) currentRate = json.rate;
-    } catch(e) { console.error(e); }
-
-    // 2. แสดง Popup
-    const { value: newRate } = await Swal.fire({
-        title: `<span class="text-info"><i class="fas fa-ship me-2"></i>Shipping Rate</span>`,
-        html: `
-            <div class="mb-2 text-muted small">กำหนดราคาค่าขนส่งต่อตู้ (Cost per Container)</div>
-            <div class="badge bg-light text-dark border mb-3 px-3 py-2">
-                เดือน: ${month}/${year}
-            </div>
-        `,
-        input: 'number',
-        inputValue: currentRate,
-        inputAttributes: { step: '100', min: '0' },
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-save me-1"></i> Save Rate',
-        confirmButtonColor: '#0dcaf0',
-        cancelButtonText: 'Cancel',
-        inputValidator: (value) => {
-            if (!value || value < 0) return 'กรุณาระบุราคาที่ถูกต้อง';
-        }
-    });
-
-    // 3. บันทึก
-    if (newRate) {
-        try {
-            const res = await fetch('api/manage_pl_entry.php?action=save_container_rate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ year, month, rate: newRate })
-            });
-            const json = await res.json();
-            
-            if(json.success) {
-                await Swal.fire({
-                    icon: 'success', 
-                    title: 'Saved', 
-                    text: `อัปเดตราคาเป็น ${newRate} บาท/ตู้ เรียบร้อยแล้ว`,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-                loadEntryData(); // โหลดข้อมูลใหม่เพื่อให้ P&L คำนวณใหม่ทันที
-            } else {
-                throw new Exception(json.message);
-            }
-        } catch(e) {
-            Swal.fire('Error', 'บันทึกไม่สำเร็จ: ' + e.message, 'error');
-        }
-    }
-}
-
 // ========================================================
-// 8. SNAPSHOT LOGIC (SAVE ALL) - 🔥 เพิ่มส่วนนี้ครับ
+// 8. SNAPSHOT LOGIC (SAVE ALL)
 // ========================================================
 
 async function saveDailySnapshot() {
