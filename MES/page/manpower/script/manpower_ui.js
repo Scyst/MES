@@ -1619,6 +1619,268 @@ const Actions = {
         }
     },
 
+    // =========================================================================
+    // OPEN REPORT MODAL (FIXED)
+    // =========================================================================
+    openReportModal() {
+        const modalEl = document.getElementById('reportRangeModal');
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // 1. Set Default Dates (Current Week)
+        const curr = new Date();
+        const first = curr.getDate() - curr.getDay() + 1; 
+        const firstDay = new Date(curr.setDate(first)).toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+
+        document.getElementById('reportStartDate').value = firstDay;
+        document.getElementById('reportEndDate').value = today;
+
+        // 2. Populate Line Dropdown (FIXED UNDEFINED ISSUE)
+        const lineSelect = document.getElementById('rpt_line');
+        if (this._structureCache && this._structureCache.lines) {
+            lineSelect.innerHTML = '<option value="ALL">All Lines</option>';
+            
+            this._structureCache.lines.forEach(item => {
+                // แก้บั๊ก: ตรวจสอบว่า item เป็น object ({line: 'A'}) หรือ string ('A')
+                const lineName = (typeof item === 'object' && item.line) ? item.line : item;
+                
+                if (lineName) {
+                    lineSelect.innerHTML += `<option value="${lineName}">${lineName}</option>`;
+                }
+            });
+        }
+
+        // 3. Attach Auto-Load Events
+        const filters = ['rpt_line', 'rpt_shift', 'rpt_type', 'reportStartDate', 'reportEndDate'];
+        filters.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                // ลบ Event เก่า (ถ้ามี) แล้วใส่ใหม่
+                el.onchange = null; 
+                el.onchange = () => this.loadExecutiveReport();
+            }
+        });
+
+        modal.show();
+        this.loadExecutiveReport(); 
+    },
+
+    // =========================================================================
+    // LOAD DATA & CALCULATE STATS
+    // =========================================================================
+    async loadExecutiveReport() {
+        // 1. ดึงค่าจาก Input
+        const sDate = document.getElementById('reportStartDate').value;
+        const eDate = document.getElementById('reportEndDate').value;
+        const line  = document.getElementById('rpt_line').value;
+        const shift = document.getElementById('rpt_shift').value;
+        const type  = document.getElementById('rpt_type').value;
+
+        // Validation
+        if(!sDate || !eDate) return alert("Please select dates");
+
+        // 2. แสดงสถานะ Loading UI (...)
+        const loadingIds = ['rpt_hc', 'rpt_actual', 'rpt_absent', 'rpt_leave', 
+                            'hc_max', 'hc_min', 'hc_avg', 
+                            'act_max', 'act_min', 'act_avg',
+                            'abs_max', 'abs_min', 'abs_avg',
+                            'lev_max', 'lev_min', 'lev_avg'];
+        
+        loadingIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.innerText = '...';
+        });
+
+        try {
+            // 3. ยิง API พร้อม Parameter ครบชุด
+            // ใช้ encodeURIComponent เพื่อป้องกันปัญหากรณีชื่อไลน์มีช่องว่างหรืออักขระพิเศษ
+            const url = `api/api_daily_operations.php?action=read_range_report` +
+                        `&startDate=${sDate}` +
+                        `&endDate=${eDate}` +
+                        `&line=${encodeURIComponent(line)}` +
+                        `&shift=${encodeURIComponent(shift)}` +
+                        `&type=${encodeURIComponent(type)}`;
+            
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (json.success) {
+                const h = json.header; // ข้อมูล Header (ยอดรวม)
+                const t = json.trend;  // ข้อมูล Trend (รายวัน)
+
+                // ---------------------------------------------------------
+                // ส่วนที่ 1: อัปเดตตัวเลขการ์ดใหญ่ (Big Numbers)
+                // ---------------------------------------------------------
+                // ใช้ Total_Headcount ตามที่ SQL ส่งมา (ไม่ต้องแปลงชื่อ)
+                UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
+                
+                // แสดงยอด เข้าใหม่ / ลาออก
+                document.getElementById('rpt_new').innerText = `+${h.New_Joiners || 0} / -${h.Total_Resigned || 0}`; 
+                const elNew = document.getElementById('rpt_new');
+                if (elNew) {
+                    // แต่งสีหน่อย: เข้าเขียว / ออกแดง
+                    elNew.innerHTML = `<span class="text-success">+${h.New_Joiners || 0}</span> / <span class="text-danger">-${h.Total_Resigned || 0}</span>`;
+                }
+                
+                UI.animateNumber('rpt_actual', h.Total_Present_ManDays || 0);
+                UI.animateNumber('rpt_absent', h.Total_Absent || 0);
+                UI.animateNumber('rpt_leave', h.Total_Leave || 0);
+
+                // ---------------------------------------------------------
+                // ส่วนที่ 2: คำนวณค่าสถิติ (Max/Min/Avg) สำหรับตารางเล็ก
+                // ---------------------------------------------------------
+                const calcStats = (data, key) => {
+                    // Default Structure
+                    const res = { max: 0, min: 0, avg: 0, last: 0 };
+                    
+                    if (!data || data.length === 0) return res;
+                    
+                    let max = -Infinity, min = Infinity, sum = 0, count = 0;
+
+                    data.forEach(d => {
+                        const val = parseInt(d[key] || 0);
+                        if (val >= 0) { // นับเฉพาะค่าที่เป็นบวก
+                            if (val > max) max = val;
+                            if (val < min && val > 0) min = val; // Min ไม่นับ 0 (ถ้าต้องการนับให้ลบ && val > 0)
+                            sum += val;
+                            count++;
+                        }
+                    });
+
+                    // Handle Infinity
+                    if (min === Infinity) min = 0;
+                    if (max === -Infinity) max = 0;
+
+                    res.max = max;
+                    res.min = min;
+                    res.avg = count > 0 ? (sum / count).toFixed(1) : 0;
+                    
+                    // 🔥 [NEW] ค่าล่าสุด (ตัวสุดท้ายของ Array)
+                    const lastItem = data[data.length - 1];
+                    res.last = lastItem ? parseInt(lastItem[key] || 0) : 0;
+
+                    return res;
+                };
+
+                // Helper: Render ลง HTML
+                const renderStats = (prefix, stats) => {
+                    const setVal = (suffix, val) => {
+                        const el = document.getElementById(`${prefix}_${suffix}`);
+                        if(el) el.innerText = val;
+                    };
+                    setVal('max', stats.max);
+                    setVal('min', stats.min);
+                    setVal('avg', stats.avg);
+                    setVal('last', stats.last);
+                };
+
+                // เรียกใช้งาน
+                renderStats('hc',  calcStats(t, 'Daily_HC'));
+                renderStats('act', calcStats(t, 'Daily_Actual'));
+                renderStats('abs', calcStats(t, 'Daily_Absent'));
+                renderStats('lev', calcStats(t, 'Daily_Leave'));
+                // ---------------------------------------------------------
+                // ส่วนที่ 3: วาดกราฟ (Chart)
+                // ---------------------------------------------------------
+                this.renderReportChart(t);
+            }
+        } catch (err) {
+            console.error("Error loading report:", err);
+            // alert("Failed to load report data"); // ปิดไว้ก็ได้ถ้าไม่อยากให้เด้งรบกวน
+        }
+    },
+
+    // =========================================================================
+    // RENDER CHART (Stacked Bar with Advanced Tooltip)
+    // =========================================================================
+    renderReportChart(data) {
+        const ctx = document.getElementById('reportChart').getContext('2d');
+        
+        // ทำลายกราฟเก่าทิ้งก่อนวาดใหม่ (ป้องกันกราฟซ้อนกัน)
+        if (window.reportChartObj) {
+            window.reportChartObj.destroy();
+        }
+
+        window.reportChartObj = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                // แกน X: วันที่ (แปลงเป็น วว/ดด)
+                labels: data.map(d => {
+                    const date = new Date(d.log_date);
+                    return `${date.getDate()}/${date.getMonth()+1}`;
+                }),
+                datasets: [
+                    {
+                        label: 'Actual (มา)',
+                        data: data.map(d => d.Daily_Actual),
+                        backgroundColor: '#1cc88a', // สีเขียว
+                        borderRadius: 4,
+                        stack: 'Stack 0'
+                    },
+                    {
+                        label: 'Leave (ลา)',
+                        data: data.map(d => d.Daily_Leave),
+                        backgroundColor: '#36b9cc', // สีฟ้า
+                        borderRadius: 4,
+                        stack: 'Stack 0'
+                    },
+                    {
+                        label: 'Absent (ขาด)',
+                        data: data.map(d => d.Daily_Absent),
+                        backgroundColor: '#e74a3b', // สีแดง
+                        borderRadius: 4,
+                        stack: 'Stack 0'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index', // Hover จุดเดียว แสดงข้อมูลทุกแท่งในวันนั้น
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            // 🔥 เพิ่ม Footer แสดงยอดรวม และยอด Movement (เข้า/ออก)
+                            footer: function(tooltipItems) {
+                                // 1. หา index ของข้อมูลที่ Hover อยู่
+                                const dataIndex = tooltipItems[0].dataIndex;
+                                
+                                // 2. ดึงข้อมูลดิบของวันนั้นจาก Array 'data'
+                                const dayData = data[dataIndex];
+
+                                // 3. คำนวณยอดรวม Stack (มา+ลา+ขาด)
+                                let totalStack = 0;
+                                tooltipItems.forEach(function(tooltipItem) {
+                                    totalStack += tooltipItem.parsed.y;
+                                });
+
+                                // 4. สร้างข้อความที่จะแสดง
+                                return `----------------\n` +
+                                       `Total Accounted: ${totalStack} คน\n` +
+                                       `New Joiners: +${dayData.Daily_New || 0}\n` +
+                                       `Resigned: -${dayData.Daily_Resigned || 0}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { 
+                        stacked: true, // กราฟแท่งแบบซ้อน
+                        grid: { display: false } 
+                    },
+                    y: { 
+                        stacked: true, 
+                        beginAtZero: true 
+                    }
+                }
+            }
+        });
+    },
+
     // -------------------------------------------------------------------------
     // 7. MAPPING & SHIFT PLANNER
     // -------------------------------------------------------------------------

@@ -387,3 +387,177 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="reportRangeModal" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i>Manpower Summary Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body py-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text bg-white text-secondary fw-bold">Date</span>
+                                <input type="date" id="reportStartDate" class="form-control" style="max-width: 130px;">
+                                <span class="input-group-text bg-white">-</span>
+                                <input type="date" id="reportEndDate" class="form-control" style="max-width: 130px;">
+                            </div>
+
+                            <select id="rpt_line" class="form-select form-select-sm" style="width: 140px;">
+                                <option value="ALL">All Lines</option>
+                            </select>
+
+                            <select id="rpt_shift" class="form-select form-select-sm" style="width: 110px;">
+                                <option value="ALL">All Shift</option>
+                                <option value="Day">Day</option>
+                                <option value="Night">Night</option>
+                            </select>
+
+                            <select id="rpt_type" class="form-select form-select-sm" style="width: 120px;">
+                                <option value="ALL">All Types</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Subcontract">Subcontract</option>
+                            </select>
+
+                            </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+    
+                <style>
+                    .stat-label { font-size: 0.65rem; color: #858796; text-transform: uppercase; font-weight: 700; display: block; }
+                    .stat-val   { font-size: 0.9rem; font-weight: 700; color: #333; display: block; }
+                    .stat-box   { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
+                    .stat-box:last-child { border-right: none; }
+                    .card-stat-container { display: flex; justify-content: space-between; margin-top: 0.5rem; background: rgba(255,255,255,0.5); border-radius: 4px; padding: 4px 0; }
+                </style>
+
+                <div class="col-lg-3 col-6">
+                    <div class="card h-100 border-primary border-start border-3 shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="text-uppercase small text-primary fw-bold">Headcount</div>
+                            <div class="d-flex align-items-baseline justify-content-between">
+                                <div class="h3 fw-bold text-dark mb-0" id="rpt_hc">0</div>
+                                <div class="small fw-bold" id="rpt_new">+0 / -0</div>
+                            </div>
+                            
+                            <div class="card-stat-container">
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Max</span>
+                                    <span class="stat-val" id="hc_max">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Min</span>
+                                    <span class="stat-val" id="hc_min">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Avg</span>
+                                    <span class="stat-val text-primary" id="hc_avg">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-primary">Latest</span>
+                                    <span class="stat-val text-primary" id="hc_last">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="card h-100 border-success border-start border-3 shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="text-uppercase small text-success fw-bold">Present</div>
+                            <div class="h3 fw-bold text-dark mb-0" id="rpt_actual">0</div>
+
+                            <div class="card-stat-container">
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Max</span>
+                                    <span class="stat-val" id="act_max">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Min</span>
+                                    <span class="stat-val" id="act_min">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Avg</span>
+                                    <span class="stat-val text-success" id="act_avg">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-success">Latest</span>
+                                    <span class="stat-val text-success" id="act_last">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="card h-100 border-danger border-start border-3 shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="text-uppercase small text-danger fw-bold">Absent</div>
+                            <div class="h3 fw-bold text-dark mb-0" id="rpt_absent">0</div>
+
+                            <div class="card-stat-container">
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Max</span>
+                                    <span class="stat-val" id="abs_max">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Min</span>
+                                    <span class="stat-val" id="abs_min">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Avg</span>
+                                    <span class="stat-val text-danger" id="abs_avg">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-danger">Latest</span>
+                                    <span class="stat-val text-danger" id="abs_last">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="card h-100 border-info border-start border-3 shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="text-uppercase small text-info fw-bold">Leave</div>
+                            <div class="h3 fw-bold text-dark mb-0" id="rpt_leave">0</div>
+
+                            <div class="card-stat-container">
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Max</span>
+                                    <span class="stat-val" id="lev_max">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Min</span>
+                                    <span class="stat-val" id="lev_min">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;">
+                                    <span class="stat-label">Avg</span>
+                                    <span class="stat-val text-info" id="lev_avg">0</span>
+                                </div>
+                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-info">Latest</span>
+                                    <span class="stat-val text-info" id="lev_last">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body" style="height: 250px;">
+                        <canvas id="reportChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

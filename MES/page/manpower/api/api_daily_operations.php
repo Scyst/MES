@@ -466,6 +466,46 @@ try {
             break;
 
         // ======================================================================
+        // CASE: read_range_report (Executive Report) - [FIXED KEY MISMATCH]
+        // ======================================================================
+        case 'read_range_report':
+            $startDate = $_GET['startDate'] ?? date('Y-m-01');
+            $endDate   = $_GET['endDate']   ?? date('Y-m-t');
+            
+            // [NEW] รับค่า Filter
+            $line  = isset($_GET['line']) ? $_GET['line'] : null;
+            $shift = isset($_GET['shift']) ? $_GET['shift'] : null;
+            $type  = isset($_GET['type']) ? $_GET['type'] : null;
+
+            // เลือก SP
+            $spName = IS_DEVELOPMENT ? 'sp_GetExecutiveRangeReport_TEST' : 'sp_GetExecutiveRangeReport';
+
+            // execute พร้อม Parameter ใหม่
+            $stmt = $pdo->prepare("EXEC $spName @StartDate = ?, @EndDate = ?, @Line = ?, @Shift = ?, @EmpType = ?");
+            $stmt->execute([$startDate, $endDate, $line, $shift, $type]);
+            $summaryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Result Set 2: Daily Trend (ข้ามไปชุดถัดไป)
+            $stmt->nextRowset();
+            $trendData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $headerStats = !empty($summaryData) ? $summaryData[0] : [
+                'Total_Headcount' => 0,
+                'New_Joiners' => 0,
+                'Total_Resigned' => 0,
+                'Total_Absent' => 0,
+                'Total_Late' => 0,
+                'Total_Leave' => 0,
+                'Total_Present_ManDays' => 0
+            ];
+
+            echo json_encode([
+                'success' => true, 
+                'header' => $headerStats, 
+                'trend' => $trendData
+            ]);
+            break;
+
+        // ======================================================================
         // CASE: update_log (แก้ไขข้อมูลรายวัน - FIXED Version)
         // ======================================================================
         case 'update_log':

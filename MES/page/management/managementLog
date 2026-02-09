@@ -1,3 +1,9 @@
+คำสั่งลบข้อมูลตั้งแต่ต้นปี 
+DELETE FROM dbo.PRODUCTION_PLANS_TEST
+WHERE plan_date >= '2026-01-01';
+DELETE FROM dbo.PRODUCTION_PLANS
+WHERE plan_date >= '2026-01-01';
+
 ================================================================================
 PROJECT: IIOT TOOLBOX - MES
 PAGE: Management Dashboard (Production Plan)
