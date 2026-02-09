@@ -1072,12 +1072,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = new Date(endDateFilter.value);
         while (curr <= end) {
             const dStr = curr.toISOString().split('T')[0];
-            // เพิ่ม field แยกสำหรับ Original และ CarryOver (Revenue)
             dateMap[dStr] = { date: dStr, originalRev: 0, carryOverRev: 0, actualRev: 0 };
             curr.setDate(curr.getDate() + 1);
         }
 
-        // 2. คำนวณยอดเงินแยกประเภท
         planData.forEach(p => {
             const d = p.plan_date;
             if (dateMap[d]) {
@@ -1089,10 +1087,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const carryOverQty = parseFloat(p.carry_over_quantity || 0);
                 const actQty = parseFloat(p.actual_quantity || 0);
 
-                // คูณราคาเข้าไป
                 dateMap[d].originalRev += (originalQty * unitPrice);
-                dateMap[d].carryOverRev += (carryOverQty * unitPrice);
                 dateMap[d].actualRev += (actQty * unitPrice);
+                if (p.shift === 'DAY') {
+                    dateMap[d].carryOverRev += (carryOverQty * unitPrice);
+                }
             }
         });
 
@@ -1242,13 +1241,15 @@ document.addEventListener('DOMContentLoaded', () => {
             dateMap[dStr] = { date: dStr, original: 0, carryOver: 0, actual: 0 };
             curr.setDate(curr.getDate() + 1);
         }
-        
+       
         planData.forEach(p => {
             const d = p.plan_date; 
             if (dateMap[d]) {
                 dateMap[d].original += parseFloat(p.original_planned_quantity || 0);
-                dateMap[d].carryOver += parseFloat(p.carry_over_quantity || 0);
                 dateMap[d].actual += parseFloat(p.actual_quantity || 0);
+                if (p.shift === 'DAY') {
+                    dateMap[d].carryOver += parseFloat(p.carry_over_quantity || 0);
+                }
             }
         });
 
@@ -1371,10 +1372,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const original = parseFloat(p.original_planned_quantity || 0);
             const co = parseFloat(p.carry_over_quantity || 0);
-            aggregatedData[itemId].totalAdjustedPlan += (original + co);
-            aggregatedData[itemId].totalActualQty += parseFloat(p.actual_quantity || 0);
+            
             aggregatedData[itemId].totalOriginalPlan += original;
-            aggregatedData[itemId].totalCarryOver += co;
+            aggregatedData[itemId].totalActualQty += parseFloat(p.actual_quantity || 0);
+            
+            if (p.shift === 'DAY') {
+                aggregatedData[itemId].totalCarryOver += co;
+            }
+            const coToAdd = (p.shift === 'DAY') ? co : 0;
+            aggregatedData[itemId].totalAdjustedPlan += (original + coToAdd);
         });
 
         const aggregatedArray = Object.values(aggregatedData);
@@ -1438,11 +1444,14 @@ document.addEventListener('DOMContentLoaded', () => {
             editable: false, 
             dayMaxEvents: 3, 
             height: '100%',
+            
+            // ★ บังคับเรียงลำดับตาม Priority (1 -> 4)
             eventOrder: 'displayOrder', 
 
             events: (info, sc, fc) => fetchCalendarEvents(info, sc, fc, todayString),
             eventClick: (info) => { if(info.event.extendedProps.planData) openFinancialDetail(info.event.extendedProps.planData); },
             
+            // (ส่วน dateClick คงเดิม)
             dateClick: (info) => {
                 const clickedDate = info.dateStr;
                 const plansOnDate = currentPlanData.filter(p => p.plan_date === clickedDate);
@@ -1492,12 +1501,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dailyStats = {};
                 const itemAggregator = {};
 
+                // 1. รวมยอด Day + Night
                 result.data.forEach(p => {
                     const original = parseFloat(p.original_planned_quantity || 0);
                     const co = parseFloat(p.carry_over_quantity || 0);
                     const act = parseFloat(p.actual_quantity || 0);
                     const adj = original + co;
 
+                    // กรองเฉพาะแถวที่ว่างเปล่าจริงๆ (0 ทุกช่อง) ถ้ามี Actual หรือ Original ต้องแสดง
                     if (original === 0 && co === 0 && act === 0) return;
 
                     const key = `${p.plan_date}_${p.line}_${p.item_id}`;
@@ -1525,36 +1536,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     dailyStats[p.plan_date].actualRevenue += (act * unitPrice);
                 });
 
+                // 2. สร้าง Event
                 Object.values(itemAggregator).forEach(item => {
                     const target = item.aggr_adj;
                     const actual = item.aggr_act;
 
                     let bgColor, bdColor, orderPriority;
 
-                    // Priority 1: งานเสร็จตามเป้า (สีเขียวเดิม)
-                    if (actual >= target && target > 0) { 
+                    // Priority 1 (บนสุด): งานเสร็จ (Actual >= Target) โดยที่ต้องมีการผลิตจริง (Actual > 0)
+                    if (actual >= target && actual > 0) { 
+                        // สีเขียว
                         bgColor = 'rgba(75, 192, 192, 0.7)'; 
                         bdColor = 'rgba(75, 192, 192, 1)';
-                        orderPriority = 1;
+                        orderPriority = 1; 
                     }
-                    // Priority 2: งานนอกแผน (สีม่วงเดิม)
-                    else if (target === 0 && actual > 0) { 
+                    // Priority 2: งานนอกแผน/Surplus (Target <= 0 แต่มีของ)
+                    else if (target <= 0 && actual > 0) { 
+                        // สีม่วง
                         bgColor = 'rgba(153, 102, 255, 0.7)'; 
                         bdColor = 'rgba(153, 102, 255, 1)';
-                        orderPriority = 2;
+                        orderPriority = 2; 
                     }
-                    // Priority 3: รอผลิต วันนี้หรืออนาคต (สีฟ้าเดิม)
+                    // Priority 3: งานรอผลิต (วันนี้/อนาคต)
                     else if (actual < target && item.plan_date >= todayString) { 
+                        // สีฟ้า
                         bgColor = 'rgba(54, 162, 235, 0.6)'; 
                         bdColor = 'rgba(54, 162, 235, 1)';
-                        orderPriority = 3;
+                        orderPriority = 3; 
                     }
-                    // Priority 4: ผลิตไม่ทัน เป็นอดีต (สีแดงเดิม)
+                    // Priority 4 (ล่างสุด): งานล่าช้า (อดีต)
                     else { 
+                        // สีแดง
                         bgColor = 'rgba(255, 99, 132, 0.7)'; 
                         bdColor = 'rgba(255, 99, 132, 1)';
-                        orderPriority = 4;
+                        orderPriority = 4; 
                     }
+
+                    // กรณีพิเศษ: ถ้า Target <= 0 และไม่มี Actual (คือจบแล้ว สบายตัว) ให้ข้ามไปเลย ไม่ต้องโชว์
+                    if (target <= 0 && actual === 0) return;
 
                     item.adjusted_planned_quantity = target;
                     item.original_planned_quantity = item.aggr_original;
@@ -1563,6 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     events.push({ 
                         id: `cal_${item.plan_id}_${item.item_id}`, 
+                        // Title: ไม่มีไอคอน
                         title: `${item.sap_no} (${parseInt(actual)}/${parseInt(target)})`, 
                         start: item.plan_date, 
                         backgroundColor: bgColor, 
@@ -1573,6 +1593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
 
+                // 3. Background Events
                 Object.keys(dailyStats).forEach(date => {
                     const stat = dailyStats[date];
                     if (stat.planRevenue > 0) {

@@ -1,15 +1,37 @@
 <?php
-// แก้ไข Path ให้ตรงกับโครงสร้างจริง
-include_once("../../../auth/check_auth.php"); // MES/auth/check_auth.php
-include_once("../../db.php");               // MES/page/db.php
-include_once("../../../config/config.php");   // MES/config/config.php
+// MES/page/management/api/planManage.php
 
+// 1. Config Environment (เหมือน Manpower)
+ignore_user_abort(true); 
+set_time_limit(300); // 5 นาที
 header('Content-Type: application/json');
 
-if (!hasRole(['admin', 'creator', 'planner'])) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
+// 2. 🔥 Auto-Sync Check (เช็คก่อน Include Auth!)
+// ใช้ $_SERVER แทน getallheaders() เพื่อความชัวร์ 100%
+$is_api_call = false;
+if (isset($_SERVER['HTTP_X_API_KEY']) && $_SERVER['HTTP_X_API_KEY'] === 'MESKey2026') {
+    $is_api_call = true;
+}
+
+// 3. Include DB & Config
+require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../../config/config.php';
+
+// 4. 🔥 Auth Check (ถ้าไม่ใช่ API Call ค่อยเช็คคน)
+if (!$is_api_call) {
+    // Include Auth เฉพาะตอนคนใช้งาน เพื่อกัน Node-RED โดน Redirect
+    require_once __DIR__ . '/../../../auth/check_auth.php';
+    
+    if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'planner'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+}
+
+// ถ้าเป็น Node-RED (API Call) ให้ปิด Session เพื่อลดภาระ
+if ($is_api_call) {
+    session_write_close();
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -17,18 +39,6 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
 $planTable = PRODUCTION_PLANS_TABLE;
-// Subquery สำหรับดึงยอด Actual
-$actualsSubQuery = "SELECT ActualDate, ActualLine, ActualShift, ActualItemId, SUM(ActualQty) as ActualQty FROM (
-    SELECT 
-        CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) AS ActualDate,
-        l.production_line AS ActualLine,
-        CASE WHEN DATEPART(HOUR, DATEADD(HOUR, -8, transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END AS ActualShift,
-        parameter_id AS ActualItemId,
-        quantity AS ActualQty
-    FROM " . TRANSACTIONS_TABLE . " t
-    JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
-    WHERE t.transaction_type = 'PRODUCTION_FG'
-) sub GROUP BY ActualDate, ActualLine, ActualShift, ActualItemId";
 $itemTable = ITEMS_TABLE;
 
 try {
@@ -52,8 +62,6 @@ try {
 
             // [SQL OPTIMIZATION]
             // เขียน Subquery ใหม่: กรองช่วงเวลาด้วย Timestamp และ Group By
-            // หมายเหตุ: แม้เราจะมี column ProductionDate แล้ว แต่การใช้ Range Query แบบนี้
-            // ก็ยังคงเร็วและปลอดภัยที่สุดสำหรับการดึงข้อมูลช่วงกว้างๆ
             $actualsSubQuery = "
                 SELECT 
                     CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) AS ActualDate,
@@ -84,7 +92,6 @@ try {
             $params = [];
             
             // Base Where Clause
-            // สังเกต: เรายังคง Logic เดิมของ Plan Table ไว้
             $whereClause = " AND (p.plan_date BETWEEN :start AND :end OR actual.ActualDate BETWEEN :start2 AND :end2)";
             
             $params[':start'] = $startDate;
@@ -150,7 +157,6 @@ try {
             $stmtCount = $pdo->prepare($countSql);
             // ข้อควรระวัง: ต้อง bind params ทั้งหมดที่เตรียมไว้
             foreach ($params as $key => $val) {
-                // ข้าม offset/limit ใน count query
                 if ($key !== ':offset' && $key !== ':limit') {
                     $stmtCount->bindValue($key, $val);
                 }
@@ -242,7 +248,6 @@ try {
             $carry_over = isset($data['carry_over_quantity']) ? floatval($data['carry_over_quantity']) : 0;
 
             if ($plan_id != 0) {
-                // --- UPDATE Logic (เหมือนเดิม) ---
                 $sql = "UPDATE $planTable SET 
                             original_planned_quantity = :qty, 
                             note = :note, 
@@ -258,16 +263,15 @@ try {
                     ':id' => $plan_id
                 ]);
             } else {
-                // --- INSERT Logic (แก้ใหม่ให้บันทึก Carry Over ได้) ---
                 $sql = "INSERT INTO $planTable (
                             plan_date, line, shift, item_id, 
                             original_planned_quantity, 
-                            carry_over_quantity, /* ★ เพิ่ม Column นี้ */
+                            carry_over_quantity,
                             note, updated_by
                         ) VALUES (
                             :date, :line, :shift, :item, 
                             :qty, 
-                            :co, /* ★ เพิ่ม Value นี้ */
+                            :co,
                             :note, :user
                         )";
                 
@@ -278,7 +282,7 @@ try {
                     ':shift' => $shift, 
                     ':item' => $item_id, 
                     ':qty' => $qty, 
-                    ':co' => $carry_over, // ★ ส่งค่า C/O ไปบันทึก
+                    ':co' => $carry_over,
                     ':note' => $note, 
                     ':user' => $currentUser
                 ]);
@@ -296,36 +300,44 @@ try {
 
         case 'calculate_carry_over':
             try {
-                // กำหนดช่วงเวลา (-30 วัน ถึง +30 วัน)
-                $startDate = date('Y-m-d', strtotime('-14 days'));
+                set_time_limit(300); 
+                try {
+                    $pdo->setAttribute(PDO::ATTR_TIMEOUT, 300);
+                } catch (Exception $ex) { /* Ignore if not supported */ }
+                
+                if (defined('PDO::SQLSRV_ATTR_QUERY_TIMEOUT')) {
+                    try {
+                        $pdo->setAttribute(PDO::SQLSRV_ATTR_QUERY_TIMEOUT, 300);
+                    } catch (Exception $ex) { /* Ignore */ }
+                }
+
+                $startDate = date('Y-01-01'); 
                 $endDate   = date('Y-m-d', strtotime('+30 days')); 
                 
-                // ตรวจสอบว่ามี Constant นี้หรือยัง (กันพลาด)
                 if (!defined('SP_UPDATE_CARRYOVER')) {
                     throw new Exception("Config Error: SP_UPDATE_CARRYOVER is not defined.");
                 }
 
                 $spName = SP_UPDATE_CARRYOVER;
-                
-                // เรียก Stored Procedure
                 $sql = "EXEC $spName @StartDate = :start, @EndDate = :end";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([
-                    ':start' => $startDate,
-                    ':end' => $endDate
-                ]);
+                $options = array();
+                if (defined('PDO::SQLSRV_ATTR_QUERY_TIMEOUT')) {
+                    $options[PDO::SQLSRV_ATTR_QUERY_TIMEOUT] = 300;
+                } else {
+                    $options[PDO::ATTR_TIMEOUT] = 300;
+                }
+                
+                $stmt = $pdo->prepare($sql, $options);
+                $stmt->execute([':start' => $startDate, ':end' => $endDate]);
                 
                 echo json_encode([
                     'success' => true, 
-                    'message' => "Carry Over updated successfully (Range: -30 to +30 days)"
+                    'message' => "Carry Over updated successfully (Year-to-Date: $startDate)."
                 ]);
 
             } catch (Exception $e) {
                 http_response_code(500);
-                echo json_encode([
-                    'success' => false, 
-                    'message' => 'Calculation Error: ' . $e->getMessage()
-                ]);
+                echo json_encode(['success' => false, 'message' => 'Calculation Error: ' . $e->getMessage()]);
             }
             break;
 
@@ -337,14 +349,10 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // 1. เตรียม Query ค้นหา
-                // Logic A: หาจาก SAP No. (แม่นยำ 100% เพราะไม่ซ้ำ)
                 $sqlFindSAP = "SELECT TOP 1 item_id FROM $itemTable WHERE sap_no = :code";
                 $stmtFindSAP = $pdo->prepare($sqlFindSAP);
 
-                // Logic B: หาจาก Part No. + Line (กรองเฉพาะ Process ของ Line นี้)
-                // ต้อง Join กับ Manufacturing Routes เพื่อดูว่าสินค้านี้ผลิตที่ Line ไหน
-                $routesTable = ROUTES_TABLE; // ดึงชื่อตารางจาก config (MANUFACTURING_ROUTES)
+                $routesTable = ROUTES_TABLE;
                 $sqlFindPart = "
                     SELECT TOP 1 i.item_id 
                     FROM $itemTable i
@@ -353,11 +361,9 @@ try {
                 ";
                 $stmtFindPart = $pdo->prepare($sqlFindPart);
                 
-                // Logic C: (สำรอง) ถ้าไม่มี Route ให้หา Part No. เฉยๆ (เสี่ยงหน่อยแต่ดีกว่าไม่เจอ)
                 $sqlFindPartFallback = "SELECT TOP 1 item_id FROM $itemTable WHERE part_no = :code";
                 $stmtFindPartFallback = $pdo->prepare($sqlFindPartFallback);
 
-                // SQL Merge (เหมือนเดิม)
                 $sqlMerge = "
                     MERGE INTO $planTable AS T
                     USING (VALUES (:plan_date, :line, :shift, :item_id, :qty, :user)) 
@@ -377,20 +383,17 @@ try {
 
                 foreach ($plans as $index => $row) {
                     $itemCode = trim($row['item_code']);
-                    $targetLine = $row['line']; // Line ที่ user เลือกมา
+                    $targetLine = $row['line']; 
                     $itemId = null;
 
-                    // Step 1: ลองหาด้วย SAP No.
                     $stmtFindSAP->execute([':code' => $itemCode]);
                     $itemId = $stmtFindSAP->fetchColumn();
 
-                    // Step 2: ถ้าไม่เจอ SAP ให้หาด้วย Part No. + Line
                     if (!$itemId) {
                         $stmtFindPart->execute([':code' => $itemCode, ':line' => $targetLine]);
                         $itemId = $stmtFindPart->fetchColumn();
                     }
 
-                    // Step 3: ถ้ายังไม่เจออีก ลองหา Part No. เพียวๆ (กรณี Master Data ยังไม่ทำ Route)
                     if (!$itemId) {
                          $stmtFindPartFallback->execute([':code' => $itemCode]);
                          $itemId = $stmtFindPartFallback->fetchColumn();
@@ -407,7 +410,6 @@ try {
                         ]);
                         $count++;
                     } else {
-                        // แจ้ง Error ชัดเจนว่าหาไม่เจอใน Line นี้
                         $errors[] = "Row " . ($index+1) . ": Item '$itemCode' not found for line '$targetLine'.";
                     }
                 }
@@ -427,7 +429,6 @@ try {
             if ($method !== 'POST') throw new Exception("Invalid method");
             
             $plan_id = $data['plan_id'] ?? null;
-            // รับค่า C/O ที่ส่งมา (แปลงเป็น float เพื่อความชัวร์)
             $carry_over = isset($data['carry_over_quantity']) ? floatval($data['carry_over_quantity']) : 0;
             $currentUser = $_SESSION['user']['username'] ?? 'System';
 
@@ -435,7 +436,6 @@ try {
 
             $sql = "UPDATE $planTable SET 
                         carry_over_quantity = :co,
-                        /* ลบบรรทัด adjusted_planned_quantity ทิ้ง */
                         updated_by = :user,
                         updated_at = GETDATE()
                     WHERE plan_id = :id";
@@ -443,7 +443,6 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 ':co' => $carry_over,
-                /* ลบ :co_calc ออก */
                 ':user' => $currentUser,
                 ':id' => $plan_id
             ]);
