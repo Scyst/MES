@@ -616,7 +616,7 @@ const UI = {
             viewTrend.style.display = 'none';
             
             if(footerDaily) footerDaily.style.display = 'block';
-            if(footerTrend) footerTrend.style.setProperty('display', 'none', 'important'); // Force hide
+            if(footerTrend) footerTrend.style.setProperty('display', 'none', 'important');
 
         } else {
             btnDaily.classList.remove('active');
@@ -626,13 +626,92 @@ const UI = {
             viewTrend.style.display = 'block';
             
             if(footerDaily) footerDaily.style.display = 'none';
-            if(footerTrend) footerTrend.style.setProperty('display', 'flex', 'important'); // Force flex
+            if(footerTrend) footerTrend.style.setProperty('display', 'flex', 'important');
             
             if (this.charts && this.charts.trend) {
                 this.charts.trend.resize();
             }
         }
+    },
+
+    // ✅ [MOVED] ย้ายมาไว้ตรงนี้ (ใน UI Object)
+    renderReportChart(data) {
+        const canvas = document.getElementById('reportChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        if (window.reportChartObj instanceof Chart) {
+            window.reportChartObj.destroy();
+        }
+
+        window.reportChartObj = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => {
+                    const date = new Date(d.log_date);
+                    return `${date.getDate()}/${date.getMonth()+1}`;
+                }),
+                datasets: [
+                    {
+                        label: 'Actual (มา)',
+                        data: data.map(d => d.Daily_Actual),
+                        backgroundColor: '#1cc88a',
+                        borderRadius: 4,
+                        stack: 'Stack 0',
+                        order: 1
+                    },
+                    {
+                        label: 'Leave (ลา)',
+                        data: data.map(d => d.Daily_Leave),
+                        backgroundColor: '#36b9cc',
+                        borderRadius: 4,
+                        stack: 'Stack 0',
+                        order: 2
+                    },
+                    {
+                        label: 'Absent (ขาด)',
+                        data: data.map(d => d.Daily_Absent),
+                        backgroundColor: '#e74a3b',
+                        borderRadius: 4,
+                        stack: 'Stack 0',
+                        order: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                const dataIndex = tooltipItems[0].dataIndex;
+                                const dayData = data[dataIndex];
+                                let totalStack = 0;
+                                tooltipItems.forEach(item => totalStack += item.parsed.y);
+
+                                return `----------------\n` +
+                                       `Total Accounted: ${totalStack} คน\n` +
+                                       `New Joiners: +${dayData.Daily_New || 0}\n` +
+                                       `Resigned: -${dayData.Daily_Resigned || 0}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true, grid: { borderDash: [2, 4] } }
+                }
+            }
+        });
     }
+
 };
 
 // =============================================================================
@@ -1881,6 +1960,111 @@ const Actions = {
         });
     },
 
+    openSimulationModal() {
+        const modal = new bootstrap.Modal(document.getElementById('costCompareModal'));
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const toLocalISO = (date) => {
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        const mainDateVal = document.getElementById('filterDate').value;
+        
+        document.getElementById('simStartDate').value = toLocalISO(firstDay); 
+        document.getElementById('simEndDate').value = mainDateVal || toLocalISO(today);
+
+        document.getElementById('simSummarySection').style.display = 'none';
+        document.getElementById('simTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Ready to analyze range...</td></tr>`;
+        
+        modal.show();
+    },
+
+    async runSimulation() {
+        const sDate = document.getElementById('simStartDate').value;
+        const eDate = document.getElementById('simEndDate').value;
+        
+        if(!sDate || !eDate) {
+            alert("Please select both Start and End dates.");
+            return;
+        }
+
+        const tbody = document.getElementById('simTableBody');
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+
+        // 1. UI State: Loading
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5"><div class="spinner-border text-primary"></div><br>Calculating...</td></tr>`;
+        
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=compare_cost&startDate=${sDate}&endDate=${eDate}`);
+            const json = await res.json();
+
+            if(json.success) {
+                // 2. Render Summary Cards (3 กล่องบน)
+                const sum = json.summary;
+                document.getElementById('simSummarySection').style.display = 'flex';
+                
+                this.animateNumber('sim_old_total', Math.round(sum.total_old));
+                this.animateNumber('sim_new_total', Math.round(sum.total_new));
+                
+                const diffEl = document.getElementById('sim_diff_total');
+                const diffCard = document.getElementById('sim_diff_card');
+                const percentEl = document.getElementById('sim_diff_percent');
+                
+                if(diffEl) diffEl.innerText = (sum.diff > 0 ? '+' : '') + Math.round(sum.diff).toLocaleString();
+                if(percentEl) percentEl.innerText = (sum.diff > 0 ? '+' : '') + sum.percent.toFixed(2) + '%';
+
+                if(diffCard) {
+                    diffCard.className = 'card h-100 shadow-sm text-white';
+                    if(sum.diff > 0) diffCard.classList.add('bg-danger'); 
+                    else if(sum.diff < 0) diffCard.classList.add('bg-success');
+                    else diffCard.classList.add('bg-secondary');
+                }
+
+                // 3. Render Table Body (วาดตารางใหม่ทั้งหมด)
+                let html = '';
+                const fmt = (n) => Math.round(parseFloat(n || 0)).toLocaleString();
+
+                if (!json.data || json.data.length === 0) {
+                    html = `<tr><td colspan="9" class="text-center py-4">No data found</td></tr>`;
+                } else {
+                    json.data.forEach(row => {
+                        const oldT = parseFloat(row.old_total || 0);
+                        const newT = parseFloat(row.new_total || 0);
+                        const diffVal = parseFloat(row.diff_amount || 0);
+                        const diffClass = diffVal > 0 ? 'text-danger fw-bold' : (diffVal < 0 ? 'text-success fw-bold' : 'text-muted');
+                        
+                        html += `
+                            <tr>
+                                <td class="fw-bold text-dark ps-3">${row.line_name}</td>
+                                <td class="text-end text-secondary small font-monospace">${fmt(row.old_dl)}</td>
+                                <td class="text-end text-secondary small font-monospace">${fmt(row.old_ot)}</td>
+                                <td class="text-end bg-light fw-bold text-secondary font-monospace border-end">${fmt(oldT)}</td>
+                                <td class="text-end text-primary small font-monospace">${fmt(row.new_dl)}</td>
+                                <td class="text-end text-primary small font-monospace">${fmt(row.new_ot)}</td>
+                                <td class="text-end bg-light fw-bold text-primary font-monospace border-end">${fmt(newT)}</td>
+                                <td class="text-end ${diffClass} font-monospace">${diffVal > 0 ? '+' : ''}${fmt(diffVal)}</td>
+                                <td class="text-center small text-muted">${oldT > 0 ? ((diffVal/oldT)*100).toFixed(1) : 0}%</td>
+                            </tr>`;
+                    });
+                }
+                tbody.innerHTML = html;
+
+            } else {
+                alert('Error: ' + json.message);
+            }
+        } catch(err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-5">Analysis Failed</td></tr>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    },
+
     // -------------------------------------------------------------------------
     // 7. MAPPING & SHIFT PLANNER
     // -------------------------------------------------------------------------
@@ -1947,5 +2131,318 @@ const Actions = {
     },
     async saveMappings() {
         await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save_mappings', categories: this._mappingCache }) });
+    },
+
+    // =========================================================================
+    // 8. INTEGRATED ANALYTICS (SUPER MODAL)
+    // =========================================================================
+    
+    openIntegratedAnalysis() {
+        const modalEl = document.getElementById('integratedAnalysisModal');
+        if (!modalEl) return;
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // 1. Set Default Dates (1st of Month -> Today)
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        const toLocalISO = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        // เช็คว่าเคยเลือกวันที่ไว้หน้าหลักไหม ถ้ามีให้ดึงมาใช้
+        const mainDate = document.getElementById('filterDate').value;
+        
+        document.getElementById('superStartDate').value = toLocalISO(firstDay);
+        document.getElementById('superEndDate').value = mainDate || toLocalISO(today);
+
+        // 2. Populate Line Dropdown (ใช้ Cache ที่มีอยู่)
+        const lineSelect = document.getElementById('superLineSelect');
+        if (lineSelect && this._structureCache && this._structureCache.lines) {
+            lineSelect.innerHTML = '<option value="ALL">All Lines</option>';
+            this._structureCache.lines.forEach(item => {
+                const lineName = (typeof item === 'object' && item.line) ? item.line : item;
+                if (lineName) {
+                    lineSelect.innerHTML += `<option value="${lineName}">${lineName}</option>`;
+                }
+            });
+        }
+
+        // 3. Reset UI states
+        document.getElementById('simTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">Click "Analyze" to load data...</td></tr>`;
+        document.getElementById('rpt_hc').innerText = '-';
+        
+        modal.show();
+
+        // Optional: Auto Run
+        setTimeout(() => this.runSuperAnalysis(), 300);
+    },
+
+    // Internal Logic for Tab 1: Operation
+    async runExecutiveReportInternal(sDate, eDate, line) {
+        try {
+            const url = `api/api_daily_operations.php?action=read_range_report` +
+                        `&startDate=${sDate}&endDate=${eDate}` +
+                        `&line=${encodeURIComponent(line)}&shift=ALL&type=ALL`; // Default shift/type to ALL
+            
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (json.success) {
+                const h = json.header;
+                const t = json.trend;
+
+                // 1. Big Cards
+                UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
+                UI.animateNumber('rpt_actual', h.Total_Present_ManDays || 0);
+                UI.animateNumber('rpt_absent', h.Total_Absent || 0);
+                UI.animateNumber('rpt_leave', h.Total_Leave || 0);
+
+                // 2. New/Resigned Label
+                const elNew = document.getElementById('rpt_new');
+                if (elNew) elNew.innerHTML = `Move: <span class="text-success">+${h.New_Joiners || 0}</span> / <span class="text-danger">-${h.Total_Resigned || 0}</span>`;
+
+                // 3. Stats (Min/Max/Avg) Helper
+                const calcStats = (data, key) => {
+                    if (!data || data.length === 0) return { max: 0, min: 0, avg: 0 };
+                    let max = -Infinity, min = Infinity, sum = 0, count = 0;
+                    data.forEach(d => {
+                        const val = parseInt(d[key] || 0);
+                        if (val >= 0) {
+                            if (val > max) max = val;
+                            if (val < min && val > 0) min = val;
+                            sum += val; count++;
+                        }
+                    });
+                    return { 
+                        max: max === -Infinity ? 0 : max, 
+                        min: min === Infinity ? 0 : min, 
+                        avg: count > 0 ? (sum/count).toFixed(1) : 0 
+                    };
+                };
+
+                const setStats = (prefix, stats) => {
+                    if(document.getElementById(`${prefix}_max`)) document.getElementById(`${prefix}_max`).innerText = stats.max;
+                    if(document.getElementById(`${prefix}_min`)) document.getElementById(`${prefix}_min`).innerText = stats.min;
+                    if(document.getElementById(`${prefix}_avg`)) document.getElementById(`${prefix}_avg`).innerText = stats.avg;
+                };
+
+                setStats('hc', calcStats(t, 'Daily_HC'));
+                setStats('act', calcStats(t, 'Daily_Actual'));
+                setStats('abs', calcStats(t, 'Daily_Absent'));
+                setStats('lev', calcStats(t, 'Daily_Leave'));
+
+                // 4. Render Chart
+                UI.renderReportChart(t);
+            }
+        } catch(err) {
+            console.error("Exec Report Error:", err);
+        }
+    },
+
+    async runCostSimulationInternal(sDate, eDate, line) {
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=compare_cost&startDate=${sDate}&endDate=${eDate}`);
+            const json = await res.json();
+
+            if(json.success) {
+                let data = json.data;
+                if (line !== 'ALL') {
+                    data = data.filter(r => r.line_name === line);
+                }
+
+                let totalOld = 0, totalNew = 0;
+                data.forEach(r => {
+                    totalOld += parseFloat(r.old_total || 0);
+                    totalNew += parseFloat(r.new_total || 0);
+                });
+                const diff = totalNew - totalOld;
+                const percent = totalOld > 0 ? ((diff / totalOld) * 100) : 0;
+
+                UI.animateNumber('sim_old_total', Math.round(totalOld));
+                UI.animateNumber('sim_new_total', Math.round(totalNew));
+                
+                const diffEl = document.getElementById('sim_diff_total');
+                const diffCard = document.getElementById('sim_diff_card');
+                const percentEl = document.getElementById('sim_diff_percent');
+                
+                if(diffEl) diffEl.innerText = (diff > 0 ? '+' : '') + Math.round(diff).toLocaleString();
+                if(percentEl) percentEl.innerText = (diff > 0 ? '+' : '') + percent.toFixed(2) + '%';
+
+                if(diffCard) {
+                    diffCard.className = 'card border-0 h-100 shadow text-white';
+                    if(diff > 0) diffCard.style.backgroundColor = '#e74a3b';
+                    else if(diff < 0) diffCard.style.backgroundColor = '#1cc88a';
+                    else diffCard.style.backgroundColor = '#858796';
+                }
+
+                const tbody = document.getElementById('simTableBody');
+                tbody.innerHTML = '';
+                const fmt = (n) => Math.round(parseFloat(n)).toLocaleString();
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No data for selected criteria</td></tr>`;
+                    return;
+                }
+
+                data.forEach(row => {
+                    const rDiff = parseFloat(row.diff_amount);
+                    const rDiffClass = rDiff > 0 ? 'text-danger fw-bold' : (rDiff < 0 ? 'text-success fw-bold' : 'text-muted');
+                    const rPrefix = rDiff > 0 ? '+' : '';
+                    const rPct = parseFloat(row.old_total) > 0 ? ((rDiff / parseFloat(row.old_total)) * 100).toFixed(1) + '%' : '-';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="fw-bold text-dark ps-3">${row.line_name}</td>
+                            
+                            <td class="text-end text-secondary small font-monospace">${fmt(row.old_dl)}</td>
+                            <td class="text-end text-secondary small font-monospace">${fmt(row.old_ot)}</td>
+                            <td class="text-end bg-light fw-bold text-secondary font-monospace border-end">${fmt(row.old_total)}</td>
+                            
+                            <td class="text-end text-primary small font-monospace">${fmt(row.new_dl)}</td>
+                            <td class="text-end text-primary small font-monospace">${fmt(row.new_ot)}</td>
+                            <td class="text-end bg-light fw-bold text-primary font-monospace border-end">${fmt(row.new_total)}</td>
+                            
+                            <td class="text-end ${rDiffClass} font-monospace">${rPrefix}${fmt(rDiff)}</td>
+                            <td class="text-center small text-muted">${rPct}</td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error("Cost Sim Error:", err);
+            document.getElementById('simTableBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error loading cost data</td></tr>`;
+        }
+    },
+
+    // Export Function for Simulation Table
+    exportSimTable() {
+        const wb = XLSX.utils.book_new();
+        const table = document.getElementById('simTable');
+        const ws = XLSX.utils.table_to_sheet(table);
+        XLSX.utils.book_append_sheet(wb, ws, "Cost_Analysis");
+        XLSX.writeFile(wb, "Manpower_Cost_Analysis.xlsx");
+    },
+
+    // =========================================================================
+    // INTEGRATED ANALYTICS (FIXED VERSION)
+    // =========================================================================
+    
+    async runSuperAnalysis() {
+        // 1. ดึงค่าจาก Modal (ใช้ ID ตามไฟล์ bundle.php เป๊ะๆ)
+        const sDate = document.getElementById('superStartDate')?.value;
+        const eDate = document.getElementById('superEndDate')?.value;
+        const line  = document.getElementById('superLineSelect')?.value || 'ALL';
+
+        if(!sDate || !eDate) return alert("กรุณาระบุวันที่เริ่มต้นและสิ้นสุด");
+
+        // 2. Loading State สำหรับปุ่ม Analyze
+        const btn = event?.currentTarget;
+        const originalHtml = btn ? btn.innerHTML : '';
+        if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...'; }
+
+        // 3. แสดง Loading ในตาราง (simTableBody)
+        const tbody = document.getElementById('simTableBody');
+        if(tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5"><div class="spinner-border text-primary"></div><br>Calculating Costs...</td></tr>`;
+
+        try {
+            // 4. ยิง API compare_cost (URL ที่คุณทดสอบผ่านแล้ว)
+            const url = `api/api_daily_operations.php?action=compare_cost&startDate=${sDate}&endDate=${eDate}`;
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (json.success) {
+                let costData = json.data || [];
+                // กรองข้อมูลตามไลน์ที่เลือกใน Modal
+                if (line !== 'ALL') {
+                    costData = costData.filter(r => r.line_name === line);
+                }
+                
+                // 5. ส่ง Data ไป Render ลงตารางและสรุปยอด (ฟังก์ชันอยู่ด้านล่าง)
+                this.renderSimulationTable(costData, json.summary, line === 'ALL');
+            }
+
+            // 6. โหลดข้อมูลแถบ Operation Stats (Tab แรก)
+            const resReport = await fetch(`api/api_daily_operations.php?action=read_range_report&startDate=${sDate}&endDate=${eDate}&line=${encodeURIComponent(line)}&shift=ALL&type=ALL`);
+            const jsonReport = await resReport.json();
+            if (jsonReport.success) {
+                const h = jsonReport.header;
+                UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
+                UI.animateNumber('rpt_actual', h.Total_Present_ManDays || 0);
+                UI.animateNumber('rpt_absent', h.Total_Absent || 0);
+                UI.animateNumber('rpt_leave', h.Total_Leave || 0);
+                if (jsonReport.trend) UI.renderReportChart(jsonReport.trend);
+            }
+
+        } catch(err) {
+            console.error("Analysis Error:", err);
+            if(tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-5">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+        }
+    },
+
+    renderSimulationTable(data, apiSummary, isAllLines) {
+        const tbody = document.getElementById('simTableBody');
+        if(!tbody) return;
+
+        let html = '';
+        let totalOld = 0, totalNew = 0;
+        const fmt = (n) => Math.round(parseFloat(n || 0)).toLocaleString();
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">ไม่พบข้อมูลต้นทุนในช่วงวันที่เลือก</td></tr>`;
+            return;
+        }
+
+        data.forEach(row => {
+            const oldT = parseFloat(row.old_total || 0);
+            const newT = parseFloat(row.new_total || 0);
+            const diff = parseFloat(row.diff_amount || 0);
+            const diffClass = diff > 0 ? 'text-danger fw-bold' : (diff < 0 ? 'text-success fw-bold' : 'text-muted');
+            const pct = oldT > 0 ? ((diff / oldT) * 100).toFixed(1) + '%' : '0%';
+
+            totalOld += oldT;
+            totalNew += newT;
+
+            html += `
+                <tr>
+                    <td class="fw-bold text-dark ps-3">${row.line_name}</td>
+                    <td class="text-end text-secondary small font-monospace">${fmt(row.old_dl)}</td>
+                    <td class="text-end text-secondary small font-monospace">${fmt(row.old_ot)}</td>
+                    <td class="text-end bg-secondary bg-opacity-10 fw-bold text-secondary font-monospace border-end">${fmt(oldT)}</td>
+                    <td class="text-end text-primary small font-monospace">${fmt(row.new_dl)}</td>
+                    <td class="text-end text-primary small font-monospace">${fmt(row.new_ot)}</td>
+                    <td class="text-end bg-primary bg-opacity-10 fw-bold text-primary font-monospace border-end">${fmt(newT)}</td>
+                    <td class="text-end ${diffClass} font-monospace">${diff > 0 ? '+' : ''}${fmt(diff)}</td>
+                    <td class="text-center small text-muted">${pct}</td>
+                </tr>`;
+        });
+
+        tbody.innerHTML = html;
+
+        // อัปเดต Card สรุปยอดด้านบน (ใช้ ID จาก bundle.php)
+        const finalOld = isAllLines ? apiSummary.total_old : totalOld;
+        const finalNew = isAllLines ? apiSummary.total_new : totalNew;
+        const finalDiff = finalNew - finalOld;
+        const finalPct = finalOld > 0 ? ((finalDiff / finalOld) * 100) : 0;
+
+        UI.animateNumber('sim_old_total', finalOld);
+        UI.animateNumber('sim_new_total', finalNew);
+        
+        const diffTotalEl = document.getElementById('sim_diff_total');
+        if (diffTotalEl) {
+            diffTotalEl.innerText = (finalDiff > 0 ? '+' : '') + fmt(finalDiff);
+            const pctEl = document.getElementById('sim_diff_percent');
+            if(pctEl) pctEl.innerText = (finalDiff > 0 ? '+' : '') + finalPct.toFixed(2) + '%';
+            
+            // เปลี่ยนสีการ์ด Variance
+            const card = document.getElementById('sim_diff_card');
+            if(card) {
+                card.className = 'card h-100 shadow text-white ' + 
+                    (finalDiff > 0 ? 'bg-danger' : (finalDiff < 0 ? 'bg-success' : 'bg-secondary'));
+            }
+        }
     }
 };

@@ -32,6 +32,10 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
             font-weight: 600;
             padding: 0.25rem 0.75rem;
         }
+        /* Style สำหรับปุ่ม Toggle สูตร */
+        .transition-btn {
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 
@@ -68,6 +72,14 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <i class="fas fa-sync-alt"></i>
                     </button>
 
+                    <button id="btnFormulaToggle" class="btn btn-white border text-secondary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm transition-btn" title="Switch Calculation Formula">
+                        <i class="fas fa-calculator me-2"></i>Standard Cost
+                    </button>
+
+                    <button class="btn btn-outline-dark btn-sm fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="Actions.openIntegratedAnalysis()" title="Compare Old vs New Formula">
+                        <i class="fas fa-balance-scale"></i> Compare
+                    </button>
+
                     <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.syncNow()" title="Sync from Cloud">
                         <i class="fas fa-cloud-download-alt me-1"></i> Sync
                     </button>
@@ -86,9 +98,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             <li><a class="dropdown-item" href="#" onclick="Actions.exportDailyRaw()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
                             
                             <?php if (hasRole(['admin', 'creator'])): ?>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Management</h6></li>
-                                
+                    
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openReportModal()"><i class="fas fa-chart-pie text-primary me-2"></i>Executive Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
 

@@ -6,15 +6,14 @@ const API = {
     URL_GET_SUMMARY: 'api/api_daily_operations.php?action=read_summary',
     URL_SYNC: 'api/sync_from_api.php', 
 
-    async getSummary(dateString) {
+    async getSummary(dateString, useNewFormula = false) {
         try {
-            // อันนี้ใช้ & ถูกแล้ว เพราะ URL_GET_SUMMARY มี ?action=... อยู่แล้ว
-            const response = await fetch(`${this.URL_GET_SUMMARY}&date=${dateString}`);
+            // ส่งค่าไปที่ API (&use_new_formula=true/false)
+            const response = await fetch(`${this.URL_GET_SUMMARY}&date=${dateString}&use_new_formula=${useNewFormula}`);
             if (!response.ok) throw new Error("Network response was not ok");
             
             const json = await response.json();
             
-            // [FIX] แกะข้อมูลจาก key "raw_data" ตามที่ PHP ส่งมา
             if (json.success && Array.isArray(json.raw_data)) {
                 return json.raw_data;
             } else {

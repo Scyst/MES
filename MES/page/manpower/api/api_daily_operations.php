@@ -27,7 +27,7 @@ try {
     switch ($action) {
         
         // ======================================================================
-        // CASE: read_daily (ดึงข้อมูลรายวัน)
+        // CASE: read_daily (ดึงข้อมูลรายวัน) - คงเดิม
         // ======================================================================
         case 'read_daily':
             $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
@@ -137,14 +137,12 @@ try {
                 $params[':empIdFilter'] = $empIdFilter;
             }
 
-            // 🔥 [FIXED] ย้าย ORDER BY มาไว้ท้ายสุดตรงนี้
             $sql .= " ORDER BY line ASC, E.emp_id ASC";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Calc Summary
             $summary = [
                 'total' => count($data), 'present' => 0, 'absent' => 0, 
                 'late' => 0, 'leave' => 0, 'waiting' => 0, 'other' => 0, 'other_total' => 0
@@ -164,164 +162,48 @@ try {
             break;
 
         // ======================================================================
-        // CASE: read_summary (Dashboard Graph & Table) - อัปเกรดใหม่รองรับ Payment
+        // CASE: read_summary (Dashboard Graph & Table) - Refactored for Toggle Logic
         // ======================================================================
         case 'read_summary':
             $date = $_GET['date'] ?? date('Y-m-d');
             
-            $sql = "SELECT 
-                        ISNULL(L.actual_line, E.line) as line_name,
-                        ISNULL(S.shift_name, S_Master.shift_name) as shift_name,
-                        ISNULL(L.actual_team, E.team_group) as team_group,
-                        ISNULL(CM.category_name, 'General') as emp_type,
-                        ISNULL(CM.rate_type, 'DAILY') as rate_type,
-
-                        COUNT(E.emp_id) as total_hc,
-                        SUM(CASE WHEN E.is_active = 1 THEN 1 ELSE 0 END) as plan_count,
-                        
-                        SUM(CASE WHEN L.status = 'PRESENT' THEN 1 ELSE 0 END) as present,
-                        SUM(CASE WHEN L.status = 'LATE' THEN 1 ELSE 0 END) as late,
-                        SUM(CASE WHEN L.status = 'ABSENT' THEN 1 ELSE 0 END) as absent,
-                        SUM(CASE WHEN L.status IN ('SICK','BUSINESS','VACATION') THEN 1 ELSE 0 END) as leave,
-                        SUM(CASE WHEN L.status IN ('PRESENT','LATE') THEN 1 ELSE 0 END) as actual,
-
-                        SUM(CAST(
-                            CASE 
-                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                    CASE 
-                                        WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN (CM.hourly_rate / 30.0)
-                                        WHEN CM.rate_type LIKE 'MONTHLY%' THEN 
-                                            (CM.hourly_rate / 30.0) + 
-                                            (CASE WHEN Cal.day_type = 'HOLIDAY' THEN (Rate.Hourly_Base * 8.0 * (Rate.Work_Multiplier - 1.0)) ELSE 0 END)
-                                        ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) 
-                                    END
-
-                                WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
-                                    CASE 
-                                        WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) 
-                                        ELSE (Rate.Hourly_Base * 8.0) 
-                                    END
-
-                                ELSE 
-                                    CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END
-                            END
-                        AS DECIMAL(10,2))) as normal_cost,
-
-                        SUM(CAST(
-                            CASE 
-                                WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                    (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
-                                ELSE 0
-                            END
-                        AS DECIMAL(10,2))) as ot_cost,
-
-                        SUM(CAST(
-                            (
-                                CASE 
-                                    WHEN L.status IN ('PRESENT', 'LATE') THEN 
-                                        CASE 
-                                            WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN (CM.hourly_rate / 30.0)
-                                            WHEN CM.rate_type LIKE 'MONTHLY%' THEN 
-                                                (CM.hourly_rate / 30.0) + (CASE WHEN Cal.day_type = 'HOLIDAY' THEN (Rate.Hourly_Base * 8.0 * (Rate.Work_Multiplier - 1.0)) ELSE 0 END)
-                                            ELSE (Rate.Hourly_Base * 8.0 * Rate.Work_Multiplier) 
-                                        END
-                                    WHEN L.status IN ('SICK', 'VACATION', 'BUSINESS') THEN
-                                        CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE (Rate.Hourly_Base * 8.0) END
-                                    ELSE 
-                                        CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) ELSE 0 END
-                                END
-                            ) + 
-                            (
-                                CASE 
-                                    WHEN L.status IN ('PRESENT', 'LATE') THEN (Final_OT.OT_Capped * Rate.Hourly_Base * Rate.OT_Multiplier)
-                                    ELSE 0
-                                END
-                            )
-                        AS DECIMAL(10,2))) as total_cost
-
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
-                    OUTER APPLY (
-                        SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
-                        WHERE E.position LIKE '%' + M.keyword + '%' 
-                        ORDER BY LEN(M.keyword) DESC
-                    ) CM
-                    LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
-                        ON E.emp_id = L.emp_id AND L.log_date = :date
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
-                    
-                    LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
-                    
-                    CROSS APPLY (
-                        SELECT 
-                            CASE 
-                                WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 
-                                WHEN Cal.day_type='HOLIDAY' THEN ISNULL(Cal.ot_rate_holiday, 3.0) 
-                                ELSE 1.5 
-                            END AS OT_Multiplier, 
-                            
-                            CASE 
-                                WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0
-                                WHEN Cal.day_type='HOLIDAY' THEN ISNULL(Cal.work_rate_holiday, 2.0) 
-                                ELSE 1.0 
-                            END AS Work_Multiplier, 
-                            
-                            CASE 
-                                WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 
-                                WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 
-                                ELSE COALESCE(CM.hourly_rate,0) 
-                            END AS Hourly_Base
-                    ) AS Rate
-
-                    CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
-                    CROSS APPLY (
-                        SELECT CASE 
-                            WHEN L.scan_out_time IS NOT NULL THEN L.scan_out_time 
-                            WHEN L.log_date < CAST(GETDATE() AS DATE) THEN T0.Shift_Start 
-                            ELSE GETDATE() 
-                        END AS Calc_End_Time
-                    ) AS T1
-                    CROSS APPLY (SELECT DATEDIFF(MINUTE, T0.Shift_Start, T1.Calc_End_Time) AS Total_Minutes) AS T2
-                    CROSS APPLY (SELECT CASE WHEN T2.Total_Minutes > 570 THEN FLOOR((T2.Total_Minutes - 570) / 30.0) * 0.5 ELSE 0 END AS OT_Hours) AS Step_OT
-                    CROSS APPLY (SELECT CASE WHEN L.log_date < CAST(GETDATE() AS DATE) AND L.scan_out_time IS NULL THEN 0 WHEN Step_OT.OT_Hours > 6 THEN 6 ELSE Step_OT.OT_Hours END AS OT_Capped) AS Final_OT
-                    
-                    WHERE (E.is_active = 1 OR L.log_id IS NOT NULL)
-                      AND (L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= :createDateCheck))
-                    
-                    GROUP BY 
-                        ISNULL(L.actual_line, E.line),
-                        ISNULL(S.shift_name, S_Master.shift_name),
-                        ISNULL(L.actual_team, E.team_group),
-                        ISNULL(CM.category_name, 'General'),
-                        ISNULL(CM.rate_type, 'DAILY')
-                    
-                    ORDER BY line_name, shift_name";
-
+            // ✅ 1. รับค่า Toggle จาก Frontend
+            $useNewFormula = isset($_GET['use_new_formula']) && $_GET['use_new_formula'] === 'true' ? 1 : 0;
+            
+            // ✅ 2. เลือกชื่อ SP ตาม Environment
+            // (บน TEST ใช้ตัว TEST, บน PROD ใช้ตัว PROD ถ้ามี)
+            $spName = IS_DEVELOPMENT ? 'sp_GetManpowerDashboardData_TEST' : 'sp_GetManpowerDashboardData'; 
+            
+            // ✅ 3. เรียก Stored Procedure แทนการฝัง SQL
+            $sql = "EXEC $spName @StartDate = :start, @EndDate = :end, @UseNewFormula = :formula";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                ':date' => $date, 
-                ':calDate' => $date, 
-                ':t0Date' => $date, 
-                ':createDateCheck' => $date
+                ':start'   => $date,
+                ':end'     => $date, 
+                ':formula' => $useNewFormula
             ]);
+            
             $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
             $finalData = array_map(function($row) {
                 return [
-                    'line_name' => $row['line_name'],
-                    'shift_name' => $row['shift_name'],
-                    'team_group' => $row['team_group'],
-                    'emp_type' => $row['emp_type'],
-                    'rate_type' => $row['rate_type'],
-                    'total_hc' => $row['total_hc'],
-                    'plan' => $row['total_hc'],
-                    'present' => $row['present'],
-                    'late' => $row['late'],
-                    'absent' => $row['absent'],
-                    'leave' => $row['leave'],
-                    'total_cost' => $row['total_cost'],
-                    'normal_cost' => $row['normal_cost'],
-                    'ot_cost' => $row['ot_cost']
+                    'line_name'   => $row['Line'],
+                    'shift_name'  => $row['Shift'],
+                    'team_group'  => $row['Team'],
+                    
+                    'emp_type'    => $row['Category'], // ex. "Operator", "Leader"
+                    'rate_type'   => $row['RateType'], // ex. "DAILY", "MONTHLY"
+                    
+                    'total_hc'    => $row['Plan (HC)'],
+                    'plan'        => $row['Plan (HC)'],
+                    'present'     => $row['Present'],
+                    'late'        => $row['Late'],
+                    'absent'      => $row['Absent'],
+                    'leave'       => $row['Leave'],
+                    'actual'      => $row['Actual (Present+Late)'],
+                    
+                    'total_cost'  => $row['Est_Cost'],
+                    'normal_cost' => $row['Normal_Cost'],
+                    'ot_cost'     => $row['OT_Cost']
                 ];
             }, $rawData);
 
@@ -329,7 +211,7 @@ try {
             break;
 
         // ======================================================================
-        // CASE: clear_day (Admin Only)
+        // CASE: clear_day (Admin Only) - คงเดิม
         // ======================================================================
         case 'clear_day':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
@@ -358,7 +240,7 @@ try {
             break;
 
         // ======================================================================
-        // CASE: update_log_status (Quick Update)
+        // CASE: update_log_status (Quick Update) - คงเดิม
         // ======================================================================
         case 'update_log_status':
             if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -389,7 +271,7 @@ try {
             break;
 
         // ======================================================================
-        // CASE: delete_log (Delete Individual)
+        // CASE: delete_log (Delete Individual) - คงเดิม
         // ======================================================================
         case 'delete_log':
             if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
@@ -419,19 +301,13 @@ try {
             break;
 
         // ======================================================================
-        // CASE: read_trend (ดึงข้อมูลกราฟย้อนหลัง)
+        // CASE: read_trend (ดึงข้อมูลกราฟย้อนหลัง) - คงเดิม
         // ======================================================================
         case 'read_trend':
-            // 1. รับค่า Date Range (Default ย้อนหลัง 7 วัน)
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
-            
-            // 2. ชื่อฟังก์ชัน SQL (ตาม Environment)
-            $funcName = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+            $funcName     = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
 
-            // 3. SQL Query: ใช้ Recursive CTE สร้างวันที่ แล้ว Cross Apply ฟังก์ชัน
-            // หมายเหตุ: ใช้ WITH (NOLOCK) ในฟังก์ชันไม่ได้โดยตรง แต่ Table ในฟังก์ชันควรมีอยู่แล้ว 
-            // หรือเรายอมรับ Dirty Read ได้เล็กน้อยสำหรับ Dashboard
             $sql = "
                 WITH DateRange AS (
                     SELECT CAST(:start AS DATE) AS SummaryDate
@@ -452,61 +328,44 @@ try {
                 CROSS APPLY $funcName(d.SummaryDate) f
                 GROUP BY d.SummaryDate
                 ORDER BY d.SummaryDate ASC
-                OPTION (MAXRECURSION 366); -- ป้องกัน Infinite Loop
+                OPTION (MAXRECURSION 366);
             ";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':start' => $startDateStr, 
-                ':end'   => $endDateStr
-            ]);
+            $stmt->execute([':start' => $startDateStr, ':end'   => $endDateStr]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         // ======================================================================
-        // CASE: read_range_report (Executive Report) - [FIXED KEY MISMATCH]
+        // CASE: read_range_report - คงเดิม
         // ======================================================================
         case 'read_range_report':
             $startDate = $_GET['startDate'] ?? date('Y-m-01');
             $endDate   = $_GET['endDate']   ?? date('Y-m-t');
-            
-            // [NEW] รับค่า Filter
             $line  = isset($_GET['line']) ? $_GET['line'] : null;
             $shift = isset($_GET['shift']) ? $_GET['shift'] : null;
             $type  = isset($_GET['type']) ? $_GET['type'] : null;
 
-            // เลือก SP
             $spName = IS_DEVELOPMENT ? 'sp_GetExecutiveRangeReport_TEST' : 'sp_GetExecutiveRangeReport';
 
-            // execute พร้อม Parameter ใหม่
             $stmt = $pdo->prepare("EXEC $spName @StartDate = ?, @EndDate = ?, @Line = ?, @Shift = ?, @EmpType = ?");
             $stmt->execute([$startDate, $endDate, $line, $shift, $type]);
             $summaryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Result Set 2: Daily Trend (ข้ามไปชุดถัดไป)
             $stmt->nextRowset();
             $trendData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $headerStats = !empty($summaryData) ? $summaryData[0] : [
-                'Total_Headcount' => 0,
-                'New_Joiners' => 0,
-                'Total_Resigned' => 0,
-                'Total_Absent' => 0,
-                'Total_Late' => 0,
-                'Total_Leave' => 0,
-                'Total_Present_ManDays' => 0
+                'Total_Headcount' => 0, 'New_Joiners' => 0, 'Total_Resigned' => 0,
+                'Total_Absent' => 0, 'Total_Late' => 0, 'Total_Leave' => 0, 'Total_Present_ManDays' => 0
             ];
 
-            echo json_encode([
-                'success' => true, 
-                'header' => $headerStats, 
-                'trend' => $trendData
-            ]);
+            echo json_encode(['success' => true, 'header' => $headerStats, 'trend' => $trendData]);
             break;
 
         // ======================================================================
-        // CASE: update_log (แก้ไขข้อมูลรายวัน - FIXED Version)
+        // CASE: update_log (แก้ไขข้อมูลรายวัน) - คงเดิม
         // ======================================================================
         case 'update_log':
             if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'supervisor'])) {
@@ -514,58 +373,34 @@ try {
             }
 
             $logId  = $input['log_id'] ?? '';
-            $empId  = $input['emp_id'] ?? ''; // เพิ่มการรับ emp_id
-            $logDate = $input['log_date'] ?? date('Y-m-d'); // เพิ่มการรับวันที่
+            $empId  = $input['emp_id'] ?? '';
+            $logDate = $input['log_date'] ?? date('Y-m-d');
             $status = $input['status'] ?? '';
             $remark = $input['remark'] ?? '';
             $scanIn  = !empty($input['scan_in_time']) ? $input['scan_in_time'] : null;
             $scanOut = !empty($input['scan_out_time']) ? $input['scan_out_time'] : null;
-            
-            // เพิ่มการรับค่าไลน์และทีมที่ย้าย
             $actualLine = $input['actual_line'] ?? null;
             $actualTeam = $input['actual_team'] ?? null;
             $shiftId    = $input['shift_id'] ?? null;
 
             $pdo->beginTransaction();
 
-            // 1. ตรวจสอบว่ามีข้อมูลอยู่แล้วหรือไม่ (Check by ID or Date+Emp)
             $stmtCheck = $pdo->prepare("SELECT log_id FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE (log_id = ? AND log_id != '0') OR (emp_id = ? AND log_date = ?)");
             $stmtCheck->execute([$logId, $empId, $logDate]);
             $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
-                // อัปเดตข้อมูลเดิมที่มีอยู่ (Update)
                 $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
-                        SET status = ?, 
-                            remark = ?, 
-                            scan_in_time = ?, 
-                            scan_out_time = ?,
-                            actual_line = ?, 
-                            actual_team = ?, 
-                            shift_id = ?,
-                            updated_by = ?, 
-                            updated_at = GETDATE(),
-                            is_verified = 1 
+                        SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, actual_line = ?, actual_team = ?, shift_id = ?, updated_by = ?, updated_at = GETDATE(), is_verified = 1 
                         WHERE log_id = ?";
-                
-                $pdo->prepare($sql)->execute([
-                    $status, $remark, $scanIn, $scanOut, 
-                    $actualLine, $actualTeam, $shiftId,
-                    $updatedBy, $existing['log_id']
-                ]);
+                $pdo->prepare($sql)->execute([$status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy, $existing['log_id']]);
             } else {
-                // กรณีพนักงานยังไม่มี Log (Insert ใหม่)
                 $sql = "INSERT INTO " . MANPOWER_DAILY_LOGS_TABLE . " 
                         (log_date, emp_id, status, remark, scan_in_time, scan_out_time, actual_line, actual_team, shift_id, updated_by, updated_at, is_verified)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 1)";
-                
-                $pdo->prepare($sql)->execute([
-                    $logDate, $empId, $status, $remark, $scanIn, $scanOut, 
-                    $actualLine, $actualTeam, $shiftId, $updatedBy
-                ]);
+                $pdo->prepare($sql)->execute([$logDate, $empId, $status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy]);
             }
 
-            // 2. คำนวณเงินใหม่ทันที (Trigger SP)
             $recalcStmt = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
             $recalcStmt->execute([$logDate, $logDate]);
 
@@ -574,14 +409,13 @@ try {
             break;
 
         // ======================================================================
-        // CASE: export_history (ดึงข้อมูลสรุปแยก Line/Shift ตามช่วงเวลา)
+        // CASE: export_history (ดึงข้อมูลสรุปแยก Line/Shift ตามช่วงเวลา) - คงเดิม
         // ======================================================================
         case 'export_history':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
             $funcName     = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
 
-            // Query นี้จะดึงข้อมูลละเอียดระดับ Line/Shift/Team ของทุกวันในช่วงเวลา
             $sql = "
                 WITH DateRange AS (
                     SELECT CAST(:start AS DATE) AS SummaryDate
@@ -614,6 +448,40 @@ try {
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        // ======================================================================
+        // CASE: compare_cost (เปรียบเทียบสูตรเก่า vs ใหม่)
+        // ======================================================================
+        case 'compare_cost':
+            $startDate = $_GET['startDate'] ?? date('Y-m-d');
+            $endDate   = $_GET['endDate']   ?? $startDate; 
+            
+            $sql = "EXEC sp_CompareLaborCost_Logic @StartDate = :start, @EndDate = :end";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':start' => $startDate,
+                ':end'   => $endDate
+            ]);
+            
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $totalOld = 0; 
+            $totalNew = 0;
+            foreach($data as $row) {
+                $totalOld += floatval($row['old_total']);
+                $totalNew += floatval($row['new_total']);
+            }
+
+            echo json_encode([
+                'success' => true, 
+                'data' => $data,
+                'summary' => [
+                    'total_old' => $totalOld,
+                    'total_new' => $totalNew,
+                    'diff' => $totalNew - $totalOld,
+                    'percent' => $totalOld > 0 ? (($totalNew - $totalOld)/$totalOld)*100 : 0
+                ]
+            ]);
             break;
 
         // ======================================================================
