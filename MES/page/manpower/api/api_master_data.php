@@ -52,9 +52,9 @@ try {
             $empId = $_GET['emp_id'] ?? '';
             if (!$empId) throw new Exception("Employee ID is required.");
 
-            // Select เฉพาะฟิลด์ที่จำเป็นต้องใช้ในฟอร์มแก้ไข
+            // ✅ [UPDATED] เพิ่ม start_date, resign_date ในการดึงข้อมูล
             $sql = "SELECT emp_id, name_th, position, line, team_group, 
-                           default_shift_id, is_active 
+                           default_shift_id, is_active, start_date, resign_date 
                     FROM " . MANPOWER_EMPLOYEES_TABLE . " 
                     WHERE emp_id = ?";
             
@@ -149,103 +149,132 @@ try {
             $line = trim($input['line']);
             $shift = $input['shift_id'] ?? 1;
             $team = trim($input['team_group'] ?? '-');
+            
+            // ✅ [UPDATED] รับค่า start_date
+            $startDate = !empty($input['start_date']) ? $input['start_date'] : date('Y-m-d');
 
             // Duplicate Check
             $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE emp_id = ?");
             $stmtCheck->execute([$empId]);
             if ($stmtCheck->fetchColumn() > 0) throw new Exception("Employee ID already exists!");
 
+            // ✅ [UPDATED] เพิ่ม start_date ลงใน Insert
             $sql = "INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " 
-                    (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE())";
+                    (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at, start_date)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE(), ?)";
             
-            $pdo->prepare($sql)->execute([$empId, $name, $pos, $line, $shift, $team]);
+            $pdo->prepare($sql)->execute([$empId, $name, $pos, $line, $shift, $team, $startDate]);
             echo json_encode(['success' => true, 'message' => 'Created successfully']);
             break;
 
         // ======================================================================
-        // [FIX] 2. บันทึกแก้ไขข้อมูลพนักงาน (Update Logic + Retroactive)
+        // [FINAL & SECURE] 2. บันทึกแก้ไขข้อมูลพนักงาน (Update Logic + Retroactive)
         // ======================================================================
         case 'update_employee':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
-            $empId  = trim($input['emp_id']);
-            $name   = trim($input['name_th']);
-            $pos    = trim($input['position']);
-            $line   = trim($input['line']);
-            // รับค่า shift_id หรือ default_shift_id ก็ได้ (เผื่อ Frontend ส่งมาไม่เหมือนกัน)
-            $shift  = $input['shift_id'] ?? ($input['default_shift_id'] ?? null);
-            $team   = trim($input['team_group']);
-            $active = isset($input['is_active']) ? intval($input['is_active']) : 1;
+            // 1. ประกาศตัวแปร updatedBy ให้ชัดเจน
+            $updatedBy = $_SESSION['user']['username'] ?? 'SYSTEM'; 
+
+            $empId      = trim($input['emp_id'] ?? '');
+            $name       = trim($input['name_th'] ?? '');
+            $pos        = trim($input['position'] ?? '');
+            $line       = trim($input['line'] ?? '');
+            $shift      = $input['shift_id'] ?? ($input['default_shift_id'] ?? null);
+            $team       = trim($input['team_group'] ?? '-');
+            $active     = isset($input['is_active']) ? intval($input['is_active']) : 1;
+            
+            // รับค่าวันที่ (จากที่คุณเขียนเพิ่มมา)
+            $startDate  = !empty($input['start_date']) ? $input['start_date'] : null;
+            $resignDate = !empty($input['resign_date']) ? $input['resign_date'] : null;
+
+            if (empty($empId)) throw new Exception("Employee ID is missing.");
 
             $pdo->beginTransaction();
 
-            // 2.1 Update Master Data
-            $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                    SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE() 
-                    WHERE emp_id = ?";
-            
-            $pdo->prepare($sql)->execute([$name, $pos, $line, $shift, $team, $active, $empId]);
-
-            // 2.2 Retroactive Log Update (อัปเดตย้อนหลัง)
-            // เช็คว่ามี Flag update_logs และ effective_date หรือไม่
-            if (!empty($input['update_logs']) && !empty($input['effective_date'])) {
-                $effDate = $input['effective_date'];
+            try {
+                // 2.1 Update Master Data
+                $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                        SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE(),
+                        start_date = ?, resign_date = ? 
+                        WHERE emp_id = ?";
                 
-                // อัปเดต Log ที่เกิดขึ้นแล้วตั้งแต่วันที่ระบุ จนถึงปัจจุบัน
-                // เปลี่ยนเฉพาะ Line, Team, Shift ให้ตรงกับ Master ใหม่
-                // เงื่อนไข: ต้องยังไม่ถูก Verify (is_verified = 0)
-                
-                $sqlRetro = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . "
-                             SET actual_line = ?,
-                                 actual_team = ?,
-                                 shift_id = ?,
-                                 updated_at = GETDATE(),
-                                 updated_by = ?
-                             WHERE emp_id = ? 
-                               AND log_date >= ?
-                               AND (is_verified = 0 OR is_verified IS NULL)"; 
+                $pdo->prepare($sql)->execute([$name, $pos, $line, $shift, $team, $active, $startDate, $resignDate, $empId]);
 
-                $stmtRetro = $pdo->prepare($sqlRetro);
-                $stmtRetro->execute([$line, $team, $shift, $updatedBy, $empId, $effDate]);
+                // 2.2 Retroactive Log Update (อัปเดตย้อนหลัง)
+                if (!empty($input['update_logs']) && !empty($input['effective_date'])) {
+                    $effDate = $input['effective_date'];
+                    
+                    $sqlRetro = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . "
+                                 SET actual_line = ?,
+                                     actual_team = ?,
+                                     shift_id = ?,
+                                     updated_at = GETDATE(),
+                                     updated_by = ?
+                                 WHERE emp_id = ? 
+                                   AND log_date >= ?
+                                   AND (is_verified = 0 OR is_verified IS NULL)"; // Handle NULL
+
+                    $pdo->prepare($sqlRetro)->execute([$line, $team, $shift, $updatedBy, $empId, $effDate]);
+                }
+
+                // 2.3 Cleanup Logic (ถ้าปิดการใช้งาน)
+                if ($active === 0) {
+                    $sqlCleanLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
+                                    WHERE emp_id = ? 
+                                      AND log_date >= CAST(GETDATE() AS DATE) 
+                                      AND (is_verified = 0 OR is_verified IS NULL)";
+                    $pdo->prepare($sqlCleanLog)->execute([$empId]);
+                }
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
             }
-
-            // 2.3 Cleanup if inactive
-            if ($active === 0) {
-                $sqlCleanLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
-                                WHERE emp_id = ? 
-                                  AND log_date >= CAST(GETDATE() AS DATE) 
-                                  AND is_verified = 0 
-                                  AND (status = 'WAITING' OR status = 'ABSENT')";
-                $pdo->prepare($sqlCleanLog)->execute([$empId]);
-            }
-
-            $pdo->commit();
-            echo json_encode(['success' => true, 'message' => 'Updated successfully']);
             break;
 
         // ======================================================================
-        // CASE: terminate_employee (ลาออก)
+        // [FINAL & SECURE] CASE: terminate_employee (ลาออก)
         // ======================================================================
         case 'terminate_employee':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
             
+            $updatedBy = $_SESSION['user']['username'] ?? 'SYSTEM'; // ประกาศตัวแปร
             $empId = $input['emp_id'] ?? '';
             $resignDate = $input['resign_date'] ?? date('Y-m-d');
 
+            if (empty($empId)) throw new Exception("Missing Employee ID");
+
             $pdo->beginTransaction();
-            
-            // 1. Deactivate
-            $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET is_active = 0, last_sync_at = GETDATE() WHERE emp_id = ?")->execute([$empId]);
-            
-            // 2. Mark today as RESIGNED
-            $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " SET status = 'RESIGNED' WHERE emp_id = ? AND log_date = CAST(GETDATE() AS DATE)")->execute([$empId]);
-            
-            // 3. Delete Future Logs
-            $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE emp_id = ? AND log_date > ? AND is_verified = 0")->execute([$empId, $resignDate]);
-            
-            $pdo->commit();
-            echo json_encode(['success' => true, 'message' => 'Terminated and Logs updated']);
+
+            try {
+                // 1. Deactivate & Set Resign Date
+                $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                               SET is_active = 0, last_sync_at = GETDATE(), resign_date = ? 
+                               WHERE emp_id = ?")
+                    ->execute([$resignDate, $empId]);
+                
+                // 2. ปรับปรุงสถานะ Log ในวันที่ลาออก (ใช้ $resignDate ไม่ใช่ GETDATE())
+                $stmtUpdate = $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
+                                             SET status = 'RESIGNED', updated_at = GETDATE(), updated_by = ? 
+                                             WHERE emp_id = ? AND log_date = ?");
+                $stmtUpdate->execute([$updatedBy, $empId, $resignDate]);
+
+                // 3. ลบ Log อนาคตหลังจากวันที่ลาออก
+                $stmtDelete = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
+                                             WHERE emp_id = ? AND log_date > ? AND (is_verified = 0 OR is_verified IS NULL)");
+                $stmtDelete->execute([$empId, $resignDate]);
+                
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Staff termination processed successfully']);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         // ======================================================================

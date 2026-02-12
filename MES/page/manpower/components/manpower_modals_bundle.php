@@ -1,6 +1,6 @@
 <?php 
 // MES/page/manpower/components/manpower_modals_bundle.php 
-// รวม Modal ทั้งหมดไว้ที่นี่ (Cleaned & ID Fixed)
+// รวม Modal ทั้งหมดไว้ที่นี่ (Updated: Added Start/Resign Date to Employee Edit)
 ?>
 
 <div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
@@ -245,12 +245,16 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="empEditTitle"><i class="fas fa-user-edit me-2"></i>Edit Employee</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i><span id="empEditTitle">Edit Employee</span>
+                    <span id="empStatusBadge" class="badge bg-secondary ms-3 border border-light" style="font-size: 0.7rem;">Loading...</span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="empEditForm">
-                    <input type="hidden" id="isEditMode"> 
+                    <input type="hidden" id="isEditMode">
+                    <input type="hidden" id="currentActiveStatus" value="1"> 
                     
                     <div class="row g-2 mb-3">
                         <div class="col-4">
@@ -292,9 +296,23 @@
                         </div>
                     </div>
 
-                    <div class="form-check form-switch bg-light p-2 rounded border mb-3">
-                        <input class="form-check-input ms-0 me-2" type="checkbox" id="empEditActive" checked>
-                        <label class="form-check-label fw-bold" for="empEditActive">Active Status (ยังทำงานอยู่)</label>
+                    <div id="resignInfoCard" class="alert alert-danger py-2 mb-3" style="display: none;">
+                        <small><i class="fas fa-info-circle me-1"></i> พนักงานนี้พ้นสภาพแล้ว</small>
+                    </div>
+
+                    <div class="row g-2 mb-3 bg-light p-2 rounded border">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-success">
+                                <i class="fas fa-calendar-check me-1"></i>Start Date
+                            </label>
+                            <input type="date" class="form-control form-control-sm" id="empEditStartDate">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-danger">
+                                <i class="fas fa-calendar-times me-1"></i>Resign Date
+                            </label>
+                            <input type="date" class="form-control form-control-sm" id="empEditResignDate">
+                        </div>
                     </div>
 
                     <div id="divRetroUpdate" style="display:none;">
@@ -321,14 +339,21 @@
                             </div>
                         </div>
                     </div>
-                    </form>
+                </form>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-outline-danger me-auto" id="btnDeleteEmp" 
-                        onclick="const id=document.getElementById('empEditId').value; const name=document.getElementById('empEditName').value; Actions.terminateStaff(id, name);" 
-                        title="ปรับสถานะเป็นพ้นสภาพและลบแผนงานในอนาคต">
-                    <i class="fas fa-user-slash me-1"></i> แจ้งลาออก (Resign)
+                <button type="button" class="btn btn-outline-danger me-auto" id="btnResign" 
+                        onclick="Actions.handleResignClick()" 
+                        title="ปรับสถานะเป็นพ้นสภาพ">
+                    <i class="fas fa-user-slash me-1"></i> แจ้งลาออก
                 </button>
+
+                <button type="button" class="btn btn-outline-success me-auto" id="btnReactivate" 
+                        style="display: none;"
+                        onclick="Actions.handleReactivateClick()">
+                    <i class="fas fa-trash-restore me-1"></i> รับกลับเข้าทำงาน
+                </button>
+
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary px-4" onclick="Actions.saveEmployee()">
                     <i class="fas fa-save me-1"></i> Save Data
@@ -368,7 +393,7 @@
                                 <td>
                                     <input class="form-control form-control-sm" list="typeList" id="newMapType" placeholder="เลือกหรือพิมพ์ใหม่...">
                                     <datalist id="typeList">
-                                        </datalist>
+                                    </datalist>
                                 </td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-primary rounded-circle shadow-sm" onclick="Actions.addMapping()" title="Add">
@@ -388,471 +413,141 @@
     </div>
 </div>
 
-<div class="modal fade" id="reportRangeModal" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+<div class="modal fade" id="integratedAnalysisModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-white border-bottom">
-                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i>Manpower Summary Report</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title small text-uppercase fw-bold">
+                    <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower & Cost Analysis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body bg-light">
+            <div class="modal-body bg-light p-3">
                 
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-body py-2">
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            
-                            <div class="input-group input-group-sm" style="width: auto;">
-                                <span class="input-group-text bg-white text-secondary fw-bold">Date</span>
-                                <input type="date" id="reportStartDate" class="form-control" style="max-width: 130px;">
-                                <span class="input-group-text bg-white">-</span>
-                                <input type="date" id="reportEndDate" class="form-control" style="max-width: 130px;">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted">Range Start</label>
+                                <input type="date" id="ia_startDate" class="form-control form-control-sm border-primary-subtle" value="<?php echo date('Y-m-01'); ?>">
                             </div>
-
-                            <select id="rpt_line" class="form-select form-select-sm" style="width: 140px;">
-                                <option value="ALL">All Lines</option>
-                            </select>
-
-                            <select id="rpt_shift" class="form-select form-select-sm" style="width: 110px;">
-                                <option value="ALL">All Shift</option>
-                                <option value="Day">Day</option>
-                                <option value="Night">Night</option>
-                            </select>
-
-                            <select id="rpt_type" class="form-select form-select-sm" style="width: 120px;">
-                                <option value="ALL">All Types</option>
-                                <option value="Daily">Daily</option>
-                                <option value="Monthly">Monthly</option>
-                                <option value="Subcontract">Subcontract</option>
-                            </select>
-
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted">Range End</label>
+                                <input type="date" id="ia_endDate" class="form-control form-control-sm border-primary-subtle" value="<?php echo date('Y-m-d'); ?>">
                             </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted">Line Selection</label>
+                                <select id="superLineSelect" class="form-select form-select-sm border-primary-subtle">
+                                    <option value="ALL">All Lines</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="Actions.runSuperAnalysis()">
+                                    <i class="fas fa-sync-alt me-1"></i> RUN ANALYSIS
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="row g-2 mb-3">
-    
-                <style>
-                    .stat-label { font-size: 0.65rem; color: #858796; text-transform: uppercase; font-weight: 700; display: block; }
-                    .stat-val   { font-size: 0.9rem; font-weight: 700; color: #333; display: block; }
-                    .stat-box   { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
-                    .stat-box:last-child { border-right: none; }
-                    .card-stat-container { display: flex; justify-content: space-between; margin-top: 0.5rem; background: rgba(255,255,255,0.5); border-radius: 4px; padding: 4px 0; }
-                </style>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white border-start border-primary border-4 rounded shadow-sm">
+                            <div class="text-muted small text-uppercase fw-bold">Unique Headcount</div>
+                            <h3 id="ia_rpt_hc" class="mb-0 fw-bold text-primary">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white border-start border-success border-4 rounded shadow-sm">
+                            <div class="text-muted small text-uppercase fw-bold">Actual Man-Days</div>
+                            <h3 id="ia_rpt_actual" class="mb-0 fw-bold text-success">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white border-start border-danger border-4 rounded shadow-sm">
+                            <div class="text-muted small text-uppercase fw-bold">Absent Cases</div>
+                            <h3 id="ia_rpt_absent" class="mb-0 fw-bold text-danger">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white border-start border-info border-4 rounded shadow-sm">
+                            <div class="text-muted small text-uppercase fw-bold">Leave Records</div>
+                            <h3 id="ia_rpt_leave" class="mb-0 fw-bold text-info">0</h3>
+                        </div>
+                    </div>
+                </div>
 
-                <div class="col-lg-3 col-6">
-                    <div class="card h-100 border-primary border-start border-3 shadow-sm">
-                        <div class="card-body p-2">
-                            <div class="text-uppercase small text-primary fw-bold">Headcount</div>
-                            <div class="d-flex align-items-baseline justify-content-between">
-                                <div class="h3 fw-bold text-dark mb-0" id="rpt_hc">0</div>
-                                <div class="small fw-bold" id="rpt_new">+0 / -0</div>
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+                                <h6 class="fw-bold mb-3 small text-uppercase text-secondary border-bottom pb-2">
+                                    <i class="fas fa-users-cog me-2"></i>Staff Distribution
+                                </h6>
+                                <div id="ia_rpt_attrition" class="mb-3 p-2 bg-light rounded text-center small">
+                                    </div>
+                                <div style="height: 180px; position: relative;">
+                                    <canvas id="ia_distributionChart"></canvas>
+                                </div>
                             </div>
-                            
-                            <div class="card-stat-container">
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Max</span>
-                                    <span class="stat-val" id="hc_max">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Min</span>
-                                    <span class="stat-val" id="hc_min">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Avg</span>
-                                    <span class="stat-val text-primary" id="hc_avg">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-primary">Latest</span>
-                                    <span class="stat-val text-primary" id="hc_last">0</span>
+                        </div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+                                <h6 class="fw-bold mb-3 small text-uppercase text-secondary border-bottom pb-2">
+                                    <i class="fas fa-chart-line me-2 text-primary"></i>Daily Attendance Trend
+                                </h6>
+                                <div style="height: 220px; position: relative;">
+                                    <canvas id="ia_trendChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-lg-3 col-6">
-                    <div class="card h-100 border-success border-start border-3 shadow-sm">
-                        <div class="card-body p-2">
-                            <div class="text-uppercase small text-success fw-bold">Present</div>
-                            <div class="h3 fw-bold text-dark mb-0" id="rpt_actual">0</div>
-
-                            <div class="card-stat-container">
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Max</span>
-                                    <span class="stat-val" id="act_max">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Min</span>
-                                    <span class="stat-val" id="act_min">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Avg</span>
-                                    <span class="stat-val text-success" id="act_avg">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-success">Latest</span>
-                                    <span class="stat-val text-success" id="act_last">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-6">
-                    <div class="card h-100 border-danger border-start border-3 shadow-sm">
-                        <div class="card-body p-2">
-                            <div class="text-uppercase small text-danger fw-bold">Absent</div>
-                            <div class="h3 fw-bold text-dark mb-0" id="rpt_absent">0</div>
-
-                            <div class="card-stat-container">
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Max</span>
-                                    <span class="stat-val" id="abs_max">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Min</span>
-                                    <span class="stat-val" id="abs_min">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Avg</span>
-                                    <span class="stat-val text-danger" id="abs_avg">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-danger">Latest</span>
-                                    <span class="stat-val text-danger" id="abs_last">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-6">
-                    <div class="card h-100 border-info border-start border-3 shadow-sm">
-                        <div class="card-body p-2">
-                            <div class="text-uppercase small text-info fw-bold">Leave</div>
-                            <div class="h3 fw-bold text-dark mb-0" id="rpt_leave">0</div>
-
-                            <div class="card-stat-container">
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Max</span>
-                                    <span class="stat-val" id="lev_max">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Min</span>
-                                    <span class="stat-val" id="lev_min">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;">
-                                    <span class="stat-label">Avg</span>
-                                    <span class="stat-val text-info" id="lev_avg">0</span>
-                                </div>
-                                <div class="stat-box" style="width: 25%;"> <span class="stat-label text-info">Latest</span>
-                                    <span class="stat-val text-info" id="lev_last">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
                 <div class="card border-0 shadow-sm">
-                    <div class="card-body" style="height: 250px;">
-                        <canvas id="reportChart"></canvas>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="costCompareModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-balance-scale me-2"></i>Cost Simulation Analysis
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body bg-light">
-                
-                <div class="d-flex align-items-center flex-wrap gap-2 mb-3 bg-white p-2 rounded shadow-sm">
-                    <div class="d-flex align-items-center">
-                        <span class="text-secondary fw-bold small me-2">From:</span>
-                        <input type="date" id="simStartDate" class="form-control form-control-sm" style="width: 140px;">
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <span class="text-secondary fw-bold small me-2">To:</span>
-                        <input type="date" id="simEndDate" class="form-control form-control-sm" style="width: 140px;">
-                    </div>
-                    
-                    <div class="vr mx-2"></div>
-
-                    <button class="btn btn-primary btn-sm px-3" onclick="Actions.runSimulation()">
-                        <i class="fas fa-play me-1"></i> Analyze Impact
-                    </button>
-                </div>
-
-                <div class="row g-3 mb-3" id="simSummarySection" style="display: none;">
-                    <div class="col-md-4">
-                        <div class="card border-secondary h-100">
-                            <div class="card-body text-center p-2">
-                                <small class="text-muted">Standard Cost (Old)</small>
-                                <h4 class="mb-0 text-secondary" id="sim_old_total">0</h4>
-                            </div>
+                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold small text-secondary text-uppercase">
+                            <i class="fas fa-coins me-2 text-warning"></i>Cost Impact: Standard vs Actual (Saturday Logic)
+                        </span>
+                        <div id="ia_diff_card" class="badge bg-secondary p-2">
+                            VARIANCE: <span id="ia_diff_percent" class="fw-bold">0%</span>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-primary h-100">
-                            <div class="card-body text-center p-2">
-                                <small class="text-primary">New Logic Cost</small>
-                                <h4 class="mb-0 text-primary" id="sim_new_total">0</h4>
-                            </div>
-                        </div>
+                    <div class="table-responsive" style="max-height: 350px;">
+                        <table class="table table-sm table-hover align-middle mb-0" id="ia_simTable">
+                            <thead class="bg-light sticky-top">
+                                <tr class="small text-muted">
+                                    <th rowspan="2" class="ps-3">Line/Section</th>
+                                    <th class="text-center border-start bg-secondary bg-opacity-10" width="12%">Standard (฿)</th>
+                                    <th colspan="3" class="text-center border-start bg-primary bg-opacity-10 text-primary" width="30%">Actual Performance (฿)</th>
+                                    <th colspan="2" class="text-center border-start" width="15%">Analysis</th>
+                                </tr>
+                                <tr class="small text-muted text-uppercase" style="font-size: 0.7rem;">
+                                    <th class="text-center bg-secondary bg-opacity-10 border-start">Total Std.</th>
+                                    <th class="text-center bg-primary bg-opacity-10 border-start">Total Act.</th>
+                                    <th class="text-center bg-primary bg-opacity-10">Direct Labor</th>
+                                    <th class="text-center bg-primary bg-opacity-10">Overtime</th>
+                                    <th class="text-center border-start">Diff (฿)</th>
+                                    <th class="text-center">Var%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ia_simTableBody" class="small">
+                                <tr><td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div> 
+                                    Waiting for analysis command...
+                                </td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-0 h-100" id="sim_diff_card">
-                            <div class="card-body text-center p-2">
-                                <small class="text-dark">Variance (Diff)</small>
-                                <h4 class="mb-0 fw-bold" id="sim_diff_total">0</h4>
-                                <small id="sim_diff_percent">0%</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-responsive bg-white rounded shadow-sm border">
-                    <table class="table table-hover table-bordered mb-0 small" id="simTable">
-                        <thead class="table-light text-center">
-                            <tr>
-                                <th rowspan="2" class="align-middle">Line / Section</th>
-                                <th colspan="3" class="border-bottom-0 text-secondary">Standard (Old)</th>
-                                <th colspan="3" class="border-bottom-0 text-primary">New Logic</th>
-                                <th colspan="2" class="border-bottom-0">Impact</th>
-                            </tr>
-                            <tr>
-                                <th class="text-secondary">DL</th>
-                                <th class="text-secondary">OT</th>
-                                <th class="bg-light fw-bold">Total</th>
-                                
-                                <th class="text-primary">DL</th>
-                                <th class="text-primary">OT</th>
-                                <th class="bg-light fw-bold text-primary">Total</th>
-
-                                <th>Diff (THB)</th>
-                                <th>%</th>
-                            </tr>
-                        </thead>
-                        <tbody id="simTableBody">
-                            <tr><td colspan="9" class="text-center py-4 text-muted">Select date and click Analyze</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="integratedAnalysisModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95vw;">
-        <div class="modal-content border-0 shadow-lg">
-            
-            <div class="modal-header bg-dark text-white py-2">
-                <div class="d-flex align-items-center gap-3 w-100">
-                    <div>
-                        <h5 class="modal-title mb-0">
-                            <i class="fas fa-chart-pie me-2 text-warning"></i>Manpower & Cost Analytics
-                        </h5>
-                        <small class="text-white-50" style="font-size: 0.75rem;">ศูนย์รวมข้อมูลวิเคราะห์กำลังพลและต้นทุน</small>
-                    </div>
-
-                    <div class="vr bg-secondary mx-2"></div>
-
-                    <div class="d-flex gap-2 align-items-center">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-secondary text-white border-secondary">From</span>
-                            <input type="date" id="superStartDate" class="form-control bg-dark text-white border-secondary fw-bold">
-                        </div>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-secondary text-white border-secondary">To</span>
-                            <input type="date" id="superEndDate" class="form-control bg-dark text-white border-secondary fw-bold">
-                        </div>
-                        
-                        <select id="superLineSelect" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 150px;">
-                            <option value="ALL">All Lines</option>
-                            </select>
-
-                        <button class="btn btn-warning btn-sm fw-bold px-3" onclick="Actions.runSuperAnalysis()">
-                            <i class="fas fa-search me-1"></i> Analyze
-                        </button>
-                    </div>
-
-                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
                 </div>
             </div>
-
-            <div class="modal-body bg-light p-0">
-                
-                <ul class="nav nav-tabs nav-justified" id="analyticsTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active py-3 fw-bold rounded-0" id="tab-exec-report" data-bs-toggle="tab" data-bs-target="#pane-exec-report" type="button">
-                            <i class="fas fa-users me-2 text-primary"></i>Operation Summary
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link py-3 fw-bold rounded-0" id="tab-cost-sim" data-bs-toggle="tab" data-bs-target="#pane-cost-sim" type="button">
-                            <i class="fas fa-coins me-2 text-success"></i>Cost Simulation (Old vs New)
-                        </button>
-                    </li>
-                </ul>
-
-                <div class="tab-content p-4" id="analyticsTabsContent">
-                    
-                    <div class="tab-pane fade show active" id="pane-exec-report" role="tabpanel">
-                        
-                        <div class="row g-3 mb-4">
-                            <div class="col-lg-3 col-6">
-                                <div class="card h-100 border-primary border-start border-4 shadow-sm">
-                                    <div class="card-body p-3">
-                                        <div class="text-uppercase small text-primary fw-bold mb-1">Total Headcount</div>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="h2 fw-bold text-dark mb-0" id="rpt_hc">-</div>
-                                            <div class="badge bg-primary bg-opacity-10 text-primary px-2" id="rpt_new">Move: -</div>
-                                        </div>
-                                        <div class="mt-3 small text-muted d-flex justify-content-between border-top pt-2">
-                                            <span>Min: <b id="hc_min">-</b></span>
-                                            <span>Max: <b id="hc_max">-</b></span>
-                                            <span class="text-primary">Avg: <b id="hc_avg">-</b></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-3 col-6">
-                                <div class="card h-100 border-success border-start border-4 shadow-sm">
-                                    <div class="card-body p-3">
-                                        <div class="text-uppercase small text-success fw-bold mb-1">Present (Work)</div>
-                                        <div class="h2 fw-bold text-dark mb-0" id="rpt_actual">-</div>
-                                        <div class="mt-3 small text-muted d-flex justify-content-between border-top pt-2">
-                                            <span>Min: <b id="act_min">-</b></span>
-                                            <span>Max: <b id="act_max">-</b></span>
-                                            <span class="text-success">Avg: <b id="act_avg">-</b></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-3 col-6">
-                                <div class="card h-100 border-danger border-start border-4 shadow-sm">
-                                    <div class="card-body p-3">
-                                        <div class="text-uppercase small text-danger fw-bold mb-1">Absent (No Pay)</div>
-                                        <div class="h2 fw-bold text-dark mb-0" id="rpt_absent">-</div>
-                                        <div class="mt-3 small text-muted d-flex justify-content-between border-top pt-2">
-                                            <span>Min: <b id="abs_min">-</b></span>
-                                            <span>Max: <b id="abs_max">-</b></span>
-                                            <span class="text-danger">Avg: <b id="abs_avg">-</b></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-3 col-6">
-                                <div class="card h-100 border-info border-start border-4 shadow-sm">
-                                    <div class="card-body p-3">
-                                        <div class="text-uppercase small text-info fw-bold mb-1">Leave (Sick/Vac)</div>
-                                        <div class="h2 fw-bold text-dark mb-0" id="rpt_leave">-</div>
-                                        <div class="mt-3 small text-muted d-flex justify-content-between border-top pt-2">
-                                            <span>Min: <b id="lev_min">-</b></span>
-                                            <span>Max: <b id="lev_max">-</b></span>
-                                            <span class="text-info">Avg: <b id="lev_avg">-</b></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white py-3">
-                                <h6 class="m-0 fw-bold text-secondary"><i class="fas fa-chart-area me-1"></i>Daily Trend Analysis</h6>
-                            </div>
-                            <div class="card-body">
-                                <div style="height: 350px;">
-                                    <canvas id="reportChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="pane-cost-sim" role="tabpanel">
-                        
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <div class="card border-secondary bg-white h-100 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted text-uppercase mb-2">Standard Cost (Old)</h6>
-                                        <h3 class="mb-0 text-secondary fw-bold" id="sim_old_total">0</h3>
-                                        <small class="text-muted">Formula: Salary / 30 Days</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-primary bg-white h-100 shadow-sm">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-primary text-uppercase mb-2">New Logic Cost (V2.5)</h6>
-                                        <h3 class="mb-0 text-primary fw-bold" id="sim_new_total">0</h3>
-                                        <small class="text-primary opacity-75">Formula: Salary / WorkDays (Fixed)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 h-100 shadow text-white" id="sim_diff_card" style="background: #858796;">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-uppercase mb-2 text-white-50">Impact / Variance</h6>
-                                        <h3 class="mb-0 fw-bold text-white" id="sim_diff_total">0</h3>
-                                        <div class="badge bg-white bg-opacity-25 mt-2 fs-6" id="sim_diff_percent">0%</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                                <h6 class="m-0 fw-bold text-dark"><i class="fas fa-table me-1"></i>Detail by Line/Section</h6>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="Actions.exportSimTable()">
-                                    <i class="fas fa-file-excel"></i> Export
-                                </button>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-bordered mb-0 small align-middle" id="simTable">
-                                        <thead class="bg-light text-center text-uppercase">
-                                            <tr>
-                                                <th rowspan="2" class="align-middle bg-light sticky-start">Line / Section</th>
-                                                <th colspan="3" class="text-secondary border-bottom-0">Standard (Old)</th>
-                                                <th colspan="3" class="text-primary border-bottom-0">New Logic</th>
-                                                <th colspan="2" class="text-dark border-bottom-0">Impact</th>
-                                            </tr>
-                                            <tr>
-                                                <th class="text-secondary font-monospace">DL</th>
-                                                <th class="text-secondary font-monospace">OT</th>
-                                                <th class="bg-secondary bg-opacity-10 fw-bold text-secondary">Total</th>
-                                                
-                                                <th class="text-primary font-monospace">DL</th>
-                                                <th class="text-primary font-monospace">OT</th>
-                                                <th class="bg-primary bg-opacity-10 fw-bold text-primary">Total</th>
-
-                                                <th>Diff (฿)</th>
-                                                <th>%</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="simTableBody">
-                                            <tr><td colspan="9" class="text-center py-5 text-muted">Click "Analyze" to see data...</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
+            <div class="modal-footer bg-light py-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="Actions.exportSimTable()">
+                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                </button>
             </div>
         </div>
     </div>

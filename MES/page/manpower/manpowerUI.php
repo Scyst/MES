@@ -76,16 +76,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <i class="fas fa-calculator me-2"></i>Standard Cost
                     </button>
 
-                    <button class="btn btn-outline-dark btn-sm fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="Actions.openIntegratedAnalysis()" title="Compare Old vs New Formula">
-                        <i class="fas fa-balance-scale"></i> Compare
-                    </button>
-
                     <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.syncNow()" title="Sync from Cloud">
                         <i class="fas fa-cloud-download-alt me-1"></i> Sync
-                    </button>
-
-                    <button class="btn btn-outline-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="Actions.openEmployeeManager()" title="จัดการพนักงาน">
-                        <i class="fas fa-users-cog me-1"></i> Staff
                     </button>
 
                     <div class="dropdown ms-1">
@@ -99,7 +91,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             
                             <?php if (hasRole(['admin', 'creator'])): ?>
                     
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openReportModal()"><i class="fas fa-chart-pie text-primary me-2"></i>Executive Report</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>

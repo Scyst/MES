@@ -483,6 +483,64 @@ try {
                 ]
             ]);
             break;
+        
+        case 'integrated_analysis':
+            try {
+                $startDate = $_GET['startDate'] ?? date('Y-m-01');
+                $endDate   = $_GET['endDate']   ?? date('Y-m-d');
+                $line      = $_GET['line']      ?? 'ALL';
+
+                // ป้องกัน SQL Injection และใช้พารามิเตอร์ที่สะอาด
+                $sql = "EXEC sp_GetIntegratedManpowerAnalysis @StartDate = ?, @EndDate = ?, @Line = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$startDate, $endDate, $line]);
+
+                // Layer 1: Summary (KPI Cards)
+                $summary = $stmt->fetch(PDO::FETCH_ASSOC);
+                // ถ้าไม่มีข้อมูล ให้ส่งค่า Default กลับไปแทน False เพื่อป้องกัน JS พัง
+                if (!$summary) {
+                    $summary = [
+                        'Total_Unique_HC' => 0,
+                        'Total_Present_ManDays' => 0,
+                        'Total_Absent_ManDays' => 0,
+                        'Total_Leave_ManDays' => 0,
+                        'New_Joiners' => 0,
+                        'Resigned' => 0
+                    ];
+                }
+                $stmt->nextRowset();
+
+                // Layer 2: Daily Trend (Charts)
+                $trend = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $stmt->nextRowset();
+
+                // Layer 3: Financials (Cost Table)
+                $financials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $stmt->nextRowset();
+
+                // Bonus: Category Distribution (Pie Chart)
+                $distribution = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'summary'      => $summary,
+                        'trend'        => $trend,
+                        'financials'   => $financials,
+                        'distribution' => $distribution
+                    ]
+                ], JSON_NUMERIC_CHECK); // แปลง "123.45" เป็น 123.45 (Number) อัตโนมัติ
+
+            } catch (Exception $e) {
+                // Log Error ลงไฟล์ระบบ MES (ถ้ามีระบบ Logger)
+                error_log("Integrated Analysis Error: " . $e->getMessage());
+                
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Database Error: ' . $e->getMessage()
+                ]);
+            }
+            break;
 
         // ======================================================================
         // DEFAULT: Error

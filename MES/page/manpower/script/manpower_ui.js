@@ -710,8 +710,113 @@ const UI = {
                 }
             }
         });
-    }
+    },
 
+    renderIntegratedFinancialTable(data, targetId) {
+        const tbody = document.getElementById(targetId);
+        if (!tbody) return;
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูลต้นทุนในช่วงวันที่เลือก</td></tr>`;
+            return;
+        }
+
+        const fmt = (n) => Math.round(n || 0).toLocaleString();
+
+        tbody.innerHTML = data.map(row => {
+            const diff = row.cost_actual - row.cost_standard;
+            const diffClass = diff > 0 ? 'text-danger fw-bold' : (diff < 0 ? 'text-success fw-bold' : 'text-muted');
+            const pct = row.cost_standard > 0 ? ((diff / row.cost_standard) * 100).toFixed(1) + '%' : '0%';
+
+            return `
+                <tr>
+                    <td class="fw-bold text-dark ps-3">${row.section_name}</td>
+                    <td class="text-end text-muted small border-start">${fmt(row.cost_standard)}</td>
+                    <td class="text-end bg-primary bg-opacity-10 fw-bold text-primary">${fmt(row.cost_actual)}</td>
+                    <td class="text-end text-secondary font-monospace border-start">${fmt(row.actual_dl)}</td>
+                    <td class="text-end text-secondary font-monospace">${fmt(row.actual_ot)}</td>
+                    <td class="text-end ${diffClass} border-start">${diff > 0 ? '+' : ''}${fmt(diff)}</td>
+                    <td class="text-center small text-muted">${pct}</td>
+                </tr>`;
+        }).join('');
+    },
+
+    
+
+    renderIntegratedTrendChart(trendData) {
+        const ctx = document.getElementById('ia_trendChart')?.getContext('2d');
+        if (!ctx) return;
+
+        // เปลี่ยนจาก this.charts เป็น UI.charts
+        if (UI.charts.iaTrend) UI.charts.iaTrend.destroy();
+
+        UI.charts.iaTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.map(d => {
+                    const date = new Date(d.log_date);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                }),
+                datasets: [
+                    {
+                        label: 'Actual Present',
+                        data: trendData.map(d => d.Act_Present),
+                        borderColor: '#1cc88a',
+                        backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Absence/Leave',
+                        data: trendData.map(d => d.Act_Absent + d.Act_Leave),
+                        borderColor: '#e74a3b',
+                        borderDash: [5, 5],
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    },
+    
+    renderIntegratedDistribution(distData) {
+        const ctx = document.getElementById('ia_distributionChart')?.getContext('2d');
+        if (!ctx) return;
+
+        // เปลี่ยนจาก this.charts เป็น UI.charts
+        if (UI.charts.iaDist) UI.charts.iaDist.destroy();
+
+        UI.charts.iaDist = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: distData.map(d => d.category),
+                datasets: [{
+                    data: distData.map(d => d.head_count),
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
 };
 
 // =============================================================================
@@ -1503,158 +1608,196 @@ const Actions = {
         this.renderEmployeeTable(filtered);
     },
 
-    // --- [FIXED] Force Fetch Fresh Data & Reset Retro UI ---
     openEmpEdit: async function(dataOrEmpId) {
         const modalEl = document.getElementById('empEditModal');
         const modal = new bootstrap.Modal(modalEl);
         
-        // 1. Determine Mode & Extract ID
         let empId = null;
         let isEdit = false;
 
+        document.getElementById('empEditForm').reset();
+        document.getElementById('empEditStartDate').value = ''; 
+        document.getElementById('empEditResignDate').value = '';
+
+        document.getElementById('divRetroUpdate').style.display = 'none'; 
+        document.getElementById('retroDateBox').style.display = 'none';
+        
+        this._originalWorkData = { line: '', team: '', shift: '' };
+
         if (dataOrEmpId) {
             isEdit = true;
-            if (typeof dataOrEmpId === 'string' && dataOrEmpId.length < 20) {
-                // Case A: ส่งมาเป็น ID เพียวๆ (เช่น 'EMP001')
-                empId = dataOrEmpId;
-            } else {
-                // Case B: ส่งมาเป็น JSON (แบบเก่า) -> แกะเอาแค่ ID พอ
-                try {
-                    const tempObj = JSON.parse(decodeURIComponent(dataOrEmpId));
-                    empId = tempObj.emp_id;
-                } catch (e) {
-                    console.error("Parse Error:", e);
-                    alert("Error parsing employee data");
-                    return;
-                }
-            }
+            if (typeof dataOrEmpId === 'string' && dataOrEmpId.length < 20) { empId = dataOrEmpId; } 
+            else { try { const t = JSON.parse(decodeURIComponent(dataOrEmpId)); empId = t.emp_id; } catch(e) { return; } }
         }
 
-        // 2. Setup UI State
+        // Setup Header
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
-        document.getElementById('empEditTitle').innerHTML = isEdit ? '<i class="fas fa-user-edit"></i> Edit Employee' : '<i class="fas fa-user-plus"></i> New Employee';
-        
-        // Reset Form ก่อน
-        document.getElementById('empEditForm').reset();
+        document.getElementById('empEditTitle').innerText = isEdit ? 'Edit Employee' : 'New Employee';
+        document.getElementById('empEditId').readOnly = isEdit;
 
-        // 🔥 [NEW] Reset Retroactive Update Section & Fix Date Format
-        const retroCheck = document.getElementById('editMaster_UpdateLogs');
-        const retroBox = document.getElementById('retroDateBox');
-        const retroDiv = document.getElementById('divRetroUpdate');
-        
-        if (retroCheck) retroCheck.checked = false;
-        if (retroBox) retroBox.style.display = 'none';
-        if (retroDiv) retroDiv.style.display = isEdit ? 'block' : 'none';
-        
-        // ✅ เรียกใช้ Flatpickr เพื่อแสดงวันที่แบบไทย (dd/mm/yyyy)
-        const effDateInput = document.getElementById('editMaster_EffectiveDate');
-        if (effDateInput) {
-            if (typeof flatpickr === 'function') {
-                flatpickr(effDateInput, {
-                    dateFormat: "Y-m-d", // ค่าจริงที่ส่งเข้า Server (เช่น 2026-02-06)
-                    altInput: true,      // สร้างช่องหลอกเพื่อแสดงผล
-                    altFormat: "d/m/Y",  // รูปแบบที่ตาเห็น (เช่น 06/02/2026)
-                    defaultDate: "today", // ตั้งค่าเริ่มต้นเป็นวันนี้
-                    allowInput: true
-                });
-            } else {
-                // Fallback กรณีโหลด Flatpickr ไม่ติด
-                effDateInput.value = new Date().toISOString().split('T')[0];
-            }
-        }
-
-        // 3. Load Dropdowns (ถ้ายังไม่มี)
+        // Load Dropdowns
         if(this._structureCache.lines.length === 0) await this.initDropdowns();
 
-        // 4. Logic แยกตาม Mode
         if (isEdit) {
-            UI.showLoader(); // บังหน้าจอไว้กัน User แก้ก่อนข้อมูลมา
+            UI.showLoader();
             try {
-                // เรียก API read_single_employee เสมอ
                 const res = await fetch(`api/api_master_data.php?action=read_single_employee&emp_id=${encodeURIComponent(empId)}`);
                 const json = await res.json();
-
-                if (!json.success || !json.data) {
-                    throw new Error(json.message || "ไม่พบข้อมูลพนักงานในฐานข้อมูล (อาจถูกลบไปแล้ว)");
-                }
-
+                if (!json.success) throw new Error(json.message);
                 const emp = json.data;
 
-                // Populate Form
-                document.getElementById('empEditId').value = emp.emp_id; 
-                document.getElementById('empEditId').readOnly = true;
-                document.getElementById('empEditName').value = emp.name_th || ''; 
+                // Populate Data
+                document.getElementById('empEditId').value = emp.emp_id;
+                document.getElementById('empEditName').value = emp.name_th || '';
                 document.getElementById('empEditPos').value = emp.position || '';
+                document.getElementById('empEditStartDate').value = emp.start_date || '';
                 
-                // ใช้ setTimeout เล็กน้อยเพื่อให้มั่นใจว่า Dropdown Render เสร็จแล้ว
+                // Work Info
                 setTimeout(() => {
-                    document.getElementById('empEditLine').value = emp.line || ''; 
-                    // รองรับทั้ง field shift_id และ default_shift_id
+                    document.getElementById('empEditLine').value = emp.line || '';
                     document.getElementById('empEditShift').value = emp.default_shift_id || emp.shift_id || '';
-                    document.getElementById('empEditTeam').value = emp.team_group || ''; 
-                    document.getElementById('empEditActive').checked = (parseInt(emp.is_active) === 1);
+                    document.getElementById('empEditTeam').value = emp.team_group || '';
+                    
+                    // Cache ค่าเดิมไว้เทียบ
+                    this._originalWorkData = { 
+                        line: emp.line, 
+                        shift: (emp.default_shift_id || emp.shift_id), 
+                        team: emp.team_group 
+                    };
                 }, 50);
 
-                if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'block';
+                // --- 🔥 SMART STATUS LOGIC ---
+                const isActive = parseInt(emp.is_active) === 1;
+                document.getElementById('currentActiveStatus').value = isActive ? '1' : '0';
+                
+                const badge = document.getElementById('empStatusBadge');
+                const btnResign = document.getElementById('btnResign');
+                const btnReactivate = document.getElementById('btnReactivate');
+                const resignCard = document.getElementById('resignInfoCard');
+
+                if (isActive) {
+                    badge.className = 'badge bg-success ms-3 border border-light';
+                    badge.innerText = 'ACTIVE';
+                    btnResign.style.display = 'inline-block';
+                    btnReactivate.style.display = 'none';
+                    resignCard.style.display = 'none';
+                } else {
+                    badge.className = 'badge bg-secondary ms-3 border border-light';
+                    badge.innerText = 'RESIGNED / INACTIVE';
+                    btnResign.style.display = 'none';
+                    btnReactivate.style.display = 'inline-block';
+                    
+                    resignCard.style.display = 'block';
+                    document.getElementById('empEditResignDate').value = emp.resign_date || '';
+                }
 
             } catch (e) {
-                console.error(e);
-                alert("❌ Error loading data: " + e.message);
-                UI.hideLoader();
-                return; // จบการทำงานถ้าดึงข้อมูลไม่ได้
+                alert("Error: " + e.message);
+                return;
             } finally {
                 UI.hideLoader();
             }
         } else {
-            // New Employee Mode
-            document.getElementById('empEditId').readOnly = false; 
-            document.getElementById('empEditActive').checked = true;
-            if(document.getElementById('btnDeleteEmp')) document.getElementById('btnDeleteEmp').style.display = 'none';
+            // New Mode
+            document.getElementById('currentActiveStatus').value = '1';
+            document.getElementById('empStatusBadge').innerText = 'NEW';
+            document.getElementById('empStatusBadge').className = 'badge bg-primary ms-3';
+            document.getElementById('btnResign').style.display = 'none';
+            document.getElementById('btnReactivate').style.display = 'none';
+            document.getElementById('resignInfoCard').style.display = 'none';
         }
 
         modal.show();
     },
 
-    // --- [FIXED] Save Logic with Retroactive ---
+    detectWorkChange() {
+        const newLine = document.getElementById('empEditLine').value;
+        const newTeam = document.getElementById('empEditTeam').value;
+        const newShift = document.getElementById('empEditShift').value;
+
+        // ถ้าค่าใหม่ ไม่ตรงกับค่าเดิม -> โชว์ Retroactive Box
+        const isChanged = (newLine != this._originalWorkData.line) || 
+                          (newTeam != this._originalWorkData.team) || 
+                          (newShift != this._originalWorkData.shift);
+        
+        const retroDiv = document.getElementById('divRetroUpdate');
+        
+        if (isChanged && document.getElementById('isEditMode').value === '1') {
+            if (retroDiv.style.display === 'none') {
+                retroDiv.style.display = 'block'; // Slide Down
+                retroDiv.classList.add('animate__animated', 'animate__fadeIn'); // ถ้ามี Animate.css
+                // Auto-set effective date to Today
+                document.getElementById('editMaster_EffectiveDate').value = new Date().toISOString().split('T')[0];
+            }
+        } else {
+            retroDiv.style.display = 'none';
+            document.getElementById('editMaster_UpdateLogs').checked = false;
+        }
+    },
+
+    handleResignClick() {
+        const id = document.getElementById('empEditId').value;
+        const name = document.getElementById('empEditName').value;
+        if(!id) return;
+        this.terminateStaff(id, name);
+    },
+
+    async handleReactivateClick() {
+        if(!confirm('ต้องการปรับสถานะพนักงานนี้กลับเป็น Active ใช่หรือไม่?')) return;
+        
+        // แค่เซ็ตสถานะใน UI เป็น 1 แล้วกด Save เอง หรือจะยิง API เลยก็ได้
+        // วิธีง่ายสุด: เปลี่ยนค่าใน Hidden แล้วสั่ง Save
+        document.getElementById('currentActiveStatus').value = '1';
+        document.getElementById('empEditResignDate').value = ''; // เคลียร์วันลาออก
+        await this.saveEmployee(); // Reuse Save Logic
+    },
+
+    // 5. Save Function (Updated to use hidden status)
     async saveEmployee() {
-        const btn = event.currentTarget; // จับปุ่มที่กด
+        const btn = event.currentTarget;
         const originalHtml = btn.innerHTML;
         
-        // 1. Operator Proofing: Lock ปุ่มทันที
+        // 1. ป้องกัน Double Submit
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
         try {
-            // 🔥 [NEW] Check Retroactive Values
-            const needRetroUpdate = document.getElementById('editMaster_UpdateLogs').checked;
-            const retroDate = document.getElementById('editMaster_EffectiveDate').value;
+            // 2. ดึง Element แบบปลอดภัย (Defensive Check)
+            const elRetroCheck = document.getElementById('editMaster_UpdateLogs');
+            const elRetroDate = document.getElementById('editMaster_EffectiveDate');
+            const elActiveStatus = document.getElementById('currentActiveStatus');
+            const elIsEdit = document.getElementById('isEditMode');
+
+            // 3. ตรวจสอบเงื่อนไขการอัปเดตย้อนหลัง
+            const needRetroUpdate = elRetroCheck ? elRetroCheck.checked : false;
+            const retroDate = elRetroDate ? elRetroDate.value : null;
 
             if (needRetroUpdate && !retroDate) {
                 throw new Error('กรุณาระบุ "มีผลตั้งแต่วันที่" หากต้องการอัปเดตย้อนหลัง');
             }
 
-            // 2. Prepare Payload
+            // 4. เตรียม Payload
             const payload = {
-                action: document.getElementById('isEditMode').value === '1' ? 'update_employee' : 'create_employee',
+                action: (elIsEdit && elIsEdit.value === '1') ? 'update_employee' : 'create_employee',
                 emp_id: document.getElementById('empEditId').value.trim(),
                 name_th: document.getElementById('empEditName').value.trim(),
                 position: document.getElementById('empEditPos').value.trim(),
                 line: document.getElementById('empEditLine').value,
                 shift_id: document.getElementById('empEditShift').value,
                 team_group: document.getElementById('empEditTeam').value,
-                is_active: document.getElementById('empEditActive').checked ? 1 : 0,
-                
-                // ส่งพารามิเตอร์ใหม่ไปด้วย
+                is_active: elActiveStatus ? parseInt(elActiveStatus.value) : 1,
+                start_date: document.getElementById('empEditStartDate').value,
+                resign_date: document.getElementById('empEditResignDate').value,
                 update_logs: needRetroUpdate ? 1 : 0,
-                effective_date: needRetroUpdate ? retroDate : null
+                effective_date: needRetroUpdate ? retroDate : null, 
             };
 
-            // 3. Client-Side Validation
-            if(!payload.emp_id || !payload.name_th) { 
-                throw new Error('กรุณากรอก "รหัสพนักงาน" และ "ชื่อ-นามสกุล" ให้ครบถ้วน');
+            // 5. Validation เบื้องต้น
+            if(!payload.emp_id || !payload.name_th) {
+                throw new Error('กรุณากรอกรหัสพนักงานและชื่อให้ครบถ้วน');
             }
 
-            // 4. Call API
+            // 6. ยิง API ไปที่ api_master_data.php
             const res = await fetch('api/api_master_data.php', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
@@ -1664,23 +1807,23 @@ const Actions = {
             const json = await res.json();
             
             if(json.success) { 
-                // 5. Success Flow
-                // ปิด Modal
-                const editModal = bootstrap.Modal.getInstance(document.getElementById('empEditModal'));
-                if (editModal) editModal.hide();
+                // 7. ปิด Modal และรีโหลดข้อมูล
+                const editModalEl = document.getElementById('empEditModal');
+                const editModal = bootstrap.Modal.getInstance(editModalEl);
+                if (editModal) editModal.show(); // บางครั้งเรียก hide ไม่ไป ให้ลองเช็ค instance
+                editModal.hide();
 
-                // Refresh Data (สำคัญมาก!)
-                // โหลด Dashboard ใหม่
-                if (typeof App !== 'undefined' && App.loadData) await App.loadData(true); 
+                // รีเฟรชตารางเบื้องหลัง
+                if (typeof App !== 'undefined') await App.loadData(true); 
                 
-                // ถ้าเปิดหน้ารายชื่อพนักงานรวมอยู่ (Employee Manager) ให้รีโหลดตารางนั้นด้วย
+                // ถ้าเปิดหน้า Employee Manager ค้างไว้ให้รีโหลดด้วย
                 const empListModal = document.getElementById('empListModal');
                 if(empListModal && empListModal.classList.contains('show')) {
                     this.openEmployeeManager();
                 }
                 
-                // ถ้าเปิดหน้ารายละเอียดพนักงาน (Detail List) อยู่ ให้รีโหลดด้วย
-                if (typeof this.fetchDetailData === 'function') {
+                // ถ้ามาจากหน้า Detail Modal ให้รีโหลดข้อมูลคนในไลน์นั้น
+                if (typeof this.fetchDetailData === 'function' && document.getElementById('detailModal').classList.contains('show')) {
                     await this.fetchDetailData(); 
                 }
                 
@@ -1690,10 +1833,11 @@ const Actions = {
             }
 
         } catch(e) {
+            console.error("Save Error:", e);
             alert('❌ Failed: ' + e.message);
         } finally {
-            // 6. Restore Button State
-            btn.disabled = false;
+            // 8. คืนค่าสถานะปุ่ม
+            btn.disabled = false; 
             btn.innerHTML = originalHtml;
         }
     },
@@ -2133,52 +2277,6 @@ const Actions = {
         await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save_mappings', categories: this._mappingCache }) });
     },
 
-    // =========================================================================
-    // 8. INTEGRATED ANALYTICS (SUPER MODAL)
-    // =========================================================================
-    
-    openIntegratedAnalysis() {
-        const modalEl = document.getElementById('integratedAnalysisModal');
-        if (!modalEl) return;
-        const modal = new bootstrap.Modal(modalEl);
-        
-        // 1. Set Default Dates (1st of Month -> Today)
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        
-        const toLocalISO = (d) => {
-            const offset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offset).toISOString().split('T')[0];
-        };
-
-        // เช็คว่าเคยเลือกวันที่ไว้หน้าหลักไหม ถ้ามีให้ดึงมาใช้
-        const mainDate = document.getElementById('filterDate').value;
-        
-        document.getElementById('superStartDate').value = toLocalISO(firstDay);
-        document.getElementById('superEndDate').value = mainDate || toLocalISO(today);
-
-        // 2. Populate Line Dropdown (ใช้ Cache ที่มีอยู่)
-        const lineSelect = document.getElementById('superLineSelect');
-        if (lineSelect && this._structureCache && this._structureCache.lines) {
-            lineSelect.innerHTML = '<option value="ALL">All Lines</option>';
-            this._structureCache.lines.forEach(item => {
-                const lineName = (typeof item === 'object' && item.line) ? item.line : item;
-                if (lineName) {
-                    lineSelect.innerHTML += `<option value="${lineName}">${lineName}</option>`;
-                }
-            });
-        }
-
-        // 3. Reset UI states
-        document.getElementById('simTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">Click "Analyze" to load data...</td></tr>`;
-        document.getElementById('rpt_hc').innerText = '-';
-        
-        modal.show();
-
-        // Optional: Auto Run
-        setTimeout(() => this.runSuperAnalysis(), 300);
-    },
-
     // Internal Logic for Tab 1: Operation
     async runExecutiveReportInternal(sDate, eDate, line) {
         try {
@@ -2325,74 +2423,15 @@ const Actions = {
         XLSX.writeFile(wb, "Manpower_Cost_Analysis.xlsx");
     },
 
-    // =========================================================================
-    // INTEGRATED ANALYTICS (FIXED VERSION)
-    // =========================================================================
-    
-    async runSuperAnalysis() {
-        // 1. ดึงค่าจาก Modal (ใช้ ID ตามไฟล์ bundle.php เป๊ะๆ)
-        const sDate = document.getElementById('superStartDate')?.value;
-        const eDate = document.getElementById('superEndDate')?.value;
-        const line  = document.getElementById('superLineSelect')?.value || 'ALL';
-
-        if(!sDate || !eDate) return alert("กรุณาระบุวันที่เริ่มต้นและสิ้นสุด");
-
-        // 2. Loading State สำหรับปุ่ม Analyze
-        const btn = event?.currentTarget;
-        const originalHtml = btn ? btn.innerHTML : '';
-        if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...'; }
-
-        // 3. แสดง Loading ในตาราง (simTableBody)
-        const tbody = document.getElementById('simTableBody');
-        if(tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5"><div class="spinner-border text-primary"></div><br>Calculating Costs...</td></tr>`;
-
-        try {
-            // 4. ยิง API compare_cost (URL ที่คุณทดสอบผ่านแล้ว)
-            const url = `api/api_daily_operations.php?action=compare_cost&startDate=${sDate}&endDate=${eDate}`;
-            const res = await fetch(url);
-            const json = await res.json();
-
-            if (json.success) {
-                let costData = json.data || [];
-                // กรองข้อมูลตามไลน์ที่เลือกใน Modal
-                if (line !== 'ALL') {
-                    costData = costData.filter(r => r.line_name === line);
-                }
-                
-                // 5. ส่ง Data ไป Render ลงตารางและสรุปยอด (ฟังก์ชันอยู่ด้านล่าง)
-                this.renderSimulationTable(costData, json.summary, line === 'ALL');
-            }
-
-            // 6. โหลดข้อมูลแถบ Operation Stats (Tab แรก)
-            const resReport = await fetch(`api/api_daily_operations.php?action=read_range_report&startDate=${sDate}&endDate=${eDate}&line=${encodeURIComponent(line)}&shift=ALL&type=ALL`);
-            const jsonReport = await resReport.json();
-            if (jsonReport.success) {
-                const h = jsonReport.header;
-                UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
-                UI.animateNumber('rpt_actual', h.Total_Present_ManDays || 0);
-                UI.animateNumber('rpt_absent', h.Total_Absent || 0);
-                UI.animateNumber('rpt_leave', h.Total_Leave || 0);
-                if (jsonReport.trend) UI.renderReportChart(jsonReport.trend);
-            }
-
-        } catch(err) {
-            console.error("Analysis Error:", err);
-            if(tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-5">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
-        } finally {
-            if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
-        }
-    },
-
-    renderSimulationTable(data, apiSummary, isAllLines) {
-        const tbody = document.getElementById('simTableBody');
+    renderSimulationTable(data, apiSummary, isAllLines, targetTbodyId = 'simTableBody') {
+        const tbody = document.getElementById(targetTbodyId); // ใช้ ID ที่ส่งมา
         if(!tbody) return;
 
         let html = '';
-        let totalOld = 0, totalNew = 0;
         const fmt = (n) => Math.round(parseFloat(n || 0)).toLocaleString();
 
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">ไม่พบข้อมูลต้นทุนในช่วงวันที่เลือก</td></tr>`;
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
@@ -2401,48 +2440,98 @@ const Actions = {
             const newT = parseFloat(row.new_total || 0);
             const diff = parseFloat(row.diff_amount || 0);
             const diffClass = diff > 0 ? 'text-danger fw-bold' : (diff < 0 ? 'text-success fw-bold' : 'text-muted');
-            const pct = oldT > 0 ? ((diff / oldT) * 100).toFixed(1) + '%' : '0%';
-
-            totalOld += oldT;
-            totalNew += newT;
-
+            
             html += `
                 <tr>
                     <td class="fw-bold text-dark ps-3">${row.line_name}</td>
-                    <td class="text-end text-secondary small font-monospace">${fmt(row.old_dl)}</td>
-                    <td class="text-end text-secondary small font-monospace">${fmt(row.old_ot)}</td>
-                    <td class="text-end bg-secondary bg-opacity-10 fw-bold text-secondary font-monospace border-end">${fmt(oldT)}</td>
+                    <td class="text-end small font-monospace">${fmt(row.old_dl)}</td>
+                    <td class="text-end small font-monospace">${fmt(row.old_ot)}</td>
+                    <td class="text-end bg-light fw-bold border-end">${fmt(oldT)}</td>
                     <td class="text-end text-primary small font-monospace">${fmt(row.new_dl)}</td>
                     <td class="text-end text-primary small font-monospace">${fmt(row.new_ot)}</td>
-                    <td class="text-end bg-primary bg-opacity-10 fw-bold text-primary font-monospace border-end">${fmt(newT)}</td>
-                    <td class="text-end ${diffClass} font-monospace">${diff > 0 ? '+' : ''}${fmt(diff)}</td>
-                    <td class="text-center small text-muted">${pct}</td>
+                    <td class="text-end bg-primary bg-opacity-10 fw-bold text-primary border-end">${fmt(newT)}</td>
+                    <td class="text-end ${diffClass}">${diff > 0 ? '+' : ''}${fmt(diff)}</td>
+                    <td class="text-center small text-muted">${oldT > 0 ? ((diff / oldT) * 100).toFixed(1) : 0}%</td>
                 </tr>`;
         });
-
         tbody.innerHTML = html;
+    },
 
-        // อัปเดต Card สรุปยอดด้านบน (ใช้ ID จาก bundle.php)
-        const finalOld = isAllLines ? apiSummary.total_old : totalOld;
-        const finalNew = isAllLines ? apiSummary.total_new : totalNew;
-        const finalDiff = finalNew - finalOld;
-        const finalPct = finalOld > 0 ? ((finalDiff / finalOld) * 100) : 0;
-
-        UI.animateNumber('sim_old_total', finalOld);
-        UI.animateNumber('sim_new_total', finalNew);
+    openIntegratedAnalysis() {
+        const modalEl = document.getElementById('integratedAnalysisModal');
+        if (!modalEl) return;
         
-        const diffTotalEl = document.getElementById('sim_diff_total');
-        if (diffTotalEl) {
-            diffTotalEl.innerText = (finalDiff > 0 ? '+' : '') + fmt(finalDiff);
-            const pctEl = document.getElementById('sim_diff_percent');
-            if(pctEl) pctEl.innerText = (finalDiff > 0 ? '+' : '') + finalPct.toFixed(2) + '%';
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const toLocalISO = (d) => new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+        // เปลี่ยน ID ให้ตรงกับ HTML (ia_...)
+        const startInput = document.getElementById('ia_startDate');
+        const endInput = document.getElementById('ia_endDate');
+        
+        if(startInput) startInput.value = toLocalISO(firstDay);
+        if(endInput) endInput.value = document.getElementById('filterDate').value || toLocalISO(today);
+
+        // สั่งเปิด Modal
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        setTimeout(() => this.runSuperAnalysis(), 300);
+    },
+
+    async runSuperAnalysis() {
+        const start = document.getElementById('ia_startDate').value;
+        const end = document.getElementById('ia_endDate').value;
+        const line = document.getElementById('superLineSelect')?.value || 'ALL';
+        
+        UI.showLoader(); 
+        
+        try {
+            // 1. เรียก API
+            const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}`);
+            const result = await response.json();
             
-            // เปลี่ยนสีการ์ด Variance
-            const card = document.getElementById('sim_diff_card');
-            if(card) {
-                card.className = 'card h-100 shadow text-white ' + 
-                    (finalDiff > 0 ? 'bg-danger' : (finalDiff < 0 ? 'bg-success' : 'bg-secondary'));
+            if (result.success) {
+                const { summary, trend, financials, distribution } = result.data;
+
+                // --- LAYER 1: KPI CARDS ---
+                UI.animateNumber('ia_rpt_hc', summary.Total_Unique_HC || 0);
+                UI.animateNumber('ia_rpt_actual', summary.Total_Present_ManDays || 0);
+                UI.animateNumber('ia_rpt_absent', summary.Total_Absent_ManDays || 0);
+                UI.animateNumber('ia_rpt_leave', summary.Total_Leave_ManDays || 0);
+
+                const elNew = document.getElementById('ia_rpt_attrition'); 
+                if (elNew) {
+                    elNew.innerHTML = `Move: <span class="text-success fw-bold">+${summary.New_Joiners || 0}</span> / <span class="text-danger fw-bold">-${summary.Resigned || 0}</span>`;
+                }
+
+                // --- LAYER 2: FINANCIAL TABLE ---
+                UI.renderIntegratedFinancialTable(financials, 'ia_simTableBody');
+                
+                const totalStd = financials.reduce((sum, row) => sum + row.cost_standard, 0);
+                const totalAct = financials.reduce((sum, row) => sum + row.cost_actual, 0);
+                const diffPct = totalStd > 0 ? ((totalAct - totalStd) / totalStd) * 100 : 0;
+                
+                const pctEl = document.getElementById('ia_diff_percent');
+                if(pctEl) {
+                    pctEl.innerText = (diffPct > 0 ? '+' : '') + diffPct.toFixed(2) + '%';
+                    const badgeClass = diffPct > 5 ? 'bg-danger' 
+                                     : diffPct < -5 ? 'bg-success' 
+                                     : 'bg-secondary';
+                    pctEl.parentElement.className = `badge ${badgeClass} p-2`;
+                }
+
+                // --- LAYER 3: CHARTS ---
+                UI.renderIntegratedTrendChart(trend);
+                UI.renderIntegratedDistribution(distribution);
+
+            } else {
+                alert("Analysis Error: " + result.message);
             }
+        } catch (err) {
+            console.error("Critical Analysis Error:", err);
+        } finally {
+            UI.hideLoader();
         }
-    }
+    },
 };
