@@ -186,56 +186,105 @@
 </div>
 
 <div class="modal fade" id="empListModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg" style="height: 80vh;">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
             
-            <div class="modal-header bg-white border-bottom py-3">
-                <div>
-                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-address-book me-2 text-primary"></i>Employee Address Book</h5>
-                    <p class="text-muted small mb-0">ค้นหาและจัดการข้อมูลพนักงาน</p>
+            <div class="modal-header bg-white border-bottom py-2 pe-3">
+                <div class="d-flex flex-column me-3">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fas fa-users-cog text-primary me-2"></i>Employee Management
+                    </h5>
                 </div>
                 
-                <div class="d-flex align-items-center gap-2">
-                    
-                    <div class="form-check form-switch me-2 border rounded p-1 ps-5 pe-2 bg-light">
-                        <input class="form-check-input" type="checkbox" id="showInactiveToggle" onchange="Actions.openEmployeeManager()">
-                        <label class="form-check-label small fw-bold text-secondary cursor-pointer" for="showInactiveToggle">Show Inactive</label>
-                    </div>
-
-                    <div class="input-group" style="width: 250px;">
-                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0" id="empSearchBox" placeholder="ค้นหาชื่อ, รหัส..." onkeyup="Actions.filterEmployeeList()">
-                    </div>
-                    <button class="btn btn-outline-primary shadow-sm" onclick="Actions.openMappingManager()">
-                        <i class="fas fa-tags me-1"></i> Mappings
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button class="btn btn-primary btn-sm shadow-sm text-nowrap" onclick="Actions.openEmpEdit()">
+                        <i class="fas fa-plus me-1"></i> New
                     </button>
-                    <button class="btn btn-primary" onclick="Actions.openEmpEdit()">
-                        <i class="fas fa-plus"></i> New
-                    </button>
-                    
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
             </div>
 
-            <div class="modal-body p-0 bg-light">
+            <div class="modal-body bg-light border-bottom py-2 px-3">
+                
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <span class="input-group-text bg-white border-end-0 text-muted ps-2"><i class="fas fa-search"></i></span>
+                            <input type="text" id="empSearchBox" class="form-control border-start-0 py-1" placeholder="Search..." onkeyup="Actions.filterEmployeeList()">
+                        </div>
+
+                        <div class="input-group input-group-sm" style="width: 150px;">
+                            <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-industry"></i></span>
+                            <select id="empFilterLine" class="form-select border-start-0" onchange="Actions.filterEmployeeList()">
+                                <option value="">All Lines</option>
+                                </select>
+                        </div>
+
+                        <div class="d-flex align-items-center bg-white rounded border shadow-sm p-0 overflow-hidden">
+                            
+                            <select id="empDateType" class="form-select form-select-sm border-0 fw-bold text-primary" style="width: 130px; background-color: transparent;" onchange="Actions.toggleDateInputs(); Actions.filterEmployeeList();">
+                                <option value="">📅 Any Date</option>
+                                <option value="JOIN">Joined Date</option>
+                                <option value="RESIGN">Resigned Date</option>
+                            </select>
+
+                            <div id="empDateWrapper" class="d-none d-flex align-items-center border-start ps-2 pe-2 gap-1 bg-light animate__animated animate__fadeInLeft animate__fast">
+                                <input type="date" id="empDateFrom" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
+                                <span class="text-muted small">-</span>
+                                <input type="date" id="empDateTo" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
+                            </div>
+
+                        </div>
+
+                        <button class="btn btn-sm btn-link text-secondary text-decoration-none" onclick="Actions.resetEmployeeFilters()" title="Reset Filters">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
+
+                        <div class="btn-group btn-group-sm shadow-sm me-2" role="group">
+                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusActive" value="1" checked onchange="Actions.filterEmployeeList()">
+                            <label class="btn btn-outline-success px-2" for="filterStatusActive">Active</label>
+
+                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusInactive" value="0" onchange="Actions.filterEmployeeList()">
+                            <label class="btn btn-outline-secondary px-2" for="filterStatusInactive">Resigned</label>
+
+                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusAll" value="ALL" onchange="Actions.filterEmployeeList()">
+                            <label class="btn btn-outline-primary px-2" for="filterStatusAll">All</label>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-body p-0 bg-white">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 table-striped">
-                        <thead class="bg-white text-secondary sticky-top shadow-sm">
-                            <tr class="text-uppercase small">
-                                <th class="ps-4" style="width:15%">ID</th>
-                                <th style="width:25%">Name</th>
-                                <th style="width:15%">Position</th>
-                                <th style="width:10%">Line</th>
-                                <th class="text-center" style="width:10%">Shift</th>
-                                <th class="text-center" style="width:5%">Team</th>
-                                <th class="text-center" style="width:10%">Active</th>
-                                <th class="text-center pe-4" style="width:5%">Edit</th>
+                    <table class="table table-hover align-middle mb-0" style="min-width: 1000px;">
+                        <thead class="bg-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4" width="25%">Employee Profile</th>
+                                <th width="15%">Line / Section</th>
+                                <th class="text-center" width="10%">Shift</th>
+                                <th class="text-center" width="10%">Type</th>
+                                <th class="text-center" width="18%">Status / Timeline</th>
+                                <th width="15%">Tags / Data Check</th>
+                                <th class="text-end pe-4" width="10%">Action</th>
                             </tr>
                         </thead>
                         <tbody id="empListBody">
                             </tbody>
                     </table>
                 </div>
+            </div>
+            
+            <div class="modal-footer bg-light py-2 justify-content-between">
+                <div class="small text-muted" id="empListCount">Loaded: 0 records</div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -414,139 +463,262 @@
 </div>
 
 <div class="modal fade" id="integratedAnalysisModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white py-2">
+            
+            <div class="modal-header bg-dark text-white py-2 border-bottom-0">
                 <h5 class="modal-title small text-uppercase fw-bold">
-                    <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower & Cost Analysis
+                    <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower Analysis
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body bg-light p-3">
-                
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-body py-2">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-md-3">
-                                <label class="small fw-bold text-muted">Range Start</label>
-                                <input type="date" id="ia_startDate" class="form-control form-control-sm border-primary-subtle" value="<?php echo date('Y-m-01'); ?>">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="small fw-bold text-muted">Range End</label>
-                                <input type="date" id="ia_endDate" class="form-control form-control-sm border-primary-subtle" value="<?php echo date('Y-m-d'); ?>">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="small fw-bold text-muted">Line Selection</label>
-                                <select id="superLineSelect" class="form-select form-select-sm border-primary-subtle">
-                                    <option value="ALL">All Lines</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="Actions.runSuperAnalysis()">
-                                    <i class="fas fa-sync-alt me-1"></i> RUN ANALYSIS
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="row g-2 mb-3">
+            <div class="bg-light border-bottom p-3">
+                <div class="row g-2 align-items-end">
                     <div class="col-md-3">
-                        <div class="p-3 bg-white border-start border-primary border-4 rounded shadow-sm">
-                            <div class="text-muted small text-uppercase fw-bold">Unique Headcount</div>
-                            <h3 id="ia_rpt_hc" class="mb-0 fw-bold text-primary">0</h3>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3 bg-white border-start border-success border-4 rounded shadow-sm">
-                            <div class="text-muted small text-uppercase fw-bold">Actual Man-Days</div>
-                            <h3 id="ia_rpt_actual" class="mb-0 fw-bold text-success">0</h3>
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Range Start</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-calendar-alt text-primary"></i></span>
+                            <input type="date" id="ia_startDate" class="form-control border-start-0 ps-0" value="<?php echo date('Y-m-01'); ?>">
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-white border-start border-danger border-4 rounded shadow-sm">
-                            <div class="text-muted small text-uppercase fw-bold">Absent Cases</div>
-                            <h3 id="ia_rpt_absent" class="mb-0 fw-bold text-danger">0</h3>
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Range End</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-calendar-check text-primary"></i></span>
+                            <input type="date" id="ia_endDate" class="form-control border-start-0 ps-0" value="<?php echo date('Y-m-d'); ?>">
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-white border-start border-info border-4 rounded shadow-sm">
-                            <div class="text-muted small text-uppercase fw-bold">Leave Records</div>
-                            <h3 id="ia_rpt_leave" class="mb-0 fw-bold text-info">0</h3>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-lg-4">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-                                <h6 class="fw-bold mb-3 small text-uppercase text-secondary border-bottom pb-2">
-                                    <i class="fas fa-users-cog me-2"></i>Staff Distribution
-                                </h6>
-                                <div id="ia_rpt_attrition" class="mb-3 p-2 bg-light rounded text-center small">
-                                    </div>
-                                <div style="height: 180px; position: relative;">
-                                    <canvas id="ia_distributionChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-8">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-                                <h6 class="fw-bold mb-3 small text-uppercase text-secondary border-bottom pb-2">
-                                    <i class="fas fa-chart-line me-2 text-primary"></i>Daily Attendance Trend
-                                </h6>
-                                <div style="height: 220px; position: relative;">
-                                    <canvas id="ia_trendChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold small text-secondary text-uppercase">
-                            <i class="fas fa-coins me-2 text-warning"></i>Cost Impact: Standard vs Actual (Saturday Logic)
-                        </span>
-                        <div id="ia_diff_card" class="badge bg-secondary p-2">
-                            VARIANCE: <span id="ia_diff_percent" class="fw-bold">0%</span>
-                        </div>
-                    </div>
-                    <div class="table-responsive" style="max-height: 350px;">
-                        <table class="table table-sm table-hover align-middle mb-0" id="ia_simTable">
-                            <thead class="bg-light sticky-top">
-                                <tr class="small text-muted">
-                                    <th rowspan="2" class="ps-3">Line/Section</th>
-                                    <th class="text-center border-start bg-secondary bg-opacity-10" width="12%">Standard (฿)</th>
-                                    <th colspan="3" class="text-center border-start bg-primary bg-opacity-10 text-primary" width="30%">Actual Performance (฿)</th>
-                                    <th colspan="2" class="text-center border-start" width="15%">Analysis</th>
-                                </tr>
-                                <tr class="small text-muted text-uppercase" style="font-size: 0.7rem;">
-                                    <th class="text-center bg-secondary bg-opacity-10 border-start">Total Std.</th>
-                                    <th class="text-center bg-primary bg-opacity-10 border-start">Total Act.</th>
-                                    <th class="text-center bg-primary bg-opacity-10">Direct Labor</th>
-                                    <th class="text-center bg-primary bg-opacity-10">Overtime</th>
-                                    <th class="text-center border-start">Diff (฿)</th>
-                                    <th class="text-center">Var%</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ia_simTableBody" class="small">
-                                <tr><td colspan="7" class="text-center py-5 text-muted">
-                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div> 
-                                    Waiting for analysis command...
-                                </td></tr>
-                            </tbody>
-                        </table>
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Focus Line</label>
+                        <select id="superLineSelect" class="form-select form-select-sm">
+                            <option value="ALL">All Lines (Overview)</option>
+                            </select>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-1">
+
+            <div class="modal-body p-0 bg-white">
+                <ul class="nav nav-tabs nav-tabs-bordered px-3 pt-3" id="iaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">
+                            <i class="fas fa-chart-line me-2 text-success"></i>Operations & Trends
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="tab-financial-btn" data-bs-toggle="tab" data-bs-target="#tab-financial" type="button" role="tab">
+                            <i class="fas fa-coins me-2 text-warning"></i>Financial Analysis
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3" id="iaTabContent">
+                    
+                    <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-uppercase fw-bold small text-secondary">Total HC</span>
+                                        <span id="ia_rpt_attrition" class="badge bg-light text-muted border" style="font-size: 0.7rem;">--</span>
+                                    </div>
+                                    <h3 id="ia_rpt_hc" class="mb-2 fw-bold text-primary text-center">0</h3>
+                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
+                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                        <tbody><tr><td id="ia_rpt_hc_max" class="fw-bold">0</td><td id="ia_rpt_hc_min">0</td><td id="ia_rpt_hc_avg">0</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100">
+                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Actual Present</div>
+                                    <h3 id="ia_rpt_actual" class="mb-2 fw-bold text-success text-center">0</h3>
+                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
+                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                        <tbody><tr><td id="ia_rpt_actual_max" class="fw-bold">0</td><td id="ia_rpt_actual_min">0</td><td id="ia_rpt_actual_avg">0</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100">
+                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Absent</div>
+                                    <h3 id="ia_rpt_absent" class="mb-2 fw-bold text-danger text-center">0</h3>
+                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
+                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                        <tbody><tr><td id="ia_rpt_absent_max" class="fw-bold">0</td><td id="ia_rpt_absent_min">0</td><td id="ia_rpt_absent_avg">0</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100">
+                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Leave</div>
+                                    <h3 id="ia_rpt_leave" class="mb-2 fw-bold text-info text-center">0</h3>
+                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
+                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                        <tbody><tr><td id="ia_rpt_leave_max" class="fw-bold">0</td><td id="ia_rpt_leave_min">0</td><td id="ia_rpt_leave_avg">0</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-lg-8">
+                                <div class="card border shadow-sm h-100">
+                                    <div class="card-header bg-white py-1 fw-bold small text-uppercase text-secondary">
+                                        <i class="fas fa-chart-line me-2 text-primary"></i>Performance Trend (Plan vs Actual)
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div style="height: 220px; width: 100%;">
+                                            <canvas id="ia_trendLineChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="card border shadow-sm h-100">
+                                    <div class="card-header bg-white py-1 fw-bold small text-uppercase text-secondary">
+                                        <i class="fas fa-users-cog me-2 text-dark"></i>Workforce Structure
+                                    </div>
+                                    <div class="card-body p-2 d-flex align-items-center justify-content-center">
+                                        <div style="height: 220px; width: 100%;">
+                                            <canvas id="ia_structureDonut"></canvas> </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-lg-8">
+                                <div class="card border shadow-sm h-100">
+                                    <div class="card-header bg-white py-1 fw-bold small text-uppercase text-secondary d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-layer-group me-2 text-success"></i>Daily Breakdown & Capacity</span>
+                                        <span class="badge bg-light text-dark border">Combo Chart</span>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div style="height: 250px; width: 100%;">
+                                            <canvas id="ia_comboChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="card border shadow-sm h-100">
+                                    <div class="card-header bg-white py-1 fw-bold small text-uppercase text-secondary">
+                                        <i class="fas fa-chart-pie me-2 text-warning"></i>Attendance Ratio
+                                    </div>
+                                    <div class="card-body p-2 d-flex align-items-center justify-content-center">
+                                        <div style="height: 250px; width: 100%;">
+                                            <canvas id="ia_attendanceDonut"></canvas> </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-financial" role="tabpanel"> 
+    
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="card border-start border-4 border-secondary shadow-sm h-100">
+                                    <div class="card-body py-2">
+                                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                            Current Logic (สูตรเดิม)
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_old_total">-</div>
+                                        <div class="small text-muted mt-1">Standard Calculation</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card border-start border-4 border-primary shadow-sm h-100">
+                                    <div class="card-body py-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            New Logic (สูตรใหม่)
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_new_total">-</div>
+                                        <div class="small text-muted mt-1">Adj. Sat/Sun & Holiday</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card border-start border-4 border-info shadow-sm h-100" id="fin_impact_card">
+                                    <div class="card-body py-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Net Impact (ผลต่าง)
+                                        </div>
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_diff_total">-</div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="badge bg-light text-dark border" id="fin_diff_percent">0%</span>
+                                            </div>
+                                        </div>
+                                        <div class="small text-muted mt-1" id="fin_impact_text">Variance Analysis</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-lg-12">
+                                <div class="card shadow-sm mb-3">
+                                    <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
+                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                            <i class="fas fa-chart-bar me-1"></i> Cost Impact by Line
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-area" style="height: 300px;">
+                                            <canvas id="financialImpactChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <div class="card shadow-sm">
+                                    <div class="card-header py-2 bg-light">
+                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                            <i class="fas fa-table me-1"></i> Detailed Breakdown
+                                        </h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 0.85rem;">
+                                                <thead class="bg-light text-secondary">
+                                                    <tr>
+                                                        <th class="ps-3" width="20%">Line</th>
+                                                        <th class="text-end" width="15%">Old (Std)</th>
+                                                        <th class="text-end" width="15%">New (Act)</th>
+                                                        <th class="text-end" width="15%">Diff</th>
+                                                        <th class="text-center" width="10%">% Var</th>
+                                                        <th class="text-end text-muted" width="12%">New DL</th>
+                                                        <th class="text-end text-muted" width="12%">New OT</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="financialTableBody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light py-2">
+                <div class="me-auto small text-muted">
+                    <i class="fas fa-info-circle me-1"></i> Values calculated based on daily logs & master rates.
+                </div>
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="Actions.exportSimTable()">
-                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="Actions.exportSimTable()">
+                    <i class="fas fa-file-excel me-1"></i> Export Full Report
                 </button>
             </div>
         </div>

@@ -68,33 +68,44 @@ try {
             break;
 
         // ======================================================================
-        // CASE: read_employees (Filter Active/All)
+        // CASE: read_employees (List View)
         // ======================================================================
         case 'read_employees':
-            $showAll = isset($_GET['show_all']) && $_GET['show_all'] === 'true';
+            $showAll = filter_var($_GET['show_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            
+            // ✅ แก้ไข SQL: เพิ่ม start_date และ resign_date
+            $sql = "SELECT 
+                        E.emp_id, 
+                        E.name_th, 
+                        E.position, 
+                        E.line, 
+                        E.team_group, 
+                        E.default_shift_id, 
+                        E.is_active, 
+                        CM.rate_type as emp_type,
+                        S.shift_name,
+                        CONVERT(VARCHAR(10), E.start_date, 120) as start_date,
+                        CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date
 
-            $sql = "SELECT E.emp_id, E.name_th, E.position, E.line, E.team_group, 
-                           E.default_shift_id, E.is_active,
-                           ISNULL(S.shift_name, '-') as shift_name,
-                           ISNULL(CM.category_name, 'Other') as emp_type
                     FROM " . MANPOWER_EMPLOYEES_TABLE . " E
                     LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
                     OUTER APPLY (
-                        SELECT TOP 1 category_name 
+                        SELECT TOP 1 rate_type 
                         FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
                         WHERE E.position LIKE '%' + M.keyword + '%' 
                         ORDER BY LEN(M.keyword) DESC
-                    ) CM";
-            
+                    ) CM ";
+
             if (!$showAll) {
                 $sql .= " WHERE E.is_active = 1";
             }
-                    
-            $sql .= " ORDER BY E.is_active DESC, E.line ASC, E.emp_id ASC";
+            
+            $sql .= " ORDER BY E.emp_id ASC";
 
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            $stmt = $pdo->query($sql);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         // ======================================================================

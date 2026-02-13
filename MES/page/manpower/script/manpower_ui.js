@@ -788,6 +788,74 @@ const UI = {
             }
         });
     },
+
+    renderIntegratedStackedChart(data) {
+        const ctx = document.getElementById('ia_trendChart')?.getContext('2d');
+        if (!ctx) return;
+
+        if (UI.charts.iaTrend) UI.charts.iaTrend.destroy();
+
+        UI.charts.iaTrend = new Chart(ctx, {
+            type: 'bar', // เปลี่ยนเป็น Bar
+            data: {
+                labels: data.map(d => {
+                    const date = new Date(d.log_date);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                }),
+                datasets: [
+                    {
+                        label: 'Present (มา)',
+                        data: data.map(d => d.Act_Present),
+                        backgroundColor: '#1cc88a', // เขียว
+                        stack: 'Stack 0'
+                    },
+                    {
+                        label: 'Leave (ลา)',
+                        data: data.map(d => d.Act_Leave),
+                        backgroundColor: '#36b9cc', // ฟ้า
+                        stack: 'Stack 0'
+                    },
+                    {
+                        label: 'Absent (ขาด)',
+                        data: data.map(d => d.Act_Absent),
+                        backgroundColor: '#e74a3b', // แดง
+                        stack: 'Stack 0'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                // Logic: ดึงข้อมูล New Joiner / Resigned ของวันนั้นมาโชว์
+                                const index = tooltipItems[0].dataIndex;
+                                const dayData = data[index];
+                                let total = 0;
+                                tooltipItems.forEach(t => total += t.parsed.y);
+                                
+                                let footerText = `Total: ${total} คน`;
+                                if (dayData.Daily_New > 0) footerText += `\nNew: +${dayData.Daily_New}`;
+                                if (dayData.Daily_Resigned > 0) footerText += `\nResign: -${dayData.Daily_Resigned}`;
+                                return footerText;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
+    },
     
     renderIntegratedDistribution(distData) {
         const ctx = document.getElementById('ia_distributionChart')?.getContext('2d');
@@ -816,6 +884,539 @@ const UI = {
                 cutout: '70%'
             }
         });
+    },
+
+    renderIntegratedLineChart(data) {
+        const ctx = document.getElementById('ia_trendLineChart')?.getContext('2d');
+        if (!ctx) return;
+        if (this.charts.iaLine) this.charts.iaLine.destroy();
+
+        this.charts.iaLine = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => this.formatDate(d.log_date)),
+                datasets: [
+                    {
+                        label: 'Total HC (Plan)',
+                        data: data.map(d => d.Daily_HC),
+                        borderColor: '#4e73df',
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Actual Present',
+                        data: data.map(d => d.Act_Present),
+                        borderColor: '#1cc88a',
+                        backgroundColor: 'rgba(28, 200, 138, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, usePointStyle: true } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    },
+
+    renderIntegratedDonutChart(values) {
+        const ctx = document.getElementById('ia_distributionChart')?.getContext('2d');
+        if (!ctx) return;
+        if (this.charts.iaDonut) this.charts.iaDonut.destroy();
+
+        this.charts.iaDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent', 'Leave'],
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } }
+                }
+            }
+        });
+    },
+
+    renderIntegratedComboChart(data) {
+        const ctx = document.getElementById('ia_comboChart')?.getContext('2d');
+        if (!ctx) return;
+        if (this.charts.iaCombo) this.charts.iaCombo.destroy();
+
+        this.charts.iaCombo = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => this.formatDate(d.log_date)),
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Capacity (HC)',
+                        data: data.map(d => d.Daily_HC),
+                        borderColor: '#858796',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        order: 0
+                    },
+                    { label: 'Present', data: data.map(d => d.Act_Present), backgroundColor: '#1cc88a', stack: 'combined', order: 1 },
+                    { label: 'Late', data: data.map(d => d.Act_Late), backgroundColor: '#f6c23e', stack: 'combined', order: 1 },
+                    { label: 'Leave', data: data.map(d => d.Act_Leave), backgroundColor: '#36b9cc', stack: 'combined', order: 1 },
+                    { label: 'Absent', data: data.map(d => d.Act_Absent), backgroundColor: '#e74a3b', stack: 'combined', order: 1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            footer: (items) => {
+                                const d = data[items[0].dataIndex];
+                                let txt = ``;
+                                if(d.Daily_New > 0) txt += `New: +${d.Daily_New} `;
+                                if(d.Daily_Resigned > 0) txt += `Resign: -${d.Daily_Resigned}`;
+                                return txt;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
+    },
+
+    // --- 3.2 Donut 1: Workforce Structure (โครงสร้างพนักงาน) ---
+    renderIntegratedStructureDonut(data) {
+        const ctx = document.getElementById('ia_structureDonut')?.getContext('2d');
+        if (!ctx) return;
+        if (this.charts.iaStructDonut) this.charts.iaStructDonut.destroy();
+
+        if (!data || data.length === 0) return;
+
+        // คำนวณยอดรวม
+        const totalHeadCount = data.reduce((acc, cur) => acc + parseInt(cur.head_count || 0), 0);
+
+        this.charts.iaStructDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(d => d.category),
+                datasets: [{
+                    data: data.map(d => d.head_count),
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#858796'], 
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                layout: { padding: 10 },
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, family: 'Prompt' }, padding: 15 } 
+                    },
+                    // แสดงตัวเลขจำนวนคนบนกราฟ
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11, family: 'Prompt' },
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.map(data => { sum += data; });
+                            let percentage = (value * 100 / sum).toFixed(1);
+                            // แสดงเฉพาะถ้าพื้นที่พอ (> 5%)
+                            return (percentage > 5) ? value : null;
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerTextStruct',
+                beforeDraw: function(chart) {
+                    var width = chart.width, height = chart.height, ctx = chart.ctx;
+                    ctx.restore();
+                    
+                    var shiftX = -65; // ขยับซ้ายนิดนึง
+                    var shiftY = 0; // ขยับลงล่างนิดนึง
+
+                    // 1. ยอดรวม (ตัวใหญ่)
+                    ctx.font = "bold 26px 'Prompt', sans-serif";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#4e73df"; 
+                    var text = totalHeadCount.toLocaleString();
+                    var textX = Math.round((width - ctx.measureText(text).width) / 2) + shiftX;
+                    var textY = (height / 2) + 10 + shiftY;
+                    ctx.fillText(text, textX, textY);
+
+                    // 2. ป้าย Total
+                    ctx.font = "normal 12px 'Prompt', sans-serif";
+                    ctx.fillStyle = "#858796";
+                    var label = "Total HC";
+                    var labelX = Math.round((width - ctx.measureText(label).width) / 2) + shiftX;
+                    var labelY = (height / 2) - 15 + shiftY;
+                    ctx.fillText(label, labelX, labelY);
+                    
+                    ctx.save();
+                }
+            }]
+        });
+    },
+
+    // --- 3.4 Donut 2: Attendance Ratio (สัดส่วนการมาทำงาน) ---
+    renderIntegratedAttendanceDonut(values) {
+        const ctx = document.getElementById('ia_attendanceDonut')?.getContext('2d');
+        if (!ctx) return;
+        if (this.charts.iaAttDonut) this.charts.iaAttDonut.destroy();
+
+        // ตรวจสอบข้อมูลก่อนวาด
+        const totalVal = values.reduce((a, b) => a + (parseInt(b)||0), 0);
+        if (totalVal === 0) return; // ถ้าไม่มีข้อมูลเลย ไม่ต้องวาด (กัน Error หาร 0)
+
+        this.charts.iaAttDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Late', 'Absent', 'Leave'],
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'], 
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                layout: { padding: 10 },
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, family: 'Prompt' }, padding: 15 } 
+                    },
+                    // แสดง % บนกราฟ
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11, family: 'Prompt' },
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.map(data => { sum += data; });
+                            let percentage = (value * 100 / sum).toFixed(1);
+                            return (percentage > 4) ? Math.round(percentage) + '%' : null;
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerTextAtt',
+                beforeDraw: function(chart) {
+                    var width = chart.width, height = chart.height, ctx = chart.ctx;
+                    ctx.restore();
+
+                    // คำนวณ % Working Rate สดๆ จากกราฟ
+                    var d = chart.config.data.datasets[0].data;
+                    var present = d[0] || 0;
+                    var late    = d[1] || 0;
+                    var total   = d.reduce((a, b) => a + b, 0);
+                    var rate    = total > 0 ? (((present + late) / total) * 100).toFixed(1) : 0;
+
+                    var shiftX = -40;
+                    var shiftY = 0;
+
+                    // 1. ตัวเลข %
+                    ctx.font = "bold 26px 'Prompt', sans-serif";
+                    ctx.textBaseline = "middle";
+                    // เปลี่ยนสีตามเกณฑ์
+                    ctx.fillStyle = rate >= 95 ? "#1cc88a" : (rate >= 90 ? "#f6c23e" : "#e74a3b");
+                    
+                    var text = rate + "%";
+                    var textX = Math.round((width - ctx.measureText(text).width) / 2) + shiftX;
+                    var textY = (height / 2) + 10 + shiftY;
+                    ctx.fillText(text, textX, textY);
+
+                    // 2. ป้าย Working Rate
+                    ctx.font = "normal 12px 'Prompt', sans-serif";
+                    ctx.fillStyle = "#858796";
+                    var label = "Working Rate";
+                    var labelX = Math.round((width - ctx.measureText(label).width) / 2) + shiftX;
+                    var labelY = (height / 2) - 15 + shiftY;
+                    ctx.fillText(label, labelX, labelY);
+
+                    ctx.save();
+                }
+            }]
+        });
+    },
+
+    formatCurrency(val) {
+        return new Intl.NumberFormat('th-TH', { 
+            style: 'decimal', 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        }).format(val || 0);
+    },
+
+    formatDate(dateStr) {
+        if(!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
+    },
+
+    populateAnalysisDropdown: async function() {
+        const selectEl = document.getElementById('superLineSelect');
+        if (!selectEl) return;
+
+        try {
+            const response = await fetch('api/api_master_data.php?action=read_structure');
+            const json = await response.json();
+
+            // ✅ FIX 1: แก้จาก json.data.lines เป็น json.lines ตาม API
+            if (json.success && json.lines) { 
+                const currentValue = selectEl.value;
+
+                selectEl.innerHTML = '<option value="ALL">All Lines (Overview)</option>';
+
+                // ✅ FIX 1: แก้ Loop ให้ใช้ json.lines
+                json.lines.forEach(line => {
+                    const option = document.createElement('option');
+                    option.value = line;
+                    option.textContent = line;
+                    selectEl.appendChild(option);
+                });
+
+                if (currentValue && Array.from(selectEl.options).some(o => o.value === currentValue)) {
+                    selectEl.value = currentValue;
+                }
+                
+                // ✅ เพิ่ม Event Listener ให้เปลี่ยนแล้วโหลดข้อมูลทันที (เผื่อไว้)
+                selectEl.onchange = () => Actions.runSuperAnalysis();
+            }
+        } catch (error) {
+            console.error("Failed to load analysis lines:", error);
+        }
+    },
+
+    renderFinancialAnalysis(financials) {
+        if (!financials || financials.length === 0) {
+            document.getElementById('financialTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">No data available for comparison</td></tr>`;
+            return;
+        }
+
+        let sumOld = 0, sumNew = 0;
+        financials.forEach(f => {
+            sumOld += parseFloat(f.cost_standard || 0);
+            sumNew += parseFloat(f.cost_actual || 0);
+        });
+
+        // 🔥 FIX: ปัดเศษให้เป็นจำนวนเต็มก่อนเทียบ เพื่อแก้ปัญหาทศนิยมเพี้ยน
+        const sumDiff = sumNew - sumOld;
+        const sumDiffRounded = Math.round(sumDiff); 
+        
+        const sumPct = sumOld > 0 ? ((sumDiff / sumOld) * 100) : 0;
+
+        this.animateNumber('fin_old_total', Math.round(sumOld));
+        this.animateNumber('fin_new_total', Math.round(sumNew));
+        
+        const diffEl = document.getElementById('fin_diff_total');
+        const diffTxt = document.getElementById('fin_impact_text');
+        const percentEl = document.getElementById('fin_diff_percent');
+        
+        // 1. จัดการตัวเลขและสี (Header)
+        if (diffEl) {
+            if (sumDiffRounded > 0) {
+                diffEl.innerText = '+' + sumDiffRounded.toLocaleString();
+                diffEl.className = 'h5 mb-0 font-weight-bold text-danger'; // แดง
+            } else if (sumDiffRounded < 0) {
+                diffEl.innerText = sumDiffRounded.toLocaleString(); 
+                diffEl.className = 'h5 mb-0 font-weight-bold text-success'; // เขียว
+            } else {
+                diffEl.innerText = '0';
+                diffEl.className = 'h5 mb-0 font-weight-bold text-secondary'; // ✅ เทา (เมื่อเท่ากัน)
+            }
+        }
+        
+        // 2. จัดการ % Badge
+        if (percentEl) {
+            if (sumDiffRounded === 0) {
+                percentEl.innerText = '0%';
+                percentEl.className = 'badge bg-light text-muted border'; // สีจางๆ
+            } else {
+                percentEl.innerText = (sumDiffRounded > 0 ? '+' : '') + sumPct.toFixed(2) + '%';
+                percentEl.className = `badge ${sumDiffRounded > 0 ? 'bg-danger' : 'bg-success'} text-white`;
+            }
+        }
+
+        // 3. จัดการข้อความ (Context Text)
+        if (diffTxt) {
+            if (sumDiffRounded > 0) {
+                diffTxt.innerHTML = `<i class="fas fa-arrow-up"></i> Cost เพิ่มขึ้น (Overrun)`;
+                diffTxt.className = "small text-danger mt-1 fw-bold";
+            } else if (sumDiffRounded < 0) {
+                diffTxt.innerHTML = `<i class="fas fa-arrow-down"></i> Cost ลดลง (Saving)`;
+                diffTxt.className = "small text-success mt-1 fw-bold";
+            } else {
+                // ✅ เพิ่มเคสเท่ากัน
+                diffTxt.innerHTML = `<i class="fas fa-check-circle"></i> No Variance (เท่าเดิม)`;
+                diffTxt.className = "small text-muted mt-1";
+            }
+        }
+
+        this.renderFinancialChart(financials);
+        this.renderFinancialTable(financials);
+    },
+
+    renderFinancialChart(data) {
+        const ctx = document.getElementById('financialImpactChart')?.getContext('2d');
+        if (!ctx) return;
+
+        if (UI.charts.finImpact) UI.charts.finImpact.destroy();
+
+        // Prepare Data
+        const labels = data.map(d => d.section_name);
+        const dataOld = data.map(d => d.cost_standard);
+        const dataNew = data.map(d => d.cost_actual);
+
+        UI.charts.finImpact = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Old Formula',
+                        data: dataOld,
+                        backgroundColor: '#858796', // สีเทา (เดิม)
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    },
+                    {
+                        label: 'New Formula',
+                        data: dataNew,
+                        backgroundColor: '#4e73df', // สีน้ำเงิน (ใหม่)
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            footer: (items) => {
+                                const oldVal = items[0].parsed.y;
+                                const newVal = items[1].parsed.y;
+                                const diff = newVal - oldVal;
+                                return `Diff: ${(diff > 0 ? '+' : '') + diff.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    },
+
+    renderFinancialTable(data) {
+        const tbody = document.getElementById('financialTableBody');
+        if (!tbody) return;
+
+        let html = '';
+        const fmt = (n) => Math.round(parseFloat(n || 0)).toLocaleString();
+
+        data.forEach(row => {
+            const oldCost = parseFloat(row.cost_standard || 0);
+            const newCost = parseFloat(row.cost_actual || 0);
+            const diff = newCost - oldCost;
+            
+            // 🔥 FIX: ปัดเศษก่อนเทียบ
+            const diffRounded = Math.round(diff);
+            const pct = oldCost > 0 ? ((diff / oldCost) * 100).toFixed(1) : '0.0';
+            
+            // Logic สี และ Badge
+            let diffClass = 'text-muted font-weight-normal'; // Default (0)
+            let badgeHtml = `<span class="badge bg-light text-muted border" style="min-width:50px;">0%</span>`; // Default (0)
+            let sign = '';
+
+            if (diffRounded > 0) {
+                diffClass = 'text-danger fw-bold';
+                badgeHtml = `<span class="badge-var bad">${pct}%</span>`;
+                sign = '+';
+            } else if (diffRounded < 0) {
+                diffClass = 'text-success fw-bold';
+                badgeHtml = `<span class="badge-var good">${pct}%</span>`;
+                // เครื่องหมายลบ (-) มากับตัวเลขอยู่แล้ว
+            }
+
+            // Highlight แถวเฉพาะที่มีผลต่างเยอะๆ (> 1000)
+            const rowClass = Math.abs(diffRounded) > 1000 ? 'bg-warning bg-opacity-10' : '';
+
+            html += `
+                <tr class="${rowClass}">
+                    <td class="ps-3 fw-bold text-dark border-end" style="font-size: 0.85rem;">
+                        ${row.section_name}
+                    </td>
+                    <td class="num-cell text-secondary">
+                        ${fmt(oldCost)}
+                    </td>
+                    <td class="num-cell text-primary fw-bold bg-primary bg-opacity-10">
+                        ${fmt(newCost)}
+                    </td>
+                    <td class="num-cell ${diffClass}">
+                        ${sign}${fmt(diff)}
+                    </td>
+                    <td class="text-center align-middle border-start">
+                        ${badgeHtml}
+                    </td>
+                    <td class="num-cell text-muted border-start opacity-75">
+                        ${fmt(row.actual_dl)}
+                    </td>
+                    <td class="num-cell text-muted opacity-75">
+                        ${fmt(row.actual_ot)}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
     }
 };
 
@@ -826,6 +1427,7 @@ const UI = {
 const Actions = {
     _structureCache: { lines: [], teams: [] },
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
+    _cachedAnalysisData: null,
 
     async openDetailModal(line, shiftId, empType = 'ALL', filterStatus = 'ALL') {
         if (arguments.length === 3 && (empType === 'ALL' || empType === 'PRESENT' || empType === 'LATE' || empType === 'ABSENT')) {
@@ -1555,57 +2157,261 @@ const Actions = {
     },
     
     // -------------------------------------------------------------------------
-    // 6. EMPLOYEE MANAGER
+    // 6. EMPLOYEE MANAGER V2 (IMPROVED)
     // -------------------------------------------------------------------------
     _employeeCache: [],
+    
     async openEmployeeManager() {
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
-        document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(8);
+        document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
+        
+        // Populate Line Filter
+        const filterSelect = document.getElementById('empFilterLine');
+        if (filterSelect && this._structureCache.lines.length > 0) {
+            filterSelect.innerHTML = '<option value="">All Lines</option>' + 
+                this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
+        }
+
         if(!document.getElementById('empListModal').classList.contains('show')) modal.show();
         
         try {
-            const showAll = document.getElementById('showInactiveToggle').checked;
-            const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=${showAll}`);
+            const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
             const json = await res.json();
-            if (json.success) { this._employeeCache = json.data; this.renderEmployeeTable(json.data); }
-        } catch (e) { console.error(e); }
-    },
+            
+            if (json.success) { 
+                this._employeeCache = json.data;
+                
+                // 🔥 FIX: แก้ตรงนี้จาก .value = '1' เป็น .checked = true
+                if (document.getElementById('filterStatusActive')) {
+                    document.getElementById('filterStatusActive').checked = true;
+                }
 
-    renderEmployeeTable(list) {
-         const tbody = document.getElementById('empListBody'); tbody.innerHTML = '';
-         if (!list || list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`; return; }
-         
-         list.forEach(emp => {
-             const statusBadge = (emp.is_active == 1) ? '<span class="badge badge-soft-success badge-pill">Active</span>' : '<span class="badge bg-light text-secondary border badge-pill">Inactive</span>';
-             let typeClass = 'badge-soft-secondary';
-             if (emp.emp_type === 'Monthly') typeClass = 'badge-soft-primary';
-             else if (emp.emp_type === 'Daily') typeClass = 'badge-soft-success';
-             else if (emp.emp_type === 'Subcontract') typeClass = 'badge-soft-warning';
-             
-             tbody.innerHTML += `
-                <tr>
-                    <td class="ps-4 font-monospace small text-muted">${emp.emp_id}</td>
-                    <td class="fw-bold text-dark">${emp.name_th}</td>
-                    <td><span class="badge ${typeClass} badge-pill">${emp.emp_type}</span></td> 
-                    <td><span class="fw-bold text-primary small">${emp.line}</span></td>
-                    <td class="text-center small">${emp.shift_name || '-'}</td>
-                    <td class="text-center fw-bold text-dark">${emp.team_group || '-'}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="text-center pe-4">
-                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle" style="width: 32px; height: 32px;" onclick="Actions.openEmpEdit('${encodeURIComponent(JSON.stringify(emp))}')"><i class="fas fa-pen text-secondary"></i></button>
-                    </td>
-                </tr>`;
-         });
+                // Reset Date Filters
+                if (document.getElementById('empDateType')) {
+                    document.getElementById('empDateType').value = '';
+                    this.toggleDateInputs(); // ซ่อนกล่องวันที่
+                }
+
+                this.filterEmployeeList();
+            }
+        } catch (e) { 
+            console.error(e); 
+            document.getElementById('empListBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>`;
+        }
     },
 
     filterEmployeeList() {
-        const term = document.getElementById('empSearchBox').value.toLowerCase();
-        const filtered = this._employeeCache.filter(emp => 
-            (emp.name_th && emp.name_th.toLowerCase().includes(term)) || 
-            (emp.emp_id && emp.emp_id.toLowerCase().includes(term)) || 
-            (emp.line && emp.line.toLowerCase().includes(term))
-        );
+        if (this._employeeCache && this._employeeCache.length > 0) {
+            console.log("🔥 CHECK DATA STRUCTURE:", this._employeeCache[0]);
+        }
+
+        // 1. ดึงค่าจาก Input
+        const term = document.getElementById('empSearchBox').value.toLowerCase().trim();
+        const lineFilter = document.getElementById('empFilterLine').value;
+        
+        // อ่านค่า Status (รองรับทั้ง Radio และ Select เผื่อคุณเปลี่ยนไปมา)
+        let statusVal = 'ALL';
+        const radioActive = document.querySelector('input[name="empStatusFilter"]:checked');
+        const selectActive = document.getElementById('empFilterStatus');
+        if (radioActive) statusVal = radioActive.value;
+        else if (selectActive) statusVal = selectActive.value;
+
+        // อ่านค่าวันที่
+        const dateType = document.getElementById('empDateType').value; // 'JOIN', 'RESIGN', ''
+        const dateFrom = document.getElementById('empDateFrom').value;
+        const dateTo = document.getElementById('empDateTo').value;
+
+        // 2. กรองข้อมูล
+        const filtered = this._employeeCache.filter(emp => {
+            // [A] Status Filter
+            const isActive = parseInt(emp.is_active);
+            if (statusVal !== 'ALL') {
+                if (isActive != parseInt(statusVal)) return false;
+            }
+
+            // [B] Line Filter
+            if (lineFilter && emp.line !== lineFilter) return false;
+
+            // [C] Search Term
+            if (term) {
+                const searchStr = `${emp.emp_id} ${emp.name_th} ${emp.position} ${emp.line}`.toLowerCase();
+                if (!searchStr.includes(term)) return false;
+            }
+
+            // [D] Date Filter (Logic ใหม่: ยืดหยุ่นกว่าเดิม)
+            if (dateType && dateType !== '') {
+                // เลือกฟิลด์ที่จะเช็ค
+                const rawDate = (dateType === 'JOIN') ? emp.start_date : emp.resign_date;
+
+                // ถ้าคนนี้ไม่มีวันที่บันทึกไว้ -> ตกไปเลย
+                if (!rawDate) return false;
+
+                // ตัดเวลาทิ้งเอาแค่ YYYY-MM-DD
+                const targetDate = rawDate.split(' ')[0];
+
+                // ถ้ามี 'จากวันที่' -> วันที่เป้าหมายต้อง มากกว่าหรือเท่ากับ
+                if (dateFrom && targetDate < dateFrom) return false;
+
+                // ถ้ามี 'ถึงวันที่' -> วันที่เป้าหมายต้อง น้อยกว่าหรือเท่ากับ
+                if (dateTo && targetDate > dateTo) return false;
+            }
+
+            return true;
+        });
+
+        // 3. แสดงผล
+        console.log(`🔍 Found: ${filtered.length} items`);
         this.renderEmployeeTable(filtered);
+    },
+
+    resetEmployeeFilters() {
+        document.getElementById('empSearchBox').value = '';
+        document.getElementById('empFilterLine').value = '';
+        if(document.getElementById('filterStatusActive')) {
+            document.getElementById('filterStatusActive').checked = true;
+        }
+        
+        document.getElementById('empDateType').value = '';
+        this.toggleDateInputs(); // ซ่อนวัน
+        
+        this.filterEmployeeList();
+    },
+
+    toggleDateInputs() {
+        const type = document.getElementById('empDateType').value;
+        const wrapper = document.getElementById('empDateWrapper');
+        if (!wrapper) return;
+
+        if (type === '') {
+            wrapper.classList.remove('d-flex');
+            wrapper.classList.add('d-none');
+            
+            // Clear Dates
+            document.getElementById('empDateFrom').value = '';
+            document.getElementById('empDateTo').value = '';
+        } else {
+            wrapper.classList.remove('d-none');
+            wrapper.classList.add('d-flex');
+            
+            // 🔥 AUTO-SWITCH LOGIC:
+            if (type === 'RESIGN') {
+                // ถ้าหาคนลาออก -> ปรับ Status เป็น Inactive หรือ All
+                // แนะนำ 'ALL' เผื่อบางคนลาออกล่วงหน้า (แต่ยัง Active อยู่)
+                document.getElementById('filterStatusAll').checked = true;
+            } else if (type === 'JOIN') {
+                // ถ้าหาคนเข้าใหม่ -> ปรับเป็น All (เผื่อเข้าใหม่แล้วออกไปแล้ว)
+                document.getElementById('filterStatusAll').checked = true;
+            }
+            
+            // สั่งกรองใหม่ทันที
+            this.filterEmployeeList();
+        }
+    },
+
+    renderEmployeeTable(list) {
+         const tbody = document.getElementById('empListBody'); 
+         tbody.innerHTML = '';
+         
+         document.getElementById('empListCount').innerText = `Showing: ${list.length} records`;
+
+         if (!list || list.length === 0) { 
+             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted opacity-50"><i class="fas fa-search fa-3x mb-3"></i><br>ไม่พบข้อมูลพนักงานตามเงื่อนไข</td></tr>`; 
+             return; 
+         }
+         
+         const displayList = list.slice(0, 100); 
+
+         // Helper Date Format (DD/MM/YY)
+         const dFmt = (dStr) => {
+             if (!dStr) return '<span class="text-muted opacity-50">-</span>';
+             const d = new Date(dStr);
+             return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear().toString().substr(-2)}`;
+         };
+
+         displayList.forEach(emp => {
+             const isActive = parseInt(emp.is_active) === 1;
+             
+             // 1. Profile Section
+             const profileHtml = `
+                <div class="d-flex align-items-center">
+                    <div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem;">
+                        ${emp.name_th.charAt(0)}
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark">${emp.name_th}</div>
+                        <div class="small text-muted font-monospace"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
+                    </div>
+                </div>
+             `;
+
+             // 2. Type Badge
+             let typeBadge = '';
+             if (emp.emp_type === 'Monthly') typeBadge = '<span class="badge badge-soft-primary">Monthly</span>';
+             else if (emp.emp_type === 'Daily') typeBadge = '<span class="badge badge-soft-success">Daily</span>';
+             else if (emp.emp_type === 'Subcontract') typeBadge = '<span class="badge badge-soft-warning text-dark">Sub</span>';
+             else typeBadge = `<span class="badge bg-secondary">${emp.emp_type || '?'}</span>`;
+
+             // 3. Status Badge & Timeline (ปรับใหม่)
+             let statusHtml = '';
+             if (isActive) {
+                 statusHtml = `
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success mb-1" style="min-width: 70px;">ACTIVE</span>
+                        <div class="small font-monospace text-muted" style="font-size: 0.7rem;" title="Start Date">
+                            <i class="fas fa-sign-in-alt text-success me-1"></i>${dFmt(emp.start_date)}
+                        </div>
+                    </div>`;
+             } else {
+                 statusHtml = `
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary mb-1" style="min-width: 70px;">RESIGNED</span>
+                        <div class="d-flex align-items-center small font-monospace bg-light rounded px-1 border" style="font-size: 0.7rem;">
+                            <span class="text-success" title="Joined">${dFmt(emp.start_date)}</span>
+                            <i class="fas fa-arrow-right mx-1 text-muted" style="font-size: 0.6rem;"></i>
+                            <span class="text-danger fw-bold" title="Resigned">${dFmt(emp.resign_date)}</span>
+                        </div>
+                    </div>`;
+             }
+
+             // 4. Data Quality Check
+             let tagsHtml = '';
+             if (!emp.line) tagsHtml += `<span class="badge bg-danger mb-1 me-1">No Line</span>`;
+             if (!emp.default_shift_id) tagsHtml += `<span class="badge bg-warning text-dark mb-1 me-1">No Shift</span>`;
+             if (!emp.team_group) tagsHtml += `<span class="badge bg-info text-dark mb-1 me-1">No Team</span>`;
+             if (tagsHtml === '') tagsHtml = `<span class="text-muted small"><i class="fas fa-check-circle text-success me-1"></i>Data OK</span>`;
+
+             // 5. Shift Info
+             const shiftText = emp.shift_name ? (emp.shift_name.includes('Day') ? '<i class="fas fa-sun text-warning me-1"></i>Day' : '<i class="fas fa-moon text-indigo me-1"></i>Night') : '-';
+
+             // Row HTML
+             tbody.innerHTML += `
+                <tr class="${!isActive ? 'bg-light text-muted' : ''}"> <td class="ps-4">${profileHtml}</td>
+                    <td>
+                        <div class="fw-bold ${isActive ? 'text-dark' : 'text-secondary'}">${emp.line || '-'}</div>
+                        <div class="small text-muted">${emp.position || ''}</div>
+                    </td>
+                    <td class="text-center small">${shiftText}</td>
+                    <td class="text-center">${typeBadge}</td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td>${tagsHtml}</td>
+                    <td class="text-end pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${encodeURIComponent(JSON.stringify(emp))}')"><i class="fas fa-pen text-primary me-2"></i>Edit Details</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${emp.emp_id}', '${emp.name_th}')"><i class="fas fa-history text-info me-2"></i>View History</a></li>
+                                ${isActive ? `<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="#" onclick="Actions.terminateStaff('${emp.emp_id}', '${emp.name_th}')"><i class="fas fa-user-times me-2"></i>Resign User</a></li>` : ''}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>`;
+         });
+         
+         if (list.length > 100) {
+             tbody.innerHTML += `<tr><td colspan="7" class="text-center text-muted small py-2">... and ${list.length - 100} more (Use search to find specific user) ...</td></tr>`;
+         }
     },
 
     openEmpEdit: async function(dataOrEmpId) {
@@ -2414,13 +3220,70 @@ const Actions = {
         }
     },
 
-    // Export Function for Simulation Table
     exportSimTable() {
+        // 1. เช็คว่ามีข้อมูลให้ Export ไหม
+        if (!this._cachedAnalysisData) {
+            alert("กรุณากด Run Analysis เพื่อโหลดข้อมูลก่อน Export");
+            return;
+        }
+
+        const { summary, financials, trend } = this._cachedAnalysisData;
         const wb = XLSX.utils.book_new();
-        const table = document.getElementById('simTable');
-        const ws = XLSX.utils.table_to_sheet(table);
-        XLSX.utils.book_append_sheet(wb, ws, "Cost_Analysis");
-        XLSX.writeFile(wb, "Manpower_Cost_Analysis.xlsx");
+
+        // =========================================================
+        // SHEET 1: Financial Impact (หน้าสรุปต้นทุน)
+        // =========================================================
+        if (financials && financials.length > 0) {
+            // จัด Format ข้อมูลให้สวยงามสำหรับ Excel
+            const finData = financials.map(row => {
+                const diff = row.cost_actual - row.cost_standard;
+                const pct = row.cost_standard > 0 ? ((diff / row.cost_standard) * 100).toFixed(2) + '%' : '0%';
+                
+                return {
+                    "Section / Line": row.section_name,
+                    "Old Logic (Std)": row.cost_standard,
+                    "New Logic (Act)": row.cost_actual,
+                    "Diff Amount": diff,
+                    "% Variance": pct,
+                    "Actual DL Cost": row.actual_dl,
+                    "Actual OT Cost": row.actual_ot
+                };
+            });
+
+            // สร้าง Sheet
+            const wsFin = XLSX.utils.json_to_sheet(finData);
+
+            // ปรับความกว้างคอลัมน์ (Auto Width แบบบ้านๆ)
+            const wscols = [
+                {wch: 25}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 12}, {wch: 15}, {wch: 15}
+            ];
+            wsFin['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, wsFin, "Financial Impact");
+        }
+
+        // =========================================================
+        // SHEET 2: Daily Trend (ข้อมูลรายวัน) - แถมให้!
+        // =========================================================
+        if (trend && trend.length > 0) {
+            const trendData = trend.map(t => ({
+                "Date": t.log_date,
+                "Total HC": t.Daily_HC,
+                "Present": t.Act_Present,
+                "Late": t.Act_Late || 0,
+                "Absent": t.Act_Absent,
+                "Leave": t.Act_Leave
+            }));
+
+            const wsTrend = XLSX.utils.json_to_sheet(trendData);
+            XLSX.utils.book_append_sheet(wb, wsTrend, "Daily Trend");
+        }
+
+        // =========================================================
+        // 3. SAVE FILE
+        // =========================================================
+        const dateStr = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Manpower_Analysis_Report_${dateStr}.xlsx`);
     },
 
     renderSimulationTable(data, apiSummary, isAllLines, targetTbodyId = 'simTableBody') {
@@ -2461,21 +3324,42 @@ const Actions = {
         const modalEl = document.getElementById('integratedAnalysisModal');
         if (!modalEl) return;
         
+        // 1. ตั้งค่า Default Date (ต้นเดือน - ปัจจุบัน)
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const toLocalISO = (d) => new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-        // เปลี่ยน ID ให้ตรงกับ HTML (ia_...)
         const startInput = document.getElementById('ia_startDate');
         const endInput = document.getElementById('ia_endDate');
+        const lineSelect = document.getElementById('superLineSelect');
         
+        // Set Date Values
         if(startInput) startInput.value = toLocalISO(firstDay);
         if(endInput) endInput.value = document.getElementById('filterDate').value || toLocalISO(today);
 
-        // สั่งเปิด Modal
+        // 2. ✅ Auto-Refresh Setup: ผูก Event Listener ให้ทำงานทันทีเมื่อค่าเปลี่ยน
+        const inputs = [startInput, endInput, lineSelect];
+        inputs.forEach(el => {
+            if (el) {
+                // ล้าง Event เก่า (ถ้ามี) แล้วใส่ใหม่
+                el.onchange = null;
+                el.onchange = () => {
+                    // ตรวจสอบว่าวันที่ครบไหมก่อนรัน (กัน Error)
+                    if (startInput.value && endInput.value) {
+                        this.runSuperAnalysis();
+                    }
+                };
+            }
+        });
+
+        // 3. โหลด Dropdown Line (ถ้ายังไม่เคยโหลด)
+        UI.populateAnalysisDropdown(); 
+
+        // 4. เปิด Modal
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
 
+        // 5. รันครั้งแรกทันที (Initial Run)
         setTimeout(() => this.runSuperAnalysis(), 300);
     },
 
@@ -2484,46 +3368,103 @@ const Actions = {
         const end = document.getElementById('ia_endDate').value;
         const line = document.getElementById('superLineSelect')?.value || 'ALL';
         
-        UI.showLoader(); 
+        UI.showLoader();
         
         try {
-            // 1. เรียก API
             const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}`);
             const result = await response.json();
             
             if (result.success) {
+                this._cachedAnalysisData = result.data;
                 const { summary, trend, financials, distribution } = result.data;
 
-                // --- LAYER 1: KPI CARDS ---
-                UI.animateNumber('ia_rpt_hc', summary.Total_Unique_HC || 0);
-                UI.animateNumber('ia_rpt_actual', summary.Total_Present_ManDays || 0);
-                UI.animateNumber('ia_rpt_absent', summary.Total_Absent_ManDays || 0);
-                UI.animateNumber('ia_rpt_leave', summary.Total_Leave_ManDays || 0);
+                // --- 1. KPI & Stats Calculation Helper ---
+                const calcStats = (dataArray, key) => {
+                    if (!dataArray || dataArray.length === 0) return { max: 0, min: 0, avg: 0 };
+                    let max = -Infinity, min = Infinity, sum = 0, count = 0;
+                    dataArray.forEach(d => {
+                        const val = parseInt(d[key] || 0);
+                        if (val > max) max = val;
+                        if (val < min) min = val;
+                        sum += val; count++;
+                    });
+                    return { max: max === -Infinity ? 0 : max, min: min === Infinity ? 0 : min, avg: count > 0 ? (sum / count).toFixed(1) : 0 };
+                };
 
-                const elNew = document.getElementById('ia_rpt_attrition'); 
-                if (elNew) {
-                    elNew.innerHTML = `Move: <span class="text-success fw-bold">+${summary.New_Joiners || 0}</span> / <span class="text-danger fw-bold">-${summary.Resigned || 0}</span>`;
+                const setCardStats = (prefix, totalVal, statsObj) => {
+                    UI.animateNumber(`ia_rpt_${prefix}`, totalVal);
+                    if(document.getElementById(`ia_rpt_${prefix}_max`)) document.getElementById(`ia_rpt_${prefix}_max`).innerText = statsObj.max;
+                    if(document.getElementById(`ia_rpt_${prefix}_min`)) document.getElementById(`ia_rpt_${prefix}_min`).innerText = statsObj.min;
+                    if(document.getElementById(`ia_rpt_${prefix}_avg`)) document.getElementById(`ia_rpt_${prefix}_avg`).innerText = statsObj.avg;
+                };
+
+                // Apply Data to Cards
+                setCardStats('hc', summary.Total_Unique_HC, calcStats(trend, 'Daily_HC'));
+                setCardStats('actual', summary.Total_Present_ManDays, calcStats(trend, 'Act_Present'));
+                setCardStats('absent', summary.Total_Absent_ManDays, calcStats(trend, 'Act_Absent'));
+                setCardStats('leave', summary.Total_Leave_ManDays, calcStats(trend, 'Act_Leave'));
+
+                // 🔥 [ADDED] Logic สำหรับ Movement Badge (เข้า/ออก) บนการ์ด HC
+                const elAttr = document.getElementById('ia_rpt_attrition');
+                if (elAttr) {
+                    const newJoin = parseInt(summary.New_Joiners || 0);
+                    const resign  = parseInt(summary.Resigned || 0);
+                    
+                    if (newJoin === 0 && resign === 0) {
+                        elAttr.className = "badge bg-light text-muted border";
+                        elAttr.innerHTML = `<i class="fas fa-minus me-1"></i>Stable`;
+                    } else {
+                        elAttr.className = "badge bg-white border text-dark";
+                        elAttr.innerHTML = `
+                            <span class="text-success fw-bold"><i class="fas fa-plus"></i> ${newJoin}</span>
+                            <span class="text-muted mx-1">|</span>
+                            <span class="text-danger fw-bold"><i class="fas fa-minus"></i> ${resign}</span>
+                        `;
+                    }
                 }
 
-                // --- LAYER 2: FINANCIAL TABLE ---
+                // --- 2. Financials ---
                 UI.renderIntegratedFinancialTable(financials, 'ia_simTableBody');
                 
+                // Calculate Variance
                 const totalStd = financials.reduce((sum, row) => sum + row.cost_standard, 0);
                 const totalAct = financials.reduce((sum, row) => sum + row.cost_actual, 0);
-                const diffPct = totalStd > 0 ? ((totalAct - totalStd) / totalStd) * 100 : 0;
+                const diffVal = totalAct - totalStd;
+                const diffPct = totalStd > 0 ? ((diffVal / totalStd) * 100) : 0;
                 
-                const pctEl = document.getElementById('ia_diff_percent');
+                UI.animateNumber('sim_old_total', Math.round(totalStd));
+                UI.animateNumber('sim_new_total', Math.round(totalAct));
+                
+                const diffEl = document.getElementById('sim_diff_total');
+                if(diffEl) diffEl.innerText = (diffVal > 0 ? '+' : '') + Math.round(diffVal).toLocaleString();
+                
+                const pctEl = document.getElementById('sim_diff_percent');
                 if(pctEl) {
                     pctEl.innerText = (diffPct > 0 ? '+' : '') + diffPct.toFixed(2) + '%';
-                    const badgeClass = diffPct > 5 ? 'bg-danger' 
-                                     : diffPct < -5 ? 'bg-success' 
-                                     : 'bg-secondary';
-                    pctEl.parentElement.className = `badge ${badgeClass} p-2`;
+                    // Dynamic Color
+                    pctEl.parentElement.className = `badge ${diffPct > 5 ? 'bg-danger' : (diffPct < -5 ? 'bg-success' : 'bg-secondary')} p-2`;
                 }
 
-                // --- LAYER 3: CHARTS ---
-                UI.renderIntegratedTrendChart(trend);
-                UI.renderIntegratedDistribution(distribution);
+                // --- 3. CHARTS RENDERING (4 Charts Layout) ---
+                
+                // A. Trend Line
+                UI.renderIntegratedLineChart(trend);
+
+                // B. Donut 1: Workforce Structure
+                UI.renderIntegratedStructureDonut(distribution); 
+
+                // C. Combo Chart
+                UI.renderIntegratedComboChart(trend);
+
+                // D. Donut 2: Attendance Ratio 
+                const sumPresent = trend.reduce((s, d) => s + parseInt(d.Act_Present || 0), 0);
+                const sumLate    = trend.reduce((s, d) => s + parseInt(d.Act_Late || 0), 0);
+                const sumAbsent  = trend.reduce((s, d) => s + parseInt(d.Act_Absent || 0), 0);
+                const sumLeave   = trend.reduce((s, d) => s + parseInt(d.Act_Leave || 0), 0);
+                
+                UI.renderIntegratedAttendanceDonut([sumPresent, sumLate, sumAbsent, sumLeave]);
+
+                UI.renderFinancialAnalysis(financials);
 
             } else {
                 alert("Analysis Error: " + result.message);
@@ -2533,5 +3474,5 @@ const Actions = {
         } finally {
             UI.hideLoader();
         }
-    },
+    }
 };
