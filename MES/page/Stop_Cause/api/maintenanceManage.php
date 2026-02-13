@@ -131,6 +131,15 @@ try {
                 $conditions[] = "M.line = ?"; 
                 $params[] = $_GET['line'];
             }
+            if (!empty($_GET['startDate'])) { 
+                $conditions[] = "request_date >= ?"; 
+                $params[] = $_GET['startDate']; 
+            }
+            if (!empty($_GET['endDate'])) { 
+                // ใช้ < วันถัดไป เพื่อเอาเวลาทั้งหมดของวันนั้น
+                $conditions[] = "request_date < DATEADD(DAY, 1, CAST(? AS DATE))"; 
+                $params[] = $_GET['endDate']; 
+            }
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
             
@@ -151,6 +160,72 @@ try {
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'get_maintenance_summary':
+            $startDate = $_GET['startDate'] ?? date('Y-m-01');
+            $endDate   = $_GET['endDate'] ?? date('Y-m-d');
+            $lineFilter = !empty($_GET['line']) ? $_GET['line'] : null;
+
+            // [FIXED] แปลง EndDate ให้ครอบคลุมถึงสิ้นวัน (23:59:59.999)
+            // โดยการใช้เงื่อนไข: request_date >= Start AND request_date < (End + 1 วัน)
+            $params = [$startDate, $endDate];
+            
+            $lineCondition = "";
+            if ($lineFilter && $lineFilter !== 'All') { // ดัก 'All' เผื่อหลุดมา
+                $lineCondition = "AND line = ?";
+                $params[] = $lineFilter;
+            }
+
+            // 1. ภาพรวม (Total, Completed, Pending, Avg Time)
+            // ใช้ DATEADD(DAY, 1, ?) เพื่อให้ครอบคลุมเวลาทั้งวันของวันสุดท้าย
+            $sqlStats = "SELECT 
+                            COUNT(*) as Total_Jobs,
+                            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as Completed_Jobs,
+                            SUM(CASE WHEN status IN ('Pending', 'In Progress') THEN 1 ELSE 0 END) as Pending_Jobs,
+                            -- คำนวณเวลาเฉลี่ย (นาที) -> แปลงเป็นทศนิยม 0 ตำแหน่ง (Int)
+                            ISNULL(AVG(CASE WHEN status = 'Completed' AND started_at IS NOT NULL AND resolved_at IS NOT NULL 
+                                     THEN DATEDIFF(MINUTE, started_at, resolved_at) 
+                                     ELSE NULL END), 0) as Avg_Repair_Time
+                         FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                         WHERE request_date >= ? 
+                           AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) 
+                         $lineCondition";
+
+            $stmtStats = $pdo->prepare($sqlStats);
+            $stmtStats->execute($params);
+            $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+
+            // 2. แยกตาม Line (Top 5)
+            $sqlByLine = "SELECT TOP 5 line, COUNT(*) as job_count
+                          FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                          WHERE request_date >= ? 
+                            AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) 
+                          $lineCondition
+                          GROUP BY line
+                          ORDER BY job_count DESC";
+            
+            $stmtLine = $pdo->prepare($sqlByLine);
+            $stmtLine->execute($params);
+            $byLine = $stmtLine->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. แยกตาม Priority
+            $sqlByPrio = "SELECT priority, COUNT(*) as job_count
+                          FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                          WHERE request_date >= ? 
+                            AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) 
+                          $lineCondition
+                          GROUP BY priority";
+            $stmtPrio = $pdo->prepare($sqlByPrio);
+            $stmtPrio->execute($params);
+            $byPrio = $stmtPrio->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'summary' => $stats,
+                'by_line' => $byLine,
+                'by_prio' => $byPrio
+            ]);
             break;
 
         case 'add_request':
@@ -245,6 +320,131 @@ try {
                 $pdo->rollBack(); // ยกเลิกหากมี Error
                 throw $e;
             }
+            break;
+
+        case 'get_integrated_maintenance_analysis':
+            $startDate = $_GET['startDate'] ?? date('Y-m-01');
+            $endDate   = $_GET['endDate'] ?? date('Y-m-d');
+            $lineFilter = !empty($_GET['line']) ? $_GET['line'] : null;
+
+            // Prepare Params
+            $params = [];
+            $lineCondition = "";
+            if ($lineFilter && $lineFilter !== 'All') {
+                $lineCondition = "AND line = ?";
+                $params[] = $lineFilter;
+            }
+
+            // --- 1. KPI CARDS ---
+            $sqlKPI = "SELECT 
+                            -- Card 1: Total Volume
+                            COUNT(*) as Total_Req,
+                            SUM(CASE WHEN priority = 'Critical' THEN 1 ELSE 0 END) as Total_Critical,
+                            SUM(CASE WHEN priority = 'High' THEN 1 ELSE 0 END) as Total_High,
+                            SUM(CASE WHEN priority = 'Normal' THEN 1 ELSE 0 END) as Total_Normal,
+
+                            -- Card 2: Status Breakdown
+                            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as Count_Completed,
+                            SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as Count_WIP,
+                            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as Count_Pending,
+
+                            -- Card 3: Repair Time (MTTR) - Only Completed Jobs
+                            ISNULL(AVG(CASE WHEN status = 'Completed' AND started_at IS NOT NULL AND resolved_at IS NOT NULL 
+                                     THEN DATEDIFF(MINUTE, started_at, resolved_at) ELSE NULL END), 0) as Time_Avg,
+                            ISNULL(MAX(CASE WHEN status = 'Completed' AND started_at IS NOT NULL AND resolved_at IS NOT NULL 
+                                     THEN DATEDIFF(MINUTE, started_at, resolved_at) ELSE NULL END), 0) as Time_Max,
+                            ISNULL(MIN(CASE WHEN status = 'Completed' AND started_at IS NOT NULL AND resolved_at IS NOT NULL 
+                                     THEN DATEDIFF(MINUTE, started_at, resolved_at) ELSE NULL END), 0) as Time_Min,
+
+                            -- Card 4: Pending Backlog (งานค้างแยกตามความด่วน)
+                            SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as Total_Backlog,
+                            SUM(CASE WHEN status != 'Completed' AND priority = 'Critical' THEN 1 ELSE 0 END) as Backlog_Critical,
+                            SUM(CASE WHEN status != 'Completed' AND priority = 'High' THEN 1 ELSE 0 END) as Backlog_High,
+                            SUM(CASE WHEN status != 'Completed' AND priority = 'Normal' THEN 1 ELSE 0 END) as Backlog_Normal
+
+                         FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                         WHERE request_date >= ? AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) 
+                         $lineCondition";
+            
+            $stmtKPI = $pdo->prepare($sqlKPI);
+            $kpiParams = [$startDate, $endDate];
+            if ($lineFilter) $kpiParams[] = $lineFilter;
+            $stmtKPI->execute($kpiParams);
+            $kpiData = $stmtKPI->fetch(PDO::FETCH_ASSOC);
+
+            // --- 2. TREND CHART (Incoming vs Completed) ---
+            // สร้าง Date Range CTE เพื่อให้กราฟต่อเนื่อง
+            $sqlTrend = "
+            ;WITH DateRange(DateVal) AS (
+                SELECT CAST(? AS DATE)
+                UNION ALL
+                SELECT DATEADD(DAY, 1, DateVal) FROM DateRange WHERE DateVal < CAST(? AS DATE)
+            )
+            SELECT 
+                d.DateVal,
+                (SELECT COUNT(*) FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK) 
+                 WHERE CAST(request_date AS DATE) = d.DateVal $lineCondition) as Incoming,
+                (SELECT COUNT(*) FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK) 
+                 WHERE CAST(resolved_at AS DATE) = d.DateVal AND status = 'Completed' $lineCondition) as Completed
+            FROM DateRange d
+            OPTION (MAXRECURSION 366)
+            ";
+            
+            $stmtTrend = $pdo->prepare($sqlTrend);
+            $trendParams = [$startDate, $endDate];
+            // ต้อง bind lineCondition ซ้ำ 2 รอบใน subquery
+            if ($lineFilter) { $trendParams[] = $lineFilter; $trendParams[] = $lineFilter; } 
+            $stmtTrend->execute($trendParams);
+            $trendData = $stmtTrend->fetchAll(PDO::FETCH_ASSOC);
+
+            // --- 3. DONUT: Status ---
+            $sqlStatus = "SELECT status, COUNT(*) as val FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                          WHERE request_date >= ? AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition
+                          GROUP BY status";
+            $stmtStatus = $pdo->prepare($sqlStatus);
+            $stmtStatus->execute($kpiParams); // ใช้ params ชุดเดียวกับ KPI
+            $statusData = $stmtStatus->fetchAll(PDO::FETCH_ASSOC);
+
+            // --- 4. DONUT: Priority ---
+            $sqlPrio = "SELECT priority, COUNT(*) as val FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                        WHERE request_date >= ? AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition
+                        GROUP BY priority";
+            $stmtPrio = $pdo->prepare($sqlPrio);
+            $stmtPrio->execute($kpiParams);
+            $prioData = $stmtPrio->fetchAll(PDO::FETCH_ASSOC);
+
+            // --- 5. BAR: Top 5 Machines ---
+            $sqlTop = "SELECT TOP 5 line, COUNT(*) as val FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                       WHERE request_date >= ? AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition
+                       GROUP BY line ORDER BY val DESC";
+            $stmtTop = $pdo->prepare($sqlTop);
+            $stmtTop->execute($kpiParams);
+            $topData = $stmtTop->fetchAll(PDO::FETCH_ASSOC);
+
+            // --- 6. TABLE: Analysis ---
+            $sqlTable = "SELECT 
+                            line, machine,
+                            COUNT(*) as total_count,
+                            SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) as completed_count,
+                            ISNULL(AVG(CASE WHEN status='Completed' AND started_at IS NOT NULL AND resolved_at IS NOT NULL 
+                                     THEN DATEDIFF(MINUTE, started_at, resolved_at) ELSE NULL END), 0) as avg_mttr
+                         FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK)
+                         WHERE request_date >= ? AND request_date < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition
+                         GROUP BY line, machine
+                         ORDER BY total_count DESC";
+            $stmtTable = $pdo->prepare($sqlTable);
+            $stmtTable->execute($kpiParams);
+            $tableData = $stmtTable->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'kpi' => $kpiData,
+                'trend' => $trendData,
+                'status_dist' => $statusData,
+                'prio_dist' => $prioData,
+                'top_machines' => $topData,
+                'analysis_table' => $tableData
+            ]);
             break;
 
         case 'resend_email':

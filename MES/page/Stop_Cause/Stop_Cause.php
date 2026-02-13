@@ -1,5 +1,4 @@
 <?php 
-    // MES/page/Stop_Cause/Stop_Cause.php
     require_once __DIR__ . '/../components/init.php';
     
     if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
@@ -20,80 +19,9 @@
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
+    <?php include_once '../components/chart_head.php'; ?>
     
-    <style>
-        /* [FIX 4] Mobile Tabs Scrolling */
-        .nav-tabs {
-            border-bottom: none;
-            gap: 0.5rem;
-            flex-wrap: nowrap; /* ห้ามขึ้นบรรทัดใหม่ */
-            overflow-x: auto;  /* ให้เลื่อนแนวนอนได้ */
-            overflow-y: hidden;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch; /* ลื่นไหลบน iOS */
-            padding-bottom: 5px; /* เผื่อที่ให้ Scrollbar นิดนึง */
-            scrollbar-width: none; /* ซ่อน Scrollbar (Firefox) */
-        }
-        .nav-tabs::-webkit-scrollbar { display: none; } /* ซ่อน Scrollbar (Chrome/Safari) */
-
-        .nav-tabs .nav-link {
-            border: 1px solid transparent;
-            border-radius: 0.5rem;
-            color: var(--bs-secondary);
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            transition: all 0.2s;
-            background-color: rgba(var(--bs-secondary-bg-rgb), 0.5);
-        }
-        .nav-tabs .nav-link:hover {
-            color: var(--bs-primary);
-            background-color: var(--bs-secondary-bg);
-        }
-        .nav-tabs .nav-link.active {
-            color: var(--bs-primary);
-            background-color: var(--bs-body-bg);
-            border-color: var(--bs-border-color);
-            border-bottom-color: transparent; 
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
-            font-weight: bold;
-        }
-        .nav-link i { font-size: 0.9rem; }
-
-        .note-truncate {
-            max-width: 150px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* [FIX] ปรับ Spinner ให้ลอยเหนือ Modal */
-        #loadingOverlay {
-            display: none; 
-            position: fixed; /* เปลี่ยนกลับเป็น fixed เพื่อให้ครอบทั้งจอรวมถึง Modal */
-            top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255,255,255,0.7); /* พื้นหลังโปร่งแสง เห็นเนื้อหาเดิมจางๆ ไม่กระพริบหาย */
-            z-index: 9999; /* [สำคัญ] ต้องสูงกว่า 1060 เพื่อให้ลอยเหนือ Modal */
-            align-items: center; justify-content: center;
-            backdrop-filter: blur(1px); /* เบลอฉากหลังนิดหน่อยให้รู้ว่าโหลด */
-        }
-        /* ต้องให้ Parent ของ Overlay มี position relative */
-        #main-content { position: relative; }
-
-        @media (max-width: 991.98px) {
-            .fab-container {
-                position: fixed; bottom: 25px; right: 25px; z-index: 1060;
-            }
-            .fab-btn {
-                width: 56px; height: 56px;
-                font-size: 1.2rem; border: none; border-radius: 50%;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                display: flex; align-items: center; justify-content: center;
-                transition: transform 0.2s;
-            }
-            .fab-btn:active { transform: scale(0.95); }
-            .table-responsive { font-size: 0.85rem; }
-        }
-    </style>
+    <link rel="stylesheet" href="css/stopCause.css?v=<?php echo filemtime(__DIR__ . '/css/stopCause.css'); ?>">
 </head>
 
 <body class="dashboard-page layout-top-header">
@@ -106,7 +34,7 @@
             <div class="spinner-border text-primary" role="status"></div>
         </div>
 
-        <div class="container-fluid p-3" style="max-width: 1600px;">
+        <div class="container-fluid p-3">
 
             <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -128,7 +56,7 @@
                     <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
                         <div class="card-body py-3">
                             <div class="row align-items-center g-2">
-                                <div class="col-md-8 d-flex flex-wrap align-items-center gap-2">
+                                <div class="col-md-7 d-flex flex-wrap align-items-center gap-2">
                                     <label class="small fw-bold text-muted me-1">Status:</label>
                                     <select id="mtFilterStatus" class="form-select form-select-sm fw-bold border-primary text-primary" style="max-width: 200px;" onchange="fetchMaintenanceData()">
                                         <option value="Active" selected>Pending + In Progress</option>
@@ -142,14 +70,94 @@
                                     
                                     <input list="lineListFilter" id="filterLineMt" class="form-control form-control-sm" placeholder="Filter Line..." style="max-width: 120px;" onchange="fetchMaintenanceData()">
 
+                                    <div class="d-flex align-items-center gap-1 bg-white border rounded px-2" style="height: 31px;">
+                                        <input type="date" id="mtStartDate" class="form-control form-control-sm border-0 p-0" style="max-width: 110px;" onchange="fetchMaintenanceData()">
+                                        <span class="text-muted small">-</span>
+                                        <input type="date" id="mtEndDate" class="form-control form-control-sm border-0 p-0" style="max-width: 110px;" onchange="fetchMaintenanceData()">
+                                    </div>
+
                                     <button class="btn btn-sm btn-light border shadow-sm" onclick="fetchMaintenanceData()" title="Refresh">
                                         <i class="fas fa-sync-alt text-secondary"></i>
                                     </button>
                                 </div>
-                                <div class="col-md-4 text-end d-none d-lg-block">
-                                    <button class="btn btn-sm btn-warning text-dark fw-bold shadow-sm px-3" onclick="showBootstrapModal('addMaintenanceModal')">
-                                        <i class="fas fa-plus-circle me-1"></i> Request Maintenance
+                                <div class="col-md-5 text-end d-none d-lg-block">
+                                    <button class="btn btn-sm btn-outline-success fw-bold shadow-sm px-3 me-1" onclick="exportMaintenanceExcel()">
+                                        <i class="fas fa-file-excel me-1"></i> Export
                                     </button>
+                                    
+                                    <button class="btn btn-sm btn-outline-info fw-bold shadow-sm px-3 me-1" onclick="showBootstrapModal('maintenanceAnalysisModal')">
+                                        <i class="fas fa-chart-pie me-1"></i> Dashboard
+                                    </button>
+
+                                    <button class="btn btn-sm btn-warning text-dark fw-bold shadow-sm px-3" onclick="showBootstrapModal('addMaintenanceModal')">
+                                        <i class="fas fa-plus-circle me-1"></i> Request
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mtSummaryPanel" class="row g-3 mb-3">
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Total Requests</div>
+                                            <div class="h3 mb-0 fw-bold text-primary" id="sumTotal">0</div>
+                                        </div>
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Completed</div>
+                                            <div class="h3 mb-0 fw-bold text-success" id="sumCompleted">0</div>
+                                        </div>
+                                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Pending / WIP</div>
+                                            <div class="h3 mb-0 fw-bold text-warning" id="sumPending">0</div>
+                                        </div>
+                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Avg Repair Time</div>
+                                            <div class="h4 mb-0 fw-bold text-info" id="sumAvgTime">0 <span class="fs-6 text-muted">min</span></div>
+                                        </div>
+                                        <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-stopwatch"></i>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -264,26 +272,23 @@
 
     <?php 
         if ($canManage) {
-            include('components/addStopModal.php');
-            include('components/editStopModal.php');
+            include('components/stop_cause_modals.php'); 
         }
-        include('components/addMaintenanceModal.php');
-        include('components/completeMaintenanceModal.php');
-        include('components/viewMaintenanceModal.php');
+        include('components/maintenance_modals.php'); 
+        include('components/maintenance_analysis_modal.php');
     ?>
     
     <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
     
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
     <script src="script/maintenance_handler.js?v=<?php echo time(); ?>"></script>
-    
-    <script>
+    <script src="script/maintenance_analysis.js?v=<?php echo time(); ?>"></script> <script>
         const canManage = <?php echo json_encode($canManage); ?>;
         
-        // [FIX 6] Override Spinner Functions ให้ใช้ Overlay ภายใน Main Content
         function showSpinner() { 
             const el = document.getElementById('loadingOverlay');
             if(el) el.style.display = 'flex'; 
@@ -293,13 +298,11 @@
             if(el) el.style.display = 'none'; 
         }
 
-        // FAB Logic
         function updateMobileFab(activeTabId) {
             const fabContainer = document.getElementById('mobileFabContainer');
             const fabBtn = document.getElementById('mobileFabBtn');
             if (!fabContainer || !fabBtn) return;
             
-            // Clone node to reset listeners
             const newFabBtn = fabBtn.cloneNode(true);
             fabBtn.parentNode.replaceChild(newFabBtn, fabBtn);
 
@@ -325,19 +328,32 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Init Date Filters
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            
+            const todayStr = `${year}-${month}-${day}`;     // วันนี้
+            const firstDayStr = `${year}-${month}-01`;      // วันที่ 1 ของเดือน
+
+            // --- 1. Filter ของ Stop Cause (อันนี้แล้วแต่คุณว่าอยากได้แบบไหน ถ้าเอาเหมือนกันก็แก้ตามนี้) ---
             const startDateEl = document.getElementById("filterStartDate");
             const endDateEl = document.getElementById("filterEndDate");
-            const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
-            if (startDateEl && !startDateEl.value) startDateEl.value = dateStr;
-            if (endDateEl && !endDateEl.value) endDateEl.value = dateStr;
+            if (startDateEl && !startDateEl.value) startDateEl.value = todayStr; // หรือ firstDayStr ถ้าต้องการ
+            if (endDateEl && !endDateEl.value) endDateEl.value = todayStr;
 
-            // Init Data
+            // --- 2. [FIXED] Filter ของ Maintenance (ตั้งเป็น วันที่ 1 - วันนี้) ---
+            const mtStartEl = document.getElementById("mtStartDate");
+            const mtEndEl = document.getElementById("mtEndDate");
+            
+            // ถ้ายังไม่มีค่า ให้ใส่ค่า Default
+            if (mtStartEl && !mtStartEl.value) mtStartEl.value = firstDayStr; // <--- แก้เป็นวันที่ 1
+            if (mtEndEl && !mtEndEl.value) mtEndEl.value = todayStr;          // <--- ถึงวันนี้
+
+            // Load Data
             if (typeof fetchMaintenanceData === 'function') fetchMaintenanceData();
             if (typeof fetchStopData === 'function') fetchStopData(1);
 
-            // Tab Change Listener
             const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
             tabEls.forEach(tab => {
                 tab.addEventListener('shown.bs.tab', event => {

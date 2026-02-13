@@ -16,13 +16,21 @@ function toLocalISOString(date) {
 async function fetchMaintenanceData() {
     const statusEl = document.getElementById('mtFilterStatus');
     const lineEl = document.getElementById('filterLineMt');
+    // [NEW] เพิ่ม Date Inputs (ใช้ ID เดียวกับของ Stop Cause ก็ได้ เพราะอยู่หน้าเดียวกัน หรือสร้างใหม่ถ้าอยากแยก)
+    const startEl = document.getElementById('filterStartDate'); 
+    const endEl = document.getElementById('filterEndDate');
     
     const status = statusEl ? statusEl.value : 'Active';
     const line = lineEl ? lineEl.value : '';
+    const startDate = document.getElementById('mtStartDate')?.value || '';
+    const endDate = document.getElementById('mtEndDate')?.value || '';
     
+    // [NEW] เรียก Summary ให้ทำงานคู่กัน
+    fetchMaintenanceSummary(); 
+
     showSpinner();
     try {
-        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}`);
+        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&startDate=${startDate}&endDate=${endDate}`);
         const result = await response.json();
         
         if (result.success) {
@@ -341,6 +349,97 @@ async function updateMtStatus(id, currentStatus) {
     }
 }
 
+// [INSERT] ใส่ใน maintenance_handler.js (ต่อจาก function fetchMaintenanceData หรือก่อนจบไฟล์)
+
+// ==========================================
+// 6. Maintenance Summary & Export
+// ==========================================
+
+async function fetchMaintenanceSummary() {
+    const startDate = document.getElementById('mtStartDate')?.value || '';
+    const endDate = document.getElementById('mtEndDate')?.value || '';
+    const line = document.getElementById('filterLineMt')?.value || '';
+
+    // ไม่แสดง Spinner เพราะจะโหลดคู่กับ Table เดี๋ยวซ้อนกัน
+    try {
+        const response = await fetch(`${MT_API_URL}?action=get_maintenance_summary&startDate=${startDate}&endDate=${endDate}&line=${line}`);
+        const result = await response.json();
+
+        if (result.success) {
+            const s = result.summary;
+            
+            // Animation นับเลข (Optional) หรือใส่ค่าตรงๆ
+            document.getElementById('sumTotal').textContent = s.Total_Jobs || 0;
+            document.getElementById('sumCompleted').textContent = s.Completed_Jobs || 0;
+            document.getElementById('sumPending').textContent = s.Pending_Jobs || 0;
+            
+            const avgTime = parseFloat(s.Avg_Repair_Time || 0).toFixed(0);
+            document.getElementById('sumAvgTime').innerHTML = `${avgTime} <span class="fs-6 text-muted">min</span>`;
+        }
+    } catch (err) {
+        console.error("Summary Error:", err);
+    }
+}
+
+async function exportMaintenanceExcel() {
+    const startDate = document.getElementById('mtStartDate')?.value || '';
+    const endDate = document.getElementById('mtEndDate')?.value || '';
+    const line = document.getElementById('filterLineMt')?.value || '';
+    const status = document.getElementById('mtFilterStatus')?.value || '';
+
+    showSpinner();
+    try {
+        // ใช้ get_requests ตัวเดิมแต่ส่ง date range ไปด้วยเพื่อดึงข้อมูลทั้งหมด
+        // หมายเหตุ: ต้องแน่ใจว่า API get_requests รองรับ startDate/endDate (ถ้ายัง ต้องไปแก้ API นิดนึง หรือใช้ Filter เดิมที่มี)
+        // **Trick:** เราใช้ Filter ที่มีอยู่แล้วคือ status, line แต่เราจะขอข้อมูลทั้งหมดในช่วงวันที่นี้
+        // เพื่อความชัวร์ ผมแนะนำให้ทำ action 'get_requests' ให้รับ startDate/endDate เพิ่มใน maintenanceManage.php ด้วย (ดูข้อ 4 ด้านล่าง)
+        
+        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&startDate=${startDate}&endDate=${endDate}`);
+        const result = await response.json();
+
+        if (!result.success || result.data.length === 0) {
+            showToast("No data to export", "#ffc107");
+            return;
+        }
+
+        const exportData = result.data.map(item => ({
+            "Job No": `MNT-${item.id}`,
+            "Status": item.status,
+            "Request Date": item.request_date,
+            "Line": item.line,
+            "Machine": item.machine,
+            "Priority": item.priority,
+            "Issue": item.issue_description,
+            "Requester": item.requester_name,
+            "Technician": item.resolver_name || '',
+            "Started At": item.started_at || '',
+            "Finished At": item.resolved_at || '',
+            "Tech Note": item.technician_note || '',
+            "Spare Parts": item.spare_parts_list || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        // Auto width (คร่าวๆ)
+        const wscols = [
+            {wch:15}, {wch:10}, {wch:20}, {wch:10}, {wch:15}, 
+            {wch:10}, {wch:30}, {wch:15}, {wch:15}, {wch:20}, 
+            {wch:20}, {wch:30}, {wch:30}
+        ];
+        ws['!cols'] = wscols;
+
+        XLSX.utils.book_append_sheet(wb, ws, "Maintenance Data");
+        XLSX.writeFile(wb, `Maintenance_Report_${startDate}_to_${endDate}.xlsx`);
+
+    } catch (err) {
+        console.error(err);
+        showToast("Export Failed", "#dc3545");
+    } finally {
+        hideSpinner();
+    }
+}
+
 // ==========================================
 // 5. DOMContentLoaded: Event Listeners
 // ==========================================
@@ -431,4 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
     });
+    document.getElementById('filterStartDate').addEventListener('change', fetchMaintenanceData);
+    document.getElementById('filterEndDate').addEventListener('change', fetchMaintenanceData);
 });

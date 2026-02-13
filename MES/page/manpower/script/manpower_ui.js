@@ -2161,13 +2161,34 @@ const Actions = {
     // -------------------------------------------------------------------------
     _employeeCache: [],
     
-    async openEmployeeManager() {
-        const modal = new bootstrap.Modal(document.getElementById('empListModal'));
-        document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
+    // เพิ่ม parameter keepFilters = false (ค่าเริ่มต้นคือไม่จำ)
+    async openEmployeeManager(keepFilters = false) {
         
-        // Populate Line Filter
+        // 1. 💾 SAVE STATE: ถ้าสั่งให้จำค่า ให้เก็บค่าปัจจุบันใส่ตัวแปรไว้ก่อน
+        let savedState = null;
+        if (keepFilters) {
+            // เช็คว่า Element มีอยู่จริงไหมก่อนดึงค่า
+            const statusEl = document.querySelector('input[name="empStatusFilter"]:checked');
+            savedState = {
+                term: document.getElementById('empSearchBox')?.value || '',
+                line: document.getElementById('empFilterLine')?.value || '',
+                status: statusEl ? statusEl.value : '1', // Default Active if not found
+                dateType: document.getElementById('empDateType')?.value || '',
+                dFrom: document.getElementById('empDateFrom')?.value || '',
+                dTo: document.getElementById('empDateTo')?.value || ''
+            };
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('empListModal'));
+        
+        // แสดง Skeleton Loading เฉพาะตอนเปิดใหม่ (ถ้า keepFilters ไม่ต้องโชว์โหลดให้วูบวาบ)
+        if (!keepFilters) {
+            document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
+        }
+        
+        // Populate Line Filter (ถ้ายังไม่มี option)
         const filterSelect = document.getElementById('empFilterLine');
-        if (filterSelect && this._structureCache.lines.length > 0) {
+        if (filterSelect && filterSelect.options.length <= 1 && this._structureCache.lines.length > 0) {
             filterSelect.innerHTML = '<option value="">All Lines</option>' + 
                 this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
         }
@@ -2175,23 +2196,45 @@ const Actions = {
         if(!document.getElementById('empListModal').classList.contains('show')) modal.show();
         
         try {
+            // Fetch ข้อมูลใหม่
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
             const json = await res.json();
             
             if (json.success) { 
                 this._employeeCache = json.data;
                 
-                // 🔥 FIX: แก้ตรงนี้จาก .value = '1' เป็น .checked = true
-                if (document.getElementById('filterStatusActive')) {
-                    document.getElementById('filterStatusActive').checked = true;
+                // 2. 🔄 RESTORE STATE: คืนค่าเดิมกลับไป
+                if (keepFilters && savedState) {
+                    // คืนค่า Search & Line
+                    document.getElementById('empSearchBox').value = savedState.term;
+                    document.getElementById('empFilterLine').value = savedState.line;
+                    
+                    // คืนค่า Status Radio
+                    const rad = document.querySelector(`input[name="empStatusFilter"][value="${savedState.status}"]`);
+                    if(rad) rad.checked = true;
+
+                    // คืนค่า Date
+                    document.getElementById('empDateType').value = savedState.dateType;
+                    document.getElementById('empDateFrom').value = savedState.dFrom;
+                    document.getElementById('empDateTo').value = savedState.dTo;
+                    
+                    // สั่งเปิดกล่องวันที่ ถ้าเดิมมันเปิดอยู่
+                    this.toggleDateInputs(); 
+
+                } else {
+                    // 🧹 RESET DEFAULT: กรณีเปิดใหม่ปกติ
+                    if(document.getElementById('filterStatusActive')) {
+                        document.getElementById('filterStatusActive').checked = true;
+                    }
+                    if (document.getElementById('empDateType')) {
+                        document.getElementById('empDateType').value = '';
+                        this.toggleDateInputs();
+                    }
+                    if (document.getElementById('empSearchBox')) document.getElementById('empSearchBox').value = '';
+                    if (document.getElementById('empFilterLine')) document.getElementById('empFilterLine').value = '';
                 }
 
-                // Reset Date Filters
-                if (document.getElementById('empDateType')) {
-                    document.getElementById('empDateType').value = '';
-                    this.toggleDateInputs(); // ซ่อนกล่องวันที่
-                }
-
+                // สั่งกรองข้อมูลทันที
                 this.filterEmployeeList();
             }
         } catch (e) { 
@@ -2625,7 +2668,7 @@ const Actions = {
                 // ถ้าเปิดหน้า Employee Manager ค้างไว้ให้รีโหลดด้วย
                 const empListModal = document.getElementById('empListModal');
                 if(empListModal && empListModal.classList.contains('show')) {
-                    this.openEmployeeManager();
+                    this.openEmployeeManager(true); 
                 }
                 
                 // ถ้ามาจากหน้า Detail Modal ให้รีโหลดข้อมูลคนในไลน์นั้น

@@ -1,3 +1,60 @@
+<div class="modal fade" id="addMaintenanceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-tools text-warning me-2"></i>New Request
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <form id="addMaintenanceForm" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Line</label>
+                            <input list="lineListFilter" name="line" class="form-control" placeholder="Line..." required style="text-transform: uppercase;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Machine</label>
+                            <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Priority</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priority" id="prioNormal" value="Normal" checked>
+                                    <label class="form-check-label" for="prioNormal">Normal</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priority" id="prioUrgent" value="Urgent">
+                                    <label class="form-check-label text-warning fw-bold" for="prioUrgent">Urgent</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priority" id="prioCritical" value="Critical">
+                                    <label class="form-check-label text-danger fw-bold" for="prioCritical">Critical</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Issue Description</label>
+                            <textarea name="issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Photo (ถ่ายให้เห็นปัญหา))</label>
+                            <input type="file" name="photo_before" class="form-control form-control-sm" accept="image/*" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="addMaintenanceForm" class="btn btn-primary btn-sm fw-bold px-4">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="viewMaintenanceModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border shadow rounded-3 bg-body">
@@ -136,6 +193,58 @@
                     <button id="btn_start_job" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm d-none" onclick="">Start Repair</button>
                     <button id="btn_complete_job" class="btn btn-sm btn-success rounded-pill px-4 shadow-sm d-none" onclick="">Complete Job</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="completeMaintenanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"> <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Complete Job (ปิดงานซ่อม)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="completeMaintenanceForm" enctype="multipart/form-data">
+                    <input type="hidden" name="id" id="complete_req_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">วันที่/เวลา เริ่มซ่อม</label>
+                            <input type="datetime-local" name="started_at" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">วันที่/เวลา เสร็จสิ้น</label>
+                            <input type="datetime-local" name="resolved_at" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Work Detail (รายละเอียดการซ่อม)</label>
+                        <textarea name="technician_note" class="form-control" rows="3" placeholder="อธิบายสิ่งที่ทำไป..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Spare Parts (รายการอะไหล่ที่ใช้)</label>
+                        <textarea name="spare_parts_list" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร&#10;- เบรคเกอร์ 1 ตัว"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold text-success">
+                                <i class="fas fa-camera me-1"></i>หลังซ่อม (After)
+                            </label>
+                            <input type="file" name="photo_after" class="form-control" accept="image/*" required>
+                            <div class="form-text">ถ่ายให้เห็นผลลัพธ์การซ่อม</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="completeMaintenanceForm" class="btn btn-success">
+                    <i class="fas fa-save me-1"></i> Save & Close Job
+                </button>
             </div>
         </div>
     </div>
