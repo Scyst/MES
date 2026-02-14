@@ -286,6 +286,6 @@
         const g_EntryType = null; // ไม่จำเป็นในหน้านี้
         const g_LocationId = null; // ไม่จำเป็นในหน้านี้
     </script>
-    <script src="script/mobile.js?v=<?php echo time(); ?>"></script>
+    <script src="script/mobile.js?v=<?php echo filemtime(__DIR__ . '/script/mobile.js'); ?>" defer></script>
 </body>
 </html>

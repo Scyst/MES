@@ -180,7 +180,7 @@ $currentUser = $_SESSION['user'];
     
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/maintenance.js?v=<?php echo time();?>"></script>
+    <script src="script/maintenance.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance.js'); ?>" defer></script>
     
 </body>
 </html>

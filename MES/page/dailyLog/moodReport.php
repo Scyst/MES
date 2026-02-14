@@ -399,7 +399,7 @@ $pageHeaderSubtitle = "วิเคราะห์สุขภาพใจพน
     </div>
 
     <?php include_once __DIR__ . '/components/replyModal.php'; ?>
-    <script src="script/moodReport.js?v=<?php echo time(); ?>"></script>
+    <script src="script/moodReport.js?v=<?php echo filemtime(__DIR__ . '/script/moodReport.js'); ?>" defer></script>
     
 </body>
 </html>

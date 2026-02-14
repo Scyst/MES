@@ -20,8 +20,7 @@ $pageHelpId = "helpModal";
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?> 
-    
-    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/shipping_loading.css?v=<?php echo filemtime(__DIR__ . '/css/shipping_loading.css'); ?>">
     
     <?php if ($isLocked): ?>
     <style>
@@ -310,6 +309,6 @@ $pageHelpId = "helpModal";
     
     <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/shipping_loading.js?v=<?php echo time(); ?>"></script>
+    <script src="script/shipping_loading.js?v=<?php echo filemtime(__DIR__ . '/script/shipping_loading.js'); ?>" defer></script>
 </body>
 </html>

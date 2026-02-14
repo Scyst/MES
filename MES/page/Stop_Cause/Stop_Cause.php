@@ -285,8 +285,8 @@
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
-    <script src="script/maintenance_handler.js?v=<?php echo time(); ?>"></script>
-    <script src="script/maintenance_analysis.js?v=<?php echo time(); ?>"></script> <script>
+    <script src="script/maintenance_handler.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_handler.js'); ?>" defer></script>
+    <script src="script/maintenance_analysis.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_analysis.js'); ?>" defer></script> <script>
         const canManage = <?php echo json_encode($canManage); ?>;
         
         function showSpinner() { 

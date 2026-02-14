@@ -108,6 +108,6 @@
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
     <script src="../../utils/libs/qrcode.min.js"></script>
-    <script src="script/label_printer.js?v=<?php echo time(); ?>"></script>
+    <script src="script/label_printer.js?v=<?php echo filemtime(__DIR__ . '/script/label_printer.js'); ?>" defer></script>
 </body>
 </html>

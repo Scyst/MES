@@ -1,0 +1,31 @@
+
+.drop-zone {
+    border: 2px dashed var(--bs-primary);
+    border-radius: 10px;
+    padding: 3rem 1rem;
+    text-align: center;
+    background-color: var(--bs-primary-bg-subtle);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.drop-zone.dragover {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+/* จัดการดัน Main Content หลบ Sidebar เฉพาะจอ Desktop (lg ขึ้นไป) */
+@media (min-width: 992px) {
+    body.layout-top-header #main-content {
+        margin-left: 70px; /* ระยะเท่ากับ Sidebar ตอน Collapsed */
+        transition: margin-left 0.3s ease-in-out;
+    }
+}
+
+/* [Optional] ถ้าหากระบบของคุณสามารถ "กดกาง" Sidebar ออกมาได้ 
+  (เช่น ความกว้างตอนกางเป็น 250px) และระบบมี JS ไปใส่ class เช่น 'sidebar-expanded' ไว้ที่ body 
+  คุณสามารถดักจับสถานะนั้นได้ตามตัวอย่างด้านล่างนี้ครับ:
+
+  body.layout-top-header.sidebar-expanded #main-content {
+      margin-left: 250px;
+  }
+*/

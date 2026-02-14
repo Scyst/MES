@@ -21,8 +21,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <title><?php echo $pageTitle; ?></title>
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
-    
-    <link href="css/manpowerUI.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link rel="stylesheet" href="css/manpowerUI.css?v=<?php echo filemtime(__DIR__ . '/css/manpowerUI.css'); ?>">
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     
     <style>
@@ -317,9 +316,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
         </div>
     </div>
 
-    <script src="script/manpower_api.js?v=<?php echo time(); ?>"></script>
-    <script src="script/manpower_ui.js?v=<?php echo time(); ?>"></script>
-    <script src="script/manpower_main.js?v=<?php echo time(); ?>"></script>
+    <script src="script/manpower_api.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_api.js'); ?>" defer></script>
+    <script src="script/manpower_ui.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_ui.js'); ?>" defer></script>
+    <script src="script/manpower_main.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_main.js'); ?>" defer></script>
     
 </body>
 </html>

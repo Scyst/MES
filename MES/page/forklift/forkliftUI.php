@@ -20,8 +20,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal คู่มือ
     <?php require_once __DIR__ . '/../components/common_head.php'; ?>
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     <title><?php echo $pageTitle; ?></title>
-    
-    <link rel="stylesheet" href="css/forklift.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/forklift.css?v=<?php echo filemtime(__DIR__ . '/css/forklift.css'); ?>">
     
     <script>
         const CURRENT_USER_ID = <?php echo $_SESSION['user']['id']; ?>;
@@ -85,8 +84,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal คู่มือ
     
     <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
-
-    <script src="script/forklift.js?v=<?php echo time(); ?>"></script>
+    <script src="script/forklift.js?v=<?php echo filemtime(__DIR__ . '/script/forklift.js'); ?>" defer></script>
     
     </body>
 </html>

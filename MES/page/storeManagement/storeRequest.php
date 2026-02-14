@@ -17,7 +17,7 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    <link rel="stylesheet" href="css/storeRequest.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/storeRequest.css?v=<?php echo filemtime(__DIR__ . '/css/storeRequest.css'); ?>">
 </head>
 
 <body class="layout-top-header">
@@ -168,6 +168,6 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
         function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
     </script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/storeRequest.js?v=<?php echo time(); ?>"></script>
+    <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
 </body>
 </html>

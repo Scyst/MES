@@ -14,7 +14,7 @@ $pageHelpId = "helpModal";
 <head>
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/daily_meeting.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/daily_meeting.css?v=<?php echo filemtime(__DIR__ . '/css/daily_meeting.css'); ?>">
 </head>
 <body class="layout-top-header bg-dashboard">
     
@@ -156,7 +156,6 @@ $pageHelpId = "helpModal";
     <?php include_once('../components/php/mobile_menu.php'); ?>
     <?php include_once('components/allDailyModal.php'); ?>
     <?php include_once('components/helpModal.php'); ?>
-
-    <script src="script/daily_meeting.js?v=<?php echo time(); ?>"></script>
+    <script src="script/daily_meeting.js?v=<?php echo filemtime(__DIR__ . '/script/daily_meeting.js'); ?>" defer></script>
 </body>
 </html>

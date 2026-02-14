@@ -94,7 +94,6 @@ if (!hasRole(['admin', 'creator'])) {
     </div>
 
     <script> const INVENTORY_API_URL = 'api/inventoryManage.php'; </script>
-    
-    <script src="script/print_qr.js?v=<?php echo time(); ?>"></script>
+    <script src="script/print_qr.js?v=<?php echo filemtime(__DIR__ . '/script/print_qr.js'); ?>" defer></script>
 </body>
 </html>

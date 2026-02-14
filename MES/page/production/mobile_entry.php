@@ -470,6 +470,6 @@
         const g_AutoFillData_OLD = <?php echo json_encode($g_autofill_data); ?>;
         const g_TransferId_NEW = <?php echo json_encode($g_transfer_id); ?>;
     </script>
-    <script src="script/mobile.js?v=<?php echo time(); ?>"></script>
+    <script src="script/mobile.js?v=<?php echo filemtime(__DIR__ . '/script/mobile.js'); ?>" defer></script>
 </body>
 </html>

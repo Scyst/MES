@@ -10,8 +10,7 @@ $pageTitle = "Loading Inspection";
     <title><?php echo $pageTitle; ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <?php include_once __DIR__ . '/../components/common_head.php'; ?> 
-    
-    <link href="css/loading_report.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link href="css/loading_report.css?v=<?php echo filemtime(__DIR__ . '/css/loading_report.css'); ?>" rel="stylesheet">
 
 </head>
 <body class="layout-top-header">
@@ -270,6 +269,6 @@ $pageTitle = "Loading Inspection";
     <input type="hidden" id="current_report_id">
 
     <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
-    <script src="script/loading_report.js?v=<?php echo time(); ?>"></script>
+    <script src="script/loading_report.js?v=<?php echo filemtime(__DIR__ . '/script/loading_report.js'); ?>" defer></script>
 </body>
 </html>

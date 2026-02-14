@@ -24,7 +24,7 @@ $pageHelpId = "execHelpModal";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <?php include_once '../components/chart_head.php'; ?>
-    <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo filemtime(__DIR__ . '/css/executiveDashboard.css'); ?>">
 </head>
 <body class="layout-top-header">
     
@@ -401,6 +401,6 @@ $pageHelpId = "execHelpModal";
         </div>
     </div>
 
-    <script src="script/executiveDashboard.js?v=<?php echo time(); ?>"></script>
+    <script src="script/executiveDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/executiveDashboard.js'); ?>" defer></script>
 </body>
 </html>
