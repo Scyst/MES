@@ -82,112 +82,126 @@ document.addEventListener('DOMContentLoaded', function() {
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     
-                    // ดึงข้อมูลออกมาเป็น 2D Array
+                    // แปลงเป็น 2D Array เพื่อหลบปัญหาบรรทัดขยะด้านบน
                     const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
                     let invoices = {};
                     let idx = {};
+                    let headerFound = false;
 
                     // ลูปแกะข้อมูลทีละแถว
                     for (let i = 0; i < rows.length; i++) {
+                        // ทำความสะอาดข้อมูล ลบช่องว่างหัวท้าย
                         let row = rows[i].map(c => String(c).trim());
-                        if (row.filter(c => c !== '').length === 0) continue; 
+                        if (row.filter(c => c !== '').length === 0) continue; // ข้ามบรรทัดว่าง
 
-                        // 1. หาตำแหน่งคอลัมน์ Header (ดักจับตัวใหม่เพียบ)
-                        if (row.includes('INVOICE NO.') && row.includes('CUSTOMER NAME :')) {
-                            idx.customer = row.indexOf('CUSTOMER NAME :');
-                            idx.incoterms = row.indexOf('INCOTERMS:');
-                            idx.invoice_no = row.indexOf('INVOICE NO.');
-                            idx.invoice_date = row.indexOf('INVOICE DATE.');
-                            idx.port = row.indexOf('PORT OF DISCHARGE:');
-                            idx.desc = row.indexOf('DESCRIPTION');
+                        // 1. สแกนหาบรรทัดที่เป็น Header อัตโนมัติ
+                        if (!headerFound) {
+                            let rowUpper = row.map(c => c.toUpperCase());
                             
-                            // ค้นหาแบบยืดหยุ่น (ป้องกันชื่อคอลัมน์มีการเว้นบรรทัด)
-                            row.forEach((v, k) => {
-                                let vUp = v.toUpperCase();
-                                if (vUp.includes('QUANTITY')) idx.qty = k;
-                                if (vUp.includes('UNIT PRICE')) idx.price = k;
-                                if (vUp.includes('CONTAINER NAME')) idx.container = k;
-                                if (vUp.includes('SEAL')) idx.seal = k;
-                                if (vUp.includes('FEEDER VESSEL')) idx.vessel = k;
-                                if (vUp.includes('MOTHER VESSEL')) idx.mother = k;
-                                if (vUp.includes('N.W')) idx.nw = k;
-                                if (vUp.includes('G.W')) idx.gw = k;
-                                if (vUp.includes('MEASUREMENT') || vUp.includes('CBM')) idx.cbm = k;
-                                if (vUp.includes('ETD')) idx.etd = k;
-                                if (vUp.includes('ETA')) idx.eta = k;
-                                if (vUp.includes('CONSIGNEE')) idx.consignee = k;
-                                if (vUp.includes('PURCHASE ORDER') || vUp.includes('PO NO')) idx.po = k;
-                                if (vUp.includes('CARTON NO')) idx.carton = k;
-                                if (vUp.includes('SHIPPING MARKS')) idx.marks = k;
-                                if (vUp.includes('CONTAINER QTY')) idx.container_qty = k;
-                                if (vUp.includes('TARE')) idx.tare = k;
-                            });
-                            continue;
+                            // ถ้าบรรทัดนี้มีคำว่า INVOICE NO และ CUSTOMER ให้ถือว่าเป็นบรรทัด Header
+                            if (rowUpper.some(c => c.includes('INVOICE NO')) && rowUpper.some(c => c.includes('CUSTOMER'))) {
+                                headerFound = true;
+                                
+                                // Map ตำแหน่งคอลัมน์แบบยืดหยุ่น (แค่มีคำที่กำหนดก็จับคู่ให้เลย)
+                                const findIdx = (keyword) => rowUpper.findIndex(c => c.includes(keyword));
+                                
+                                idx.invoice_no = findIdx('INVOICE NO');
+                                idx.customer = findIdx('CUSTOMER');
+                                idx.incoterms = findIdx('INCOTERMS');
+                                idx.consignee = findIdx('CONSIGNEE');
+                                idx.notify = findIdx('NOTIFY PARTY');
+                                idx.payment = findIdx('PAYMENT');
+                                idx.port_loading = findIdx('PORT OF LOADING');
+                                idx.port_discharge = findIdx('PORT OF DISCHARGE');
+                                idx.vessel = findIdx('FEEDER VESSEL');
+                                idx.mother = findIdx('MOTHER VESSEL');
+                                idx.container = findIdx('CONTAINER NO') !== -1 ? findIdx('CONTAINER NO') : findIdx('CONTAINER NAME');
+                                idx.seal = findIdx('SEAL');
+                                idx.invoice_date = findIdx('INVOICE DATE');
+                                idx.etd = findIdx('ETD');
+                                idx.eta = findIdx('ETA');
+                                idx.container_qty = findIdx('CONTAINER QTY');
+                                idx.tare = findIdx('TARE');
+                                
+                                idx.qty = findIdx('QUANTITY');
+                                idx.price = findIdx('UNIT PRICE');
+                                idx.nw = findIdx('N.W');
+                                idx.gw = findIdx('G.W');
+                                idx.cbm = findIdx('CBM') !== -1 ? findIdx('CBM') : findIdx('MEASUREMENT');
+                                idx.po = findIdx('PURCHASE ORDER') !== -1 ? findIdx('PURCHASE ORDER') : findIdx('PO NO');
+                                idx.carton = findIdx('CARTON NO');
+                                idx.marks = findIdx('MARKS');
+                                idx.desc = findIdx('DESCRIPTION');
+                                continue; // ได้ Header แล้วข้ามไปอ่าน Data บรรทัดถัดไป
+                            }
                         }
 
-                        // 2. ดึง Data 
-                        if (idx.invoice_no !== undefined && row[idx.invoice_no] !== '') {
+                        // 2. ดึง Data ของจริง (เมื่อเจอ Header แล้ว)
+                        if (headerFound && idx.invoice_no !== undefined && idx.invoice_no !== -1) {
                             let invNo = row[idx.invoice_no];
-                            if (invNo === 'INVOICE NO.') continue;
+                            if (!invNo || invNo.toUpperCase().includes('INVOICE NO')) continue; // ข้ามถ้าไม่มีเลขบิล หรือซ้ำ Header
 
-                            let qty = idx.qty !== undefined ? parseFloat(row[idx.qty].replace(/,/g, '')) || 0 : 0;
-                            let price = idx.price !== undefined ? parseFloat(row[idx.price].replace(/,/g, '')) || 0 : 0;
-                            let nw = idx.nw !== undefined ? parseFloat(row[idx.nw].replace(/,/g, '')) || 0 : 0;
-                            let gw = idx.gw !== undefined ? parseFloat(row[idx.gw].replace(/,/g, '')) || 0 : 0;
-                            let cbm = idx.cbm !== undefined ? parseFloat(row[idx.cbm].replace(/,/g, '')) || 0 : 0;
+                            // Helper ดึงค่าแบบปลอดภัย (ถ้าไม่เจอคอลัมน์ให้คืนค่าว่าง)
+                            const getVal = (index, defaultVal = '') => (index !== undefined && index !== -1 && row[index] !== undefined && row[index] !== '') ? row[index] : defaultVal;
+                            
+                            let qty = parseFloat(getVal(idx.qty).replace(/,/g, '')) || 0;
+                            let price = parseFloat(getVal(idx.price).replace(/,/g, '')) || 0;
 
                             if (qty > 0 && price > 0) {
                                 if (!invoices[invNo]) {
-                                    // ยัดข้อมูล Header ทั้งหมดลง JSON ก้อนเดียว!
+                                    // สร้างโครงสร้างบิลใหม่
                                     invoices[invNo] = {
                                         customerData: { 
-                                            name: row[idx.customer] || '', 
-                                            incoterms: row[idx.incoterms] || '',
-                                            consignee: row[idx.consignee] || ''
+                                            name: getVal(idx.customer), 
+                                            incoterms: getVal(idx.incoterms),
+                                            consignee: getVal(idx.consignee),
+                                            notify_party: getVal(idx.notify),
+                                            payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.') // ค่า Default ตาม PDF
                                         },
                                         shippingData: {
-                                            port_discharge: row[idx.port] || '', 
-                                            feeder_vessel: row[idx.vessel] || '',
-                                            mother_vessel: row[idx.mother] || '',
-                                            container_no: row[idx.container] || '', 
-                                            seal_no: row[idx.seal] || '', 
-                                            invoice_date: row[idx.invoice_date] || '',
-                                            etd_date: row[idx.etd] || '',
-                                            eta_date: row[idx.eta] || '',
-                                            container_qty: row[idx.container_qty] || '',
-                                            tare: row[idx.tare] || ''                                         },
+                                            port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'), // ค่า Default ตาม PDF
+                                            port_discharge: getVal(idx.port_discharge), 
+                                            feeder_vessel: getVal(idx.vessel),
+                                            mother_vessel: getVal(idx.mother),
+                                            container_no: getVal(idx.container), 
+                                            seal_no: getVal(idx.seal), 
+                                            invoice_date: getVal(idx.invoice_date),
+                                            etd_date: getVal(idx.etd),
+                                            eta_date: getVal(idx.eta),
+                                            container_qty: getVal(idx.container_qty),
+                                            tare: getVal(idx.tare)
+                                        },
                                         details: []
                                     };
                                 }
 
-                                let desc = row[idx.desc] || '';
-                                let sku = desc.split(' ')[0].replace(/^#/, '');
-                                let po = row[idx.po] || '';
-                                let carton = row[idx.carton] || '';
-                                let marks = row[idx.marks] || '';
-                                
-                                let existingItem = invoices[invNo].details.find(d => d.sku === sku);
-                                if (existingItem) {
-                                    if (nw > 0) existingItem.nw = nw;
-                                    if (gw > 0) existingItem.gw = gw;
-                                    if (cbm > 0) existingItem.cbm = cbm;
-                                } else {
-                                    // เพิ่มฟิลด์ใหม่ (PO, Carton, Marks) ลงในรายการสินค้า
-                                    invoices[invNo].details.push({ 
-                                        sku: sku, description: desc, qty: qty, price: price, 
-                                        nw: nw, gw: gw, cbm: cbm, po: po, carton: carton, marks: marks
-                                    });
-                                }
+                                // ดึง Description และสกัด SKU
+                                let rawDesc = getVal(idx.desc);
+                                let sku = rawDesc.split(' ')[0].replace(/^#/, '');
+
+                                // ใส่รายการสินค้า
+                                invoices[invNo].details.push({ 
+                                    sku: sku, 
+                                    description: rawDesc, 
+                                    qty: qty, 
+                                    price: price, 
+                                    nw: parseFloat(getVal(idx.nw).replace(/,/g, '')) || 0, 
+                                    gw: parseFloat(getVal(idx.gw).replace(/,/g, '')) || 0, 
+                                    cbm: parseFloat(getVal(idx.cbm).replace(/,/g, '')) || 0, 
+                                    po: getVal(idx.po), 
+                                    carton: getVal(idx.carton), 
+                                    marks: getVal(idx.marks)
+                                });
                             }
                         }
                     }
 
                     if (Object.keys(invoices).length === 0) {
-                        throw new Error("ไม่พบข้อมูล Invoice หรือรูปแบบตารางไม่ถูกต้อง");
+                        throw new Error("ไม่พบข้อมูล Invoice ตรวจสอบว่าคอลัมน์ Quantity และ Price มีตัวเลขที่ถูกต้องหรือไม่");
                     }
 
-                    // 3. ส่ง JSON ไปให้ Server
+                    // 3. ส่ง JSON ไปให้ Server API
                     const payload = {
                         action: 'import_invoice',
                         report_id: formImport.querySelector('[name="report_id"]').value,

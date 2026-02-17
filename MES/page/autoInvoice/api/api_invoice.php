@@ -53,7 +53,7 @@ try {
         // CASE: import_invoice (รับ JSON จาก Client-side JS ไปบันทึกลง DB)
         // ======================================================================
         case 'import_invoice':
-            if (!hasRole(['admin', 'creator', 'supervisor'])) { // เปลี่ยน Role ตามความเหมาะสม
+            if (!hasRole(['admin', 'creator', 'supervisor'])) {
                 throw new Exception("คุณไม่มีสิทธิ์นำเข้าข้อมูล Invoice");
             }
 
@@ -71,7 +71,9 @@ try {
             $successCount = 0;
             $processedInvoices = [];
 
-            // วนลูปยิง SP (SP มี BEGIN TRAN/COMMIT จัดการตัวเองอยู่แล้ว จึงไม่ต้องเปิด TRAN ซ้อนใน PHP)
+            // 🔥 บังคับเปิด Transaction ระดับ PHP ควบคุม Bulk Insert
+            $pdo->beginTransaction(); 
+
             foreach ($input['invoices'] as $invNo => $invData) {
                 $stmt->execute([
                     $invNo,
@@ -87,16 +89,19 @@ try {
                 if ($result && $result['success'] == 1) {
                     $successCount++;
                     $processedInvoices[] = $invNo . " (v" . $result['current_version'] . ")";
+                } else {
+                    // ถ้ามีบิลไหนพัง ให้โยน Error ไปเข้า Catch เพื่อ Rollback ทั้งยวงทันที
+                    throw new Exception("เกิดข้อผิดพลาดในการนำเข้าบิล: " . $invNo);
                 }
             }
+
+            $pdo->commit(); // ถ้าผ่านทุกลูปถึงจะ Save ลง DB จริงๆ
 
             if ($successCount > 0) {
                 echo json_encode([
                     "success" => true,
                     "message" => "นำเข้าสำเร็จ $successCount บิล ได้แก่: " . implode(", ", $processedInvoices)
                 ]);
-            } else {
-                throw new Exception("เกิดข้อผิดพลาด ไม่สามารถนำเข้าข้อมูลได้ (อาจเป็น Error จากฐานข้อมูล)");
             }
             break;
 

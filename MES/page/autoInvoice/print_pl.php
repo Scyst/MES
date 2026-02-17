@@ -1,25 +1,21 @@
 <?php
 // MES/page/autoInvoice/print_pl.php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../../auth/check_auth.php';
+require_once __DIR__ . '/../components/init.php';
 
 $invoice_id = $_GET['id'] ?? 0;
 
 try {
-    // 1. ดึงข้อมูล Header
-    $stmt = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICES WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE id = ?");
     $stmt->execute([$invoice_id]);
     $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$header) {
-        die("Invoice not found.");
-    }
+    if (!$header) die("Invoice not found.");
 
     $customer = json_decode($header['customer_data_json'], true) ?: [];
     $shipping = json_decode($header['shipping_data_json'], true) ?: [];
 
-    // 2. ดึงข้อมูล Details
-    $stmtDetails = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WHERE invoice_id = ? ORDER BY detail_id ASC");
+    $stmtDetails = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
     $stmtDetails->execute([$invoice_id]);
     $details = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
 
