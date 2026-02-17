@@ -39,7 +39,7 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                     <i class="fas fa-cloud-upload-alt fa-3x mb-2"></i>
                                     <h6>ลากไฟล์ CSV มาวางที่นี่</h6>
                                     <p class="small text-muted mb-0">หรือคลิกเพื่อเลือกไฟล์</p>
-                                    <input type="file" id="fileInput" name="invoice_file" accept=".csv" class="d-none" required>
+                                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="d-none" required>
                                 </div>
                                 <div id="fileNameDisplay" class="mt-2 text-success fw-bold text-center small"></div>
                             </div>
@@ -82,6 +82,7 @@ $pageIcon = "fas fa-file-invoice-dollar";
         </div>
     </div>
 
+    <script src="../../utils/libs/xlsx.full.min.js" defer></script>
     <script src="script/finance_dashboard.js?v=<?php echo filemtime(__DIR__ . '/script/finance_dashboard.js'); ?>"></script>
 </body>
 </html>

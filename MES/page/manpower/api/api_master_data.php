@@ -248,43 +248,49 @@ try {
             break;
 
         // ======================================================================
-        // [FINAL & SECURE] CASE: terminate_employee (ลาออก)
+        // CASE: terminate_employee (แจ้งพนักงานลาออก)
         // ======================================================================
         case 'terminate_employee':
-            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
-            
-            $updatedBy = $_SESSION['user']['username'] ?? 'SYSTEM'; // ประกาศตัวแปร
-            $empId = $input['emp_id'] ?? '';
-            $resignDate = $input['resign_date'] ?? date('Y-m-d');
+            $emp_id = $input['emp_id'] ?? '';
+            $resign_date = $input['resign_date'] ?? '';
 
-            if (empty($empId)) throw new Exception("Missing Employee ID");
-
-            $pdo->beginTransaction();
+            if (!$emp_id || !$resign_date) {
+                echo json_encode(['success' => false, 'message' => 'Missing Employee ID or Resign Date']);
+                break;
+            }
 
             try {
-                // 1. Deactivate & Set Resign Date
-                $pdo->prepare("UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
-                               SET is_active = 0, last_sync_at = GETDATE(), resign_date = ? 
-                               WHERE emp_id = ?")
-                    ->execute([$resignDate, $empId]);
-                
-                // 2. ปรับปรุงสถานะ Log ในวันที่ลาออก (ใช้ $resignDate ไม่ใช่ GETDATE())
-                $stmtUpdate = $pdo->prepare("UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
-                                             SET status = 'RESIGNED', updated_at = GETDATE(), updated_by = ? 
-                                             WHERE emp_id = ? AND log_date = ?");
-                $stmtUpdate->execute([$updatedBy, $empId, $resignDate]);
+                // เริ่ม Transaction (ถ้าบรรทัดไหนพัง จะได้ Rollback กลับให้หมด)
+                $pdo->beginTransaction();
 
-                // 3. ลบ Log อนาคตหลังจากวันที่ลาออก
-                $stmtDelete = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
-                                             WHERE emp_id = ? AND log_date > ? AND (is_verified = 0 OR is_verified IS NULL)");
-                $stmtDelete->execute([$empId, $resignDate]);
-                
+                // 1. อัปเดต Master Data: ปิด Active และใส่วันที่ลาออก
+                $sqlUpdate = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                              SET is_active = 0, resign_date = :resign_date 
+                              WHERE emp_id = :emp_id";
+                $stmtUpdate = $pdo->prepare($sqlUpdate);
+                $stmtUpdate->execute([
+                    ':resign_date' => $resign_date,
+                    ':emp_id' => $emp_id
+                ]);
+
+                // 2. ลบ Daily Logs: ลบข้อมูล "ตั้งแต่วันที่ลาออกเป็นต้นไป" (ป้องกันยอด HC เกิน)
+                // ตารางอาจจะชื่อ MANPOWER_DAILY_LOGS (ตรวจสอบชื่อตารางของคุณให้ตรงนะครับ)
+                $sqlDelete = "DELETE FROM MANPOWER_DAILY_LOGS 
+                              WHERE emp_id = :emp_id AND log_date >= :resign_date";
+                $stmtDelete = $pdo->prepare($sqlDelete);
+                $stmtDelete->execute([
+                    ':emp_id' => $emp_id,
+                    ':resign_date' => $resign_date
+                ]);
+
+                // บันทึกการเปลี่ยนแปลงทั้งหมด
                 $pdo->commit();
-                echo json_encode(['success' => true, 'message' => 'Staff termination processed successfully']);
 
+                echo json_encode(['success' => true, 'message' => 'Terminated and logs cleared']);
             } catch (Exception $e) {
+                // ถ้ามี Error ให้ย้อนกลับข้อมูลทั้งหมด
                 $pdo->rollBack();
-                throw $e;
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
             }
             break;
 

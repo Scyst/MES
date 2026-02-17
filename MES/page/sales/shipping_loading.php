@@ -20,7 +20,7 @@ $pageHelpId = "helpModal";
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?> 
-    <link rel="stylesheet" href="css/shipping_loading.css?v=<?php echo filemtime(__DIR__ . '/css/shipping_loading.css'); ?>">
+    <link rel="stylesheet" href="css/salesDashboard.css?v=<?php echo filemtime(__DIR__ . '/css/salesDashboard.css'); ?>">
     
     <?php if ($isLocked): ?>
     <style>

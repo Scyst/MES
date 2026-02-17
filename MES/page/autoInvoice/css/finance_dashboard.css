@@ -1,4 +1,4 @@
-
+/* 1. สไตล์สำหรับกล่อง Drag & Drop (ที่คุณน่าจะย้ายมาแล้ว) */
 .drop-zone {
     border: 2px dashed var(--bs-primary);
     border-radius: 10px;
@@ -13,19 +13,22 @@
     color: #fff;
 }
 
-/* จัดการดัน Main Content หลบ Sidebar เฉพาะจอ Desktop (lg ขึ้นไป) */
+/* 2. ตัวแก้ปัญหาจม Sidebar (Bulletproof Layout Fix) */
 @media (min-width: 992px) {
     body.layout-top-header #main-content {
-        margin-left: 70px; /* ระยะเท่ากับ Sidebar ตอน Collapsed */
-        transition: margin-left 0.3s ease-in-out;
+        /* ดันเนื้อหาหนี Sidebar 70px */
+        margin-left: 70px !important; 
+        
+        /* หักความกว้างออก 70px ป้องกันหน้าจอเกิดแถบ Scroll แนวนอน (ล้นขอบขวา) */
+        width: calc(100% - 70px) !important; 
+        
+        transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+    }
+    
+    /* เผื่อระบบคุณมีการ "กาง" Sidebar (สมมติว่ากางแล้วกว้าง 250px) */
+    body.layout-top-header.sidebar-hovered #main-content,
+    body.layout-top-header.sidebar-expanded #main-content {
+        margin-left: 250px !important;
+        width: calc(100% - 250px) !important;
     }
 }
-
-/* [Optional] ถ้าหากระบบของคุณสามารถ "กดกาง" Sidebar ออกมาได้ 
-  (เช่น ความกว้างตอนกางเป็น 250px) และระบบมี JS ไปใส่ class เช่น 'sidebar-expanded' ไว้ที่ body 
-  คุณสามารถดักจับสถานะนั้นได้ตามตัวอย่างด้านล่างนี้ครับ:
-
-  body.layout-top-header.sidebar-expanded #main-content {
-      margin-left: 250px;
-  }
-*/

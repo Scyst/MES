@@ -1,0 +1,2388 @@
+[2026-02-14 14:29:19] TOPIC: /B9/iPSS/LPG
+[
+    {
+        "cumulative": 195577.305,
+        "velocity": 4.303399085998535,
+        "flow": 389.7777099609375,
+        "round": 19,
+        "created_at": "2/14/2026, 7:14:19 AM",
+        "thai_time": "2026-02-14T14:14:19.000Z",
+        "created_at_new": "2026-02-14T07:14:19.445Z"
+    },
+    {
+        "cumulative": 195582.7815,
+        "velocity": 2.8894522190093994,
+        "flow": 261.7103576660156,
+        "round": 19,
+        "created_at": "2/14/2026, 7:29:19 AM",
+        "thai_time": "2026-02-14T14:29:19.000Z",
+        "created_at_new": "2026-02-14T07:29:19.446Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/ECMDB
+{
+    "volt": 219.7947540283203,
+    "current": 661.4769897460938,
+    "kW": 62.203601562500005,
+    "kVA": 68.6556953125,
+    "kVAR": 29.05712890625,
+    "pf": 0.9060224294662476,
+    "kWh": 1383975.75
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/iPSS/MDB/Send
+[
+    {
+        "voltage": 222.33,
+        "current": 661.69,
+        "power": 63.72,
+        "reactive_power": 32.36,
+        "apparent_power": 71.47,
+        "power_factor": 0.89,
+        "cumulative": 1383951.13,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.433Z"
+    },
+    {
+        "voltage": 222.31,
+        "current": 653.88,
+        "power": 61.63,
+        "reactive_power": 29.76,
+        "apparent_power": 68.44,
+        "power_factor": 0.9,
+        "cumulative": 1383959.38,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.434Z"
+    },
+    {
+        "voltage": 225.72,
+        "current": 666.43,
+        "power": 60.46,
+        "reactive_power": 34.87,
+        "apparent_power": 69.8,
+        "power_factor": 0.87,
+        "cumulative": 1383967.63,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.436Z"
+    },
+    {
+        "voltage": 219.79,
+        "current": 661.48,
+        "power": 62.2,
+        "reactive_power": 29.06,
+        "apparent_power": 68.66,
+        "power_factor": 0.91,
+        "cumulative": 1383975.75,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.436Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/DB_PAINT
+{
+    "volt": 220.32705688476562,
+    "current": 638.3117065429688,
+    "kW": 41.91220703125,
+    "kVA": 46.52836328125,
+    "kVAR": 20.20533984375,
+    "pf": 0.9007883071899414,
+    "kWh": 919558.5625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/iPSS/DB_PAINT/Send
+[
+    {
+        "voltage": 222.2,
+        "current": 620.36,
+        "power": 41.98,
+        "reactive_power": 21.84,
+        "apparent_power": 47.32,
+        "power_factor": 0.89,
+        "cumulative": 919537.44,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.766Z"
+    },
+    {
+        "voltage": 222.32,
+        "current": 645.77,
+        "power": 42.53,
+        "reactive_power": 22.08,
+        "apparent_power": 47.92,
+        "power_factor": 0.89,
+        "cumulative": 919544.5,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.762Z"
+    },
+    {
+        "voltage": 225.1,
+        "current": 646.68,
+        "power": 43.67,
+        "reactive_power": 20.98,
+        "apparent_power": 48.45,
+        "power_factor": 0.9,
+        "cumulative": 919551.5,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.764Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 638.31,
+        "power": 41.91,
+        "reactive_power": 20.21,
+        "apparent_power": 46.53,
+        "power_factor": 0.9,
+        "cumulative": 919558.56,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.768Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/DB_SPOTWELDING
+{
+    "volt": 220.1416015625,
+    "current": 77.06725311279297,
+    "kW": 15.210556640625,
+    "kVA": 15.6009560546875,
+    "kVAR": 3.468259033203125,
+    "pf": 0.9749759435653687,
+    "kWh": 95377.3359375
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:48] TOPIC: /B9/iPSS/DB_SPOTWELDING/Send
+[
+    {
+        "voltage": 221.71,
+        "current": 153.32,
+        "power": 19.17,
+        "reactive_power": 13.12,
+        "apparent_power": 23.24,
+        "power_factor": 0.83,
+        "cumulative": 95373.05,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.985Z"
+    },
+    {
+        "voltage": 222.18,
+        "current": 43.63,
+        "power": 8.93,
+        "reactive_power": 3.28,
+        "apparent_power": 9.52,
+        "power_factor": 0.94,
+        "cumulative": 95374.52,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.984Z"
+    },
+    {
+        "voltage": 224.96,
+        "current": 124.01,
+        "power": 15.3,
+        "reactive_power": 7.97,
+        "apparent_power": 17.25,
+        "power_factor": 0.89,
+        "cumulative": 95375.91,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.986Z"
+    },
+    {
+        "voltage": 220.14,
+        "current": 77.07,
+        "power": 15.21,
+        "reactive_power": 3.47,
+        "apparent_power": 15.6,
+        "power_factor": 0.97,
+        "cumulative": 95377.34,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.986Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/DB_LP1
+{
+    "volt": 219.843505859375,
+    "current": 41.86940002441406,
+    "kW": 1.479358642578125,
+    "kVA": 1.593852294921875,
+    "kVAR": -0.5931802978515626,
+    "pf": 0.9281654953956604,
+    "kWh": 108286.1015625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/iPSS/DB_LP1/Send
+[
+    {
+        "voltage": 221.73,
+        "current": 41.54,
+        "power": 1.48,
+        "reactive_power": -0.6,
+        "apparent_power": 1.6,
+        "power_factor": 0.93,
+        "cumulative": 108284.77,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.205Z"
+    },
+    {
+        "voltage": 220.21,
+        "current": 41.79,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108285.22,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.205Z"
+    },
+    {
+        "voltage": 226.91,
+        "current": 40.71,
+        "power": 1.49,
+        "reactive_power": -0.61,
+        "apparent_power": 1.61,
+        "power_factor": 0.92,
+        "cumulative": 108285.65,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.203Z"
+    },
+    {
+        "voltage": 219.84,
+        "current": 41.87,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108286.1,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.208Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/DB_LP2
+{
+    "volt": 220.0989990234375,
+    "current": 37.49127960205078,
+    "kW": 6.902568847656251,
+    "kVA": 6.95137158203125,
+    "kVAR": 0.82225732421875,
+    "pf": 0.9929794669151306,
+    "kWh": 130737.1640625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/iPSS/DB_LP2/Send
+[
+    {
+        "voltage": 221.88,
+        "current": 111.46,
+        "power": 20.54,
+        "reactive_power": 1.4,
+        "apparent_power": 20.59,
+        "power_factor": 1,
+        "cumulative": 130734.74,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.425Z"
+    },
+    {
+        "voltage": 221.09,
+        "current": 61.08,
+        "power": 11.46,
+        "reactive_power": 0.74,
+        "apparent_power": 11.48,
+        "power_factor": 1,
+        "cumulative": 130735.55,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.426Z"
+    },
+    {
+        "voltage": 226.74,
+        "current": 103.53,
+        "power": 20.07,
+        "reactive_power": 0.86,
+        "apparent_power": 20.09,
+        "power_factor": 1,
+        "cumulative": 130736.45,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.424Z"
+    },
+    {
+        "voltage": 220.1,
+        "current": 37.49,
+        "power": 6.9,
+        "reactive_power": 0.82,
+        "apparent_power": 6.95,
+        "power_factor": 0.99,
+        "cumulative": 130737.16,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.428Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/DB_TEMPORARY
+{
+    "volt": 220.30496215820312,
+    "current": 264.23626708984375,
+    "kW": 46.54865234375,
+    "kVA": 54.73433203125,
+    "kVAR": 28.7935703125,
+    "pf": 0.8504471182823181,
+    "kWh": 985962.3125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/iPSS/DB_TEMPORARY/Send
+[
+    {
+        "voltage": 221.94,
+        "current": 270.18,
+        "power": 47.84,
+        "reactive_power": 29.52,
+        "apparent_power": 56.21,
+        "power_factor": 0.85,
+        "cumulative": 985950.81,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.644Z"
+    },
+    {
+        "voltage": 221.51,
+        "current": 281.58,
+        "power": 49.84,
+        "reactive_power": 29.37,
+        "apparent_power": 57.85,
+        "power_factor": 0.86,
+        "cumulative": 985954.63,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.646Z"
+    },
+    {
+        "voltage": 226.52,
+        "current": 249.38,
+        "power": 43.54,
+        "reactive_power": 30.14,
+        "apparent_power": 52.96,
+        "power_factor": 0.82,
+        "cumulative": 985958.56,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.642Z"
+    },
+    {
+        "voltage": 220.3,
+        "current": 264.24,
+        "power": 46.55,
+        "reactive_power": 28.79,
+        "apparent_power": 54.73,
+        "power_factor": 0.85,
+        "cumulative": 985962.31,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.649Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/DB1
+{
+    "volt": 219.82992553710938,
+    "current": 233.81719970703125,
+    "kW": 24.574083984375,
+    "kVA": 50.891867187500004,
+    "kVAR": 44.56564453125,
+    "pf": 0.48286861181259155,
+    "kWh": 551494.6875
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/iPSS/DB1/Send
+[
+    {
+        "voltage": 221.76,
+        "current": 242.24,
+        "power": 26.02,
+        "reactive_power": 46.51,
+        "apparent_power": 53.29,
+        "power_factor": 0.49,
+        "cumulative": 551488,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.866Z"
+    },
+    {
+        "voltage": 219.99,
+        "current": 240.01,
+        "power": 27.46,
+        "reactive_power": 44.64,
+        "apparent_power": 52.41,
+        "power_factor": 0.52,
+        "cumulative": 551490.25,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.869Z"
+    },
+    {
+        "voltage": 227.05,
+        "current": 256.67,
+        "power": 27.04,
+        "reactive_power": 51.2,
+        "apparent_power": 57.9,
+        "power_factor": 0.47,
+        "cumulative": 551492.5,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.874Z"
+    },
+    {
+        "voltage": 219.83,
+        "current": 233.82,
+        "power": 24.57,
+        "reactive_power": 44.57,
+        "apparent_power": 50.89,
+        "power_factor": 0.48,
+        "cumulative": 551494.69,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.879Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/DB_AIRCOM
+{
+    "volt": 219.19129943847656,
+    "current": 932.9503784179688,
+    "kW": 60.37844921875,
+    "kVA": 67.585515625,
+    "kVAR": 30.36848046875,
+    "pf": 0.8933637142181396,
+    "kWh": 1599436.875
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:49] TOPIC: /B9/iPSS/DB_AIRCOM/Send
+[
+    {
+        "voltage": 221.68,
+        "current": 881.49,
+        "power": 57.83,
+        "reactive_power": 29.37,
+        "apparent_power": 64.86,
+        "power_factor": 0.89,
+        "cumulative": 1599408.25,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.084Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 910.99,
+        "power": 58.1,
+        "reactive_power": 31.37,
+        "apparent_power": 66.03,
+        "power_factor": 0.88,
+        "cumulative": 1599417.75,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.083Z"
+    },
+    {
+        "voltage": 227.66,
+        "current": 891.4,
+        "power": 59.16,
+        "reactive_power": 29.93,
+        "apparent_power": 66.3,
+        "power_factor": 0.89,
+        "cumulative": 1599427.25,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.085Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 932.95,
+        "power": 60.38,
+        "reactive_power": 30.37,
+        "apparent_power": 67.59,
+        "power_factor": 0.89,
+        "cumulative": 1599436.88,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.087Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:50] TOPIC: /B9/DB_LPCN
+{
+    "volt": 220.3325653076172,
+    "current": 91.14396667480469,
+    "kW": 5.40149658203125,
+    "kVA": 5.40830615234375,
+    "kVAR": 0.27131668090820316,
+    "pf": 0.9987409114837646,
+    "kWh": 20812.509765625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:33:50] TOPIC: /B9/iPSS/DB_LPCN/Send
+[
+    {
+        "voltage": 221.72,
+        "current": 24.1,
+        "power": 1.81,
+        "reactive_power": 0.38,
+        "apparent_power": 1.84,
+        "power_factor": 0.98,
+        "cumulative": 20811.35,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.305Z"
+    },
+    {
+        "voltage": 223.21,
+        "current": 21.58,
+        "power": 1.91,
+        "reactive_power": 0.31,
+        "apparent_power": 1.94,
+        "power_factor": 0.99,
+        "cumulative": 20811.76,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.306Z"
+    },
+    {
+        "voltage": 226.44,
+        "current": 23.8,
+        "power": 1.49,
+        "reactive_power": -0.11,
+        "apparent_power": 1.49,
+        "power_factor": 1,
+        "cumulative": 20812.15,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.308Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 91.14,
+        "power": 5.4,
+        "reactive_power": 0.27,
+        "apparent_power": 5.41,
+        "power_factor": 1,
+        "cumulative": 20812.51,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.310Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:34:19] TOPIC: /B9/iPSS/LPG
+[
+    {
+        "cumulative": 195577.305,
+        "velocity": 4.303399085998535,
+        "flow": 389.7777099609375,
+        "round": 19,
+        "created_at": "2/14/2026, 7:14:19 AM",
+        "thai_time": "2026-02-14T14:14:19.000Z",
+        "created_at_new": "2026-02-14T07:14:19.445Z"
+    },
+    {
+        "cumulative": 195585.5055,
+        "velocity": 2.680731773376465,
+        "flow": 242.80563354492188,
+        "round": 19,
+        "created_at": "2/14/2026, 7:34:19 AM",
+        "thai_time": "2026-02-14T14:34:19.000Z",
+        "created_at_new": "2026-02-14T07:34:19.439Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/ECMDB
+{
+    "volt": 221.3782958984375,
+    "current": 625.4070434570312,
+    "kW": 61.26223828125,
+    "kVA": 67.8970234375,
+    "kVAR": 29.273605468750002,
+    "pf": 0.902281641960144,
+    "kWh": 1383983.75
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/iPSS/MDB/Send
+[
+    {
+        "voltage": 222.33,
+        "current": 661.69,
+        "power": 63.72,
+        "reactive_power": 32.36,
+        "apparent_power": 71.47,
+        "power_factor": 0.89,
+        "cumulative": 1383951.13,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.433Z"
+    },
+    {
+        "voltage": 222.31,
+        "current": 653.88,
+        "power": 61.63,
+        "reactive_power": 29.76,
+        "apparent_power": 68.44,
+        "power_factor": 0.9,
+        "cumulative": 1383959.38,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.434Z"
+    },
+    {
+        "voltage": 225.72,
+        "current": 666.43,
+        "power": 60.46,
+        "reactive_power": 34.87,
+        "apparent_power": 69.8,
+        "power_factor": 0.87,
+        "cumulative": 1383967.63,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.436Z"
+    },
+    {
+        "voltage": 219.79,
+        "current": 661.48,
+        "power": 62.2,
+        "reactive_power": 29.06,
+        "apparent_power": 68.66,
+        "power_factor": 0.91,
+        "cumulative": 1383975.75,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.436Z"
+    },
+    {
+        "voltage": 221.38,
+        "current": 625.41,
+        "power": 61.26,
+        "reactive_power": 29.27,
+        "apparent_power": 67.9,
+        "power_factor": 0.9,
+        "cumulative": 1383983.75,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.436Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/DB_PAINT
+{
+    "volt": 223.23646545410156,
+    "current": 634.8395385742188,
+    "kW": 42.697359375,
+    "kVA": 47.946097656250004,
+    "kVAR": 21.812013671875,
+    "pf": 0.8905283212661743,
+    "kWh": 919565.5625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/iPSS/DB_PAINT/Send
+[
+    {
+        "voltage": 222.2,
+        "current": 620.36,
+        "power": 41.98,
+        "reactive_power": 21.84,
+        "apparent_power": 47.32,
+        "power_factor": 0.89,
+        "cumulative": 919537.44,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.766Z"
+    },
+    {
+        "voltage": 222.32,
+        "current": 645.77,
+        "power": 42.53,
+        "reactive_power": 22.08,
+        "apparent_power": 47.92,
+        "power_factor": 0.89,
+        "cumulative": 919544.5,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.762Z"
+    },
+    {
+        "voltage": 225.1,
+        "current": 646.68,
+        "power": 43.67,
+        "reactive_power": 20.98,
+        "apparent_power": 48.45,
+        "power_factor": 0.9,
+        "cumulative": 919551.5,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.764Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 638.31,
+        "power": 41.91,
+        "reactive_power": 20.21,
+        "apparent_power": 46.53,
+        "power_factor": 0.9,
+        "cumulative": 919558.56,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.768Z"
+    },
+    {
+        "voltage": 223.24,
+        "current": 634.84,
+        "power": 42.7,
+        "reactive_power": 21.81,
+        "apparent_power": 47.95,
+        "power_factor": 0.89,
+        "cumulative": 919565.56,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.770Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/DB_SPOTWELDING
+{
+    "volt": 223.0277557373047,
+    "current": 57.39130401611328,
+    "kW": 11.698130859375,
+    "kVA": 12.1879736328125,
+    "kVAR": 3.4205869140625,
+    "pf": 0.9598093628883362,
+    "kWh": 95378.59375
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:48] TOPIC: /B9/iPSS/DB_SPOTWELDING/Send
+[
+    {
+        "voltage": 221.71,
+        "current": 153.32,
+        "power": 19.17,
+        "reactive_power": 13.12,
+        "apparent_power": 23.24,
+        "power_factor": 0.83,
+        "cumulative": 95373.05,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.985Z"
+    },
+    {
+        "voltage": 222.18,
+        "current": 43.63,
+        "power": 8.93,
+        "reactive_power": 3.28,
+        "apparent_power": 9.52,
+        "power_factor": 0.94,
+        "cumulative": 95374.52,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.984Z"
+    },
+    {
+        "voltage": 224.96,
+        "current": 124.01,
+        "power": 15.3,
+        "reactive_power": 7.97,
+        "apparent_power": 17.25,
+        "power_factor": 0.89,
+        "cumulative": 95375.91,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.986Z"
+    },
+    {
+        "voltage": 220.14,
+        "current": 77.07,
+        "power": 15.21,
+        "reactive_power": 3.47,
+        "apparent_power": 15.6,
+        "power_factor": 0.97,
+        "cumulative": 95377.34,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.986Z"
+    },
+    {
+        "voltage": 223.03,
+        "current": 57.39,
+        "power": 11.7,
+        "reactive_power": 3.42,
+        "apparent_power": 12.19,
+        "power_factor": 0.96,
+        "cumulative": 95378.59,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.991Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/DB_LP1
+{
+    "volt": 223.1508026123047,
+    "current": 41.3288688659668,
+    "kW": 1.47815966796875,
+    "kVA": 1.6014149169921876,
+    "kVAR": -0.6160957031250001,
+    "pf": 0.9230334758758545,
+    "kWh": 108286.53125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/iPSS/DB_LP1/Send
+[
+    {
+        "voltage": 221.73,
+        "current": 41.54,
+        "power": 1.48,
+        "reactive_power": -0.6,
+        "apparent_power": 1.6,
+        "power_factor": 0.93,
+        "cumulative": 108284.77,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.205Z"
+    },
+    {
+        "voltage": 220.21,
+        "current": 41.79,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108285.22,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.205Z"
+    },
+    {
+        "voltage": 226.91,
+        "current": 40.71,
+        "power": 1.49,
+        "reactive_power": -0.61,
+        "apparent_power": 1.61,
+        "power_factor": 0.92,
+        "cumulative": 108285.65,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.203Z"
+    },
+    {
+        "voltage": 219.84,
+        "current": 41.87,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108286.1,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.208Z"
+    },
+    {
+        "voltage": 223.15,
+        "current": 41.33,
+        "power": 1.48,
+        "reactive_power": -0.62,
+        "apparent_power": 1.6,
+        "power_factor": 0.92,
+        "cumulative": 108286.53,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.208Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/DB_LP2
+{
+    "volt": 223.64883422851562,
+    "current": 37.74189376831055,
+    "kW": 7.040419921875,
+    "kVA": 7.09909912109375,
+    "kVAR": 0.910876708984375,
+    "pf": 0.9917342662811279,
+    "kWh": 130737.828125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/iPSS/DB_LP2/Send
+[
+    {
+        "voltage": 221.88,
+        "current": 111.46,
+        "power": 20.54,
+        "reactive_power": 1.4,
+        "apparent_power": 20.59,
+        "power_factor": 1,
+        "cumulative": 130734.74,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.425Z"
+    },
+    {
+        "voltage": 221.09,
+        "current": 61.08,
+        "power": 11.46,
+        "reactive_power": 0.74,
+        "apparent_power": 11.48,
+        "power_factor": 1,
+        "cumulative": 130735.55,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.426Z"
+    },
+    {
+        "voltage": 226.74,
+        "current": 103.53,
+        "power": 20.07,
+        "reactive_power": 0.86,
+        "apparent_power": 20.09,
+        "power_factor": 1,
+        "cumulative": 130736.45,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.424Z"
+    },
+    {
+        "voltage": 220.1,
+        "current": 37.49,
+        "power": 6.9,
+        "reactive_power": 0.82,
+        "apparent_power": 6.95,
+        "power_factor": 0.99,
+        "cumulative": 130737.16,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.428Z"
+    },
+    {
+        "voltage": 223.65,
+        "current": 37.74,
+        "power": 7.04,
+        "reactive_power": 0.91,
+        "apparent_power": 7.1,
+        "power_factor": 0.99,
+        "cumulative": 130737.83,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.444Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/DB_TEMPORARY
+{
+    "volt": 223.23184204101562,
+    "current": 255.9437255859375,
+    "kW": 47.6610859375,
+    "kVA": 55.3730546875,
+    "kVAR": 28.188580078125,
+    "pf": 0.8607270121574402,
+    "kWh": 985966.0625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/iPSS/DB_TEMPORARY/Send
+[
+    {
+        "voltage": 221.94,
+        "current": 270.18,
+        "power": 47.84,
+        "reactive_power": 29.52,
+        "apparent_power": 56.21,
+        "power_factor": 0.85,
+        "cumulative": 985950.81,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.644Z"
+    },
+    {
+        "voltage": 221.51,
+        "current": 281.58,
+        "power": 49.84,
+        "reactive_power": 29.37,
+        "apparent_power": 57.85,
+        "power_factor": 0.86,
+        "cumulative": 985954.63,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.646Z"
+    },
+    {
+        "voltage": 226.52,
+        "current": 249.38,
+        "power": 43.54,
+        "reactive_power": 30.14,
+        "apparent_power": 52.96,
+        "power_factor": 0.82,
+        "cumulative": 985958.56,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.642Z"
+    },
+    {
+        "voltage": 220.3,
+        "current": 264.24,
+        "power": 46.55,
+        "reactive_power": 28.79,
+        "apparent_power": 54.73,
+        "power_factor": 0.85,
+        "cumulative": 985962.31,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.649Z"
+    },
+    {
+        "voltage": 223.23,
+        "current": 255.94,
+        "power": 47.66,
+        "reactive_power": 28.19,
+        "apparent_power": 55.37,
+        "power_factor": 0.86,
+        "cumulative": 985966.06,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.647Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/DB1
+{
+    "volt": 222.7781219482422,
+    "current": 246.7151336669922,
+    "kW": 27.722597656250002,
+    "kVA": 54.16787890625,
+    "kVAR": 46.536187500000004,
+    "pf": 0.51179039478302,
+    "kWh": 551496.75
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/iPSS/DB1/Send
+[
+    {
+        "voltage": 221.76,
+        "current": 242.24,
+        "power": 26.02,
+        "reactive_power": 46.51,
+        "apparent_power": 53.29,
+        "power_factor": 0.49,
+        "cumulative": 551488,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.866Z"
+    },
+    {
+        "voltage": 219.99,
+        "current": 240.01,
+        "power": 27.46,
+        "reactive_power": 44.64,
+        "apparent_power": 52.41,
+        "power_factor": 0.52,
+        "cumulative": 551490.25,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.869Z"
+    },
+    {
+        "voltage": 227.05,
+        "current": 256.67,
+        "power": 27.04,
+        "reactive_power": 51.2,
+        "apparent_power": 57.9,
+        "power_factor": 0.47,
+        "cumulative": 551492.5,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.874Z"
+    },
+    {
+        "voltage": 219.83,
+        "current": 233.82,
+        "power": 24.57,
+        "reactive_power": 44.57,
+        "apparent_power": 50.89,
+        "power_factor": 0.48,
+        "cumulative": 551494.69,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.879Z"
+    },
+    {
+        "voltage": 222.78,
+        "current": 246.72,
+        "power": 27.72,
+        "reactive_power": 46.54,
+        "apparent_power": 54.17,
+        "power_factor": 0.51,
+        "cumulative": 551496.75,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.869Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/DB_AIRCOM
+{
+    "volt": 222.8357391357422,
+    "current": 644.9970703125,
+    "kW": 40.261375,
+    "kVA": 48.1414375,
+    "kVAR": 26.393548828125,
+    "pf": 0.8363143801689148,
+    "kWh": 1599446.125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:49] TOPIC: /B9/iPSS/DB_AIRCOM/Send
+[
+    {
+        "voltage": 221.68,
+        "current": 881.49,
+        "power": 57.83,
+        "reactive_power": 29.37,
+        "apparent_power": 64.86,
+        "power_factor": 0.89,
+        "cumulative": 1599408.25,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.084Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 910.99,
+        "power": 58.1,
+        "reactive_power": 31.37,
+        "apparent_power": 66.03,
+        "power_factor": 0.88,
+        "cumulative": 1599417.75,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.083Z"
+    },
+    {
+        "voltage": 227.66,
+        "current": 891.4,
+        "power": 59.16,
+        "reactive_power": 29.93,
+        "apparent_power": 66.3,
+        "power_factor": 0.89,
+        "cumulative": 1599427.25,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.085Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 932.95,
+        "power": 60.38,
+        "reactive_power": 30.37,
+        "apparent_power": 67.59,
+        "power_factor": 0.89,
+        "cumulative": 1599436.88,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.087Z"
+    },
+    {
+        "voltage": 222.84,
+        "current": 645,
+        "power": 40.26,
+        "reactive_power": 26.39,
+        "apparent_power": 48.14,
+        "power_factor": 0.84,
+        "cumulative": 1599446.13,
+        "created_at": "2/14/2026, 7:38:50 AM",
+        "thai_time": "2026-02-14T14:38:50.000Z",
+        "created_at_new": "2026-02-14T07:38:50.091Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:50] TOPIC: /B9/DB_LPCN
+{
+    "volt": 221.48635864257812,
+    "current": 22.67226791381836,
+    "kW": 1.5856481933593751,
+    "kVA": 1.65073486328125,
+    "kVAR": 0.4589613037109375,
+    "pf": 0.9605710506439209,
+    "kWh": 20812.912109375
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:38:50] TOPIC: /B9/iPSS/DB_LPCN/Send
+[
+    {
+        "voltage": 221.72,
+        "current": 24.1,
+        "power": 1.81,
+        "reactive_power": 0.38,
+        "apparent_power": 1.84,
+        "power_factor": 0.98,
+        "cumulative": 20811.35,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.305Z"
+    },
+    {
+        "voltage": 223.21,
+        "current": 21.58,
+        "power": 1.91,
+        "reactive_power": 0.31,
+        "apparent_power": 1.94,
+        "power_factor": 0.99,
+        "cumulative": 20811.76,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.306Z"
+    },
+    {
+        "voltage": 226.44,
+        "current": 23.8,
+        "power": 1.49,
+        "reactive_power": -0.11,
+        "apparent_power": 1.49,
+        "power_factor": 1,
+        "cumulative": 20812.15,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.308Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 91.14,
+        "power": 5.4,
+        "reactive_power": 0.27,
+        "apparent_power": 5.41,
+        "power_factor": 1,
+        "cumulative": 20812.51,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.310Z"
+    },
+    {
+        "voltage": 221.49,
+        "current": 22.67,
+        "power": 1.59,
+        "reactive_power": 0.46,
+        "apparent_power": 1.65,
+        "power_factor": 0.96,
+        "cumulative": 20812.91,
+        "created_at": "2/14/2026, 7:38:50 AM",
+        "thai_time": "2026-02-14T14:38:50.000Z",
+        "created_at_new": "2026-02-14T07:38:50.310Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:39:19] TOPIC: /B9/iPSS/LPG
+[
+    {
+        "cumulative": 195577.305,
+        "velocity": 4.303399085998535,
+        "flow": 389.7777099609375,
+        "round": 19,
+        "created_at": "2/14/2026, 7:14:19 AM",
+        "thai_time": "2026-02-14T14:14:19.000Z",
+        "created_at_new": "2026-02-14T07:14:19.445Z"
+    },
+    {
+        "cumulative": 195588.164,
+        "velocity": 2.9093198776245117,
+        "flow": 263.5098571777344,
+        "round": 19,
+        "created_at": "2/14/2026, 7:39:19 AM",
+        "thai_time": "2026-02-14T14:39:19.000Z",
+        "created_at_new": "2026-02-14T07:39:19.462Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/ECMDB
+{
+    "volt": 223.3019561767578,
+    "current": 634.2264404296875,
+    "kW": 60.595093750000004,
+    "kVA": 67.6571015625,
+    "kVAR": 30.09516015625,
+    "pf": 0.8956205248832703,
+    "kWh": 1383991.875
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/iPSS/MDB/Send
+[
+    {
+        "voltage": 222.33,
+        "current": 661.69,
+        "power": 63.72,
+        "reactive_power": 32.36,
+        "apparent_power": 71.47,
+        "power_factor": 0.89,
+        "cumulative": 1383951.13,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.433Z"
+    },
+    {
+        "voltage": 222.31,
+        "current": 653.88,
+        "power": 61.63,
+        "reactive_power": 29.76,
+        "apparent_power": 68.44,
+        "power_factor": 0.9,
+        "cumulative": 1383959.38,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.434Z"
+    },
+    {
+        "voltage": 225.72,
+        "current": 666.43,
+        "power": 60.46,
+        "reactive_power": 34.87,
+        "apparent_power": 69.8,
+        "power_factor": 0.87,
+        "cumulative": 1383967.63,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.436Z"
+    },
+    {
+        "voltage": 219.79,
+        "current": 661.48,
+        "power": 62.2,
+        "reactive_power": 29.06,
+        "apparent_power": 68.66,
+        "power_factor": 0.91,
+        "cumulative": 1383975.75,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.436Z"
+    },
+    {
+        "voltage": 221.38,
+        "current": 625.41,
+        "power": 61.26,
+        "reactive_power": 29.27,
+        "apparent_power": 67.9,
+        "power_factor": 0.9,
+        "cumulative": 1383983.75,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.436Z"
+    },
+    {
+        "voltage": 223.3,
+        "current": 634.23,
+        "power": 60.6,
+        "reactive_power": 30.1,
+        "apparent_power": 67.66,
+        "power_factor": 0.9,
+        "cumulative": 1383991.88,
+        "created_at": "2/14/2026, 7:43:48 AM",
+        "thai_time": "2026-02-14T14:43:48.000Z",
+        "created_at_new": "2026-02-14T07:43:48.475Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/DB_PAINT
+{
+    "volt": 222.52760314941406,
+    "current": 634.0051879882812,
+    "kW": 42.3353515625,
+    "kVA": 47.92441015625,
+    "kVAR": 22.460341796875,
+    "pf": 0.8833776712417603,
+    "kWh": 919572.5625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/iPSS/DB_PAINT/Send
+[
+    {
+        "voltage": 222.2,
+        "current": 620.36,
+        "power": 41.98,
+        "reactive_power": 21.84,
+        "apparent_power": 47.32,
+        "power_factor": 0.89,
+        "cumulative": 919537.44,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.766Z"
+    },
+    {
+        "voltage": 222.32,
+        "current": 645.77,
+        "power": 42.53,
+        "reactive_power": 22.08,
+        "apparent_power": 47.92,
+        "power_factor": 0.89,
+        "cumulative": 919544.5,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.762Z"
+    },
+    {
+        "voltage": 225.1,
+        "current": 646.68,
+        "power": 43.67,
+        "reactive_power": 20.98,
+        "apparent_power": 48.45,
+        "power_factor": 0.9,
+        "cumulative": 919551.5,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.764Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 638.31,
+        "power": 41.91,
+        "reactive_power": 20.21,
+        "apparent_power": 46.53,
+        "power_factor": 0.9,
+        "cumulative": 919558.56,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.768Z"
+    },
+    {
+        "voltage": 223.24,
+        "current": 634.84,
+        "power": 42.7,
+        "reactive_power": 21.81,
+        "apparent_power": 47.95,
+        "power_factor": 0.89,
+        "cumulative": 919565.56,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.770Z"
+    },
+    {
+        "voltage": 222.53,
+        "current": 634.01,
+        "power": 42.34,
+        "reactive_power": 22.46,
+        "apparent_power": 47.92,
+        "power_factor": 0.88,
+        "cumulative": 919572.56,
+        "created_at": "2/14/2026, 7:43:48 AM",
+        "thai_time": "2026-02-14T14:43:48.000Z",
+        "created_at_new": "2026-02-14T07:43:48.769Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/DB_SPOTWELDING
+{
+    "volt": 222.30616760253906,
+    "current": 78.599365234375,
+    "kW": 11.3267578125,
+    "kVA": 13.285951171875,
+    "kVAR": 6.94413671875,
+    "pf": 0.8525364995002747,
+    "kWh": 95379.859375
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:48] TOPIC: /B9/iPSS/DB_SPOTWELDING/Send
+[
+    {
+        "voltage": 221.71,
+        "current": 153.32,
+        "power": 19.17,
+        "reactive_power": 13.12,
+        "apparent_power": 23.24,
+        "power_factor": 0.83,
+        "cumulative": 95373.05,
+        "created_at": "2/14/2026, 7:18:48 AM",
+        "thai_time": "2026-02-14T14:18:48.000Z",
+        "created_at_new": "2026-02-14T07:18:48.985Z"
+    },
+    {
+        "voltage": 222.18,
+        "current": 43.63,
+        "power": 8.93,
+        "reactive_power": 3.28,
+        "apparent_power": 9.52,
+        "power_factor": 0.94,
+        "cumulative": 95374.52,
+        "created_at": "2/14/2026, 7:23:48 AM",
+        "thai_time": "2026-02-14T14:23:48.000Z",
+        "created_at_new": "2026-02-14T07:23:48.984Z"
+    },
+    {
+        "voltage": 224.96,
+        "current": 124.01,
+        "power": 15.3,
+        "reactive_power": 7.97,
+        "apparent_power": 17.25,
+        "power_factor": 0.89,
+        "cumulative": 95375.91,
+        "created_at": "2/14/2026, 7:28:48 AM",
+        "thai_time": "2026-02-14T14:28:48.000Z",
+        "created_at_new": "2026-02-14T07:28:48.986Z"
+    },
+    {
+        "voltage": 220.14,
+        "current": 77.07,
+        "power": 15.21,
+        "reactive_power": 3.47,
+        "apparent_power": 15.6,
+        "power_factor": 0.97,
+        "cumulative": 95377.34,
+        "created_at": "2/14/2026, 7:33:48 AM",
+        "thai_time": "2026-02-14T14:33:48.000Z",
+        "created_at_new": "2026-02-14T07:33:48.986Z"
+    },
+    {
+        "voltage": 223.03,
+        "current": 57.39,
+        "power": 11.7,
+        "reactive_power": 3.42,
+        "apparent_power": 12.19,
+        "power_factor": 0.96,
+        "cumulative": 95378.59,
+        "created_at": "2/14/2026, 7:38:48 AM",
+        "thai_time": "2026-02-14T14:38:48.000Z",
+        "created_at_new": "2026-02-14T07:38:48.991Z"
+    },
+    {
+        "voltage": 222.31,
+        "current": 78.6,
+        "power": 11.33,
+        "reactive_power": 6.94,
+        "apparent_power": 13.29,
+        "power_factor": 0.85,
+        "cumulative": 95379.86,
+        "created_at": "2/14/2026, 7:43:48 AM",
+        "thai_time": "2026-02-14T14:43:48.000Z",
+        "created_at_new": "2026-02-14T07:43:48.988Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/DB_LP1
+{
+    "volt": 222.53843688964844,
+    "current": 41.415550231933594,
+    "kW": 1.465232177734375,
+    "kVA": 1.5916107177734375,
+    "kVAR": -0.6215460815429688,
+    "pf": 0.9205971360206604,
+    "kWh": 108286.9765625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/iPSS/DB_LP1/Send
+[
+    {
+        "voltage": 221.73,
+        "current": 41.54,
+        "power": 1.48,
+        "reactive_power": -0.6,
+        "apparent_power": 1.6,
+        "power_factor": 0.93,
+        "cumulative": 108284.77,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.205Z"
+    },
+    {
+        "voltage": 220.21,
+        "current": 41.79,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108285.22,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.205Z"
+    },
+    {
+        "voltage": 226.91,
+        "current": 40.71,
+        "power": 1.49,
+        "reactive_power": -0.61,
+        "apparent_power": 1.61,
+        "power_factor": 0.92,
+        "cumulative": 108285.65,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.203Z"
+    },
+    {
+        "voltage": 219.84,
+        "current": 41.87,
+        "power": 1.48,
+        "reactive_power": -0.59,
+        "apparent_power": 1.59,
+        "power_factor": 0.93,
+        "cumulative": 108286.1,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.208Z"
+    },
+    {
+        "voltage": 223.15,
+        "current": 41.33,
+        "power": 1.48,
+        "reactive_power": -0.62,
+        "apparent_power": 1.6,
+        "power_factor": 0.92,
+        "cumulative": 108286.53,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.208Z"
+    },
+    {
+        "voltage": 222.54,
+        "current": 41.42,
+        "power": 1.47,
+        "reactive_power": -0.62,
+        "apparent_power": 1.59,
+        "power_factor": 0.92,
+        "cumulative": 108286.98,
+        "created_at": "2/14/2026, 7:43:49 AM",
+        "thai_time": "2026-02-14T14:43:49.000Z",
+        "created_at_new": "2026-02-14T07:43:49.249Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/DB_LP2
+{
+    "volt": 222.6918182373047,
+    "current": 61.031211853027344,
+    "kW": 11.54000390625,
+    "kVA": 11.5772216796875,
+    "kVAR": 0.927556640625,
+    "pf": 0.9967852234840393,
+    "kWh": 130738.640625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/iPSS/DB_LP2/Send
+[
+    {
+        "voltage": 221.88,
+        "current": 111.46,
+        "power": 20.54,
+        "reactive_power": 1.4,
+        "apparent_power": 20.59,
+        "power_factor": 1,
+        "cumulative": 130734.74,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.425Z"
+    },
+    {
+        "voltage": 221.09,
+        "current": 61.08,
+        "power": 11.46,
+        "reactive_power": 0.74,
+        "apparent_power": 11.48,
+        "power_factor": 1,
+        "cumulative": 130735.55,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.426Z"
+    },
+    {
+        "voltage": 226.74,
+        "current": 103.53,
+        "power": 20.07,
+        "reactive_power": 0.86,
+        "apparent_power": 20.09,
+        "power_factor": 1,
+        "cumulative": 130736.45,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.424Z"
+    },
+    {
+        "voltage": 220.1,
+        "current": 37.49,
+        "power": 6.9,
+        "reactive_power": 0.82,
+        "apparent_power": 6.95,
+        "power_factor": 0.99,
+        "cumulative": 130737.16,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.428Z"
+    },
+    {
+        "voltage": 223.65,
+        "current": 37.74,
+        "power": 7.04,
+        "reactive_power": 0.91,
+        "apparent_power": 7.1,
+        "power_factor": 0.99,
+        "cumulative": 130737.83,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.444Z"
+    },
+    {
+        "voltage": 222.69,
+        "current": 61.03,
+        "power": 11.54,
+        "reactive_power": 0.93,
+        "apparent_power": 11.58,
+        "power_factor": 1,
+        "cumulative": 130738.64,
+        "created_at": "2/14/2026, 7:43:49 AM",
+        "thai_time": "2026-02-14T14:43:49.000Z",
+        "created_at_new": "2026-02-14T07:43:49.455Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/DB_TEMPORARY
+{
+    "volt": 222.5327606201172,
+    "current": 231.24606323242188,
+    "kW": 41.8028515625,
+    "kVA": 49.822738281250004,
+    "kVAR": 27.107693359375002,
+    "pf": 0.8390315771102905,
+    "kWh": 985969.6875
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/iPSS/DB_TEMPORARY/Send
+[
+    {
+        "voltage": 221.94,
+        "current": 270.18,
+        "power": 47.84,
+        "reactive_power": 29.52,
+        "apparent_power": 56.21,
+        "power_factor": 0.85,
+        "cumulative": 985950.81,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.644Z"
+    },
+    {
+        "voltage": 221.51,
+        "current": 281.58,
+        "power": 49.84,
+        "reactive_power": 29.37,
+        "apparent_power": 57.85,
+        "power_factor": 0.86,
+        "cumulative": 985954.63,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.646Z"
+    },
+    {
+        "voltage": 226.52,
+        "current": 249.38,
+        "power": 43.54,
+        "reactive_power": 30.14,
+        "apparent_power": 52.96,
+        "power_factor": 0.82,
+        "cumulative": 985958.56,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.642Z"
+    },
+    {
+        "voltage": 220.3,
+        "current": 264.24,
+        "power": 46.55,
+        "reactive_power": 28.79,
+        "apparent_power": 54.73,
+        "power_factor": 0.85,
+        "cumulative": 985962.31,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.649Z"
+    },
+    {
+        "voltage": 223.23,
+        "current": 255.94,
+        "power": 47.66,
+        "reactive_power": 28.19,
+        "apparent_power": 55.37,
+        "power_factor": 0.86,
+        "cumulative": 985966.06,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.647Z"
+    },
+    {
+        "voltage": 222.53,
+        "current": 231.25,
+        "power": 41.8,
+        "reactive_power": 27.11,
+        "apparent_power": 49.82,
+        "power_factor": 0.84,
+        "cumulative": 985969.69,
+        "created_at": "2/14/2026, 7:43:49 AM",
+        "thai_time": "2026-02-14T14:43:49.000Z",
+        "created_at_new": "2026-02-14T07:43:49.646Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/DB1
+{
+    "volt": 222.54649353027344,
+    "current": 243.93946838378906,
+    "kW": 26.066904296875002,
+    "kVA": 53.89520703125,
+    "kVAR": 47.17212890625,
+    "pf": 0.483659029006958,
+    "kWh": 551499
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/iPSS/DB1/Send
+[
+    {
+        "voltage": 221.76,
+        "current": 242.24,
+        "power": 26.02,
+        "reactive_power": 46.51,
+        "apparent_power": 53.29,
+        "power_factor": 0.49,
+        "cumulative": 551488,
+        "created_at": "2/14/2026, 7:18:49 AM",
+        "thai_time": "2026-02-14T14:18:49.000Z",
+        "created_at_new": "2026-02-14T07:18:49.866Z"
+    },
+    {
+        "voltage": 219.99,
+        "current": 240.01,
+        "power": 27.46,
+        "reactive_power": 44.64,
+        "apparent_power": 52.41,
+        "power_factor": 0.52,
+        "cumulative": 551490.25,
+        "created_at": "2/14/2026, 7:23:49 AM",
+        "thai_time": "2026-02-14T14:23:49.000Z",
+        "created_at_new": "2026-02-14T07:23:49.869Z"
+    },
+    {
+        "voltage": 227.05,
+        "current": 256.67,
+        "power": 27.04,
+        "reactive_power": 51.2,
+        "apparent_power": 57.9,
+        "power_factor": 0.47,
+        "cumulative": 551492.5,
+        "created_at": "2/14/2026, 7:28:49 AM",
+        "thai_time": "2026-02-14T14:28:49.000Z",
+        "created_at_new": "2026-02-14T07:28:49.874Z"
+    },
+    {
+        "voltage": 219.83,
+        "current": 233.82,
+        "power": 24.57,
+        "reactive_power": 44.57,
+        "apparent_power": 50.89,
+        "power_factor": 0.48,
+        "cumulative": 551494.69,
+        "created_at": "2/14/2026, 7:33:49 AM",
+        "thai_time": "2026-02-14T14:33:49.000Z",
+        "created_at_new": "2026-02-14T07:33:49.879Z"
+    },
+    {
+        "voltage": 222.78,
+        "current": 246.72,
+        "power": 27.72,
+        "reactive_power": 46.54,
+        "apparent_power": 54.17,
+        "power_factor": 0.51,
+        "cumulative": 551496.75,
+        "created_at": "2/14/2026, 7:38:49 AM",
+        "thai_time": "2026-02-14T14:38:49.000Z",
+        "created_at_new": "2026-02-14T07:38:49.869Z"
+    },
+    {
+        "voltage": 222.55,
+        "current": 243.94,
+        "power": 26.07,
+        "reactive_power": 47.17,
+        "apparent_power": 53.9,
+        "power_factor": 0.48,
+        "cumulative": 551499,
+        "created_at": "2/14/2026, 7:43:49 AM",
+        "thai_time": "2026-02-14T14:43:49.000Z",
+        "created_at_new": "2026-02-14T07:43:49.869Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/DB_AIRCOM
+{
+    "volt": 222.5374755859375,
+    "current": 900.6227416992188,
+    "kW": 59.89206640625,
+    "kVA": 67.664265625,
+    "kVAR": 31.486408203125002,
+    "pf": 0.8851358294487,
+    "kWh": 1599455.5
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:49] TOPIC: /B9/iPSS/DB_AIRCOM/Send
+[
+    {
+        "voltage": 221.68,
+        "current": 881.49,
+        "power": 57.83,
+        "reactive_power": 29.37,
+        "apparent_power": 64.86,
+        "power_factor": 0.89,
+        "cumulative": 1599408.25,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.084Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 910.99,
+        "power": 58.1,
+        "reactive_power": 31.37,
+        "apparent_power": 66.03,
+        "power_factor": 0.88,
+        "cumulative": 1599417.75,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.083Z"
+    },
+    {
+        "voltage": 227.66,
+        "current": 891.4,
+        "power": 59.16,
+        "reactive_power": 29.93,
+        "apparent_power": 66.3,
+        "power_factor": 0.89,
+        "cumulative": 1599427.25,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.085Z"
+    },
+    {
+        "voltage": 219.19,
+        "current": 932.95,
+        "power": 60.38,
+        "reactive_power": 30.37,
+        "apparent_power": 67.59,
+        "power_factor": 0.89,
+        "cumulative": 1599436.88,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.087Z"
+    },
+    {
+        "voltage": 222.84,
+        "current": 645,
+        "power": 40.26,
+        "reactive_power": 26.39,
+        "apparent_power": 48.14,
+        "power_factor": 0.84,
+        "cumulative": 1599446.13,
+        "created_at": "2/14/2026, 7:38:50 AM",
+        "thai_time": "2026-02-14T14:38:50.000Z",
+        "created_at_new": "2026-02-14T07:38:50.091Z"
+    },
+    {
+        "voltage": 222.54,
+        "current": 900.62,
+        "power": 59.89,
+        "reactive_power": 31.49,
+        "apparent_power": 67.66,
+        "power_factor": 0.89,
+        "cumulative": 1599455.5,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.087Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/DB_LPCN
+{
+    "volt": 222.6868133544922,
+    "current": 36.55379867553711,
+    "kW": 1.889248291015625,
+    "kVA": 1.9031793212890626,
+    "kVAR": 0.2298532257080078,
+    "pf": 0.9926800727844238,
+    "kWh": 20813.28125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_LPCN/Send
+[
+    {
+        "voltage": 221.72,
+        "current": 24.1,
+        "power": 1.81,
+        "reactive_power": 0.38,
+        "apparent_power": 1.84,
+        "power_factor": 0.98,
+        "cumulative": 20811.35,
+        "created_at": "2/14/2026, 7:18:50 AM",
+        "thai_time": "2026-02-14T14:18:50.000Z",
+        "created_at_new": "2026-02-14T07:18:50.305Z"
+    },
+    {
+        "voltage": 223.21,
+        "current": 21.58,
+        "power": 1.91,
+        "reactive_power": 0.31,
+        "apparent_power": 1.94,
+        "power_factor": 0.99,
+        "cumulative": 20811.76,
+        "created_at": "2/14/2026, 7:23:50 AM",
+        "thai_time": "2026-02-14T14:23:50.000Z",
+        "created_at_new": "2026-02-14T07:23:50.306Z"
+    },
+    {
+        "voltage": 226.44,
+        "current": 23.8,
+        "power": 1.49,
+        "reactive_power": -0.11,
+        "apparent_power": 1.49,
+        "power_factor": 1,
+        "cumulative": 20812.15,
+        "created_at": "2/14/2026, 7:28:50 AM",
+        "thai_time": "2026-02-14T14:28:50.000Z",
+        "created_at_new": "2026-02-14T07:28:50.308Z"
+    },
+    {
+        "voltage": 220.33,
+        "current": 91.14,
+        "power": 5.4,
+        "reactive_power": 0.27,
+        "apparent_power": 5.41,
+        "power_factor": 1,
+        "cumulative": 20812.51,
+        "created_at": "2/14/2026, 7:33:50 AM",
+        "thai_time": "2026-02-14T14:33:50.000Z",
+        "created_at_new": "2026-02-14T07:33:50.310Z"
+    },
+    {
+        "voltage": 221.49,
+        "current": 22.67,
+        "power": 1.59,
+        "reactive_power": 0.46,
+        "apparent_power": 1.65,
+        "power_factor": 0.96,
+        "cumulative": 20812.91,
+        "created_at": "2/14/2026, 7:38:50 AM",
+        "thai_time": "2026-02-14T14:38:50.000Z",
+        "created_at_new": "2026-02-14T07:38:50.310Z"
+    },
+    {
+        "voltage": 222.69,
+        "current": 36.55,
+        "power": 1.89,
+        "reactive_power": 0.23,
+        "apparent_power": 1.9,
+        "power_factor": 0.99,
+        "cumulative": 20813.28,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.308Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/DB_ROLLFORMING1
+{
+    "volt": 222.144287109375,
+    "current": 50.761837005615234,
+    "kW": 0.2936004333496094,
+    "kVA": 1.3336854248046874,
+    "kVAR": 1.30096728515625,
+    "pf": 0.22014220058918,
+    "kWh": 2548.788330078125
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_ROLLFORMING1/Send
+[
+    {
+        "voltage": 222.14,
+        "current": 50.76,
+        "power": 0.29,
+        "reactive_power": 1.3,
+        "apparent_power": 1.33,
+        "power_factor": 0.22,
+        "cumulative": 2548.79,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.479Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_ROLLFORMING1/Send
+[
+    {
+        "voltage": 222.14,
+        "current": 50.76,
+        "power": 0.29,
+        "reactive_power": 1.3,
+        "apparent_power": 1.33,
+        "power_factor": 0.22,
+        "cumulative": 2548.79,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.479Z"
+    },
+    {
+        "voltage": 222.14,
+        "current": 50.76,
+        "power": 0.29,
+        "reactive_power": 1.3,
+        "apparent_power": 1.33,
+        "power_factor": 0.22,
+        "cumulative": 2548.79,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.487Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/DB_ROLLFORMING2
+{
+    "volt": 222.41244506835938,
+    "current": 12.63933277130127,
+    "kW": 2.7027446289062502,
+    "kVA": 2.7050322265625,
+    "kVAR": 0.11122389221191406,
+    "pf": 0.9991543292999268,
+    "kWh": 2258.7509765625
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_ROLLFORMING2/Send
+[
+    {
+        "voltage": 222.41,
+        "current": 12.64,
+        "power": 2.7,
+        "reactive_power": 0.11,
+        "apparent_power": 2.71,
+        "power_factor": 1,
+        "cumulative": 2258.75,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.689Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_ROLLFORMING2/Send
+[
+    {
+        "voltage": 222.41,
+        "current": 12.64,
+        "power": 2.7,
+        "reactive_power": 0.11,
+        "apparent_power": 2.71,
+        "power_factor": 1,
+        "cumulative": 2258.75,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.689Z"
+    },
+    {
+        "voltage": 222.41,
+        "current": 12.64,
+        "power": 2.7,
+        "reactive_power": 0.11,
+        "apparent_power": 2.71,
+        "power_factor": 1,
+        "cumulative": 2258.75,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.697Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/DB_HM_1003_3
+{
+    "volt": 221.95596313476562,
+    "current": 0.11122666299343109,
+    "kW": 0,
+    "kVA": 0,
+    "kVAR": 0,
+    "pf": 1,
+    "kWh": 0.02239999547600746
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_HM_1003_3/Send
+[
+    {
+        "voltage": 221.96,
+        "current": 0.11,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0.02,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.909Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_HM_1003_3/Send
+[
+    {
+        "voltage": 221.96,
+        "current": 0.11,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0.02,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.909Z"
+    },
+    {
+        "voltage": 221.96,
+        "current": 0.11,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0.02,
+        "created_at": "2/14/2026, 7:43:50 AM",
+        "thai_time": "2026-02-14T14:43:50.000Z",
+        "created_at_new": "2026-02-14T07:43:50.915Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/DB_HM_1003_4
+{
+    "volt": 222.4723358154297,
+    "current": 0.2670133411884308,
+    "kW": 0,
+    "kVA": 0,
+    "kVAR": 0,
+    "pf": 1,
+    "kWh": 0
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_HM_1003_4/Send
+[
+    {
+        "voltage": 222.47,
+        "current": 0.27,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.131Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:50] TOPIC: /B9/iPSS/DB_HM_1003_4/Send
+[
+    {
+        "voltage": 222.47,
+        "current": 0.27,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.131Z"
+    },
+    {
+        "voltage": 222.47,
+        "current": 0.27,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 0,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.135Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:51] TOPIC: /B9/DB_HM_1003_7
+{
+    "volt": 222.2094268798828,
+    "current": 0.7447666525840759,
+    "kW": 0,
+    "kVA": 0,
+    "kVAR": 0,
+    "pf": 1,
+    "kWh": 1.5639991760253906
+}
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:51] TOPIC: /B9/iPSS/DB_HM_1003_7/Send
+[
+    {
+        "voltage": 222.21,
+        "current": 0.74,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 1.56,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.352Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:43:51] TOPIC: /B9/iPSS/DB_HM_1003_7/Send
+[
+    {
+        "voltage": 222.21,
+        "current": 0.74,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 1.56,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.352Z"
+    },
+    {
+        "voltage": 222.21,
+        "current": 0.74,
+        "power": 0,
+        "reactive_power": 0,
+        "apparent_power": 0,
+        "power_factor": 1,
+        "cumulative": 1.56,
+        "created_at": "2/14/2026, 7:43:51 AM",
+        "thai_time": "2026-02-14T14:43:51.000Z",
+        "created_at_new": "2026-02-14T07:43:51.361Z"
+    }
+]
+--------------------------------------------------------------------------------
+[2026-02-14 14:44:19] TOPIC: /B9/iPSS/LPG
+[
+    {
+        "cumulative": 195577.305,
+        "velocity": 4.303399085998535,
+        "flow": 389.7777099609375,
+        "round": 19,
+        "created_at": "2/14/2026, 7:14:19 AM",
+        "thai_time": "2026-02-14T14:14:19.000Z",
+        "created_at_new": "2026-02-14T07:14:19.445Z"
+    },
+    {
+        "cumulative": 195590.9295,
+        "velocity": 3.822222948074341,
+        "flow": 346.19549560546875,
+        "round": 19,
+        "created_at": "2/14/2026, 7:44:19 AM",
+        "thai_time": "2026-02-14T14:44:19.000Z",
+        "created_at_new": "2026-02-14T07:44:19.452Z"
+    }
+]
+--------------------------------------------------------------------------------
