@@ -16,73 +16,62 @@ $pageIcon = "fas fa-file-invoice-dollar";
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
 
     <div id="main-content" class="container-fluid pt-4 px-3 px-md-4 pb-4">
-        <div class="row">
-            <div class="col-lg-4 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white border-bottom-0 pt-3">
-                        <h5 class="fw-bold text-primary"><i class="fas fa-upload me-2"></i>Import Data</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="formImport">
-                            <div class="mb-3">
-                                <label class="form-label text-secondary fw-bold small">Loading Report ID (ถ้ามี)</label>
-                                <input type="number" class="form-control" name="report_id" placeholder="Ex: 1045">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label text-secondary fw-bold small">เหตุผลการนำเข้า / แก้ไข</label>
-                                <input type="text" class="form-control" name="remark" value="อัปโหลดครั้งแรก" required>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="form-label text-secondary fw-bold small">CSV File (จาก Excel)</label>
-                                <div id="dropZone" class="drop-zone">
-                                    <i class="fas fa-cloud-upload-alt fa-3x mb-2"></i>
-                                    <h6>ลากไฟล์ CSV มาวางที่นี่</h6>
-                                    <p class="small text-muted mb-0">หรือคลิกเพื่อเลือกไฟล์</p>
-                                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="d-none" required>
-                                </div>
-                                <div id="fileNameDisplay" class="mt-2 text-success fw-bold text-center small"></div>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnSubmit">
-                                <span class="spinner-border spinner-border-sm d-none" id="btnSpinner"></span>
-                                <span id="btnText">Process Invoice</span>
-                            </button>
-                        </form>
-                    </div>
+        
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap" style="flex: 1;">
+                <div class="input-group shadow-sm" style="max-width: 250px;">
+                    <span class="input-group-text bg-white text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="ค้นหา Invoice...">
                 </div>
+                
+                <div class="input-group shadow-sm" style="max-width: 320px;">
+                    <span class="input-group-text bg-white text-muted small">จาก</span>
+                    <input type="date" id="filterStartDate" class="form-control form-control-sm">
+                    <span class="input-group-text bg-white text-muted small">ถึง</span>
+                    <input type="date" id="filterEndDate" class="form-control form-control-sm">
+                </div>
+                
+                <button class="btn btn-primary shadow-sm btn-sm fw-bold" onclick="loadHistory()"><i class="fas fa-filter"></i> กรอง</button>
+                <button class="btn btn-light shadow-sm border btn-sm" onclick="clearFilter()" title="ล้างตัวกรอง"><i class="fas fa-sync-alt text-primary"></i></button>
             </div>
 
-            <div class="col-lg-8 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white border-bottom-0 pt-3 d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold text-dark"><i class="fas fa-history me-2"></i>Version History</h5>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="loadHistory()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="historyTable">
-                                <thead class="table-light text-secondary">
-                                    <tr>
-                                        <th>Invoice No.</th>
-                                        <th class="text-center">Version</th>
-                                        <th class="text-end">Total Amount</th>
-                                        <th>Remark</th>
-                                        <th>Date</th>
-                                        <th class="text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <div class="d-flex gap-2">
+                <button type="button" id="btnDownloadTemplate" class="btn btn-outline-success shadow-sm fw-bold">
+                    <i class="fas fa-file-excel me-1"></i> ดาวน์โหลดฟอร์ม
+                </button>
+                <button type="button" class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-import me-1"></i> นำเข้า Invoice
+                </button>
+            </div>
+        </div>
+
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 650px;">
+                    <table class="table table-hover align-middle mb-0" id="historyTable">
+                        <thead class="table-light text-secondary" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>Invoice No.</th>
+                                <th>Customer</th>
+                                <th>Logistics Info</th>
+                                <th class="text-center">ETD / ETA</th>
+                                <th class="text-end">Total (USD)</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="../../utils/libs/xlsx.full.min.js" defer></script>
+    <?php include __DIR__ . '/components/financeModal.php'; ?>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/finance_dashboard.js?v=<?php echo filemtime(__DIR__ . '/script/finance_dashboard.js'); ?>"></script>
 </body>
 </html>
