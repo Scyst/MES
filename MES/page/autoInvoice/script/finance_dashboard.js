@@ -222,28 +222,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     let headerFound = false;
                     let currentInvNo = null;
 
-                    // 📌 Helper: ฟังก์ชันแปลงวันที่ Excel (Serial) หรือ String ให้เป็น Format สากล (MONTH DD, YYYY)
-                    const formatExcelDate = (val) => {
+                    // 📌 ฟังก์ชันแปลงวันที่ครอบจักรวาล (Excel, DD/MM/YYYY, YYYY-MM-DD)
+                    const formatUniversalDate = (val) => {
                         if (!val) return '';
                         let d;
-                        // ถ้าเป็นตัวเลข (Excel Serial Date เช่น 46072)
+                        
+                        // 1. กรณีเป็นตัวเลขจาก Excel (เช่น 46072)
                         if (!isNaN(val) && Number(val) > 10000) {
                             d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
-                        } else {
-                            // ถ้าเป็น String วันที่ปกติ
+                        } 
+                        // 2. กรณีมี / (เช่น 19/2/2026 หรือ 19/02/2026)
+                        else if (typeof val === 'string' && val.includes('/')) {
+                            let parts = val.split('/');
+                            // แปลงจาก DD/MM/YYYY เป็น YYYY-MM-DD ให้ JS เข้าใจ
+                            if (parts.length === 3 && parts[2].length === 4) {
+                                d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+                            } else {
+                                d = new Date(val);
+                            }
+                        } 
+                        // 3. กรณีเป็นวันที่ปกติ หรือ YYYY-MM-DD (จาก Date Picker บนเว็บ)
+                        else {
                             d = new Date(val);
                         }
 
-                        // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format
+                        // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format เป็น "MONTH DD, YYYY"
                         if (!isNaN(d.getTime())) {
                             const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
                             const day = String(d.getDate()).padStart(2, '0');
                             const month = months[d.getMonth()];
                             const year = d.getFullYear();
-                            return `${month} ${day}, ${year}`; // ผลลัพธ์: JANUARY 06, 2026
+                            return `${month} ${day}, ${year}`; // รูปแบบเป้าหมาย
                         }
-                        // ถ้าแปลงไม่ได้เลย ให้คืนค่าเดิมกลับไป (เผื่อพิมพ์ Text แปลกๆ มา)
-                        return String(val).toUpperCase();
+                        return String(val).toUpperCase(); // ถ้ามั่วจัดๆ คืนค่าเดิมไป
                     };
 
                     for (let i = 0; i < rows.length; i++) {
@@ -325,9 +336,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         mother_vessel: getVal(idx.mother),
                                         container_no: getVal(idx.container), 
                                         seal_no: getVal(idx.seal), 
-                                        invoice_date: formatExcelDate(getVal(idx.invoice_date)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
-                                        etd_date: formatExcelDate(getVal(idx.etd)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
-                                        eta_date: formatExcelDate(getVal(idx.eta)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
+                                        invoice_date: formatUniversalDate(getVal(idx.invoice_date)), 
+                                        etd_date: formatUniversalDate(getVal(idx.etd)), 
+                                        eta_date: formatUniversalDate(getVal(idx.eta)),
                                         container_qty: getVal(idx.container_qty),
                                         tare: getVal(idx.tare)
                                     },
@@ -559,12 +570,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 payment_terms: document.getElementById('editPayment').value
             },
             shippingData: {
-                invoice_date: document.getElementById('editInvDate').value,
+                invoice_date: formatUniversalDate(document.getElementById('editInvDate').value),
                 container_qty: document.getElementById('editContainerQty').value,
                 port_loading: document.getElementById('editPortLoading').value,
                 port_discharge: document.getElementById('editPortDischarge').value,
-                etd_date: document.getElementById('editEtd').value,
-                eta_date: document.getElementById('editEta').value,
+                etd_date: formatUniversalDate(document.getElementById('editEtd').value),
+                eta_date: formatUniversalDate(document.getElementById('editEta').value),
                 feeder_vessel: document.getElementById('editVessel').value,
                 mother_vessel: document.getElementById('editMotherVessel').value,
                 container_no: document.getElementById('editContainer').value,
