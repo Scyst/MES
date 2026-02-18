@@ -79,8 +79,8 @@ function numberToWordsUsd($num) {
         .pre-line { white-space: pre-line; }
         
         /* Header Section */
-        .company-header { text-align: center; margin-bottom: 20px; line-height: 1.2; font-size: 10px; }
-        .company-name { font-size: 16px; font-weight: bold; margin-bottom: 3px; letter-spacing: 0.5px; }
+        .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 10px; font-weight: bold; }
+        .company-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         .doc-title { font-size: 18px; font-weight: bold; text-align: center; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
         
         /* Top Box Table */
@@ -263,10 +263,10 @@ function numberToWordsUsd($num) {
         <table class="items-table" style="margin-bottom: 0; border-left: none; border-right: none;">
             <thead>
                 <tr style="background: #ffff99;">
-                    <th style="width: 15%; border-left: none;">CARTON NO.</th>
-                    <th style="width: 45%;">DESCRIPTION</th>
+                    <th style="width: 12%; border-left: none;">CARTON NO.</th>
+                    <th style="width: 50%;">DESCRIPTION</th>
                     <th style="width: 12%;">QUANTITY<br>(CARTON)</th>
-                    <th style="width: 14%;">UNIT PRICE<br>(USD)</th>
+                    <th style="width: 12%;">UNIT PRICE<br>(USD)</th>
                     <th style="width: 14%; border-right: none;">AMOUNT PRICE<br>(USD)</th>
                 </tr>
             </thead>
@@ -278,13 +278,13 @@ function numberToWordsUsd($num) {
                     $sumTotal += $row['line_total'];
                 ?>
                 <tr>
-                    <td></td>
+                    <td style="border-left: none;"></td>
                     <td style="color: #ff0702;">
                         <b><?= htmlspecialchars($row['sku']) ?></b><br>
                     </td>
                     <td></td>
                     <td></td>
-                    <td></td>
+                    <td style="border-right: none;"></td>
                 </tr>
                 <?php endforeach; ?>
                 
