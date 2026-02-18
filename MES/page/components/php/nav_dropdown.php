@@ -70,6 +70,16 @@
                 <span>Sales Tracking</span>
             </a>
         </li>
+
+        <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
+        <li>
+            <a class="dropdown-item-icon" href="../autoInvoice/finance_dashboard.php" title="Invoice Management">
+                <i class="fas fa-file-invoice-dollar fa-fw"></i>
+                <span>Invoice Management</span>
+            </a>
+        </li>
+        <?php endif; ?>
+
         <li>
             <a class="dropdown-item-icon" href="../loadingReport/loading_report.php" title="Loading Toolbox">
                 <i class="fas fa-truck-loading fa-fw"></i>

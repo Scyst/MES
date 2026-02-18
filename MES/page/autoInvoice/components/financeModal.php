@@ -44,12 +44,17 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header bg-white fw-bold">ข้อมูลลูกค้า (Customer)</div>
+                            <div class="card shadow-sm h-100 border-0">
+                                <div class="card-header bg-white fw-bold"><i class="fas fa-user-tie text-primary me-2"></i>ข้อมูลลูกค้า (Customer)</div>
                                 <div class="card-body">
                                     <div class="mb-2"><label class="form-label small">Customer Name</label><input type="text" id="editCustName" class="form-control form-control-sm" required></div>
-                                    <div class="mb-2"><label class="form-label small">Consignee</label><textarea id="editConsignee" class="form-control form-control-sm" rows="2"></textarea></div>
-                                    <div class="mb-2"><label class="form-label small">Notify Party</label><textarea id="editNotify" class="form-control form-control-sm" rows="2"></textarea></div>
+                                    <div class="mb-2"><label class="form-label small">Address</label><textarea id="editAddress" class="form-control form-control-sm" rows="2"></textarea></div>
+                                    
+                                    <div class="row">
+                                        <div class="col-6 mb-2"><label class="form-label small">Consignee</label><textarea id="editConsignee" class="form-control form-control-sm" rows="2"></textarea></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">Notify Party</label><textarea id="editNotify" class="form-control form-control-sm" rows="2"></textarea></div>
+                                    </div>
+                                    
                                     <div class="row">
                                         <div class="col-6 mb-2"><label class="form-label small">Incoterms</label><input type="text" id="editIncoterms" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Payment Terms</label><input type="text" id="editPayment" class="form-control form-control-sm"></div>
@@ -59,40 +64,51 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header bg-white fw-bold">ข้อมูลขนส่ง (Shipping)</div>
+                            <div class="card shadow-sm h-100 border-0">
+                                <div class="card-header bg-white fw-bold"><i class="fas fa-ship text-info me-2"></i>ข้อมูลขนส่ง (Shipping)</div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-6 mb-2"><label class="form-label small">Invoice Date</label><input type="date" id="editInvDate" class="form-control form-control-sm" required></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">Invoice Date</label><input type="text" id="editInvDate" class="form-control form-control-sm" required></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
+                                        
+                                        <div class="col-6 mb-2"><label class="form-label small">Port of Loading</label><input type="text" id="editPortLoading" class="form-control form-control-sm"></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">Port of Discharge</label><input type="text" id="editPortDischarge" class="form-control form-control-sm"></div>
+
+                                        <div class="col-6 mb-2"><label class="form-label small">ETD Date</label><input type="text" id="editEtd" class="form-control form-control-sm"></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">ETA Date</label><input type="text" id="editEta" class="form-control form-control-sm"></div>
+
+                                        <div class="col-12 mb-2"><label class="form-label small">Feeder Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
+                                        <div class="col-12 mb-2"><label class="form-label small">Mother Vessel</label><input type="text" id="editMotherVessel" class="form-control form-control-sm"></div>
+
                                         <div class="col-6 mb-2"><label class="form-label small">Container No.</label><input type="text" id="editContainer" class="form-control form-control-sm"></div>
-                                        <div class="col-6 mb-2"><label class="form-label small">Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Seal No.</label><input type="text" id="editSeal" class="form-control form-control-sm"></div>
-                                    </div>
-                                    <div class="mb-2"><label class="form-label small">หมายเหตุการแก้ไข (Remark สำหรับสร้าง Version ใหม่)</label>
-                                        <input type="text" id="editRemark" class="form-control form-control-sm border-primary" placeholder="เช่น แก้ไขราคาสินค้า, เปลี่ยนเบอร์ตู้" required>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card shadow-sm mb-3">
+                    <div class="card shadow-sm border-0 mb-3">
                         <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-                            รายการสินค้า (Items)
-                            <button type="button" class="btn btn-sm btn-success" onclick="addEditItemRow()"><i class="fas fa-plus me-1"></i>เพิ่มรายการ</button>
+                            <span><i class="fas fa-boxes text-success me-2"></i>รายการสินค้า (Items)</span>
+                            <button type="button" class="btn btn-sm btn-success rounded-pill px-3" onclick="addEditItemRow()"><i class="fas fa-plus me-1"></i>เพิ่มรายการ</button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="editItemsTable" style="font-size: 0.85rem;">
-                                    <thead class="table-light">
+                                <table class="table table-bordered align-middle mb-0" id="editItemsTable" style="font-size: 0.85rem; min-width: 1000px;">
+                                    <thead class="table-light text-center">
                                         <tr>
-                                            <th>SKU</th>
-                                            <th>Description</th>
-                                            <th style="width: 100px;">Qty</th>
-                                            <th style="width: 120px;">Price(USD)</th>
-                                            <th style="width: 100px;">N.W</th>
-                                            <th style="width: 100px;">G.W</th>
-                                            <th style="width: 100px;">CBM</th>
+                                            <th style="width: 150px;">Product Type <small class="text-danger d-block">(หมวดหมู่สินค้า)</small></th>
+                                            <th style="width: 120px;">SKU <small class="d-block">(รหัสสินค้า)</small></th>
+                                            <th style="min-width: 200px;">Description</th>
+                                            <th style="width: 100px;">Carton No</th>
+                                            <th style="width: 90px;">Qty</th>
+                                            <th style="width: 110px;">Price(USD)</th>
+                                            <th style="width: 90px;">N.W (Ex)</th>
+                                            <th style="width: 90px;">G.W (Ex)</th>
+                                            <th style="width: 90px;">CBM (Ex)</th>
+                                            <th style="width: 120px;">PO No</th>
+                                            <th style="width: 120px;">Marks</th>
                                             <th style="width: 50px;">ลบ</th>
                                         </tr>
                                     </thead>
@@ -101,12 +117,18 @@
                                 </table>
                             </div>
                         </div>
+                        <div class="card-footer bg-light py-2">
+                            <div class="mb-0">
+                                <label class="form-label small fw-bold text-danger">หมายเหตุการแก้ไข (บังคับใส่):</label>
+                                <input type="text" id="editRemark" class="form-control form-control-sm border-danger" placeholder="เช่น แก้ไขราคาสินค้า, เปลี่ยนชื่อเรือ, เพิ่มสินค้า" required>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-primary fw-bold" onclick="saveWebEdit()"><i class="fas fa-save me-2"></i>บันทึกเป็นเวอร์ชันใหม่</button>
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="saveWebEdit()"><i class="fas fa-save me-2"></i>บันทึกเป็นเวอร์ชันใหม่</button>
             </div>
         </div>
     </div>
@@ -142,7 +164,7 @@
                         <div id="fileNameDisplay" class="mt-2 text-success fw-bold text-center small"></div>
                     </div>
 
-                    <button type="submit" id="btnSubmit" class="btn btn-primary w-100 fw-bold" disabled>
+                    <button type="submit" id="btnSubmit" class="btn btn-primary w-100 fw-bold rounded-pill" disabled>
                         <span id="btnSpinner" class="spinner-border spinner-border-sm d-none me-2"></span>
                         <i class="fas fa-save me-2"></i>เริ่มการนำเข้า
                     </button>

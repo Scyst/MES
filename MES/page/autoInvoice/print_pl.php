@@ -3,7 +3,8 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
-$invoice_id = $_GET['id'] ?? 0;
+$invoice_id = (int)($_GET['id'] ?? 0);
+if ($invoice_id <= 0) die("Invalid Invoice ID.");
 
 try {
     global $pdo;
@@ -16,9 +17,22 @@ try {
     $customer = json_decode($header['customer_data_json'], true) ?: [];
     $shipping = json_decode($header['shipping_data_json'], true) ?: [];
 
-    $stmtDetails = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
+    $sqlDetails = "
+        SELECT 
+            d.*, 
+            ISNULL(NULLIF(i.net_weight, 0), d.net_weight) AS final_nw,
+            ISNULL(NULLIF(i.gross_weight, 0), d.gross_weight) AS final_gw,
+            ISNULL(NULLIF(i.cbm, 0), d.cbm) AS final_cbm
+        FROM dbo.FINANCE_INVOICE_DETAILS d WITH (NOLOCK)
+        LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON d.sku = i.sku -- เชื่อมด้วย SKU
+        WHERE d.invoice_id = ? 
+        ORDER BY d.detail_id ASC
+    ";
+    $stmtDetails = $pdo->prepare($sqlDetails);
     $stmtDetails->execute([$invoice_id]);
     $details = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
+    $display_po = !empty($details) ? ($details[0]['po_number'] ?? '-') : '-';
+    $display_marks = !empty($details) ? ($details[0]['shipping_marks'] ?? '-') : '-';
 
 } catch (Exception $e) {
     die("Database Error: " . $e->getMessage());
@@ -118,6 +132,15 @@ try {
             padding-bottom: 10px;
         }
 
+        .address-box {
+            white-space: pre-line;
+            word-wrap: break-word;
+            word-break: break-word; /* รองรับคำยาวๆ */
+            overflow-wrap: break-word;
+            text-align: justify;
+            line-height: 1.4;
+        }
+
         /* Print Settings */
         @media print {
             body { background: none; margin: 0; padding: 0; }
@@ -191,7 +214,7 @@ try {
                             </tr>
                             <tr>
                                 <td class="lbl-col">ADDRESS:</td>
-                                <td class="pre-line"><?= htmlspecialchars($customer['address'] ?? '-') ?></td>
+                                <td class="address-box"><?= htmlspecialchars($customer['address'] ?? '-') ?></td>
                             </tr>
                         </table>
                     </td>
@@ -248,16 +271,23 @@ try {
             <tbody>
                 <?php 
                 $sumQty = 0; $sumNW = 0; $sumGW = 0; $sumCBM = 0;
-                foreach ($details as $index => $row): 
-                    $sumQty += $row['qty_carton'];
-                    $sumNW += $row['net_weight'];
-                    $sumGW += $row['gross_weight'];
-                    $sumCBM += $row['cbm'];
+                
+                if (!empty($details)): 
+                    foreach ($details as $index => $row): 
+                        // ใช้ค่า final_nw ที่เรา Query ผสมมาระหว่าง Master กับ Excel
+                        $nw = (float)($row['final_nw'] ?? 0);
+                        $gw = (float)($row['final_gw'] ?? 0);
+                        $cbm = (float)($row['final_cbm'] ?? 0);
+
+                        $sumQty += (float)($row['qty_carton'] ?? 0);
+                        $sumNW  += $nw;
+                        $sumGW  += $gw;
+                        $sumCBM += $cbm;
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
                     <td style="color: #ff0702;">
-                        <b><?= htmlspecialchars($row['sku']) ?></b><br>
+                        <b><?= htmlspecialchars($row['product_type'] ?? '') ?></b><br>
                     </td>
                     <td></td>
                     <td></td>
@@ -266,16 +296,19 @@ try {
                 </tr>
                 
                 <tr>
-                    <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['carton_no']) ?></td>
+                    <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
                     <td> 
-                        <span class="pre-line"><?= htmlspecialchars($row['description']) ?></span>
+                        <span class="pre-line"><b><?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
                     </td>
-                    <td class="text-center"><?= number_format($row['qty_carton'], 0) ?></td>
-                    <td class="text-right"><?= number_format($row['net_weight'], 2) ?></td>
-                    <td class="text-right"><?= number_format($row['gross_weight'], 2) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($row['cbm'], 3) ?></td>
+                    <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-right"><?= number_format($nw, 2) ?></td>
+                    <td class="text-right"><?= number_format($gw, 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($cbm, 3) ?></td>
                 </tr>
-                <?php endforeach; ?>
+                <?php 
+                    endforeach; 
+                endif; 
+                ?>
 
                 <tr>
                     <td style="border-left: none;"></td>
@@ -310,11 +343,11 @@ try {
                     <table style="border-collapse: collapse;">
                         <tr>
                             <td class="fw-bold" style="padding-bottom: 3px; padding-right: 30px; vertical-align: top;">PURCHASE ORDER NO.:</td>
-                            <td style="padding-bottom: 3px; vertical-align: top;"><?= htmlspecialchars($details[0]['po_number'] ?? '-') ?></td>
+                            <td style="padding-bottom: 3px; vertical-align: top;"><?= htmlspecialchars($display_po) ?></td>
                         </tr>
                         <tr>
                             <td class="fw-bold" style="padding-right: 30px; vertical-align: top;">SHIPPING MARKS:</td>
-                            <td class="pre-line" style="vertical-align: top;"><?= htmlspecialchars($details[0]['shipping_marks'] ?? '-') ?></td>
+                            <td class="pre-line" style="vertical-align: top;"><?= htmlspecialchars($display_marks) ?></td>
                         </tr>
                     </table>
                 </td>

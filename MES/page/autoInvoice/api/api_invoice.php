@@ -29,29 +29,26 @@ $action = $_GET['action'] ?? ($input['action'] ?? '');
 session_write_close();
 
 try {
-    global $pdo; // อ้างอิงตัวแปร Database Connection
+    global $pdo;
 
     switch ($action) {
 
-        // ======================================================================
-        // CASE: get_history (ดึงประวัติ Invoice ไปโชว์ที่ตารางหน้า Dashboard)
-        // ======================================================================
         case 'get_history':
             $startDate = $_GET['start'] ?? '';
             $endDate = $_GET['end'] ?? '';
 
-            $whereSql = "is_active = 1"; // โชว์เฉพาะเวอร์ชันล่าสุด
+            $whereSql = "is_active = 1";
             $params = [];
+            $topLimit = "TOP 100";
 
-            // ถ้ามีการส่งช่วงวันที่มา ให้ต่อ SQL WHERE เข้าไป
             if ($startDate && $endDate) {
                 $whereSql .= " AND CAST(created_at AS DATE) BETWEEN ? AND ?";
                 $params[] = $startDate;
                 $params[] = $endDate;
+                $topLimit = ""; 
             }
 
-            // เพิ่ม doc_status เข้ามาใน SELECT
-            $sql = "SELECT TOP 100 
+            $sql = "SELECT $topLimit 
                         id, invoice_no, version, total_amount, created_at, 
                         customer_data_json, shipping_data_json, 
                         ISNULL(doc_status, 'Pending') AS doc_status
@@ -76,7 +73,7 @@ try {
                     'vessel' => $shipping['feeder_vessel'] ?? '-',
                     'etd_date' => $shipping['etd_date'] ?? '-',
                     'eta_date' => $shipping['eta_date'] ?? '-',
-                    'total_amount' => number_format($row['total_amount'], 2),
+                    'total_amount' => number_format((float)$row['total_amount'], 2),
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
             }, $invoices);
@@ -84,9 +81,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: import_invoice (รับ JSON จาก Client-side JS ไปบันทึกลง DB)
-        // ======================================================================
         case 'import_invoice':
             if (!hasRole(['admin', 'creator', 'supervisor'])) {
                 throw new Exception("คุณไม่มีสิทธิ์นำเข้าข้อมูล Invoice");
@@ -99,14 +93,12 @@ try {
             $reportId = (int)($input['report_id'] ?? 0);
             $remark = trim($input['remark'] ?? 'Bulk Import via Browser');
 
-            // เตรียม Execute Stored Procedure
             $sql = "EXEC dbo.sp_Finance_ImportInvoice ?, ?, ?, ?, ?, ?, ?";
             $stmt = $pdo->prepare($sql);
 
             $successCount = 0;
             $processedInvoices = [];
 
-            // 🔥 บังคับเปิด Transaction ระดับ PHP ควบคุม Bulk Insert
             $pdo->beginTransaction(); 
 
             foreach ($input['invoices'] as $invNo => $invData) {
@@ -125,12 +117,11 @@ try {
                     $successCount++;
                     $processedInvoices[] = $invNo . " (v" . $result['current_version'] . ")";
                 } else {
-                    // ถ้ามีบิลไหนพัง ให้โยน Error ไปเข้า Catch เพื่อ Rollback ทั้งยวงทันที
-                    throw new Exception("เกิดข้อผิดพลาดในการนำเข้าบิล: " . $invNo);
+                    throw new Exception("เกิดข้อผิดพลาดจาก Stored Procedure ระหว่างนำเข้าบิล: " . $invNo);
                 }
             }
 
-            $pdo->commit(); // ถ้าผ่านทุกลูปถึงจะ Save ลง DB จริงๆ
+            $pdo->commit(); 
 
             if ($successCount > 0) {
                 echo json_encode([
@@ -140,23 +131,13 @@ try {
             }
             break;
 
-        // ======================================================================
-        // CASE: get_versions (ดึงประวัติทุกเวอร์ชันของ Invoice ที่เลือก)
-        // ======================================================================
         case 'get_versions':
             $invoice_no = $_GET['invoice_no'] ?? ($input['invoice_no'] ?? '');
-            if (!$invoice_no) {
-                throw new Exception("ระบุเลข Invoice ไม่ถูกต้อง");
-            }
+            if (!$invoice_no) throw new Exception("ระบุเลข Invoice ไม่ถูกต้อง");
 
             $sql = "SELECT 
-                        id, 
-                        invoice_no, 
-                        version, 
-                        total_amount, 
-                        is_active, 
-                        created_at, 
-                        remark 
+                        id, invoice_no, version, total_amount, is_active, 
+                        created_at, remark, doc_status, void_reason
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
                     WHERE invoice_no = ? 
                     ORDER BY version DESC";
@@ -165,36 +146,32 @@ try {
             $stmt->execute([$invoice_no]);
             $versions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Format ข้อมูลก่อนส่งกลับให้ Frontend
             $data = array_map(function($row) {
                 return [
                     'id' => $row['id'],
                     'invoice_no' => $row['invoice_no'],
                     'version' => $row['version'],
-                    'total_amount' => number_format($row['total_amount'], 2),
+                    'doc_status' => $row['doc_status'] ?? 'Pending',
+                    'total_amount' => number_format((float)$row['total_amount'], 2),
                     'is_active' => $row['is_active'],
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at'])),
-                    'remark' => $row['remark'] ? $row['remark'] : '-'
+                    'remark' => $row['remark'] ? $row['remark'] : '-',
+                    'void_reason' => $row['void_reason'] ? $row['void_reason'] : ''
                 ];
             }, $versions);
 
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: get_invoice_detail (ดึงข้อมูลบิล 1 ใบแบบเต็มรูปแบบเพื่อนำไป Edit)
-        // ======================================================================
         case 'get_invoice_detail':
-            $id = $_GET['id'] ?? 0;
+            $id = (int)($_GET['id'] ?? 0);
             if (!$id) throw new Exception("ไม่พบรหัส Invoice");
 
-            // 1. ดึง Header (ข้อมูลลูกค้า + ข้อมูลขนส่ง)
             $stmt = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE id = ?");
             $stmt->execute([$id]);
             $header = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$header) throw new Exception("ไม่พบข้อมูล Invoice ในระบบ");
 
-            // 2. ดึง Details (รายการสินค้าทั้งหมด)
             $stmtDet = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
             $stmtDet->execute([$id]);
             $details = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
@@ -208,65 +185,49 @@ try {
             ]);
             break;
 
-        // ======================================================================
-        // CASE: update_status (เปลี่ยนสถานะ หรือ ยกเลิกบิล)
-        // ======================================================================
         case 'update_status':
             $invoice_no = $input['invoice_no'] ?? '';
             $status = $input['status'] ?? '';
-            $remark = $input['remark'] ?? ''; // เหตุผลที่ยกเลิก
+            $remark = trim($input['remark'] ?? ''); // สำหรับ void_reason
             
             if (!$invoice_no || !$status) throw new Exception("ข้อมูลไม่ครบถ้วน");
 
-            $sql = "UPDATE dbo.FINANCE_INVOICES SET doc_status = ? WHERE invoice_no = ? AND is_active = 1";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$status, $invoice_no]);
-
-            // ถ้ายกเลิกบิล (Voided) ให้ใส่เหตุผลลงไปใน Remark ด้วย
-            if ($status === 'Voided' && $remark) {
-                 $sqlRem = "UPDATE dbo.FINANCE_INVOICES SET remark = CONCAT('[VOID] ', ?, ' | ', ISNULL(remark,'')) WHERE invoice_no = ? AND is_active = 1";
-                 $pdo->prepare($sqlRem)->execute([$remark, $invoice_no]);
+            if ($status === 'Voided') {
+                if (!$remark) throw new Exception("ต้องระบุเหตุผลการยกเลิกบิล");
+                // อัปเดต Column void_reason ตรงๆ ตาม Structure ใหม่
+                $sql = "UPDATE dbo.FINANCE_INVOICES 
+                        SET doc_status = ?, void_reason = ?
+                        WHERE invoice_no = ? AND is_active = 1";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$status, $remark, $invoice_no]);
+            } else {
+                $sql = "UPDATE dbo.FINANCE_INVOICES SET doc_status = ? WHERE invoice_no = ? AND is_active = 1";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$status, $invoice_no]);
             }
 
             echo json_encode(['success' => true, 'message' => "อัปเดตสถานะเป็น $status สำเร็จ"]);
             break;
 
-        // ======================================================================
-        // CASE: restore_invoice (กู้คืนบิลที่ถูก Void ไปแล้ว)
-        // ======================================================================
         case 'restore_invoice':
             $invoice_no = $input['invoice_no'] ?? '';
             if (!$invoice_no) throw new Exception("ข้อมูลไม่ครบถ้วน");
 
-            // 1. ดึง Remark เดิมออกมาก่อน เพื่อที่จะล้างคำว่า [VOID] ... | ทิ้งไป
-            $stmt = $pdo->prepare("SELECT remark FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE invoice_no = ? AND is_active = 1");
-            $stmt->execute([$invoice_no]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $newRemark = $row['remark'] ?? '';
-            if (strpos($newRemark, '[VOID]') !== false) {
-                // แยกข้อความที่ถูกคั่นด้วย ' | ' และเอาเฉพาะส่วนที่เป็น Remark ดั้งเดิมกลับมา
-                $parts = explode(' | ', $newRemark, 2);
-                $newRemark = isset($parts[1]) ? $parts[1] : '';
-            }
-
-            // 2. อัปเดตสถานะกลับเป็น Pending และใส่ Remark ที่ล้างแล้วกลับเข้าไป
-            $updateSql = "UPDATE dbo.FINANCE_INVOICES SET doc_status = 'Pending', remark = ? WHERE invoice_no = ? AND is_active = 1";
-            $pdo->prepare($updateSql)->execute([$newRemark, $invoice_no]);
+            // เคลียร์ void_reason ทิ้ง และปรับ Status เป็น Pending
+            $updateSql = "UPDATE dbo.FINANCE_INVOICES 
+                          SET doc_status = 'Pending', void_reason = NULL 
+                          WHERE invoice_no = ? AND is_active = 1";
+            $pdo->prepare($updateSql)->execute([$invoice_no]);
 
             echo json_encode(['success' => true, 'message' => "กู้คืนบิล $invoice_no สำเร็จ!"]);
             break;
 
-        // ======================================================================
-        // DEFAULT: กรณีเรียก Action ผิด
-        // ======================================================================
         default:
             throw new Exception("Invalid Action or Method");
     }
 
 } catch (Exception $e) {
-    // Error Handling ตามมาตรฐาน
-    if (isset($pdo) && $pdo->inTransaction()) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     http_response_code(400);

@@ -1,6 +1,11 @@
 <?php
 // MES/page/autoInvoice/api/export_template.php
 
+// ป้องกันไฟล์ Excel พังจาก White space หรือ Warning ที่อาจแอบ echo ออกมาก่อนหน้า
+if (ob_get_length()) {
+    ob_end_clean();
+}
+
 // 1. ดึงไลบรารีไฟล์เดียวจบของเราเข้ามา
 require_once("xlsxwriter.class.php");
 
@@ -39,6 +44,7 @@ $header_types = [
     'Seal_No' => 'string',          // ความกว้าง 15
     'Shipping_Marks' => 'string',   // ความกว้าง 20
     'Carton_No' => 'string',        // ความกว้าง 15
+    'Product_Type' => 'string',     // ความกว้าง 20
     'SKU' => 'string',              // ความกว้าง 20
     'Description' => 'string',      // ความกว้าง 35
     'Qty_Carton' => 'number',       // ความกว้าง 15
@@ -56,7 +62,7 @@ $header_styles = [
     'fill' => '#002060', // พื้นหลังสีน้ำเงินบริษัท
     'color' => '#FFFFFF',// ตัวอักษรสีขาว
     'halign' => 'center',// จัดกึ่งกลาง
-    'widths' => [15, 15, 30, 40, 20, 20, 15, 15, 20, 20, 20, 15, 15, 25, 20, 15, 20, 15, 20, 15, 20, 35, 15, 15, 15, 15, 15] // ความกว้างแต่ละคอลัมน์เรียงตามลำดับ
+    'widths' => [15, 15, 30, 40, 20, 20, 15, 15, 20, 20, 20, 15, 15, 25, 20, 15, 20, 15, 20, 15, 20, 20, 35, 15, 15, 15, 15, 15]
 ];
 
 // 7. เขียนหัวตารางลง Sheet1
@@ -64,11 +70,12 @@ $writer->writeSheetHeader('Template', $header_types, $header_styles);
 
 // 8. ข้อมูลตัวอย่าง (Dummy Data) แถวที่ 2
 $row = [
-    'INV-20260201', '2026-02-18', 'John Doe Co., Ltd.', '123 Main St, NY', 
-    'SAME AS BUYER', 'SAME AS CONSIGNEE', 'PO-998877', 'FOB', 'T/T 30 DAYS', 
-    'LAEM CHABANG', 'CHARLESTON', '2026-02-22', '2026-04-27', 'XIN HANG ZHOU V.211W', 
-    '-', '1X40HQ', 'TLLU1234567', 'SL998877', 'N/M', '1-50', 'ITEM-001', 
-    'PART A DESCRIPTION', 50, 15.50, 100.00, 110.00, 2.500
+    'SNC-GP26-0146', '2026-02-18', 'WATER WOOD PTE.LTD', '9 RAFFLES PLACE #26-01 PEPUBLIC PLAZA 048619 SINGAPORE (SG) PAYA LEDAR SQUARE 048619 TEL:86 15894290371 (Head office)', 
+    'HARBOR FREIGHT TOOLS 23400 CACTUS AVE MORENO VALLEY,CA 92553', ' HARBOR FREIGHT TOOLS  26677 AGOURA RD,CALABASAS, CA 91302, PHONE: (818) 836-5000. FAX: (805) 445-4943', ' 38001-7407636', 'FOB LAEM CHABANG,THAILAND ', 'O/A 30 DAYS AFTER B/L DATE', 
+    'LAEM CHABANG', 'LOS ANGELES', '2026-02-22', '2026-04-27', 'EVER BLISS 0835-108N', 
+    '-', '1X40HQ', '-', '-', '-', '1-50', 
+    'TOOL CABINET',
+    '58712', 'S3 56IN TOP CHEST, RED', 81, 220.06, 9963, 11421, 61.51
 ];
 
 // เขียนข้อมูลลงไป

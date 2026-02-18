@@ -3,7 +3,8 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
-$invoice_id = $_GET['id'] ?? 0;
+$invoice_id = (int)($_GET['id'] ?? 0);
+if ($invoice_id <= 0) die("Invalid Invoice ID.");
 
 try {
     global $pdo;
@@ -19,6 +20,9 @@ try {
     $stmtDetails = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
     $stmtDetails->execute([$invoice_id]);
     $details = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
+    
+    $display_po = !empty($details) ? ($details[0]['po_number'] ?? '-') : '-';
+    $display_marks = !empty($details) ? ($details[0]['shipping_marks'] ?? '-') : '-';
 
 } catch (Exception $e) {
     die("Database Error: " . $e->getMessage());
@@ -54,7 +58,7 @@ function numberToWordsUsd($num) {
             margin: 0; 
             padding: 20px 0; 
             color: #000; 
-            -webkit-print-color-adjust: exact !important; /* บังคับให้สีและกรอบพิมพ์ออกมาเหมือนหน้าจอเป๊ะ */
+            -webkit-print-color-adjust: exact !important; 
             print-color-adjust: exact !important;
         }
         * { box-sizing: border-box; }
@@ -68,7 +72,7 @@ function numberToWordsUsd($num) {
             padding: 12mm 15mm; 
             box-shadow: 0 0 10px rgba(0,0,0,0.5); 
             position: relative; 
-            line-height: 1.3; /* ล็อคระยะห่างบรรทัดให้หน้าเว็บกับตอนพิมพ์เท่ากัน ไม่โดน Bootstrap กวน */
+            line-height: 1.3; 
         }
         
         /* Typography & Alignment */
@@ -76,7 +80,16 @@ function numberToWordsUsd($num) {
         .text-right { text-align: right; }
         .text-left { text-align: left; }
         .fw-bold { font-weight: bold; }
-        .pre-line { white-space: pre-line; }
+        
+        /* Address Box (ตัดคำสวยงาม) */
+        .address-box {
+            white-space: pre-line;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            text-align: justify;
+            line-height: 1.4;
+        }
         
         /* Header Section */
         .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 10px; font-weight: bold; }
@@ -87,19 +100,17 @@ function numberToWordsUsd($num) {
         table.border-box-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 10px; border: 1px solid #000; }
         table.border-box-table > tbody > tr > td { padding: 3px 8px; vertical-align: middle; border: 1px solid #000; }
         
-        /* Inner Table (ตารางซ้อนด้านในต้องไม่มีเส้นขอบ) */
+        /* Inner Table */
         table.inner-table { width: 100%; border-collapse: collapse; }
         table.inner-table td { padding: 2px 0; vertical-align: top; border: none !important; }
         .lbl-col { display: inline-block; font-weight: bold; }
         
-        /* --------------------------------------------------- */
-        /* Items Table (ตารางรายการสินค้า) */
-        /* --------------------------------------------------- */
+        /* Items Table */
         table.items-table { 
             width: 100%; 
             border-collapse: collapse;
             font-size: 10px; 
-            border: 2px solid #000; /* กรอบหนานอกสุด */
+            border: 2px solid #000; 
         }
         
         table.items-table th { 
@@ -116,35 +127,28 @@ function numberToWordsUsd($num) {
             padding: 3px 8px; 
         }
         
-        /* ลบเส้นแนวนอนด้านในระหว่างแถวสินค้า (ทะลุยาวลงมา) */
         table.items-table tbody tr td { 
             border-bottom: none; 
             border-top: none; 
         }
         
-        /* ตีเส้นคั่นเฉพาะคอลัมน์ Qty, Price, Amount เพื่อใส่ยอดรวม */
         table.items-table tr.sub-total-row td:nth-child(3),
         table.items-table tr.sub-total-row td:nth-child(4),
         table.items-table tr.sub-total-row td:nth-child(5) {
             border-top: 1px solid #000; 
-            vertical-align: bottom; /* ให้ตัวเลขลงมาเสมอกับขอบล่าง */
+            vertical-align: bottom; 
             padding-top: 5px;
             padding-bottom: 10px;
         }
 
-        /* แถว Total Amount ล่างสุด ยาวทะลุกรอบ */
         table.items-table tr.total-text-row td { 
             border-top: 1px solid #000; 
             padding: 8px 10px; 
         }
         
-        /* เส้นขอบสำหรับแถวพิเศษท้ายตาราง */
         table.items-table tr.total-row td,
         table.items-table tr.footer-row td { border-top: 1px solid #000; border-bottom: 1px solid #000; }
         
-        .signature-box { margin-top: 40px; text-align: center; float: right; width: 300px; }
-        
-        /* Print Settings */
         @media print {
             body { background: none; margin: 0; padding: 0; }
             .a4-page { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; border: none; }
@@ -195,7 +199,6 @@ function numberToWordsUsd($num) {
     </table>
 
     <div style="border: 2px solid #000;">
-
         <table class="border-box-table" style="margin-bottom: 0; border: none;">
             <tbody>
                 <tr>
@@ -217,7 +220,7 @@ function numberToWordsUsd($num) {
                             </tr>
                             <tr>
                                 <td class="lbl-col">ADDRESS:</td>
-                                <td class="pre-line"><?= htmlspecialchars($customer['address'] ?? '-') ?></td>
+                                <td class="address-box"><?= htmlspecialchars($customer['address'] ?? '-') ?></td>
                             </tr>
                         </table>
                     </td>
@@ -273,31 +276,35 @@ function numberToWordsUsd($num) {
             <tbody>
                 <?php 
                 $sumQty = 0; $sumTotal = 0;
-                foreach ($details as $index => $row): 
-                    $sumQty += $row['qty_carton'];
-                    $sumTotal += $row['line_total'];
+                if (!empty($details)): 
+                    foreach ($details as $index => $row): 
+                        $sumQty += (float)($row['qty_carton'] ?? 0);
+                        $sumTotal += (float)($row['line_total'] ?? 0);
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
                     <td style="color: #ff0702;">
-                        <b><?= htmlspecialchars($row['sku']) ?></b><br>
+                        <b><?= htmlspecialchars($row['product_type'] ?? '') ?></b><br>
                     </td>
                     <td></td>
                     <td></td>
                     <td style="border-right: none;"></td>
                 </tr>
-                <?php endforeach; ?>
                 
                 <tr>
-                    <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['carton_no']) ?></td>
+                    <td class="text-center address-box" style="border-left: none;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
                     <td> 
-                        <span class="pre-line"><?= htmlspecialchars($row['description']) ?></span>
+                        <span class="address-box"><b><?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
                     </td>
-                    <td class="text-center"><?= number_format($row['qty_carton'], 0) ?></td>
-                    <td class="text-right"><?= number_format($row['unit_price'], 2) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($row['line_total'], 2) ?></td>
+                    <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format((float)($row['line_total'] ?? 0), 2) ?></td>
                 </tr>
-
+                <?php 
+                    endforeach; 
+                endif; 
+                ?>
+                
                 <tr>
                     <td style="border-left: none;"></td>
                     <td style="padding-bottom: 2px;">
@@ -313,7 +320,6 @@ function numberToWordsUsd($num) {
                     <td style="padding-bottom: 5px; color: #0d1adf;">
                         "ORIGIN OF GOODS: THAILAND"
                     </td>
-                    
                     <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, 0) ?></td>
                     <td style="padding-bottom: 5px;"></td>
                     <td class="text-right fw-bold" style="text-decoration: underline double; text-underline-offset: 3px; border-right: none; padding-bottom: 5px;">
@@ -335,15 +341,14 @@ function numberToWordsUsd($num) {
                     <div class="fw-bold" style="margin-bottom: 3px;">
                         CURRENCY: US DOLLAR:    USD
                     </div>
-                    
                     <table style="border-collapse: collapse;">
                         <tr>
                             <td class="fw-bold" style="padding-bottom: 3px; padding-right: 30px; vertical-align: top;">PURCHASE ORDER NO.:</td>
-                            <td style="padding-bottom: 3px; vertical-align: top;"><?= htmlspecialchars($details[0]['po_number'] ?? '-') ?></td>
+                            <td style="padding-bottom: 3px; vertical-align: top;"><?= htmlspecialchars($display_po) ?></td>
                         </tr>
                         <tr>
                             <td class="fw-bold" style="padding-right: 30px; vertical-align: top;">SHIPPING MARKS:</td>
-                            <td class="pre-line" style="vertical-align: top;"><?= htmlspecialchars($details[0]['shipping_marks'] ?? '-') ?></td>
+                            <td class="address-box" style="vertical-align: top;"><?= htmlspecialchars($display_marks) ?></td>
                         </tr>
                     </table>
                 </td>
@@ -354,20 +359,18 @@ function numberToWordsUsd($num) {
             <tr>
                 <td style="width: 50%; vertical-align: top; padding: 15px 30px 15px 80px;">
                     <div class="fw-bold" style="margin-bottom: 5px;">CONSIGNEE :-</div>
-                    <div class="pre-line"><?= htmlspecialchars(trim(str_replace('CONSIGNEE :-', '', $customer['consignee'] ?? '-'))) ?></div>
+                    <div class="address-box"><?= htmlspecialchars(trim(str_replace('CONSIGNEE :-', '', $customer['consignee'] ?? '-'))) ?></div>
                 </td>
                 
                 <td style="width: 50%; vertical-align: top; padding: 15px 30px;">
-                    
                     <div style="position: relative; width: 100%;">
                         <div class="fw-bold" style="margin-bottom: 5px;">NOTIFY PARTY:-</div>
-                        <div class="pre-line" style="margin-bottom: 40px;"><?= htmlspecialchars(trim($customer['notify_party'] ?? '-')) ?></div>
+                        <div class="address-box" style="margin-bottom: 40px;"><?= htmlspecialchars(trim($customer['notify_party'] ?? '-')) ?></div>
                         
                         <div style="position: absolute; right: -70px; bottom: -15px; text-align: center; width: 220px; z-index: 10;">
                             <img src="../components/images/company_stamp.png" alt="Company Stamp" style="width: 150px; height: 120px; margin-bottom: 5px; mix-blend-mode: multiply;">
                         </div>
                     </div>
-
                 </td>
             </tr>
         </table>
@@ -375,7 +378,6 @@ function numberToWordsUsd($num) {
 </div>
 
 <script>
-    // สั่งเปิดหน้าต่าง Print อัตโนมัติเมื่อเรนเดอร์เสร็จ
     window.onload = () => setTimeout(() => window.print(), 500);
 </script>
 </body>

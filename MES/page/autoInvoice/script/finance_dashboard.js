@@ -18,14 +18,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileInput.files = e.dataTransfer.files;
                 selectedFile = e.dataTransfer.files[0];
                 fileNameDisplay.textContent = selectedFile.name;
-                document.getElementById('btnSubmit').disabled = false; // เปิดปุ่มเมื่อมีไฟล์
+                document.getElementById('btnSubmit').disabled = false;
             }
         });
         fileInput.addEventListener('change', () => {
             if(fileInput.files.length) {
                 selectedFile = fileInput.files[0];
                 fileNameDisplay.textContent = selectedFile.name;
-                document.getElementById('btnSubmit').disabled = false; // เปิดปุ่มเมื่อมีไฟล์
+                document.getElementById('btnSubmit').disabled = false;
             }
         });
     }
@@ -35,8 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#historyTable tbody');
         if (!tbody) return;
         
-        const start = document.getElementById('filterStartDate')?.value || '';
-        const end = document.getElementById('filterEndDate')?.value || '';
+        const start = encodeURIComponent(document.getElementById('filterStartDate')?.value || '');
+        const end = encodeURIComponent(document.getElementById('filterEndDate')?.value || '');
         
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
 
@@ -44,9 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => res.json())
             .then(resData => {
                 if (resData.success) {
-                    allInvoiceData = resData.data; // เก็บข้อมูลทั้งหมดไว้ในตัวแปร
-                    renderTable(); // สั่งวาดตาราง
-                    updateKPIs();  // สั่งนับเลข KPI
+                    allInvoiceData = resData.data;
+                    renderTable();
+                    updateKPIs();
                 } else {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
                 }
@@ -61,7 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#historyTable tbody');
         tbody.innerHTML = '';
 
-        // กรองข้อมูลตามสถานะปัจจุบัน
         let filteredData = allInvoiceData;
         if (currentStatusFilter !== 'ALL') {
             filteredData = allInvoiceData.filter(inv => inv.doc_status === currentStatusFilter);
@@ -124,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ฟังก์ชันนับตัวเลขลงในการ์ด KPI
     function updateKPIs() {
         document.getElementById('kpi-all').innerText = allInvoiceData.length;
         document.getElementById('kpi-pending').innerText = allInvoiceData.filter(d => d.doc_status === 'Pending').length;
@@ -133,29 +131,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('kpi-voided').innerText = allInvoiceData.filter(d => d.doc_status === 'Voided').length;
     }
 
-    // ฟังก์ชันเมื่อคลิกการ์ด (สลับ Active)
     window.filterStatus = function(status) {
         currentStatusFilter = status;
-        
-        // เคลียร์ class active เดิม
         document.querySelectorAll('.kpi-card').forEach(c => {
             c.classList.remove('active');
-            c.style.borderWidth = '0 0 0 4px'; // คืนค่า border
+            c.style.borderWidth = '0 0 0 4px';
         });
-        
-        // ใส่ class active ให้การ์ดที่ถูกคลิก
         const activeCard = document.getElementById('card-' + status);
-        if(activeCard) {
-            activeCard.classList.add('active');
-        }
-        
-        renderTable(); // วาดตารางใหม่ด้วยข้อมูลเดิมที่ Filter แล้ว
-};
+        if(activeCard) activeCard.classList.add('active');
+        renderTable();
+    };
 
     window.loadHistory = loadHistory;
     loadHistory();
 
-    // --- 5. View Versions Logic (ดูประวัติการแก้ไข) ---
+    // --- 5. View Versions Logic ---
     window.viewVersions = function(invoiceNo) {
         const modalEl = document.getElementById('versionModal');
         const modal = new bootstrap.Modal(modalEl);
@@ -164,21 +154,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#versionTable tbody');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดประวัติ...</td></tr>';
         
-        // เปิดหน้าต่าง Modal ขึ้นมาก่อน
         modal.show();
 
-        // ดึงข้อมูลเวอร์ชันจาก API
         fetch(`api/api_invoice.php?action=get_versions&invoice_no=${encodeURIComponent(invoiceNo)}`)
             .then(res => res.json())
             .then(resData => {
                 if (resData.success && resData.data.length > 0) {
                     tbody.innerHTML = '';
-                    
                     resData.data.forEach(v => {
-                        // แยกสถานะ Latest กับ Old
                         const isLatest = v.is_active == 1;
-                        const badge = isLatest ? '<span class="badge bg-success">Latest (ล่าสุด)</span>' : '<span class="badge bg-secondary">Old</span>';
-                        const rowClass = isLatest ? '' : 'table-light text-muted'; // ให้เวอร์ชันเก่าสีจางลงนิดนึง
+                        const badge = isLatest ? '<span class="badge bg-success">Latest</span>' : '<span class="badge bg-secondary">Old</span>';
+                        const rowClass = isLatest ? '' : 'table-light text-muted'; 
                         
                         const tr = document.createElement('tr');
                         tr.className = rowClass;
@@ -186,7 +172,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td class="text-center fw-bold">v.${v.version}</td>
                             <td class="text-center">${v.created_at}</td>
                             <td class="text-end">${v.total_amount}</td>
-                            <td>${v.remark}</td>
+                            <td>
+                                <div>${v.remark}</div>
+                                ${v.void_reason ? `<small class="text-danger"><i class="fas fa-exclamation-circle"></i> ${v.void_reason}</small>` : ''}
+                            </td>
                             <td class="text-center">${badge}</td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
@@ -202,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(err => {
-                console.error('Fetch Versions Error:', err);
+                console.error(err);
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
             });
     };
@@ -219,7 +208,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnSubmit.disabled = true;
             btnSpinner.classList.remove('d-none');
 
-            // ใช้ FileReader อ่านไฟล์ Excel
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -232,6 +220,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     let invoices = {};
                     let idx = {};
                     let headerFound = false;
+                    let currentInvNo = null;
+
+                    // 📌 Helper: ฟังก์ชันแปลงวันที่ Excel (Serial) หรือ String ให้เป็น Format สากล (MONTH DD, YYYY)
+                    const formatExcelDate = (val) => {
+                        if (!val) return '';
+                        let d;
+                        // ถ้าเป็นตัวเลข (Excel Serial Date เช่น 46072)
+                        if (!isNaN(val) && Number(val) > 10000) {
+                            d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+                        } else {
+                            // ถ้าเป็น String วันที่ปกติ
+                            d = new Date(val);
+                        }
+
+                        // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format
+                        if (!isNaN(d.getTime())) {
+                            const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = months[d.getMonth()];
+                            const year = d.getFullYear();
+                            return `${month} ${day}, ${year}`; // ผลลัพธ์: JANUARY 06, 2026
+                        }
+                        // ถ้าแปลงไม่ได้เลย ให้คืนค่าเดิมกลับไป (เผื่อพิมพ์ Text แปลกๆ มา)
+                        return String(val).toUpperCase();
+                    };
 
                     for (let i = 0; i < rows.length; i++) {
                         let row = rows[i].map(c => String(c).trim());
@@ -239,14 +252,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         if (!headerFound) {
                             let rowUpper = row.map(c => c.toUpperCase());
-                            
                             if (rowUpper.some(c => c.includes('INVOICE NO')) && rowUpper.some(c => c.includes('CUSTOMER'))) {
                                 headerFound = true;
-                                
                                 const findIdx = (keyword) => rowUpper.findIndex(c => c.includes(keyword));
                                 
                                 idx.invoice_no = findIdx('INVOICE NO');
-                                idx.customer = findIdx('CUSTOMER');
+                                idx.customer = findIdx('CUSTOMER NAME') !== -1 ? findIdx('CUSTOMER NAME') : findIdx('CUSTOMER');
+                                idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS'); // 📌 เพิ่มการหา Address
                                 idx.incoterms = findIdx('INCOTERMS');
                                 idx.consignee = findIdx('CONSIGNEE');
                                 idx.notify = findIdx('NOTIFY PARTY');
@@ -269,53 +281,69 @@ document.addEventListener('DOMContentLoaded', function() {
                                 idx.cbm = findIdx('CBM') !== -1 ? findIdx('CBM') : findIdx('MEASUREMENT');
                                 idx.po = findIdx('PURCHASE ORDER') !== -1 ? findIdx('PURCHASE ORDER') : findIdx('PO NO');
                                 idx.carton = findIdx('CARTON NO');
+                                idx.product_type = findIdx('PRODUCT TYPE');
                                 idx.marks = findIdx('MARKS');
                                 idx.desc = findIdx('DESCRIPTION');
+                                idx.sku = findIdx('SKU');
                                 continue; 
                             }
                         }
 
                         if (headerFound && idx.invoice_no !== undefined && idx.invoice_no !== -1) {
-                            let invNo = row[idx.invoice_no];
-                            if (!invNo || invNo.toUpperCase().includes('INVOICE NO')) continue; 
+                            let rowInvNo = row[idx.invoice_no];
+                            
+                            if (rowInvNo && rowInvNo.toUpperCase().includes('INVOICE NO')) continue; 
+                            
+                            if (rowInvNo !== "") {
+                                currentInvNo = rowInvNo;
+                            }
+                            
+                            if (!currentInvNo) continue;
 
                             const getVal = (index, defaultVal = '') => (index !== undefined && index !== -1 && row[index] !== undefined && row[index] !== '') ? row[index] : defaultVal;
                             
                             let qty = parseFloat(getVal(idx.qty).replace(/,/g, '')) || 0;
                             let price = parseFloat(getVal(idx.price).replace(/,/g, '')) || 0;
+                            let rawDesc = getVal(idx.desc);
 
-                            if (qty > 0 && price > 0) {
-                                if (!invoices[invNo]) {
-                                    invoices[invNo] = {
-                                        customerData: { 
-                                            name: getVal(idx.customer), 
-                                            incoterms: getVal(idx.incoterms),
-                                            consignee: getVal(idx.consignee),
-                                            notify_party: getVal(idx.notify),
-                                            payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
-                                        },
-                                        shippingData: {
-                                            port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
-                                            port_discharge: getVal(idx.port_discharge), 
-                                            feeder_vessel: getVal(idx.vessel),
-                                            mother_vessel: getVal(idx.mother),
-                                            container_no: getVal(idx.container), 
-                                            seal_no: getVal(idx.seal), 
-                                            invoice_date: getVal(idx.invoice_date),
-                                            etd_date: getVal(idx.etd),
-                                            eta_date: getVal(idx.eta),
-                                            container_qty: getVal(idx.container_qty),
-                                            tare: getVal(idx.tare)
-                                        },
-                                        details: []
-                                    };
-                                }
+                            if (rawDesc === "" && qty === 0) continue;
 
-                                let rawDesc = getVal(idx.desc);
-                                let sku = rawDesc.split(' ')[0].replace(/^#/, '');
+                            if (!invoices[currentInvNo]) {
+                                invoices[currentInvNo] = {
+                                    customerData: { 
+                                        name: getVal(idx.customer), 
+                                        address: getVal(idx.address), // 📌 ดึง Address เข้าไปเก็บแล้ว
+                                        incoterms: getVal(idx.incoterms),
+                                        consignee: getVal(idx.consignee),
+                                        notify_party: getVal(idx.notify),
+                                        payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
+                                    },
+                                    shippingData: {
+                                        port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
+                                        port_discharge: getVal(idx.port_discharge), 
+                                        feeder_vessel: getVal(idx.vessel),
+                                        mother_vessel: getVal(idx.mother),
+                                        container_no: getVal(idx.container), 
+                                        seal_no: getVal(idx.seal), 
+                                        invoice_date: formatExcelDate(getVal(idx.invoice_date)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
+                                        etd_date: formatExcelDate(getVal(idx.etd)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
+                                        eta_date: formatExcelDate(getVal(idx.eta)), // 📌 โยนเข้าฟังก์ชันแปลงวันที่
+                                        container_qty: getVal(idx.container_qty),
+                                        tare: getVal(idx.tare)
+                                    },
+                                    details: []
+                                };
+                            }
 
-                                invoices[invNo].details.push({ 
+                            let sku = getVal(idx.sku);
+                            if (!sku) {
+                                sku = rawDesc.split(' ')[0].replace(/^#/, '');
+                            }
+
+                            if (qty > 0 || price > 0 || rawDesc !== "") {
+                                invoices[currentInvNo].details.push({ 
                                     sku: sku, 
+                                    product_type: getVal(idx.product_type),
                                     description: rawDesc, 
                                     qty: qty, 
                                     price: price, 
@@ -331,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     if (Object.keys(invoices).length === 0) {
-                        throw new Error("ไม่พบข้อมูล Invoice ตรวจสอบว่าคอลัมน์ Quantity และ Price มีตัวเลขที่ถูกต้องหรือไม่");
+                        throw new Error("ไม่พบข้อมูล Invoice ตรวจสอบว่าคอลัมน์และข้อมูลในไฟล์ถูกต้องหรือไม่");
                     }
 
                     const payload = {
@@ -357,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             formImport.reset();
                             selectedFile = null;
                             fileNameDisplay.textContent = '';
-                            btnSubmit.disabled = true; // ปิดปุ่มกลับ
+                            btnSubmit.disabled = true;
                             loadHistory();
                         } else {
                             Swal.fire('Error', resData.message, 'error');
@@ -382,17 +410,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==========================================================
     // --- 4. สร้างและดาวน์โหลด Excel Template ผ่าน SheetJS ---
-    // ==========================================================
     const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
     if (btnDownloadTemplate) {
         btnDownloadTemplate.addEventListener('click', function() {
-            
-            // 1. กำหนดข้อมูล: แถวแรกคือหัวคอลัมน์, แถวที่สองคือข้อมูลตัวอย่าง (Dummy Data)
             const templateData = [
                 [
-                    // แก้ไขหัวตารางให้ตรงกับที่ Parser กวาดหา (เอา _ ออก และใช้ชื่อเต็ม)
                     'Invoice No', 'Invoice Date', 'Customer Name', 'Customer Address', 
                     'Consignee', 'Notify Party', 'PO No', 'Incoterms', 
                     'Payment Terms', 'Port of Loading', 'Port of Discharge', 
@@ -412,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ]
             ];
 
-            // สร้าง Sheet และกำหนดความกว้างคอลัมน์
             const ws = XLSX.utils.aoa_to_sheet(templateData);
             ws['!cols'] = [
                 {wch: 15}, {wch: 15}, {wch: 30}, {wch: 40}, 
@@ -424,18 +446,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 {wch: 15}, {wch: 15}, {wch: 15}
             ];
 
-            // สร้างไฟล์แล้วสั่งดาวน์โหลด
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Upload_Template");
             XLSX.writeFile(wb, "Invoice_Upload_Template.xlsx");
         });
     }
 
-    // ==========================================================
     // --- 5. แก้ไข Invoice บนเว็บ (Web Edit) ---
-    // ==========================================================
-    
-    // 5.1 เปิด Modal และดึงข้อมูลมาเติม
     window.openWebEdit = function(id) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
@@ -445,28 +462,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.close();
                 if (resData.success) {
                     const inv = resData;
-                    // เติมข้อมูล Header
                     document.getElementById('editInvoiceNoTxt').textContent = inv.header.invoice_no;
                     document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
                     
+                    // Customer
                     document.getElementById('editCustName').value = inv.customer.name || '';
+                    document.getElementById('editAddress').value = inv.customer.address || '';
                     document.getElementById('editConsignee').value = inv.customer.consignee || '';
                     document.getElementById('editNotify').value = inv.customer.notify_party || '';
                     document.getElementById('editIncoterms').value = inv.customer.incoterms || '';
                     document.getElementById('editPayment').value = inv.customer.payment_terms || '';
                     
+                    // Shipping
                     document.getElementById('editInvDate').value = inv.shipping.invoice_date || '';
-                    document.getElementById('editContainer').value = inv.shipping.container_no || '';
+                    document.getElementById('editContainerQty').value = inv.shipping.container_qty || '';
+                    document.getElementById('editPortLoading').value = inv.shipping.port_loading || 'LAEM CHABANG, THAILAND';
+                    document.getElementById('editPortDischarge').value = inv.shipping.port_discharge || '';
+                    document.getElementById('editEtd').value = inv.shipping.etd_date || '';
+                    document.getElementById('editEta').value = inv.shipping.eta_date || '';
                     document.getElementById('editVessel').value = inv.shipping.feeder_vessel || '';
+                    document.getElementById('editMotherVessel').value = inv.shipping.mother_vessel || '';
+                    document.getElementById('editContainer').value = inv.shipping.container_no || '';
                     document.getElementById('editSeal').value = inv.shipping.seal_no || '';
-                    document.getElementById('editRemark').value = ''; // ว่างไว้บังคับให้พิมพ์สาเหตุ
                     
-                    // เติมข้อมูล Items
+                    document.getElementById('editRemark').value = ''; 
+                    
                     const tbody = document.querySelector('#editItemsTable tbody');
                     tbody.innerHTML = '';
                     inv.details.forEach(item => addEditItemRow(item));
 
-                    // โชว์ Modal
                     new bootstrap.Modal(document.getElementById('editModal')).show();
                 } else {
                     Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
@@ -478,53 +502,57 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     };
 
-    // 5.2 ฟังก์ชันสร้างแถวสินค้าในตาราง
     window.addEditItemRow = function(item = {}) {
         const tbody = document.querySelector('#editItemsTable tbody');
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm i-type" value="${item.product_type || ''}" placeholder="หมวดหมู่"></td>
             <td><input type="text" class="form-control form-control-sm i-sku" value="${item.sku || ''}" required></td>
             <td><input type="text" class="form-control form-control-sm i-desc" value="${item.description || ''}"></td>
+            <td><input type="text" class="form-control form-control-sm i-carton" value="${item.carton_no || ''}"></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm i-qty" value="${item.qty_carton || 1}" required></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm i-price" value="${item.unit_price || 0}" required></td>
-            <td><input type="number" step="0.01" class="form-control form-control-sm i-nw" value="${item.net_weight || 0}"></td>
-            <td><input type="number" step="0.01" class="form-control form-control-sm i-gw" value="${item.gross_weight || 0}"></td>
-            <td><input type="number" step="0.01" class="form-control form-control-sm i-cbm" value="${item.cbm || 0}"></td>
-            <td class="text-center"><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm i-nw text-muted" value="${item.net_weight || 0}"></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm i-gw text-muted" value="${item.gross_weight || 0}"></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm i-cbm text-muted" value="${item.cbm || 0}"></td>
+            <td><input type="text" class="form-control form-control-sm i-po" value="${item.po_number || ''}"></td>
+            <td><input type="text" class="form-control form-control-sm i-marks" value="${item.shipping_marks || ''}"></td>
+            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
     };
 
-    // 5.3 รวบรวมข้อมูลแปลงเป็น JSON แล้วยิง API เดียวกับตอนอัปโหลด Excel
     window.saveWebEdit = function() {
         const invNo = document.getElementById('editInvoiceNo').value;
         const remark = document.getElementById('editRemark').value;
         
-        if (!remark) return Swal.fire('แจ้งเตือน', 'กรุณาระบุหมายเหตุการแก้ไข (เพื่อให้รู้ว่าสร้าง Version ใหม่ทำไม)', 'warning');
+        if (!remark) return Swal.fire('แจ้งเตือน', 'กรุณาระบุหมายเหตุการแก้ไข', 'warning');
 
-        // รวบรวมรายการสินค้า
         const rows = document.querySelectorAll('#editItemsTable tbody tr');
         if (rows.length === 0) return Swal.fire('แจ้งเตือน', 'ต้องมีสินค้าอย่างน้อย 1 รายการ', 'warning');
         
         const details = [];
         rows.forEach(tr => {
             details.push({
+                product_type: tr.querySelector('.i-type').value,
                 sku: tr.querySelector('.i-sku').value,
                 description: tr.querySelector('.i-desc').value,
+                carton: tr.querySelector('.i-carton').value,
                 qty: parseFloat(tr.querySelector('.i-qty').value) || 0,
                 price: parseFloat(tr.querySelector('.i-price').value) || 0,
                 nw: parseFloat(tr.querySelector('.i-nw').value) || 0,
                 gw: parseFloat(tr.querySelector('.i-gw').value) || 0,
                 cbm: parseFloat(tr.querySelector('.i-cbm').value) || 0,
-                po: '', carton: '', marks: '' // ฟิลด์เสริม สามารถเพิ่มใน UI ภายหลังได้
+                po: tr.querySelector('.i-po').value,
+                marks: tr.querySelector('.i-marks').value
             });
         });
 
-        // จัดโครงสร้าง Payload ให้เหมือนการ Import จาก Excel เป๊ะๆ
         const invoices = {};
         invoices[invNo] = {
             customerData: {
                 name: document.getElementById('editCustName').value,
+                address: document.getElementById('editAddress').value,
                 consignee: document.getElementById('editConsignee').value,
                 notify_party: document.getElementById('editNotify').value,
                 incoterms: document.getElementById('editIncoterms').value,
@@ -532,8 +560,14 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             shippingData: {
                 invoice_date: document.getElementById('editInvDate').value,
-                container_no: document.getElementById('editContainer').value,
+                container_qty: document.getElementById('editContainerQty').value,
+                port_loading: document.getElementById('editPortLoading').value,
+                port_discharge: document.getElementById('editPortDischarge').value,
+                etd_date: document.getElementById('editEtd').value,
+                eta_date: document.getElementById('editEta').value,
                 feeder_vessel: document.getElementById('editVessel').value,
+                mother_vessel: document.getElementById('editMotherVessel').value,
+                container_no: document.getElementById('editContainer').value,
                 seal_no: document.getElementById('editSeal').value
             },
             details: details
@@ -542,11 +576,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = {
             action: 'import_invoice',
             report_id: 0,
-            remark: '[Web Edit] ' + remark, // พ่วงคำว่า Web Edit ให้รู้ว่าแก้ผ่านเว็บ
+            remark: '[Web Edit] ' + remark,
             invoices: invoices
         };
 
-        // ยิงเข้า API เดียวกับตอนอัปโหลด Excel เลย!
         Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
         fetch('api/api_invoice.php', {
@@ -559,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (resData.success) {
                 bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
                 Swal.fire('Success', 'สร้างเวอร์ชันใหม่สำเร็จ!', 'success');
-                loadHistory(); // รีเฟรชตารางหน้าเว็บ
+                loadHistory(); 
             } else {
                 Swal.fire('Error', resData.message, 'error');
             }
@@ -570,9 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // ==========================================================
-    // --- 6. Live Search Filter (ค้นหาในตาราง) ---
-    // ==========================================================
+    // --- 6. Live Search Filter ---
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('keyup', function() {
@@ -580,10 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('#historyTable tbody tr');
             
             rows.forEach(row => {
-                // ข้ามแถวที่เขียนว่า "กำลังโหลด..." หรือ "ไม่มีข้อมูล"
                 if(row.cells.length < 2) return; 
-                
-                // ดึงข้อความทั้งแถวมาตรวจสอบ
                 const rowText = row.textContent.toLowerCase();
                 if (rowText.includes(filter)) {
                     row.style.display = '';
@@ -594,11 +622,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==========================================================
     // --- 7. Status, Void, and Filters ---
-    // ==========================================================
-    
-    // ล้างตัวกรอง
     window.clearFilter = function() {
         document.getElementById('filterStartDate').value = '';
         document.getElementById('filterEndDate').value = '';
@@ -606,9 +630,8 @@ document.addEventListener('DOMContentLoaded', function() {
         loadHistory();
     };
 
-    // เปลี่ยนสถานะบิล (คลิกที่ Badge สถานะ)
     window.changeStatus = function(invoiceNo, currentStatus) {
-        if (currentStatus === 'Voided') return; // ยกเลิกแล้วแก้ไม่ได้
+        if (currentStatus === 'Voided') return; 
 
         Swal.fire({
             title: 'เปลี่ยนสถานะ Invoice',
@@ -629,7 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // ยกเลิกบิล (Void)
     window.voidInvoice = function(invoiceNo) {
         Swal.fire({
             title: 'ยืนยันการยกเลิกบิล?',
@@ -649,7 +671,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // กู้คืนบิล (Restore)
     window.restoreInvoice = function(invoiceNo) {
         Swal.fire({
             title: 'ยืนยันการกู้คืนบิล?',
@@ -670,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(resData => {
                     if (resData.success) {
                         Swal.fire('สำเร็จ!', resData.message, 'success');
-                        loadHistory(); // รีเฟรชตาราง
+                        loadHistory(); 
                     } else {
                         Swal.fire('Error', resData.message, 'error');
                     }
@@ -679,7 +700,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // ฟังก์ชันหลักยิง API เปลี่ยนสถานะ
     function updateInvoiceStatus(invoiceNo, status, remark) {
         fetch('api/api_invoice.php', {
             method: 'POST',
@@ -690,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(resData => {
             if (resData.success) {
                 Swal.fire('สำเร็จ!', resData.message, 'success');
-                loadHistory(); // รีเฟรชตาราง
+                loadHistory(); 
             } else {
                 Swal.fire('Error', resData.message, 'error');
             }
