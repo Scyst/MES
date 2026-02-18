@@ -114,12 +114,12 @@
 
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-file-import me-2"></i>อัปโหลดไฟล์ Excel</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-file-import me-2"></i>อัปโหลดไฟล์ Excel</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body bg-light">
                 <form id="formImport">
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -133,9 +133,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <div id="dropZone" class="drop-zone p-4 text-center border rounded bg-light" style="border-style: dashed !important; border-width: 2px !important; cursor: pointer;">
+                        <div id="dropZone" class="drop-zone p-4 text-center border rounded bg-white" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important; cursor: pointer;">
                             <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2"></i>
-                            <h6 class="fw-bold">ลากไฟล์มาวางที่นี่</h6>
+                            <h6 class="fw-bold text-dark">ลากไฟล์มาวางที่นี่</h6>
                             <p class="text-muted small mb-0">หรือคลิกเพื่อเลือกไฟล์ (.xlsx, .csv)</p>
                             <input type="file" id="fileInput" accept=".xlsx, .csv" class="d-none">
                         </div>

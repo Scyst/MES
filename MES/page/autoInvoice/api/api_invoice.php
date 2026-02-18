@@ -232,6 +232,32 @@ try {
             break;
 
         // ======================================================================
+        // CASE: restore_invoice (กู้คืนบิลที่ถูก Void ไปแล้ว)
+        // ======================================================================
+        case 'restore_invoice':
+            $invoice_no = $input['invoice_no'] ?? '';
+            if (!$invoice_no) throw new Exception("ข้อมูลไม่ครบถ้วน");
+
+            // 1. ดึง Remark เดิมออกมาก่อน เพื่อที่จะล้างคำว่า [VOID] ... | ทิ้งไป
+            $stmt = $pdo->prepare("SELECT remark FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE invoice_no = ? AND is_active = 1");
+            $stmt->execute([$invoice_no]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $newRemark = $row['remark'] ?? '';
+            if (strpos($newRemark, '[VOID]') !== false) {
+                // แยกข้อความที่ถูกคั่นด้วย ' | ' และเอาเฉพาะส่วนที่เป็น Remark ดั้งเดิมกลับมา
+                $parts = explode(' | ', $newRemark, 2);
+                $newRemark = isset($parts[1]) ? $parts[1] : '';
+            }
+
+            // 2. อัปเดตสถานะกลับเป็น Pending และใส่ Remark ที่ล้างแล้วกลับเข้าไป
+            $updateSql = "UPDATE dbo.FINANCE_INVOICES SET doc_status = 'Pending', remark = ? WHERE invoice_no = ? AND is_active = 1";
+            $pdo->prepare($updateSql)->execute([$newRemark, $invoice_no]);
+
+            echo json_encode(['success' => true, 'message' => "กู้คืนบิล $invoice_no สำเร็จ!"]);
+            break;
+
+        // ======================================================================
         // DEFAULT: กรณีเรียก Action ผิด
         // ======================================================================
         default:

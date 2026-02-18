@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('fileInput');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     let selectedFile = null;
+    let allInvoiceData = [];
+    let currentStatusFilter = 'ALL';
 
     if (dropZone && fileInput) {
         dropZone.addEventListener('click', () => fileInput.click());
@@ -36,64 +38,119 @@ document.addEventListener('DOMContentLoaded', function() {
         const start = document.getElementById('filterStartDate')?.value || '';
         const end = document.getElementById('filterEndDate')?.value || '';
         
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลด...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
 
         fetch(`api/api_invoice.php?action=get_history&start=${start}&end=${end}`)
             .then(res => res.json())
             .then(resData => {
-                if (resData.success && resData.data.length > 0) {
-                    tbody.innerHTML = ''; // ล้างข้อความโหลด
-                    
-                    resData.data.forEach(inv => {
-                        const tr = document.createElement('tr');
-                        let statusBadge = '';
-                        if (inv.doc_status === 'Pending') statusBadge = `<span class="badge bg-warning text-dark" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-clock"></i> Pending</span>`;
-                        else if (inv.doc_status === 'Exported') statusBadge = `<span class="badge bg-info text-dark" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-plane-departure"></i> Exported</span>`; // <--- เพิ่มบรรทัดนี้ครับ
-                        else if (inv.doc_status === 'Paid') statusBadge = `<span class="badge bg-success" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-check-circle"></i> Paid</span>`;
-                        else if (inv.doc_status === 'Voided') statusBadge = `<span class="badge bg-danger"><i class="fas fa-ban"></i> Voided</span>`;
-                        
-                        const rowClass = (inv.doc_status === 'Voided') ? 'table-danger text-muted text-decoration-line-through' : '';
-
-                        tr.className = rowClass;
-                        tr.innerHTML = `
-                            <td class="fw-bold text-primary">${inv.invoice_no}</td>
-                            <td>
-                                <div class="text-truncate fw-bold" style="max-width: 250px;" title="${inv.customer_name}">${inv.customer_name}</div>
-                            </td>
-                            <td>
-                                <div class="small"><i class="fas fa-box text-muted me-1"></i> ${inv.container_no}</div>
-                                <div class="small"><i class="fas fa-ship text-muted me-1"></i> ${inv.vessel}</div>
-                            </td>
-                            <td class="text-center small">
-                                <span class="text-success" title="ETD">D: ${inv.etd_date}</span><br>
-                                <span class="text-danger" title="ETA">A: ${inv.eta_date}</span>
-                            </td>
-                            <td class="text-end fw-bold">${inv.total_amount}</td>
-                            <td class="text-center">
-                                ${statusBadge}<br>
-                                <span class="badge bg-secondary mt-1">v.${inv.version}</span>
-                            </td>
-                            <td class="text-center text-muted small">${inv.created_at}</td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-info" onclick="viewVersions('${inv.invoice_no}')" title="ประวัติ"><i class="fas fa-history"></i></button>
-                                    ${inv.doc_status !== 'Voided' ? `<button type="button" class="btn btn-outline-warning" onclick="openWebEdit(${inv.id})" title="แก้ไข"><i class="fas fa-edit"></i></button>` : ''}
-                                    <a href="print_ci.php?id=${inv.id}" target="_blank" class="btn btn-outline-primary" title="Print CI">CI</a>
-                                    ${inv.doc_status !== 'Voided' ? `<button type="button" class="btn btn-outline-danger" onclick="voidInvoice('${inv.invoice_no}')" title="ยกเลิกบิล"><i class="fas fa-trash-alt"></i></button>` : ''}
-                                </div>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+                if (resData.success) {
+                    allInvoiceData = resData.data; // เก็บข้อมูลทั้งหมดไว้ในตัวแปร
+                    renderTable(); // สั่งวาดตาราง
+                    updateKPIs();  // สั่งนับเลข KPI
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีข้อมูล Invoice ในระบบ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
                 }
             })
             .catch(err => {
-                console.error('Fetch History Error:', err);
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
             });
     }
+
+    function renderTable() {
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = '';
+
+        // กรองข้อมูลตามสถานะปัจจุบัน
+        let filteredData = allInvoiceData;
+        if (currentStatusFilter !== 'ALL') {
+            filteredData = allInvoiceData.filter(inv => inv.doc_status === currentStatusFilter);
+        }
+
+        if (filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">
+                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลในสถานะ ${currentStatusFilter}
+            </td></tr>`;
+            return;
+        }
+
+        filteredData.forEach(inv => {
+            const tr = document.createElement('tr');
+            
+            let statusBadge = '';
+            if (inv.doc_status === 'Pending') statusBadge = `<span class="badge bg-warning text-dark px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-clock"></i> Pending</span>`;
+            else if (inv.doc_status === 'Exported') statusBadge = `<span class="badge bg-info text-dark px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-plane-departure"></i> Exported</span>`;
+            else if (inv.doc_status === 'Paid') statusBadge = `<span class="badge bg-success px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-check-circle"></i> Paid</span>`;
+            else if (inv.doc_status === 'Voided') statusBadge = `<span class="badge bg-danger px-2 py-1"><i class="fas fa-ban"></i> Voided</span>`;
+            
+            const rowClass = (inv.doc_status === 'Voided') ? 'table-light text-muted opacity-75' : '';
+
+            tr.className = rowClass;
+            tr.innerHTML = `
+                <td class="fw-bold text-primary">${inv.invoice_no}</td>
+                <td>
+                    <div class="text-truncate fw-bold text-dark" style="max-width: 200px;" title="${inv.customer_name}">${inv.customer_name}</div>
+                </td>
+                <td>
+                    <div class="small text-secondary"><i class="fas fa-box w-15px"></i> ${inv.container_no}</div>
+                    <div class="small text-secondary"><i class="fas fa-ship w-15px"></i> <span class="text-truncate d-inline-block" style="max-width: 150px; vertical-align: bottom;">${inv.vessel}</span></div>
+                </td>
+                <td class="text-center small">
+                    <span class="text-success fw-bold" title="ETD"><i class="fas fa-calendar-alt"></i> ${inv.etd_date}</span><br>
+                    <span class="text-danger" title="ETA"><i class="fas fa-calendar-check"></i> ${inv.eta_date}</span>
+                </td>
+                <td class="text-end fw-bold text-dark">${inv.total_amount}</td>
+                <td class="text-center">
+                    ${statusBadge}<br>
+                    <span class="badge border text-secondary mt-1">v.${inv.version}</span>
+                </td>
+                <td class="text-center text-muted small">${inv.created_at}</td>
+                <td class="text-center">
+                    <div class="btn-group shadow-sm">
+                        <button type="button" class="btn btn-sm btn-light border text-info" onclick="viewVersions('${inv.invoice_no}')" title="History"><i class="fas fa-history"></i></button>
+                        
+                        ${inv.doc_status !== 'Voided' ? `<button type="button" class="btn btn-sm btn-light border text-warning" onclick="openWebEdit(${inv.id})" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
+                        
+                        <a href="print_ci.php?id=${inv.id}" target="_blank" class="btn btn-sm btn-primary" title="Print CI">CI</a>
+                        <a href="print_pl.php?id=${inv.id}" target="_blank" class="btn btn-sm btn-secondary" title="Print PL">PL</a>
+                        
+                        ${inv.doc_status !== 'Voided' ? `<button type="button" class="btn btn-sm btn-light border text-danger" onclick="voidInvoice('${inv.invoice_no}')" title="Void"><i class="fas fa-trash-alt"></i></button>` : ''}
+                        
+                        ${inv.doc_status === 'Voided' ? `<button type="button" class="btn btn-sm btn-light border text-success" onclick="restoreInvoice('${inv.invoice_no}')" title="Restore"><i class="fas fa-undo"></i></button>` : ''}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ฟังก์ชันนับตัวเลขลงในการ์ด KPI
+    function updateKPIs() {
+        document.getElementById('kpi-all').innerText = allInvoiceData.length;
+        document.getElementById('kpi-pending').innerText = allInvoiceData.filter(d => d.doc_status === 'Pending').length;
+        document.getElementById('kpi-exported').innerText = allInvoiceData.filter(d => d.doc_status === 'Exported').length;
+        document.getElementById('kpi-paid').innerText = allInvoiceData.filter(d => d.doc_status === 'Paid').length;
+        document.getElementById('kpi-voided').innerText = allInvoiceData.filter(d => d.doc_status === 'Voided').length;
+    }
+
+    // ฟังก์ชันเมื่อคลิกการ์ด (สลับ Active)
+    window.filterStatus = function(status) {
+        currentStatusFilter = status;
+        
+        // เคลียร์ class active เดิม
+        document.querySelectorAll('.kpi-card').forEach(c => {
+            c.classList.remove('active');
+            c.style.borderWidth = '0 0 0 4px'; // คืนค่า border
+        });
+        
+        // ใส่ class active ให้การ์ดที่ถูกคลิก
+        const activeCard = document.getElementById('card-' + status);
+        if(activeCard) {
+            activeCard.classList.add('active');
+        }
+        
+        renderTable(); // วาดตารางใหม่ด้วยข้อมูลเดิมที่ Filter แล้ว
+};
 
     window.loadHistory = loadHistory;
     loadHistory();
@@ -588,6 +645,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 updateInvoiceStatus(invoiceNo, 'Voided', result.value);
+            }
+        });
+    };
+
+    // กู้คืนบิล (Restore)
+    window.restoreInvoice = function(invoiceNo) {
+        Swal.fire({
+            title: 'ยืนยันการกู้คืนบิล?',
+            text: `คุณต้องการกู้คืนบิล ${invoiceNo} ให้กลับมาสถานะ Pending ใช่หรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-undo me-1"></i> ใช่, กู้คืนเลย!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('api/api_invoice.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'restore_invoice', invoice_no: invoiceNo })
+                })
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.success) {
+                        Swal.fire('สำเร็จ!', resData.message, 'success');
+                        loadHistory(); // รีเฟรชตาราง
+                    } else {
+                        Swal.fire('Error', resData.message, 'error');
+                    }
+                });
             }
         });
     };
