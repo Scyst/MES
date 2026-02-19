@@ -35,7 +35,12 @@
             <div class="modal-header bg-primary text-white align-items-center">
                 <h5 class="modal-title fw-bold mb-0 d-flex align-items-center">
                     <i class="fas fa-edit me-2"></i>Invoice No: 
-                    <input type="text" id="editInvoiceNo" class="form-control form-control-sm ms-2 fw-bold text-primary" style="width: 220px; font-size: 1.1rem;" placeholder="AUTO">
+                    <div class="input-group input-group-sm ms-2" style="width: 250px;">
+                        <input type="text" id="editInvoiceNo" class="form-control fw-bold text-primary" style="font-size: 1.1rem;" placeholder="AUTO">
+                        <button class="btn btn-light border text-primary" type="button" id="btnSearchInvoice" title="ดึงข้อมูลบิลเดิม" onclick="searchInvoiceByNo()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

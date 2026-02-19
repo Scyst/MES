@@ -708,6 +708,119 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
+    // 📌 ฟังก์ชันตัวช่วยสำหรับหยอดข้อมูลลงฟอร์ม (เพื่อไม่ให้เขียนโค้ดซ้ำ)
+    window.fillInvoiceForm = function(inv) {
+        document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
+        
+        // Customer
+        document.getElementById('editCustName').value = inv.customer.name || '';
+        document.getElementById('editAddress').value = inv.customer.address || '';
+        document.getElementById('editConsignee').value = inv.customer.consignee || '';
+        document.getElementById('editNotify').value = inv.customer.notify_party || '';
+        document.getElementById('editIncoterms').value = inv.customer.incoterms || '';
+        document.getElementById('editPayment').value = inv.customer.payment_terms || '';
+        
+        // Shipping
+        document.getElementById('editInvDate').value = window.formatDateForInput(inv.shipping.invoice_date);
+        document.getElementById('editContainerQty').value = inv.shipping.container_qty || '';
+        document.getElementById('editPortLoading').value = inv.shipping.port_loading || 'LAEM CHABANG, THAILAND';
+        document.getElementById('editPortDischarge').value = inv.shipping.port_discharge || '';
+        document.getElementById('editEtd').value = window.formatDateForInput(inv.shipping.etd_date);
+        document.getElementById('editEta').value = window.formatDateForInput(inv.shipping.eta_date);
+        document.getElementById('editVessel').value = inv.shipping.feeder_vessel || '';
+        document.getElementById('editMotherVessel').value = inv.shipping.mother_vessel || '';
+        document.getElementById('editContainer').value = inv.shipping.container_no || '';
+        document.getElementById('editSeal').value = inv.shipping.seal_no || '';
+        
+        document.getElementById('editRemark').value = ''; 
+        
+        const tbody = document.querySelector('#editItemsTable tbody');
+        tbody.innerHTML = '';
+        if (inv.details && inv.details.length > 0) {
+            inv.details.forEach(item => addEditItemRow(item));
+        } else {
+            addEditItemRow(); // ถ้าไม่มีสินค้าเลย ใส่แถวว่างๆ ไว้ 1 แถว
+        }
+    };
+
+    // 📌 ฟังก์ชันใหม่! ค้นหาบิลจากเลข Invoice No ใน Modal
+    window.searchInvoiceByNo = function() {
+        const inputEl = document.getElementById('editInvoiceNo');
+        let invNo = inputEl.value.trim().toUpperCase();
+        inputEl.value = invNo; // จัด Format เป็นตัวพิมพ์ใหญ่
+
+        if (!invNo || invNo === 'AUTO') {
+            return; // ถ้าว่าง หรือเป็น AUTO ไม่ต้องค้นหา
+        }
+
+        const btnSearch = document.getElementById('btnSearchInvoice');
+        btnSearch.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch(`api/api_invoice.php?action=get_invoice_by_no&invoice_no=${encodeURIComponent(invNo)}`)
+            .then(res => res.json())
+            .then(resData => {
+                if (resData.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'พบข้อมูลบิลเดิม!',
+                        text: 'ดึงข้อมูลเวอร์ชันล่าสุดมาให้แล้ว (หากกดบันทึก จะเป็นการสร้าง Version ใหม่)',
+                        timer: 2500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                    fillInvoiceForm(resData); // หยอดข้อมูล
+                } else {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'สร้างบิลใหม่',
+                        text: 'ไม่พบเลข Invoice นี้ในระบบ สามารถกรอกข้อมูลเพื่อสร้างบิลใหม่ได้เลย',
+                        timer: 2500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            })
+            .finally(() => {
+                btnSearch.innerHTML = '<i class="fas fa-search"></i>';
+            });
+    };
+
+    window.openWebEdit = function(id) {
+        Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        fetch(`api/api_invoice.php?action=get_invoice_detail&id=${id}`)
+            .then(res => res.json())
+            .then(resData => {
+                Swal.close();
+                if (resData.success) {
+                    fillInvoiceForm(resData); // ยุบโค้ดให้เหลือแค่นี้!
+                    document.getElementById('editInvoiceNo').readOnly = true; // ล็อคห้ามแก้
+                    new bootstrap.Modal(document.getElementById('editModal')).show();
+                } else {
+                    Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.close(); console.error(err); Swal.fire('Error', 'ไม่สามารถเชื่อมต่อได้', 'error');
+            });
+    };
+
+    // กด Enter ในช่องค้นหา Invoice No ให้ทำทีกดปุ่มค้นหาเลย
+    const editInvInput = document.getElementById('editInvoiceNo');
+    if (editInvInput) {
+        editInvInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // กันไม่ให้ฟอร์มเผลอ Submit
+                window.searchInvoiceByNo();
+            }
+        });
+    }
+
     // --- 6. Live Search Filter ---
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {

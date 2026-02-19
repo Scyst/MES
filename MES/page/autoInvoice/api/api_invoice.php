@@ -288,6 +288,46 @@ try {
             echo json_encode(['success' => true, 'data' => $defaults]);
             break;
 
+        // ======================================================================
+        // CASE: get_invoice_by_no (ค้นหาและดึงข้อมูลบิลล่าสุดด้วยเลข Invoice No)
+        // ======================================================================
+        case 'get_invoice_by_no':
+            $invNo = $_GET['invoice_no'] ?? '';
+            if (!$invNo) throw new Exception("กรุณาระบุ Invoice No");
+
+            // หา ID ของเวอร์ชันล่าสุดที่ Active อยู่
+            $stmtId = $pdo->prepare("SELECT id FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE invoice_no = ? AND is_active = 1");
+            $stmtId->execute([$invNo]);
+            $rowId = $stmtId->fetch(PDO::FETCH_ASSOC);
+
+            if (!$rowId) {
+                echo json_encode(['success' => false, 'message' => 'ไม่พบข้อมูล']);
+                break;
+            }
+
+            // ถ้าเจอ ให้ทำงานเหมือน get_invoice_detail ทุกประการ
+            $invoice_id = $rowId['id'];
+
+            $stmt = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE id = ?");
+            $stmt->execute([$invoice_id]);
+            $header = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $stmtDet = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
+            $stmtDet->execute([$invoice_id]);
+            $details = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
+
+            $customer = json_decode($header['customer_data_json'], true) ?: [];
+            $shipping = json_decode($header['shipping_data_json'], true) ?: [];
+
+            echo json_encode([
+                'success' => true,
+                'header' => $header,
+                'customer' => $customer,
+                'shipping' => $shipping,
+                'details' => $details
+            ]);
+            break;
+
         default:
             throw new Exception("Invalid Action or Method");
     }
