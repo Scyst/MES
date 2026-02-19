@@ -108,8 +108,13 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                 <button type="button" id="btnDownloadTemplate" class="btn btn-outline-success btn-sm shadow-sm fw-bold">
                                     <i class="fas fa-file-excel me-1"></i> Template
                                 </button>
-                                <button type="button" class="btn btn-primary btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <i class="fas fa-file-import me-1"></i> Import Invoice
+                                
+                                <button type="button" class="btn btn-info text-white btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
+                                    <i class="fas fa-file-import me-1"></i> อัปโหลด Excel
+                                </button>
+                                
+                                <button type="button" class="btn btn-primary btn-sm shadow-sm fw-bold" onclick="openCreateInvoice()">
+                                    <i class="fas fa-plus me-1"></i> สร้าง Invoice
                                 </button>
                             </div>
                         </div>

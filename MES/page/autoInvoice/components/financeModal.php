@@ -30,11 +30,12 @@
 </div>
 
 <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+    <div class="modal-dialog modal-fullscreen-lg-down" style="max-width: 95%;">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-edit me-2"></i>แก้ไข Invoice: <span id="editInvoiceNoTxt"></span>
+            <div class="modal-header bg-primary text-white align-items-center">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center">
+                    <i class="fas fa-edit me-2"></i>Invoice No: 
+                    <input type="text" id="editInvoiceNo" class="form-control form-control-sm ms-2 fw-bold text-primary" style="width: 220px; font-size: 1.1rem;" placeholder="AUTO">
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -68,14 +69,14 @@
                                 <div class="card-header bg-white fw-bold"><i class="fas fa-ship text-info me-2"></i>ข้อมูลขนส่ง (Shipping)</div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-6 mb-2"><label class="form-label small">Invoice Date</label><input type="text" id="editInvDate" class="form-control form-control-sm" required></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">Invoice Date</label><input type="date" id="editInvDate" class="form-control form-control-sm" required></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
                                         
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Loading</label><input type="text" id="editPortLoading" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Discharge</label><input type="text" id="editPortDischarge" class="form-control form-control-sm"></div>
 
-                                        <div class="col-6 mb-2"><label class="form-label small">ETD Date</label><input type="text" id="editEtd" class="form-control form-control-sm"></div>
-                                        <div class="col-6 mb-2"><label class="form-label small">ETA Date</label><input type="text" id="editEta" class="form-control form-control-sm"></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">ETD Date</label><input type="date" id="editEtd" class="form-control form-control-sm"></div>
+                                        <div class="col-6 mb-2"><label class="form-label small">ETA Date</label><input type="date" id="editEta" class="form-control form-control-sm"></div>
 
                                         <div class="col-12 mb-2"><label class="form-label small">Feeder Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
                                         <div class="col-12 mb-2"><label class="form-label small">Mother Vessel</label><input type="text" id="editMotherVessel" class="form-control form-control-sm"></div>
@@ -95,20 +96,20 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered align-middle mb-0" id="editItemsTable" style="font-size: 0.85rem; min-width: 1000px;">
+                                <table class="table table-bordered align-middle mb-0" id="editItemsTable" style="font-size: 0.85rem; min-width: 1400px;">
                                     <thead class="table-light text-center">
                                         <tr>
                                             <th style="width: 150px;">Product Type <small class="text-danger d-block">(หมวดหมู่สินค้า)</small></th>
-                                            <th style="width: 120px;">SKU <small class="d-block">(รหัสสินค้า)</small></th>
-                                            <th style="min-width: 200px;">Description</th>
-                                            <th style="width: 100px;">Carton No</th>
+                                            <th style="width: 140px;">SKU <small class="d-block">(รหัสสินค้า)</small></th>
+                                            <th style="min-width: 250px;">Description</th>
+                                            <th style="width: 120px;">Carton No</th>
                                             <th style="width: 90px;">Qty</th>
                                             <th style="width: 110px;">Price(USD)</th>
                                             <th style="width: 90px;">N.W (Ex)</th>
                                             <th style="width: 90px;">G.W (Ex)</th>
                                             <th style="width: 90px;">CBM (Ex)</th>
-                                            <th style="width: 120px;">PO No</th>
-                                            <th style="width: 120px;">Marks</th>
+                                            <th style="width: 130px;">PO No</th>
+                                            <th style="width: 130px;">Marks</th>
                                             <th style="width: 50px;">ลบ</th>
                                         </tr>
                                     </thead>
@@ -128,7 +129,7 @@
             </div>
             <div class="modal-footer bg-white">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="saveWebEdit()"><i class="fas fa-save me-2"></i>บันทึกเป็นเวอร์ชันใหม่</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="saveWebEdit(this)"><i class="fas fa-save me-2"></i>บันทึกเป็นเวอร์ชันใหม่</button>
             </div>
         </div>
     </div>

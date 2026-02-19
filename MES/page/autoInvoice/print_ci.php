@@ -81,13 +81,12 @@ function numberToWordsUsd($num) {
         .text-left { text-align: left; }
         .fw-bold { font-weight: bold; }
         
-        /* Address Box (ตัดคำสวยงาม) */
         .address-box {
             white-space: pre-line;
             word-wrap: break-word;
-            word-break: break-word;
+            word-break: break-word; 
             overflow-wrap: break-word;
-            text-align: justify;
+            text-align: left;
             line-height: 1.4;
         }
         
@@ -367,7 +366,7 @@ function numberToWordsUsd($num) {
                         <div class="fw-bold" style="margin-bottom: 5px;">NOTIFY PARTY:-</div>
                         <div class="address-box" style="margin-bottom: 40px;"><?= htmlspecialchars(trim($customer['notify_party'] ?? '-')) ?></div>
                         
-                        <div style="position: absolute; right: -70px; bottom: -15px; text-align: center; width: 220px; z-index: 10;">
+                        <div style="position: absolute; right: -70px; bottom: 15px; text-align: center; width: 220px; z-index: 10;">
                             <img src="../components/images/company_stamp.png" alt="Company Stamp" style="width: 150px; height: 120px; margin-bottom: 5px; mix-blend-mode: multiply;">
                         </div>
                     </div>

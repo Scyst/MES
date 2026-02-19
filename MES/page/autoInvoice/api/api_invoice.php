@@ -115,9 +115,11 @@ try {
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($result && $result['success'] == 1) {
                     $successCount++;
-                    $processedInvoices[] = $invNo . " (v" . $result['current_version'] . ")";
+                    // 📌 แก้ไขให้ดึงเลขบิลจริงที่ SP สร้างให้มาโชว์ (ถ้าไม่ได้สร้างใหม่ก็เอาเลขเดิม)
+                    $actualInvNo = $result['invoice_no'] ?? $invNo;
+                    $processedInvoices[] = $actualInvNo . " (v" . $result['current_version'] . ")";
                 } else {
-                    throw new Exception("เกิดข้อผิดพลาดจาก Stored Procedure ระหว่างนำเข้าบิล: " . $invNo);
+                    throw new Exception("เกิดข้อผิดพลาดจาก Stored Procedure ระหว่างนำเข้าบิล");
                 }
             }
 
@@ -220,6 +222,70 @@ try {
             $pdo->prepare($updateSql)->execute([$invoice_no]);
 
             echo json_encode(['success' => true, 'message' => "กู้คืนบิล $invoice_no สำเร็จ!"]);
+            break;
+
+        // ======================================================================
+        // CASE: get_item_info (ดึงข้อมูล Master ของสินค้าจาก SKU)
+        // ======================================================================
+        case 'get_item_info':
+            $sku = $_GET['sku'] ?? '';
+            if (!$sku) throw new Exception("ไม่พบรหัส SKU");
+
+            $sql = "SELECT TOP 1 
+                        part_description, 
+                        invoice_description, 
+                        Price_USD,
+                        net_weight, 
+                        gross_weight, 
+                        cbm,
+                        CTN,
+                        material_type
+                    FROM dbo.ITEMS WITH (NOLOCK) 
+                    WHERE sku = ? AND is_active = 1";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$sku]);
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($item) {
+                echo json_encode(['success' => true, 'data' => $item]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'ไม่พบข้อมูลสินค้านี้ในระบบ Master']);
+            }
+            break;
+
+        // ======================================================================
+        // CASE: get_last_invoice_defaults (ดึงข้อมูลซ้ำๆ จากบิลล่าสุดมาเป็นค่าเริ่มต้น)
+        // ======================================================================
+        case 'get_last_invoice_defaults':
+            // ดึงบิลล่าสุดที่ Active
+            $stmt = $pdo->query("SELECT TOP 1 id, customer_data_json, shipping_data_json 
+                                 FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
+                                 WHERE is_active = 1 
+                                 ORDER BY created_at DESC");
+            $lastInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $defaults = [
+                'customer' => [],
+                'shipping' => [],
+                'product_type' => ''
+            ];
+
+            if ($lastInvoice) {
+                $defaults['customer'] = json_decode($lastInvoice['customer_data_json'], true) ?: [];
+                $defaults['shipping'] = json_decode($lastInvoice['shipping_data_json'], true) ?: [];
+                
+                // ดึง Product Type จากรายการสินค้าแรกของบิลนั้น
+                $stmtDet = $pdo->prepare("SELECT TOP 1 product_type FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
+                $stmtDet->execute([$lastInvoice['id']]);
+                $lastDetail = $stmtDet->fetch(PDO::FETCH_ASSOC);
+                
+                if ($lastDetail) {
+                    $defaults['product_type'] = $lastDetail['product_type'] ?? '';
+                }
+            }
+            
+            echo json_encode(['success' => true, 'data' => $defaults]);
             break;
 
         default:

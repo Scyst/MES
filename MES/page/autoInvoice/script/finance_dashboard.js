@@ -1,3 +1,51 @@
+// 📌 ฟังก์ชันแปลงวันที่ครอบจักรวาล (Global Scope ไว้บรรทัดบนสุด)
+window.formatUniversalDate = function(val) {
+    if (!val) return '';
+    let d;
+    
+    // 1. กรณีเป็นตัวเลขจาก Excel (เช่น 46072)
+    if (!isNaN(val) && Number(val) > 10000) {
+        d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+    } 
+    // 2. กรณีมี / (เช่น 19/2/2026 หรือ 19/02/2026)
+    else if (typeof val === 'string' && val.includes('/')) {
+        let parts = val.split('/');
+        // แปลงจาก DD/MM/YYYY เป็น YYYY-MM-DD ให้ JS เข้าใจ
+        if (parts.length === 3 && parts[2].length === 4) {
+            d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+        } else {
+            d = new Date(val);
+        }
+    } 
+    // 3. กรณีเป็นวันที่ปกติ หรือ YYYY-MM-DD (จาก Date Picker บนเว็บ)
+    else {
+        d = new Date(val);
+    }
+
+    // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format เป็น "MONTH DD, YYYY"
+    if (!isNaN(d.getTime())) {
+        const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${month} ${day}, ${year}`;
+    }
+    return String(val).toUpperCase(); 
+};
+
+// 📌 ฟังก์ชันแปลงข้อความวันที่ กลับเป็น YYYY-MM-DD สำหรับหยอดใส่ <input type="date">
+window.formatDateForInput = function(val) {
+    if (!val) return '';
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    return '';
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // --- 1. Drag & Drop Logic ---
     const dropZone = document.getElementById('dropZone');
@@ -222,41 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     let headerFound = false;
                     let currentInvNo = null;
 
-                    // 📌 ฟังก์ชันแปลงวันที่ครอบจักรวาล (Excel, DD/MM/YYYY, YYYY-MM-DD)
-                    const formatUniversalDate = (val) => {
-                        if (!val) return '';
-                        let d;
-                        
-                        // 1. กรณีเป็นตัวเลขจาก Excel (เช่น 46072)
-                        if (!isNaN(val) && Number(val) > 10000) {
-                            d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
-                        } 
-                        // 2. กรณีมี / (เช่น 19/2/2026 หรือ 19/02/2026)
-                        else if (typeof val === 'string' && val.includes('/')) {
-                            let parts = val.split('/');
-                            // แปลงจาก DD/MM/YYYY เป็น YYYY-MM-DD ให้ JS เข้าใจ
-                            if (parts.length === 3 && parts[2].length === 4) {
-                                d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-                            } else {
-                                d = new Date(val);
-                            }
-                        } 
-                        // 3. กรณีเป็นวันที่ปกติ หรือ YYYY-MM-DD (จาก Date Picker บนเว็บ)
-                        else {
-                            d = new Date(val);
-                        }
-
-                        // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format เป็น "MONTH DD, YYYY"
-                        if (!isNaN(d.getTime())) {
-                            const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const month = months[d.getMonth()];
-                            const year = d.getFullYear();
-                            return `${month} ${day}, ${year}`; // รูปแบบเป้าหมาย
-                        }
-                        return String(val).toUpperCase(); // ถ้ามั่วจัดๆ คืนค่าเดิมไป
-                    };
-
                     for (let i = 0; i < rows.length; i++) {
                         let row = rows[i].map(c => String(c).trim());
                         if (row.filter(c => c !== '').length === 0) continue; 
@@ -269,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 idx.invoice_no = findIdx('INVOICE NO');
                                 idx.customer = findIdx('CUSTOMER NAME') !== -1 ? findIdx('CUSTOMER NAME') : findIdx('CUSTOMER');
-                                idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS'); // 📌 เพิ่มการหา Address
+                                idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS');
                                 idx.incoterms = findIdx('INCOTERMS');
                                 idx.consignee = findIdx('CONSIGNEE');
                                 idx.notify = findIdx('NOTIFY PARTY');
@@ -323,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 invoices[currentInvNo] = {
                                     customerData: { 
                                         name: getVal(idx.customer), 
-                                        address: getVal(idx.address), // 📌 ดึง Address เข้าไปเก็บแล้ว
+                                        address: getVal(idx.address), 
                                         incoterms: getVal(idx.incoterms),
                                         consignee: getVal(idx.consignee),
                                         notify_party: getVal(idx.notify),
@@ -336,9 +349,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         mother_vessel: getVal(idx.mother),
                                         container_no: getVal(idx.container), 
                                         seal_no: getVal(idx.seal), 
-                                        invoice_date: formatUniversalDate(getVal(idx.invoice_date)), 
-                                        etd_date: formatUniversalDate(getVal(idx.etd)), 
-                                        eta_date: formatUniversalDate(getVal(idx.eta)),
+                                        invoice_date: window.formatUniversalDate(getVal(idx.invoice_date)), 
+                                        etd_date: window.formatUniversalDate(getVal(idx.etd)), 
+                                        eta_date: window.formatUniversalDate(getVal(idx.eta)),
                                         container_qty: getVal(idx.container_qty),
                                         tare: getVal(idx.tare)
                                     },
@@ -421,49 +434,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 4. สร้างและดาวน์โหลด Excel Template ผ่าน SheetJS ---
+    // --- 4. สร้างและดาวน์โหลด Excel Template ---
     const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
     if (btnDownloadTemplate) {
         btnDownloadTemplate.addEventListener('click', function() {
-            const templateData = [
-                [
-                    'Invoice No', 'Invoice Date', 'Customer Name', 'Customer Address', 
-                    'Consignee', 'Notify Party', 'PO No', 'Incoterms', 
-                    'Payment Terms', 'Port of Loading', 'Port of Discharge', 
-                    'ETD Date', 'ETA Date', 'Feeder Vessel', 'Mother Vessel', 
-                    'Container Qty', 'Container No', 'Seal No', 'Shipping Marks', 
-                    'Carton No', 'SKU', 'Description', 'Quantity', 
-                    'Unit Price', 'N.W', 'G.W', 'CBM'
-                ],
-                [
-                    'INV-20260201', '2026-02-18', 'John Doe Co., Ltd.', '123 Main St, NY', 
-                    'SAME AS BUYER', 'SAME AS CONSIGNEE', 'PO-998877', 'FOB', 
-                    'T/T 30 DAYS', 'LAEM CHABANG', 'CHARLESTON', 
-                    '2026-02-22', '2026-04-27', 'XIN HANG ZHOU V.211W', '-', 
-                    '1X40HQ', 'TLLU1234567', 'SL998877', 'N/M', 
-                    '1-50', 'ITEM-001', 'PART A DESCRIPTION', 50, 
-                    15.50, 100.00, 110.00, 2.500
-                ]
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet(templateData);
-            ws['!cols'] = [
-                {wch: 15}, {wch: 15}, {wch: 30}, {wch: 40}, 
-                {wch: 20}, {wch: 20}, {wch: 15}, {wch: 15}, 
-                {wch: 20}, {wch: 20}, {wch: 20}, {wch: 15}, 
-                {wch: 15}, {wch: 25}, {wch: 20}, {wch: 15}, 
-                {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}, 
-                {wch: 20}, {wch: 35}, {wch: 15}, {wch: 15}, 
-                {wch: 15}, {wch: 15}, {wch: 15}
-            ];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Upload_Template");
-            XLSX.writeFile(wb, "Invoice_Upload_Template.xlsx");
+            window.location.href = 'api/export_template.php'; // เปลี่ยนให้ชี้ไปโหลดไฟล์ PHP โดยตรง
         });
     }
 
-    // --- 5. แก้ไข Invoice บนเว็บ (Web Edit) ---
+    // --- 5. แก้ไข/สร้าง Invoice บนเว็บ (Web Edit & Create) ---
     window.openWebEdit = function(id) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
@@ -473,8 +452,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.close();
                 if (resData.success) {
                     const inv = resData;
-                    document.getElementById('editInvoiceNoTxt').textContent = inv.header.invoice_no;
                     document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
+                    document.getElementById('editInvoiceNo').readOnly = true;
                     
                     // Customer
                     document.getElementById('editCustName').value = inv.customer.name || '';
@@ -485,12 +464,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('editPayment').value = inv.customer.payment_terms || '';
                     
                     // Shipping
-                    document.getElementById('editInvDate').value = inv.shipping.invoice_date || '';
+                    document.getElementById('editInvDate').value = window.formatDateForInput(inv.shipping.invoice_date);
                     document.getElementById('editContainerQty').value = inv.shipping.container_qty || '';
                     document.getElementById('editPortLoading').value = inv.shipping.port_loading || 'LAEM CHABANG, THAILAND';
                     document.getElementById('editPortDischarge').value = inv.shipping.port_discharge || '';
-                    document.getElementById('editEtd').value = inv.shipping.etd_date || '';
-                    document.getElementById('editEta').value = inv.shipping.eta_date || '';
+                    document.getElementById('editEtd').value = window.formatDateForInput(inv.shipping.etd_date);
+                    document.getElementById('editEta').value = window.formatDateForInput(inv.shipping.eta_date);
                     document.getElementById('editVessel').value = inv.shipping.feeder_vessel || '';
                     document.getElementById('editMotherVessel').value = inv.shipping.mother_vessel || '';
                     document.getElementById('editContainer').value = inv.shipping.container_no || '';
@@ -513,12 +492,67 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     };
 
+    window.openCreateInvoice = function() {
+        document.getElementById('formEditInvoice').reset();
+        
+        document.getElementById('editInvoiceNo').value = 'AUTO';
+        document.getElementById('editInvoiceNo').readOnly = false;
+        document.getElementById('editRemark').value = 'สร้างบิลใหม่ (Manual Entry)'; 
+        
+        const tbody = document.querySelector('#editItemsTable tbody');
+        tbody.innerHTML = '';
+
+        Swal.fire({ title: 'กำลังเตรียมแบบฟอร์ม...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        fetch(`api/api_invoice.php?action=get_last_invoice_defaults`)
+            .then(res => res.json())
+            .then(resData => {
+                Swal.close();
+                let defaultProductType = '';
+
+                if (resData.success && resData.data) {
+                    const defaults = resData.data;
+                    
+                    if (defaults.customer) {
+                        document.getElementById('editCustName').value = defaults.customer.name || '';
+                        document.getElementById('editAddress').value = defaults.customer.address || '';
+                        document.getElementById('editConsignee').value = defaults.customer.consignee || '';
+                        document.getElementById('editNotify').value = defaults.customer.notify_party || '';
+                        document.getElementById('editIncoterms').value = defaults.customer.incoterms || '';
+                        document.getElementById('editPayment').value = defaults.customer.payment_terms || '';
+                    }
+
+                    if (defaults.shipping) {
+                        document.getElementById('editPortLoading').value = defaults.shipping.port_loading || 'LAEM CHABANG, THAILAND';
+                        document.getElementById('editPortDischarge').value = defaults.shipping.port_discharge || '';
+                    }
+
+                    defaultProductType = defaults.product_type || '';
+                }
+
+                addEditItemRow({ product_type: defaultProductType });
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            })
+            .catch(err => {
+                Swal.close();
+                console.error(err);
+                addEditItemRow(); 
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            });
+    };
+
     window.addEditItemRow = function(item = {}) {
         const tbody = document.querySelector('#editItemsTable tbody');
         const tr = document.createElement('tr');
+        
         tr.innerHTML = `
             <td><input type="text" class="form-control form-control-sm i-type" value="${item.product_type || ''}" placeholder="หมวดหมู่"></td>
-            <td><input type="text" class="form-control form-control-sm i-sku" value="${item.sku || ''}" required></td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control i-sku fw-bold text-primary" value="${item.sku || ''}" placeholder="พิมพ์ SKU" required>
+                    <button class="btn btn-outline-secondary btn-search-sku" type="button" title="ค้นหาข้อมูล"><i class="fas fa-search"></i></button>
+                </div>
+            </td>
             <td><input type="text" class="form-control form-control-sm i-desc" value="${item.description || ''}"></td>
             <td><input type="text" class="form-control form-control-sm i-carton" value="${item.carton_no || ''}"></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm i-qty" value="${item.qty_carton || 1}" required></td>
@@ -530,10 +564,65 @@ document.addEventListener('DOMContentLoaded', function() {
             <td><input type="text" class="form-control form-control-sm i-marks" value="${item.shipping_marks || ''}"></td>
             <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
         `;
+        
+        const skuInput = tr.querySelector('.i-sku');
+        const searchBtn = tr.querySelector('.btn-search-sku');
+
+        const fetchSkuInfo = () => {
+            const skuVal = skuInput.value.trim();
+            if (!skuVal) return;
+
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            skuInput.classList.add('bg-light');
+
+            fetch(`api/api_invoice.php?action=get_item_info&sku=${encodeURIComponent(skuVal)}`)
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.success && resData.data) {
+                        const d = resData.data;
+                        
+                        // ดึง CTN มา (ถ้าไม่มีให้เป็น 1)
+                        const ctn = parseFloat(d.CTN) || 1;
+                        
+                        // 1. ใส่ชื่อสินค้า และ Qty (ดึงจาก CTN)
+                        tr.querySelector('.i-desc').value = d.invoice_description || d.part_description || '';
+                        tr.querySelector('.i-qty').value = ctn; // 📌 ตั้งค่า Qty เป็น CTN
+                        
+                        // 2. น้ำหนักและ CBM ต้องเอามา "คูณ CTN" ตามที่แอดมินต้องการ
+                        const nwTotal = (parseFloat(d.net_weight) || 0) * ctn;
+                        const gwTotal = (parseFloat(d.gross_weight) || 0) * ctn;
+                        const cbmTotal = (parseFloat(d.cbm) || 0) * ctn;
+
+                        tr.querySelector('.i-nw').value = nwTotal.toFixed(2);
+                        tr.querySelector('.i-gw').value = gwTotal.toFixed(2);
+                        tr.querySelector('.i-cbm').value = cbmTotal.toFixed(3);
+                        
+                        // 3. ราคาต่อหน่วย (เอา Price_USD มาใส่ตรงๆ ห้ามคูณ เพราะเดี๋ยวมันไปคูณใน DB อีกรอบ)
+                        const priceInput = tr.querySelector('.i-price');
+                        if (priceInput.value == 0 || priceInput.value == '') {
+                            priceInput.value = parseFloat(d.Price_USD) || 0; // 📌 ใช้ Price_USD
+                        }
+                        
+                    } else {
+                        tr.querySelector('.i-desc').value = ''; 
+                        tr.querySelector('.i-desc').placeholder = 'ไม่พบ SKU นี้ในระบบ...';
+                    }
+                })
+                .catch(err => console.error(err))
+                .finally(() => {
+                    searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+                    skuInput.classList.remove('bg-light');
+                });
+        };
+
+        skuInput.addEventListener('change', fetchSkuInfo);
+        skuInput.addEventListener('blur', fetchSkuInfo); // เพิ่มดักตอนคลิกออก
+        searchBtn.addEventListener('click', fetchSkuInfo);
+
         tbody.appendChild(tr);
     };
 
-    window.saveWebEdit = function() {
+    window.saveWebEdit = function(btnElement) {
         const invNo = document.getElementById('editInvoiceNo').value;
         const remark = document.getElementById('editRemark').value;
         
@@ -570,12 +659,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 payment_terms: document.getElementById('editPayment').value
             },
             shippingData: {
-                invoice_date: formatUniversalDate(document.getElementById('editInvDate').value),
+                invoice_date: window.formatUniversalDate(document.getElementById('editInvDate').value),
                 container_qty: document.getElementById('editContainerQty').value,
                 port_loading: document.getElementById('editPortLoading').value,
                 port_discharge: document.getElementById('editPortDischarge').value,
-                etd_date: formatUniversalDate(document.getElementById('editEtd').value),
-                eta_date: formatUniversalDate(document.getElementById('editEta').value),
+                etd_date: window.formatUniversalDate(document.getElementById('editEtd').value),
+                eta_date: window.formatUniversalDate(document.getElementById('editEta').value),
                 feeder_vessel: document.getElementById('editVessel').value,
                 mother_vessel: document.getElementById('editMotherVessel').value,
                 container_no: document.getElementById('editContainer').value,
@@ -591,6 +680,8 @@ document.addEventListener('DOMContentLoaded', function() {
             invoices: invoices
         };
 
+        // ล็อคปุ่มป้องกันกดเบิ้ล
+        if(btnElement) btnElement.disabled = true;
         Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
         fetch('api/api_invoice.php', {
@@ -602,7 +693,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(resData => {
             if (resData.success) {
                 bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                Swal.fire('Success', 'สร้างเวอร์ชันใหม่สำเร็จ!', 'success');
+                Swal.fire('Success', 'บันทึกข้อมูลสำเร็จ!', 'success');
                 loadHistory(); 
             } else {
                 Swal.fire('Error', resData.message, 'error');
@@ -611,6 +702,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => {
             console.error(err);
             Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        })
+        .finally(() => {
+            if(btnElement) btnElement.disabled = false;
         });
     };
 
