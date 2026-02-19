@@ -1,5 +1,12 @@
 <?php
 // page/QMS/print_ncr.php
+
+// เริ่ม Session และเช็คสิทธิ์ (Security)
+session_start();
+if (!isset($_SESSION['user'])) {
+    die('<div style="color:red; font-family:sans-serif; padding:20px;"><b>Error:</b> Unauthorized Access. Please login first.</div>');
+}
+
 require_once('../../utils/libs/tcpdf/tcpdf.php');
 require_once('../../config/config.php');
 require_once('../db.php');
@@ -25,29 +32,32 @@ if ($is_blank) {
     // --- Normal Mode ---
     if (!$case_id) die('Error: Missing Case ID');
     
-    $sql = "SELECT c.car_no, c.customer_name, c.product_name, c.case_date,
-                   n.*,
+    // 1. ระบุชื่อตารางใหม่ตรงๆ และใส่ WITH (NOLOCK)
+    $sql = "SELECT c.car_no, c.customer_name, c.product_name, c.case_date as found_date,
+                   n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift, n.product_model, n.production_line,
                    u.username as issuer_name
-            FROM " . QMS_CASES_TABLE . " c
-            JOIN " . QMS_NCR_TABLE . " n ON c.case_id = n.case_id
-            LEFT JOIN " . USERS_TABLE . " u ON c.created_by = u.id
+            FROM QMS_CASES c WITH (NOLOCK)
+            JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
+            LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
             WHERE c.case_id = ?";
+            
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$case_id]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$data) die('NCR Data not found');
+    if (!$data) die('Error: NCR Data not found');
 
-    // รูปภาพ NCR (TOP 3)
-    $sqlImg = "SELECT TOP 3 file_path FROM " . QMS_FILE_TABLE . " WHERE case_id = ? AND doc_stage = 'NCR' ORDER BY uploaded_at ASC";
+    // 2. ดึงรูปภาพ NCR จากตาราง QMS_FILE พร้อม WITH (NOLOCK)
+    $sqlImg = "SELECT TOP 3 file_path FROM QMS_FILE WITH (NOLOCK) WHERE case_id = ? AND doc_stage = 'NCR' ORDER BY uploaded_at ASC";
     $stmtImg = $pdo->prepare($sqlImg);
     $stmtImg->execute([$case_id]);
     $images = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Display Variables
-$show_date = $is_blank ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y H:i', strtotime($data['found_date']));
-$show_qty  = $is_blank ? '' : number_format($data['defect_qty']);
+$show_date = $is_blank || empty($data['found_date']) ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y H:i', strtotime($data['found_date']));
+$qty = $data['defect_qty'];
+$show_qty = $is_blank ? '' : (floor($qty) == $qty ? number_format($qty) : rtrim(rtrim(number_format($qty, 4), '0'), '.'));
 $show_car_no = $data['car_no'];
 
 // Init PDF
@@ -116,15 +126,15 @@ $html .= '
 </table>';
 
 // ==========================================
-// 3. DEFECT DETAILS (ใช้ Layout 50/50 แบบเดียวกับ CAR)
-// [FIX] เอา colspan="2" ออกจาก Header เพื่อไม่ให้ Layout เพี้ยน
+// 3. DEFECT DETAILS
 // ==========================================
 $imgHtml = '&nbsp;';
 if (!$is_blank && !empty($images)) {
     foreach ($images as $img) {
-        $path = dirname(__DIR__) . '/' . str_replace('../', '', $img['file_path']);
+        $path = __DIR__ . '/' . $img['file_path']; 
+        
         if (file_exists($path)) {
-            $imgHtml .= '<img src="' . $path . '" height="95" border="1">&nbsp;&nbsp;'; 
+            $imgHtml .= '<img src="' . $path . '" height="95" border="1" style="margin-right:10px;">'; 
         }
     }
 }
@@ -152,7 +162,7 @@ $html .= '
                         </table>
                     </td>
                     
-                    <td width="50%" valign="top">
+                    <td width="50%" valign="top" align="center">
                         <table border="0" width="100%">
                             <tr><td height="10" style="font-size:10pt; line-height:10px;">&nbsp;</td></tr>
                             <tr><td align="center">' . $imgHtml . '</td></tr>
@@ -173,9 +183,9 @@ $html .= '
         <td colspan="3"><b>3. Traceability (ข้อมูลการผลิต)</b></td>
     </tr>
     <tr>
-        <td width="33%"><b>Prod Date:</b> ' . $data['production_date'] . '</td>
-        <td width="33%"><b>Shift:</b> ' . $data['found_shift'] . '</td>
-        <td width="34%"><b>Lot No:</b> ' . $data['lot_no'] . '</td>
+        <td width="33%"><b>Prod Date:</b> ' . (empty($data['production_date']) ? '-' : date('d/m/Y', strtotime($data['production_date']))) . '</td>
+        <td width="33%"><b>Shift:</b> ' . ($data['found_shift'] ?? '-') . '</td>
+        <td width="34%"><b>Lot No:</b> ' . ($data['lot_no'] ?? '-') . '</td>
     </tr>
 </table>';
 

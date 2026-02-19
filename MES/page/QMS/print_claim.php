@@ -3,6 +3,12 @@
 // Orientation: Landscape (L)
 // Update: Header Vertical Alignment (Center Logo & Title)
 
+// 1. เพิ่มการตรวจสอบสิทธิ์ (Security)
+session_start();
+if (!isset($_SESSION['user'])) {
+    die('<div style="color:red; font-family:sans-serif; padding:20px;"><b>Error:</b> Unauthorized Access. Please login first.</div>');
+}
+
 require_once('../../utils/libs/tcpdf/tcpdf.php');
 require_once('../../config/config.php');
 require_once('../db.php');
@@ -27,24 +33,26 @@ if ($is_blank) {
     // --- Normal Mode ---
     if (!$case_id) die('Error: Missing Case ID');
 
+    // 2. ใช้ชื่อตารางจริงและใส่ WITH (NOLOCK)
     $sql = "SELECT c.car_no, c.customer_name, c.product_name,
                    n.defect_type, n.defect_qty, n.defect_description, n.product_model,
                    cl.disposition, cl.final_qty, cl.cost_estimation, cl.closed_at,
                    u.username as approved_by_name
-            FROM " . QMS_CASES_TABLE . " c
-            JOIN " . QMS_CLAIM_TABLE . " cl ON c.case_id = cl.case_id
-            JOIN " . QMS_NCR_TABLE . " n ON c.case_id = n.case_id
-            LEFT JOIN " . USERS_TABLE . " u ON cl.approved_by = u.id
+            FROM QMS_CASES c WITH (NOLOCK)
+            JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
+            JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
+            LEFT JOIN USERS u WITH (NOLOCK) ON cl.approved_by = u.id
             WHERE c.case_id = ?";
+            
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$case_id]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$data) die('Claim Data not found (Case might not be closed yet)');
+    if (!$data) die('Error: Claim Data not found (Case might not be closed yet)');
 }
 
 // Display Variables
-$show_date = $is_blank ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y', strtotime($data['closed_at']));
+$show_date = $is_blank || empty($data['closed_at']) ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y', strtotime($data['closed_at']));
 $show_car_no = $data['car_no'];
 $show_claim_no = $is_blank ? '....................' : $data['car_no'] . '-CLM'; 
 
@@ -65,7 +73,6 @@ function chkBox($val, $target) {
 
 // ==========================================
 // 1. HEADER (3 Columns)
-// [UPDATE] ปรับ valign="middle" และเพิ่ม Spacer
 // ==========================================
 $html = '
 <table border="1" cellpadding="5" cellspacing="0">
@@ -139,6 +146,10 @@ $html .= '
         <td width="35%">PROBLEM / DESCRIPTION</td>
     </tr>';
 
+// ตัดทศนิยมส่วนเกินของ Defect Qty
+$qty = $data['defect_qty'];
+$format_qty = ($qty ? (floor($qty) == $qty ? number_format($qty) : rtrim(rtrim(number_format($qty, 4), '0'), '.')) : '-');
+
 // Row 1: ข้อมูลจริง
 $html .= '
     <tr style="text-align:center;">
@@ -146,7 +157,7 @@ $html .= '
         <td>' . ($data['product_name'] ?: '-') . '</td>
         <td>' . ($data['product_name'] ?: '-') . '</td>
         <td>' . ($data['product_model'] ?: '-') . '</td>
-        <td>' . ($data['defect_qty'] ? number_format($data['defect_qty']) : '-') . '</td>
+        <td>' . $format_qty . '</td>
         <td align="left">' . nl2br($data['defect_description']) . '</td>
     </tr>';
 

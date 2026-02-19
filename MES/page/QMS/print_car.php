@@ -1,5 +1,12 @@
 <?php
 // page/QMS/print_car.php
+// FM-QCS-064  Rev.00 11/12/2025
+// 1. เพิ่มการตรวจสอบสิทธิ์ (Security)
+session_start();
+if (!isset($_SESSION['user'])) {
+    die('<div style="color:red; font-family:sans-serif; padding:20px;"><b>Error:</b> Unauthorized Access. Please login first.</div>');
+}
+
 require_once('../../utils/libs/tcpdf/tcpdf.php');
 require_once('../../config/config.php');
 require_once('../db.php');
@@ -28,30 +35,37 @@ if ($is_blank) {
 } else {
     // --- โหมดปกติ ---
     if (!$case_id) die('Error: Missing Case ID');
+    
+    // 2. ใช้ชื่อตารางจริงและใส่ WITH (NOLOCK) 
+    // หมายเหตุ: เอา n.invoice_no และ n.found_by_type ออกจาก SQL เพื่อป้องกัน Error เพราะไม่มีใน Schema
     $sql = "SELECT c.car_no, c.case_date, c.customer_name, c.product_name,
                    n.defect_type, n.defect_qty, n.defect_description, 
                    n.lot_no, n.production_date,
-                   n.product_model, n.invoice_no, n.production_line, n.found_by_type,
+                   n.product_model, n.production_line,
                    car.*, u.username as issuer_name
-            FROM " . QMS_CASES_TABLE . " c
-            JOIN " . QMS_NCR_TABLE . " n ON c.case_id = n.case_id
-            LEFT JOIN " . QMS_CAR_TABLE . " car ON c.case_id = car.case_id
-            LEFT JOIN " . USERS_TABLE . " u ON c.created_by = u.id
+            FROM QMS_CASES c WITH (NOLOCK)
+            JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
+            LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
+            LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
             WHERE c.case_id = ?";
+            
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$case_id]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$data) die('CAR Data not found');
+    
+    if (!$data) die('Error: CAR Data not found');
 
-    $sqlImg = "SELECT TOP 3 file_path FROM " . QMS_FILE_TABLE . " WHERE case_id = ? AND doc_stage = 'NCR' ORDER BY uploaded_at ASC";
+    // 3. ดึงรูปภาพจาก QMS_FILE พร้อม WITH (NOLOCK)
+    $sqlImg = "SELECT TOP 3 file_path FROM QMS_FILE WITH (NOLOCK) WHERE case_id = ? AND doc_stage = 'NCR' ORDER BY uploaded_at ASC";
     $stmtImg = $pdo->prepare($sqlImg);
     $stmtImg->execute([$case_id]);
     $images = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // ตัวแปรแสดงผล
-$show_date = $is_blank ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y', strtotime($data['case_date']));
-$show_qty  = $is_blank ? '' : number_format($data['defect_qty']);
+$show_date = $is_blank || empty($data['case_date']) ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : date('d/m/Y', strtotime($data['case_date']));
+$qty = $data['defect_qty'];
+$show_qty = $is_blank ? '' : (floor($qty) == $qty ? number_format($qty) : rtrim(rtrim(number_format($qty, 4), '0'), '.'));
 $show_car_no = $data['car_no'];
 
 // Init PDF
@@ -133,7 +147,7 @@ $html .= '
     </tr>
     <tr>
         <td bgcolor="#f2f2f2"><b>Invoice No:</b></td>
-        <td>' . ($data['invoice_no'] ?? '') . '</td>
+        <td>' . ($data['invoice_no'] ?? '-') . '</td>
         <td bgcolor="#f2f2f2"><b>Q\'ty:</b></td>
         <td>' . $show_qty . '</td>
     </tr>
@@ -142,7 +156,7 @@ $html .= '
 // ==========================================
 // 4. NON-CONFORMING
 // ==========================================
-$src = $data['found_by_type'];
+$src = $data['found_by_type'] ?? '';
 $html .= '
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;">
@@ -156,14 +170,15 @@ $html .= '
 </table>';
 
 // ==========================================
-// 5. PROBLEM (Spacer = 5 ตามสั่ง)
+// 5. PROBLEM
 // ==========================================
 $imgHtml = '&nbsp;';
 if (!$is_blank && !empty($images)) {
     foreach ($images as $img) {
-        $path = dirname(__DIR__) . '/' . str_replace('../', '', $img['file_path']);
+        $path = __DIR__ . '/' . $img['file_path']; 
+        
         if (file_exists($path)) {
-            $imgHtml .= '<img src="' . $path . '" height="95" border="1">&nbsp;&nbsp;'; 
+            $imgHtml .= '<img src="' . $path . '" height="95" border="1" style="margin-right:10px;">'; 
         }
     }
 }
@@ -201,7 +216,7 @@ $html .= '
 </table>';
 
 // ==========================================
-// 6-11. (ส่วนอื่นๆ คงเดิม)
+// 6-11. CONTAINMENT & CORRECTIVE ACTIONS
 // ==========================================
 $html .= '
 <table border="1" cellpadding="3" cellspacing="0">
@@ -211,31 +226,31 @@ $html .= '
             <span style="float:right; font-size:8pt;">(Within 7 Days reply)</span>
         </td>
     </tr>
-    <tr><td height="55">' . ($data['containment_action'] ?? '') . '</td></tr>
+    <tr><td height="55">' . nl2br($data['containment_action'] ?? '') . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;">
         <td>
             <b>3. Root Cause Analysis (สาเหตุของปัญหา):</b><br>
-            ' . chkBox($data['root_cause_category'], 'Man') . ' Man &nbsp;
-            ' . chkBox($data['root_cause_category'], 'Machine') . ' Machine &nbsp;
-            ' . chkBox($data['root_cause_category'], 'Material') . ' Material &nbsp;
-            ' . chkBox($data['root_cause_category'], 'Method') . ' Method &nbsp;
-            ' . chkBox($data['root_cause_category'], 'Other') . ' Other
+            ' . chkBox($data['root_cause_category'] ?? '', 'Man') . ' Man &nbsp;
+            ' . chkBox($data['root_cause_category'] ?? '', 'Machine') . ' Machine &nbsp;
+            ' . chkBox($data['root_cause_category'] ?? '', 'Material') . ' Material &nbsp;
+            ' . chkBox($data['root_cause_category'] ?? '', 'Method') . ' Method &nbsp;
+            ' . chkBox($data['root_cause_category'] ?? '', 'Other') . ' Other
         </td>
     </tr>
-    <tr><td height="50">' . nl2br($data['customer_root_cause']) . '</td></tr>
+    <tr><td height="50">' . nl2br($data['customer_root_cause'] ?? '') . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;"><td><b>4. Leak Cause (สาเหตุที่หลุดรอด):</b></td></tr>
-    <tr><td height="55">' . ($data['leak_cause'] ?? '') . '</td></tr>
+    <tr><td height="55">' . nl2br($data['leak_cause'] ?? '') . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;"><td><b>5. Corrective Action (การแก้ไขระยะยาว):</b></td></tr>
-    <tr><td height="50">' . nl2br($data['customer_action_plan']) . '</td></tr>
+    <tr><td height="50">' . nl2br($data['customer_action_plan'] ?? '') . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
@@ -276,7 +291,7 @@ $html .= '
 </table>';
 
 // ==========================================
-// 13. SIGNATURES (Height = 60 ตามสั่ง)
+// 13. SIGNATURES
 // ==========================================
 $html .= '
 <br>

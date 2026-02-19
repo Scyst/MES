@@ -1,0 +1,231 @@
+/* ==========================================================================
+   MES/page/QMS/css/qmsDashboard.css
+   Unified Design (Desktop & Mobile) - Refactored
+   ========================================================================== */
+
+/* 1. RESET & MAIN LAYOUT */
+html, body { 
+    height: 100%; 
+    margin: 0; 
+    padding: 0; 
+    overflow: hidden !important; 
+    background-color: #f4f6f9; 
+}
+body, table { 
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+
+.page-container { 
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+}
+#main-content { 
+    flex: 1; 
+    height: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+}
+.content-wrapper { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    padding: 1rem !important; 
+    height: 100%; 
+    min-height: 0; 
+}
+
+/* ==========================================================================
+   2. KPI CARDS (Filter Buttons)
+   ========================================================================== */
+.card.mb-3 { 
+    flex: 0 0 auto; 
+    margin-bottom: 1rem !important; 
+}
+.kpi-card { 
+    transition: all 0.2s ease; 
+    border: none; 
+    border-radius: 12px; 
+    cursor: pointer; 
+    background: #fff; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); 
+    border-left: 5px solid transparent; 
+}
+.kpi-card:active { 
+    transform: scale(0.98); 
+}
+.kpi-card.active { 
+    background-color: #f8fbff; 
+    box-shadow: 0 6px 20px rgba(13,110,253,0.15) !important; 
+}
+
+/* สีแถบด้านซ้ายของแต่ละสถานะ */
+#card-all { border-left-color: #6c757d; }
+#card-ncr { border-left-color: #dc3545; }
+#card-sent { border-left-color: #ffc107; }
+#card-replied { border-left-color: #0dcaf0; }
+#card-closed { border-left-color: #198754; }
+
+/* Responsive Grid สำหรับ Cards (แบ่ง 5 คอลัมน์ตอนจอใหญ่) */
+@media (min-width: 992px) { .col-lg-20-percent { flex: 0 0 auto; width: 20%; } }
+@media (max-width: 992px) { .col-lg-20-percent { width: 33.33%; } }
+@media (max-width: 576px) { .col-lg-20-percent { width: 50%; } }
+
+/* ==========================================================================
+   3. DESKTOP TABLE VIEW
+   ========================================================================== */
+.card.table-card { 
+    flex: 1; 
+    min-height: 0; 
+    height: auto !important; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    border: none; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+.table-responsive-custom { 
+    flex: 1; 
+    width: 100%; 
+    height: 100%; 
+    overflow-x: auto !important; 
+    overflow-y: auto !important; 
+    position: relative; 
+    background-color: #fff; 
+}
+.table-responsive-custom table { 
+    width: 100% !important; 
+    border-collapse: separate; 
+    border-spacing: 0; 
+}
+.table-responsive-custom th { 
+    font-size: 0.85rem; 
+    padding: 12px; 
+    white-space: nowrap; 
+    position: sticky; 
+    top: 0; 
+    background-color: #f8f9fa; 
+    border-bottom: 2px solid #dee2e6; 
+    z-index: 10; 
+}
+.table-responsive-custom td { 
+    font-size: 0.85rem; 
+    padding: 10px 12px; 
+    vertical-align: middle; 
+    border-bottom: 1px solid #f1f1f1; 
+}
+.table-hover tbody tr { 
+    cursor: pointer; 
+    transition: background-color 0.2s; 
+}
+.table-hover tbody tr:hover td { 
+    background-color: #f8fbff !important; 
+}
+
+/* Custom Scrollbar สำหรับตาราง Desktop */
+.table-responsive-custom::-webkit-scrollbar { width: 10px; height: 10px; }
+.table-responsive-custom::-webkit-scrollbar-track { background: #f1f1f1; border-top: 1px solid #dee2e6; }
+.table-responsive-custom::-webkit-scrollbar-thumb { background-color: #c1c1c1; border-radius: 10px; border: 2px solid #f1f1f1; }
+.table-responsive-custom::-webkit-scrollbar-thumb:hover { background-color: #a8a8a8; }
+
+/* ==========================================================================
+   4. MOBILE VIEW (Cards instead of Table)
+   ========================================================================== */
+.mobile-case-card { 
+    background: #fff; 
+    border-radius: 12px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    margin-bottom: 1rem; 
+    padding: 1rem; 
+    border-left: 5px solid transparent; 
+    cursor: pointer; 
+    transition: transform 0.2s; 
+}
+.mobile-case-card:active { 
+    transform: scale(0.98); 
+    background-color: #f8f9fa; 
+}
+.m-card-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 0.5rem; 
+    padding-bottom: 0.5rem; 
+    border-bottom: 1px dashed #eee; 
+}
+.m-card-body { 
+    font-size: 0.85rem; 
+    color: #495057; 
+}
+
+/* ==========================================================================
+   5. UTILITIES (Photo Upload & Badges)
+   ========================================================================== */
+.badge-status { 
+    font-weight: 500; 
+    letter-spacing: 0.3px; 
+    font-size: 0.75rem; 
+    padding: 0.4em 0.6em; 
+}
+
+/* Touch Friendly Upload Box */
+.photo-upload-box { 
+    position: relative; 
+    border: 2px dashed #0d6efd; 
+    border-radius: 12px; 
+    background-color: #f8fbff; 
+    padding: 2rem 1rem; 
+    text-align: center; 
+    transition: all 0.2s; 
+}
+.photo-upload-box:hover, 
+.photo-upload-box:focus-within { 
+    background-color: #eaf2ff; 
+    border-color: #0043a8; 
+}
+.photo-upload-box input[type="file"] { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    opacity: 0; 
+    cursor: pointer; 
+    z-index: 2; 
+}
+.preview-container { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+    margin-top: 10px; 
+}
+.preview-img-wrapper { 
+    position: relative; 
+    width: 80px; 
+    height: 80px; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+}
+.preview-img-wrapper img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+}
+
+/* ==========================================================================
+   6. RESPONSIVE DISPLAY LOGIC
+   ========================================================================== */
+@media (max-width: 768px) { 
+    .desktop-view { display: none !important; } 
+    .mobile-view { display: block !important; overflow-y: auto; height: 100%; padding-bottom: 20px; }
+    .content-wrapper { padding: 0.5rem !important; }
+}
+@media (min-width: 769px) { 
+    .desktop-view { display: flex !important; flex-direction: column; } 
+    .mobile-view { display: none !important; } 
+}
