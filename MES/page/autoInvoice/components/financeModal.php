@@ -46,19 +46,26 @@
             </div>
             <div class="modal-body bg-light">
                 <form id="formEditInvoice">
-                    <input type="hidden" id="editInvoiceNo" value="">
-                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <div class="card shadow-sm h-100 border-0">
                                 <div class="card-header bg-white fw-bold"><i class="fas fa-user-tie text-primary me-2"></i>ข้อมูลลูกค้า (Customer)</div>
                                 <div class="card-body">
                                     <div class="mb-2"><label class="form-label small">Customer Name</label><input type="text" id="editCustName" class="form-control form-control-sm" required></div>
-                                    <div class="mb-2"><label class="form-label small">Address</label><textarea id="editAddress" class="form-control form-control-sm" rows="2"></textarea></div>
-                                    
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Address</label>
+                                        <textarea id="editAddress" class="form-control form-control-sm" rows="3" placeholder="พิมพ์ที่อยู่ (กด Enter เพื่อขึ้นบรรทัดใหม่)"></textarea>
+                                    </div>
+
                                     <div class="row">
-                                        <div class="col-6 mb-2"><label class="form-label small">Consignee</label><textarea id="editConsignee" class="form-control form-control-sm" rows="2"></textarea></div>
-                                        <div class="col-6 mb-2"><label class="form-label small">Notify Party</label><textarea id="editNotify" class="form-control form-control-sm" rows="2"></textarea></div>
+                                        <div class="col-6 mb-2">
+                                            <label class="form-label small fw-bold">Consignee</label>
+                                            <textarea id="editConsignee" class="form-control form-control-sm" rows="4" placeholder="พิมพ์ชื่อและที่อยู่ Consignee&#10;ใส่ *ข้อความ* เพื่อทำตัวหนา"></textarea>
+                                        </div>
+                                        <div class="col-6 mb-2">
+                                            <label class="form-label small fw-bold">Notify Party</label>
+                                            <textarea id="editNotify" class="form-control form-control-sm" rows="4" placeholder="พิมพ์ชื่อและที่อยู่ Notify Party&#10;ใส่ *ข้อความ* เพื่อทำตัวหนา"></textarea>
+                                        </div>
                                     </div>
                                     
                                     <div class="row">

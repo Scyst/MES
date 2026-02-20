@@ -28,6 +28,20 @@ try {
     die("Database Error: " . $e->getMessage());
 }
 
+// Helper: แปลงข้อความให้รองรับการขึ้นบรรทัดใหม่ (Enter) และตัวหนา (*ข้อความ*)
+function formatAddressText($text) {
+    if (empty($text) || $text === '-') return '-';
+    
+    // 1. ป้องกัน XSS (แปลง Tag HTML อันตรายเป็น Text ธรรมดา)
+    $safe_text = htmlspecialchars(trim($text));
+    
+    // 2. แปลง *ข้อความ* ให้กลายเป็น <b>ข้อความ</b>
+    $bold_text = preg_replace('/\*(.*?)\*/', '<b>$1</b>', $safe_text);
+    
+    // 3. แปลงการเคาะ Enter (\n) ให้เป็นแท็ก <br> ของ HTML
+    return nl2br($bold_text);
+}
+
 // Helper: Convert Number to Words (USD)
 function numberToWordsUsd($num) {
     $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
@@ -42,6 +56,26 @@ function numberToWordsUsd($num) {
     }
     return str_replace('-', ' ', $words);
 }
+
+// Helper: แปลงวันที่จาก DD/MM/YYYY เป็นเดือนภาษาอังกฤษ (เช่น FEBRUARY 20, 2026)
+function formatDocDate($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    
+    // ลองแปลงจากรูปแบบ DD/MM/YYYY (ที่มาจากระบบ Import ของเรา)
+    $d = DateTime::createFromFormat('d/m/Y', $dateStr);
+    if ($d) {
+        return strtoupper($d->format('F d, Y')); // F = Full month, d = Day, Y = Year
+    }
+    
+    // สำรอง: ถ้ามาเป็นรูปแบบ YYYY-MM-DD
+    $timestamp = strtotime($dateStr);
+    if ($timestamp) {
+        return strtoupper(date('F d, Y', $timestamp));
+    }
+    
+    // ถ้าแปลงไม่ได้เลย ให้คืนค่าเดิมกลับไป
+    return htmlspecialchars($dateStr);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,7 +87,7 @@ function numberToWordsUsd($num) {
         /* Reset & Base */
         body { 
             font-family: 'Arial', Helvetica, sans-serif; 
-            font-size: 10px; 
+            font-size: 9px; 
             background: #525659; 
             margin: 0; 
             padding: 20px 0; 
@@ -82,21 +116,20 @@ function numberToWordsUsd($num) {
         .fw-bold { font-weight: bold; }
         
         .address-box {
-            white-space: pre-line;
             word-wrap: break-word;
             word-break: break-word; 
             overflow-wrap: break-word;
             text-align: left;
-            line-height: 1.4;
+            line-height: 1.7;
         }
         
         /* Header Section */
-        .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 10px; font-weight: bold; }
+        .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 9px; font-weight: bold; }
         .company-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         .doc-title { font-size: 18px; font-weight: bold; text-align: center; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
         
         /* Top Box Table */
-        table.border-box-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 10px; border: 1px solid #000; }
+        table.border-box-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 9px; border: 1px solid #000; }
         table.border-box-table > tbody > tr > td { padding: 3px 8px; vertical-align: middle; border: 1px solid #000; }
         
         /* Inner Table */
@@ -108,7 +141,7 @@ function numberToWordsUsd($num) {
         table.items-table { 
             width: 100%; 
             border-collapse: collapse;
-            font-size: 10px; 
+            font-size: 9px; 
             border: 2px solid #000; 
         }
         
@@ -166,7 +199,7 @@ function numberToWordsUsd($num) {
 
     <div class="doc-title">COMMERCIAL INVOICE</div>
 
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px;">
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9px;">
         <tr>
             <td style="width: 50%; vertical-align: top;">
                 <table style="border-collapse: collapse;">
@@ -190,7 +223,7 @@ function numberToWordsUsd($num) {
                     </tr>
                     <tr>
                         <td class="fw-bold">INVOICE DATE:</td>
-                        <td><?= htmlspecialchars($shipping['invoice_date'] ?? '-') ?></td>
+                        <td><?= formatDocDate($shipping['invoice_date'] ?? '-') ?></td>
                     </tr>
                 </table>
             </td>
@@ -201,17 +234,17 @@ function numberToWordsUsd($num) {
         <table class="border-box-table" style="margin-bottom: 0; border: none;">
             <tbody>
                 <tr>
-                    <td style="width: 50%; vertical-align: middle;">
+                    <td style="width: 55%; vertical-align: middle;">
                         <div class="fw-bold">BY ORDER AND ON ACCOUNT OF MESSRS.</div>
                     </td>
-                    <td style="width: 50%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
+                    <td style="width: 45; border-left: 1px solid #000; border-bottom: 1px solid #000;">
                         <span class="lbl-col" style="width: 130px;">PORT OF LOADING:</span>
                         <span><?= htmlspecialchars($shipping['port_loading'] ?? 'LAEM CHABANG, THAILAND') ?></span>
                     </td>
                 </tr>
 
                 <tr>
-                    <td rowspan="6" style="width: 50%; vertical-align: top;">
+                    <td rowspan="6" style="width: 55%; vertical-align: top;">
                         <table class="inner-table">
                             <tr>
                                 <td class="lbl-col" style="width: 120px;">CUSTOMER NAME:</td>
@@ -219,7 +252,7 @@ function numberToWordsUsd($num) {
                             </tr>
                             <tr>
                                 <td class="lbl-col">ADDRESS:</td>
-                                <td class="address-box"><?= htmlspecialchars($customer['address'] ?? '-') ?></td>
+                                <td class="address-box"><?= formatAddressText($customer['address'] ?? '-') ?></td>
                             </tr>
                         </table>
                     </td>
@@ -238,13 +271,13 @@ function numberToWordsUsd($num) {
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
                         <span class="lbl-col" style="width: 130px;">ETD DATE:</span>
-                        <span><?= htmlspecialchars($shipping['etd_date'] ?? '-') ?></span>
+                        <span><?= formatDocDate($shipping['etd_date'] ?? '-') ?></span> 
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
                         <span class="lbl-col" style="width: 130px;">ETA DATE:</span>
-                        <span><?= htmlspecialchars($shipping['eta_date'] ?? '-') ?></span>
+                        <span><?= formatDocDate($shipping['eta_date'] ?? '-') ?></span>
                     </td>
                 </tr>
                 <tr>
@@ -275,20 +308,31 @@ function numberToWordsUsd($num) {
             <tbody>
                 <?php 
                 $sumQty = 0; $sumTotal = 0;
+                $currentProductType = null; // 📌 ตัวแปรเก็บหัวข้อปัจจุบัน (Product Type)
+                
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
                         $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumTotal += (float)($row['line_total'] ?? 0);
+                        
+                        $rowProductType = trim($row['product_type'] ?? '');
+                        
+                        // 📌 ตรวจสอบว่า Product Type เปลี่ยนไปจากบรรทัดที่แล้วหรือไม่
+                        if ($rowProductType !== $currentProductType && $rowProductType !== ''):
+                            $currentProductType = $rowProductType; // อัปเดตสถานะล่าสุด
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
-                    <td style="color: #ff0702;">
-                        <b><?= htmlspecialchars($row['product_type'] ?? '') ?></b><br>
+                    <td style="color: #ff0702; padding-top: 8px;">
+                        <b><?= htmlspecialchars($rowProductType) ?></b><br>
                     </td>
                     <td></td>
                     <td></td>
                     <td style="border-right: none;"></td>
                 </tr>
+                <?php 
+                        endif; // จบเงื่อนไขการพิมพ์หัวข้อ
+                ?>
                 
                 <tr>
                     <td class="text-center address-box" style="border-left: none;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
@@ -332,7 +376,6 @@ function numberToWordsUsd($num) {
                     </td>
                 </tr>
             </tbody>
-        </table>
 
         <table style="width: 100%; border-collapse: collapse; border-top: 1px solid #000; border-bottom: 1px solid #000; margin-bottom: 0;">
             <tr>
@@ -357,18 +400,16 @@ function numberToWordsUsd($num) {
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
             <tr>
                 <td style="width: 50%; vertical-align: top; padding: 15px 30px 15px 80px;">
-                    <div class="fw-bold" style="margin-bottom: 5px;">CONSIGNEE :-</div>
-                    <div class="address-box"><?= htmlspecialchars(trim(str_replace('CONSIGNEE :-', '', $customer['consignee'] ?? '-'))) ?></div>
+                    <div class="fw-bold">CONSIGNEE :-</div>
+                    <div class="address-box"><?= formatAddressText(str_replace('CONSIGNEE :-', '', $customer['consignee'] ?? '-')) ?></div>
                 </td>
                 
                 <td style="width: 50%; vertical-align: top; padding: 15px 30px;">
-                    <div style="position: relative; width: 100%;">
-                        <div class="fw-bold" style="margin-bottom: 5px;">NOTIFY PARTY:-</div>
-                        <div class="address-box" style="margin-bottom: 40px;"><?= htmlspecialchars(trim($customer['notify_party'] ?? '-')) ?></div>
-                        
-                        <div style="position: absolute; right: -70px; bottom: 15px; text-align: center; width: 220px; z-index: 10;">
-                            <img src="../components/images/company_stamp.png" alt="Company Stamp" style="width: 150px; height: 120px; margin-bottom: 5px; mix-blend-mode: multiply;">
-                        </div>
+                    <div class="fw-bold" style="margin-bottom: 5px;">NOTIFY PARTY:-</div>
+                    <div class="address-box" style="min-height: 60px; margin-bottom: 15px;"><?= formatAddressText($customer['notify_party'] ?? '-') ?></div>
+                    
+                    <div style="text-align: right; margin-top: -150px; margin-right: -30px;">
+                        <img src="../components/images/company_stamp.png" alt="Company Stamp" style="width: 160px; height: auto; mix-blend-mode: multiply;">
                     </div>
                 </td>
             </tr>

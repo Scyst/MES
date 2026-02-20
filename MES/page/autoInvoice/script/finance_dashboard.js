@@ -1,4 +1,3 @@
-// 📌 ฟังก์ชันแปลงวันที่ครอบจักรวาล (Global Scope ไว้บรรทัดบนสุด)
 window.formatUniversalDate = function(val) {
     if (!val) return '';
     let d;
@@ -7,35 +6,44 @@ window.formatUniversalDate = function(val) {
     if (!isNaN(val) && Number(val) > 10000) {
         d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
     } 
-    // 2. กรณีมี / (เช่น 19/2/2026 หรือ 19/02/2026)
+    // 2. กรณีมี / (เช่น 20/02/2026) -> ต้องแปลงเป็น YYYY-MM-DD ให้ JS เข้าใจก่อน
     else if (typeof val === 'string' && val.includes('/')) {
         let parts = val.split('/');
-        // แปลงจาก DD/MM/YYYY เป็น YYYY-MM-DD ให้ JS เข้าใจ
-        if (parts.length === 3 && parts[2].length === 4) {
-            d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
-        } else {
-            d = new Date(val);
+        if (parts.length === 3) {
+            let day = parts[0].padStart(2, '0');
+            let month = parts[1].padStart(2, '0');
+            let year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            d = new Date(`${year}-${month}-${day}`);
         }
     } 
-    // 3. กรณีเป็นวันที่ปกติ หรือ YYYY-MM-DD (จาก Date Picker บนเว็บ)
+    // 3. กรณีทั่วไป
     else {
         d = new Date(val);
     }
 
-    // ถ้าแปลงเป็น Date สำเร็จ ให้จัด Format เป็น "MONTH DD, YYYY"
+    // จัด Format ส่งกลับเป็น DD/MM/YYYY คืนให้ Database
     if (!isNaN(d.getTime())) {
-        const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
         const day = String(d.getDate()).padStart(2, '0');
-        const month = months[d.getMonth()];
+        const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
-        return `${month} ${day}, ${year}`;
+        return `${day}/${month}/${year}`;
     }
     return String(val).toUpperCase(); 
 };
 
-// 📌 ฟังก์ชันแปลงข้อความวันที่ กลับเป็น YYYY-MM-DD สำหรับหยอดใส่ <input type="date">
 window.formatDateForInput = function(val) {
     if (!val) return '';
+    
+    if (typeof val === 'string' && val.includes('/')) {
+        let parts = val.split('/');
+        if (parts.length === 3) {
+            let day = parts[0].padStart(2, '0');
+            let month = parts[1].padStart(2, '0');
+            let year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            return `${year}-${month}-${day}`;
+        }
+    }
+    
     const d = new Date(val);
     if (!isNaN(d.getTime())) {
         const year = d.getFullYear();
@@ -275,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (row.filter(c => c !== '').length === 0) continue; 
 
                         if (!headerFound) {
-                            let rowUpper = row.map(c => c.toUpperCase());
+                            let rowUpper = row.map(c => String(c).toUpperCase().replace(/_/g, ' '));
                             if (rowUpper.some(c => c.includes('INVOICE NO')) && rowUpper.some(c => c.includes('CUSTOMER'))) {
                                 headerFound = true;
                                 const findIdx = (keyword) => rowUpper.findIndex(c => c.includes(keyword));
@@ -297,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 idx.etd = findIdx('ETD');
                                 idx.eta = findIdx('ETA');
                                 idx.container_qty = findIdx('CONTAINER QTY');
-                                idx.tare = findIdx('TARE');
                                 idx.qty = findIdx('QUANTITY');
                                 idx.price = findIdx('UNIT PRICE');
                                 idx.nw = findIdx('N.W');
@@ -306,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 idx.po = findIdx('PURCHASE ORDER') !== -1 ? findIdx('PURCHASE ORDER') : findIdx('PO NO');
                                 idx.carton = findIdx('CARTON NO');
                                 idx.product_type = findIdx('PRODUCT TYPE');
-                                idx.marks = findIdx('MARKS');
+                                idx.marks = findIdx('SHIPPING MARKS') !== -1 ? findIdx('SHIPPING MARKS') : findIdx('MARKS');
                                 idx.desc = findIdx('DESCRIPTION');
                                 idx.sku = findIdx('SKU');
                                 continue; 
@@ -326,11 +333,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             const getVal = (index, defaultVal = '') => (index !== undefined && index !== -1 && row[index] !== undefined && row[index] !== '') ? row[index] : defaultVal;
                             
-                            let qty = parseFloat(getVal(idx.qty).replace(/,/g, '')) || 0;
-                            let price = parseFloat(getVal(idx.price).replace(/,/g, '')) || 0;
+                            let qty = parseFloat(String(getVal(idx.qty)).replace(/,/g, '')) || 0;
+                            let price = parseFloat(String(getVal(idx.price)).replace(/,/g, '')) || 0;
                             let rawDesc = getVal(idx.desc);
+                            let pType = getVal(idx.product_type);
+                            let sku = getVal(idx.sku) || '';
 
-                            if (rawDesc === "" && qty === 0) continue;
+                            if (rawDesc === '-' || rawDesc.toUpperCase() === '(AUTO)') rawDesc = '';
+                            if (pType === '-' || pType.toUpperCase() === '(AUTO)') pType = '';
+
+                            if (rawDesc === "" && qty === 0 && sku === "") continue; 
 
                             if (!invoices[currentInvNo]) {
                                 invoices[currentInvNo] = {
@@ -352,28 +364,26 @@ document.addEventListener('DOMContentLoaded', function() {
                                         invoice_date: window.formatUniversalDate(getVal(idx.invoice_date)), 
                                         etd_date: window.formatUniversalDate(getVal(idx.etd)), 
                                         eta_date: window.formatUniversalDate(getVal(idx.eta)),
-                                        container_qty: getVal(idx.container_qty),
-                                        tare: getVal(idx.tare)
+                                        container_qty: getVal(idx.container_qty)
                                     },
                                     details: []
                                 };
                             }
 
-                            let sku = getVal(idx.sku);
                             if (!sku) {
                                 sku = rawDesc.split(' ')[0].replace(/^#/, '');
                             }
 
-                            if (qty > 0 || price > 0 || rawDesc !== "") {
+                            if (qty > 0 || price > 0 || rawDesc !== "" || sku !== "") {
                                 invoices[currentInvNo].details.push({ 
                                     sku: sku, 
-                                    product_type: getVal(idx.product_type),
+                                    product_type: pType,
                                     description: rawDesc, 
                                     qty: qty, 
                                     price: price, 
-                                    nw: parseFloat(getVal(idx.nw).replace(/,/g, '')) || 0, 
-                                    gw: parseFloat(getVal(idx.gw).replace(/,/g, '')) || 0, 
-                                    cbm: parseFloat(getVal(idx.cbm).replace(/,/g, '')) || 0, 
+                                    nw: parseFloat(String(getVal(idx.nw)).replace(/,/g, '')) || 0, 
+                                    gw: parseFloat(String(getVal(idx.gw)).replace(/,/g, '')) || 0, 
+                                    cbm: parseFloat(String(getVal(idx.cbm)).replace(/,/g, '')) || 0, 
                                     po: getVal(idx.po), 
                                     carton: getVal(idx.carton), 
                                     marks: getVal(idx.marks)
@@ -386,43 +396,67 @@ document.addEventListener('DOMContentLoaded', function() {
                         throw new Error("ไม่พบข้อมูล Invoice ตรวจสอบว่าคอลัมน์และข้อมูลในไฟล์ถูกต้องหรือไม่");
                     }
 
-                    const payload = {
-                        action: 'import_invoice',
-                        report_id: formImport.querySelector('[name="report_id"]')?.value || '',
-                        remark: formImport.querySelector('[name="remark"]')?.value || '',
-                        invoices: invoices
-                    };
+                    const invoiceKeys = Object.keys(invoices);
+                    
+                    const processUpload = async () => {
+                        let successCount = 0;
+                        let errorList = [];
 
-                    fetch('api/api_invoice.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                        },
-                        body: JSON.stringify(payload)
-                    })
-                    .then(res => res.json())
-                    .then(resData => {
-                        if (resData.success) {
-                            bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
-                            Swal.fire('Success', resData.message, 'success');
+                        for (const key of invoiceKeys) {
+                            const invData = invoices[key]; 
+                            
+                            const payload = {
+                                action: 'import_invoice',
+                                invoice_no: key, 
+                                report_id: formImport.querySelector('[name="report_id"]')?.value || '',
+                                remark: formImport.querySelector('[name="remark"]')?.value || '',
+                                customer: invData.customerData, 
+                                shipping: invData.shippingData, 
+                                details: invData.details        
+                            };
+
+                            try {
+                                const res = await fetch('api/api_invoice.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                    },
+                                    body: JSON.stringify(payload)
+                                });
+                                const resData = await res.json();
+                                
+                                if (resData.success) {
+                                    successCount++;
+                                } else {
+                                    errorList.push(`บิล ${key}: ${resData.message}`);
+                                }
+                            } catch (err) {
+                                errorList.push(`บิล ${key}: Network Error`);
+                            }
+                        }
+
+                        if (errorList.length === 0) {
+                            Swal.fire('Success', `นำเข้าสำเร็จทั้งหมด ${successCount} บิล`, 'success');
+                            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('importModal'));
+                            if (modalInstance) modalInstance.hide();
                             formImport.reset();
                             selectedFile = null;
                             fileNameDisplay.textContent = '';
-                            btnSubmit.disabled = true;
-                            loadHistory();
                         } else {
-                            Swal.fire('Error', resData.message, 'error');
+                            Swal.fire({
+                                title: 'นำเข้าสำเร็จบางส่วน',
+                                html: `สำเร็จ ${successCount} บิล<br><br><span class="text-danger">ล้มเหลว:</span><br><div style="max-height: 150px; overflow-y: auto;" class="small text-start mt-2">${errorList.join('<br>')}</div>`,
+                                icon: 'warning'
+                            });
                         }
-                    })
-                    .catch(err => {
-                        console.error('API Error:', err);
-                        Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
-                    })
-                    .finally(() => {
+                        
                         btnSubmit.disabled = false;
                         btnSpinner.classList.add('d-none');
-                    });
+                        loadHistory();
+                    };
+
+                    processUpload(); 
 
                 } catch (error) {
                     Swal.fire('Parse Error', error.message, 'error');
@@ -434,61 +468,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 4. สร้างและดาวน์โหลด Excel Template ---
+    // --- 4. ดาวน์โหลด Excel Template ---
     const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
     if (btnDownloadTemplate) {
         btnDownloadTemplate.addEventListener('click', function() {
-            window.location.href = 'api/export_template.php'; // เปลี่ยนให้ชี้ไปโหลดไฟล์ PHP โดยตรง
+            window.location.href = 'api/export_template.php'; 
         });
     }
 
     // --- 5. แก้ไข/สร้าง Invoice บนเว็บ (Web Edit & Create) ---
     window.openWebEdit = function(id) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        
         fetch(`api/api_invoice.php?action=get_invoice_detail&id=${id}`)
             .then(res => res.json())
             .then(resData => {
                 Swal.close();
                 if (resData.success) {
-                    const inv = resData;
-                    document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
-                    document.getElementById('editInvoiceNo').readOnly = true;
-                    
-                    // Customer
-                    document.getElementById('editCustName').value = inv.customer.name || '';
-                    document.getElementById('editAddress').value = inv.customer.address || '';
-                    document.getElementById('editConsignee').value = inv.customer.consignee || '';
-                    document.getElementById('editNotify').value = inv.customer.notify_party || '';
-                    document.getElementById('editIncoterms').value = inv.customer.incoterms || '';
-                    document.getElementById('editPayment').value = inv.customer.payment_terms || '';
-                    
-                    // Shipping
-                    document.getElementById('editInvDate').value = window.formatDateForInput(inv.shipping.invoice_date);
-                    document.getElementById('editContainerQty').value = inv.shipping.container_qty || '';
-                    document.getElementById('editPortLoading').value = inv.shipping.port_loading || 'LAEM CHABANG, THAILAND';
-                    document.getElementById('editPortDischarge').value = inv.shipping.port_discharge || '';
-                    document.getElementById('editEtd').value = window.formatDateForInput(inv.shipping.etd_date);
-                    document.getElementById('editEta').value = window.formatDateForInput(inv.shipping.eta_date);
-                    document.getElementById('editVessel').value = inv.shipping.feeder_vessel || '';
-                    document.getElementById('editMotherVessel').value = inv.shipping.mother_vessel || '';
-                    document.getElementById('editContainer').value = inv.shipping.container_no || '';
-                    document.getElementById('editSeal').value = inv.shipping.seal_no || '';
-                    
-                    document.getElementById('editRemark').value = ''; 
-                    
-                    const tbody = document.querySelector('#editItemsTable tbody');
-                    tbody.innerHTML = '';
-                    inv.details.forEach(item => addEditItemRow(item));
-
+                    fillInvoiceForm(resData); 
+                    document.getElementById('editInvoiceNo').readOnly = true; 
                     new bootstrap.Modal(document.getElementById('editModal')).show();
                 } else {
                     Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
                 }
-            }).catch(err => {
-                Swal.close();
-                console.error(err);
-                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+            })
+            .catch(err => {
+                Swal.close(); console.error(err); Swal.fire('Error', 'ไม่สามารถเชื่อมต่อได้', 'error');
             });
     };
 
@@ -545,6 +549,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#editItemsTable tbody');
         const tr = document.createElement('tr');
         
+        const initQty = parseFloat(item.qty_carton) || 1;
+        tr.dataset.baseNw = item.net_weight ? (parseFloat(item.net_weight) / initQty) : 0;
+        tr.dataset.baseGw = item.gross_weight ? (parseFloat(item.gross_weight) / initQty) : 0;
+        tr.dataset.baseCbm = item.cbm ? (parseFloat(item.cbm) / initQty) : 0;
+
         tr.innerHTML = `
             <td><input type="text" class="form-control form-control-sm i-type" value="${item.product_type || ''}" placeholder="หมวดหมู่"></td>
             <td>
@@ -567,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const skuInput = tr.querySelector('.i-sku');
         const searchBtn = tr.querySelector('.btn-search-sku');
+        const qtyInput = tr.querySelector('.i-qty'); 
 
         const fetchSkuInfo = () => {
             const skuVal = skuInput.value.trim();
@@ -580,29 +590,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(resData => {
                     if (resData.success && resData.data) {
                         const d = resData.data;
-                        
-                        // ดึง CTN มา (ถ้าไม่มีให้เป็น 1)
                         const ctn = parseFloat(d.CTN) || 1;
                         
-                        // 1. ใส่ชื่อสินค้า และ Qty (ดึงจาก CTN)
-                        tr.querySelector('.i-desc').value = d.invoice_description || d.part_description || '';
-                        tr.querySelector('.i-qty').value = ctn; // 📌 ตั้งค่า Qty เป็น CTN
-                        
-                        // 2. น้ำหนักและ CBM ต้องเอามา "คูณ CTN" ตามที่แอดมินต้องการ
-                        const nwTotal = (parseFloat(d.net_weight) || 0) * ctn;
-                        const gwTotal = (parseFloat(d.gross_weight) || 0) * ctn;
-                        const cbmTotal = (parseFloat(d.cbm) || 0) * ctn;
+                        tr.dataset.baseNw = parseFloat(d.net_weight) || 0;
+                        tr.dataset.baseGw = parseFloat(d.gross_weight) || 0;
+                        tr.dataset.baseCbm = parseFloat(d.cbm) || 0;
 
-                        tr.querySelector('.i-nw').value = nwTotal.toFixed(2);
-                        tr.querySelector('.i-gw').value = gwTotal.toFixed(2);
-                        tr.querySelector('.i-cbm').value = cbmTotal.toFixed(3);
+                        tr.querySelector('.i-desc').value = d.invoice_description || d.part_description || '';
                         
-                        // 3. ราคาต่อหน่วย (เอา Price_USD มาใส่ตรงๆ ห้ามคูณ เพราะเดี๋ยวมันไปคูณใน DB อีกรอบ)
+                        const typeInput = tr.querySelector('.i-type');
+                        if (typeInput.value === '') { typeInput.value = d.invoice_product_type || 'TOOL CABINET'; }
+                        
+                        qtyInput.value = ctn; 
+                        qtyInput.dispatchEvent(new Event('input'));
+                        
                         const priceInput = tr.querySelector('.i-price');
                         if (priceInput.value == 0 || priceInput.value == '') {
-                            priceInput.value = parseFloat(d.Price_USD) || 0; // 📌 ใช้ Price_USD
+                            priceInput.value = parseFloat(d.Price_USD) || 0; 
                         }
-                        
                     } else {
                         tr.querySelector('.i-desc').value = ''; 
                         tr.querySelector('.i-desc').placeholder = 'ไม่พบ SKU นี้ในระบบ...';
@@ -615,13 +620,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         };
 
+        qtyInput.addEventListener('input', function() {
+            const currentQty = parseFloat(this.value) || 0;
+            const bNw = parseFloat(tr.dataset.baseNw) || 0;
+            const bGw = parseFloat(tr.dataset.baseGw) || 0;
+            const bCbm = parseFloat(tr.dataset.baseCbm) || 0;
+
+            tr.querySelector('.i-nw').value = (bNw * currentQty).toFixed(2);
+            tr.querySelector('.i-gw').value = (bGw * currentQty).toFixed(2);
+            tr.querySelector('.i-cbm').value = (bCbm * currentQty).toFixed(4); 
+        });
+
         skuInput.addEventListener('change', fetchSkuInfo);
-        skuInput.addEventListener('blur', fetchSkuInfo); // เพิ่มดักตอนคลิกออก
+        skuInput.addEventListener('blur', fetchSkuInfo);
         searchBtn.addEventListener('click', fetchSkuInfo);
 
         tbody.appendChild(tr);
     };
 
+    // 🚀 ตรงนี้คือจุดที่แก้ไข Payload ครับ 🚀
     window.saveWebEdit = function(btnElement) {
         const invNo = document.getElementById('editInvoiceNo').value;
         const remark = document.getElementById('editRemark').value;
@@ -648,9 +665,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        const invoices = {};
-        invoices[invNo] = {
-            customerData: {
+        // 📌 ปรับ Payload ให้ตรงกับที่ API ฝั่ง PHP ต้องการเป๊ะๆ
+        const payload = {
+            action: 'import_invoice',
+            invoice_no: invNo,
+            report_id: 0,
+            remark: '[Web Edit] ' + remark,
+            customer: {
                 name: document.getElementById('editCustName').value,
                 address: document.getElementById('editAddress').value,
                 consignee: document.getElementById('editConsignee').value,
@@ -658,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 incoterms: document.getElementById('editIncoterms').value,
                 payment_terms: document.getElementById('editPayment').value
             },
-            shippingData: {
+            shipping: {
                 invoice_date: window.formatUniversalDate(document.getElementById('editInvDate').value),
                 container_qty: document.getElementById('editContainerQty').value,
                 port_loading: document.getElementById('editPortLoading').value,
@@ -673,14 +694,6 @@ document.addEventListener('DOMContentLoaded', function() {
             details: details
         };
 
-        const payload = {
-            action: 'import_invoice',
-            report_id: 0,
-            remark: '[Web Edit] ' + remark,
-            invoices: invoices
-        };
-
-        // ล็อคปุ่มป้องกันกดเบิ้ล
         if(btnElement) btnElement.disabled = true;
         Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
@@ -708,11 +721,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // 📌 ฟังก์ชันตัวช่วยสำหรับหยอดข้อมูลลงฟอร์ม (เพื่อไม่ให้เขียนโค้ดซ้ำ)
     window.fillInvoiceForm = function(inv) {
         document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
         
-        // Customer
         document.getElementById('editCustName').value = inv.customer.name || '';
         document.getElementById('editAddress').value = inv.customer.address || '';
         document.getElementById('editConsignee').value = inv.customer.consignee || '';
@@ -720,7 +731,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('editIncoterms').value = inv.customer.incoterms || '';
         document.getElementById('editPayment').value = inv.customer.payment_terms || '';
         
-        // Shipping
         document.getElementById('editInvDate').value = window.formatDateForInput(inv.shipping.invoice_date);
         document.getElementById('editContainerQty').value = inv.shipping.container_qty || '';
         document.getElementById('editPortLoading').value = inv.shipping.port_loading || 'LAEM CHABANG, THAILAND';
@@ -739,19 +749,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inv.details && inv.details.length > 0) {
             inv.details.forEach(item => addEditItemRow(item));
         } else {
-            addEditItemRow(); // ถ้าไม่มีสินค้าเลย ใส่แถวว่างๆ ไว้ 1 แถว
+            addEditItemRow(); 
         }
     };
 
-    // 📌 ฟังก์ชันใหม่! ค้นหาบิลจากเลข Invoice No ใน Modal
     window.searchInvoiceByNo = function() {
         const inputEl = document.getElementById('editInvoiceNo');
         let invNo = inputEl.value.trim().toUpperCase();
-        inputEl.value = invNo; // จัด Format เป็นตัวพิมพ์ใหญ่
+        inputEl.value = invNo; 
 
-        if (!invNo || invNo === 'AUTO') {
-            return; // ถ้าว่าง หรือเป็น AUTO ไม่ต้องค้นหา
-        }
+        if (!invNo || invNo === 'AUTO') return; 
 
         const btnSearch = document.getElementById('btnSearchInvoice');
         btnSearch.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -761,61 +768,30 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(resData => {
                 if (resData.success) {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'พบข้อมูลบิลเดิม!',
-                        text: 'ดึงข้อมูลเวอร์ชันล่าสุดมาให้แล้ว (หากกดบันทึก จะเป็นการสร้าง Version ใหม่)',
-                        timer: 2500,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
+                        icon: 'success', title: 'พบข้อมูลบิลเดิม!', text: 'ดึงข้อมูลเวอร์ชันล่าสุดมาให้แล้ว',
+                        timer: 2500, showConfirmButton: false, toast: true, position: 'top-end'
                     });
-                    fillInvoiceForm(resData); // หยอดข้อมูล
+                    fillInvoiceForm(resData); 
                 } else {
                     Swal.fire({
-                        icon: 'info',
-                        title: 'สร้างบิลใหม่',
-                        text: 'ไม่พบเลข Invoice นี้ในระบบ สามารถกรอกข้อมูลเพื่อสร้างบิลใหม่ได้เลย',
-                        timer: 2500,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
+                        icon: 'info', title: 'สร้างบิลใหม่', text: 'ไม่พบเลข Invoice นี้ในระบบ',
+                        timer: 2500, showConfirmButton: false, toast: true, position: 'top-end'
                     });
                 }
             })
             .catch(err => {
-                console.error(err);
-                Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+                console.error(err); Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
             })
             .finally(() => {
                 btnSearch.innerHTML = '<i class="fas fa-search"></i>';
             });
     };
 
-    window.openWebEdit = function(id) {
-        Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        fetch(`api/api_invoice.php?action=get_invoice_detail&id=${id}`)
-            .then(res => res.json())
-            .then(resData => {
-                Swal.close();
-                if (resData.success) {
-                    fillInvoiceForm(resData); // ยุบโค้ดให้เหลือแค่นี้!
-                    document.getElementById('editInvoiceNo').readOnly = true; // ล็อคห้ามแก้
-                    new bootstrap.Modal(document.getElementById('editModal')).show();
-                } else {
-                    Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
-                }
-            })
-            .catch(err => {
-                Swal.close(); console.error(err); Swal.fire('Error', 'ไม่สามารถเชื่อมต่อได้', 'error');
-            });
-    };
-
-    // กด Enter ในช่องค้นหา Invoice No ให้ทำทีกดปุ่มค้นหาเลย
     const editInvInput = document.getElementById('editInvoiceNo');
     if (editInvInput) {
         editInvInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // กันไม่ให้ฟอร์มเผลอ Submit
+                e.preventDefault(); 
                 window.searchInvoiceByNo();
             }
         });

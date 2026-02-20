@@ -82,54 +82,49 @@ try {
             break;
 
         case 'import_invoice':
-            if (!hasRole(['admin', 'creator', 'supervisor'])) {
-                throw new Exception("คุณไม่มีสิทธิ์นำเข้าข้อมูล Invoice");
-            }
+            $invoice_no = $input['invoice_no'] ?? 'AUTO';
+            $remark = $input['remark'] ?? '';
+            
+            $customerJson = json_encode($input['customer'] ?? [], JSON_UNESCAPED_UNICODE);
+            $shippingJson = json_encode($input['shipping'] ?? [], JSON_UNESCAPED_UNICODE);
+            $detailsJson  = json_encode($input['details'] ?? [], JSON_UNESCAPED_UNICODE);
 
-            if (empty($input['invoices'])) {
-                throw new Exception("ไม่มีข้อมูลที่ถูกส่งมา (Payload ว่างเปล่า)");
-            }
+            // เรียกใช้ SP ของ Production หรือ TEST ขึ้นอยู่กับ Environment
+            $spName = IS_DEVELOPMENT ? 'sp_Finance_ImportInvoice_TEST' : 'sp_Finance_ImportInvoice';
 
-            $reportId = (int)($input['report_id'] ?? 0);
-            $remark = trim($input['remark'] ?? 'Bulk Import via Browser');
+            $stmt = $pdo->prepare("
+                EXEC {$spName}
+                    @invoice_no = ?, 
+                    @report_id = NULL,
+                    @customer_json = ?, 
+                    @shipping_json = ?, 
+                    @details_json = ?, 
+                    @user_id = ?, 
+                    @remark = ?
+            ");
 
-            $sql = "EXEC dbo.sp_Finance_ImportInvoice ?, ?, ?, ?, ?, ?, ?";
-            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                $invoice_no, 
+                $customerJson, 
+                $shippingJson, 
+                $detailsJson, 
+                $userId, 
+                $remark
+            ]);
 
-            $successCount = 0;
-            $processedInvoices = [];
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $pdo->beginTransaction(); 
+            // ไม่ต้องใช้ $pdo->commit();
 
-            foreach ($input['invoices'] as $invNo => $invData) {
-                $stmt->execute([
-                    $invNo,
-                    $reportId,
-                    json_encode($invData['customerData'], JSON_UNESCAPED_UNICODE),
-                    json_encode($invData['shippingData'], JSON_UNESCAPED_UNICODE),
-                    json_encode($invData['details'], JSON_UNESCAPED_UNICODE),
-                    $userId,
-                    $remark
-                ]);
-
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($result && $result['success'] == 1) {
-                    $successCount++;
-                    // 📌 แก้ไขให้ดึงเลขบิลจริงที่ SP สร้างให้มาโชว์ (ถ้าไม่ได้สร้างใหม่ก็เอาเลขเดิม)
-                    $actualInvNo = $result['invoice_no'] ?? $invNo;
-                    $processedInvoices[] = $actualInvNo . " (v" . $result['current_version'] . ")";
-                } else {
-                    throw new Exception("เกิดข้อผิดพลาดจาก Stored Procedure ระหว่างนำเข้าบิล");
-                }
-            }
-
-            $pdo->commit(); 
-
-            if ($successCount > 0) {
+            if ($result && $result['success'] == 1) {
                 echo json_encode([
-                    "success" => true,
-                    "message" => "นำเข้าสำเร็จ $successCount บิล ได้แก่: " . implode(", ", $processedInvoices)
+                    'success' => true, 
+                    'message' => 'บันทึกข้อมูลสำเร็จ',
+                    'invoice_no' => $result['invoice_no'],
+                    'version' => $result['current_version']
                 ]);
+            } else {
+                throw new Exception("Stored Procedure Failed to return success.");
             }
             break;
 
@@ -239,7 +234,7 @@ try {
                         gross_weight, 
                         cbm,
                         CTN,
-                        material_type
+                        invoice_product_type
                     FROM dbo.ITEMS WITH (NOLOCK) 
                     WHERE sku = ? AND is_active = 1";
             
