@@ -81,8 +81,9 @@
                                 <div class="card-header bg-white fw-bold"><i class="fas fa-ship text-info me-2"></i>ข้อมูลขนส่ง (Shipping)</div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-6 mb-2"><label class="form-label small">Invoice Date</label><input type="date" id="editInvDate" class="form-control form-control-sm" required></div>
-                                        <div class="col-6 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
+                                        <div class="col-4 mb-2"><label class="form-label small">Invoice Date</label><input type="date" id="editInvDate" class="form-control form-control-sm" required></div>
+                                        <div class="col-4 mb-2"><label class="form-label small fw-bold text-primary">Booking No.</label><input type="text" id="editBookingNo" class="form-control form-control-sm border-primary"></div>
+                                        <div class="col-4 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
                                         
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Loading</label><input type="text" id="editPortLoading" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Discharge</label><input type="text" id="editPortDischarge" class="form-control form-control-sm"></div>

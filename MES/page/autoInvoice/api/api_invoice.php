@@ -63,6 +63,10 @@ try {
             $data = array_map(function($row) {
                 $customer = json_decode($row['customer_data_json'], true) ?: [];
                 $shipping = json_decode($row['shipping_data_json'], true) ?: [];
+                
+                // 📌 เพิ่มบรรทัดดึง Booking ออกมา (ถ้าไม่มีให้เป็น -)
+                $booking_no = isset($shipping['booking_no']) && $shipping['booking_no'] !== '' ? trim($shipping['booking_no']) : '-';
+
                 return [
                     'id' => $row['id'],
                     'invoice_no' => $row['invoice_no'],
@@ -71,6 +75,10 @@ try {
                     'customer_name' => $customer['name'] ?? '-',
                     'container_no' => $shipping['container_no'] ?? '-',
                     'vessel' => $shipping['feeder_vessel'] ?? '-',
+                    
+                    // 📌 เพิ่ม Key ส่งกลับไปให้ Frontend
+                    'booking_no' => $booking_no, 
+                    
                     'etd_date' => $shipping['etd_date'] ?? '-',
                     'eta_date' => $shipping['eta_date'] ?? '-',
                     'total_amount' => number_format((float)$row['total_amount'], 2),

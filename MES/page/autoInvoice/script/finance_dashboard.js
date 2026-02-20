@@ -86,6 +86,88 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // --- 🌟 เริ่มส่วน UI/UX ใหม่ (การตั้งค่าวันที่ & คำนวณยอด) 🌟 ---
+    function setDefaultDates() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
+        
+        const sd = document.getElementById('filterStartDate');
+        const ed = document.getElementById('filterEndDate');
+        
+        if (sd) sd.value = `${year}-${month}-01`;
+        if (ed) ed.value = `${year}-${month}-${lastDay}`;
+    }
+    // เรียกใช้ตอนโหลดหน้า เพื่อตั้งให้เป็นเดือนปัจจุบันเสมอ
+    setDefaultDates();
+
+    // ดักจับการเปลี่ยนวันที่ ถ้าเปลี่ยนปุ๊บให้โหลดข้อมูลใหม่ทันที
+    document.getElementById('filterStartDate')?.addEventListener('change', loadHistory);
+    document.getElementById('filterEndDate')?.addEventListener('change', loadHistory);
+
+    function calculateToolbarSums(filteredData) {
+        let totalInvoices = filteredData.length;
+        let totalUsd = filteredData.reduce((sum, inv) => {
+            let amount = parseFloat(String(inv.total_amount).replace(/,/g, '')) || 0;
+            return sum + amount;
+        }, 0);
+
+        const elInvoices = document.getElementById('sum-invoices');
+        const elUsd = document.getElementById('sum-amount-usd');
+        
+        if (elInvoices) elInvoices.innerText = totalInvoices.toLocaleString();
+        if (elUsd) elUsd.innerText = '$' + totalUsd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        calculateTHB(totalUsd);
+    }
+
+    function calculateTHB(usdValue) {
+        const elUsd = document.getElementById('sum-amount-usd');
+        if (usdValue === undefined && elUsd) {
+            usdValue = parseFloat(elUsd.innerText.replace(/[^0-9.-]+/g, "")) || 0;
+        } else if (usdValue === undefined) {
+            usdValue = 0;
+        }
+        
+        const rateEl = document.getElementById('exchangeRate');
+        let rate = rateEl ? parseFloat(rateEl.value) || 0 : 35.00;
+        let thbValue = usdValue * rate;
+        
+        const elThb = document.getElementById('sum-amount-thb');
+        if (elThb) elThb.innerText = '฿' + thbValue.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // เมื่อแก้เรทเงิน ให้คำนวณ THB ใหม่ทันที
+    document.getElementById('exchangeRate')?.addEventListener('input', () => calculateTHB());
+    // --- 🌍 ระบบดึงเรทเงินอัตโนมัติ (Live Exchange Rate) ---
+    async function fetchExchangeRate() {
+        const rateInput = document.getElementById('exchangeRate');
+        try {
+            // โชว์สถานะกำลังโหลดชั่วคราว (ถ้าต้องการ)
+            // if (rateInput) rateInput.value = '...'; 
+            
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await res.json();
+            
+            if (data && data.rates && data.rates.THB) {
+                const thbRate = data.rates.THB;
+                if (rateInput) {
+                    rateInput.value = thbRate.toFixed(2);
+                }
+                // ดึงค่าได้ปุ๊บ สั่งให้ระบบคำนวณเงินบาทบน Toolbar ใหม่ทันที
+                calculateTHB();
+            }
+        } catch (err) { 
+            console.warn("Failed to fetch exchange rate, using default 35.00:", err); 
+            // ถ้า API ล่ม หรือไม่มีเน็ต ก็จะใช้ค่า 35.00 ที่อยู่ใน HTML ต่อไป
+            calculateTHB();
+        }
+    }
+    
+    // เรียกใช้งานดึงเรทเงินทันทีตอนโหลดหน้าเว็บ
+    fetchExchangeRate();
+
     // --- 2. Load History Logic ---
     function loadHistory() {
         const tbody = document.querySelector('#historyTable tbody');
@@ -115,16 +197,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderTable() {
         const tbody = document.querySelector('#historyTable tbody');
+        if(!tbody) return;
         tbody.innerHTML = '';
 
         let filteredData = allInvoiceData;
+
+        // ฟิลเตอร์จากปุ่มสถานะ
         if (currentStatusFilter !== 'ALL') {
-            filteredData = allInvoiceData.filter(inv => inv.doc_status === currentStatusFilter);
+            filteredData = filteredData.filter(inv => inv.doc_status === currentStatusFilter);
         }
+
+        // ฟิลเตอร์จากช่อง Live Search (ค้นหาพร้อมกันหลายคอลัมน์)
+        const searchInput = document.getElementById('universalSearch');
+        const searchText = (searchInput?.value || '').toLowerCase().trim();
+        if (searchText) {
+            filteredData = filteredData.filter(inv => 
+                (inv.invoice_no && String(inv.invoice_no).toLowerCase().includes(searchText)) ||
+                (inv.customer_name && String(inv.customer_name).toLowerCase().includes(searchText)) ||
+                (inv.vessel && String(inv.vessel).toLowerCase().includes(searchText)) ||
+                (inv.container_no && String(inv.container_no).toLowerCase().includes(searchText))
+            );
+        }
+
+        // อัปเดตยอดรวมใน Toolbar จากข้อมูลที่ผ่านการกรองแล้ว
+        calculateToolbarSums(filteredData);
 
         if (filteredData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">
-                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลในสถานะ ${currentStatusFilter}
+                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลที่ค้นหา
             </td></tr>`;
             return;
         }
@@ -147,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="text-truncate fw-bold text-dark" style="max-width: 200px;" title="${inv.customer_name}">${inv.customer_name}</div>
                 </td>
                 <td>
+                    <div class="small fw-bold text-primary"><i class="fas fa-bookmark w-15px"></i> BKG: ${inv.booking_no || '-'}</div>
                     <div class="small text-secondary"><i class="fas fa-box w-15px"></i> ${inv.container_no}</div>
                     <div class="small text-secondary"><i class="fas fa-ship w-15px"></i> <span class="text-truncate d-inline-block" style="max-width: 150px; vertical-align: bottom;">${inv.vessel}</span></div>
                 </td>
@@ -200,6 +301,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.loadHistory = loadHistory;
     loadHistory();
+
+    // --- 🌟 ระบบ Live Search (Debounce แบบไม่กระตุก) 🌟 ---
+    const universalSearch = document.getElementById('universalSearch');
+    if (universalSearch) {
+        let debounceTimer;
+        universalSearch.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            // รอ 0.4 วินาทีหลังหยุดพิมพ์ ถึงจะสั่งกรองข้อมูล
+            debounceTimer = setTimeout(() => {
+                renderTable(); 
+            }, 400); 
+        });
+    }
+
+    // --- 🌟 ปุ่ม Reset Filter รูปแบบใหม่ 🌟 ---
+    window.clearFilter = function() {
+        setDefaultDates(); 
+        if (document.getElementById('universalSearch')) {
+            document.getElementById('universalSearch').value = '';
+        }
+        currentStatusFilter = 'ALL';
+        document.querySelectorAll('.kpi-card').forEach(c => {
+            c.classList.remove('active');
+            c.style.borderWidth = '0 0 0 4px';
+        });
+        loadHistory();
+    };
 
     // --- 5. View Versions Logic ---
     window.viewVersions = function(invoiceNo) {
@@ -289,6 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const findIdx = (keyword) => rowUpper.findIndex(c => c.includes(keyword));
                                 
                                 idx.invoice_no = findIdx('INVOICE NO');
+                                idx.booking = findIdx('BOOKING NO') !== -1 ? findIdx('BOOKING NO') : findIdx('BOOKING');
                                 idx.customer = findIdx('CUSTOMER NAME') !== -1 ? findIdx('CUSTOMER NAME') : findIdx('CUSTOMER');
                                 idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS');
                                 idx.incoterms = findIdx('INCOTERMS');
@@ -355,6 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
                                     },
                                     shippingData: {
+                                        booking_no: getVal(idx.booking),
                                         port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
                                         port_discharge: getVal(idx.port_discharge), 
                                         feeder_vessel: getVal(idx.vessel),
@@ -638,7 +768,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tbody.appendChild(tr);
     };
 
-    // 🚀 ตรงนี้คือจุดที่แก้ไข Payload ครับ 🚀
     window.saveWebEdit = function(btnElement) {
         const invNo = document.getElementById('editInvoiceNo').value;
         const remark = document.getElementById('editRemark').value;
@@ -665,7 +794,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 📌 ปรับ Payload ให้ตรงกับที่ API ฝั่ง PHP ต้องการเป๊ะๆ
         const payload = {
             action: 'import_invoice',
             invoice_no: invNo,
@@ -680,6 +808,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 payment_terms: document.getElementById('editPayment').value
             },
             shipping: {
+                booking_no: document.getElementById('editBookingNo').value,
                 invoice_date: window.formatUniversalDate(document.getElementById('editInvDate').value),
                 container_qty: document.getElementById('editContainerQty').value,
                 port_loading: document.getElementById('editPortLoading').value,
@@ -723,6 +852,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.fillInvoiceForm = function(inv) {
         document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
+        document.getElementById('editBookingNo').value = inv.shipping.booking_no || '';
         
         document.getElementById('editCustName').value = inv.customer.name || '';
         document.getElementById('editAddress').value = inv.customer.address || '';
@@ -796,33 +926,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
-    // --- 6. Live Search Filter ---
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keyup', function() {
-            const filter = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#historyTable tbody tr');
-            
-            rows.forEach(row => {
-                if(row.cells.length < 2) return; 
-                const rowText = row.textContent.toLowerCase();
-                if (rowText.includes(filter)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-    }
-
-    // --- 7. Status, Void, and Filters ---
-    window.clearFilter = function() {
-        document.getElementById('filterStartDate').value = '';
-        document.getElementById('filterEndDate').value = '';
-        document.getElementById('searchInput').value = '';
-        loadHistory();
-    };
 
     window.changeStatus = function(invoiceNo, currentStatus) {
         if (currentStatus === 'Voided') return; 
