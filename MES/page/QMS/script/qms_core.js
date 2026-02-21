@@ -1,25 +1,65 @@
 // MES/page/QMS/script/qms_core.js
 
 // ==========================================
+// SECURITY UTILITIES
+// ==========================================
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return str.toString().replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag])
+    );
+}
+
+function appendCsrfToken(formData) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+    return formData;
+}
+
+// ==========================================
 // GLOBAL VARIABLES
 // ==========================================
-let allCasesData = []; // เก็บข้อมูล Master ไว้สำหรับ Filter ในหน้าจอ
-let currentStatusFilter = 'ALL'; // สถานะ Filter ปัจจุบัน
+let allCasesData = []; 
+let currentStatusFilter = 'ALL'; 
+let searchTimer; 
+let caseDetailOffcanvasInstance = null; 
+let isDataReady = false;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. โหลดข้อมูลเมื่อเปิดหน้า
     fetchCasesData();
+    loadMasterData();
 
-    // 2. ระบบค้นหา (Real-time Filtering - พิมพ์ปุ๊บหาปั๊บ)
+    const offcanvasEl = document.getElementById('caseDetailOffcanvas');
+    if(offcanvasEl) {
+        caseDetailOffcanvasInstance = new bootstrap.Offcanvas(offcanvasEl);
+    }
+
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
-            renderTable(); 
+            if (!isDataReady) return; 
+
+            const tbody = document.querySelector('#caseTable tbody');
+            const mobileContainer = document.getElementById('mobileCaseContainer');
+            
+            if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</td></tr>';
+            if(mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</div>';
+
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                renderTable(); 
+            }, 300); 
         });
     }
 
-    loadMasterData();
-    // 3. เริ่มต้นระบบจัดการฟอร์มทั้งหมด
     initForms();
 });
 
@@ -27,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // 1. DATA FETCHING & FILTERING
 // ==========================================
 function fetchCasesData() {
+    isDataReady = false; 
+
     const tbody = document.querySelector('#caseTable tbody');
     if (!tbody) return;
 
@@ -36,9 +78,11 @@ function fetchCasesData() {
     .then(res => res.json())
     .then(res => {
         if(res.success) {
-            allCasesData = res.data.list; 
+            allCasesData = res.data.list.map(c => {
+                c._searchStr = `${c.car_no || ''} ${c.customer_name || ''} ${c.product_name || ''}`.toLowerCase();
+                return c;
+            });
             
-            // อัปเดตตัวเลขบน Card
             const stats = res.data.stats;
             if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = stats.total || 0;
             if (document.getElementById('stat-ncr')) document.getElementById('stat-ncr').innerText = stats.ncr_count || 0;
@@ -47,8 +91,10 @@ function fetchCasesData() {
             if (document.getElementById('stat-closed')) document.getElementById('stat-closed').innerText = stats.closed_count || 0;
 
             renderTable(); 
+            
+            setTimeout(() => { isDataReady = true; }, 100); 
         } else {
-            Swal.fire('ข้อผิดพลาด', res.message, 'error');
+            Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
             tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
         }
     })
@@ -58,10 +104,44 @@ function fetchCasesData() {
     });
 }
 
+// ==========================================
+// FIX: สร้าง String ให้เสร็จก่อนแล้วค่อย innerHTML ทีเดียว ลดภาระ Browser
+// ==========================================
+function loadMasterData() {
+    fetch('./api/qms_data.php?action=master_data')
+    .then(res => res.json())
+    .then(res => {
+        if(res.success) {
+            
+            // 1. จัดการ Line
+            const selectLine = document.getElementById('select_line');
+            if(selectLine) {
+                let lineHTML = '<option value="" selected disabled>-- เลือกไลน์ผลิต --</option>';
+                res.data.lines.forEach(l => {
+                    lineHTML += `<option value="${escapeHTML(l.line_name)}">${escapeHTML(l.line_name)}</option>`;
+                });
+                selectLine.innerHTML = lineHTML; // อัปเดต DOM แค่ 1 ครั้ง
+            }
+
+            // 2. จัดการ Items (จุดที่เคยทำให้ค้าง)
+            const dataList = document.getElementById('item_list');
+            if(dataList) {
+                let itemHTML = '';
+                res.data.items.forEach(i => {
+                    itemHTML += `<option value="${escapeHTML(i.part_no)} | ${escapeHTML(i.name)}">`;
+                });
+                dataList.innerHTML = itemHTML; // อัปเดต DOM แค่ 1 ครั้ง
+            }
+        }
+    })
+    .catch(err => console.error("Error loading master data:", err));
+}
+
 function setFilter(status) {
+    if (!isDataReady || currentStatusFilter === status) return; 
+
     currentStatusFilter = status;
     
-    // เปลี่ยนสถานะ Active ของ Card
     document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
     
     let cardId = 'card-all';
@@ -73,97 +153,102 @@ function setFilter(status) {
     const activeCard = document.getElementById(cardId);
     if(activeCard) activeCard.classList.add('active');
     
-    renderTable(); 
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            renderTable(); 
+        }, 0);
+    });
 }
 
 // ==========================================
-// 1.1 วาดตารางและ Mobile Cards
+// 1.1 วาดตารางและ Mobile Cards (XSS Secured)
 // ==========================================
 function renderTable() {
     const tbody = document.querySelector('#caseTable tbody');
     const mobileContainer = document.getElementById('mobileCaseContainer');
     if (!tbody || !mobileContainer) return;
 
-    const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+    const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase().trim() : '';
     
-    tbody.innerHTML = '';
-    mobileContainer.innerHTML = '';
-
     const filteredData = allCasesData.filter(c => {
         const matchStatus = (currentStatusFilter === 'ALL' || c.current_status === currentStatusFilter);
-        const matchSearch = searchTerm === '' || 
-                            (c.car_no && c.car_no.toLowerCase().includes(searchTerm)) ||
-                            (c.customer_name && c.customer_name.toLowerCase().includes(searchTerm)) ||
-                            (c.product_name && c.product_name.toLowerCase().includes(searchTerm));
+        const matchSearch = searchTerm === '' || c._searchStr.includes(searchTerm);
         return matchStatus && matchSearch;
     });
 
     if(filteredData.length === 0) {
-        const emptyMsg = `<tr><td colspan="6" class="text-center py-5 text-muted bg-light"><i class="fas fa-folder-open fa-2x mb-2 text-secondary opacity-50"></i><br>ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`;
-        tbody.innerHTML = emptyMsg;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted bg-light"><i class="fas fa-folder-open fa-2x mb-2 text-secondary opacity-50"></i><br>ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`;
         mobileContainer.innerHTML = `<div class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-2x mb-2"></i><br>ไม่พบรายการ</div>`;
         return;
     }
 
-    filteredData.forEach(c => {
-        // --- Badge Setup ---
+    const RENDER_LIMIT = 100;
+    const renderData = filteredData.slice(0, RENDER_LIMIT);
+
+    let tableHTML = '';
+    let mobileHTML = '';
+
+    renderData.forEach(c => {
         let badgeClass = 'bg-secondary text-white';
-        let cardBorder = '#6c757d'; // สีขอบ Card Mobile
-        let statusText = c.current_status.replace(/_/g, ' ');
+        let cardBorder = '#6c757d'; 
+        let statusText = escapeHTML(c.current_status.replace(/_/g, ' '));
 
         if(c.current_status === 'NCR_CREATED') { badgeClass = 'bg-danger text-white'; cardBorder = '#dc3545'; statusText = 'NEW NCR'; }
-        else if(c.current_status === 'SENT_TO_CUSTOMER') { badgeClass = 'bg-warning text-dark'; cardBorder = '#ffc107'; statusText = 'WAITING CAR'; }
-        else if(c.current_status === 'CUSTOMER_REPLIED') { badgeClass = 'bg-info text-dark'; cardBorder = '#0dcaf0'; statusText = 'READY TO CLAIM'; }
+        else if(c.current_status === 'SENT_TO_CUSTOMER') { badgeClass = 'bg-warning text-dark border border-warning'; cardBorder = '#ffc107'; statusText = 'WAITING CAR'; }
+        else if(c.current_status === 'CUSTOMER_REPLIED') { badgeClass = 'bg-info text-dark border border-info'; cardBorder = '#0dcaf0'; statusText = 'READY TO CLAIM'; }
         else if(c.current_status === 'CLOSED') { badgeClass = 'bg-success text-white'; cardBorder = '#198754'; }
 
-        // --- 1. วาด Desktop Table Row ---
-        const tr = document.createElement('tr');
-        tr.onclick = () => openCaseDetail(c.case_id);
-        tr.innerHTML = `
-            <td><span class="fw-bold text-primary">${c.car_no}</span></td>
-            <td class="text-muted small">${c.case_date ? new Date(c.case_date).toLocaleDateString('th-TH') : '-'}</td>
-            <td>
-                <div class="fw-bold text-dark">${c.customer_name}</div>
-                <div class="small text-muted">${c.product_name}</div>
-            </td>
-            <td>
-                <div class="fw-bold text-secondary">${c.defect_type || '-'}</div>
-                <div class="small text-danger">Defect Qty: ${c.defect_qty ? Number(c.defect_qty).toLocaleString() : 0}</div>
-            </td>
-            <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${statusText}</span></td>
-            <td><div class="small fw-bold text-secondary"><i class="fas fa-user-circle me-1"></i>${c.created_by_name || '-'}</div></td>
+        tableHTML += `
+            <tr onclick="openCaseDetail(${c.case_id})">
+                <td><span class="fw-bold text-primary">${escapeHTML(c.car_no)}</span></td>
+                <td class="text-muted small">${c.case_date ? new Date(c.case_date).toLocaleDateString('th-TH') : '-'}</td>
+                <td>
+                    <div class="fw-bold text-dark">${escapeHTML(c.customer_name)}</div>
+                    <div class="small text-muted">${escapeHTML(c.product_name)}</div>
+                </td>
+                <td>
+                    <div class="fw-bold text-secondary">${escapeHTML(c.defect_type) || '-'}</div>
+                    <div class="small text-danger">Defect Qty: ${c.defect_qty ? Number(c.defect_qty).toLocaleString() : 0}</div>
+                </td>
+                <td class="text-center"><span class="badge badge-status ${badgeClass}">${statusText}</span></td>
+                <td><div class="small fw-bold text-secondary"><i class="fas fa-user-circle me-1"></i>${escapeHTML(c.created_by_name) || '-'}</div></td>
+            </tr>
         `;
-        tbody.appendChild(tr);
 
-        // --- 2. วาด Mobile Card ---
-        const mCard = document.createElement('div');
-        mCard.className = 'mobile-case-card';
-        mCard.style.borderLeftColor = cardBorder;
-        mCard.onclick = () => openCaseDetail(c.case_id);
-        mCard.innerHTML = `
-            <div class="m-card-header">
-                <span class="fw-bold text-primary">${c.car_no}</span>
-                <span class="badge ${badgeClass}">${statusText}</span>
-            </div>
-            <div class="m-card-body">
-                <div class="fw-bold text-dark mb-1">${c.customer_name}</div>
-                <div class="small text-muted mb-2"><i class="fas fa-cube me-1"></i> ${c.product_name}</div>
-                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
-                    <div><span class="text-danger fw-bold">${c.defect_type || '-'}</span></div>
-                    <div class="small fw-bold">Qty: ${c.defect_qty ? Number(c.defect_qty).toLocaleString() : 0}</div>
+        mobileHTML += `
+            <div class="mobile-case-card" style="border-left-color: ${cardBorder}" onclick="openCaseDetail(${c.case_id})">
+                <div class="m-card-header">
+                    <span class="fw-bold text-primary">${escapeHTML(c.car_no)}</span>
+                    <span class="badge ${badgeClass}">${statusText}</span>
+                </div>
+                <div class="m-card-body">
+                    <div class="fw-bold text-dark mb-1">${escapeHTML(c.customer_name)}</div>
+                    <div class="small text-muted mb-2"><i class="fas fa-cube me-1"></i> ${escapeHTML(c.product_name)}</div>
+                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                        <div><span class="text-danger fw-bold">${escapeHTML(c.defect_type) || '-'}</span></div>
+                        <div class="small fw-bold">Qty: ${c.defect_qty ? Number(c.defect_qty).toLocaleString() : 0}</div>
+                    </div>
                 </div>
             </div>
         `;
-        mobileContainer.appendChild(mCard);
     });
+
+    if (filteredData.length > RENDER_LIMIT) {
+        tableHTML += `<tr><td colspan="6" class="text-center py-3 text-muted bg-light small"><i class="fas fa-info-circle me-1"></i> แสดงผล ${RENDER_LIMIT} รายการล่าสุดจากทั้งหมด ${filteredData.length} รายการ (ค้นหาเพื่อดูเพิ่มเติม)</td></tr>`;
+        mobileHTML += `<div class="text-center py-3 text-muted small"><i class="fas fa-info-circle me-1"></i> แสดง ${RENDER_LIMIT} จาก ${filteredData.length} รายการ</div>`;
+    }
+
+    tbody.innerHTML = tableHTML;
+    mobileContainer.innerHTML = mobileHTML;
 }
 
 // ==========================================
 // 2. CASE DETAIL (Offcanvas)
 // ==========================================
 function openCaseDetail(caseId) {
-    const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('caseDetailOffcanvas'));
-    bsOffcanvas.show();
+    if(caseDetailOffcanvasInstance) {
+        caseDetailOffcanvasInstance.show();
+    }
 
     document.getElementById('offcanvas_car_no').innerText = 'Loading...';
     document.getElementById('offcanvas_status').innerText = '...';
@@ -175,11 +260,10 @@ function openCaseDetail(caseId) {
         if(res.success) {
             const data = res.data;
             
-            // Header
             document.getElementById('offcanvas_car_no').innerText = data.car_no;
             
             let badgeClass = 'bg-secondary text-white';
-            let statusText = data.current_status.replace(/_/g, ' ');
+            let statusText = escapeHTML(data.current_status.replace(/_/g, ' '));
             if(data.current_status === 'NCR_CREATED') { badgeClass = 'bg-danger text-white'; statusText = 'NEW NCR'; }
             else if(data.current_status === 'SENT_TO_CUSTOMER') { badgeClass = 'bg-warning text-dark'; statusText = 'WAITING CAR'; }
             else if(data.current_status === 'CUSTOMER_REPLIED') { badgeClass = 'bg-info text-dark'; statusText = 'READY TO CLAIM'; }
@@ -188,11 +272,10 @@ function openCaseDetail(caseId) {
             document.getElementById('offcanvas_status').innerText = statusText;
             document.getElementById('offcanvas_status').className = `badge ${badgeClass} border`;
 
-            // Hidden Inputs
             if(document.getElementById('issue_case_id')) document.getElementById('issue_case_id').value = data.case_id;
             if(document.getElementById('claim_case_id')) document.getElementById('claim_case_id').value = data.case_id;
 
-            // Bind Data
+            // innerText ปลอดภัยจาก XSS อยู่แล้ว แต่คลุมไว้เพื่อความชัวร์
             const setText = (id, text) => { if(document.getElementById(id)) document.getElementById(id).innerText = text || '-'; };
             
             setText('view_customer', data.customer_name);
@@ -205,14 +288,17 @@ function openCaseDetail(caseId) {
             setText('view_prod_date', data.production_date);
             setText('view_shift', data.found_shift);
             setText('view_lot', data.lot_no);
+            setText('view_return_container', data.return_container_no);
+            setText('view_expected_qty', data.expected_return_qty ? Number(data.expected_return_qty).toLocaleString() + ' PCS' : '-');
 
-            // Images
             const gallery = document.getElementById('gallery_ncr');
             if (gallery) {
                 gallery.innerHTML = ''; 
                 if (data.images && data.images.length > 0) {
                     data.images.forEach(img => {
-                        gallery.innerHTML += `<div class="col-6"><a href="${img.file_path}" target="_blank"><img src="${img.file_path}" class="img-fluid rounded border border-secondary border-opacity-25 shadow-sm" style="height:120px; object-fit:cover; width:100%;"></a></div>`;
+                        // ป้องกัน URL Injection ใน src
+                        const safeUrl = encodeURI(img.file_path);
+                        gallery.innerHTML += `<div class="col-6"><a href="${safeUrl}" target="_blank"><img src="${safeUrl}" class="img-fluid rounded border border-secondary border-opacity-25 shadow-sm" style="height:120px; object-fit:cover; width:100%;"></a></div>`;
                     });
                 } else {
                     gallery.innerHTML = '<div class="col-12 text-muted small text-center py-3 bg-light rounded border border-dashed">- ไม่มีการแนบรูปภาพ -</div>';
@@ -231,8 +317,8 @@ function openCaseDetail(caseId) {
             manageUIZones(data);
 
         } else {
-            Swal.fire('ข้อผิดพลาด', res.message, 'error');
-            bsOffcanvas.hide();
+            Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
+            if(caseDetailOffcanvasInstance) caseDetailOffcanvasInstance.hide();
         }
     })
     .catch(err => {
@@ -268,8 +354,24 @@ function manageUIZones(data) {
     else if (status === 'CUSTOMER_REPLIED') {
         show('zone_customer_replied');
         show('claim_form_zone');
+        
+        // เช็คว่าลูกค้ากรอกตู้มาหรือยัง
+        const hasContainer = (data.return_container_no && data.return_container_no.trim() !== '');
+        const alertMissing = document.getElementById('missing_container_alert');
+        const btnClose = document.getElementById('btnCloseClaimBtn');
+        
+        if (!hasContainer) {
+            // ถ้ายังไม่กรอก -> โชว์ Alert สีเหลือง และล็อกปุ่มปิดงาน
+            if(alertMissing) alertMissing.classList.remove('d-none');
+            if(btnClose) btnClose.disabled = true;
+        } else {
+            // ถ้ากรอกแล้ว -> ซ่อน Alert และปลดล็อกปุ่มปิดงาน
+            if(alertMissing) alertMissing.classList.add('d-none');
+            if(btnClose) btnClose.disabled = false;
+        }
+
         if(document.getElementById('claim_final_qty')) document.getElementById('claim_final_qty').value = Number(data.defect_qty); 
-    } 
+    }
     else if (status === 'CLOSED') {
         show('zone_customer_replied');
         show('claim_closed_zone');
@@ -277,31 +379,28 @@ function manageUIZones(data) {
 }
 
 // ==========================================
-// 3. FORM SUBMISSIONS
+// 3. FORM SUBMISSIONS & EVENT BINDINGS (CSRF Applied)
 // ==========================================
 function initForms() {
     
-    // [A] Form: Create NCR
     const formNCR = document.getElementById('formNCR');
     if(formNCR) {
         formNCR.addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            // เช็ค Validation พื้นฐาน (รวมถึงเช็คว่าแนบรูปหรือยัง)
             if (!this.checkValidity()) {
                 e.stopPropagation();
                 this.classList.add('was-validated');
                 return;
             }
 
-            // ค้นหาปุ่ม Submit ไม่ว่าจะอยู่ในฟอร์มหรืออยู่ส่วน Footer
             const btn = this.querySelector('button[type="submit"]') || document.querySelector(`button[form="${this.id}"]`);
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังบันทึก...';
 
-            const formData = new FormData(this);
+            let formData = new FormData(this);
             formData.append('action', 'create_ncr');
+            formData = appendCsrfToken(formData); // แทรก CSRF Token
 
             fetch('./api/qms_action.php', { method: 'POST', body: formData })
             .then(res => res.json())
@@ -318,10 +417,19 @@ function initForms() {
                         if (modal) modal.hide();
                         formNCR.reset();
                         formNCR.classList.remove('was-validated');
-                        fetchCasesData(); // ดึงข้อมูลใหม่แทน loadCaseTable
+                        
+                        const previewContainer = document.getElementById('imagePreviewContainer');
+                        const uploadBox = document.getElementById('uploadBox');
+                        if(previewContainer) previewContainer.innerHTML = '';
+                        if(uploadBox) {
+                            uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+                            uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
+                        }
+
+                        fetchCasesData(); 
                     });
                 } else {
-                    Swal.fire('ข้อผิดพลาด', res.message, 'error');
+                    Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
                 }
             })
             .catch(err => {
@@ -335,7 +443,6 @@ function initForms() {
         });
     }
 
-    // [B] Form: Issue CAR
     const formIssueCAR = document.getElementById('formIssueCAR');
     if(formIssueCAR) {
         formIssueCAR.addEventListener('submit', function(e) {
@@ -362,8 +469,9 @@ function initForms() {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังดำเนินการ...';
 
-                    const formData = new FormData(this);
+                    let formData = new FormData(this);
                     formData.append('action', 'issue_car');
+                    formData = appendCsrfToken(formData); // แทรก CSRF Token
 
                     fetch('./api/qms_action.php', { method: 'POST', body: formData })
                     .then(res => res.json())
@@ -371,9 +479,9 @@ function initForms() {
                         if(res.success) {
                             Swal.fire('สำเร็จ', res.message, 'success');
                             openCaseDetail(document.getElementById('issue_case_id').value);
-                            fetchCasesData(); // ดึงข้อมูลใหม่แทน loadCaseTable
+                            fetchCasesData(); 
                         } else {
-                            Swal.fire('ข้อผิดพลาด', res.message, 'error');
+                            Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
                         }
                     })
                     .catch(err => {
@@ -389,7 +497,6 @@ function initForms() {
         });
     }
 
-    // [C] Form: Close Claim
     const formClaim = document.getElementById('formCloseClaim');
     if(formClaim) {
         formClaim.addEventListener('submit', function(e) {
@@ -416,8 +523,9 @@ function initForms() {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังบันทึก...';
 
-                    const formData = new FormData(this);
+                    let formData = new FormData(this);
                     formData.append('action', 'close_claim');
+                    formData = appendCsrfToken(formData); // แทรก CSRF Token
 
                     fetch('./api/qms_action.php', { method: 'POST', body: formData })
                     .then(res => res.json())
@@ -425,9 +533,9 @@ function initForms() {
                         if(res.success) {
                             Swal.fire('สำเร็จ', res.message, 'success');
                             openCaseDetail(document.getElementById('claim_case_id').value);
-                            fetchCasesData(); // ดึงข้อมูลใหม่แทน loadCaseTable
+                            fetchCasesData(); 
                         } else {
-                            Swal.fire('ข้อผิดพลาด', res.message, 'error');
+                            Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
                         }
                     })
                     .catch(err => {
@@ -440,6 +548,40 @@ function initForms() {
                     });
                 }
             });
+        });
+    }
+
+    const fileInput = document.getElementById('ncrFileInput');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const uploadBox = document.getElementById('uploadBox');
+
+    if(fileInput && previewContainer) {
+        fileInput.addEventListener('change', function() {
+            previewContainer.innerHTML = ''; 
+            
+            if (this.files.length > 0) {
+                uploadBox.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+                uploadBox.classList.remove('border-primary', 'bg-light');
+                uploadBox.querySelector('h6').innerHTML = `<i class="fas fa-check-circle me-1"></i> เลือกรูปแล้ว ${this.files.length} รูป`;
+                
+                Array.from(this.files).forEach(file => {
+                    if(file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'preview-img-wrapper';
+                            // ไม่ต้องใช้ escapeHTML ตรงนี้เพราะ e.target.result เป็น Data URL จากไฟล์ที่ถูกกรองว่าเป็น Image แล้ว
+                            wrapper.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                            previewContainer.appendChild(wrapper);
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+            } else {
+                uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+                uploadBox.classList.add('border-primary', 'bg-light');
+                uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
+            }
         });
     }
 }
@@ -481,94 +623,12 @@ function printDoc(type) {
     if(url) window.open(url, '_blank');
 }
 
-// ==========================================
-// 5. MODAL CONTROLLERS
-// ==========================================
-function openNCRModal() {
-    const formNCR = document.getElementById('formNCR');
-    if (formNCR) {
-        formNCR.reset(); 
-        formNCR.classList.remove('was-validated'); 
-    }
-    const myModal = new bootstrap.Modal(document.getElementById('ncrModal'));
-    myModal.show();
-}
-
-// เติมฟังก์ชันนี้ต่อท้ายไฟล์ qms_core.js
-function loadMasterData() {
-    fetch('./api/qms_data.php?action=master_data')
-    .then(res => res.json())
-    .then(res => {
-        if(res.success) {
-            // เติม Line
-            const selectLine = document.getElementById('select_line');
-            if(selectLine) {
-                selectLine.innerHTML = '<option value="" selected disabled>-- เลือกไลน์ผลิต --</option>';
-                res.data.lines.forEach(l => {
-                    selectLine.innerHTML += `<option value="${l.line_name}">${l.line_name}</option>`;
-                });
-            }
-            // เติม Product Datalist
-            const dataList = document.getElementById('item_list');
-            if(dataList) {
-                dataList.innerHTML = '';
-                res.data.items.forEach(i => {
-                    dataList.innerHTML += `<option value="${i.part_no} | ${i.name}">`;
-                });
-            }
-        }
-    });
-}
-
-// ==========================================
-// 6. IMAGE PREVIEW (Mobile Upload UX)
-// ==========================================
-document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('ncrFileInput');
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    const uploadBox = document.getElementById('uploadBox');
-
-    if(fileInput && previewContainer) {
-        fileInput.addEventListener('change', function() {
-            previewContainer.innerHTML = ''; // เคลียร์ของเก่า
-            
-            if (this.files.length > 0) {
-                // เปลี่ยนสีกล่องให้รู้ว่าเลือกไฟล์แล้ว
-                uploadBox.classList.add('border-success', 'bg-success', 'bg-opacity-10');
-                uploadBox.classList.remove('border-primary', 'bg-light');
-                uploadBox.querySelector('h6').innerHTML = `<i class="fas fa-check-circle me-1"></i> เลือกรูปแล้ว ${this.files.length} รูป`;
-                
-                // วนลูปวาด Preview
-                Array.from(this.files).forEach(file => {
-                    if(file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            const wrapper = document.createElement('div');
-                            wrapper.className = 'preview-img-wrapper';
-                            wrapper.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                            previewContainer.appendChild(wrapper);
-                        }
-                        reader.readAsDataURL(file);
-                    }
-                });
-            } else {
-                // Reset กล่อง
-                uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
-                uploadBox.classList.add('border-primary', 'bg-light');
-                uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
-            }
-        });
-    }
-});
-
-// ดักตอนเปิด Modal ให้เคลียร์รูปเก่าออกด้วย
 function openNCRModal() {
     const formNCR = document.getElementById('formNCR');
     if (formNCR) {
         formNCR.reset(); 
         formNCR.classList.remove('was-validated'); 
         
-        // Clear Preview
         const previewContainer = document.getElementById('imagePreviewContainer');
         const uploadBox = document.getElementById('uploadBox');
         if(previewContainer) previewContainer.innerHTML = '';
@@ -579,4 +639,36 @@ function openNCRModal() {
     }
     const myModal = new bootstrap.Modal(document.getElementById('ncrModal'));
     myModal.show();
+}
+
+function rejectCAR() {
+    const caseId = document.getElementById('claim_case_id').value;
+    Swal.fire({
+        title: 'ยืนยันตีกลับให้ลูกค้าแก้ไข?',
+        text: "สถานะจะเปลี่ยนกลับเป็น 'WAITING CAR' เพื่อให้ลูกค้าปรับปรุงแผน 8D หรือระบุข้อมูลเพิ่มเติม",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'ยืนยันตีกลับ (Reject)',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'reject_car');
+            formData.append('case_id', caseId);
+            appendCsrfToken(formData); // ดึงมาจากฟังก์ชัน Security ที่เราทำไว้รอบที่แล้ว
+
+            fetch('./api/qms_action.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(res => {
+                if(res.success) {
+                    Swal.fire('สำเร็จ', res.message, 'success');
+                    openCaseDetail(caseId);
+                    fetchCasesData();
+                } else {
+                    Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
+                }
+            });
+        }
+    });
 }

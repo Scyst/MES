@@ -62,7 +62,9 @@ try {
                     car.qa_issue_description, car.access_token, car.token_expiry, car.customer_root_cause, 
                     car.customer_action_plan, car.customer_respond_date, car.containment_action, 
                     car.root_cause_category, car.leak_cause,
-                    cl.disposition, cl.cost_estimation, cl.closed_at, cl.final_qty
+                    car.return_container_no, car.expected_return_qty,
+                    cl.disposition, cl.cost_estimation, cl.closed_at, cl.final_qty,
+                    cl.actual_received_qty
                 FROM QMS_CASES c WITH (NOLOCK)
                 LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
                 LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id

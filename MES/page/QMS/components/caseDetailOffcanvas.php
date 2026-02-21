@@ -154,39 +154,57 @@
                 </div>
 
                 <div id="claim_form_zone" class="d-none">
-                    <div class="mb-3 border-start border-4 border-success ps-2">
-                        <h6 class="fw-bold text-dark mb-0">สรุปผลการพิจารณา (Final Disposition)</h6>
+                    <div class="mb-2 border-start border-4 border-warning ps-2">
+                        <h6 class="fw-bold text-dark mb-0">ตรวจสอบและรับของ (Review & Receive)</h6>
                     </div>
+
+                    <div id="missing_container_alert" class="alert alert-warning py-2 mb-3 d-none" style="font-size: 0.85rem;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> ลูกค้าส่งการวิเคราะห์ปัญหาแล้ว <b>แต่ยังไม่ระบุข้อมูลการส่งคืน</b><br>
+                        (คุณสามารถอ่านข้อมูล 8D ได้ แต่ยังไม่สามารถปิดเคสได้จนกว่าข้อมูลขนส่งจะครบ)
+                    </div>
+
+                    <div class="row g-2 mb-3 px-2">
+                        <div class="col-6">
+                            <div class="info-label text-primary">ตู้คอนเทนเนอร์จากลูกค้า</div>
+                            <div class="info-value font-monospace bg-light border px-2 py-1 rounded" id="view_return_container">-</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="info-label text-primary">จำนวนที่ลูกค้าแจ้งส่งคืน</div>
+                            <div class="info-value text-danger font-monospace bg-light border px-2 py-1 rounded" id="view_expected_qty">-</div>
+                        </div>
+                    </div>
+
                     <form id="formCloseClaim" class="needs-validation" novalidate>
                         <input type="hidden" name="case_id" id="claim_case_id">
                         
-                        <div class="row g-3 mb-4 p-3 bg-light border rounded mx-0">
+                        <div class="row g-3 mb-4 p-3 bg-light border border-secondary rounded mx-0">
                             <div class="col-12">
                                 <label class="form-label info-label">Disposition <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm border-secondary fw-bold text-dark" name="disposition" required>
-                                    <option value="" selected disabled>-- เลือกการดำเนินการ --</option>
-                                    <option value="RETURN">ส่งคืนลูกค้า (Return)</option>
-                                    <option value="SCRAP">ทำลายทิ้ง (Scrap)</option>
-                                    <option value="REWORK">ซ่อมแซม (Rework)</option>
-                                    <option value="ACCEPT">ยอมรับสภาพ (Accept)</option>
+                                    <option value="" selected disabled>-- เลือกผลการตรวจสอบ --</option>
+                                    <option value="RETURN">รับของคืนแล้ว (Return & Rework)</option>
+                                    <option value="SCRAP">ทำลายทิ้งที่ลูกค้า (Scrap at site)</option>
+                                    <option value="ACCEPT">ยอมรับสภาพ (Accept as is)</option>
                                 </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label info-label">Final Qty <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm border-secondary text-center fw-bold text-dark" name="final_qty" id="claim_final_qty" required>
+                                <label class="form-label info-label text-success">ยอดรับเข้าจริง <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm border-success text-center fw-bold text-success" name="actual_received_qty" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label info-label">Cost Estimation</label>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-secondary text-white border-secondary">฿</span>
-                                    <input type="number" class="form-control border-secondary text-end fw-bold text-danger" name="cost_estimation" placeholder="0.00" step="0.01">
-                                </div>
+                                <label class="form-label info-label text-danger">ค่าใช้จ่าย/CN (THB)</label>
+                                <input type="number" class="form-control form-control-sm border-danger text-end fw-bold text-danger" name="cost_estimation" placeholder="0.00" step="0.01">
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-sm btn-success w-100 fw-bold fs-6 py-2">
-                            <i class="fas fa-check-circle me-1"></i> ยืนยันปิดเคส (Close Case)
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger w-50 fw-bold" id="btnRejectCAR" onclick="rejectCAR()">
+                                <i class="fas fa-reply me-1"></i> ตีกลับ CAR
+                            </button>
+                            <button type="submit" class="btn btn-sm btn-success w-50 fw-bold shadow-sm" id="btnCloseClaimBtn">
+                                <i class="fas fa-clipboard-check me-1"></i> รับของ & ปิดเคส
+                            </button>
+                        </div>
                     </form>
                 </div>
 

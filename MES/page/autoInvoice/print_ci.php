@@ -204,7 +204,7 @@ function formatDocDate($dateStr) {
             <td style="width: 50%; vertical-align: top;">
                 <table style="border-collapse: collapse;">
                     <tr>
-                        <td class="fw-bold" style="width: 120px; padding-bottom: 4px;">INCOTERMS:</td>
+                        <td class="fw-bold" style="width: 100px; padding-bottom: 4px;">INCOTERMS:</td>
                         <td style="padding-bottom: 4px;"><?= htmlspecialchars($customer['incoterms'] ?? '-') ?></td>
                     </tr>
                     <tr>
@@ -216,8 +216,8 @@ function formatDocDate($dateStr) {
             <td style="width: 50%; vertical-align: top;">
                 <table style="border-collapse: collapse;">
                     <tr>
-                        <td class="fw-bold" style="width: 130px; padding-bottom: 4px;">INVOICE NO.:</td>
-                        <td class="fw-bold" style="background: #ffff99; color: #002060; padding: 1px 4px; margin-bottom: 4px; display: inline-block;">
+                        <td class="fw-bold" style="width: 100px; padding-bottom: 4px;">INVOICE NO.:</td>
+                        <td class="fw-bold" style="background: #ffff99; color: #002060; margin-bottom: 4px; display: inline-block;">
                             <?= htmlspecialchars($header['invoice_no']) ?>
                         </td>
                     </tr>
@@ -238,7 +238,7 @@ function formatDocDate($dateStr) {
                         <div class="fw-bold">BY ORDER AND ON ACCOUNT OF MESSRS.</div>
                     </td>
                     <td style="width: 45; border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">PORT OF LOADING:</span>
+                        <span class="lbl-col" style="width: 110px;">PORT OF LOADING:</span>
                         <span><?= htmlspecialchars($shipping['port_loading'] ?? 'LAEM CHABANG, THAILAND') ?></span>
                     </td>
                 </tr>
@@ -247,7 +247,7 @@ function formatDocDate($dateStr) {
                     <td rowspan="6" style="width: 55%; vertical-align: top;">
                         <table class="inner-table">
                             <tr>
-                                <td class="lbl-col" style="width: 120px;">CUSTOMER NAME:</td>
+                                <td class="lbl-col" style="width: 100px;">CUSTOMER NAME:</td>
                                 <td class="fw-bold"><?= htmlspecialchars($customer['name'] ?? '-') ?></td>
                             </tr>
                             <tr>
@@ -258,37 +258,37 @@ function formatDocDate($dateStr) {
                     </td>
                     
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">PORT OF DISCHARGE:</span>
+                        <span class="lbl-col" style="width: 110px;">PORT OF DISCHARGE:</span>
                         <span><?= htmlspecialchars($shipping['port_discharge'] ?? '-') ?></span>
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">CONTAINER QTY:</span>
+                        <span class="lbl-col" style="width: 110px;">CONTAINER QTY:</span>
                         <span><?= htmlspecialchars($shipping['container_qty'] ?? '-') ?></span>
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">ETD DATE:</span>
+                        <span class="lbl-col" style="width: 110px;">ETD DATE:</span>
                         <span><?= formatDocDate($shipping['etd_date'] ?? '-') ?></span> 
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">ETA DATE:</span>
+                        <span class="lbl-col" style="width: 110px;">ETA DATE:</span>
                         <span><?= formatDocDate($shipping['eta_date'] ?? '-') ?></span>
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000; border-bottom: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">FEEDER VESSEL:</span>
+                        <span class="lbl-col" style="width: 110px;">FEEDER VESSEL:</span>
                         <span><?= htmlspecialchars($shipping['feeder_vessel'] ?? '-') ?></span>
                     </td>
                 </tr>
                 <tr>
                     <td style="border-left: 1px solid #000;">
-                        <span class="lbl-col" style="width: 130px;">MOTHER VESSEL:</span>
+                        <span class="lbl-col" style="width: 110px;">MOTHER VESSEL:</span>
                         <span><?= htmlspecialchars($shipping['mother_vessel'] ?? '-') ?></span>
                     </td>
                 </tr>

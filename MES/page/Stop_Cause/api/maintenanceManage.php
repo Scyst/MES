@@ -458,14 +458,32 @@ try {
             $jobType = $input['job_type'] ?? $_POST['job_type'] ?? 'Repair';
             $priority = $input['priority'] ?? $_POST['priority'] ?? 'Normal';
             $issue = $input['issue_description'] ?? $_POST['issue_description'] ?? '';
+
+            // 1. ดึงข้อมูลเดิมจาก Database มาก่อน เพื่อป้องกันค่า NULL ไปทับคอลัมน์สำคัญ
+            $stmtCheck = $pdo->prepare("SELECT request_by, resolved_by FROM " . MAINTENANCE_REQUESTS_TABLE . " WHERE id = ?");
+            $stmtCheck->execute([$id]);
+            $currentRecord = $stmtCheck->fetch(PDO::FETCH_ASSOC);
             
-            // [NEW] รับค่าคนเปิดงานและคนปิดงาน (รับเป็น Text อิสระได้เลย)
-            $requestBy = $input['request_by'] ?? $_POST['request_by'] ?? null;
-            $resolvedBy = $input['resolved_by'] ?? $_POST['resolved_by'] ?? null;
+            if (!$currentRecord) throw new Exception("ไม่พบข้อมูลใบแจ้งซ่อมนี้");
+
+            // 2. ตรวจสอบค่า 'ผู้แจ้งซ่อม' (ห้ามเป็น NULL เด็ดขาด)
+            $requestBy = trim($_POST['request_by'] ?? $input['request_by'] ?? '');
+            if ($requestBy === '') {
+                // ถ้าลบข้อความทิ้ง หรือไม่ได้ส่งมา ให้ใช้ชื่อเดิมที่เคยบันทึกไว้
+                $requestBy = $currentRecord['request_by']; 
+            }
+
+            // 3. ตรวจสอบค่า 'ผู้ปิดงาน'
+            $resolvedBy = trim($_POST['resolved_by'] ?? $input['resolved_by'] ?? '');
+            if ($resolvedBy === '') {
+                // ถ้าปล่อยว่าง ให้เก็บเป็น NULL (ระบบส่วนใหญ่ยอมให้ช่องนี้เป็น NULL ได้ถืองานยังไม่เสร็จ)
+                // หรือถ้าอยากให้เก็บค่าเดิมให้เปลี่ยนเป็น: $resolvedBy = $currentRecord['resolved_by'];
+                $resolvedBy = $currentRecord['resolved_by'];
+            }
 
             $pdo->beginTransaction();
             try {
-                // อัปเดตข้อมูลข้อความ รวมทั้งชื่อคนแจ้งและคนปิดงาน
+                // อัปเดตข้อมูล
                 $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " 
                         SET line = ?, machine = ?, job_type = ?, priority = ?, issue_description = ?, request_by = ?, resolved_by = ? 
                         WHERE id = ?";

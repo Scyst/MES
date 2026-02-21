@@ -33,6 +33,7 @@
                             <select name="job_type" class="form-select form-select-sm" required>
                                 <option value="Repair" selected>ซ่อมแซม (Repair)</option>
                                 <option value="Development">พัฒนางาน (Development)</option>
+                                <option value="Setup">ตั้งเครื่อง (Setup)</option>
                                 <option value="PM">บำรุงรักษา (PM)</option>
                                 <option value="Other">อื่นๆ (Other)</option>
                             </select>
@@ -306,6 +307,7 @@
                             <select name="job_type" class="form-select form-select-sm" required>
                                 <option value="Repair">ซ่อมแซม (Repair)</option>
                                 <option value="Development">พัฒนางาน (Development)</option>
+                                <option value="Setup">ตั้งเครื่อง (Setup)</option>
                                 <option value="PM">บำรุงรักษา (PM)</option>
                                 <option value="Other">อื่นๆ (Other)</option>
                             </select>

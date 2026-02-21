@@ -12,6 +12,20 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+// ==========================================
+// SECURITY GUARD: ตรวจสอบ CSRF Token
+// ==========================================
+$client_token = $_POST['csrf_token'] ?? '';
+$server_token = $_SESSION['csrf_token'] ?? '';
+
+if (empty($client_token) || empty($server_token) || !hash_equals($server_token, $client_token)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'Security Error: CSRF Token Validation Failed. Please refresh the page.']);
+    exit;
+}
+// ==========================================
+
+
 // ฟังก์ชันย่อรูป
 function compressImage($source, $destination, $quality) {
     $info = getimagesize($source);
@@ -46,7 +60,6 @@ try {
         // 1. CREATE NCR (สร้างเคสใหม่ + อัพโหลดรูป)
         // ==========================================
         case 'create_ncr':
-            // เรียก SP จัดการ Lock และรันเลขให้ปลอดภัย
             $sql = "
                 SET NOCOUNT ON;
                 DECLARE @newId INT, @newCarNo VARCHAR(50);
@@ -136,26 +149,47 @@ try {
         case 'close_claim':
             $case_id = $_POST['case_id'] ?? null;
             $disposition = $_POST['disposition'] ?? null;
-            $final_qty = $_POST['final_qty'] ?? 0;
+            $actual_qty = $_POST['actual_received_qty'] ?? 0;
             $cost = $_POST['cost_estimation'] ?? 0;
             
-            if (!$case_id || !$disposition) throw new Exception("Missing required parameters: case_id or disposition");
+            if (!$case_id || !$disposition) throw new Exception("Missing required parameters");
 
             $pdo->beginTransaction();
             $sqlClaim = "
                 MERGE INTO QMS_CLAIM AS target
                 USING (SELECT ? AS case_id) AS source ON (target.case_id = source.case_id)
-                WHEN MATCHED THEN UPDATE SET disposition = ?, final_qty = ?, cost_estimation = ?, approved_by = ?, closed_at = GETDATE()
-                WHEN NOT MATCHED THEN INSERT (case_id, disposition, final_qty, cost_estimation, approved_by, closed_at) VALUES (?, ?, ?, ?, ?, GETDATE());
+                WHEN MATCHED THEN UPDATE SET disposition = ?, actual_received_qty = ?, final_qty = ?, cost_estimation = ?, approved_by = ?, closed_at = GETDATE()
+                WHEN NOT MATCHED THEN INSERT (case_id, disposition, actual_received_qty, final_qty, cost_estimation, approved_by, closed_at) 
+                VALUES (?, ?, ?, ?, ?, ?, GETDATE());
             ";
+            // สังเกตว่าผมใส่ $actual_qty ลงไปที่ final_qty ด้วย เพื่อให้สอดคล้องกับโครงสร้างเก่า
             $stmt = $pdo->prepare($sqlClaim);
-            $stmt->execute([$case_id, $disposition, $final_qty, $cost, $user_id, $case_id, $disposition, $final_qty, $cost, $user_id]);
+            $stmt->execute([$case_id, $disposition, $actual_qty, $actual_qty, $cost, $user_id, $case_id, $disposition, $actual_qty, $actual_qty, $cost, $user_id]);
 
             $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'CLOSED', updated_at = GETDATE() WHERE case_id = ?");
             $stmtCase->execute([$case_id]);
+            
             $pdo->commit();
 
-            echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'ปิดงานเคลมเรียบร้อยแล้ว']);
+            echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'ตรวจสอบและปิดงานเคลมเรียบร้อยแล้ว']);
+            break;
+
+        // ==========================================
+        // 4. REJECT CAR (ตีกลับให้ลูกค้าทำมาใหม่ / เติมข้อมูล)
+        // ==========================================
+        case 'reject_car':
+            $case_id = $_POST['case_id'] ?? null;
+            if (!$case_id) throw new Exception("Missing Case ID");
+
+            $pdo->beginTransaction();
+            // ถอยสถานะกลับไปเป็น SENT_TO_CUSTOMER เพื่อให้ลูกค้าเข้ามาแก้ได้ใหม่
+            $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'SENT_TO_CUSTOMER', updated_at = GETDATE() WHERE case_id = ?");
+            $stmtCase->execute([$case_id]);
+            
+            // Trigger Database จะทำงานอัตโนมัติเพื่อบันทึก Audit Log ลงตาราง QMS_AUDIT_LOGS ที่เราเพิ่งสร้าง
+            $pdo->commit();
+
+            echo json_encode(['success' => true, 'message' => 'ตีกลับ CAR ไปให้ลูกค้าเรียบร้อยแล้ว']);
             break;
 
         default:

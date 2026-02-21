@@ -18,6 +18,8 @@ switch ($action) {
             $containment = $_POST['containment_action'] ?? '';
             $rc_type = $_POST['root_cause_category'] ?? '';
             $leak = $_POST['leak_cause'] ?? '';
+            $return_container = $_POST['return_container_no'] ?? '';
+            $expected_qty = $_POST['expected_return_qty'] ?? 0;
 
             if (empty($token)) throw new Exception("Invalid Token");
 
@@ -41,10 +43,12 @@ switch ($action) {
                                 containment_action = ?,
                                 root_cause_category = ?,
                                 leak_cause = ?,
+                                return_container_no = ?,
+                                expected_return_qty = ?,
                                 customer_respond_date = GETDATE()
                             WHERE access_token = ?";
             $stmtUpdate = $pdo->prepare($sqlUpdateCAR);
-            $stmtUpdate->execute([$root_cause, $action_plan, $containment, $rc_type, $leak, $token]);
+            $stmtUpdate->execute([$root_cause, $action_plan, $containment, $rc_type, $leak, $return_container, $expected_qty, $token]);
             
             // 4. อัปเดตสถานะเคสหลัก เป็น 'CUSTOMER_REPLIED'
             $sqlUpdateCase = "UPDATE QMS_CASES 

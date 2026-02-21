@@ -1,11 +1,20 @@
 <?php
-define('ALLOW_GUEST_ACCESS', true);
+// page/QMS/qmsDashboard.php
 require_once __DIR__ . '/../components/init.php';
 
-$isStaff = isset($_SESSION['user']) && ($_SESSION['user']['role'] !== 'CUSTOMER');
-$isGuestAuth = isset($_SESSION['guest_access']) && $_SESSION['guest_access'] === true;
-$isLocked = !isset($_SESSION['user']) && !$isGuestAuth; 
-$isCustomer = (!$isStaff); 
+// 1. ดักจับคนที่ยังไม่ล็อกอิน ให้เด้งไปหน้า Login
+if (!isset($_SESSION['user'])) {
+    header("Location: ../../auth/login_form.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
+    exit;
+}
+
+// 2. ดักจับ Account ลูกค้า (ถ้าเผลอเข้ามา ให้หยุดการทำงาน)
+if ($_SESSION['user']['role'] === 'CUSTOMER') {
+    die('<div style="padding:50px; text-align:center; font-family:sans-serif;">
+            <h2 style="color:red;">Access Denied</h2>
+            <p>Customers are not allowed to view the internal QMS Dashboard.<br>Please use the portal link provided in your email.</p>
+         </div>');
+}
 
 $pageTitle = "ระบบจัดการคุณภาพ (iQMS)";
 $pageHeaderTitle = "Integrated Quality Management";
@@ -16,36 +25,10 @@ $pageIcon = "fas fa-shield-check";
 <html lang="en">
 <head>
     <?php include_once '../components/common_head.php'; ?>
-    <link rel="stylesheet" href="css/qmsDashboard.css?v=<?php echo filemtime(__DIR__ . '/css/qmsDashboard.css'); ?>">
-    
-    <?php if ($isLocked): ?>
-    <style>
-        body { overflow: hidden; }
-        .page-container, header, .mobile-menu, .docking-sidebar { 
-            filter: blur(8px); 
-            pointer-events: none; 
-            user-select: none;
-        }
-    </style>
-    <?php endif; ?>
+    <link rel="stylesheet" href="css/qmsDashboard.css?v=<?php echo time(); ?>">
 </head>
 <body class="layout-top-header bg-body-tertiary">
     
-    <?php if ($isLocked): ?>
-    <div id="guestLockScreen" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.7); z-index:9999; display:flex; justify-content:center; align-items:center;">
-        <div class="card shadow-lg border-0 rounded-4" style="max-width:400px; width:90%;">
-            <div class="card-body text-center p-5">
-                <i class="fas fa-lock fa-4x text-primary mb-3"></i>
-                <h4 class="fw-bold text-dark">Access Restricted</h4>
-                <p class="text-muted small mb-4">กรุณาเข้าสู่ระบบเพื่อดูข้อมูล Quality Management</p>
-                <a href="../../auth/login_form.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="btn btn-primary fw-bold w-100 py-2 rounded-3">
-                    <i class="fas fa-sign-in-alt me-2"></i> เข้าสู่ระบบ (Login)
-                </a>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
     <?php include_once '../components/php/top_header.php'; ?>
     <?php include_once '../components/php/mobile_menu.php'; ?>
 
@@ -59,11 +42,9 @@ $pageIcon = "fas fa-shield-check";
                         <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.9rem;">
                     </div>
                     
-                    <?php if ($isStaff): ?>
                     <button class="btn btn-primary fw-bold shadow-sm" onclick="openNCRModal()" style="font-size: 0.9rem;">
                         <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
                     </button>
-                    <?php endif; ?>
                 </div>
 
                 <div class="row g-2 mb-3">

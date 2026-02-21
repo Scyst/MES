@@ -22,13 +22,17 @@
                                 <div class="col-md-6">
                                     <label class="form-label small text-secondary fw-bold">ไลน์ผลิต (Line) <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-lg fs-6" name="production_line" id="select_line" required>
-                                        <option value="" selected disabled>-- เลือกไลน์ผลิต --</option>
+                                        <option value="" selected disabled>-- กำลังโหลดข้อมูล --</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-md-8">
                                     <label class="form-label small text-secondary fw-bold">ชื่อชิ้นงาน / Part No. <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-lg fs-6" name="product_name" list="item_list" required placeholder="ค้นหาสินค้า...">
                                     <datalist id="item_list"></datalist>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-secondary fw-bold">โมเดล (Model)</label>
+                                    <input type="text" class="form-control form-control-lg fs-6" name="product_model" placeholder="Ex. Model X...">
                                 </div>
                             </div>
                         </div>
@@ -80,7 +84,7 @@
                         <div class="accordion-item border-0 shadow-sm rounded-4 overflow-hidden">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed bg-white text-secondary small fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExtra">
-                                    <i class="fas fa-cog me-2"></i> ข้อมูลเพิ่มเติม (Prod Date, Shift, Model)
+                                    <i class="fas fa-cog me-2"></i> ข้อมูลเพิ่มเติมและผู้แจ้ง (Extra & Audit)
                                 </button>
                             </h2>
                             <div id="collapseExtra" class="accordion-collapse collapse bg-light">
@@ -97,17 +101,15 @@
                                                 <option value="Night">Night</option>
                                             </select>
                                         </div>
-                                        <div class="col-6">
+                                        <div class="col-12">
                                             <label class="form-label small text-secondary">Lot No.</label>
-                                            <input type="text" class="form-control form-control-sm" name="lot_no">
+                                            <input type="text" class="form-control form-control-sm" name="lot_no" placeholder="ระบุ Lot No (ถ้ามี)...">
                                         </div>
-                                        <div class="col-6">
-                                            <label class="form-label small text-secondary">โมเดล (Model)</label>
-                                            <input type="text" class="form-control form-control-sm" name="product_model">
-                                        </div>
-                                        <div class="col-12 mt-2">
-                                            <label class="form-label small text-secondary">ชื่อผู้แจ้ง (Issuer)</label>
-                                            <input type="text" class="form-control form-control-sm" name="issue_by_name" required value="<?php echo $_SESSION['user']['username'] ?? ''; ?>">
+                                        
+                                        <div class="col-12 mt-3 pt-3 border-top border-secondary border-opacity-25">
+                                            <label class="form-label small text-primary fw-bold"><i class="fas fa-user-edit me-1"></i> ชื่อผู้แจ้งบนเอกสาร (Issuer)</label>
+                                            <input type="text" class="form-control form-control-sm border-primary bg-primary bg-opacity-10 fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['username'] ?? ''; ?>">
+                                            <div class="form-text small text-muted">แก้ไขได้หากคุณกำลังแจ้งเรื่องแทนผู้อื่น</div>
                                         </div>
                                     </div>
                                 </div>
