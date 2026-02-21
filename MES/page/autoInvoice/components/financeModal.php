@@ -83,8 +83,16 @@
                                     <div class="row">
                                         <div class="col-4 mb-2"><label class="form-label small">Invoice Date</label><input type="date" id="editInvDate" class="form-control form-control-sm" required></div>
                                         <div class="col-4 mb-2"><label class="form-label small fw-bold text-primary">Booking No.</label><input type="text" id="editBookingNo" class="form-control form-control-sm border-primary"></div>
-                                        <div class="col-4 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
                                         
+                                        <div class="col-4 mb-2"><label class="form-label small fw-bold text-success">Team / Line</label>
+                                            <select id="editTeam" class="form-select form-select-sm border-success">
+                                                <option value="">- ไม่ระบุ -</option>
+                                                <option value="Team 1">Team 1</option>
+                                                <option value="Team 2">Team 2</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-4 mb-2"><label class="form-label small">Container Qty</label><input type="text" id="editContainerQty" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Loading</label><input type="text" id="editPortLoading" class="form-control form-control-sm"></div>
                                         <div class="col-6 mb-2"><label class="form-label small">Port of Discharge</label><input type="text" id="editPortDischarge" class="form-control form-control-sm"></div>
 

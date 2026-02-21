@@ -21,9 +21,9 @@ header('Pragma: public');
 
 $writer = new XLSXWriter();
 
-// 1. กำหนดหัวคอลัมน์ (เพิ่ม Incoterms เข้ามาแล้ว 📌)
+// 1. กำหนดหัวคอลัมน์ (📌 เพิ่ม Team เข้ามาหลัง Booking_No)
 $header_types = [
-    'Invoice_No' => 'string', 'Booking_No' => 'string', 'Invoice_Date' => 'string', 'Customer_Name' => 'string',
+    'Invoice_No' => 'string', 'Booking_No' => 'string', 'Team' => 'string', 'Invoice_Date' => 'string', 'Customer_Name' => 'string',
     'Customer_Address' => 'string', 'Consignee' => 'string', 'Notify_Party' => 'string',
     'Incoterms' => 'string', 'Payment' => 'string', 'Port_of_Loading' => 'string', 'Port_of_Discharge' => 'string',
     'Feeder_Vessel' => 'string', 'Mother_Vessel' => 'string', 'Container_No' => 'string',
@@ -35,8 +35,8 @@ $header_types = [
     'Purchase_Order' => 'string', 'Shipping Marks' => 'string'
 ];
 
-// ปรับความกว้างให้ตรงกับจำนวนคอลัมน์ (เพิ่มมา 1 ช่อง)
-$widths = [15, 20, 15, 30, 40, 20, 20, 25, 15, 25, 20, 20, 20, 15, 15, 15, 15, 15, 15, 20, 35, 15, 15, 15, 15, 15, 15, 20, 20];
+// ปรับความกว้างให้ตรงกับจำนวนคอลัมน์ (📌 เพิ่ม 15 สำหรับช่อง Team)
+$widths = [15, 20, 15, 15, 30, 40, 20, 20, 25, 15, 25, 20, 20, 20, 15, 15, 15, 15, 15, 15, 20, 35, 15, 15, 15, 15, 15, 15, 20, 20];
 
 // 2. ตั้งค่า Sheet
 $sheet_options = [
@@ -75,9 +75,9 @@ foreach ($header_row as $colName) {
 // 4. วาดแถว Header 
 $writer->writeSheetRow('Template', $header_row, $header_styles);
 
-// 5. ข้อมูลตัวอย่าง (Dummy Data) - เพิ่มตัวอย่าง Incoterms เข้าไปแล้ว 📌
+// 5. ข้อมูลตัวอย่าง (Dummy Data) - 📌 เพิ่ม 'Team 1' 
 $row = [
-    'SNC-GP26-0001', 'BKG-12345678', '20/02/2026', 'DUMMY CUSTOMER CO., LTD', '123 DUMMY STREET, CITY, COUNTRY', 'SAME AS CONSIGNEE',
+    'SNC-GP26-0001', 'BKG-12345678', 'Team 1', '20/02/2026', 'DUMMY CUSTOMER CO., LTD', '123 DUMMY STREET, CITY, COUNTRY', 'SAME AS CONSIGNEE',
     'SAME AS CONSIGNEE', 'FOB LAEM CHABANG,THAILAND', 'O/A 30 DAYS AFTER B/L DATE.', 'LAEM CHABANG, THAILAND', 'YOKOHAMA, JAPAN', 'DUMMY VESSEL V.123',
     'MOTHER VESSEL V.456', 'TLLU1234567', 'SEAL123', '25/02/2026', '05/03/2026', '1x20FT', '70344', 
     '', '', '1-10', '', '', '', '', '', 'PO-2026-001', 'N/M'

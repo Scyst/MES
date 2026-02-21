@@ -336,7 +336,7 @@ function formatDocDate($dateStr) {
                 <tr>
                     <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['shipping_marks'] ?? '') ?></td>
                     <td> 
-                        <span class="pre-line"><b><?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
+                        <span class="pre-line">#<b><?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
                     </td>
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
                     <td class="text-right"><?= number_format($nw, 2) ?></td>

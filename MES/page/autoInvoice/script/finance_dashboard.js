@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ดักจับการเปลี่ยนวันที่ ถ้าเปลี่ยนปุ๊บให้โหลดข้อมูลใหม่ทันที
     document.getElementById('filterStartDate')?.addEventListener('change', loadHistory);
     document.getElementById('filterEndDate')?.addEventListener('change', loadHistory);
+    document.getElementById('filterTeam')?.addEventListener('change', renderTable);
 
     function calculateToolbarSums(filteredData) {
         let totalInvoices = filteredData.length;
@@ -219,6 +220,12 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         }
 
+        // ฟิลเตอร์ตามทีม
+        const filterTeam = document.getElementById('filterTeam')?.value || 'ALL';
+        if (filterTeam !== 'ALL') {
+            filteredData = filteredData.filter(inv => inv.team_name === filterTeam);
+        }
+
         // อัปเดตยอดรวมใน Toolbar จากข้อมูลที่ผ่านการกรองแล้ว
         calculateToolbarSums(filteredData);
 
@@ -263,6 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="text-end fw-bold text-dark">${inv.total_amount}</td>
                 
                 <td class="text-center">
+                    ${inv.team_name ? `<span class="badge bg-success mb-1 px-2 py-1"><i class="fas fa-users me-1"></i>${inv.team_name}</span><br>` : ''}
                     ${statusBadge}
                 </td>
 
@@ -495,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
                                     },
                                     shippingData: {
+                                        team_name: getVal(idx.team),
                                         booking_no: getVal(idx.booking),
                                         port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
                                         port_discharge: getVal(idx.port_discharge), 
@@ -820,6 +829,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             shipping: {
                 booking_no: document.getElementById('editBookingNo').value,
+                team_name: document.getElementById('editTeam').value,
                 invoice_date: window.formatUniversalDate(document.getElementById('editInvDate').value),
                 container_qty: document.getElementById('editContainerQty').value,
                 port_loading: document.getElementById('editPortLoading').value,
@@ -864,6 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.fillInvoiceForm = function(inv) {
         document.getElementById('editInvoiceNo').value = inv.header.invoice_no;
         document.getElementById('editBookingNo').value = inv.shipping.booking_no || '';
+        document.getElementById('editTeam').value = inv.shipping.team_name || '';
         
         document.getElementById('editCustName').value = inv.customer.name || '';
         document.getElementById('editAddress').value = inv.customer.address || '';

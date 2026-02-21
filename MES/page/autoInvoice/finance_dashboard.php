@@ -99,7 +99,15 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                     <input type="text" id="universalSearch" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Invoice No, Customer, Vessel...">
                                 </div>
-                                
+
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+                                    <span class="input-group-text bg-light border-secondary-subtle text-secondary small fw-bold"><i class="fas fa-users"></i></span>
+                                    <select id="filterTeam" class="form-select border-secondary-subtle" onchange="renderTable()" style="font-weight: 500; min-width: 120px;">
+                                        <option value="ALL">All Teams</option>
+                                        <option value="Team 1">Team 1</option>
+                                        <option value="Team 2">Team 2</option>
+                                    </select>
+                                </div>
                                 
                                 <div class="input-group input-group-sm shadow-sm" style="width: auto;">
                                     <span class="input-group-text bg-light border-secondary-subtle text-secondary small fw-bold">📅 Date:</span>
