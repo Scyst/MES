@@ -107,7 +107,7 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                     <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
                                     <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" title="End Date">
                                 </div>
-                                
+
                                 <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" onclick="clearFilter()" data-bs-toggle="tooltip" title="Reset Filters" style="width: 32px; height: 32px;"> 
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
@@ -160,18 +160,20 @@ $pageIcon = "fas fa-file-invoice-dollar";
                         <table class="table table-hover align-middle mb-0" id="historyTable">
                             <thead class="table-light text-secondary" style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
-                                    <th style="width: 150px;">Invoice No.</th>
+                                    <th style="width: 140px;">Invoice No.</th>
+                                    <th style="width: 200px;">Booking No.</th>
                                     <th>Customer</th>
                                     <th>Logistics Info</th>
                                     <th class="text-center">ETD / ETA</th>
                                     <th class="text-end">Total (USD)</th>
                                     <th class="text-center">Status</th>
+                                    <th class="text-center">Ver.</th>
                                     <th class="text-center">Date</th>
                                     <th class="text-center" style="width: 180px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>

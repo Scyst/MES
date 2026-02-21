@@ -176,8 +176,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const start = encodeURIComponent(document.getElementById('filterStartDate')?.value || '');
         const end = encodeURIComponent(document.getElementById('filterEndDate')?.value || '');
         
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
-
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+        
         fetch(`api/api_invoice.php?action=get_history&start=${start}&end=${end}`)
             .then(res => res.json())
             .then(resData => {
@@ -186,12 +186,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderTable();
                     updateKPIs();
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
                 }
             })
             .catch(err => {
                 console.error(err);
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
             });
     }
 
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateToolbarSums(filteredData);
 
         if (filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-5">
                 <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลที่ค้นหา
             </td></tr>`;
             return;
@@ -243,24 +243,35 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.className = rowClass;
             tr.innerHTML = `
                 <td class="fw-bold text-primary">${inv.invoice_no}</td>
+                
+                <td class="text-dark">${inv.booking_no || '-'}</td>
+                
                 <td>
                     <div class="text-truncate fw-bold text-dark" style="max-width: 200px;" title="${inv.customer_name}">${inv.customer_name}</div>
                 </td>
+                
                 <td>
-                    <div class="small fw-bold text-primary"><i class="fas fa-bookmark w-15px"></i> BKG: ${inv.booking_no || '-'}</div>
                     <div class="small text-secondary"><i class="fas fa-box w-15px"></i> ${inv.container_no}</div>
                     <div class="small text-secondary"><i class="fas fa-ship w-15px"></i> <span class="text-truncate d-inline-block" style="max-width: 150px; vertical-align: bottom;">${inv.vessel}</span></div>
                 </td>
+                
                 <td class="text-center small">
                     <span class="text-success fw-bold" title="ETD"><i class="fas fa-calendar-alt"></i> ${inv.etd_date}</span><br>
                     <span class="text-danger" title="ETA"><i class="fas fa-calendar-check"></i> ${inv.eta_date}</span>
                 </td>
+                
                 <td class="text-end fw-bold text-dark">${inv.total_amount}</td>
+                
                 <td class="text-center">
-                    ${statusBadge}<br>
-                    <span class="badge border text-secondary mt-1">v.${inv.version}</span>
+                    ${statusBadge}
                 </td>
+
+                <td class="text-center">
+                    <span class="badge border text-secondary">v.${inv.version}</span>
+                </td>
+                
                 <td class="text-center text-muted small">${inv.created_at}</td>
+                
                 <td class="text-center">
                     <div class="btn-group shadow-sm">
                         <button type="button" class="btn btn-sm btn-light border text-info" onclick="viewVersions('${inv.invoice_no}')" title="History"><i class="fas fa-history"></i></button>
