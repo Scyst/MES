@@ -248,19 +248,20 @@ try {
 
             $pdo->beginTransaction(); // เริ่ม Transaction
             try {
-                $sql = "INSERT INTO " . MAINTENANCE_REQUESTS_TABLE . " (request_by, line, machine, issue_description, priority, photo_before_path) VALUES (?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO " . MAINTENANCE_REQUESTS_TABLE . " (request_by, line, machine, issue_description, priority, photo_before_path, job_type) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
+                
                 $priority = $input['priority'] ?? 'Normal';
                 $line = !empty($input['line']) ? $input['line'] : ($currentUser['line'] ?? 'Unknown');
-
-                $stmt->execute([$currentUser['username'], $line, $input['machine'], $input['issue_description'], $priority, $photoPath]);
+                $jobType = $input['job_type'] ?? 'Repair'; // รับค่าประเภทงาน
+                $stmt->execute([$currentUser['username'], $line, $input['machine'], $input['issue_description'], $priority, $photoPath, $jobType]);
                 
-                logAction($pdo, $currentUser['username'], 'ADD_MT_REQ', $line, "Machine: {$input['machine']}, Issue: {$input['issue_description']}");
+                logAction($pdo, $currentUser['username'], 'ADD_MT_REQ', $line, "Type: {$jobType}, Machine: {$input['machine']}, Issue: {$input['issue_description']}");
                 
-                $pdo->commit(); // บันทึกสำเร็จ
+                $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Maintenance request submitted.']);
             } catch (Exception $e) {
-                $pdo->rollBack(); // ยกเลิกหากมี Error
+                $pdo->rollBack();
                 throw $e;
             }
             break;
@@ -445,6 +446,40 @@ try {
                 'top_machines' => $topData,
                 'analysis_table' => $tableData
             ]);
+            break;
+
+        // [NEW] API สำหรับแก้ไขข้อมูลใบแจ้งซ่อม
+        case 'edit_request':
+            $id = $input['id'] ?? $_POST['id'] ?? null;
+            if (!$id) throw new Exception("Invalid ID.");
+
+            $line = $input['line'] ?? $_POST['line'] ?? '';
+            $machine = $input['machine'] ?? $_POST['machine'] ?? '';
+            $jobType = $input['job_type'] ?? $_POST['job_type'] ?? 'Repair';
+            $priority = $input['priority'] ?? $_POST['priority'] ?? 'Normal';
+            $issue = $input['issue_description'] ?? $_POST['issue_description'] ?? '';
+            
+            // [NEW] รับค่าคนเปิดงานและคนปิดงาน (รับเป็น Text อิสระได้เลย)
+            $requestBy = $input['request_by'] ?? $_POST['request_by'] ?? null;
+            $resolvedBy = $input['resolved_by'] ?? $_POST['resolved_by'] ?? null;
+
+            $pdo->beginTransaction();
+            try {
+                // อัปเดตข้อมูลข้อความ รวมทั้งชื่อคนแจ้งและคนปิดงาน
+                $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " 
+                        SET line = ?, machine = ?, job_type = ?, priority = ?, issue_description = ?, request_by = ?, resolved_by = ? 
+                        WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$line, $machine, $jobType, $priority, $issue, $requestBy, $resolvedBy, $id]);
+
+                logAction($pdo, $currentUser['username'], 'EDIT_MT_REQ', $line, "Updated ID: {$id}, Requester: {$requestBy}");
+                
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'อัปเดตข้อมูลสำเร็จ']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         case 'resend_email':

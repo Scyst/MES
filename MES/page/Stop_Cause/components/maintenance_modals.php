@@ -18,30 +18,51 @@
                             <label class="form-label small fw-bold text-muted">Machine</label>
                             <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
                         </div>
+
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
+                            <input type="text" name="request_by" class="form-control" placeholder="ชื่อผู้แจ้ง...">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">ผู้ปิดงาน (Resolver)</label>
+                            <input type="text" name="resolved_by" class="form-control" placeholder="ชื่อช่าง/ผู้รับผิดชอบ...">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Job Type (ประเภทงาน)</label>
+                            <select name="job_type" class="form-select form-select-sm" required>
+                                <option value="Repair" selected>ซ่อมแซม (Repair)</option>
+                                <option value="Development">พัฒนางาน (Development)</option>
+                                <option value="PM">บำรุงรักษา (PM)</option>
+                                <option value="Other">อื่นๆ (Other)</option>
+                            </select>
+                        </div>
+
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted">Priority</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
+                            <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded mt-1 px-3">
+                                <div class="form-check mb-0">
                                     <input class="form-check-input" type="radio" name="priority" id="prioNormal" value="Normal" checked>
-                                    <label class="form-check-label" for="prioNormal">Normal</label>
+                                    <label class="form-check-label text-success fw-bold" for="prioNormal">Normal</label>
                                 </div>
-                                <div class="form-check">
+                                <div class="form-check mb-0">
                                     <input class="form-check-input" type="radio" name="priority" id="prioUrgent" value="Urgent">
                                     <label class="form-check-label text-warning fw-bold" for="prioUrgent">Urgent</label>
                                 </div>
-                                <div class="form-check">
+                                <div class="form-check mb-0">
                                     <input class="form-check-input" type="radio" name="priority" id="prioCritical" value="Critical">
                                     <label class="form-check-label text-danger fw-bold" for="prioCritical">Critical</label>
                                 </div>
                             </div>
                         </div>
+
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted">Issue Description</label>
                             <textarea name="issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
                         </div>
                         
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-muted">Photo (ถ่ายให้เห็นปัญหา))</label>
+                            <label class="form-label small fw-bold text-muted">Photo (ถ่ายให้เห็นปัญหา)</label>
                             <input type="file" name="photo_before" class="form-control form-control-sm" accept="image/*" required>
                         </div>
                     </div>
@@ -90,6 +111,11 @@
 
                                         <span class="text-secondary fw-bold">Priority:</span> 
                                         <span id="view_priority_text" class="text-body">-</span>
+                                    </div>
+                                    
+                                    <div class="mt-2" style="font-size: 0.9rem;">
+                                        <span class="text-secondary fw-bold">Job Type:</span> 
+                                        <span id="view_job_type" class="text-info fw-bold">-</span>
                                     </div>
                                 </div>
 
@@ -190,6 +216,9 @@
                 
                 <div class="d-flex gap-2 ms-auto">
                     <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                    <button id="btn_edit_job" class="btn btn-sm btn-warning rounded-pill px-4 shadow-sm d-none" onclick="">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </button>
                     <button id="btn_start_job" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm d-none" onclick="">Start Repair</button>
                     <button id="btn_complete_job" class="btn btn-sm btn-success rounded-pill px-4 shadow-sm d-none" onclick="">Complete Job</button>
                 </div>
@@ -245,6 +274,71 @@
                 <button type="submit" form="completeMaintenanceForm" class="btn btn-success">
                     <i class="fas fa-save me-1"></i> Save & Close Job
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editMaintenanceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning border-bottom-0 pb-2">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-edit me-2"></i>Edit Request (แก้ไขข้อมูล)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <form id="editMaintenanceForm">
+                    <input type="hidden" name="id" id="edit_req_id">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Line</label>
+                            <input list="lineListFilter" name="line" class="form-control" placeholder="Line..." required style="text-transform: uppercase;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Machine</label>
+                            <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Job Type (ประเภทงาน)</label>
+                            <select name="job_type" class="form-select form-select-sm" required>
+                                <option value="Repair">ซ่อมแซม (Repair)</option>
+                                <option value="Development">พัฒนางาน (Development)</option>
+                                <option value="PM">บำรุงรักษา (PM)</option>
+                                <option value="Other">อื่นๆ (Other)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Priority</label>
+                            <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded border mt-1 px-3">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="priority" id="editPrioNormal" value="Normal">
+                                    <label class="form-check-label text-success fw-bold" for="editPrioNormal">Normal</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="priority" id="editPrioUrgent" value="Urgent">
+                                    <label class="form-check-label text-warning fw-bold" for="editPrioUrgent">Urgent</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="priority" id="editPrioCritical" value="Critical">
+                                    <label class="form-check-label text-danger fw-bold" for="editPrioCritical">Critical</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Issue Description</label>
+                            <textarea name="issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editMaintenanceForm" class="btn btn-warning btn-sm fw-bold px-4 text-dark">Save Changes</button>
             </div>
         </div>
     </div>

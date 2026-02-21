@@ -11,21 +11,18 @@ function toLocalISOString(date) {
 }
 
 // ==========================================
-// 2. ฟังก์ชันดึงข้อมูล (Fetch Data) **[ส่วนที่ขาดหายไป]**
+// 2. ฟังก์ชันดึงข้อมูล (Fetch Data)
 // ==========================================
 async function fetchMaintenanceData() {
     const statusEl = document.getElementById('mtFilterStatus');
     const lineEl = document.getElementById('filterLineMt');
-    // [NEW] เพิ่ม Date Inputs (ใช้ ID เดียวกับของ Stop Cause ก็ได้ เพราะอยู่หน้าเดียวกัน หรือสร้างใหม่ถ้าอยากแยก)
-    const startEl = document.getElementById('filterStartDate'); 
-    const endEl = document.getElementById('filterEndDate');
     
     const status = statusEl ? statusEl.value : 'Active';
     const line = lineEl ? lineEl.value : '';
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
     
-    // [NEW] เรียก Summary ให้ทำงานคู่กัน
+    // เรียก Summary ให้ทำงานคู่กัน
     fetchMaintenanceSummary(); 
 
     showSpinner();
@@ -43,29 +40,37 @@ async function fetchMaintenanceData() {
 
         if(result.success && result.data.length > 0) {
             result.data.forEach(row => {
-                // Badge Logic
+                // Badge Logic Status
                 let statusBadge = '';
-                let rowClass = 'cursor-pointer hover-bg'; // เพิ่ม class ให้รู้ว่ากดได้
+                let rowClass = 'cursor-pointer hover-bg'; 
                 
                 if(row.status === 'Pending') statusBadge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">Pending</span>';
                 else if(row.status === 'In Progress') statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2">Processing</span>';
                 else statusBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success px-2">Completed</span>';
 
-                let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-body');
+                // Priority Logic
+                let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-success fw-bold');
+                
+                // [NEW] Job Type Badge Logic (แยกสีตามประเภทงาน)
+                let jobType = row.job_type || 'Repair';
+                let typeBadgeColor = 'bg-secondary';
+                if(jobType === 'Development') typeBadgeColor = 'bg-primary';
+                else if(jobType === 'PM') typeBadgeColor = 'bg-info text-dark';
+                else if(jobType === 'Other') typeBadgeColor = 'bg-dark';
+
                 const reqName = row.requester_name || row.request_by;
 
                 const tr = document.createElement('tr');
                 tr.className = rowClass;
                 
-                // [NEW] ผูก Event Click ทั้งแถว
+                // ผูก Event Click ทั้งแถว
                 tr.onclick = (e) => {
-                    // ป้องกันการกดซ้อน (เผื่ออนาคตมีปุ่มอื่นในแถว)
                     if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'I') {
                         viewMaintenanceDetails(row.id);
                     }
                 };
 
-                // [NEW] ลบคอลัมน์ Action ออกแล้ว
+                // [NEW] เพิ่มส่วนแสดงผล Job Type ควบคู่ไปกับ Priority
                 tr.innerHTML = `
                     <td class="ps-3 text-center">${statusBadge}</td>
                     <td class="small text-nowrap text-center">${new Date(row.request_date).toLocaleString('th-TH')}</td>
@@ -73,7 +78,10 @@ async function fetchMaintenanceData() {
                         <div class="fw-bold text-body">${row.line}</div>
                         <small class="text-muted">${row.machine}</small>
                     </td>
-                    <td class="${priorityColor} small text-center">${row.priority}</td>
+                    <td class="text-center">
+                        <span class="badge ${typeBadgeColor} mb-1" style="font-size: 0.7rem;">${jobType}</span><br>
+                        <span class="${priorityColor} small">${row.priority}</span>
+                    </td>
                     <td class="small text-body text-center">${reqName}</td>
                     <td class="text-center"><span class="text-break small">${row.issue_description}</span></td>
                     <td class="small text-body text-center note-truncate" title="${row.technician_note || ''}">${row.technician_note || '-'}</td>
@@ -81,7 +89,6 @@ async function fetchMaintenanceData() {
                 tbody.appendChild(tr);
             });
         } else {
-            // ปรับ colspan เป็น 7 (เพราะลบ Action ออกไป 1 ช่อง)
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-2x mb-2 opacity-25"></i><br>No maintenance requests found.</td></tr>';
         }
     } catch(err) {
@@ -126,13 +133,11 @@ function viewMaintenanceDetails(id) {
     const data = currentMaintenanceData.find(item => item.id == id);
     if (!data) return;
 
-    // Helper: Set Text Content Safely
     const setText = (elmId, val) => {
         const el = document.getElementById(elmId);
         if(el) el.textContent = val || '-';
     };
 
-    // Prepare Date & Job No
     const reqDateObj = new Date(data.request_date);
     const thaiYearShort = (reqDateObj.getFullYear() + 543).toString().slice(-2);
     const monthTwoDigits = (reqDateObj.getMonth() + 1).toString().padStart(2, '0'); 
@@ -143,6 +148,9 @@ function viewMaintenanceDetails(id) {
     setText('view_machine_title', data.machine);
     setText('view_line_subtitle', data.line);
     setText('view_issue', data.issue_description);
+    
+    // [NEW] นำค่า job_type ไปแสดงใน Modal View
+    setText('view_job_type', data.job_type || 'Repair');
     
     const reqName = data.requester_name || data.request_by;
     setText('view_requested_by', reqName);
@@ -163,32 +171,26 @@ function viewMaintenanceDetails(id) {
     const priorityEl = document.getElementById('view_priority_text');
     if (priorityEl) {
         priorityEl.textContent = data.priority;
-        priorityEl.className = data.priority === 'Critical' ? 'text-danger fw-bold' : ''; 
+        priorityEl.className = data.priority === 'Critical' ? 'text-danger fw-bold' : (data.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-success fw-bold'); 
     }
 
-    // =================================================================
-    // 3. Image Before Logic (ใช้ Logic ของคุณ)
-    // =================================================================
+    // 3. Image Before Logic
     const imgBefore = document.getElementById('view_photo_before');
     const noImgBefore = document.getElementById('no_photo_before');
 
-    // Reset: ซ่อนทั้งคู่ก่อน และล้าง inline style ที่อาจค้างอยู่
     if (imgBefore) {
         imgBefore.classList.add('d-none');
         imgBefore.style.display = ''; 
     }
     if (noImgBefore) noImgBefore.classList.add('d-none');
 
-    // Logic: มีรูป -> โชว์รูป / ไม่มีรูป -> โชว์ข้อความ
     if (data.photo_before_path) {
         if(imgBefore) {
             imgBefore.src = data.photo_before_path;
-            imgBefore.classList.remove('d-none'); // เปิดรูป
+            imgBefore.classList.remove('d-none'); 
         }
-        // *เพิ่มเติม: ถ้ามีรูป ต้องซ่อน text no image แน่นอน
         if(noImgBefore) noImgBefore.classList.add('d-none'); 
     } else {
-        // ไม่มีรูป -> เปิดข้อความ
         if(noImgBefore) noImgBefore.classList.remove('d-none');
     }
 
@@ -198,13 +200,17 @@ function viewMaintenanceDetails(id) {
     const btnComplete = document.getElementById('btn_complete_job');
     const actionCompleted = document.getElementById('action_buttons_completed');
 
-    // Reset Visibility
+    const btnEdit = document.getElementById('btn_edit_job');
+    if(btnEdit) {
+        btnEdit.classList.remove('d-none'); // ให้ปุ่มโชว์เสมอ ไม่ว่างานจะเสร็จหรือไม่
+        btnEdit.onclick = () => openEditModal(id);
+    }
+
     if(btnStart) btnStart.classList.add('d-none');
     if(btnComplete) btnComplete.classList.add('d-none');
     if(actionCompleted) actionCompleted.classList.add('d-none');
     if(completionSection) completionSection.classList.add('d-none');
 
-    // Control Logic based on Status
     if (data.status === 'Pending') {
         if(btnStart) {
             btnStart.classList.remove('d-none');
@@ -241,13 +247,10 @@ function viewMaintenanceDetails(id) {
         const techName = data.resolver_name || data.resolved_by;
         setText('view_resolved_by', techName);
 
-        // =================================================================
-        // Image After Logic (ใช้ Logic เดียวกัน)
-        // =================================================================
+        // Image After Logic 
         const imgAfter = document.getElementById('view_photo_after');
         const noImgAfter = document.getElementById('no_photo_after');
 
-        // Reset
         if (imgAfter) {
             imgAfter.classList.add('d-none');
             imgAfter.style.display = '';
@@ -264,7 +267,6 @@ function viewMaintenanceDetails(id) {
             if(noImgAfter) noImgAfter.classList.remove('d-none');
         }
 
-        // Print & Email
         const btnPrint = document.getElementById('btn_print_job');
         if(btnPrint) btnPrint.href = `print_job_order.php?id=${id}`;
         
@@ -276,6 +278,40 @@ function viewMaintenanceDetails(id) {
     }
 
     showBootstrapModal('viewMaintenanceModal');
+}
+
+// ==========================================
+// 7. ฟังก์ชันเปิด Modal แก้ไขข้อมูล (Edit Job)
+// ==========================================
+function openEditModal(id) {
+    const data = currentMaintenanceData.find(item => item.id == id);
+    if (!data) return;
+
+    // เติมค่าเดิมลงในฟอร์ม
+    document.getElementById('edit_req_id').value = data.id;
+    document.querySelector('#editMaintenanceForm input[name="line"]').value = data.line;
+    document.querySelector('#editMaintenanceForm input[name="machine"]').value = data.machine;
+    document.querySelector('#editMaintenanceForm select[name="job_type"]').value = data.job_type || 'Repair';
+    document.querySelector('#editMaintenanceForm textarea[name="issue_description"]').value = data.issue_description;
+    
+    // [NEW] ดึงชื่อที่ประมวลผลแล้วมาให้แก้ไข (ถ้าไม่มีให้ว่างไว้)
+    const reqName = data.requester_name || data.request_by || '';
+    const resName = data.resolver_name || data.resolved_by || '';
+    
+    const reqInput = document.querySelector('#editMaintenanceForm input[name="request_by"]');
+    const resInput = document.querySelector('#editMaintenanceForm input[name="resolved_by"]');
+    
+    if(reqInput) reqInput.value = reqName;
+    if(resInput) resInput.value = resName;
+    
+    // เติมค่า Radio Button
+    document.querySelectorAll('#editMaintenanceForm input[name="priority"]').forEach(radio => {
+        if(radio.value === data.priority) radio.checked = true;
+    });
+
+    // ปิดหน้า View แล้วเปิดหน้า Edit
+    bootstrap.Modal.getInstance(document.getElementById('viewMaintenanceModal')).hide();
+    showBootstrapModal('editMaintenanceModal');
 }
 
 // ==========================================
@@ -349,18 +385,14 @@ async function updateMtStatus(id, currentStatus) {
     }
 }
 
-// [INSERT] ใส่ใน maintenance_handler.js (ต่อจาก function fetchMaintenanceData หรือก่อนจบไฟล์)
-
 // ==========================================
 // 6. Maintenance Summary & Export
 // ==========================================
-
 async function fetchMaintenanceSummary() {
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
     const line = document.getElementById('filterLineMt')?.value || '';
 
-    // ไม่แสดง Spinner เพราะจะโหลดคู่กับ Table เดี๋ยวซ้อนกัน
     try {
         const response = await fetch(`${MT_API_URL}?action=get_maintenance_summary&startDate=${startDate}&endDate=${endDate}&line=${line}`);
         const result = await response.json();
@@ -368,7 +400,6 @@ async function fetchMaintenanceSummary() {
         if (result.success) {
             const s = result.summary;
             
-            // Animation นับเลข (Optional) หรือใส่ค่าตรงๆ
             document.getElementById('sumTotal').textContent = s.Total_Jobs || 0;
             document.getElementById('sumCompleted').textContent = s.Completed_Jobs || 0;
             document.getElementById('sumPending').textContent = s.Pending_Jobs || 0;
@@ -389,11 +420,6 @@ async function exportMaintenanceExcel() {
 
     showSpinner();
     try {
-        // ใช้ get_requests ตัวเดิมแต่ส่ง date range ไปด้วยเพื่อดึงข้อมูลทั้งหมด
-        // หมายเหตุ: ต้องแน่ใจว่า API get_requests รองรับ startDate/endDate (ถ้ายัง ต้องไปแก้ API นิดนึง หรือใช้ Filter เดิมที่มี)
-        // **Trick:** เราใช้ Filter ที่มีอยู่แล้วคือ status, line แต่เราจะขอข้อมูลทั้งหมดในช่วงวันที่นี้
-        // เพื่อความชัวร์ ผมแนะนำให้ทำ action 'get_requests' ให้รับ startDate/endDate เพิ่มใน maintenanceManage.php ด้วย (ดูข้อ 4 ด้านล่าง)
-        
         const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&startDate=${startDate}&endDate=${endDate}`);
         const result = await response.json();
 
@@ -404,6 +430,7 @@ async function exportMaintenanceExcel() {
 
         const exportData = result.data.map(item => ({
             "Job No": `MNT-${item.id}`,
+            "Job Type": item.job_type || 'Repair', // [NEW] ส่งค่า Job Type ออก Excel
             "Status": item.status,
             "Request Date": item.request_date,
             "Line": item.line,
@@ -421,9 +448,8 @@ async function exportMaintenanceExcel() {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(exportData);
         
-        // Auto width (คร่าวๆ)
         const wscols = [
-            {wch:15}, {wch:10}, {wch:20}, {wch:10}, {wch:15}, 
+            {wch:15}, {wch:15}, {wch:10}, {wch:20}, {wch:10}, {wch:15}, 
             {wch:10}, {wch:30}, {wch:15}, {wch:15}, {wch:20}, 
             {wch:20}, {wch:30}, {wch:30}
         ];
@@ -521,6 +547,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- D. จัดการ Form แก้ไขข้อมูล (Edit Job) ---
+    const editMtForm = document.getElementById('editMaintenanceForm');
+    if (editMtForm) {
+        editMtForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(editMtForm);
+            formData.append('action', 'edit_request'); // ส่ง Action ไปให้ Backend
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            showSpinner();
+            try {
+                const response = await fetch(MT_API_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken },
+                    body: formData 
+                });
+                const res = await response.json();
+                
+                if (res.success) {
+                    showToast('อัปเดตข้อมูลเรียบร้อย', '#28a745');
+                    bootstrap.Modal.getInstance(document.getElementById('editMaintenanceModal')).hide();
+                    
+                    // รีเฟรชข้อมูลในตารางใหม่
+                    fetchMaintenanceData();
+                } else {
+                    showToast(res.message || 'เกิดข้อผิดพลาด', '#dc3545');
+                }
+            } catch (err) {
+                console.error('Edit Error:', err);
+                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
+            } finally {
+                hideSpinner();
+            }
+        });
+    }
+
     // --- C. ตรวจจับการเปลี่ยน Tab ---
     const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
     tabEls.forEach(tab => {
@@ -530,6 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
     });
-    document.getElementById('filterStartDate').addEventListener('change', fetchMaintenanceData);
-    document.getElementById('filterEndDate').addEventListener('change', fetchMaintenanceData);
+    
+    // [NEW] ผูก Event เข้ากับ mtStartDate แทน filterStartDate
+    document.getElementById('mtStartDate')?.addEventListener('change', fetchMaintenanceData);
+    document.getElementById('mtEndDate')?.addEventListener('change', fetchMaintenanceData);
 });
