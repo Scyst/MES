@@ -63,8 +63,8 @@ if (empty($token)) {
             $stmtOther->execute([$caseData['customer_name'], $caseData['case_id']]);
             $otherPending = $stmtOther->fetchAll(PDO::FETCH_ASSOC);
             
-            // 5. เช็คสถานะ
-            if (!empty($caseData['customer_respond_date'])) {
+            // 5. เช็คสถานะการล็อกฟอร์ม
+            if (!empty($caseData['customer_respond_date']) && $caseData['current_status'] !== 'SENT_TO_CUSTOMER') {
                 $isReplied = true;
             }
             $isClosed = ($caseData['current_status'] === 'CLOSED');

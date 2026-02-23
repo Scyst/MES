@@ -172,9 +172,28 @@ try {
             $raw_cost = trim($_POST['cost_estimation'] ?? '');
             $cost = ($raw_cost !== '') ? floatval($raw_cost) : 0;
 
-            // เรียกใช้ Stored Procedure (ไม่ต้องเปิด Transaction ใน PHP)
-            $stmt = $pdo->prepare("EXEC sp_QMS_CloseClaim ?, ?, ?, ?, ?");
-            $stmt->execute([$case_id, $disposition, $actual_qty, $cost, $user_id]);
+            // [NEW] รับค่า Checkbox และวันที่ประเมิน
+            $std_fmea = isset($_POST['std_fmea']) ? 1 : 0;
+            $std_cp   = isset($_POST['std_control_plan']) ? 1 : 0;
+            $std_wi   = isset($_POST['std_wi']) ? 1 : 0;
+            $std_oth  = empty(trim($_POST['std_others'] ?? '')) ? null : trim($_POST['std_others']);
+
+            $v1_date = empty($_POST['verify_date_1']) ? null : $_POST['verify_date_1'];
+            $v1_res  = ($_POST['verify_result_1'] ?? '') !== '' ? (int)$_POST['verify_result_1'] : null;
+            
+            $v2_date = empty($_POST['verify_date_2']) ? null : $_POST['verify_date_2'];
+            $v2_res  = ($_POST['verify_result_2'] ?? '') !== '' ? (int)$_POST['verify_result_2'] : null;
+            
+            $v3_date = empty($_POST['verify_date_3']) ? null : $_POST['verify_date_3'];
+            $v3_res  = ($_POST['verify_result_3'] ?? '') !== '' ? (int)$_POST['verify_result_3'] : null;
+
+            // เรียกใช้ Stored Procedure ด้วย Parameter ใหม่ 15 ตัว (ตามที่อัปเดตใน DB)
+            $stmt = $pdo->prepare("EXEC sp_QMS_CloseClaim ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?");
+            $stmt->execute([
+                $case_id, $disposition, $actual_qty, $cost, $user_id,
+                $std_fmea, $std_cp, $std_wi, $std_oth,
+                $v1_date, $v1_res, $v2_date, $v2_res, $v3_date, $v3_res
+            ]);
 
             echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'ตรวจสอบและปิดงานเคลมเรียบร้อยแล้ว']);
             break;
@@ -186,9 +205,17 @@ try {
             $case_id = $_POST['case_id'] ?? null;
             if (!$case_id) throw new Exception("Missing Case ID");
 
-            // การทำงานนี้สั้นและเร็วมาก (แค่ Update ฟิลด์เดียว) ไม่ต้องทำ SP ก็ได้
+            $pdo->beginTransaction();
+            
+            // 1. ถอยสถานะกลับเป็น SENT_TO_CUSTOMER
             $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'SENT_TO_CUSTOMER', updated_at = GETDATE() WHERE case_id = ?");
             $stmtCase->execute([$case_id]);
+            
+            // 2. เคลียร์วันที่ตอบกลับ และ ยืดอายุ Token ออกไปอีก 7 วัน เพื่อให้ลูกค้ามีเวลาแก้
+            $stmtCar = $pdo->prepare("UPDATE QMS_CAR SET customer_respond_date = NULL, token_expiry = DATEADD(DAY, 7, GETDATE()) WHERE case_id = ?");
+            $stmtCar->execute([$case_id]);
+            
+            $pdo->commit();
 
             echo json_encode(['success' => true, 'message' => 'ตีกลับ CAR ไปให้ลูกค้าเรียบร้อยแล้ว']);
             break;

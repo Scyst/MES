@@ -55,7 +55,7 @@
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small text-secondary fw-bold">จำนวนที่พบ (Qty) <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control form-control-lg text-center fw-bold fs-5" name="defect_qty" required min="1" value="1">
+                                    <input type="number" class="form-control form-control-lg text-center fw-bold fs-5" name="defect_qty" required min="0.0001" step="1" value="1">
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small text-secondary fw-bold">รายละเอียดเพิ่มเติม <span class="text-danger">*</span></label>

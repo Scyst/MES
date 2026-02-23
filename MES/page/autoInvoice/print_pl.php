@@ -341,7 +341,7 @@ function formatDocDate($dateStr) {
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
                     <td class="text-right"><?= number_format($nw, 2) ?></td>
                     <td class="text-right"><?= number_format($gw, 2) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($cbm, 3) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($cbm, 2) ?></td>
                 </tr>
                 <?php 
                     endforeach; 
@@ -369,7 +369,7 @@ function formatDocDate($dateStr) {
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumNW, 2) ?></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumGW, 2) ?></td>
                     <td class="text-right fw-bold" style="text-decoration: underline double; text-underline-offset: 3px; border-right: none; padding-bottom: 5px;">
-                        <?= number_format($sumCBM, 3) ?>
+                        <?= number_format($sumCBM, 2) ?>
                     </td>
                 </tr>
             </tbody>
