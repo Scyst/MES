@@ -34,10 +34,17 @@ try {
             $term = "%$search%";
             array_push($params, $term, $term, $term);
         }
+        
         $sql .= " ORDER BY c.case_id DESC";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        // เช็คก่อนว่ามีพารามิเตอร์ส่งเข้าไปไหม ป้องกัน Execute พังตอนเป็น Array ว่าง
+        if (!empty($params)) {
+            $stmt->execute($params);
+        } else {
+            $stmt->execute();
+        }
+        
         $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $sqlStats = "SELECT 
@@ -56,15 +63,21 @@ try {
         $case_id = $_GET['case_id'] ?? null;
         if (!$case_id) throw new Exception("Missing Case ID");
 
+        // 🔥 เพิ่มคอลัมน์ใหม่ที่เพิ่งสร้างเข้าไปใน SELECT
         $sql = "SELECT 
                     c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name,
                     n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift,
+                    n.invoice_no, n.issuer_position, n.found_by_type,
                     car.qa_issue_description, car.access_token, car.token_expiry, car.customer_root_cause, 
                     car.customer_action_plan, car.customer_respond_date, car.containment_action, 
                     car.root_cause_category, car.leak_cause,
                     car.return_container_no, car.expected_return_qty,
                     cl.disposition, cl.cost_estimation, cl.closed_at, cl.final_qty,
-                    cl.actual_received_qty
+                    cl.actual_received_qty,
+                    cl.verify_date_1, cl.verify_result_1, 
+                    cl.verify_date_2, cl.verify_result_2, 
+                    cl.verify_date_3, cl.verify_result_3,
+                    cl.std_fmea, cl.std_control_plan, cl.std_wi, cl.std_others
                 FROM QMS_CASES c WITH (NOLOCK)
                 LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
                 LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id

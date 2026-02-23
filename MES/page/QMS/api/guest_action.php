@@ -19,11 +19,12 @@ switch ($action) {
             $rc_type = $_POST['root_cause_category'] ?? '';
             $leak = $_POST['leak_cause'] ?? '';
             $return_container = $_POST['return_container_no'] ?? '';
-            $expected_qty = $_POST['expected_return_qty'] ?? 0;
+            
+            $expected_qty_raw = trim($_POST['expected_return_qty'] ?? '');
+            $expected_qty = ($expected_qty_raw !== '') ? floatval($expected_qty_raw) : null;
 
             if (empty($token)) throw new Exception("Invalid Token");
 
-            // 1. ตรวจสอบ Token อีกครั้งเพื่อความชัวร์ (ใช้ NOLOCK)
             $sqlCheck = "SELECT case_id FROM QMS_CAR WITH (NOLOCK) WHERE access_token = ? AND token_expiry > GETDATE()";
             $stmtCheck = $pdo->prepare($sqlCheck);
             $stmtCheck->execute([$token]);
@@ -33,10 +34,8 @@ switch ($action) {
 
             $case_id = $car['case_id'];
 
-            // 2. เริ่ม Transaction
             $pdo->beginTransaction();
 
-            // 3. อัปเดตข้อมูล CAR
             $sqlUpdateCAR = "UPDATE QMS_CAR 
                             SET customer_root_cause = ?, 
                                 customer_action_plan = ?,
@@ -48,9 +47,17 @@ switch ($action) {
                                 customer_respond_date = GETDATE()
                             WHERE access_token = ?";
             $stmtUpdate = $pdo->prepare($sqlUpdateCAR);
-            $stmtUpdate->execute([$root_cause, $action_plan, $containment, $rc_type, $leak, $return_container, $expected_qty, $token]);
+            $stmtUpdate->execute([
+                $root_cause, 
+                $action_plan, 
+                $containment, 
+                $rc_type, 
+                $leak, 
+                $return_container, 
+                $expected_qty, 
+                $token
+            ]);
             
-            // 4. อัปเดตสถานะเคสหลัก เป็น 'CUSTOMER_REPLIED'
             $sqlUpdateCase = "UPDATE QMS_CASES 
                               SET current_status = 'CUSTOMER_REPLIED', updated_at = GETDATE()
                               WHERE case_id = ?";
@@ -59,20 +66,54 @@ switch ($action) {
 
             $pdo->commit();
 
-            echo json_encode(['success' => true, 'message' => 'Response saved successfully']);
+            echo json_encode(['success' => true, 'message' => 'Response saved successfully', 'data' => null]);
 
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) {
+            if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => $e->getMessage(), 'data' => null]);
+        }
+        break;
+
+    case 'customer_update_container':
+        try {
+            $token = $_POST['token'] ?? '';
+            $return_container = $_POST['return_container_no'] ?? '';
+            
+            $expected_qty_raw = trim($_POST['expected_return_qty'] ?? '');
+            $expected_qty = ($expected_qty_raw !== '') ? floatval($expected_qty_raw) : null;
+
+            if (empty($token)) throw new Exception("Invalid Token");
+
+            $sqlCheck = "SELECT case_id FROM QMS_CAR WITH (NOLOCK) WHERE access_token = ? AND token_expiry > GETDATE()";
+            $stmtCheck = $pdo->prepare($sqlCheck);
+            $stmtCheck->execute([$token]);
+            
+            if (!$stmtCheck->fetch(PDO::FETCH_ASSOC)) {
+                throw new Exception("Invalid or Expired Token");
+            }
+
+            // อัปเดตเฉพาะเลขตู้และยอดที่คืน โดยไม่แตะต้องข้อ 1-5
+            $sqlUpdateCAR = "UPDATE QMS_CAR 
+                            SET return_container_no = ?,
+                                expected_return_qty = ?
+                            WHERE access_token = ?";
+            $stmtUpdate = $pdo->prepare($sqlUpdateCAR);
+            $stmtUpdate->execute([$return_container, $expected_qty, $token]);
+
+            echo json_encode(['success' => true, 'message' => 'Container information updated successfully (อัปเดตข้อมูลการส่งคืนสำเร็จ)', 'data' => null]);
+
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $e->getMessage(), 'data' => null]);
         }
         break;
 
     default:
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid Action']);
+        echo json_encode(['success' => false, 'message' => 'Invalid Action', 'data' => null]);
         break;
 }
 ?>

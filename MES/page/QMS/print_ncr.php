@@ -131,10 +131,19 @@ $html .= '
 $imgHtml = '&nbsp;';
 if (!$is_blank && !empty($images)) {
     foreach ($images as $img) {
-        $path = __DIR__ . '/' . $img['file_path']; 
+        // 1. ดึง Path จาก DB และตัด ../../ เก่าทิ้ง (เพื่อให้รองรับทั้งเคสเก่าและเคสใหม่)
+        $db_path = str_replace('../../uploads/', 'uploads/', $img['file_path']);
         
-        if (file_exists($path)) {
-            $imgHtml .= '<img src="' . $path . '" height="95" border="1" style="margin-right:10px;">'; 
+        // 2. ต่อ Path ดิบ
+        $raw_path = __DIR__ . '/../../' . $db_path;
+        
+        // 3. แปลงเป็น Absolute Path ที่คลีนแล้ว (ลบ ../ ออกไปให้หมด)
+        $real_path = realpath($raw_path);
+        
+        // 4. เช็คว่าไฟล์มีอยู่จริง และโยน Absolute Path ให้ TCPDF
+        if ($real_path && file_exists($real_path)) {
+            // สังเกตว่าเราใช้ $real_path ยัดลงใน src
+            $imgHtml .= '<img src="' . $real_path . '" height="95" border="1" style="margin-right:10px;">'; 
         }
     }
 }

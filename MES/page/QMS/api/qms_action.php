@@ -25,7 +25,6 @@ if (empty($client_token) || empty($server_token) || !hash_equals($server_token, 
 }
 // ==========================================
 
-
 // ฟังก์ชันย่อรูป
 function compressImage($source, $destination, $quality) {
     $info = getimagesize($source);
@@ -68,17 +67,31 @@ try {
                     @defect_qty = ?, @defect_description = ?, @production_date = ?, 
                     @lot_no = ?, @found_shift = ?, @product_model = ?, 
                     @production_line = ?, @created_by = ?, @issue_by_name = ?,
+                    @invoice_no = ?, @issuer_position = ?, @found_by_type = ?,
                     @NewCaseID = @newId OUTPUT, @GeneratedCarNo = @newCarNo OUTPUT;
                 SELECT @newId AS case_id, @newCarNo AS car_no;
             ";
+            
+            $raw_defect_qty = trim($_POST['defect_qty'] ?? '');
+            $defect_qty = ($raw_defect_qty !== '') ? floatval($raw_defect_qty) : 0;
+
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $_POST['customer_name'] ?? '', $_POST['product_name'] ?? '',
-                $_POST['defect_type'] ?? '', $_POST['defect_qty'] ?? 0,
-                $_POST['defect_description'] ?? '', empty($_POST['production_date']) ? null : $_POST['production_date'],
-                $_POST['lot_no'] ?? null, $_POST['found_shift'] ?? null,
-                $_POST['product_model'] ?? null, $_POST['production_line'] ?? null, 
-                $user_id, $_POST['issue_by_name'] ?? $_SESSION['user']['username']
+                $_POST['customer_name'] ?? '', 
+                $_POST['product_name'] ?? '',
+                $_POST['defect_type'] ?? '', 
+                $defect_qty, 
+                $_POST['defect_description'] ?? '', 
+                empty($_POST['production_date']) ? null : $_POST['production_date'],
+                $_POST['lot_no'] ?? null, 
+                $_POST['found_shift'] ?? null,
+                $_POST['product_model'] ?? null, 
+                $_POST['production_line'] ?? null, 
+                $user_id, 
+                $_POST['issue_by_name'] ?? $_SESSION['user']['username'],
+                empty(trim($_POST['invoice_no'] ?? '')) ? null : trim($_POST['invoice_no']),
+                empty(trim($_POST['issuer_position'] ?? '')) ? null : trim($_POST['issuer_position']),
+                empty(trim($_POST['found_by_type'] ?? '')) ? null : trim($_POST['found_by_type'])
             ]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -87,12 +100,13 @@ try {
             $caseId = $result['case_id'];
             $newCarNo = $result['car_no'];
 
-            // จัดการรูปภาพ (ถ้ามี)
+            // จัดการรูปภาพ (ทำนอก Database Transaction เพื่อป้องกัน Table Lock)
             if (!empty($_FILES['ncr_images']['name'][0])) {
                 $baseUploadDir = __DIR__ . '/../../../uploads/qms_files/';
                 if (!is_dir($baseUploadDir)) mkdir($baseUploadDir, 0777, true);
 
-                $pdo->beginTransaction();
+                $uploadedFiles = []; // ตัวแปรเก็บไฟล์ที่ทำการย่อและย้ายสำเร็จ
+
                 foreach ($_FILES['ncr_images']['tmp_name'] as $key => $tmpName) {
                     if ($_FILES['ncr_images']['error'][$key] === UPLOAD_ERR_OK) {
                         $fileName = basename($_FILES['ncr_images']['name'][$key]);
@@ -100,16 +114,26 @@ try {
                         $newFileName = "car_{$caseId}_" . time() . "_{$key}." . $ext;
                         $targetPath = $baseUploadDir . $newFileName;
 
+                        // ประมวลผลไฟล์ลง Disk (อาจใช้เวลาหลายวินาที)
                         if (!compressImage($tmpName, $targetPath, 70)) {
                             move_uploaded_file($tmpName, $targetPath);
                         }
 
-                        $dbPath = '../../uploads/qms_files/' . $newFileName;
-                        $stmtAtt = $pdo->prepare("INSERT INTO QMS_FILE (case_id, doc_stage, file_name, file_path, uploaded_by) VALUES (?, 'NCR', ?, ?, ?)");
-                        $stmtAtt->execute([$caseId, $fileName, $dbPath, $user_id]);
+                        // บันทึก Path เป็นแบบ Relative ต่อ Root Project เพื่อไม่ให้พังเวลาย้ายโฟลเดอร์
+                        $dbPath = 'uploads/qms_files/' . $newFileName;
+                        $uploadedFiles[] = ['name' => $fileName, 'path' => $dbPath];
                     }
                 }
-                $pdo->commit();
+
+                // เปิด Transaction สั้นๆ เพื่อ INSERT ข้อมูลลงตาราง QMS_FILE ทีเดียว
+                if (!empty($uploadedFiles)) {
+                    $pdo->beginTransaction();
+                    $stmtAtt = $pdo->prepare("INSERT INTO QMS_FILE (case_id, doc_stage, file_name, file_path, uploaded_by) VALUES (?, 'NCR', ?, ?, ?)");
+                    foreach ($uploadedFiles as $file) {
+                        $stmtAtt->execute([$caseId, $file['name'], $file['path'], $user_id]);
+                    }
+                    $pdo->commit();
+                }
             }
 
             echo json_encode(['success' => true, 'data' => ['car_no' => $newCarNo, 'case_id' => $caseId], 'message' => 'แจ้งปัญหาเรียบร้อยแล้ว']);
@@ -126,19 +150,9 @@ try {
             $token = bin2hex(random_bytes(16));
             $expiry = date('Y-m-d H:i:s', strtotime('+7 days'));
 
-            $pdo->beginTransaction();
-            $sqlCAR = "
-                MERGE INTO QMS_CAR AS target
-                USING (SELECT ? AS case_id) AS source ON (target.case_id = source.case_id)
-                WHEN MATCHED THEN UPDATE SET qa_issue_description = ?, access_token = ?, token_expiry = ?
-                WHEN NOT MATCHED THEN INSERT (case_id, qa_issue_description, access_token, token_expiry) VALUES (?, ?, ?, ?);
-            ";
-            $stmt = $pdo->prepare($sqlCAR);
-            $stmt->execute([$case_id, $qa_desc, $token, $expiry, $case_id, $qa_desc, $token, $expiry]);
-
-            $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'SENT_TO_CUSTOMER', updated_at = GETDATE() WHERE case_id = ?");
-            $stmtCase->execute([$case_id]);
-            $pdo->commit();
+            // เรียกใช้ Stored Procedure (ไม่ต้องเปิด Transaction ใน PHP)
+            $stmt = $pdo->prepare("EXEC sp_QMS_IssueCAR ?, ?, ?, ?");
+            $stmt->execute([$case_id, $qa_desc, $token, $expiry]);
 
             echo json_encode(['success' => true, 'data' => ['token' => $token], 'message' => 'สร้าง CAR และลิงก์สำหรับลูกค้าสำเร็จ']);
             break;
@@ -149,27 +163,18 @@ try {
         case 'close_claim':
             $case_id = $_POST['case_id'] ?? null;
             $disposition = $_POST['disposition'] ?? null;
-            $actual_qty = $_POST['actual_received_qty'] ?? 0;
-            $cost = $_POST['cost_estimation'] ?? 0;
             
             if (!$case_id || !$disposition) throw new Exception("Missing required parameters");
 
-            $pdo->beginTransaction();
-            $sqlClaim = "
-                MERGE INTO QMS_CLAIM AS target
-                USING (SELECT ? AS case_id) AS source ON (target.case_id = source.case_id)
-                WHEN MATCHED THEN UPDATE SET disposition = ?, actual_received_qty = ?, final_qty = ?, cost_estimation = ?, approved_by = ?, closed_at = GETDATE()
-                WHEN NOT MATCHED THEN INSERT (case_id, disposition, actual_received_qty, final_qty, cost_estimation, approved_by, closed_at) 
-                VALUES (?, ?, ?, ?, ?, ?, GETDATE());
-            ";
-            // สังเกตว่าผมใส่ $actual_qty ลงไปที่ final_qty ด้วย เพื่อให้สอดคล้องกับโครงสร้างเก่า
-            $stmt = $pdo->prepare($sqlClaim);
-            $stmt->execute([$case_id, $disposition, $actual_qty, $actual_qty, $cost, $user_id, $case_id, $disposition, $actual_qty, $actual_qty, $cost, $user_id]);
+            $raw_actual_qty = trim($_POST['actual_received_qty'] ?? '');
+            $actual_qty = ($raw_actual_qty !== '') ? floatval($raw_actual_qty) : 0;
 
-            $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'CLOSED', updated_at = GETDATE() WHERE case_id = ?");
-            $stmtCase->execute([$case_id]);
-            
-            $pdo->commit();
+            $raw_cost = trim($_POST['cost_estimation'] ?? '');
+            $cost = ($raw_cost !== '') ? floatval($raw_cost) : 0;
+
+            // เรียกใช้ Stored Procedure (ไม่ต้องเปิด Transaction ใน PHP)
+            $stmt = $pdo->prepare("EXEC sp_QMS_CloseClaim ?, ?, ?, ?, ?");
+            $stmt->execute([$case_id, $disposition, $actual_qty, $cost, $user_id]);
 
             echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'ตรวจสอบและปิดงานเคลมเรียบร้อยแล้ว']);
             break;
@@ -181,13 +186,9 @@ try {
             $case_id = $_POST['case_id'] ?? null;
             if (!$case_id) throw new Exception("Missing Case ID");
 
-            $pdo->beginTransaction();
-            // ถอยสถานะกลับไปเป็น SENT_TO_CUSTOMER เพื่อให้ลูกค้าเข้ามาแก้ได้ใหม่
+            // การทำงานนี้สั้นและเร็วมาก (แค่ Update ฟิลด์เดียว) ไม่ต้องทำ SP ก็ได้
             $stmtCase = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'SENT_TO_CUSTOMER', updated_at = GETDATE() WHERE case_id = ?");
             $stmtCase->execute([$case_id]);
-            
-            // Trigger Database จะทำงานอัตโนมัติเพื่อบันทึก Audit Log ลงตาราง QMS_AUDIT_LOGS ที่เราเพิ่งสร้าง
-            $pdo->commit();
 
             echo json_encode(['success' => true, 'message' => 'ตีกลับ CAR ไปให้ลูกค้าเรียบร้อยแล้ว']);
             break;
@@ -196,7 +197,7 @@ try {
             throw new Exception("Invalid Action");
     }
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     http_response_code(500);

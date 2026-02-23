@@ -73,6 +73,18 @@
                         <div class="info-label">Description</div>
                         <div class="info-box mt-1" id="view_desc">-</div>
                     </div>
+                    <div class="col-6">
+                        <div class="info-label">Invoice No.</div>
+                        <div class="info-value" id="view_invoice_no">-</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="info-label">Found By</div>
+                        <div class="info-value" id="view_found_by">-</div>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <div class="info-label">Issuer Position</div>
+                        <div class="info-value" id="view_issuer_position">-</div>
+                    </div>
                 </div>
 
                 <h6 class="fw-bold text-dark mb-3 border-start border-4 border-danger ps-2">ข้อมูลย้อนกลับ (Traceability)</h6>
@@ -177,6 +189,82 @@
                     <form id="formCloseClaim" class="needs-validation" novalidate>
                         <input type="hidden" name="case_id" id="claim_case_id">
                         
+                        <div class="mt-4 mb-3 border-start border-4 border-info ps-2">
+                            <h6 class="fw-bold text-dark mb-0">การประเมินและการทำมาตรฐาน (Verification & Standardization)</h6>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle text-center mb-3">
+                                <thead class="table-light text-muted small">
+                                    <tr>
+                                        <th style="width: 15%;">ครั้งที่</th>
+                                        <th>วันที่ผลิต (Prod. Date)</th>
+                                        <th>ผลการประเมิน (Result)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">1</td>
+                                        <td><input type="date" class="form-control form-control-sm border-secondary" name="verify_date_1"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm border-secondary" name="verify_result_1">
+                                                <option value="">-- รอประเมิน --</option>
+                                                <option value="1" class="text-success fw-bold">Accept (ผ่าน)</option>
+                                                <option value="0" class="text-danger fw-bold">Reject (ไม่ผ่าน)</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">2</td>
+                                        <td><input type="date" class="form-control form-control-sm border-secondary" name="verify_date_2"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm border-secondary" name="verify_result_2">
+                                                <option value="">-- รอประเมิน --</option>
+                                                <option value="1" class="text-success fw-bold">Accept (ผ่าน)</option>
+                                                <option value="0" class="text-danger fw-bold">Reject (ไม่ผ่าน)</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">3</td>
+                                        <td><input type="date" class="form-control form-control-sm border-secondary" name="verify_date_3"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm border-secondary" name="verify_result_3">
+                                                <option value="">-- รอประเมิน --</option>
+                                                <option value="1" class="text-success fw-bold">Accept (ผ่าน)</option>
+                                                <option value="0" class="text-danger fw-bold">Reject (ไม่ผ่าน)</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row g-2 mb-4 bg-light p-3 rounded border border-secondary border-opacity-25 mx-0">
+                            <div class="col-12 mb-2"><span class="info-label text-dark">อัปเดตมาตรฐาน (Standardization)</span></div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="std_fmea" name="std_fmea" value="1">
+                                    <label class="form-check-label small fw-bold text-dark" for="std_fmea">Update FMEA</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="std_control_plan" name="std_control_plan" value="1">
+                                    <label class="form-check-label small fw-bold text-dark" for="std_control_plan">Update Control Plan</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="std_wi" name="std_wi" value="1">
+                                    <label class="form-check-label small fw-bold text-dark" for="std_wi">Update WI</label>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="text" class="form-control form-control-sm border-secondary" name="std_others" placeholder="มาตรฐานอื่นๆ ระบุ (ถ้ามี)...">
+                            </div>
+                        </div>
+
                         <div class="row g-3 mb-4 p-3 bg-light border border-secondary rounded mx-0">
                             <div class="col-12">
                                 <label class="form-label info-label">Disposition <span class="text-danger">*</span></label>
@@ -202,7 +290,7 @@
                                 <i class="fas fa-reply me-1"></i> ตีกลับ CAR
                             </button>
                             <button type="submit" class="btn btn-sm btn-success w-50 fw-bold shadow-sm" id="btnCloseClaimBtn">
-                                <i class="fas fa-clipboard-check me-1"></i> รับของ & ปิดเคส
+                                <i class="fas fa-clipboard-check me-1"></i> ปิดเคส
                             </button>
                         </div>
                     </form>
@@ -220,7 +308,15 @@
                         <div class="small text-secondary fw-bold" id="claim_closed_date">-</div>
                     </div>
 
-                    <div class="row g-3 px-2">
+                    <h6 class="fw-bold text-dark mt-2 mb-2">Verification & Standardization</h6>
+                    <div class="row g-2 px-2 small mb-4">
+                        <div class="col-12"><i class="fas fa-check text-muted me-1"></i> Verify 1: <span id="view_v1" class="fw-bold">-</span></div>
+                        <div class="col-12"><i class="fas fa-check text-muted me-1"></i> Verify 2: <span id="view_v2" class="fw-bold">-</span></div>
+                        <div class="col-12"><i class="fas fa-check text-muted me-1"></i> Verify 3: <span id="view_v3" class="fw-bold">-</span></div>
+                        <div class="col-12 mt-2"><i class="fas fa-file-alt text-muted me-1"></i> Standard Updates: <span id="view_std" class="text-primary fw-bold">-</span></div>
+                    </div>
+
+                    <div class="row g-3 px-2 border-top pt-3">
                         <div class="col-6">
                             <div class="info-label">Disposition</div>
                             <div class="info-value text-primary fs-5" id="view_disposition">-</div>

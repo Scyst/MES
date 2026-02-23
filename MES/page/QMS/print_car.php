@@ -1,6 +1,7 @@
 <?php
 // page/QMS/print_car.php
 // FM-QCS-064  Rev.00 11/12/2025
+
 // 1. เพิ่มการตรวจสอบสิทธิ์ (Security)
 session_start();
 if (!isset($_SESSION['user'])) {
@@ -30,22 +31,32 @@ if ($is_blank) {
         'containment_action' => '', 'root_cause_category' => '',
         'customer_root_cause' => '', 'leak_cause' => '',
         'customer_action_plan' => '',
-        'issuer_name' => '.........................................'
+        'issuer_name' => '.........................................',
+        // [NEW] ค่า Default สำหรับแบบฟอร์มเปล่า
+        'issuer_position' => '',
+        'verify_date_1' => null, 'verify_result_1' => null,
+        'verify_date_2' => null, 'verify_result_2' => null,
+        'verify_date_3' => null, 'verify_result_3' => null,
+        'std_fmea' => 0, 'std_control_plan' => 0, 'std_wi' => 0, 'std_others' => ''
     ];
 } else {
     // --- โหมดปกติ ---
     if (!$case_id) die('Error: Missing Case ID');
     
-    // 2. ใช้ชื่อตารางจริงและใส่ WITH (NOLOCK) 
-    // หมายเหตุ: เอา n.invoice_no และ n.found_by_type ออกจาก SQL เพื่อป้องกัน Error เพราะไม่มีใน Schema
+    // [FIXED] เพิ่ม Column ใหม่และ JOIN QMS_CLAIM
     $sql = "SELECT c.car_no, c.case_date, c.customer_name, c.product_name,
                    n.defect_type, n.defect_qty, n.defect_description, 
                    n.lot_no, n.production_date,
                    n.product_model, n.production_line,
-                   car.*, u.username as issuer_name
+                   n.invoice_no, n.issuer_position, n.found_by_type, -- [NEW]
+                   car.*, u.username as issuer_name,
+                   cl.verify_date_1, cl.verify_result_1, cl.verify_date_2, cl.verify_result_2, -- [NEW]
+                   cl.verify_date_3, cl.verify_result_3, cl.std_fmea, cl.std_control_plan, -- [NEW]
+                   cl.std_wi, cl.std_others -- [NEW]
             FROM QMS_CASES c WITH (NOLOCK)
             JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
             LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
+            LEFT JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
             LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
             WHERE c.case_id = ?";
             
@@ -55,7 +66,7 @@ if ($is_blank) {
     
     if (!$data) die('Error: CAR Data not found');
 
-    // 3. ดึงรูปภาพจาก QMS_FILE พร้อม WITH (NOLOCK)
+    // 3. ดึงรูปภาพจาก QMS_FILE
     $sqlImg = "SELECT TOP 3 file_path FROM QMS_FILE WITH (NOLOCK) WHERE case_id = ? AND doc_stage = 'NCR' ORDER BY uploaded_at ASC";
     $stmtImg = $pdo->prepare($sqlImg);
     $stmtImg->execute([$case_id]);
@@ -77,9 +88,10 @@ $pdf->SetAutoPageBreak(TRUE, 5);
 $pdf->AddPage();
 $pdf->SetFont('freeserif', '', 9);
 
+// [FIXED] แก้ไขฟังก์ชัน chkBox เพื่อป้องกันบั๊กตอนค่าเป็น '0'
 function chkBox($val, $target) {
-    if (empty($val) && empty($target)) return '[&nbsp;&nbsp;&nbsp;]';
-    return ($val === $target) ? '[ X ]' : '[&nbsp;&nbsp;&nbsp;]';
+    if ($val === null || $val === '') return '[&nbsp;&nbsp;&nbsp;]';
+    return ((string)$val === (string)$target) ? '[ X ]' : '[&nbsp;&nbsp;&nbsp;]';
 }
 
 // ==========================================
@@ -123,31 +135,31 @@ $html .= '
 <table border="1" cellpadding="3" cellspacing="0" style="font-size:9pt;">
     <tr>
         <td width="15%" bgcolor="#f2f2f2"><b>Name:</b></td>
-        <td width="35%">' . $data['issuer_name'] . '</td>
+        <td width="35%">' . htmlspecialchars($data['issuer_name'] ?? '') . '</td>
         <td width="15%" bgcolor="#f2f2f2"><b>Position:</b></td>
-        <td width="35%"></td>
+        <td width="35%">' . htmlspecialchars($data['issuer_position'] ?? '') . '</td>
     </tr>
     <tr>
         <td bgcolor="#f2f2f2"><b>Line:</b></td>
-        <td>' . ($data['production_line'] ?? '') . '</td>
+        <td>' . htmlspecialchars($data['production_line'] ?? '') . '</td>
         <td bgcolor="#f2f2f2"><b>Company:</b></td>
         <td style="font-size:8pt;">SNC CREATIVITY ANTHOLOGY CO.,LTD.</td>
     </tr>
     <tr>
         <td bgcolor="#f2f2f2"><b>Part No:</b></td>
-        <td>' . $data['product_name'] . '</td>
+        <td>' . htmlspecialchars($data['product_name'] ?? '') . '</td>
         <td bgcolor="#f2f2f2"><b>Part Name:</b></td>
-        <td>' . $data['product_name'] . '</td>
+        <td>' . htmlspecialchars($data['product_name'] ?? '') . '</td>
     </tr>
     <tr>
         <td bgcolor="#f2f2f2"><b>Model:</b></td>
-        <td>' . ($data['product_model'] ?? '') . '</td>
+        <td>' . htmlspecialchars($data['product_model'] ?? '') . '</td>
         <td bgcolor="#f2f2f2"><b>Lot No:</b></td>
-        <td>' . $data['lot_no'] . '</td>
+        <td>' . htmlspecialchars($data['lot_no'] ?? '') . '</td>
     </tr>
     <tr>
         <td bgcolor="#f2f2f2"><b>Invoice No:</b></td>
-        <td>' . ($data['invoice_no'] ?? '-') . '</td>
+        <td>' . htmlspecialchars($data['invoice_no'] ?? '-') . '</td>
         <td bgcolor="#f2f2f2"><b>Q\'ty:</b></td>
         <td>' . $show_qty . '</td>
     </tr>
@@ -175,10 +187,19 @@ $html .= '
 $imgHtml = '&nbsp;';
 if (!$is_blank && !empty($images)) {
     foreach ($images as $img) {
-        $path = __DIR__ . '/' . $img['file_path']; 
+        // 1. ดึง Path จาก DB และตัด ../../ เก่าทิ้ง (เพื่อให้รองรับทั้งเคสเก่าและเคสใหม่)
+        $db_path = str_replace('../../uploads/', 'uploads/', $img['file_path']);
         
-        if (file_exists($path)) {
-            $imgHtml .= '<img src="' . $path . '" height="95" border="1" style="margin-right:10px;">'; 
+        // 2. ต่อ Path ดิบ
+        $raw_path = __DIR__ . '/../../' . $db_path;
+        
+        // 3. แปลงเป็น Absolute Path ที่คลีนแล้ว (ลบ ../ ออกไปให้หมด)
+        $real_path = realpath($raw_path);
+        
+        // 4. เช็คว่าไฟล์มีอยู่จริง และโยน Absolute Path ให้ TCPDF
+        if ($real_path && file_exists($real_path)) {
+            // สังเกตว่าเราใช้ $real_path ยัดลงใน src
+            $imgHtml .= '<img src="' . $real_path . '" height="95" border="1" style="margin-right:10px;">'; 
         }
     }
 }
@@ -193,11 +214,11 @@ $html .= '
                     <td width="50%" valign="top">
                         <table border="0" width="100%">
                             <tr>
-                                <td align="left" valign="top">' . nl2br($data['defect_description']) . '</td>
+                                <td align="left" valign="top">' . nl2br(htmlspecialchars($data['defect_description'] ?? '')) . '</td>
                             </tr>
                             <tr><td height="75"></td></tr>
                             <tr>
-                                <td align="left" valign="bottom"><b>Defect Type:</b> ' . $data['defect_type'] . '</td>
+                                <td align="left" valign="bottom"><b>Defect Type:</b> ' . htmlspecialchars($data['defect_type'] ?? '') . '</td>
                             </tr>
                         </table>
                     </td>
@@ -226,7 +247,7 @@ $html .= '
             <span style="float:right; font-size:8pt;">(Within 7 Days reply)</span>
         </td>
     </tr>
-    <tr><td height="55">' . nl2br($data['containment_action'] ?? '') . '</td></tr>
+    <tr><td height="55">' . nl2br(htmlspecialchars($data['containment_action'] ?? '')) . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
@@ -240,38 +261,47 @@ $html .= '
             ' . chkBox($data['root_cause_category'] ?? '', 'Other') . ' Other
         </td>
     </tr>
-    <tr><td height="50">' . nl2br($data['customer_root_cause'] ?? '') . '</td></tr>
+    <tr><td height="50">' . nl2br(htmlspecialchars($data['customer_root_cause'] ?? '')) . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;"><td><b>4. Leak Cause (สาเหตุที่หลุดรอด):</b></td></tr>
-    <tr><td height="55">' . nl2br($data['leak_cause'] ?? '') . '</td></tr>
+    <tr><td height="55">' . nl2br(htmlspecialchars($data['leak_cause'] ?? '')) . '</td></tr>
 </table>
 
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;"><td><b>5. Corrective Action (การแก้ไขระยะยาว):</b></td></tr>
-    <tr><td height="50">' . nl2br($data['customer_action_plan'] ?? '') . '</td></tr>
-</table>
+    <tr><td height="50">' . nl2br(htmlspecialchars($data['customer_action_plan'] ?? '')) . '</td></tr>
+</table>';
 
+// เตรียมข้อมูลวันที่สำหรับการประเมินผล
+$v_date_1 = !empty($data['verify_date_1']) ? date('d/m/Y', strtotime($data['verify_date_1'])) : '____________';
+$v_date_2 = !empty($data['verify_date_2']) ? date('d/m/Y', strtotime($data['verify_date_2'])) : '____________';
+$v_date_3 = !empty($data['verify_date_3']) ? date('d/m/Y', strtotime($data['verify_date_3'])) : '____________';
+
+// ==========================================
+// VERIFICATION & STANDARDIZATION (แทนที่ของเดิมที่ฮาร์ดโค้ด)
+// ==========================================
+$html .= '
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;"><td><b>6. Verification of Effectiveness:</b> (If found reoccurrence, back to re-analysis)</td></tr>
     <tr>
         <td>
             <table border="0" cellpadding="2">
                 <tr>
-                    <td width="30%">1. Prod Date: ____________</td>
-                    <td width="20%">' . chkBox('0', '1') . ' Accept</td>
-                    <td width="50%">' . chkBox('0', '1') . ' Reject, need back to analysis element no.2</td>
+                    <td width="30%">1. Prod Date: ' . $v_date_1 . '</td>
+                    <td width="20%">' . chkBox($data['verify_result_1'] ?? null, '1') . ' Accept</td>
+                    <td width="50%">' . chkBox($data['verify_result_1'] ?? null, '0') . ' Reject, need back to analysis element no.2</td>
                 </tr>
                 <tr>
-                    <td>2. Prod Date: ____________</td>
-                    <td>' . chkBox('0', '1') . ' Accept</td>
-                    <td>' . chkBox('0', '1') . ' Reject, need back to analysis element no.3</td>
+                    <td>2. Prod Date: ' . $v_date_2 . '</td>
+                    <td>' . chkBox($data['verify_result_2'] ?? null, '1') . ' Accept</td>
+                    <td>' . chkBox($data['verify_result_2'] ?? null, '0') . ' Reject, need back to analysis element no.3</td>
                 </tr>
                 <tr>
-                    <td>3. Prod Date: ____________</td>
-                    <td>' . chkBox('0', '1') . ' Accept</td>
-                    <td>' . chkBox('0', '1') . ' Reject, need back to analysis element no.4</td>
+                    <td>3. Prod Date: ' . $v_date_3 . '</td>
+                    <td>' . chkBox($data['verify_result_3'] ?? null, '1') . ' Accept</td>
+                    <td>' . chkBox($data['verify_result_3'] ?? null, '0') . ' Reject, need back to analysis element no.4</td>
                 </tr>
             </table>
         </td>
@@ -282,10 +312,10 @@ $html .= '
     <tr style="background-color:#eaeaea;"><td><b>7. Summary Standardization Effectives:</b></td></tr>
     <tr>
         <td>
-            ' . chkBox('0', '1') . ' Update FMEA &nbsp;&nbsp;&nbsp;
-            ' . chkBox('0', '1') . ' Update Control Plan &nbsp;&nbsp;&nbsp;
-            ' . chkBox('0', '1') . ' Update Work Instruction &nbsp;&nbsp;&nbsp;
-            ' . chkBox('0', '1') . ' Others: ......................
+            ' . chkBox($data['std_fmea'] ?? null, '1') . ' Update FMEA &nbsp;&nbsp;&nbsp;
+            ' . chkBox($data['std_control_plan'] ?? null, '1') . ' Update Control Plan &nbsp;&nbsp;&nbsp;
+            ' . chkBox($data['std_wi'] ?? null, '1') . ' Update Work Instruction &nbsp;&nbsp;&nbsp;
+            ' . chkBox((!empty($data['std_others']) ? '1' : null), '1') . ' Others: ' . (!empty($data['std_others']) ? htmlspecialchars($data['std_others']) : '......................') . '
         </td>
     </tr>
 </table>';
@@ -302,7 +332,7 @@ $html .= '
         <td width="33%"><b>Ack. By (QMR)</b></td>
     </tr>
     <tr>
-        <td height="60"><br><br><br><br>(' . $data['issuer_name'] . ')<br>Date: ' . $show_date . '</td>
+        <td height="60"><br><br><br><br>(' . htmlspecialchars($data['issuer_name'] ?? '') . ')<br>Date: ' . $show_date . '</td>
         <td height="60"><br><br><br>.........................................<br>( QC Supervisor )<br>Date: _____/_____/_____</td>
         <td height="60"><br><br><br>.........................................<br>( QMR )<br>Date: _____/_____/_____</td>
     </tr>

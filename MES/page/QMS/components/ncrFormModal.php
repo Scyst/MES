@@ -89,12 +89,28 @@
                             </h2>
                             <div id="collapseExtra" class="accordion-collapse collapse bg-light">
                                 <div class="accordion-body">
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <label class="form-label small text-secondary">วันที่ผลิต</label>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-secondary">Invoice No.</label>
+                                            <input type="text" class="form-control form-control-sm" name="invoice_no" placeholder="ระบุ Invoice No...">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-secondary">แหล่งที่พบปัญหา (Originator)</label>
+                                            <select class="form-select form-select-sm" name="found_by_type">
+                                                <option value="">-- ไม่ระบุ --</option>
+                                                <option value="Customer">Customer (ลูกค้า)</option>
+                                                <option value="QC">QC (ฝ่ายตรวจสอบคุณภาพ)</option>
+                                                <option value="Maintenance">Maintenance (ฝ่ายซ่อมบำรุง)</option>
+                                                <option value="Other">Other (อื่นๆ)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-secondary">วันที่ผลิต (Production Date)</label>
                                             <input type="date" class="form-control form-control-sm" name="production_date" value="<?php echo date('Y-m-d'); ?>">
                                         </div>
-                                        <div class="col-6">
+                                        <div class="col-md-6">
                                             <label class="form-label small text-secondary">กะ (Shift)</label>
                                             <select class="form-select form-select-sm" name="found_shift">
                                                 <option value="Day">Day</option>
@@ -107,9 +123,18 @@
                                         </div>
                                         
                                         <div class="col-12 mt-3 pt-3 border-top border-secondary border-opacity-25">
-                                            <label class="form-label small text-primary fw-bold"><i class="fas fa-user-edit me-1"></i> ชื่อผู้แจ้งบนเอกสาร (Issuer)</label>
-                                            <input type="text" class="form-control form-control-sm border-primary bg-primary bg-opacity-10 fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['username'] ?? ''; ?>">
-                                            <div class="form-text small text-muted">แก้ไขได้หากคุณกำลังแจ้งเรื่องแทนผู้อื่น</div>
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small text-primary fw-bold"><i class="fas fa-user-edit me-1"></i> ชื่อผู้แจ้ง (Issuer Name)</label>
+                                                    <input type="text" class="form-control form-control-sm border-primary bg-primary bg-opacity-10 fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['username'] ?? ''; ?>">
+                                                    <div class="form-text small text-muted">แก้ไขได้หากคุณกำลังแจ้งเรื่องแทนผู้อื่น</div>
+                                                </div>
+                                                
+                                                <div class="col-md-6">
+                                                    <label class="form-label small text-primary fw-bold"><i class="fas fa-id-badge me-1"></i> ตำแหน่ง (Position)</label>
+                                                    <input type="text" class="form-control form-control-sm border-primary bg-primary bg-opacity-10" name="issuer_position" placeholder="เช่น QC Inspector, Line Leader...">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

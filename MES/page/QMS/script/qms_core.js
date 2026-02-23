@@ -290,19 +290,22 @@ function openCaseDetail(caseId) {
             setText('view_lot', data.lot_no);
             setText('view_return_container', data.return_container_no);
             setText('view_expected_qty', data.expected_return_qty ? Number(data.expected_return_qty).toLocaleString() + ' PCS' : '-');
+            setText('view_invoice_no', data.invoice_no);
+            setText('view_found_by', data.found_by_type);
+            setText('view_issuer_position', data.issuer_position);
 
             const gallery = document.getElementById('gallery_ncr');
             if (gallery) {
-                gallery.innerHTML = ''; 
+                let imgHTML = '';
                 if (data.images && data.images.length > 0) {
                     data.images.forEach(img => {
-                        // ป้องกัน URL Injection ใน src
-                        const safeUrl = encodeURI(img.file_path);
-                        gallery.innerHTML += `<div class="col-6"><a href="${safeUrl}" target="_blank"><img src="${safeUrl}" class="img-fluid rounded border border-secondary border-opacity-25 shadow-sm" style="height:120px; object-fit:cover; width:100%;"></a></div>`;
+                        const safeUrl = encodeURI('../../' + img.file_path);
+                        imgHTML += `<div class="col-6"><a href="${safeUrl}" target="_blank"><img src="${safeUrl}" class="img-fluid rounded border border-secondary border-opacity-25 shadow-sm" style="height:120px; object-fit:cover; width:100%;"></a></div>`;
                     });
                 } else {
-                    gallery.innerHTML = '<div class="col-12 text-muted small text-center py-3 bg-light rounded border border-dashed">- ไม่มีการแนบรูปภาพ -</div>';
+                    imgHTML = '<div class="col-12 text-muted small text-center py-3 bg-light rounded border border-dashed">- ไม่มีการแนบรูปภาพ -</div>';
                 }
+                gallery.innerHTML = imgHTML;
             }
 
             setText('view_rc_category', data.root_cause_category);
@@ -560,6 +563,18 @@ function initForms() {
             previewContainer.innerHTML = ''; 
             
             if (this.files.length > 0) {
+                const maxFileSize = 5 * 1024 * 1024;
+                for (let file of this.files) {
+                    if (file.size > maxFileSize) {
+                        Swal.fire('ขนาดไฟล์เกิน', `ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 5MB กรุณาเลือกรูปใหม่`, 'warning');
+                        this.value = '';
+                        uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+                        uploadBox.classList.add('border-primary', 'bg-light');
+                        uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
+                        return;
+                    }
+                }
+
                 uploadBox.classList.add('border-success', 'bg-success', 'bg-opacity-10');
                 uploadBox.classList.remove('border-primary', 'bg-light');
                 uploadBox.querySelector('h6').innerHTML = `<i class="fas fa-check-circle me-1"></i> เลือกรูปแล้ว ${this.files.length} รูป`;
@@ -570,7 +585,6 @@ function initForms() {
                         reader.onload = function(e) {
                             const wrapper = document.createElement('div');
                             wrapper.className = 'preview-img-wrapper';
-                            // ไม่ต้องใช้ escapeHTML ตรงนี้เพราะ e.target.result เป็น Data URL จากไฟล์ที่ถูกกรองว่าเป็น Image แล้ว
                             wrapper.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
                             previewContainer.appendChild(wrapper);
                         }
