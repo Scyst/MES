@@ -52,34 +52,40 @@
         <p class="text-center text-muted">กรอกข้อมูลเพื่อสร้างใบโอนย้าย (สถานะ PENDING)</p>
 
         <form id="label-generator-form">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="from_location_id" class="form-label">คลังต้นทาง (จากที่ไหน)</label>
+                    <select id="from_location_id" name="from_location_id" class="form-select" required>
+                        <option value="" disabled selected>-- เลือกคลังต้นทาง --</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="to_location_id" class="form-label">คลังปลายทาง (ไปที่ไหน)</label>
+                    <select id="to_location_id" name="to_location_id" class="form-select" required>
+                        <option value="" disabled selected>-- เลือกคลังปลายทาง --</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="mb-3 position-relative">
-                <label for="item_search" class="form-label">ค้นหาชิ้นส่วน (SAP No. / Part No.)</label>
-                <input type="text" id="item_search" class="form-control" autocomplete="off" required>
-                <input type="hidden" id="item_id" name="item_id">
+                <label for="item_search" class="form-label">ค้นหา Item (Part No / SAP No)</label>
+                <input type="text" id="item_search" class="form-control" placeholder="พิมพ์เพื่อค้นหา..." autocomplete="off">
+                <ul id="item_search-results" class="autocomplete-results border rounded shadow-sm" style="display: none;"></ul>
+                <input type="hidden" id="item_id" name="item_id" required>
             </div>
             
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="from_location_id" class="form-label">จาก (From)</label>
-                    <select id="from_location_id" name="from_location_id" class="form-select" required>
-                        <option value="">-- เลือกต้นทาง --</option>
-                    </select>
+                <div class="col-md-5 mb-3">
+                    <label for="lot_no" class="form-label">เลข Lot / Pallet หลัก</label>
+                    <input type="text" id="lot_no" name="lot_no" class="form-control" required placeholder="เช่น L-202602">
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="to_location_id" class="form-label">ไปยัง (To)</label>
-                    <select id="to_location_id" name="to_location_id" class="form-select" required>
-                        <option value="">-- เลือกปลายทาง --</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-8 mb-3">
-                    <label for="lot_no" class="form-label">เลข Lot / Pallet / อ้างอิง</label>
-                    <input type="text" id="lot_no" name="lot_no" class="form-control" required>
+                <div class="col-md-3 mb-3">
+                    <label for="quantity" class="form-label">จำนวนชิ้น/กล่อง</label>
+                    <input type="number" id="quantity" name="quantity" class="form-control" min="1" value="1" required>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label for="quantity" class="form-label">จำนวน (ใน Pallet นี้)</label>
-                    <input type="number" id="quantity" name="quantity" class="form-control" min="1" required>
+                    <label for="print_count" class="form-label text-primary fw-bold">จำนวนสติ้กเกอร์ (ดวง)</label>
+                    <input type="number" id="print_count" name="print_count" class="form-control border-primary bg-light" min="1" max="500" value="1" required>
                 </div>
             </div>
             <div class="mb-3">

@@ -87,6 +87,7 @@ const UI = {
         const labels = [];
         const dataPlan = [];
         const dataActual = [];
+        const actualColors = []; // 🔥 เพิ่ม Array สำหรับเก็บสีของแท่ง Actual แต่ละแท่ง
         const grouped = {};
         let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0;
 
@@ -107,10 +108,23 @@ const UI = {
             sumLeave += parseInt(row.leave || 0);
         });
 
+        // 🔥 วนลูปเพื่อนำข้อมูลเข้า Array และคำนวณสี
         for (const [line, val] of Object.entries(grouped)) {
             labels.push(line);
             dataPlan.push(val.plan);
             dataActual.push(val.actual);
+
+            // คำนวณ % Working Rate ของไลน์นั้นๆ
+            const rate = val.plan > 0 ? (val.actual / val.plan) * 100 : 0;
+
+            // กำหนดสีตามเงื่อนไขเดียวกับ Donut Chart
+            if (rate >= 95) {
+                actualColors.push('#1cc88a'); // เขียว (>= 95%)
+            } else if (rate < 90) {
+                actualColors.push('#e74a3b'); // แดง (< 90%)
+            } else {
+                actualColors.push('#f6c23e'); // เหลือง (90% - 94.99%)
+            }
         }
 
         const ctxBar = document.getElementById('barChart').getContext('2d');
@@ -129,8 +143,22 @@ const UI = {
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Plan', data: dataPlan, backgroundColor: '#4e73df', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 },
-                    { label: 'Actual', data: dataActual, backgroundColor: '#1cc88a', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 }
+                    { 
+                        label: 'Plan', 
+                        data: dataPlan, 
+                        backgroundColor: '#4e73df', 
+                        borderRadius: 4, 
+                        barPercentage: 0.6, 
+                        categoryPercentage: 0.8 
+                    },
+                    { 
+                        label: 'Actual', 
+                        data: dataActual, 
+                        backgroundColor: actualColors, // 🔥 ใช้ Array สีที่คำนวณไว้
+                        borderRadius: 4, 
+                        barPercentage: 0.6, 
+                        categoryPercentage: 0.8 
+                    }
                 ]
             },
             options: {
@@ -964,6 +992,39 @@ const UI = {
         if (!ctx) return;
         if (this.charts.iaCombo) this.charts.iaCombo.destroy();
 
+        // 🔥 1. เตรียม Array สำหรับเก็บสีและความหนาของตัวหนังสือแกน X
+        const tickColors = [];
+        const tickWeights = [];
+
+        data.forEach(d => {
+            const planHc = parseInt(d.Daily_HC || 0); 
+            const present = parseInt(d.Act_Present || 0);
+            const late = parseInt(d.Act_Late || 0);
+            
+            const totalActual = present + late; 
+            // คำนวณ % การมาทำงานเทียบกับแผน
+            const rate = planHc > 0 ? (totalActual / planHc) * 100 : 100;
+
+            // ตรวจสอบเงื่อนไขการทำสีวันที่ (X-Axis Label)
+            if (planHc === 0) {
+                // วันที่ไม่มีแผน (เช่น วันอาทิตย์)
+                tickColors.push('#858796'); 
+                tickWeights.push('normal');
+            } else if (rate < 90) {
+                // ตกเกณฑ์หนัก (< 90%) -> แดง ตัวหนา
+                tickColors.push('#e74a3b');  
+                tickWeights.push('bold');
+            } else if (rate < 95) {
+                // ต่ำกว่าเป้าหมาย (90% - 94.99%) -> เหลืองอมส้ม ตัวหนา (ใช้อ่านง่ายกว่าเหลืองสด)
+                tickColors.push('#f39c12');  
+                tickWeights.push('bold');
+            } else {
+                // ผ่านเกณฑ์ (>= 95%) -> สีเทาปกติ
+                tickColors.push('#858796');  
+                tickWeights.push('normal');
+            }
+        });
+
         this.charts.iaCombo = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -976,9 +1037,11 @@ const UI = {
                         borderColor: '#858796',
                         borderWidth: 2,
                         borderDash: [5, 5],
-                        pointRadius: 0,
+                        pointRadius: 0, // ซ่อนจุดบนเส้น
+                        pointHoverRadius: 0, 
                         order: 0
                     },
+                    // 🌈 2. สีแท่งกราฟกลับมาใช้สีมาตรฐานให้ตรงกับ Donut Chart
                     { label: 'Present', data: data.map(d => d.Act_Present), backgroundColor: '#1cc88a', stack: 'combined', order: 1 },
                     { label: 'Late', data: data.map(d => d.Act_Late), backgroundColor: '#f6c23e', stack: 'combined', order: 1 },
                     { label: 'Leave', data: data.map(d => d.Act_Leave), backgroundColor: '#36b9cc', stack: 'combined', order: 1 },
@@ -1004,7 +1067,20 @@ const UI = {
                     }
                 },
                 scales: {
-                    x: { stacked: true, grid: { display: false } },
+                    x: { 
+                        stacked: true, 
+                        grid: { display: false },
+                        ticks: {
+                            // 🔥 3. ดึงค่าสีจากเงื่อนไขที่เราคำนวณไว้มาใส่ให้แกน X
+                            color: tickColors,
+                            font: function(context) {
+                                return {
+                                    family: 'Prompt',
+                                    weight: tickWeights[context.index] || 'normal'
+                                };
+                            }
+                        }
+                    },
                     y: { stacked: true, beginAtZero: true }
                 }
             }

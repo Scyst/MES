@@ -435,6 +435,87 @@ try {
             echo json_encode(['success' => true, 'message' => 'ยกเลิกใบโอน (Pending) สำเร็จ']);
             break;
 
+        // ==========================================================
+        // ACTION: 'create_batch_transfer_orders'
+        // ==========================================================
+        case 'create_batch_transfer_orders':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+
+            $parent_lot = trim($input['parent_lot'] ?? '');
+            $print_count = (int)($input['print_count'] ?? 1);
+            $item_id = $input['item_id'] ?? 0;
+            $quantity = $input['quantity'] ?? 0;
+            $from_loc_id = $input['from_loc_id'] ?? 0;
+            $to_loc_id = $input['to_loc_id'] ?? 0;
+            $notes = $input['notes'] ?? null;
+
+            if (empty($parent_lot) || $print_count < 1 || empty($item_id) || empty($quantity) || empty($from_loc_id) || empty($to_loc_id)) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบฟอร์มอีกครั้ง");
+            }
+            if ($from_loc_id == $to_loc_id) {
+                throw new Exception("คลังต้นทางและปลายทางต้องไม่ซ้ำกัน");
+            }
+            if ($print_count > 500) {
+                throw new Exception("ป้องกัน Memory Limit - อนุญาตให้ปริ้นสูงสุด 500 ดวงต่อครั้ง");
+            }
+
+            $pdo->beginTransaction();
+
+            // 1. Reserve Serial Block ทีเดียวรวดเพื่อความเร็วและป้องกัน Concurrency
+            $sqlReserve = "
+                MERGE INTO dbo.LOT_SERIALS WITH (HOLDLOCK) AS T
+                USING (SELECT ? AS parent_lot) AS S
+                ON (T.parent_lot = S.parent_lot)
+                WHEN MATCHED THEN
+                    UPDATE SET T.last_serial = T.last_serial + ?, T.updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (parent_lot, last_serial, updated_at)
+                    VALUES (S.parent_lot, ?, GETDATE())
+                OUTPUT inserted.last_serial, deleted.last_serial AS old_serial;
+            ";
+            
+            $stmtReserve = $pdo->prepare($sqlReserve);
+            $stmtReserve->execute([$parent_lot, $print_count, $print_count]);
+            $reserveResult = $stmtReserve->fetch(PDO::FETCH_ASSOC);
+
+            if (!$reserveResult) {
+                throw new Exception("ไม่สามารถจองเลข Serial ได้");
+            }
+
+            $end_serial = (int)$reserveResult['last_serial'];
+            $start_serial = (int)($reserveResult['old_serial'] ?? 0) + 1;
+
+            // 2. Insert แบบ Batch ด้วย Prepared Statement
+            $insertSql = "INSERT INTO $transferTable 
+                          (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes)
+                          VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)";
+            $insertStmt = $pdo->prepare($insertSql);
+
+            $generated_labels = [];
+
+            for ($i = $start_serial; $i <= $end_serial; $i++) {
+                $serialSuffix = '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+                $transfer_uuid = $parent_lot . $serialSuffix;
+
+                $insertStmt->execute([
+                    $transfer_uuid, $item_id, $quantity, $from_loc_id, $to_loc_id, $currentUser['id'], $notes
+                ]);
+
+                $generated_labels[] = [
+                    'transfer_uuid' => $transfer_uuid,
+                    'serial_no' => $serialSuffix
+                ];
+            }
+
+            $pdo->commit();
+
+            echo json_encode([
+                'success' => true, 
+                'message' => "สร้างและเตรียมพิมพ์ {$print_count} รายการ สำเร็จ", 
+                'labels' => $generated_labels
+            ]);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Invalid action: $action"]);

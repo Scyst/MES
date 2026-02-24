@@ -7,10 +7,7 @@ let allItems = [];
 let allLocations = [];
 let selectedItem = null; 
 
-// 🔽🔽🔽 [เพิ่ม] 1. กำหนด API Endpoint ใหม่ 🔽🔽🔽
 const TRANSFER_API_URL = 'api/transferManage.php';
-// (INVENTORY_API_URL ยังคงใช้สำหรับ 'get_initial_data' และ 'get_next_serial')
-// =================================================================
 
 // =================================================================
 // SECTION: CORE & UTILITY
@@ -97,54 +94,45 @@ async function populateInitialData() {
         }
     }
 }
-// =================================================================
 
-// =================================================================
-// SECTION: LABEL PRINTING LOGIC (ฉบับอัปเกรด)
-// =================================================================
-
-// 🔽🔽🔽 [แก้ไข] 3. แก้ไขฟังก์ชันนี้ทั้งหมด 🔽🔽🔽
 async function handleGenerateLabel(event) {
     event.preventDefault();
     
-    // 1. --- รวบรวมข้อมูล (จากฟอร์มที่แก้ไขใหม่) ---
     const fromLocationId = document.getElementById('from_location_id').value;
     const toLocationId = document.getElementById('to_location_id').value;
     const fromLocationInfo = allLocations.find(l => l.location_id == fromLocationId);
     
     const qty = document.getElementById('quantity').value;
+    const printCount = document.getElementById('print_count').value;
     const notes = document.getElementById('notes').value;
     const date = new Date();
     const printTime = date.toLocaleString('en-GB');
-    const manualLot = document.getElementById('lot_no').value;
+    const manualLot = document.getElementById('lot_no').value.trim();
 
-    // 2. --- ตรวจสอบข้อมูล (อัปเดตใหม่) ---
-    if (!selectedItem || !fromLocationId || !toLocationId || !qty || !manualLot) {
-        showToast("กรุณากรอกข้อมูล: Part, ต้นทาง, ปลายทาง, Lot, และจำนวน", 'var(--bs-danger)');
+    if (!selectedItem || !fromLocationId || !toLocationId || !qty || !manualLot || !printCount) {
+        showToast("กรุณากรอกข้อมูลให้ครบถ้วน", 'var(--bs-danger)');
         return;
     }
     if (fromLocationId === toLocationId) {
         showToast("คลังต้นทางและปลายทางห้ามซ้ำกัน", 'var(--bs-warning)');
         return;
     }
+    if (printCount > 500) {
+        showToast("เพื่อป้องกันระบบค้าง อนุญาตให้ปริ้นสูงสุด 500 ดวงต่อครั้ง", 'var(--bs-warning)');
+        return;
+    }
 
+    // Operator Proofing: กันกดย้ำ
+    const btn = document.getElementById('generate-label-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Batch...';
     showSpinner();
+    
     try {
-        // 3. --- ร้องขอ Serial Number (เหมือนเดิม) ---
-        const serialResult = await sendRequest(INVENTORY_API_URL, 'get_next_serial', 'POST', {
-            parent_lot: manualLot 
-        });
-        if (!serialResult.success) {
-            throw new Error(serialResult.message || "Failed to get new serial number.");
-        }
-        
-        const newSerial = serialResult.new_serial_number;
-        const serialSuffix = `-${String(newSerial).padStart(3, '0')}`;
-        const uniqueLotID = `${manualLot}${serialSuffix}`; // (นี่คือ ID ที่เราจะใช้เป็น "UUID")
-
-        // 4. --- (ใหม่) สร้างใบโอนย้าย (Transfer Order) สถานะ PENDING ---
         const transferData = {
-            transfer_uuid: uniqueLotID, // ⭐️ ส่ง ID ที่เราสร้างเองไปให้ API
+            parent_lot: manualLot,
+            print_count: printCount,
             item_id: selectedItem.item_id,
             quantity: qty,
             from_loc_id: fromLocationId,
@@ -152,133 +140,160 @@ async function handleGenerateLabel(event) {
             notes: notes
         };
         
-        // ⭐️ เรียก API ใหม่ (transferManage.php) และ Action ใหม่
-        const transferResult = await sendRequest(TRANSFER_API_URL, 'create_transfer_order', 'POST', transferData);
+        // ยิง Request สร้าง Batch ครั้งเดียว
+        const result = await sendRequest(TRANSFER_API_URL, 'create_batch_transfer_orders', 'POST', transferData);
         
-        if (!transferResult.success) {
-            throw new Error(transferResult.message || "Failed to create transfer order record.");
-        }
+        if (!result.success) throw new Error(result.message || "Failed to create transfer orders.");
 
-        const transfer_uuid = transferResult.transfer_uuid; // (API จะส่ง ID ที่เราส่งไปกลับมา)
-
-        // 5. --- (ใหม่) สร้าง URL สำหรับ QR Code ---
-        // ⭐️ ลิงก์ไปยัง mobile_entry.php โหมด receipt และส่ง transfer_id
         const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
-        const qrDataURL = `${baseUrl}?type=receipt&transfer_id=${transfer_uuid}`;
-
-        // 6. --- สร้าง Data (Human-Readable) ---
-        const labelData = {
+        const labelsToPrint = result.labels.map(label => ({
             sap_no: selectedItem.sap_no,
             part_no: selectedItem.part_no,
             description: selectedItem.part_description || '',
             quantity: qty,
             manual_lot: manualLot,
-            serial_no: serialSuffix,
-            location_name: fromLocationInfo.location_name, // ⭐️ แสดงคลังต้นทาง
-            // count_type: type, // (ลบออก)
+            serial_no: label.serial_no,
+            location_name: fromLocationInfo.location_name,
             print_time: printTime,
             notes: notes,
-            scan_id_display: transfer_uuid // ⭐️ แสดง ID ใบโอน (UUID)
-        };
+            scan_id_display: label.transfer_uuid,
+            qr_url: `${baseUrl}?type=receipt&transfer_id=${label.transfer_uuid}`
+        }));
 
-        // 7. --- ส่งไปพิมพ์ (เหมือนเดิม) ---
-        openPrintWindow(labelData, qrDataURL);
+        showToast(result.message, 'var(--bs-success)');
+        openPrintWindow(labelsToPrint);
 
     } catch (error) {
         showToast(error.message, 'var(--bs-danger)');
     } finally {
         hideSpinner();
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
-/**
- * (หน้าต่างพิมพ์: ไม่ต้องแก้ไข)
- * (โค้ดส่วนนี้เหมือนเดิม 100% ครับ)
- */
-function openPrintWindow(data, qrDataURL) {
-    // ... (โค้ดส่วนนี้เหมือนเดิม 100% ไม่ต้องแก้ไข) ...
-    const newWin = window.open("", "Print Label", "width=500,height=300");
+function openPrintWindow(labelsArray) {
+    // 1. คำนวณขนาดหน้าจอของ Operator และตั้งค่าให้ Popup ใหญ่ 90% ของจอ พร้อมจัดกึ่งกลาง
+    const screenWidth = window.screen.availWidth;
+    const screenHeight = window.screen.availHeight;
+    const popWidth = Math.round(screenWidth * 0.9);
+    const popHeight = Math.round(screenHeight * 0.9);
+    const popLeft = Math.round((screenWidth - popWidth) / 2);
+    const popTop = Math.round((screenHeight - popHeight) / 2);
+
+    // 2. เปิดหน้าต่างด้วยขนาดที่คำนวณได้
+    const newWin = window.open(
+        "", 
+        "Print_Label_Batch", 
+        `width=${popWidth},height=${popHeight},top=${popTop},left=${popLeft},resizable=yes,scrollbars=yes`
+    );
+    
     if (!newWin) {
-        alert("Please allow popups for this site to generate the print page.");
+        showToast("กรุณาอนุญาต Pop-up (Allow Pop-ups) สำหรับเว็บไซต์นี้", 'var(--bs-warning)');
         return;
     }
     
-    newWin.document.write('<html><head><title>Print Label</title>');
+    newWin.document.write('<html><head><title>Print Labels Batch</title>');
     
+    // CSS สำหรับการปริ้นสติ้กเกอร์ (Page Break สำหรับ Thermal Printer)
     newWin.document.write(`
         <style>
             @media print {
                 @page { size: 100mm 50mm; margin: 0 !important; }
-                body, html { margin: 0 !important; padding: 0 !important; width: 100mm !important; height: 50mm !important; }
+                body, html { margin: 0 !important; padding: 0 !important; width: 100mm !important; }
+                .label-page { 
+                    page-break-after: always; 
+                    height: 50mm !important;
+                }
+                .label-box { border: none !important; }
             }
-            body { margin: 0; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
-            .label-box {
+            body { margin: 0; font-family: sans-serif; background-color: #f0f0f0; }
+            .label-page {
                 width: 100mm; height: 50mm;
-                border: 1px dashed #999;
+                margin: 0 auto; margin-bottom: 10px;
+                background-color: white;
+                box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+            }
+            .label-box {
+                width: 100%; height: 100%;
+                border: 1px dashed #999; 
                 padding: 3mm; box-sizing: border-box;
-                page-break-inside: avoid;
-                display: flex; flex-direction: row; 
-                justify-content: space-between; overflow: hidden;
+                display: flex; flex-direction: row; justify-content: space-between; overflow: hidden;
             }
             .label-left {
-                width: 60%; font-size: 10pt; line-height: 1.4;
-                word-wrap: break-word; display: flex; flex-direction: column;
+                width: 60%; font-size: 10pt; line-height: 1.4; word-wrap: break-word; 
+                display: flex; flex-direction: column; justify-content: flex-start;
             }
             .label-left strong { font-size: 11pt; }
-            .label-left .desc { font-size: 9pt; font-style: italic; }
+            .label-left .desc { font-size: 9pt; font-style: italic; max-height: 25px; overflow: hidden; }
             .label-left .lot-group { margin-top: auto; }
             .label-left .lot-parent { font-size: 14pt; font-weight: bold; }
             .label-left .lot-serial { font-size: 10pt; font-weight: bold; color: #333; margin-left: 5px; }
             .label-right {
-                width: 38%; display: flex; flex-direction: column;
-                align-items: center; justify-content: center;
+                width: 38%; display: flex; flex-direction: column; align-items: center; justify-content: center;
                 border-left: 1px dashed #ccc; padding-left: 2mm;
             }
             .qr-img { width: 35mm; height: 35mm; }
-            .qr-qty { font-size: 18pt; font-weight: bold; margin-top: 2mm; }
+            .qr-qty { font-size: 16pt; font-weight: bold; margin-top: 1mm; }
         </style>
     `);
     
+    // เรียก Local qrcode.js (อย่าลืมเช็ค Path ให้ตรงกับ Environment ของคุณ)
     newWin.document.write('<script src="../../utils/libs/qrcode.min.js"><\/script>');
     newWin.document.write('</head><body>');
     
-    newWin.document.write(`
-        <div class="label-box">
-            <div class="label-left">
-                <div><strong>Part:</strong> ${data.part_no} (${data.sap_no})</div>
-                <div class="desc">${data.description}</div>
-                <div><strong>Loc:</strong> ${data.location_name}</div>
-                <div><strong>Note:</strong> ${data.notes || '-'}</div>
-                <div class="lot-group">
-                    <span class="lot-parent">${data.manual_lot}</span>
-                    <span class="lot-serial">${data.serial_no}</span>
+    let qrRenderJobs = [];
+
+    // วน Loop สร้าง HTML ทีละหน้า
+    labelsArray.forEach((data, index) => {
+        const qrId = `qr-${index}`;
+        qrRenderJobs.push({ id: qrId, url: data.qr_url });
+
+        newWin.document.write(`
+            <div class="label-page">
+                <div class="label-box">
+                    <div class="label-left">
+                        <div><strong>Part:</strong> ${data.part_no}</div>
+                        <div><strong>SAP:</strong> ${data.sap_no}</div>
+                        <div class="desc">${data.description}</div>
+                        <div><strong>Loc:</strong> ${data.location_name}</div>
+                        <div class="lot-group">
+                            <span class="lot-parent">${data.manual_lot}</span>
+                            <span class="lot-serial">${data.serial_no}</span>
+                        </div>
+                    </div>
+                    <div class="label-right">
+                        <div id="${qrId}" class="qr-img"></div>
+                        <div class="qr-qty">${data.quantity} PCS</div>
+                        <div style="font-size: 8pt; margin-top: 1mm; font-family: monospace;">${data.scan_id_display}</div>
+                    </div>
                 </div>
             </div>
-            <div class="label-right">
-                <div id="qr-placeholder" class="qr-img"></div>
-                <div class="qr-qty">${data.quantity} PCS</div>
-                <div style="font-size: 8pt; margin-top: 1mm; font-family: monospace;">ID: ${data.scan_id_display}</div>
-            </div>
-        </div>
-    `);
+        `);
+    });
 
+    // Script ฝั่ง Print Window
     newWin.document.write(`
         <script>
             window.onload = function() {
                 try {
-                    const qrData = ${JSON.stringify(qrDataURL)}; 
+                    const jobs = ${JSON.stringify(qrRenderJobs)};
                     
-                    new QRCode(document.getElementById('qr-placeholder'), {
-                        text: qrData,
-                        width: 132,
-                        height: 132,
-                        correctLevel: QRCode.CorrectLevel.M
+                    // Render QR ทีละรูป
+                    jobs.forEach(job => {
+                        new QRCode(document.getElementById(job.id), {
+                            text: job.url,
+                            width: 132,
+                            height: 132,
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
                     });
 
+                    // หน่วงเวลาให้ Browser เรนเดอร์ QR เสร็จแล้วค่อยสั่งปริ้น (ถ้าจำนวนเยอะต้องหน่วง)
                     setTimeout(function() {
                         window.print();
                         window.close(); 
-                    }, 500); 
+                    }, 1000); 
 
                 } catch (e) {
                     alert("Error generating QR codes: " + e.message); 
