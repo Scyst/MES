@@ -6,8 +6,15 @@ let currentMaintenanceData = [];
 // ==========================================
 function toLocalISOString(date) {
     const offset = date.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
-    return localISOTime;
+    return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+}
+
+function formatJobNo(id, dateString) {
+    const reqDateObj = new Date(dateString);
+    const thaiYearShort = (reqDateObj.getFullYear() + 543).toString().slice(-2);
+    const monthTwoDigits = (reqDateObj.getMonth() + 1).toString().padStart(2, '0'); 
+    const runNo = id.toString().padStart(4, '0');
+    return `MNT-${thaiYearShort}${monthTwoDigits}-${runNo}`;
 }
 
 // ==========================================
@@ -22,7 +29,6 @@ async function fetchMaintenanceData() {
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
     
-    // เรียก Summary ให้ทำงานคู่กัน
     fetchMaintenanceSummary(); 
 
     showSpinner();
@@ -32,64 +38,13 @@ async function fetchMaintenanceData() {
         
         if (result.success) {
             currentMaintenanceData = result.data; 
-        }
-
-        const tbody = document.getElementById('maintenanceTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        if(result.success && result.data.length > 0) {
-            result.data.forEach(row => {
-                // Badge Logic Status
-                let statusBadge = '';
-                let rowClass = 'cursor-pointer hover-bg'; 
-                
-                if(row.status === 'Pending') statusBadge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">Pending</span>';
-                else if(row.status === 'In Progress') statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2">Processing</span>';
-                else statusBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success px-2">Completed</span>';
-
-                // Priority Logic
-                let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-success fw-bold');
-                
-                // [NEW] Job Type Badge Logic (แยกสีตามประเภทงาน)
-                let jobType = row.job_type || 'Repair';
-                let typeBadgeColor = 'bg-secondary';
-                if(jobType === 'Development') typeBadgeColor = 'bg-primary';
-                else if(jobType === 'PM') typeBadgeColor = 'bg-info text-dark';
-                else if(jobType === 'Other') typeBadgeColor = 'bg-dark';
-
-                const reqName = row.requester_name || row.request_by;
-
-                const tr = document.createElement('tr');
-                tr.className = rowClass;
-                
-                // ผูก Event Click ทั้งแถว
-                tr.onclick = (e) => {
-                    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'I') {
-                        viewMaintenanceDetails(row.id);
-                    }
-                };
-
-                // [NEW] เพิ่มส่วนแสดงผล Job Type ควบคู่ไปกับ Priority
-                tr.innerHTML = `
-                    <td class="ps-3 text-center">${statusBadge}</td>
-                    <td class="small text-nowrap text-center">${new Date(row.request_date).toLocaleString('th-TH')}</td>
-                    <td class="text-center">
-                        <div class="fw-bold text-body">${row.line}</div>
-                        <small class="text-muted">${row.machine}</small>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge ${typeBadgeColor} mb-1" style="font-size: 0.7rem;">${jobType}</span><br>
-                        <span class="${priorityColor} small">${row.priority}</span>
-                    </td>
-                    <td class="small text-body text-center">${reqName}</td>
-                    <td class="text-center"><span class="text-break small">${row.issue_description}</span></td>
-                    <td class="small text-body text-center note-truncate" title="${row.technician_note || ''}">${row.technician_note || '-'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-2x mb-2 opacity-25"></i><br>No maintenance requests found.</td></tr>';
+            
+            // ล้างช่อง Search ก่อนโหลดข้อมูลใหม่
+            const searchBox = document.getElementById('mtSearchBox');
+            if(searchBox) searchBox.value = '';
+            
+            // เรียกฟังก์ชันวาดตาราง
+            renderMaintenanceTable(currentMaintenanceData);
         }
     } catch(err) {
         console.error(err);
@@ -97,6 +52,99 @@ async function fetchMaintenanceData() {
     } finally {
         hideSpinner();
     }
+}
+
+function renderMaintenanceTable(dataList) {
+    const tbody = document.getElementById('maintenanceTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (dataList && dataList.length > 0) {
+        dataList.forEach(row => {
+            let statusBadge = '';
+            let rowClass = 'cursor-pointer hover-bg'; 
+            
+            if(row.status === 'Pending') statusBadge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2">Pending</span>';
+            else if(row.status === 'In Progress') statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2">Processing</span>';
+            else statusBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success px-2">Completed</span>';
+
+            let priorityColor = row.priority === 'Critical' ? 'text-danger fw-bold' : (row.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-success fw-bold');
+            
+            let jobType = row.job_type || 'Repair';
+            let typeBadgeColor = 'bg-secondary';
+            if(jobType === 'Development') typeBadgeColor = 'bg-primary';
+            else if(jobType === 'PM') typeBadgeColor = 'bg-info text-dark';
+            else if(jobType === 'Other') typeBadgeColor = 'bg-dark';
+
+            const reqName = row.requester_name || row.request_by;
+            
+            // [NEW] แปลงเลข Job
+            const jobNo = formatJobNo(row.id, row.request_date);
+
+            const tr = document.createElement('tr');
+            tr.className = rowClass;
+            tr.onclick = (e) => {
+                if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'I') {
+                    viewMaintenanceDetails(row.id);
+                }
+            };
+
+            // [NEW] เพิ่มคอลัมน์ <td class="font-monospace text-primary">...
+            tr.innerHTML = `
+                <td class="ps-3 text-center">${statusBadge}</td>
+                <td class="text-center text-primary fw-bold font-monospace small">${jobNo}</td>
+                <td class="small text-nowrap text-center">${new Date(row.request_date).toLocaleString('th-TH')}</td>
+                <td class="text-center">
+                    <div class="fw-bold text-body">${row.line}</div>
+                    <small class="text-muted">${row.machine}</small>
+                </td>
+                <td class="text-center">
+                    <span class="badge ${typeBadgeColor} mb-1" style="font-size: 0.7rem;">${jobType}</span><br>
+                    <span class="${priorityColor} small">${row.priority}</span>
+                </td>
+                <td class="small text-body text-center">${reqName}</td>
+                <td class="text-center"><span class="text-break small">${row.issue_description}</span></td>
+                <td class="small text-body text-center note-truncate" title="${row.technician_note || ''}">${row.technician_note || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        // [FIXED] เพิ่ม colspan เป็น 8 เพราะมีคอลัมน์เพิ่มมา
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-2x mb-2 opacity-25"></i><br>No maintenance requests found.</td></tr>';
+    }
+}
+
+function filterMaintenanceTable() {
+    const searchInput = document.getElementById('mtSearchBox')?.value.toLowerCase().trim() || '';
+    
+    // ถ้าพิมพ์ว่างๆ ให้โชว์ข้อมูลทั้งหมด
+    if (searchInput === '') {
+        renderMaintenanceTable(currentMaintenanceData);
+        return;
+    }
+
+    // ค้นหาทุกๆ Column จาก Array หลัก
+    const filteredData = currentMaintenanceData.filter(row => {
+        const jobNo = formatJobNo(row.id, row.request_date).toLowerCase();
+        const line = (row.line || '').toLowerCase();
+        const machine = (row.machine || '').toLowerCase();
+        const issue = (row.issue_description || '').toLowerCase();
+        const techNote = (row.technician_note || '').toLowerCase();
+        const reqName = (row.requester_name || row.request_by || '').toLowerCase();
+        const jobType = (row.job_type || '').toLowerCase();
+        const priority = (row.priority || '').toLowerCase();
+
+        return jobNo.includes(searchInput) ||
+               line.includes(searchInput) ||
+               machine.includes(searchInput) ||
+               issue.includes(searchInput) ||
+               techNote.includes(searchInput) ||
+               reqName.includes(searchInput) ||
+               jobType.includes(searchInput) ||
+               priority.includes(searchInput);
+    });
+
+    renderMaintenanceTable(filteredData);
 }
 
 async function resendEmail(id) {

@@ -56,20 +56,26 @@
                     <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
                         <div class="card-body py-3">
                             <div class="row align-items-center g-2">
-                                <div class="col-md-7 d-flex flex-wrap align-items-center gap-2">
-                                    <label class="small fw-bold text-muted me-1">Status:</label>
-                                    <select id="mtFilterStatus" class="form-select form-select-sm fw-bold border-primary text-primary" style="max-width: 200px;" onchange="fetchMaintenanceData()">
+                                <div class="col-lg-8 d-flex flex-wrap align-items-center gap-2">
+                                    
+                                    <select id="mtFilterStatus" class="form-select form-select-sm fw-bold border-primary text-primary" style="width: auto;" onchange="fetchMaintenanceData()">
                                         <option value="Active" selected>Pending + In Progress</option>
                                         <option value="">All Status</option>
                                         <option value="Pending">Pending Only</option>
                                         <option value="In Progress">In Progress Only</option>
                                         <option value="Completed">Completed</option>
                                     </select>
-                                    
-                                    <div class="vr mx-2 d-none d-md-block"></div>
-                                    
-                                    <input list="lineListFilter" id="filterLineMt" class="form-control form-control-sm" placeholder="Filter Line..." style="max-width: 120px;" onchange="fetchMaintenanceData()">
 
+                                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 350px;">
+                                        <input list="lineListFilter" id="filterLineMt" class="form-control border-end-0 fw-bold text-secondary" placeholder="Line..." style="max-width: 90px;" onchange="fetchMaintenanceData()">
+                                        
+                                        <span class="input-group-text bg-white text-muted border-start-0 border-end-0 px-2">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        
+                                        <input type="text" id="mtSearchBox" class="form-control border-start-0 ps-0" placeholder="Search Job, Machine, Issue..." oninput="filterMaintenanceTable()">
+                                    </div>
+                                    
                                     <div class="d-flex align-items-center gap-1 bg-white border rounded px-2" style="height: 31px;">
                                         <input type="date" id="mtStartDate" class="form-control form-control-sm border-0 p-0" style="max-width: 110px;" onchange="fetchMaintenanceData()">
                                         <span class="text-muted small">-</span>
@@ -79,8 +85,10 @@
                                     <button class="btn btn-sm btn-light border shadow-sm" onclick="fetchMaintenanceData()" title="Refresh">
                                         <i class="fas fa-sync-alt text-secondary"></i>
                                     </button>
+
                                 </div>
-                                <div class="col-md-5 text-end d-none d-lg-block">
+                                
+                                <div class="col-lg-4 text-end d-none d-lg-block">
                                     <button class="btn btn-sm btn-outline-success fw-bold shadow-sm px-3 me-1" onclick="exportMaintenanceExcel()">
                                         <i class="fas fa-file-excel me-1"></i> Export
                                     </button>
@@ -173,12 +181,13 @@
                                     <thead class="bg-light">
                                         <tr class="text-muted small text-uppercase">
                                             <th class="ps-3 text-center" style="width: 10%;">Status</th>
+                                            <th class="text-center" style="width: 10%;">Job No</th>
                                             <th class="text-center" style="width: 10%;">Date/Time</th>
                                             <th class="text-center" style="width: 10%;">Line / Machine</th>
                                             <th class="text-center" style="width: 10%;">Priority</th>
                                             <th class="text-center" style="width: 10%;">Requester</th>
-                                            <th class="text-center" style="width: 25%;">Issue</th>
-                                            <th class="text-center" style="width: 25%;">Tech Note</th> 
+                                            <th class="text-center" style="width: 20%;">Issue</th>
+                                            <th class="text-center" style="width: 20%;">Tech Note</th> 
                                         </tr>
                                     </thead>
                                     <tbody id="maintenanceTableBody" class="border-top-0"></tbody>
@@ -285,8 +294,11 @@
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
     <script src="script/modal_handler.js?v=<?php echo filemtime('script/modal_handler.js'); ?>"></script>
-    <script src="script/maintenance_handler.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_handler.js'); ?>" defer></script>
-    <script src="script/maintenance_analysis.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_analysis.js'); ?>" defer></script> <script>
+    
+    <script src="script/maintenance_handler.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_handler.js'); ?>"></script>
+    <script src="script/maintenance_analysis.js?v=<?php echo filemtime(__DIR__ . '/script/maintenance_analysis.js'); ?>"></script> 
+    
+    <script>
         const canManage = <?php echo json_encode($canManage); ?>;
         
         function showSpinner() { 
@@ -336,19 +348,18 @@
             const todayStr = `${year}-${month}-${day}`;     // วันนี้
             const firstDayStr = `${year}-${month}-01`;      // วันที่ 1 ของเดือน
 
-            // --- 1. Filter ของ Stop Cause (อันนี้แล้วแต่คุณว่าอยากได้แบบไหน ถ้าเอาเหมือนกันก็แก้ตามนี้) ---
+            // --- 1. Filter ของ Stop Cause ---
             const startDateEl = document.getElementById("filterStartDate");
             const endDateEl = document.getElementById("filterEndDate");
-            if (startDateEl && !startDateEl.value) startDateEl.value = todayStr; // หรือ firstDayStr ถ้าต้องการ
+            if (startDateEl && !startDateEl.value) startDateEl.value = todayStr;
             if (endDateEl && !endDateEl.value) endDateEl.value = todayStr;
 
-            // --- 2. [FIXED] Filter ของ Maintenance (ตั้งเป็น วันที่ 1 - วันนี้) ---
+            // --- 2. Filter ของ Maintenance (ตั้งเป็น วันที่ 1 - วันนี้) ---
             const mtStartEl = document.getElementById("mtStartDate");
             const mtEndEl = document.getElementById("mtEndDate");
             
-            // ถ้ายังไม่มีค่า ให้ใส่ค่า Default
-            if (mtStartEl && !mtStartEl.value) mtStartEl.value = firstDayStr; // <--- แก้เป็นวันที่ 1
-            if (mtEndEl && !mtEndEl.value) mtEndEl.value = todayStr;          // <--- ถึงวันนี้
+            if (mtStartEl && !mtStartEl.value) mtStartEl.value = firstDayStr; 
+            if (mtEndEl && !mtEndEl.value) mtEndEl.value = todayStr;          
 
             // Load Data
             if (typeof fetchMaintenanceData === 'function') fetchMaintenanceData();
