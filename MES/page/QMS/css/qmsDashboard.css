@@ -229,3 +229,6 @@ body, table {
     .desktop-view { display: flex !important; flex-direction: column; } 
     .mobile-view { display: none !important; } 
 }
+@media (min-width: 992px) {
+        .custom-modal-width { max-width: 90% !important; }
+    }

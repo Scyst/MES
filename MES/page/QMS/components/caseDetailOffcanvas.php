@@ -78,12 +78,21 @@
                         <div class="info-value" id="view_invoice_no">-</div>
                     </div>
                     <div class="col-6 text-end">
-                        <div class="info-label">Found By</div>
+                        <div class="info-label">Found By (แหล่งที่พบ)</div>
                         <div class="info-value" id="view_found_by">-</div>
                     </div>
-                    <div class="col-12 mt-2">
-                        <div class="info-label">Issuer Position</div>
-                        <div class="info-value" id="view_issuer_position">-</div>
+
+                    <div class="col-12 mt-3 pt-3 border-top border-secondary border-opacity-25">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="info-label text-primary">Issuer Name (ชื่อผู้แจ้ง)</div>
+                                <div class="info-value text-primary fw-bold" id="view_issuer_name">-</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="info-label">Issuer Position</div>
+                                <div class="info-value" id="view_issuer_position">-</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

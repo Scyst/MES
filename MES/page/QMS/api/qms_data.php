@@ -63,11 +63,11 @@ try {
         $case_id = $_GET['case_id'] ?? null;
         if (!$case_id) throw new Exception("Missing Case ID");
 
-        // 🔥 เพิ่มคอลัมน์ใหม่ที่เพิ่งสร้างเข้าไปใน SELECT
         $sql = "SELECT 
-                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name,
+                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name, c.issue_by_name,
                     n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift,
-                    n.invoice_no, n.issuer_position, n.found_by_type,
+                    n.invoice_no, n.issuer_position, n.found_by_type, n.production_line, n.product_model, 
+                    n.prelim_disposition, n.prelim_remark,
                     car.qa_issue_description, car.access_token, car.token_expiry, car.customer_root_cause, 
                     car.customer_action_plan, car.customer_respond_date, car.containment_action, 
                     car.root_cause_category, car.leak_cause,
@@ -105,7 +105,12 @@ try {
         $sqlItem = "SELECT part_no, part_description as name FROM ITEMS WITH (NOLOCK) WHERE is_active = 1 ORDER BY part_no";
         $items = $pdo->query($sqlItem)->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode(['success' => true, 'data' => ['lines' => $lines, 'items' => $items], 'message' => 'OK']);
+        // 🔥 ดึงรายชื่อลูกค้าที่เคยมีในระบบ (เพื่อทำ Auto-complete)
+        $sqlCustomer = "SELECT DISTINCT customer_name FROM QMS_CASES WITH (NOLOCK) WHERE customer_name IS NOT NULL AND customer_name != '' ORDER BY customer_name";
+        $customers = $pdo->query($sqlCustomer)->fetchAll(PDO::FETCH_ASSOC);
+
+        // ส่งกลับไปให้ครบทั้ง 3 ชุด
+        echo json_encode(['success' => true, 'data' => ['lines' => $lines, 'items' => $items, 'customers' => $customers], 'message' => 'OK']);
         
     } else {
         throw new Exception("Invalid Action");

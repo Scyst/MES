@@ -68,6 +68,7 @@ try {
                     @lot_no = ?, @found_shift = ?, @product_model = ?, 
                     @production_line = ?, @created_by = ?, @issue_by_name = ?,
                     @invoice_no = ?, @issuer_position = ?, @found_by_type = ?,
+                    @prelim_disposition = ?, @prelim_remark = ?,
                     @NewCaseID = @newId OUTPUT, @GeneratedCarNo = @newCarNo OUTPUT;
                 SELECT @newId AS case_id, @newCarNo AS car_no;
             ";
@@ -91,7 +92,9 @@ try {
                 $_POST['issue_by_name'] ?? $_SESSION['user']['username'],
                 empty(trim($_POST['invoice_no'] ?? '')) ? null : trim($_POST['invoice_no']),
                 empty(trim($_POST['issuer_position'] ?? '')) ? null : trim($_POST['issuer_position']),
-                empty(trim($_POST['found_by_type'] ?? '')) ? null : trim($_POST['found_by_type'])
+                empty(trim($_POST['found_by_type'] ?? '')) ? null : trim($_POST['found_by_type']),
+                empty(trim($_POST['prelim_disposition'] ?? '')) ? null : trim($_POST['prelim_disposition']),
+                empty(trim($_POST['prelim_remark'] ?? '')) ? null : trim($_POST['prelim_remark'])
             ]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);

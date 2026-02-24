@@ -149,13 +149,16 @@ $html .= '
 // ตัดทศนิยมส่วนเกินของ Defect Qty
 $qty = $data['defect_qty'];
 $format_qty = ($qty ? (floor($qty) == $qty ? number_format($qty) : rtrim(rtrim(number_format($qty, 4), '0'), '.')) : '-');
+$part_arr = explode('|', $data['product_name']);
+$show_part_no = isset($part_arr[0]) ? trim($part_arr[0]) : '-';
+$show_part_name = isset($part_arr[1]) ? trim($part_arr[1]) : $show_part_no;
 
 // Row 1: ข้อมูลจริง
 $html .= '
     <tr style="text-align:center;">
         <td>1</td>
-        <td>' . ($data['product_name'] ?: '-') . '</td>
-        <td>' . ($data['product_name'] ?: '-') . '</td>
+        <td>' . $show_part_no . '</td>
+        <td>' . $show_part_name . '</td>
         <td>' . ($data['product_model'] ?: '-') . '</td>
         <td>' . $format_qty . '</td>
         <td align="left">' . nl2br($data['defect_description']) . '</td>
@@ -179,8 +182,15 @@ $chk_replace = chkBox('', '');
 $chk_money = chkBox('', '');
 
 if (!$is_blank) {
-    if ($data['cost_estimation'] > 0) $chk_money = chkBox('1', '1');
-    else $chk_replace = chkBox('1', '1');
+    // 1. ติ๊ก "เคลมเป็นสินค้า" เมื่อมีการเลือกรับของคืน (RETURN)
+    if ($data['disposition'] === 'RETURN') {
+        $chk_replace = chkBox('1', '1');
+    }
+    
+    // 2. ติ๊ก "เคลมเป็นเงิน" อย่างเป็นอิสระ เมื่อมีการใส่ตัวเลข
+    if ($data['cost_estimation'] > 0) {
+        $chk_money = chkBox('1', '1');
+    }
 }
 
 $html .= '

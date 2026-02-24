@@ -26,19 +26,23 @@ if ($is_blank) {
         'defect_type' => '', 'defect_qty' => 0, 'defect_description' => '',
         'production_date' => '', 'found_shift' => '', 'lot_no' => '',
         'product_model' => '', 'production_line' => '',
-        'issuer_name' => '.........................................'
+        'issuer_name' => '.........................................',
+        // [เพิ่มค่าเริ่มต้น] ป้องกัน Undefined
+        'prelim_disposition' => '', 'prelim_remark' => '' 
     ];
 } else {
     // --- Normal Mode ---
     if (!$case_id) die('Error: Missing Case ID');
     
     // 1. ระบุชื่อตารางใหม่ตรงๆ และใส่ WITH (NOLOCK)
+    // [แก้ไข] ดึง c.issue_by_name และ n.prelim_disposition, n.prelim_remark ออกมาด้วย
     $sql = "SELECT c.car_no, c.customer_name, c.product_name, c.case_date as found_date,
-                   n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift, n.product_model, n.production_line,
-                   u.username as issuer_name
+                   c.issue_by_name as issuer_name, 
+                   n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift, 
+                   n.product_model, n.production_line,
+                   n.prelim_disposition, n.prelim_remark
             FROM QMS_CASES c WITH (NOLOCK)
             JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
-            LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
             WHERE c.case_id = ?";
             
     $stmt = $pdo->prepare($sql);
@@ -201,6 +205,16 @@ $html .= '
 // ==========================================
 // 5. DISPOSITION
 // ==========================================
+// ป้องกัน Undefined array key โดยใช้ isset() เช็คก่อน
+$p_disp = isset($data['prelim_disposition']) ? $data['prelim_disposition'] : '';
+
+$d_rework = ($p_disp === 'Rework') ? 'X' : '&nbsp;&nbsp;';
+$d_scrap  = ($p_disp === 'Scrap')  ? 'X' : '&nbsp;&nbsp;';
+$d_sort   = ($p_disp === 'Sort')   ? 'X' : '&nbsp;&nbsp;';
+$d_hold   = ($p_disp === 'Hold')   ? 'X' : '&nbsp;&nbsp;';
+
+$p_remark = !empty($data['prelim_remark']) ? htmlspecialchars($data['prelim_remark']) : '.......................................................................................';
+
 $html .= '
 <table border="1" cellpadding="3" cellspacing="0">
     <tr style="background-color:#eaeaea;">
@@ -208,8 +222,11 @@ $html .= '
     </tr>
     <tr>
         <td height="60">
-            [ &nbsp; ] Rework &nbsp;&nbsp;&nbsp; [ &nbsp; ] Scrap &nbsp;&nbsp;&nbsp; [ &nbsp; ] Sort &nbsp;&nbsp;&nbsp; [ &nbsp; ] Hold<br><br>
-            <b>Remark:</b> ....................................................................................................
+            [ ' . $d_rework . ' ] Rework &nbsp;&nbsp;&nbsp; 
+            [ ' . $d_scrap . ' ] Scrap &nbsp;&nbsp;&nbsp; 
+            [ ' . $d_sort . ' ] Sort &nbsp;&nbsp;&nbsp; 
+            [ ' . $d_hold . ' ] Hold<br><br>
+            <b>Remark:</b> ' . $p_remark . '
         </td>
     </tr>
 </table>';

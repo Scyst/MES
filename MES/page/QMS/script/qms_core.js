@@ -104,9 +104,6 @@ function fetchCasesData() {
     });
 }
 
-// ==========================================
-// FIX: สร้าง String ให้เสร็จก่อนแล้วค่อย innerHTML ทีเดียว ลดภาระ Browser
-// ==========================================
 function loadMasterData() {
     fetch('./api/qms_data.php?action=master_data')
     .then(res => res.json())
@@ -120,17 +117,27 @@ function loadMasterData() {
                 res.data.lines.forEach(l => {
                     lineHTML += `<option value="${escapeHTML(l.line_name)}">${escapeHTML(l.line_name)}</option>`;
                 });
-                selectLine.innerHTML = lineHTML; // อัปเดต DOM แค่ 1 ครั้ง
+                selectLine.innerHTML = lineHTML;
             }
 
-            // 2. จัดการ Items (จุดที่เคยทำให้ค้าง)
+            // 2. จัดการ Items 
             const dataList = document.getElementById('item_list');
             if(dataList) {
                 let itemHTML = '';
                 res.data.items.forEach(i => {
                     itemHTML += `<option value="${escapeHTML(i.part_no)} | ${escapeHTML(i.name)}">`;
                 });
-                dataList.innerHTML = itemHTML; // อัปเดต DOM แค่ 1 ครั้ง
+                dataList.innerHTML = itemHTML; 
+            }
+
+            // 3. จัดการ Customers 
+            const customerList = document.getElementById('customer_list');
+            if(customerList && res.data.customers) {
+                let custHTML = '';
+                res.data.customers.forEach(c => {
+                    custHTML += `<option value="${escapeHTML(c.customer_name)}">`;
+                });
+                customerList.innerHTML = custHTML;
             }
         }
     })
@@ -292,6 +299,7 @@ function openCaseDetail(caseId) {
             setText('view_expected_qty', data.expected_return_qty ? Number(data.expected_return_qty).toLocaleString() + ' PCS' : '-');
             setText('view_invoice_no', data.invoice_no);
             setText('view_found_by', data.found_by_type);
+            setText('view_issuer_name', data.issue_by_name);
             setText('view_issuer_position', data.issuer_position);
 
             const gallery = document.getElementById('gallery_ncr');
@@ -553,51 +561,6 @@ function initForms() {
             });
         });
     }
-
-    const fileInput = document.getElementById('ncrFileInput');
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    const uploadBox = document.getElementById('uploadBox');
-
-    if(fileInput && previewContainer) {
-        fileInput.addEventListener('change', function() {
-            previewContainer.innerHTML = ''; 
-            
-            if (this.files.length > 0) {
-                const maxFileSize = 5 * 1024 * 1024;
-                for (let file of this.files) {
-                    if (file.size > maxFileSize) {
-                        Swal.fire('ขนาดไฟล์เกิน', `ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 5MB กรุณาเลือกรูปใหม่`, 'warning');
-                        this.value = '';
-                        uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
-                        uploadBox.classList.add('border-primary', 'bg-light');
-                        uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
-                        return;
-                    }
-                }
-
-                uploadBox.classList.add('border-success', 'bg-success', 'bg-opacity-10');
-                uploadBox.classList.remove('border-primary', 'bg-light');
-                uploadBox.querySelector('h6').innerHTML = `<i class="fas fa-check-circle me-1"></i> เลือกรูปแล้ว ${this.files.length} รูป`;
-                
-                Array.from(this.files).forEach(file => {
-                    if(file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            const wrapper = document.createElement('div');
-                            wrapper.className = 'preview-img-wrapper';
-                            wrapper.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                            previewContainer.appendChild(wrapper);
-                        }
-                        reader.readAsDataURL(file);
-                    }
-                });
-            } else {
-                uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
-                uploadBox.classList.add('border-primary', 'bg-light');
-                uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
-            }
-        });
-    }
 }
 
 // ==========================================
@@ -686,3 +649,86 @@ function rejectCAR() {
         }
     });
 }
+
+// ==========================================
+// ระบบสะสมรูปภาพสำหรับ Mobile Camera (Max 3 รูป)
+// ==========================================
+let ncrPhotoArray = []; // ตัวแปรเก็บสะสมไฟล์รูปภาพ
+const maxNcrPhotos = 3;
+
+document.getElementById('ncrFileInput').addEventListener('change', function(e) {
+    const fileInput = this;
+    const newFiles = Array.from(fileInput.files);
+    const dt = new DataTransfer();
+
+    // 1. เช็คลิมิต (รูปเก่า + รูปใหม่ ต้องไม่เกิน 3)
+    if (ncrPhotoArray.length + newFiles.length > maxNcrPhotos) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'แจ้งเตือน',
+            text: `คุณสามารถแนบรูปภาพได้สูงสุด ${maxNcrPhotos} รูปเท่านั้นครับ`
+        });
+        
+        // คืนค่า input ให้เป็นรูปเก่าก่อนกดถ่าย (ป้องกันรูปเก่าหาย)
+        ncrPhotoArray.forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+        return;
+    }
+
+    // 2. นำไฟล์ใหม่มาต่อท้ายไฟล์เก่า
+    newFiles.forEach(file => {
+        ncrPhotoArray.push(file);
+    });
+
+    // 3. ยัดไฟล์ทั้งหมดกลับเข้าไปใน <input type="file"> เพื่อเตรียม Submit
+    ncrPhotoArray.forEach(file => dt.items.add(file));
+    fileInput.files = dt.files;
+
+    // 4. สั่งวาดรูปตัวอย่าง (Preview)
+    renderNcrPreviews();
+});
+
+// ฟังก์ชันวาดรูป Preview พร้อมปุ่มกากบาทลบรูป
+function renderNcrPreviews() {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.innerHTML = ''; // ล้างของเก่า
+    
+    ncrPhotoArray.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imgBox = document.createElement('div');
+            // จัดกล่องให้อยู่ในแถวเดียวกัน มีขอบ และเว้นระยะสวยงาม
+            imgBox.className = 'position-relative d-inline-block me-3 mb-2 border rounded p-1 bg-white shadow-sm';
+            imgBox.innerHTML = `
+                <img src="${e.target.result}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 start-100 translate-middle rounded-circle shadow" 
+                        style="width: 25px; height: 25px; padding: 0; line-height: 1; border: 2px solid white;" 
+                        onclick="removeNcrPhoto(${index})">
+                    <i class="fas fa-times" style="font-size: 0.75rem;"></i>
+                </button>
+            `;
+            previewContainer.appendChild(imgBox);
+        }
+        reader.readAsDataURL(file);
+    });
+}
+
+// ฟังก์ชันลบรูป (ทำงานเมื่อกดปุ่มกากบาท)
+window.removeNcrPhoto = function(index) {
+    ncrPhotoArray.splice(index, 1); // เอาออกจาก Array
+    
+    // อัปเดต <input type="file"> ใหม่
+    const dt = new DataTransfer();
+    ncrPhotoArray.forEach(file => dt.items.add(file));
+    document.getElementById('ncrFileInput').files = dt.files;
+    
+    // วาด Preview ใหม่อีกรอบ
+    renderNcrPreviews();
+};
+
+// 💡 อย่าลืมเคลียร์ Array ตอนที่กดปิด Modal หรือ Submit เสร็จแล้ว
+document.getElementById('ncrModal').addEventListener('hidden.bs.modal', function () {
+    ncrPhotoArray = [];
+    document.getElementById('imagePreviewContainer').innerHTML = '';
+    document.getElementById('formNCR').reset();
+});
