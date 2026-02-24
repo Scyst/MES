@@ -157,6 +157,7 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
+                        renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
                         ?>
                     </div>
                 </div>

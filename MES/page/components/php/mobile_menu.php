@@ -100,6 +100,13 @@ $userRole = $_SESSION['user']['role'] ?? null;
             </li>
 
             <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../QMS/qmsDashboard.php">
+                    <i class="fas fa-shield-alt fa-fw me-3"></i>
+                    <span>iQMS (Quality)</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../forklift/forkliftUI.php">
                     <i class="fas fa-truck-loading fa-fw me-3"></i>
                     <span>Forklift Booking</span>

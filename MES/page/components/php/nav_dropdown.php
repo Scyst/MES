@@ -92,6 +92,14 @@
                 <span>Scrap & Replacement</span>
             </a>
         </li>
+        
+        <li>
+            <a class="dropdown-item-icon" href="../QMS/qmsDashboard.php" title="iQMS Dashboard">
+                <i class="fas fa-shield-alt fa-fw"></i>
+                <span>iQMS (Quality)</span>
+            </a>
+        </li>
+
         <li>
             <a class="dropdown-item-icon" href="../forklift/forkliftUI.php" title="Forklift Command Center">
                 <i class="fas fa-truck-loading fa-fw"></i>

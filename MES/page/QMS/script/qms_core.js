@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const offcanvasEl = document.getElementById('caseDetailOffcanvas');
     if(offcanvasEl) {
-        caseDetailOffcanvasInstance = new bootstrap.Offcanvas(offcanvasEl);
+        caseDetailOffcanvasInstance = new bootstrap.Offcanvas(offcanvasEl); 
     }
 
     const searchInput = document.getElementById('searchInput');
@@ -308,10 +308,15 @@ function openCaseDetail(caseId) {
                 if (data.images && data.images.length > 0) {
                     data.images.forEach(img => {
                         const safeUrl = encodeURI('../../' + img.file_path);
-                        imgHTML += `<div class="col-6"><a href="${safeUrl}" target="_blank"><img src="${safeUrl}" class="img-fluid rounded border border-secondary border-opacity-25 shadow-sm" style="height:120px; object-fit:cover; width:100%;"></a></div>`;
+                        imgHTML += `
+                            <div class="col-4">
+                                <a href="${safeUrl}" target="_blank" class="ncr-image-wrapper">
+                                    <img src="${safeUrl}" alt="Evidence">
+                                </a>
+                            </div>`;
                     });
                 } else {
-                    imgHTML = '<div class="col-12 text-muted small text-center py-3 bg-light rounded border border-dashed">- ไม่มีการแนบรูปภาพ -</div>';
+                    imgHTML = '<div class="col-12 text-muted small text-center py-4 bg-light rounded border border-dashed">- ไม่มีการแนบรูปภาพ -</div>';
                 }
                 gallery.innerHTML = imgHTML;
             }
@@ -732,3 +737,20 @@ document.getElementById('ncrModal').addEventListener('hidden.bs.modal', function
     document.getElementById('imagePreviewContainer').innerHTML = '';
     document.getElementById('formNCR').reset();
 });
+
+// ==========================================
+// ฟังก์ชันสำหรับปิด Offcanvas (บังคับปิด)
+// ==========================================
+function closeCaseDetail() {
+    // 1. ถ้ามี Instance ที่เราสร้างไว้ตอนโหลดหน้าเว็บ ให้สั่ง hide()
+    if (typeof caseDetailOffcanvasInstance !== 'undefined' && caseDetailOffcanvasInstance !== null) {
+        caseDetailOffcanvasInstance.hide();
+    } else {
+        // 2. แผนสำรอง (Fallback) เผื่อหา Instance ไม่เจอ
+        const offcanvasEl = document.getElementById('caseDetailOffcanvas');
+        if (offcanvasEl) {
+            const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl) || new bootstrap.Offcanvas(offcanvasEl);
+            bsOffcanvas.hide();
+        }
+    }
+}

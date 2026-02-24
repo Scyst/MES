@@ -230,5 +230,133 @@ body, table {
     .mobile-view { display: none !important; } 
 }
 @media (min-width: 992px) {
-        .custom-modal-width { max-width: 90% !important; }
+    .custom-modal-width { max-width: 90% !important; }
+}
+
+/* ==========================================
+    MOBILE UX IMPROVEMENTS (Custom CSS)
+    ========================================== */
+
+/* 1. จัดการให้กล่องค้นหาและปุ่ม สวยงามบนมือถือ */
+.top-action-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.top-action-bar .input-group {
+    width: 100%;
+    max-width: 100%;
+}
+.top-action-bar .btn-new-ncr {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1.05rem;
+}
+
+/* 2. เปลี่ยนการ์ดให้เลื่อนซ้ายขวาได้บนมือถือ (Horizontal Swipe) */
+.mobile-swipe-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 8px; /* เว้นที่ให้ Scrollbar */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; /* ให้ลื่นไหลบน iOS */
+}
+
+/* ซ่อน Scrollbar ให้ดูสะอาดตา (แต่ยังเลื่อนได้) */
+.mobile-swipe-row::-webkit-scrollbar { height: 4px; }
+.mobile-swipe-row::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+
+.swipe-card-wrapper {
+    flex: 0 0 140px; /* ความกว้างการ์ดบนมือถือ */
+    scroll-snap-align: start;
+}
+
+/* 3. หากหน้าจอเป็นคอมพิวเตอร์ (Desktop) ให้เรียงแบบปกติ (Grid) */
+@media (min-width: 992px) {
+    .top-action-bar {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
     }
+    .top-action-bar .input-group { max-width: 400px; }
+    .top-action-bar .btn-new-ncr { width: auto; padding: 8px 20px; font-size: 0.95rem; }
+    
+    .mobile-swipe-row {
+        flex-wrap: wrap; /* ยอมให้ตกบรรทัดได้ */
+        overflow-x: visible;
+        padding-bottom: 0;
+        gap: 0; /* กลับไปใช้ gutter ของ bootstrap */
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+    }
+    .mobile-swipe-row::-webkit-scrollbar { display: none; }
+    
+    .swipe-card-wrapper {
+        flex: 0 0 20%; /* แบ่ง 5 คอลัมน์พอดีเป๊ะ */
+        max-width: 20%;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        margin-bottom: 1rem;
+    }
+}
+
+#caseDetailOffcanvas {
+    z-index: 1060 !important; 
+}
+
+/* ==========================================================================
+   [NEW] ถอดแบบมาจาก Maintenance / Stop Cause UI
+   ========================================================================== */
+
+/* บังคับขยายเต็มจอแบบมีขอบ */
+.container-fluid {
+    max-width: 100% !important; 
+    width: 100%;
+}
+
+/* Loading Overlay แบบเบลอหลัง */
+#loadingOverlay {
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(255,255,255,0.7); 
+    z-index: 9999; 
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(2px); 
+}
+#main-content { position: relative; }
+
+/* Floating Action Button (FAB) สำหรับมือถือ */
+@media (max-width: 991.98px) {
+    .fab-container {
+        position: fixed; 
+        bottom: 25px; 
+        right: 25px; 
+        z-index: 1050; /* ให้อยู่เหนือข้อมูล แต่อยู่ใต้ Modal */
+        animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    .fab-btn {
+        width: 60px; 
+        height: 60px;
+        font-size: 1.5rem; 
+        border: none; 
+        border-radius: 50%;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); /* เงาสีแดงเข้ากับตีม NCR */
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+    .fab-btn:active { 
+        transform: scale(0.9); 
+        background-color: #b02a37 !important; /* กดแล้วสีเข้มขึ้น */
+    }
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}

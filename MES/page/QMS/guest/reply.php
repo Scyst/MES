@@ -88,106 +88,236 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Quality Portal | SNC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../../utils/libs/bootstrap.min.css">
     <link rel="stylesheet" href="../../../utils/libs/fontawesome/css/all.min.css">
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        .portal-header { background: #001f3f; color: #fff; padding: 1.5rem 0; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
-        .card-header { background-color: #fff; border-bottom: 1px solid #eee; font-weight: bold; padding: 1rem 1.5rem; }
-        .form-label { font-size: 0.85rem; font-weight: 600; color: #495057; }
-        .info-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; font-size: 0.9rem; }
-        .readonly-value { font-weight: bold; color: #212529; font-size: 1.1rem; }
-        .pending-item { display: block; text-decoration: none; color: inherit; padding: 1rem; border-bottom: 1px solid #f1f1f1; transition: background 0.2s; }
-        .pending-item:hover { background-color: #f8fbff; }
+        /* =======================================================
+           MODERN CUSTOMER PORTAL UI
+           ======================================================= */
+        :root {
+            --primary-color: #0d6efd;
+            --bg-color: #f4f7f6; /* สีเทาอ่อนอมฟ้า สบายตา */
+            --card-radius: 16px;
+        }
+        body { 
+            background-color: var(--bg-color); 
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; 
+            color: #334155;
+        }
+
+        /* การ์ดแบบ Modern (ขอบมน เงาฟุ้ง) */
+        .card { 
+            border: none; 
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1); 
+            border-radius: var(--card-radius); 
+            margin-bottom: 1.5rem; 
+            overflow: hidden; 
+        }
+        .card-header { 
+            background-color: #ffffff; 
+            border-bottom: 2px solid #f1f5f9; 
+            font-weight: 700; 
+            padding: 1.25rem 1.5rem; 
+            font-size: 1.1rem;
+        }
+        .card-body { padding: 1.5rem; }
+
+        /* ปรับแต่ง Form Inputs ให้เต็มนิ้วบนมือถือ */
+        .form-label { 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            color: #475569; 
+            margin-bottom: 0.5rem;
+        }
+        .form-control, .form-select {
+            padding: 0.75rem 1rem; /* ขยายความสูงให้กดง่าย */
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #ffffff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+        }
+        /* สถานะตอนช่องถูกล็อก (Readonly) */
+        .form-control[readonly] {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-color: transparent;
+            font-weight: 500;
+        }
+
+        /* ข้อมูลฝั่งซ้าย (Issue Info) */
+        .readonly-value { 
+            font-weight: 700; 
+            color: #1e293b; 
+            font-size: 1.1rem; 
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .info-box { 
+            background: #eff6ff; 
+            border: 1px solid #bfdbfe; 
+            border-radius: 10px; 
+            padding: 1rem; 
+            font-size: 0.95rem; 
+            color: #1d4ed8;
+        }
+
+        /* รูปภาพอัจฉริยะ (สี่เหลี่ยมจัตุรัส) */
+        .evidence-img-box {
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            display: block;
+        }
+        .evidence-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .evidence-img-box:hover img { transform: scale(1.05); }
+
+        /* ลิสต์งานที่ค้าง (Sidebar) */
+        .pending-item { 
+            display: block; 
+            text-decoration: none; 
+            color: inherit; 
+            padding: 1rem 1.5rem; 
+            border-bottom: 1px solid #f1f5f9; 
+            transition: background 0.2s; 
+        }
+        .pending-item:hover { background-color: #f8fafc; }
         .pending-item:last-child { border-bottom: none; }
+
+        @media (min-width: 992px) {
+            .card-body { padding: 2rem; }
+        }
     </style>
 </head>
 <body>
-
-    <div class="portal-header">
-        <div class="container d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="mb-0 fw-bold"><i class="fas fa-shield-alt me-2 text-warning"></i> Quality Portal</h4>
-                <div class="small text-white-50">SNC Creativity Anthology Co.,Ltd.</div>
-            </div>
-            <?php if($caseData): ?>
-                <div class="text-end">
-                    <span class="badge bg-light text-dark fs-6 shadow-sm"><i class="fas fa-building me-1"></i> <?php echo htmlspecialchars($caseData['customer_name']); ?></span>
+    <header class="bg-white border-bottom shadow-sm py-2 px-3 sticky-top mb-4">
+        <div class="container-fluid px-0 px-xl-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 45px; height: 45px;">
+                    <i class="fas fa-handshake fa-lg"></i>
                 </div>
-            <?php endif; ?>
+                <div class="d-flex flex-column justify-content-center">
+                    <h5 class="fw-bold mb-0 text-dark" style="line-height: 1.2;">
+                        Customer Quality Portal
+                    </h5>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        SNC Creativity Anthology Co.,Ltd.
+                    </small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="d-none d-md-inline text-muted small me-2">
+                    <i class="far fa-clock me-1"></i> <?php echo date('d M Y'); ?>
+                </span>
+                <?php if($caseData): ?>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm">
+                        <i class="fas fa-building text-primary me-1"></i> <?php echo htmlspecialchars($caseData['customer_name']); ?>
+                    </span>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <div class="container" style="max-width: 1200px;">
-        
+    <div class="container-fluid px-3 px-xl-5">
         <?php if ($error): ?>
             <div class="card border-danger text-center py-5 mx-auto" style="max-width: 600px;">
                 <div class="card-body">
-                    <i class="fas fa-times-circle fa-4x text-danger mb-3"></i>
+                    <i class="fas fa-exclamation-triangle fa-4x text-danger mb-3 opacity-75"></i>
                     <h4 class="text-dark fw-bold">Cannot Access Data<br><small class="text-muted fs-6">(ไม่สามารถเข้าถึงข้อมูลได้)</small></h4>
-                    <p class="text-muted mt-3"><?php echo htmlspecialchars($error); ?></p>
+                    <p class="text-muted mt-3 bg-light p-3 rounded"><?php echo htmlspecialchars($error); ?></p>
                 </div>
             </div>
         <?php else: ?>
 
-            <div class="row g-4">
-                
-                <div class="col-lg-8">
-                    
-                    <?php if($isReplied && !$isWaitingContainer): ?>
-                        <div class="alert alert-success shadow-sm border-0 d-flex align-items-center mb-4 p-4 rounded-4">
-                            <i class="fas fa-check-circle fa-3x me-4"></i>
-                            <div>
-                                <h5 class="fw-bold mb-1">This CAR has been fully replied <span class="fs-6 fw-normal">(เอกสาร CAR นี้ตอบกลับสมบูรณ์แล้ว)</span></h5>
-                                <div class="small">Replied on (ตอบเมื่อ): <?php echo date('d/m/Y H:i', strtotime($caseData['customer_respond_date'])); ?></div>
-                            </div>
+            <div class="mb-4 bg-white p-3 p-md-4 rounded-4 shadow-sm border border-secondary border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 56px; height: 56px;">
+                        <i class="fas fa-file-invoice fa-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1" style="letter-spacing: 1px;">Corrective Action Request</div>
+                        <h3 class="fw-bold text-dark mb-0" style="letter-spacing: -0.5px;"><?php echo htmlspecialchars($caseData['car_no']); ?></h3>
+                    </div>
+                </div>
+                <div>
+                    <?php if(!$isReplied): ?>
+                        <div class="badge bg-warning bg-opacity-25 text-dark px-4 py-2 rounded-pill shadow-sm fs-6 border border-warning border-opacity-50 d-inline-flex align-items-center gap-2">
+                            <span class="spinner-grow text-warning" role="status" aria-hidden="true" style="width: 12px; height: 12px; animation-duration: 1.5s;"></span>
+                            <span class="fw-bold">Waiting for Response</span>
                         </div>
-                    <?php elseif($isWaitingContainer): ?>
-                        <div class="alert alert-info shadow-sm border-0 d-flex align-items-center mb-4 p-4 rounded-4">
-                            <i class="fas fa-info-circle fa-3x me-4 text-info"></i>
-                            <div>
-                                <h5 class="fw-bold mb-1 text-info">Waiting for Container/Tracking No. <span class="fs-6 fw-normal">(รอการระบุหมายเลขตู้ขนส่ง)</span></h5>
-                                <div class="small text-muted">You have already submitted the root cause analysis. Please provide the container/tracking number when ready to ship.<br>(ท่านได้ตอบกลับข้อมูลวิเคราะห์ปัญหาแล้ว กรุณาระบุหมายเลขตู้ส่งคืนหากพร้อมส่ง)</div>
-                            </div>
+                    <?php else: ?>
+                        <div class="badge bg-success bg-opacity-10 text-success px-4 py-2 rounded-pill shadow-sm fs-6 border border-success border-opacity-50 d-inline-flex align-items-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="fw-bold">Response Submitted</span>
                         </div>
                     <?php endif; ?>
+                </div>
+            </div>
 
-                    <div class="d-flex align-items-center mb-3">
-                        <h4 class="fw-bold text-primary mb-0 me-3"><?php echo htmlspecialchars($caseData['car_no']); ?></h4>
-                        <?php if(!$isReplied): ?>
-                            <span class="badge bg-warning text-dark border border-warning px-3 py-2">Waiting for Response (รอการตอบกลับ)</span>
-                        <?php endif; ?>
+            <div class="mb-4">
+                <?php if($isReplied && !$isWaitingContainer): ?>
+                    <div class="alert alert-success shadow-sm border-0 d-flex align-items-center mb-0 p-4 rounded-4" style="background-color: #ecfdf5;">
+                        <i class="fas fa-check-circle fa-3x me-4 text-success"></i>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-success">This CAR has been fully replied <span class="fs-6 fw-normal text-muted">(เอกสาร CAR นี้ตอบกลับสมบูรณ์แล้ว)</span></h5>
+                            <div class="small text-secondary fw-bold">Replied on (ตอบเมื่อ): <?php echo date('d M Y, H:i', strtotime($caseData['customer_respond_date'])); ?></div>
+                        </div>
                     </div>
+                <?php elseif($isWaitingContainer): ?>
+                    <div class="alert alert-info shadow-sm border-0 d-flex align-items-center mb-0 p-4 rounded-4" style="background-color: #eff6ff;">
+                        <i class="fas fa-shipping-fast fa-3x me-4 text-primary"></i>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-primary">Waiting for Container/Tracking No. <span class="fs-6 fw-normal text-muted">(รอการระบุหมายเลขตู้ขนส่ง)</span></h5>
+                            <div class="small text-secondary">You have already submitted the root cause analysis. Please provide the container/tracking number when ready to ship.<br>(ท่านได้ตอบกลับข้อมูลวิเคราะห์ปัญหาแล้ว กรุณาระบุหมายเลขตู้ส่งคืนหากพร้อมส่ง)</div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
 
-                    <div class="card">
-                        <div class="card-header text-primary"><i class="fas fa-info-circle me-2"></i>Issue Information (รายละเอียดปัญหา)</div>
-                        <div class="card-body p-4 bg-white">
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-8 d-flex flex-column gap-4">
+                    
+                    <div class="card mb-0">
+                        <div class="card-header text-primary border-bottom border-primary border-opacity-25">
+                            <i class="fas fa-info-circle me-2"></i> Issue Information (รายละเอียดปัญหา)
+                        </div>
+                        <div class="card-body">
                             <div class="row g-4">
                                 <div class="col-md-6">
-                                    <div class="form-label text-muted text-uppercase">Product / Part</div>
+                                    <div class="form-label text-muted text-uppercase mb-1"><i class="fas fa-cube me-1"></i> Product / Part</div>
                                     <div class="readonly-value"><?php echo htmlspecialchars($caseData['product_name']); ?></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-label text-muted text-uppercase">Defect Type & Qty</div>
+                                    <div class="form-label text-muted text-uppercase mb-1"><i class="fas fa-exclamation-triangle me-1"></i> Defect Type & Qty</div>
                                     <div class="readonly-value text-danger">
                                         <?php echo htmlspecialchars($caseData['defect_type']); ?> 
-                                        (<?php echo (floor($caseData['defect_qty']) == $caseData['defect_qty']) ? number_format($caseData['defect_qty']) : rtrim(rtrim(number_format($caseData['defect_qty'], 4), '0'), '.'); ?> PCS)
+                                        <span class="badge bg-danger ms-2"><?php echo (floor($caseData['defect_qty']) == $caseData['defect_qty']) ? number_format($caseData['defect_qty']) : rtrim(rtrim(number_format($caseData['defect_qty'], 4), '0'), '.'); ?> PCS</span>
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <div class="form-label text-muted text-uppercase">QC Message / Requirement</div>
-                                    <div class="info-box bg-primary bg-opacity-10 border-primary text-primary fw-bold"><?php echo nl2br(htmlspecialchars($caseData['qa_issue_description'])); ?></div>
+                                    <div class="form-label text-muted text-uppercase mb-1"><i class="fas fa-comment-dots me-1"></i> QC Message / Requirement</div>
+                                    <div class="info-box fw-bold shadow-sm"><?php echo nl2br(htmlspecialchars($caseData['qa_issue_description'])); ?></div>
                                 </div>
-                                
                                 <?php if (!empty($images)): ?>
                                 <div class="col-12 mt-4 pt-3 border-top">
-                                    <div class="form-label text-muted"><i class="fas fa-camera me-1"></i> Evidence Images</div>
-                                    <div class="row g-2 mt-1">
+                                    <div class="form-label text-muted mb-3"><i class="fas fa-camera me-1"></i> Evidence Images (รูปภาพหลักฐาน)</div>
+                                    <div class="row g-3">
                                         <?php foreach($images as $img): ?>
-                                            <div class="col-4 col-md-3">
-                                                <a href="../../../<?php echo $img['file_path']; ?>" target="_blank">
-                                                    <img src="../../../<?php echo $img['file_path']; ?>" class="img-fluid rounded border shadow-sm" style="height: 120px; object-fit: cover; width: 100%;">
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <a href="../../../<?php echo $img['file_path']; ?>" target="_blank" class="evidence-img-box shadow-sm">
+                                                    <img src="../../../<?php echo $img['file_path']; ?>" alt="Evidence">
                                                 </a>
                                             </div>
                                         <?php endforeach; ?>
@@ -198,21 +328,23 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                         </div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-header text-success"><i class="fas fa-edit me-2"></i>Corrective Action Response (การชี้แจงและแนวทางแก้ไข)</div>
-                        <div class="card-body p-4 bg-white">
-                            <form id="customerForm">
+                    <div class="card mb-0 shadow-lg flex-grow-1" style="border: 1px solid #e2e8f0;">
+                        <div class="card-header text-success border-bottom border-success border-opacity-25 bg-success bg-opacity-10">
+                            <i class="fas fa-edit me-2"></i> Corrective Action Response (การชี้แจงและแนวทางแก้ไข)
+                        </div>
+                        <div class="card-body">
+                            <form id="customerForm" class="h-100 d-flex flex-column">
                                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
                                 <input type="hidden" name="action" value="<?php echo ($isWaitingContainer) ? 'customer_update_container' : 'customer_reply'; ?>">
 
                                 <div class="mb-4">
                                     <label class="form-label">1. Containment Action (การแก้ไขปัญหาเบื้องต้น) <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" name="containment_action" rows="3" required <?php echo $isReplied ? 'readonly' : ''; ?>><?php echo htmlspecialchars($caseData['containment_action'] ?? ''); ?></textarea>
+                                    <textarea class="form-control" name="containment_action" rows="3" required <?php echo $isReplied ? 'readonly' : ''; ?> placeholder="What have you done immediately to stop the problem?"><?php echo htmlspecialchars($caseData['containment_action'] ?? ''); ?></textarea>
                                 </div>
 
                                 <div class="mb-4">
                                     <label class="form-label">2. Root Cause Category (หมวดหมู่สาเหตุหลัก) <span class="text-danger">*</span></label>
-                                    <select class="form-select fw-bold" name="root_cause_category" required <?php echo $isReplied ? 'disabled' : ''; ?>>
+                                    <select class="form-select fw-bold text-primary" name="root_cause_category" required <?php echo $isReplied ? 'disabled' : ''; ?>>
                                         <option value="" disabled <?php echo empty($caseData['root_cause_category']) ? 'selected' : ''; ?>>-- Select Category (เลือกหมวดหมู่) --</option>
                                         <?php 
                                             $cats = ['Man', 'Machine', 'Material', 'Method', 'Other'];
@@ -226,46 +358,43 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
 
                                 <div class="mb-4">
                                     <label class="form-label">3. Root Cause Analysis (วิเคราะห์สาเหตุของปัญหา) <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" name="root_cause" rows="4" required <?php echo $isReplied ? 'readonly' : ''; ?>><?php echo htmlspecialchars($caseData['customer_root_cause'] ?? ''); ?></textarea>
+                                    <textarea class="form-control" name="root_cause" rows="4" required <?php echo $isReplied ? 'readonly' : ''; ?> placeholder="Why did the problem occur?"><?php echo htmlspecialchars($caseData['customer_root_cause'] ?? ''); ?></textarea>
                                 </div>
 
                                 <div class="mb-4">
                                     <label class="form-label">4. Leak Cause (สาเหตุที่หลุดรอด)</label>
-                                    <textarea class="form-control" name="leak_cause" rows="2" <?php echo $isReplied ? 'readonly' : ''; ?>><?php echo htmlspecialchars($caseData['leak_cause'] ?? ''); ?></textarea>
+                                    <textarea class="form-control" name="leak_cause" rows="2" <?php echo $isReplied ? 'readonly' : ''; ?> placeholder="Why didn't your QC catch this defect?"><?php echo htmlspecialchars($caseData['leak_cause'] ?? ''); ?></textarea>
                                 </div>
 
-                                <div class="mb-4">
+                                <div class="mb-5">
                                     <label class="form-label">5. Corrective Action Plan (แนวทางการแก้ไขป้องกันระยะยาว) <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" name="action_plan" rows="4" required <?php echo $isReplied ? 'readonly' : ''; ?>><?php echo htmlspecialchars($caseData['customer_action_plan'] ?? ''); ?></textarea>
+                                    <textarea class="form-control border-success" name="action_plan" rows="4" required <?php echo $isReplied ? 'readonly' : ''; ?> placeholder="How will you prevent this from happening again?"><?php echo htmlspecialchars($caseData['customer_action_plan'] ?? ''); ?></textarea>
                                 </div>
 
-                                <div class="mb-4 p-3 bg-light border rounded">
-                                    <label class="form-label text-primary"><i class="fas fa-truck-loading me-1"></i> 6. Return Shipment Information (ข้อมูลการส่งคืนสินค้า)</label>
-                                    
+                                <div class="p-4 bg-light border border-secondary border-opacity-25 rounded-4 shadow-sm mt-auto">
+                                    <h6 class="fw-bold text-primary mb-3"><i class="fas fa-truck-loading me-2"></i> 6. Return Shipment (ข้อมูลการส่งคืนสินค้า)</h6>
                                     <?php if(!$isReplied): ?>
-                                    <div class="alert alert-info py-2 small mb-3">
-                                        <i class="fas fa-info-circle"></i> You can save the analysis data (Items 1-5) first, and return to provide the tracking number later via this link.<br>(ท่านสามารถบันทึกข้อมูลก่อน และกลับมาระบุเลขตู้ภายหลังได้)
+                                    <div class="alert alert-secondary py-2 small mb-3 border-0 bg-white shadow-sm">
+                                        <i class="fas fa-lightbulb text-warning me-1"></i> You can save the analysis data (Items 1-5) first, and return to provide the tracking number later.<br>(สามารถบันทึกข้อมูลวิเคราะห์ก่อน และกลับมาระบุเลขตู้ภายหลังได้)
                                     </div>
                                     <?php endif; ?>
-
-                                    <div class="row g-3 mt-1">
+                                    <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label small">Container / Tracking No. (หมายเลขตู้)</label>
-                                            <input type="text" class="form-control" name="return_container_no" placeholder="Not specified..." <?php echo $isClosed ? 'readonly' : ''; ?> value="<?php echo htmlspecialchars($caseData['return_container_no'] ?? ''); ?>">
-                                            <small class="text-muted" style="font-size: 0.7rem;">(If no return, please specify "NO RETURN" / หากไม่มีการส่งคืน ให้ระบุ "NO RETURN")</small>
+                                            <label class="form-label text-dark">Container / Tracking No. <span class="text-muted fw-normal">(หมายเลขตู้)</span></label>
+                                            <input type="text" class="form-control form-control-lg fs-6" name="return_container_no" placeholder='e.g., TLLU1234567 or "NO RETURN"' <?php echo $isClosed ? 'readonly' : ''; ?> value="<?php echo htmlspecialchars($caseData['return_container_no'] ?? ''); ?>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label small">Expected Return Qty (จำนวนที่ส่งคืน)</label>
-                                            <input type="number" class="form-control fw-bold" name="expected_return_qty" step="0.01" min="0" <?php echo $isClosed ? 'readonly' : ''; ?> value="<?php echo htmlspecialchars($caseData['expected_return_qty'] ?? ''); ?>">
+                                            <label class="form-label text-dark">Expected Return Qty <span class="text-muted fw-normal">(จำนวนที่ส่งคืน)</span></label>
+                                            <input type="number" class="form-control form-control-lg fs-6 fw-bold text-danger" name="expected_return_qty" step="0.01" min="0" placeholder="0" <?php echo $isClosed ? 'readonly' : ''; ?> value="<?php echo htmlspecialchars($caseData['expected_return_qty'] ?? ''); ?>">
                                         </div>
                                     </div>
                                 </div>
 
                                 <?php if(!$isReplied || $isWaitingContainer): ?>
-                                    <hr class="my-4">
-                                    <div class="d-flex justify-content-end">
-                                        <button type="submit" class="btn <?php echo $isWaitingContainer ? 'btn-primary' : 'btn-success'; ?> btn-lg px-5 fw-bold shadow">
-                                            <i class="fas fa-paper-plane me-2"></i> <?php echo $isWaitingContainer ? 'Update Container Info (อัปเดตข้อมูลการส่งคืน)' : 'Submit Response (ยืนยันการตอบกลับ)'; ?>
+                                    <hr class="my-4 text-muted">
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <button type="submit" class="btn <?php echo $isWaitingContainer ? 'btn-primary' : 'btn-success'; ?> btn-lg px-5 fw-bold shadow rounded-pill">
+                                            <i class="fas fa-paper-plane me-2"></i> <?php echo $isWaitingContainer ? 'Update Container Info' : 'Submit Response'; ?>
                                         </button>
                                     </div>
                                 <?php endif; ?>
@@ -275,16 +404,16 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="card h-100">
-                        <div class="card-header bg-warning bg-opacity-10 text-dark">
-                            <i class="fas fa-clipboard-list me-2 text-warning"></i> Other Pending Responses <span class="fs-6 fw-normal">(รอตอบกลับ)</span>
-                            <span class="badge bg-danger ms-2 float-end"><?php echo count($otherPending); ?></span>
+                    <div class="card h-100 mb-0">
+                        <div class="card-header bg-white text-dark d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-tasks me-2 text-warning"></i> Pending Tasks</span>
+                            <span class="badge bg-danger rounded-pill shadow-sm"><?php echo count($otherPending); ?></span>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0 overflow-auto" style="max-height: calc(100vh - 150px);"> 
                             <?php if(empty($otherPending)): ?>
-                                <div class="text-center text-muted p-5">
-                                    <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
-                                    <h6>Great! No pending tasks.<br><small>(ยอดเยี่ยม! ไม่มีงานค้างแล้ว)</small></h6>
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-glass-cheers fa-3x mb-3 text-success opacity-50"></i>
+                                    <h6 class="fw-bold text-dark">Great! No pending tasks.<br><small class="text-muted fw-normal">(ยอดเยี่ยม! ไม่มีงานค้างแล้ว)</small></h6>
                                 </div>
                             <?php else: ?>
                                 <?php foreach($otherPending as $p): ?>
@@ -293,13 +422,13 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <span class="fw-bold text-primary"><?php echo htmlspecialchars($p['car_no']); ?></span>
                                             <?php if($isPendingContainer): ?>
-                                                <span class="badge bg-info text-dark" style="font-size: 0.65rem;">Waiting Container No.</span>
+                                                <span class="badge bg-info text-dark shadow-sm">Wait Container</span>
                                             <?php else: ?>
-                                                <small class="text-muted"><i class="fas fa-clock"></i></small>
+                                                <span class="badge bg-warning text-dark shadow-sm">Need Reply</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="small fw-bold text-dark text-truncate"><i class="fas fa-cube me-1"></i> <?php echo htmlspecialchars($p['product_name']); ?></div>
-                                        <div class="small text-danger mt-1"><?php echo htmlspecialchars($p['defect_type']); ?></div>
+                                        <div class="small fw-bold text-dark text-truncate"><i class="fas fa-cube me-1 text-muted"></i> <?php echo htmlspecialchars($p['product_name']); ?></div>
+                                        <div class="small text-danger mt-1"><i class="fas fa-exclamation-circle me-1"></i> <?php echo htmlspecialchars($p['defect_type']); ?></div>
                                     </a>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -308,10 +437,9 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                 </div>
 
             </div>
-
         <?php endif; ?>
         
-        <div class="text-center text-muted small mt-4 mb-5">
+        <div class="text-center text-muted small mt-4 mb-5 pb-3">
             &copy; <?php echo date('Y'); ?> SNC Creativity Anthology Co.,Ltd. All rights reserved.
         </div>
     </div>
@@ -328,8 +456,9 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#198754',
-                cancelButtonText: 'Cancel (ยกเลิก)',
-                confirmButtonText: 'Confirm (ยืนยัน)'
+                cancelButtonColor: '#6c757d',
+                cancelButtonText: 'Cancel',
+                confirmButtonText: 'Yes, Submit it!'
             }).then((result) => {
                 if (result.isConfirmed) {
                     const btn = this.querySelector('button[type="submit"]');
@@ -343,7 +472,7 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                     .then(res => res.json())
                     .then(res => {
                         if (res.success) {
-                            Swal.fire('Success', 'Data saved successfully. (บันทึกข้อมูลเรียบร้อยแล้ว)', 'success').then(() => {
+                            Swal.fire('Success!', 'Data saved successfully.', 'success').then(() => {
                                 window.location.reload();
                             });
                         } else {
@@ -352,7 +481,7 @@ if ($caseData && !$isReplied && (strtotime($caseData['token_expiry']) < time()))
                             btn.innerHTML = originalText;
                         }
                     }).catch(err => {
-                        Swal.fire('Error', 'Cannot connect to the server. (ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้)', 'error');
+                        Swal.fire('Error', 'Cannot connect to the server.', 'error');
                         btn.disabled = false;
                         btn.innerHTML = originalText;
                     });

@@ -1,4 +1,4 @@
-// ตำแหน่ง: js/mobile_init.js (หรือ path ที่คุณเก็บไฟล์นี้)
+//js/mobile_init.js (ห้ามลบเด็ดขาด เพราะใช้ร่วมกันทั้ง Desktop และ Mobile โดยเฉพาะปุ่ม FAB )
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -76,4 +76,33 @@ document.addEventListener('DOMContentLoaded', () => {
             oeeHeader.classList.toggle('filters-expanded');
         });
     }
+});
+
+// ใส่โค้ดนี้ไว้ใน components/js/mobile_init.js
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. เมื่อมี Modal ใดๆ ก็ตามกำลังจะถูกเปิด (Show)
+    document.addEventListener('show.bs.modal', function () {
+        const fabs = document.querySelectorAll('.fab-container');
+        fabs.forEach(fab => {
+            fab.style.transition = 'opacity 0.2s, transform 0.2s';
+            fab.style.opacity = '0';
+            fab.style.transform = 'scale(0) translateY(20px)';
+            fab.style.pointerEvents = 'none'; // กดไม่ติด
+        });
+    });
+
+    // 2. เมื่อ Modal ใดๆ ก็ตามถูกปิดลง (Hidden)
+    document.addEventListener('hidden.bs.modal', function () {
+        const fabs = document.querySelectorAll('.fab-container');
+        fabs.forEach(fab => {
+            // เช็คก่อนว่ามันถูกสั่งให้ display:none ไว้ตั้งแต่แรกหรือไม่
+            if(window.getComputedStyle(fab).display !== 'none') {
+                fab.style.opacity = '1';
+                fab.style.transform = 'scale(1) translateY(0)';
+                fab.style.pointerEvents = 'auto'; // กลับมากดได้ปกติ
+            }
+        });
+    });
+
 });
