@@ -337,7 +337,13 @@ function formatDocDate($dateStr) {
                 <tr>
                     <td class="text-center address-box" style="border-left: none;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
                     <td> 
-                        <span class="address-box"><b>#<?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
+                        <span class="address-box">
+                            <?php 
+                                $skuVal = trim($row['sku'] ?? '');
+                                $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
+                            ?>
+                            <b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?>
+                        </span>
                     </td>
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
                     <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 2) ?></td>

@@ -82,7 +82,10 @@ try {
             $startDateTime = $startDate . ' 00:00:00';
             $endDateTime = $endDate . ' 23:59:59';
 
-            $conditions = ["t.created_at BETWEEN ? AND ?"];
+            $conditions = [
+                "t.created_at BETWEEN ? AND ?",
+                "t.transfer_uuid LIKE 'REQ-%'" 
+            ];
             $params = [$startDateTime, $endDateTime];
 
             if ($status !== 'ALL') {
@@ -133,6 +136,7 @@ try {
 
             // 1. Base Condition (Filter ตามวันที่สร้าง)
             $conditions[] = "t.created_at BETWEEN ? AND ?";
+            $conditions[] = "t.transfer_uuid LIKE 'REQ-%'";
             $params[] = $startDateTime;
             $params[] = $endDateTime;
 
@@ -242,7 +246,10 @@ try {
             $startDateTime = $startDate . ' 00:00:00';
             $endDateTime = $endDate . ' 23:59:59';
 
-            $conditions = ["t.created_at BETWEEN ? AND ?"];
+            $conditions = [
+                "t.created_at BETWEEN ? AND ?",
+                "t.transfer_uuid LIKE 'REQ-%'"
+            ];
             $params = [$startDateTime, $endDateTime];
 
             if ($status !== 'ALL') {

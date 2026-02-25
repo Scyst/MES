@@ -110,7 +110,11 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                 </div>
                                 
                                 <div class="input-group input-group-sm shadow-sm" style="width: auto;">
-                                    <span class="input-group-text bg-light border-secondary-subtle text-secondary small fw-bold">📅 Date:</span>
+                                    <select class="form-select border-secondary-subtle text-secondary small bg-light" id="filterDateType" style="max-width: 120px; font-weight: bold; border-right: 0;">
+                                        <option value="created_at" selected>💾 Created</option>
+                                        <option value="invoice_date">📝 Inv. Date</option>
+                                        <option value="etd_date">🚢 ETD Date</option>
+                                    </select>
                                     <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" title="Start Date">
                                     <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
                                     <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" title="End Date">
@@ -169,19 +173,19 @@ $pageIcon = "fas fa-file-invoice-dollar";
                             <thead class="table-light text-secondary" style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
                                     <th style="width: 140px;">Invoice No.</th>
-                                    <th style="width: 200px;">Booking No.</th>
+                                    <th style="width: 100px;">Inv. Date</th>
+                                    <th style="width: 140px;">Booking No.</th>
                                     <th>Customer</th>
                                     <th>Logistics Info</th>
                                     <th class="text-center">ETD / ETA</th>
                                     <th class="text-end">Total (USD)</th>
-                                    <th class="text-center">Status</th>
                                     <th class="text-center">Ver.</th>
-                                    <th class="text-center">Date</th>
-                                    <th class="text-center" style="width: 180px;">Action</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Created</th> <th class="text-center" style="width: 180px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="10" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="11" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>

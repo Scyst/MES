@@ -34,6 +34,7 @@ try {
     switch ($action) {
 
         case 'get_history':
+            $dateType = $_GET['date_type'] ?? 'created_at'; // 📌 รับค่าโหมดวันที่
             $startDate = $_GET['start'] ?? '';
             $endDate = $_GET['end'] ?? '';
 
@@ -42,7 +43,16 @@ try {
             $topLimit = "TOP 100";
 
             if ($startDate && $endDate) {
-                $whereSql .= " AND CAST(created_at AS DATE) BETWEEN ? AND ?";
+                // 📌 แยกลอจิกการฟิลเตอร์ตามประเภทที่เลือก
+                if ($dateType === 'invoice_date') {
+                    // แปลง DD/MM/YYYY ใน JSON เป็น DATE แล้วเทียบ (รหัส 103 คือ format ของอังกฤษ/ไทย)
+                    $whereSql .= " AND TRY_CONVERT(DATE, JSON_VALUE(shipping_data_json, '$.invoice_date'), 103) BETWEEN ? AND ?";
+                } elseif ($dateType === 'etd_date') {
+                    $whereSql .= " AND TRY_CONVERT(DATE, JSON_VALUE(shipping_data_json, '$.etd_date'), 103) BETWEEN ? AND ?";
+                } else {
+                    $whereSql .= " AND CAST(created_at AS DATE) BETWEEN ? AND ?";
+                }
+                
                 $params[] = $startDate;
                 $params[] = $endDate;
                 $topLimit = ""; 
@@ -53,8 +63,7 @@ try {
                         customer_data_json, shipping_data_json, 
                         ISNULL(doc_status, 'Pending') AS doc_status
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
-                    WHERE $whereSql 
-                    ORDER BY created_at DESC";
+                    WHERE $whereSql"; // เอา ORDER BY ออก เพราะเราจะเรียงด้วย PHP
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -65,8 +74,6 @@ try {
                 $shipping = json_decode($row['shipping_data_json'], true) ?: [];
                 
                 $booking_no = isset($shipping['booking_no']) && $shipping['booking_no'] !== '' ? trim($shipping['booking_no']) : '-';
-                
-                // 📌 แงะค่า Team ออกมาจาก JSON
                 $team_name = isset($shipping['team_name']) && $shipping['team_name'] !== '' ? trim($shipping['team_name']) : '';
 
                 return [
@@ -78,13 +85,35 @@ try {
                     'container_no' => $shipping['container_no'] ?? '-',
                     'vessel' => $shipping['feeder_vessel'] ?? '-',
                     'booking_no' => $booking_no, 
-                    'team_name' => $team_name, // 📌 ส่งค่าให้ JS
+                    'team_name' => $team_name,
+                    'invoice_date' => $shipping['invoice_date'] ?? '-', // 📌 ดึง Invoice Date ออกมา
                     'etd_date' => $shipping['etd_date'] ?? '-',
                     'eta_date' => $shipping['eta_date'] ?? '-',
                     'total_amount' => number_format((float)$row['total_amount'], 2),
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
             }, $invoices);
+
+            // 📌 เริ่มต้นการเรียงลำดับ (Sort) ด้วย PHP
+            usort($data, function($a, $b) {
+                // ฟังก์ชันช่วยแปลงวันที่จาก DD/MM/YYYY เป็น Timestamp
+                $getTimestamp = function($dateStr) {
+                    if (!$dateStr || $dateStr === '-') return 0;
+                    $d = DateTime::createFromFormat('d/m/Y', $dateStr);
+                    return $d ? $d->getTimestamp() : (strtotime(str_replace('/', '-', $dateStr)) ?: 0);
+                };
+
+                $tsA = $getTimestamp($a['invoice_date']);
+                $tsB = $getTimestamp($b['invoice_date']);
+
+                // ถ้า Invoice Date เท่ากัน ให้เรียงตาม ID ใหม่ล่าสุดขึ้นก่อน
+                if ($tsA == $tsB) {
+                    return $b['id'] <=> $a['id'];
+                }
+                
+                // เรียงจากมากไปน้อย (ล่าสุดอยู่บน)
+                return $tsB <=> $tsA;
+            });
 
             echo json_encode(['success' => true, 'data' => $data]);
             break;

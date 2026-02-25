@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ดักจับการเปลี่ยนวันที่ ถ้าเปลี่ยนปุ๊บให้โหลดข้อมูลใหม่ทันที
     document.getElementById('filterStartDate')?.addEventListener('change', loadHistory);
     document.getElementById('filterEndDate')?.addEventListener('change', loadHistory);
+    document.getElementById('filterDateType')?.addEventListener('change', loadHistory);
     document.getElementById('filterTeam')?.addEventListener('change', renderTable);
 
     function calculateToolbarSums(filteredData) {
@@ -174,12 +175,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#historyTable tbody');
         if (!tbody) return;
         
+        const dateType = document.getElementById('filterDateType')?.value || 'created_at';
         const start = encodeURIComponent(document.getElementById('filterStartDate')?.value || '');
         const end = encodeURIComponent(document.getElementById('filterEndDate')?.value || '');
         
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
-        
-        fetch(`api/api_invoice.php?action=get_history&start=${start}&end=${end}`)
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+        fetch(`api/api_invoice.php?action=get_history&date_type=${dateType}&start=${start}&end=${end}`)
             .then(res => res.json())
             .then(resData => {
                 if (resData.success) {
@@ -187,12 +188,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderTable();
                     updateKPIs();
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
                 }
             })
             .catch(err => {
                 console.error(err);
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
             });
     }
 
@@ -230,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateToolbarSums(filteredData);
 
         if (filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-5">
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-5">
                 <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลที่ค้นหา
             </td></tr>`;
             return;
@@ -251,6 +252,8 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.innerHTML = `
                 <td class="fw-bold text-primary">${inv.invoice_no}</td>
                 
+                <td class="text-dark fw-bold">${inv.invoice_date}</td>
+                
                 <td class="text-dark">${inv.booking_no || '-'}</td>
                 
                 <td>
@@ -270,15 +273,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="text-end fw-bold text-dark">${inv.total_amount}</td>
                 
                 <td class="text-center">
-                    ${inv.team_name ? `<span class="badge bg-success mb-1 px-2 py-1"><i class="fas fa-users me-1"></i>${inv.team_name}</span><br>` : ''}
-                    ${statusBadge}
-                </td>
-
-                <td class="text-center">
                     <span class="badge border text-secondary">v.${inv.version}</span>
                 </td>
                 
-                <td class="text-center text-muted small">${inv.created_at}</td>
+                <td class="text-center">
+                    ${inv.team_name ? `<span class="badge bg-success mb-1 px-2 py-1"><i class="fas fa-users me-1"></i> ${inv.team_name}</span><br>` : ''}
+                    ${statusBadge}
+                </td>
+                
+                <td class="text-center text-muted small" title="วันที่บันทึกเข้าระบบ">
+                    <i class="fas fa-save me-1 opacity-50"></i>${inv.created_at}
+                </td>
                 
                 <td class="text-center">
                     <div class="btn-group shadow-sm">
@@ -433,10 +438,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             let rowUpper = row.map(c => String(c).toUpperCase().replace(/_/g, ' '));
                             if (rowUpper.some(c => c.includes('INVOICE NO')) && rowUpper.some(c => c.includes('CUSTOMER'))) {
                                 headerFound = true;
-                                const findIdx = (keyword) => rowUpper.findIndex(c => c.includes(keyword));
+                                // แก้ไขการค้นหาหัวคอลัมน์ให้ยืดหยุ่นขึ้น (ป้องกันปัญหามีการเคาะวรรคเกิน)
+                                const findIdx = (keyword) => rowUpper.findIndex(c => c === keyword || c.includes(keyword));
                                 
                                 idx.invoice_no = findIdx('INVOICE NO');
                                 idx.booking = findIdx('BOOKING NO') !== -1 ? findIdx('BOOKING NO') : findIdx('BOOKING');
+                                
+                                // 📌 1. เพิ่มการค้นหาคอลัมน์ TEAM
+                                idx.team = findIdx('TEAM'); 
+                                
                                 idx.customer = findIdx('CUSTOMER NAME') !== -1 ? findIdx('CUSTOMER NAME') : findIdx('CUSTOMER');
                                 idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS');
                                 idx.incoterms = findIdx('INCOTERMS');
@@ -503,7 +513,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
                                     },
                                     shippingData: {
-                                        team_name: getVal(idx.team),
+                                        // 📌 2. ดึงค่า Team จากคอลัมน์ใน Excel ใส่เข้าไปใน Object Shipping
+                                        team_name: getVal(idx.team), 
                                         booking_no: getVal(idx.booking),
                                         port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
                                         port_discharge: getVal(idx.port_discharge), 

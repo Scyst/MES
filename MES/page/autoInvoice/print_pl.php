@@ -300,13 +300,15 @@ function formatDocDate($dateStr) {
             <tbody>
                 <?php 
                 $sumQty = 0; $sumNW = 0; $sumGW = 0; $sumCBM = 0;
-                $currentProductType = null; // 📌 ตัวแปรเก็บหัวข้อปัจจุบัน เพื่อใช้เช็คความซ้ำ
+                $currentProductType = null;
                 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
                         $nw = (float)($row['net_weight'] ?? 0);
                         $gw = (float)($row['gross_weight'] ?? 0);
                         $cbm = (float)($row['cbm'] ?? 0);
+
+                        $cbm = ceil(round($cbm * 100, 4)) / 100;
 
                         $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumNW  += $nw;
@@ -315,9 +317,8 @@ function formatDocDate($dateStr) {
                         
                         $rowProductType = trim($row['product_type'] ?? '');
                         
-                        // 📌 ตรวจสอบว่า Product Type เปลี่ยนไปจากบรรทัดที่แล้วหรือไม่
                         if ($rowProductType !== $currentProductType && $rowProductType !== ''):
-                            $currentProductType = $rowProductType; // อัปเดตสถานะล่าสุด
+                            $currentProductType = $rowProductType;
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
@@ -336,7 +337,13 @@ function formatDocDate($dateStr) {
                 <tr>
                     <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['shipping_marks'] ?? '') ?></td>
                     <td> 
-                        <span class="pre-line">#<b><?= htmlspecialchars($row['sku'] ?? '') ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></span>
+                        <span class="pre-line">
+                            <?php 
+                                $skuVal = trim($row['sku'] ?? '');
+                                $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
+                            ?>
+                            <b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?>
+                        </span>
                     </td>
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
                     <td class="text-right"><?= number_format($nw, 2) ?></td>
