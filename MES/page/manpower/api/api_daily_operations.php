@@ -85,18 +85,18 @@ try {
                             ELSE 0 
                         END as is_forgot_out
 
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master ON E.default_shift_id = S_Master.shift_id
+                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
+                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
                     OUTER APPLY (
-                        SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                        SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M WITH (NOLOCK)
                         WHERE E.position LIKE '%' + M.keyword + '%' 
                         ORDER BY LEN(M.keyword) DESC
                     ) CM
-                    LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L 
+                    LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L WITH (NOLOCK)
                         ON E.emp_id = L.emp_id 
                         AND L.log_date BETWEEN :start AND :end
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON L.shift_id = S.shift_id
-                    LEFT JOIN dbo.MANPOWER_CALENDAR Cal ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
+                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S WITH (NOLOCK) ON L.shift_id = S.shift_id
+                    LEFT JOIN dbo.MANPOWER_CALENDAR Cal WITH (NOLOCK) ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
                     CROSS APPLY (SELECT CASE WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 WHEN Cal.day_type='HOLIDAY' THEN 3.0 ELSE 1.5 END AS OT_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 ELSE 1.0 END AS Work_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 ELSE COALESCE(CM.hourly_rate,0) END AS Hourly_Base) AS Rate
                     CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
                     CROSS APPLY (
@@ -167,14 +167,9 @@ try {
         case 'read_summary':
             $date = $_GET['date'] ?? date('Y-m-d');
             
-            // ✅ 1. รับค่า Toggle จาก Frontend
             $useNewFormula = isset($_GET['use_new_formula']) && $_GET['use_new_formula'] === 'true' ? 1 : 0;
-            
-            // ✅ 2. เลือกชื่อ SP ตาม Environment
-            // (บน TEST ใช้ตัว TEST, บน PROD ใช้ตัว PROD ถ้ามี)
             $spName = IS_DEVELOPMENT ? 'sp_GetManpowerDashboardData_TEST' : 'sp_GetManpowerDashboardData'; 
             
-            // ✅ 3. เรียก Stored Procedure แทนการฝัง SQL
             $sql = "EXEC $spName @StartDate = :start, @EndDate = :end, @UseNewFormula = :formula";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -190,8 +185,8 @@ try {
                     'shift_name'  => $row['Shift'],
                     'team_group'  => $row['Team'],
                     
-                    'emp_type'    => $row['Category'], // ex. "Operator", "Leader"
-                    'rate_type'   => $row['RateType'], // ex. "DAILY", "MONTHLY"
+                    'emp_type'    => $row['Category'],
+                    'rate_type'   => $row['RateType'],
                     
                     'total_hc'    => $row['Plan (HC)'],
                     'plan'        => $row['Plan (HC)'],
@@ -201,9 +196,11 @@ try {
                     'leave'       => $row['Leave'],
                     'actual'      => $row['Actual (Present+Late)'],
                     
+                    'ot_headcount'=> isset($row['OT_Headcount']) ? (int)$row['OT_Headcount'] : 0, 
                     'total_cost'  => $row['Est_Cost'],
                     'normal_cost' => $row['Normal_Cost'],
-                    'ot_cost'     => $row['OT_Cost']
+                    'ot_cost'     => $row['OT_Cost'],
+                    'ot_hours'    => isset($row['OT_Hours']) ? (float)$row['OT_Hours'] : 0
                 ];
             }, $rawData);
 

@@ -37,8 +37,8 @@ try {
     //-- Branch logic based on the action --
     switch ($action) {
         case 'read':
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
-            $stmt = $pdo->query("SELECT id, username, role, created_at, line FROM " . USERS_TABLE . " WHERE role != 'creator' ORDER BY id ASC");
+            // *** เพิ่ม emp_id ใน SELECT ***
+            $stmt = $pdo->query("SELECT id, username, role, created_at, line, emp_id FROM " . USERS_TABLE . " WHERE role != 'creator' ORDER BY id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($users as &$user) {
                 if ($user['created_at']) $user['created_at'] = (new DateTime($user['created_at']))->format('Y-m-d H:i:s');
@@ -52,33 +52,42 @@ try {
             $password = trim($input['password'] ?? '');
             $role = trim($input['role'] ?? '');
             $line = ($role === 'supervisor') ? strtoupper(trim($input['line'] ?? '')) : null;
+            
+            // *** รับค่า emp_id ***
+            $emp_id = !empty($input['emp_id']) ? trim($input['emp_id']) : null;
+
             if (empty($username) || empty($password) || empty($role)) { throw new Exception("Username, password, and role are required."); }
             if ($role === 'supervisor' && empty($line)) { throw new Exception("Line is required for supervisor role.");}
             if ($role === 'creator') { throw new Exception("Cannot create a user with the 'creator' role."); }
             if ($role === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can create admin users."); }
+            
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
-            $sql = "INSERT INTO " . USERS_TABLE . " (username, password, role, line) VALUES (?, ?, ?, ?)";
+            
+            // *** เพิ่ม emp_id ลงใน SQL ***
+            $sql = "INSERT INTO " . USERS_TABLE . " (username, password, role, line, emp_id) VALUES (?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$username, $hashedPassword, $role, $line]);
-            logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line");
+            $stmt->execute([$username, $hashedPassword, $role, $line, $emp_id]);
+            
+            logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line, EmpID: $emp_id");
             echo json_encode(['success' => true, 'message' => 'User created successfully.']);
             break;
 
         case 'update':
             $targetId = (int)($input['id'] ?? 0);
             if (!$targetId) throw new Exception("Target user ID is required.");
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
             $stmt = $pdo->prepare("SELECT id, username, role FROM " . USERS_TABLE . " WHERE id = ?");
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch();
             if (!$targetUser) throw new Exception("Target user not found.");
             if ($targetUser['role'] === 'creator') throw new Exception("Creator accounts cannot be modified.");
+            
             $isEditingSelf = ($targetId === (int)$currentUser['id']);
             if (hasRole('admin') && !hasRole('creator')) {
                 if (!$isEditingSelf && $targetUser['role'] === 'admin') { throw new Exception("Admins cannot modify other admins."); }
             }
+            
             $updateFields = []; $params = []; $logDetails = [];
+            
             if (!$isEditingSelf || hasRole('creator')) {
                 if (isset($input['username']) && $input['username'] !== $targetUser['username']) {
                     $updateFields[] = "username = ?"; $params[] = trim($input['username']); $logDetails[] = "username to " . trim($input['username']);
@@ -88,6 +97,7 @@ try {
                     $updateFields[] = "role = ?"; $params[] = trim($input['role']); $logDetails[] = "role to " . trim($input['role']);
                 }
             }
+            
             if (isset($input['role']) && $input['role'] === 'supervisor') {
                 $line = strtoupper(trim($input['line'] ?? ''));
                 if (empty($line)) { throw new Exception("Line is required for supervisor role."); }
@@ -95,15 +105,24 @@ try {
             } elseif (isset($input['role']) && $input['role'] !== 'supervisor') {
                 $updateFields[] = "line = NULL"; $logDetails[] = "line cleared";
             }
+
+            // *** อัปเดต emp_id ***
+            if (isset($input['emp_id'])) {
+                $emp_id = trim($input['emp_id']) !== '' ? trim($input['emp_id']) : null;
+                $updateFields[] = "emp_id = ?"; $params[] = $emp_id; $logDetails[] = "emp_id to " . $emp_id;
+            }
+
             if (!empty($input['password'])) {
                 $updateFields[] = "password = ?"; $params[] = password_hash(trim($input['password']), PASSWORD_DEFAULT); $logDetails[] = "password changed";
             }
+            
             if (empty($updateFields)) { echo json_encode(['success' => true, 'message' => 'No changes were made.']); break; }
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
+            
             $sql = "UPDATE " . USERS_TABLE . " SET " . implode(', ', $updateFields) . " WHERE id = ?";
             $params[] = $targetId;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
+            
             logAction($pdo, $currentUser['username'], 'UPDATE USER', $targetUser['username'], implode(', ', $logDetails));
             echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             break;

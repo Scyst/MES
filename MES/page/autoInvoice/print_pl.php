@@ -308,7 +308,7 @@ function formatDocDate($dateStr) {
                         $gw = (float)($row['gross_weight'] ?? 0);
                         $cbm = (float)($row['cbm'] ?? 0);
 
-                        $cbm = ceil(round($cbm * 100, 4)) / 100;
+                        //$cbm = ceil(round($cbm * 100, 4)) / 100;
 
                         $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumNW  += $nw;

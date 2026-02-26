@@ -58,7 +58,11 @@ try {
                 ];
             }
 
-            echo json_encode($events);
+            echo json_encode([
+                'success' => true, 
+                'data' => $events,
+                'message' => 'Fetched holiday calendar successfully'
+            ]);
             break;
 
         // --------------------------------------------------------

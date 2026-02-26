@@ -295,10 +295,7 @@ const UI = {
     },
 
     // =========================================================================
-    // 3. MAIN TABLE
-    // =========================================================================
-    // =========================================================================
-    // 3. MAIN TABLE LOGIC (FIXED INTEGRITY)
+    // 3. MAIN TABLE LOGIC (FIXED INTEGRITY & PAYMENT UI)
     // =========================================================================
     processGroupedData(rawData = [], viewMode) {
         const groups = {};
@@ -335,10 +332,19 @@ const UI = {
                 leave: parseInt(row.leave || 0),
                 dl: parseFloat(row.normal_cost || 0), 
                 ot: parseFloat(row.ot_cost || 0), 
-                cost: parseFloat(row.total_cost || row.dlot || 0)
+                cost: parseFloat(row.total_cost || row.dlot || 0),
+                dl_count: parseInt(row.dl_count || 0),
+                ot_count: parseInt(row.ot_headcount || row.ot_count || 0),
+                ot_hours: parseFloat(row.ot_hours || 0)
             };
+            
             stats.actual = stats.present + stats.late;
             stats.dlot = stats.dl + stats.ot;
+
+            // 💡 [Smart Fallback] ถ้าหลังบ้านยังไม่ส่ง dl_count มา ให้เดาจากคนที่มาและลา (เพราะคนที่ลาบางประเภทก็ได้ค่าแรง)
+            if (!row.dl_count && stats.dl > 0) {
+                stats.dl_count = stats.present + stats.late + stats.leave;
+            }
 
             if (!groups[mainKey]) groups[mainKey] = { name: mainKey, subs: {}, total: this._initStats() };
             this._accumulateStats(groups[mainKey].total, stats);
@@ -373,7 +379,8 @@ const UI = {
     },
 
     _initStats() { 
-        return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, dl: 0, ot: 0, dlot: 0, cost: 0 }; 
+        // 🔥 [NEW] เพิ่ม dl_count, ot_count, ot_hours เข้าไปในโครงสร้างเริ่มต้น
+        return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, dl: 0, ot: 0, dlot: 0, cost: 0, dl_count: 0, ot_count: 0, ot_hours: 0 }; 
     },
 
     _accumulateStats(target, source) {
@@ -389,11 +396,17 @@ const UI = {
         target.ot += (Number(source.ot) || 0);
         target.dlot += (Number(source.dlot) || 0);
         target.cost += (Number(source.cost) || 0);
+        // 🔥 [NEW] บวกทบยอด Detail
+        target.dl_count += (Number(source.dl_count) || 0);
+        target.ot_count += (Number(source.ot_count) || 0);
+        target.ot_hours += (Number(source.ot_hours) || 0);
     },
 
     _createRowHtml(label, stats, options = {}) {
         const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta, toggleTarget, rowClass, isHidden } = options;
         const fmt = (n) => new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(Number(n) || 0);
+        // Helper สำหรับโชว์จำนวนคน/ชั่วโมง
+        const fmtNum = (n) => Number(n) > 0 ? Number(n).toLocaleString() : '-';
         
         let rowStyle = isHidden ? 'display: none;' : ''; 
         let rowBg = isGrand ? 'table-dark fw-bold border-bottom-0' : (isParent ? 'table-secondary fw-bold border-top border-white cursor-pointer' : (isChild ? 'bg-light fw-bold cursor-pointer' : 'bg-white'));
@@ -427,6 +440,7 @@ const UI = {
             const cellClass = "text-end align-middle font-monospace";
             const payableCount = (stats.present || 0) + (stats.late || 0) + (stats.leave || 0);
 
+            // 🔥 [NEW UI] แบ่ง 2 บรรทัด บนคือตัวเงิน(ตัวหนา) ล่างคือจำนวนคน/ชั่วโมง(ตัวเล็ก)
             columnsHtml = `
                 <td class="text-center text-primary border-end border-light opacity-75 small align-middle">${stats.hc || '-'}</td>
                 <td class="text-center text-success ${hoverClass} align-middle" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
@@ -439,9 +453,17 @@ const UI = {
                     ${payableCount > 0 ? payableCount : '-'}
                 </td>
                 
-                <td class="${cellClass} text-primary">${fmt(stats.dl)}</td>
-                <td class="${cellClass} text-danger">${fmt(stats.ot)}</td>
-                <td class="${cellClass} fw-bold pe-4 bg-light border-start">${fmt(stats.dlot)}</td>
+                <td class="${cellClass}">
+                    <div class="text-primary fw-bold">฿ ${fmt(stats.dl)}</div>
+                    <div class="small text-muted" style="font-size: 0.7rem;"><i class="fas fa-user opacity-50 me-1"></i>${fmtNum(stats.dl_count)} คน</div>
+                </td>
+                <td class="${cellClass}">
+                    <div class="text-danger fw-bold">฿ ${fmt(stats.ot)}</div>
+                    <div class="small text-muted" style="font-size: 0.7rem;">${fmtNum(stats.ot_count)} คน | ${fmtNum(stats.ot_hours)} ชม.</div>
+                </td>
+                <td class="${cellClass} pe-4 bg-light border-start">
+                    <div class="text-dark fw-bold" style="font-size: 1.1em;">฿ ${fmt(stats.dlot)}</div>
+                </td>
             `;
         } else {
             let diffClass = stats.diff < 0 ? 'text-danger fw-bold' : (stats.diff > 0 ? 'text-warning fw-bold text-dark' : 'text-success fw-bold');
