@@ -422,30 +422,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchDashboardLines() {
-    try {
-        const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
-        if (result.success && result.data && result.data.lines) {
-            const lines = result.data.lines;
-            [planLineFilter, planModalLine].forEach(select => { 
-                if (select) {
-                    const valueToKeep = ""; 
-                    select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
-                    lines.forEach(line => select.appendChild(new Option(line, line)));
-                    const assemblyOption = Array.from(select.options).find(opt => opt.value.toUpperCase() === 'ASSEMBLY');
-                    if (assemblyOption) select.value = assemblyOption.value;
-                    else if (lines.length > 0) select.value = lines[0];
-                }
-            });
+        try {
+            const result = await sendRequest(FILTERS_API, 'get_filters', 'GET');
+            if (result.success && result.data && result.data.lines) {
+                const lines = result.data.lines;
+                [planLineFilter, planModalLine].forEach(select => { 
+                    if (select) {
+                        const valueToKeep = ""; 
+                        select.querySelectorAll(`option:not([value="${valueToKeep}"])`).forEach(opt => opt.remove());
+                        lines.forEach(line => select.appendChild(new Option(line, line)));
+                        const assemblyOption = Array.from(select.options).find(opt => opt.value.toUpperCase() === 'ASSEMBLY');
+                        if (assemblyOption) select.value = assemblyOption.value;
+                        else if (lines.length > 0) select.value = lines[0];
+                    }
+                });
 
-            // --- [แก้ไข] ปิดส่วนนี้ทิ้งครับ เพื่อไม่ให้มันแย่งโหลดก่อนเพื่อน ---
-            // if (planLineFilter.value) {
-            //    fetchPlans();
-            //    fullCalendarInstance?.refetchEvents();
-            // }
-            // -----------------------------------------------------------
-        }
-    } catch (error) { console.error("Error fetching lines:", error); }
-}
+                // --- [แก้ไข] ปิดส่วนนี้ทิ้งครับ เพื่อไม่ให้มันแย่งโหลดก่อนเพื่อน ---
+                // if (planLineFilter.value) {
+                //    fetchPlans();
+                //    fullCalendarInstance?.refetchEvents();
+                // }
+                // -----------------------------------------------------------
+            }
+        } catch (error) { console.error("Error fetching lines:", error); }
+    }
 
     async function fetchAllItemsForPlanning() {
         // (Logic Cache เดิม)
@@ -1047,6 +1047,143 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(e) { console.error(e); }
     });
+
+    // =================================================================
+    // SECTION: ADVANCED APS AUTO PLAN
+    // =================================================================
+    const apsModalEl = document.getElementById('autoPlanModal');
+    const apsModal = apsModalEl ? new bootstrap.Modal(apsModalEl) : null;
+    
+    // 📌 [NEW] Logic สลับโหมด Filter (Date <-> Week)
+    document.querySelectorAll('input[name="apsFilterType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'DATE') {
+                document.getElementById('zoneDateFilter').classList.remove('d-none');
+                document.getElementById('zoneWeekFilter').classList.add('d-none');
+            } else {
+                document.getElementById('zoneDateFilter').classList.add('d-none');
+                document.getElementById('zoneWeekFilter').classList.remove('d-none');
+            }
+        });
+    });
+
+    if (apsModalEl) {
+        document.getElementById('apsRangeMode').addEventListener('change', function() {
+            const endInput = document.getElementById('apsPlanEnd');
+            if (this.value === 'CLOSED') {
+                endInput.disabled = false;
+                endInput.classList.remove('bg-light');
+                endInput.required = true;
+            } else {
+                endInput.disabled = true;
+                endInput.classList.add('bg-light');
+                endInput.value = '';
+                endInput.required = false;
+            }
+        });
+
+        document.getElementById('btnExecuteAps').addEventListener('click', async function() {
+            // ดึงโหมดว่าค้นหาด้วยอะไร
+            const filterType = document.querySelector('input[name="apsFilterType"]:checked').value;
+            
+            const soStart = document.getElementById('apsSoStart').value;
+            const soEnd = document.getElementById('apsSoEnd').value;
+            const weekStart = document.getElementById('apsWeekStart').value;
+            const weekEnd = document.getElementById('apsWeekEnd').value;
+            
+            const pStart = document.getElementById('apsPlanStart').value;
+            const pMode = document.getElementById('apsRangeMode').value;
+            const pEnd = document.getElementById('apsPlanEnd').value;
+
+            // Validation
+            if (filterType === 'DATE' && (!soStart || !soEnd)) {
+                showToast('กรุณาระบุวันที่ SO ให้ครบถ้วน', 'var(--bs-danger)');
+                return;
+            }
+            if (filterType === 'WEEK' && (!weekStart || !weekEnd)) {
+                showToast('กรุณาระบุ Shipping Week ให้ครบถ้วน (ตัวอย่าง 9.26)', 'var(--bs-danger)');
+                return;
+            }
+            if (!pStart) {
+                showToast('กรุณาระบุวันที่เริ่มจัดแผน', 'var(--bs-danger)');
+                return;
+            }
+            if (pMode === 'CLOSED' && !pEnd) {
+                showToast('โหมด Timebox จำเป็นต้องระบุวันสิ้นสุด (Cut-off)', 'var(--bs-danger)');
+                return;
+            }
+
+            const payload = {
+                filterType: filterType,
+                startDate: filterType === 'DATE' ? soStart : null,
+                endDate: filterType === 'DATE' ? soEnd : null,
+                startWeek: filterType === 'WEEK' ? weekStart : null,
+                endWeek: filterType === 'WEEK' ? weekEnd : null,
+                
+                planStartDate: pStart,
+                planEndDate: pEnd || null,
+                planRangeMode: pMode,
+                shiftMode: document.getElementById('apsShiftMode').value,
+                setupTime: document.getElementById('apsSetupTime').value,
+                otHours: document.getElementById('apsOtHours').value,
+                overwrite: document.getElementById('apsOverwrite').checked,
+                workOnSunday: document.getElementById('apsWorkOnSunday').checked ? 1 : 0
+            };
+
+            await executeAutoPlan(payload, this);
+        });
+    }
+
+    window.openAutoPlanWizard = function() {
+        if (!apsModal) return;
+        // เซ็ตค่า Default วันที่ให้ตรงกับ Filter ปัจจุบันที่ดูอยู่
+        document.getElementById('apsSoStart').value = startDateFilter.value;
+        document.getElementById('apsSoEnd').value = endDateFilter.value;
+        document.getElementById('apsPlanStart').value = new Date().toISOString().split('T')[0];
+        document.getElementById('apsOverwrite').checked = false;
+        
+        apsModal.show();
+    };
+
+    async function executeAutoPlan(payload, btnElement) {
+        // UI: เปลี่ยนปุ่มเป็นสถานะ Loading
+        const originalBtnText = btnElement.innerHTML;
+        btnElement.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>กำลังประมวลผล...`;
+        btnElement.disabled = true;
+
+        try {
+            const res = await sendRequest(PLAN_API, 'auto_create_plan', 'POST', payload);
+            
+            if (res.success) {
+                apsModal.hide();
+                
+                const hasUnplanned = res.unplanned_qty && res.unplanned_qty > 0;
+                
+                Swal.fire({
+                    title: hasUnplanned ? 'เสร็จสิ้น (มีข้อมูลตกหล่น)' : 'จัดแผนสำเร็จ!',
+                    // 📌 สำคัญมาก! บรรทัดนี้ต้องดึง res.message มาใช้ตรงๆ ห้ามไปเขียน `<div>...</div>` ทับมันเด็ดขาด
+                    html: res.message, 
+                    icon: hasUnplanned ? 'warning' : 'success',
+                    showConfirmButton: true,
+                    confirmButtonText: hasUnplanned ? 'รับทราบ' : 'ตกลง',
+                    confirmButtonColor: hasUnplanned ? '#d33' : '#28a745',
+                    allowOutsideClick: false
+                });
+
+                fetchPlans(); 
+                if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+            } else {
+                throw new Error(res.message || 'Unknown error');
+            }
+        } catch (error) {
+            console.error("APS Error:", error);
+            Swal.fire('ข้อผิดพลาด', error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        } finally {
+            // UI: คืนค่าปุ่มกลับมา
+            btnElement.innerHTML = originalBtnText;
+            btnElement.disabled = false;
+        }
+    }
 
     // =================================================================
     // SECTION 7: CHART CONFIG (FIXED COLORS)

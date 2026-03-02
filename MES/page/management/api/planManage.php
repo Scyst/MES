@@ -450,6 +450,74 @@ try {
             echo json_encode(['success' => true, 'message' => 'Carry over updated successfully']);
             break;
 
+        case 'auto_create_plan':
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $filterType = $data['filterType'] ?? 'DATE';
+            $startDate = $data['startDate'] ?? '';
+            $endDate   = $data['endDate'] ?? '';
+            $startWeek = $data['startWeek'] ?? '';
+            $endWeek   = $data['endWeek'] ?? '';
+            
+            $planStart = $data['planStartDate'] ?? date('Y-m-d');
+            $planEnd   = $data['planEndDate'] ?? null;
+            $planMode  = $data['planRangeMode'] ?? 'OPEN';
+            $setupTime = isset($data['setupTime']) ? floatval($data['setupTime']) : 0;
+            $otHours   = isset($data['otHours']) ? floatval($data['otHours']) : 0;
+
+            $shiftMode = $data['shiftMode'] ?? 'DAY'; 
+            $overwrite = isset($data['overwrite']) && $data['overwrite'] ? 1 : 0;
+            $workOnSunday = isset($data['workOnSunday']) && $data['workOnSunday'] ? 1 : 0;
+            $currentUser = $_SESSION['user']['username'] ?? 'System';
+
+            $spName = SP_AUTO_GENERATE_PLAN;
+            $sql = "EXEC $spName 
+                    @FilterType = :ftype,
+                    @StartDate = :start, 
+                    @EndDate = :end, 
+                    @StartWeek = :sweek,
+                    @EndWeek = :eweek,
+                    @PlanStartDate = :pstart,
+                    @PlanEndDate = :pend,
+                    @PlanRangeMode = :pmode,
+                    @ShiftMode = :mode, 
+                    @SetupTimeHrs = :setup,
+                    @OTHours = :ot,
+                    @WorkOnSunday = :sunday, -- 📌 [NEW] พารามิเตอร์ใน SQL
+                    @Overwrite = :ow, 
+                    @User = :usr";
+                    
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':ftype' => $filterType,
+                ':start' => $startDate === '' ? null : $startDate,
+                ':end'   => $endDate === '' ? null : $endDate,
+                ':sweek' => $startWeek === '' ? null : $startWeek,
+                ':eweek' => $endWeek === '' ? null : $endWeek,
+                ':pstart' => $planStart,
+                ':pend' => $planEnd,
+                ':pmode' => $planMode,
+                ':mode' => $shiftMode,
+                ':setup' => $setupTime,
+                ':ot' => $otHours,
+                ':sunday' => $workOnSunday,
+                ':ow' => $overwrite,
+                ':usr' => $currentUser
+            ]);
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result && $result['success'] == 1) {
+                $unplanned = isset($result['unplanned_qty']) ? floatval($result['unplanned_qty']) : 0;
+                echo json_encode([
+                    'success' => true, 
+                    'message' => $result['message'],
+                    'unplanned_qty' => $unplanned
+                ]);
+            } else {
+                throw new Exception("ไม่พบข้อมูลที่จะสร้าง หรือเกิดข้อผิดพลาด");
+            }
+            break;
+
         default:
             throw new Exception("Invalid action");
     }

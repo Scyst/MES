@@ -194,6 +194,10 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                                                 title="Auto Calculate Carry Over">
                                             <i class="fas fa-sync-alt me-1"></i> Calc C/O
                                         </button>
+
+                                        <button class="btn btn-outline-primary btn-sm ms-2 fw-bold" onclick="openAutoPlanWizard()">
+                                            <i class="fas fa-magic me-1"></i> Auto Create Plan
+                                        </button>
                                         
                                         <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" id="btnAddPlan">
                                             <i class="fas fa-plus me-1"></i> New Plan
