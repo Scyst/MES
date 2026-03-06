@@ -377,6 +377,18 @@ try {
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
 
+        case 'get_machines':
+            $sql = "SELECT DISTINCT machine 
+                    FROM " . MAINTENANCE_REQUESTS_TABLE . " WITH (NOLOCK) 
+                    WHERE machine IS NOT NULL 
+                    AND RTRIM(LTRIM(machine)) <> '' 
+                    ORDER BY machine ASC";
+            $stmt = $pdo->query($sql);
+            $machines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'data' => $machines]);
+            break;
+
         default:
             throw new Exception("Invalid Action");
     }

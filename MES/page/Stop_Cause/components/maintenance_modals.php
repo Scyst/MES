@@ -25,16 +25,12 @@
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Machine</label>
-                            <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
+                            <input list="mtMachineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
                             <input type="text" name="request_by" class="form-control" placeholder="ชื่อผู้แจ้ง...">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-muted">ผู้ปิดงาน (Resolver)</label>
-                            <input type="text" name="resolved_by" class="form-control" placeholder="ชื่อช่าง/ผู้รับผิดชอบ...">
                         </div>
                         
                         <div class="col-12 col-md-6">
@@ -48,7 +44,7 @@
                             </select>
                         </div>
 
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-12">
                             <label class="form-label small fw-bold text-muted">Priority</label>
                             <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded mt-1 px-3">
                                 <div class="form-check mb-0">
@@ -346,7 +342,7 @@
 
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Machine</label>
-                            <input list="machineListFilter" name="machine" id="edit_machine" class="form-control" placeholder="Machine..." required>
+                            <input list="mtMachineListFilter" name="machine" id="edit_machine" class="form-control" placeholder="Machine..." required>
                         </div>
                         
                         <div class="col-12 col-md-6">

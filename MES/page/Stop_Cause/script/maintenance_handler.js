@@ -152,7 +152,7 @@ function filterMaintenanceTable() {
 }
 
 // ==========================================
-// 3. ฟังก์ชันดึง Line Master Data
+// 3. ฟังก์ชันดึง Master Data (Line & Machine)
 // ==========================================
 async function loadStandardLines() {
     try {
@@ -160,15 +160,39 @@ async function loadStandardLines() {
         const result = await response.json();
         
         if (result.success) {
+            standardLines = result.data; // เก็บลงตัวแปร Global ด้วย
             const optionsHTML = '<option value="" disabled selected>-- เลือก Line / แผนก --</option>' + 
                                 result.data.map(line => `<option value="${line}">${line}</option>`).join('');
             
-            // ใส่ข้อมูลไว้ที่ช่อง Add ที่เดียวพอ
+            // ✅ อัปเดต Options ให้ทั้งฟอร์ม Add และ Edit
             const addLineEl = document.getElementById('add_line');
+            const editLineEl = document.getElementById('edit_line');
+            
             if (addLineEl) addLineEl.innerHTML = optionsHTML;
+            if (editLineEl) editLineEl.innerHTML = optionsHTML;
         }
     } catch (err) {
         console.error('Failed to load standard lines:', err);
+    }
+}
+
+async function loadMaintenanceMachines() {
+    try {
+        const response = await fetch(`${MT_API_URL}?action=get_machines`);
+        const result = await response.json();
+        
+        if (result.success) {
+            // สร้างหรืออัปเดต Datalist ใหม่
+            let datalist = document.getElementById('mtMachineListFilter');
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = 'mtMachineListFilter';
+                document.body.appendChild(datalist);
+            }
+            datalist.innerHTML = result.data.map(m => `<option value="${m}">`).join('');
+        }
+    } catch (err) {
+        console.error('Failed to load machines:', err);
     }
 }
 
@@ -550,6 +574,7 @@ async function exportMaintenanceExcel() {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     loadStandardLines();
+    loadMaintenanceMachines();
 
     const setButtonLoading = (btn, isLoading) => {
         if (!btn) return;
