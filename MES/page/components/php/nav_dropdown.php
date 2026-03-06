@@ -44,6 +44,12 @@
         </li>
 
         <li>
+            <a class="dropdown-item-icon" href="../management/utilityDashboard.php" title="Utility & Energy Dashboard">
+                <i class="fas fa-bolt fa-fw"></i> <span>Utility & Energy</span>
+            </a>
+        </li>
+
+        <li>
             <a class="dropdown-item-icon" href="../manpower/manpowerUI.php" title="Manpower Management">
                 <i class="fas fa-users-cog fa-fw"></i>
                 <span>Manpower</span>

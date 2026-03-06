@@ -81,7 +81,6 @@ $pageHelpId = "helpModal"; // ID ของ Modal คู่มือ
 
     <?php include 'components/forkliftModals.php'; ?>
     <?php include 'components/helpModal.php'; ?>
-    <?php include_once('../components/php/mobile_menu.php'); ?>
     <script src="script/forklift.js?v=<?php echo filemtime(__DIR__ . '/script/forklift.js'); ?>" defer></script>
     
     </body>

@@ -67,3 +67,5 @@ $backLink = isset($pageBackLink) ? $pageBackLink : '';
         ?>
     </div>
 </header>
+
+<?php include_once __DIR__ . '/mobile_menu.php'; ?>

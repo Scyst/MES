@@ -28,7 +28,6 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
     </div>
 
     <?php include('../components/php/top_header.php'); ?>
-    <?php include('../components/php/mobile_menu.php'); ?>
     <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">

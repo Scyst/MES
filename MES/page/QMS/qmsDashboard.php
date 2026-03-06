@@ -31,8 +31,6 @@ $pageIcon = "fas fa-shield-alt";
 <body class="layout-top-header bg-body-tertiary">
     
     <?php include_once '../components/php/top_header.php'; ?>
-    <?php include_once '../components/php/mobile_menu.php'; ?>
-
     <div class="page-container">
         <main id="main-content">
             
