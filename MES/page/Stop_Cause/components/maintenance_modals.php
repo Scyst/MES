@@ -1,5 +1,5 @@
 <div class="modal fade" id="addMaintenanceModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-dark">
@@ -10,25 +10,34 @@
             <div class="modal-body pt-3">
                 <form id="addMaintenanceForm" enctype="multipart/form-data">
                     <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Line</label>
-                            <input list="lineListFilter" name="line" class="form-control" placeholder="Line..." required style="text-transform: uppercase;">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">วัน/เวลา ที่แจ้งซ่อม (Request Time)</label>
+                            <input type="datetime-local" name="request_date" id="add_request_date" class="form-control" required>
                         </div>
-                        <div class="col-6">
+                        <div class="col-12 col-md-6">
+                            </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">Line</label>
+                            <select name="line" id="add_line" class="form-select form-select-sm" required>
+                                <option value="" disabled selected>-- เลือก Line / แผนก --</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Machine</label>
                             <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
                         </div>
 
-                        <div class="col-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
                             <input type="text" name="request_by" class="form-control" placeholder="ชื่อผู้แจ้ง...">
                         </div>
-                        <div class="col-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">ผู้ปิดงาน (Resolver)</label>
                             <input type="text" name="resolved_by" class="form-control" placeholder="ชื่อช่าง/ผู้รับผิดชอบ...">
                         </div>
                         
-                        <div class="col-12">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Job Type (ประเภทงาน)</label>
                             <select name="job_type" class="form-select form-select-sm" required>
                                 <option value="Repair" selected>ซ่อมแซม (Repair)</option>
@@ -39,7 +48,7 @@
                             </select>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Priority</label>
                             <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded mt-1 px-3">
                                 <div class="form-check mb-0">
@@ -229,7 +238,8 @@
 </div>
 
 <div class="modal fade" id="completeMaintenanceModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered"> <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered"> 
+        <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Complete Job (ปิดงานซ่อม)</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -238,29 +248,27 @@
                 <form id="completeMaintenanceForm" enctype="multipart/form-data">
                     <input type="hidden" name="id" id="complete_req_id">
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">วันที่/เวลา เริ่มซ่อม</label>
-                            <input type="datetime-local" name="started_at" class="form-control" required>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">เวลาเริ่มซ่อม (Start Time)</label>
+                            <input type="datetime-local" name="started_at" id="comp_started_at" class="form-control" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">วันที่/เวลา เสร็จสิ้น</label>
-                            <input type="datetime-local" name="resolved_at" class="form-control" required>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">เวลาซ่อมเสร็จ (End Time)</label>
+                            <input type="datetime-local" name="resolved_at" id="comp_resolved_at" class="form-control" required>
                         </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Work Detail (รายละเอียดการซ่อม)</label>
-                        <textarea name="technician_note" class="form-control" rows="3" placeholder="อธิบายสิ่งที่ทำไป..." required></textarea>
-                    </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Work Detail (รายละเอียดการซ่อม)</label>
+                            <textarea name="technician_note" class="form-control" rows="3" placeholder="อธิบายสิ่งที่ทำไป..." required></textarea>
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Spare Parts (รายการอะไหล่ที่ใช้)</label>
-                        <textarea name="spare_parts_list" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร&#10;- เบรคเกอร์ 1 ตัว"></textarea>
-                    </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Spare Parts (รายการอะไหล่ที่ใช้)</label>
+                            <textarea name="spare_parts_list" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร&#10;- เบรคเกอร์ 1 ตัว"></textarea>
+                        </div>
 
-                    <div class="row">
-                        <div class="col-12 mb-3">
+                        <div class="col-12">
                             <label class="form-label fw-bold text-success">
                                 <i class="fas fa-camera me-1"></i>หลังซ่อม (After)
                             </label>
@@ -281,7 +289,7 @@
 </div>
 
 <div class="modal fade" id="editMaintenanceModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-warning border-bottom-0 pb-2">
                 <h5 class="modal-title fw-bold text-dark">
@@ -293,18 +301,57 @@
                 <form id="editMaintenanceForm">
                     <input type="hidden" name="id" id="edit_req_id">
                     <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Line</label>
-                            <input list="lineListFilter" name="line" class="form-control" placeholder="Line..." required style="text-transform: uppercase;">
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">เวลาแจ้งซ่อม</label>
+                            <input type="datetime-local" name="request_date" id="edit_request_date" class="form-control" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Machine</label>
-                            <input list="machineListFilter" name="machine" class="form-control" placeholder="Machine..." required>
+                        <div class="col-12 col-md-6">
+                            </div>
+                        
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">เวลาเริ่มซ่อม</label>
+                            <input type="datetime-local" name="started_at" id="edit_started_at" class="form-control">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">เวลาซ่อมเสร็จ</label>
+                            <input type="datetime-local" name="resolved_at" id="edit_resolved_at" class="form-control">
                         </div>
                         
-                        <div class="col-12">
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-primary">
+                                <i class="fas fa-stopwatch me-1"></i> เวลาที่ใช้ซ่อมจริง (Actual Repair Time)
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="actual_repair_minutes" id="edit_actual_minutes" class="form-control fw-bold text-primary" placeholder="นาที" min="0">
+                                <span class="input-group-text bg-light">นาที (Minutes)</span>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted">Work Detail (รายละเอียดการซ่อม)</label>
+                            <textarea name="technician_note" id="edit_technician_note" class="form-control" rows="2" placeholder="อธิบายสิ่งที่ทำไป..."></textarea>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted">Spare Parts (รายการอะไหล่ที่ใช้)</label>
+                            <textarea name="spare_parts_list" id="edit_spare_parts" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร..."></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">Line</label>
+                            <select name="line" id="edit_line" class="form-select form-select-sm" required>
+                                <option value="" disabled selected>-- เลือก Line / แผนก --</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted">Machine</label>
+                            <input list="machineListFilter" name="machine" id="edit_machine" class="form-control" placeholder="Machine..." required>
+                        </div>
+                        
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Job Type (ประเภทงาน)</label>
-                            <select name="job_type" class="form-select form-select-sm" required>
+                            <select name="job_type" id="edit_job_type" class="form-select form-select-sm" required>
                                 <option value="Repair">ซ่อมแซม (Repair)</option>
                                 <option value="Development">พัฒนางาน (Development)</option>
                                 <option value="Setup">ตั้งเครื่อง (Setup)</option>
@@ -313,7 +360,7 @@
                             </select>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Priority</label>
                             <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded border mt-1 px-3">
                                 <div class="form-check mb-0">
@@ -332,8 +379,17 @@
                         </div>
 
                         <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
+                            <input type="text" name="request_by" class="form-control" placeholder="ชื่อผู้แจ้ง...">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">ผู้ปิดงาน (Resolver)</label>
+                            <input type="text" name="resolved_by" class="form-control" placeholder="ชื่อช่าง/ผู้รับผิดชอบ...">
+                        </div>
+
+                        <div class="col-12">
                             <label class="form-label small fw-bold text-muted">Issue Description</label>
-                            <textarea name="issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
+                            <textarea name="issue_description" id="edit_issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
                         </div>
                     </div>
                 </form>

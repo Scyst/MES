@@ -75,6 +75,12 @@
                                         
                                         <input type="text" id="mtSearchBox" class="form-control border-start-0 ps-0" placeholder="Search Job, Machine, Issue..." oninput="filterMaintenanceTable()">
                                     </div>
+
+                                    <select id="mtDateFilterType" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="request_date" selected>อิงตามวันแจ้งซ่อม (Request Date)</option>
+                                        <option value="started_at">อิงตามวันเริ่มทำ (Start Date)</option>
+                                        <option value="resolved_at">อิงตามวันจบงาน (Resolve Date)</option>
+                                    </select>
                                     
                                     <div class="d-flex align-items-center gap-1 bg-white border rounded px-2" style="height: 31px;">
                                         <input type="date" id="mtStartDate" class="form-control form-control-sm border-0 p-0" style="max-width: 110px;" onchange="fetchMaintenanceData()">

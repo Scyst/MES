@@ -1,16 +1,35 @@
 const MT_API_URL = 'api/maintenanceManage.php';
 let currentMaintenanceData = [];
+let standardLines = []; // [NEW] ตัวแปร Global เก็บรายชื่อ Line เพื่อแก้ปัญหาการโหลดทับกัน
 
 // ==========================================
-// 1. ฟังก์ชัน Helper สำหรับแปลงวันที่
+// 1. ฟังก์ชัน Helper จัดการวันที่และเวลา
 // ==========================================
-function toLocalISOString(date) {
-    const offset = date.getTimezoneOffset() * 60000;
-    return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+function getNowDateTimeLocal() {
+    const now = new Date();
+    const tzOffset = 7 * 60 * 60 * 1000;
+    const localNow = new Date(now.getTime() + tzOffset);
+    return localNow.toISOString().substring(0, 16); 
+}
+
+function formatForDateTimeLocal(dbDateStr) {
+    if (!dbDateStr) return '';
+    return dbDateStr.replace(' ', 'T').substring(0, 16);
+}
+
+function validateTimeline(reqStr, startStr, endStr) {
+    const reqTime = reqStr ? new Date(reqStr.replace(' ', 'T')).getTime() : 0;
+    const startTime = startStr ? new Date(startStr.replace(' ', 'T')).getTime() : 0;
+    const endTime = endStr ? new Date(endStr.replace(' ', 'T')).getTime() : 0;
+
+    if (startTime && startTime < reqTime) return "❌ เวลาเริ่มซ่อม ต้องไม่เกิดก่อนเวลาที่แจ้งซ่อม";
+    if (endTime && startTime && endTime < startTime) return "❌ เวลาซ่อมเสร็จ ต้องไม่เกิดก่อนเวลาที่เริ่มซ่อม";
+    if (endTime && !startTime) return "❌ กรุณาระบุเวลาเริ่มซ่อมด้วย";
+    return null; 
 }
 
 function formatJobNo(id, dateString) {
-    const reqDateObj = new Date(dateString);
+    const reqDateObj = new Date(dateString.replace(' ', 'T')); 
     const thaiYearShort = (reqDateObj.getFullYear() + 543).toString().slice(-2);
     const monthTwoDigits = (reqDateObj.getMonth() + 1).toString().padStart(2, '0'); 
     const runNo = id.toString().padStart(4, '0');
@@ -18,7 +37,7 @@ function formatJobNo(id, dateString) {
 }
 
 // ==========================================
-// 2. ฟังก์ชันดึงข้อมูล (Fetch Data)
+// 2. ฟังก์ชันเรียกและแสดงผลตาราง
 // ==========================================
 async function fetchMaintenanceData() {
     const statusEl = document.getElementById('mtFilterStatus');
@@ -26,6 +45,7 @@ async function fetchMaintenanceData() {
     
     const status = statusEl ? statusEl.value : 'Active';
     const line = lineEl ? lineEl.value : '';
+    const dateType = document.getElementById('mtDateFilterType')?.value || 'request_date'; 
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
     
@@ -33,21 +53,16 @@ async function fetchMaintenanceData() {
 
     showSpinner();
     try {
-        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&startDate=${startDate}&endDate=${endDate}`);
+        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&dateType=${dateType}&startDate=${startDate}&endDate=${endDate}`);
         const result = await response.json();
         
         if (result.success) {
             currentMaintenanceData = result.data; 
-            
-            // ล้างช่อง Search ก่อนโหลดข้อมูลใหม่
             const searchBox = document.getElementById('mtSearchBox');
             if(searchBox) searchBox.value = '';
-            
-            // เรียกฟังก์ชันวาดตาราง
             renderMaintenanceTable(currentMaintenanceData);
         }
     } catch(err) {
-        console.error(err);
         showToast('Failed to load maintenance data', '#dc3545');
     } finally {
         hideSpinner();
@@ -77,8 +92,6 @@ function renderMaintenanceTable(dataList) {
             else if(jobType === 'Other') typeBadgeColor = 'bg-dark';
 
             const reqName = row.requester_name || row.request_by;
-            
-            // [NEW] แปลงเลข Job
             const jobNo = formatJobNo(row.id, row.request_date);
 
             const tr = document.createElement('tr');
@@ -89,11 +102,10 @@ function renderMaintenanceTable(dataList) {
                 }
             };
 
-            // [NEW] เพิ่มคอลัมน์ <td class="font-monospace text-primary">...
             tr.innerHTML = `
                 <td class="ps-3 text-center">${statusBadge}</td>
                 <td class="text-center text-primary fw-bold font-monospace small">${jobNo}</td>
-                <td class="small text-nowrap text-center">${new Date(row.request_date).toLocaleString('th-TH')}</td>
+                <td class="small text-nowrap text-center">${new Date(row.request_date.replace(' ', 'T')).toLocaleString('th-TH')}</td>
                 <td class="text-center">
                     <div class="fw-bold text-body">${row.line}</div>
                     <small class="text-muted">${row.machine}</small>
@@ -109,21 +121,17 @@ function renderMaintenanceTable(dataList) {
             tbody.appendChild(tr);
         });
     } else {
-        // [FIXED] เพิ่ม colspan เป็น 8 เพราะมีคอลัมน์เพิ่มมา
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-2x mb-2 opacity-25"></i><br>No maintenance requests found.</td></tr>';
     }
 }
 
 function filterMaintenanceTable() {
     const searchInput = document.getElementById('mtSearchBox')?.value.toLowerCase().trim() || '';
-    
-    // ถ้าพิมพ์ว่างๆ ให้โชว์ข้อมูลทั้งหมด
     if (searchInput === '') {
         renderMaintenanceTable(currentMaintenanceData);
         return;
     }
 
-    // ค้นหาทุกๆ Column จาก Array หลัก
     const filteredData = currentMaintenanceData.filter(row => {
         const jobNo = formatJobNo(row.id, row.request_date).toLowerCase();
         const line = (row.line || '').toLowerCase();
@@ -134,49 +142,39 @@ function filterMaintenanceTable() {
         const jobType = (row.job_type || '').toLowerCase();
         const priority = (row.priority || '').toLowerCase();
 
-        return jobNo.includes(searchInput) ||
-               line.includes(searchInput) ||
-               machine.includes(searchInput) ||
-               issue.includes(searchInput) ||
-               techNote.includes(searchInput) ||
-               reqName.includes(searchInput) ||
-               jobType.includes(searchInput) ||
-               priority.includes(searchInput);
+        return jobNo.includes(searchInput) || line.includes(searchInput) ||
+               machine.includes(searchInput) || issue.includes(searchInput) ||
+               techNote.includes(searchInput) || reqName.includes(searchInput) ||
+               jobType.includes(searchInput) || priority.includes(searchInput);
     });
 
     renderMaintenanceTable(filteredData);
 }
 
-async function resendEmail(id) {
-    if(!confirm('ต้องการส่งอีเมลรายงานซ้ำใช่หรือไม่?')) return;
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    showSpinner();
+// ==========================================
+// 3. ฟังก์ชันดึง Line Master Data
+// ==========================================
+async function loadStandardLines() {
     try {
-        const response = await fetch(`${MT_API_URL}?action=resend_email`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({ id: id })
-        });
+        const response = await fetch(`${MT_API_URL}?action=get_standard_lines`);
         const result = await response.json();
         
         if (result.success) {
-            showToast('ส่งอีเมลเรียบร้อยแล้ว', '#28a745');
-        } else {
-            showToast(result.message, '#dc3545');
+            const optionsHTML = '<option value="" disabled selected>-- เลือก Line / แผนก --</option>' + 
+                                result.data.map(line => `<option value="${line}">${line}</option>`).join('');
+            
+            // ใส่ข้อมูลไว้ที่ช่อง Add ที่เดียวพอ
+            const addLineEl = document.getElementById('add_line');
+            if (addLineEl) addLineEl.innerHTML = optionsHTML;
         }
-    } catch (error) {
-        console.error(error);
-        showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
-    } finally {
-        hideSpinner();
+    } catch (err) {
+        console.error('Failed to load standard lines:', err);
     }
 }
 
+// ==========================================
+// 4. ฟังก์ชันการแสดง Modal จัดการข้อมูล (View / Edit / Complete)
+// ==========================================
 function viewMaintenanceDetails(id) {
     const data = currentMaintenanceData.find(item => item.id == id);
     if (!data) return;
@@ -186,26 +184,15 @@ function viewMaintenanceDetails(id) {
         if(el) el.textContent = val || '-';
     };
 
-    const reqDateObj = new Date(data.request_date);
-    const thaiYearShort = (reqDateObj.getFullYear() + 543).toString().slice(-2);
-    const monthTwoDigits = (reqDateObj.getMonth() + 1).toString().padStart(2, '0'); 
-    const runNo = data.id.toString().padStart(4, '0');
-    const formattedJobNo = `MNT-${thaiYearShort}${monthTwoDigits}-${runNo}`;
-    
-    // 1. Fill Text Data
     setText('view_machine_title', data.machine);
     setText('view_line_subtitle', data.line);
     setText('view_issue', data.issue_description);
-    
-    // [NEW] นำค่า job_type ไปแสดงใน Modal View
     setText('view_job_type', data.job_type || 'Repair');
     
-    const reqName = data.requester_name || data.request_by;
-    setText('view_requested_by', reqName);
-    setText('view_request_date', new Date(data.request_date).toLocaleString('th-TH'));
-    setText('view_job_id', formattedJobNo);
+    setText('view_requested_by', data.requester_name || data.request_by);
+    setText('view_request_date', new Date(data.request_date.replace(' ', 'T')).toLocaleString('th-TH'));
+    setText('view_job_id', formatJobNo(data.id, data.request_date));
 
-    // 2. Status Badge & Priority
     const badge = document.getElementById('view_status_badge');
     if (badge) {
         badge.textContent = data.status;
@@ -222,27 +209,18 @@ function viewMaintenanceDetails(id) {
         priorityEl.className = data.priority === 'Critical' ? 'text-danger fw-bold' : (data.priority === 'Urgent' ? 'text-warning fw-bold' : 'text-success fw-bold'); 
     }
 
-    // 3. Image Before Logic
     const imgBefore = document.getElementById('view_photo_before');
     const noImgBefore = document.getElementById('no_photo_before');
-
-    if (imgBefore) {
-        imgBefore.classList.add('d-none');
-        imgBefore.style.display = ''; 
-    }
+    if (imgBefore) { imgBefore.classList.add('d-none'); imgBefore.style.display = ''; }
     if (noImgBefore) noImgBefore.classList.add('d-none');
 
     if (data.photo_before_path) {
-        if(imgBefore) {
-            imgBefore.src = data.photo_before_path;
-            imgBefore.classList.remove('d-none'); 
-        }
+        if(imgBefore) { imgBefore.src = data.photo_before_path; imgBefore.classList.remove('d-none'); }
         if(noImgBefore) noImgBefore.classList.add('d-none'); 
     } else {
         if(noImgBefore) noImgBefore.classList.remove('d-none');
     }
 
-    // 4. Buttons & Completion Section Logic
     const completionSection = document.getElementById('view_completion_section');
     const btnStart = document.getElementById('btn_start_job');
     const btnComplete = document.getElementById('btn_complete_job');
@@ -250,7 +228,7 @@ function viewMaintenanceDetails(id) {
 
     const btnEdit = document.getElementById('btn_edit_job');
     if(btnEdit) {
-        btnEdit.classList.remove('d-none'); // ให้ปุ่มโชว์เสมอ ไม่ว่างานจะเสร็จหรือไม่
+        btnEdit.classList.remove('d-none');
         btnEdit.onclick = () => openEditModal(id);
     }
 
@@ -262,20 +240,18 @@ function viewMaintenanceDetails(id) {
     if (data.status === 'Pending') {
         if(btnStart) {
             btnStart.classList.remove('d-none');
-            btnStart.onclick = null; 
             btnStart.onclick = () => {
                  bootstrap.Modal.getInstance(document.getElementById('viewMaintenanceModal')).hide();
-                 updateMtStatus(id, 'Pending');
+                 updateMtStatus(id, 'Pending'); 
             };
         }
     } 
     else if (data.status === 'In Progress') {
         if(btnComplete) {
             btnComplete.classList.remove('d-none');
-            btnComplete.onclick = null;
             btnComplete.onclick = () => {
                  bootstrap.Modal.getInstance(document.getElementById('viewMaintenanceModal')).hide();
-                 openCompleteModal(id);
+                 setTimeout(() => openCompleteModal(id), 300); // 💡 Delay เล็กน้อยกัน Modal ทับกัน
             };
         }
     } 
@@ -286,30 +262,18 @@ function viewMaintenanceDetails(id) {
         setText('view_tech_note', data.technician_note);
         setText('view_spare_parts', data.spare_parts_list);
         
-        const startStr = data.started_at ? new Date(data.started_at).toLocaleString('th-TH') : '-';
-        const endStr = data.resolved_at ? new Date(data.resolved_at).toLocaleString('th-TH') : '-';
-        
-        setText('view_started_at', startStr);
-        setText('view_resolved_at', endStr);
-        
-        const techName = data.resolver_name || data.resolved_by;
-        setText('view_resolved_by', techName);
+        setText('view_started_at', data.started_at ? new Date(data.started_at.replace(' ', 'T')).toLocaleString('th-TH') : '-');
+        setText('view_resolved_at', data.resolved_at ? new Date(data.resolved_at.replace(' ', 'T')).toLocaleString('th-TH') : '-');
+        setText('view_resolved_by', data.resolver_name || data.resolved_by);
 
-        // Image After Logic 
         const imgAfter = document.getElementById('view_photo_after');
         const noImgAfter = document.getElementById('no_photo_after');
 
-        if (imgAfter) {
-            imgAfter.classList.add('d-none');
-            imgAfter.style.display = '';
-        }
+        if (imgAfter) { imgAfter.classList.add('d-none'); imgAfter.style.display = ''; }
         if (noImgAfter) noImgAfter.classList.add('d-none');
 
         if (data.photo_after_path) {
-            if(imgAfter) {
-                imgAfter.src = data.photo_after_path;
-                imgAfter.classList.remove('d-none');
-            }
+            if(imgAfter) { imgAfter.src = data.photo_after_path; imgAfter.classList.remove('d-none'); }
             if(noImgAfter) noImgAfter.classList.add('d-none');
         } else {
             if(noImgAfter) noImgAfter.classList.remove('d-none');
@@ -319,87 +283,133 @@ function viewMaintenanceDetails(id) {
         if(btnPrint) btnPrint.href = `print_job_order.php?id=${id}`;
         
         const btnEmail = document.getElementById('btn_resend_email');
-        if(btnEmail) {
-            btnEmail.onclick = null;
-            btnEmail.onclick = () => resendEmail(id);
-        }
+        if(btnEmail) btnEmail.onclick = () => resendEmail(id);
     }
 
     showBootstrapModal('viewMaintenanceModal');
 }
 
-// ==========================================
-// 7. ฟังก์ชันเปิด Modal แก้ไขข้อมูล (Edit Job)
-// ==========================================
-function openEditModal(id) {
-    const data = currentMaintenanceData.find(item => item.id == id);
-    if (!data) return;
+window.openCompleteModal = function(id) {
+    const item = currentMaintenanceData.find(d => d.id == id);
+    if (!item) return;
 
-    // เติมค่าเดิมลงในฟอร์ม
-    document.getElementById('edit_req_id').value = data.id;
-    document.querySelector('#editMaintenanceForm input[name="line"]').value = data.line;
-    document.querySelector('#editMaintenanceForm input[name="machine"]').value = data.machine;
-    document.querySelector('#editMaintenanceForm select[name="job_type"]').value = data.job_type || 'Repair';
-    document.querySelector('#editMaintenanceForm textarea[name="issue_description"]').value = data.issue_description;
+    document.getElementById('complete_req_id').value = item.id;
+    document.getElementById('completeMaintenanceForm').dataset.reqDate = item.request_date;
+
+    document.getElementById('comp_started_at').value = item.started_at 
+        ? formatForDateTimeLocal(item.started_at) 
+        : getNowDateTimeLocal();
     
-    // [NEW] ดึงชื่อที่ประมวลผลแล้วมาให้แก้ไข (ถ้าไม่มีให้ว่างไว้)
-    const reqName = data.requester_name || data.request_by || '';
-    const resName = data.resolver_name || data.resolved_by || '';
+    document.getElementById('comp_resolved_at').value = getNowDateTimeLocal();
+    document.getElementById('comp_resolved_at')?.dispatchEvent(new Event('change'));
+
+    showBootstrapModal('completeMaintenanceModal');
+};
+
+window.openEditModal = function(id) {
+    const item = currentMaintenanceData.find(d => d.id == id);
+    if (!item) return;
+
+    // 1. กำหนดค่า ID
+    const reqIdEl = document.getElementById('edit_req_id');
+    if (reqIdEl) reqIdEl.value = item.id;
     
+    // 2. จัดการ Line (แค่ Select ค่า ไม่ต้องล้าง HTML ทิ้งแล้ว!)
+    const editLineEl = document.getElementById('edit_line');
+    if (editLineEl && item.line) {
+        let foundInList = false;
+        const currentOptions = editLineEl.querySelectorAll('option');
+        
+        // ค้นหาว่ามีชื่อไลน์นี้ (เช่น 'SPOT') ใน Dropdown ที่โหลดมาตอนแรกไหม
+        for (let i = 0; i < currentOptions.length; i++) {
+            if (currentOptions[i].value === item.line) {
+                foundInList = true;
+                break;
+            }
+        }
+
+        // ถ้าหาไม่เจอ (เป็นคำผิด หรือข้อมูลเก่า) ให้เพิ่มเข้าไปดื้อๆ เลย
+        if (!foundInList) {
+            const opt = document.createElement('option');
+            opt.value = item.line;
+            opt.textContent = item.line + ' (ข้อมูลเก่า)';
+            editLineEl.appendChild(opt);
+        }
+
+        // จับมัน Select ค่าให้ตรงกับ Database
+        editLineEl.value = item.line;
+    }
+
+    // 3. เติมข้อมูลทั่วไป (ป้องกัน null)
+    const setVal = (elId, val) => {
+        const el = document.getElementById(elId);
+        if (el) el.value = val || '';
+    };
+
+    setVal('edit_machine', item.machine);
+    setVal('edit_issue_description', item.issue_description);
+    setVal('edit_job_type', item.job_type || 'Repair');
+    setVal('edit_technician_note', item.technician_note);
+    setVal('edit_spare_parts', item.spare_parts_list);
+
+    // 4. จัดการเรื่องคนแจ้ง/คนซ่อม 
     const reqInput = document.querySelector('#editMaintenanceForm input[name="request_by"]');
     const resInput = document.querySelector('#editMaintenanceForm input[name="resolved_by"]');
     
-    if(reqInput) reqInput.value = reqName;
-    if(resInput) resInput.value = resName;
+    if (reqInput) reqInput.value = item.requester_name ?? item.request_by ?? '';
+    if (resInput) resInput.value = item.resolver_name ?? item.resolved_by ?? '';
     
-    // เติมค่า Radio Button
-    document.querySelectorAll('#editMaintenanceForm input[name="priority"]').forEach(radio => {
-        if(radio.value === data.priority) radio.checked = true;
-    });
+    // 5. Priority & เวลา
+    const priorityValue = item.priority || 'Normal';
+    const prioRadio = document.getElementById(`editPrio${priorityValue}`);
+    if (prioRadio) prioRadio.checked = true;
 
-    // ปิดหน้า View แล้วเปิดหน้า Edit
-    bootstrap.Modal.getInstance(document.getElementById('viewMaintenanceModal')).hide();
-    showBootstrapModal('editMaintenanceModal');
-}
+    setVal('edit_request_date', formatForDateTimeLocal(item.request_date));
+    setVal('edit_started_at', formatForDateTimeLocal(item.started_at));
+    setVal('edit_resolved_at', formatForDateTimeLocal(item.resolved_at));
 
-// ==========================================
-// 3. ฟังก์ชันเปิด Modal ปิดงาน (Complete Job)
-// ==========================================
-function openCompleteModal(id) {
-    const idInput = document.getElementById('complete_req_id');
-    if (idInput) idInput.value = id;
-    
-    const jobData = currentMaintenanceData.find(j => j.id == id);
-    const now = new Date();
-    const endISO = toLocalISOString(now);
-    
-    let startISO = endISO;
-    if (jobData && jobData.started_at) {
-        startISO = jobData.started_at.replace(' ', 'T').substring(0, 16);
+    // 6. เวลาซ่อมจริง (Actual Repair Minutes)
+    const editMinutes = document.getElementById('edit_actual_minutes');
+    if (editMinutes) {
+        if (item.actual_repair_minutes !== null && item.actual_repair_minutes !== undefined) {
+            editMinutes.value = item.actual_repair_minutes; 
+        } else {
+            editMinutes.value = ''; 
+            setTimeout(() => {
+                const resolvedInput = document.getElementById('edit_resolved_at');
+                if (resolvedInput) resolvedInput.dispatchEvent(new Event('change'));
+            }, 100);
+        }
     }
 
-    const startInput = document.querySelector('#completeMaintenanceForm input[name="started_at"]');
-    const endInput = document.querySelector('#completeMaintenanceForm input[name="resolved_at"]');
-
-    if (startInput) startInput.value = startISO;
-    if (endInput) endInput.value = endISO;
-
-    showBootstrapModal('completeMaintenanceModal');
-}
+    // 7. ปิดอันเก่า เปิดอันใหม่
+    const viewModalEl = document.getElementById('viewMaintenanceModal');
+    if (viewModalEl) {
+        const viewModal = bootstrap.Modal.getInstance(viewModalEl);
+        if (viewModal) viewModal.hide();
+    }
+    
+    setTimeout(() => {
+        const editModalEl = document.getElementById('editMaintenanceModal');
+        if (editModalEl) {
+            const editModal = bootstrap.Modal.getInstance(editModalEl) || new bootstrap.Modal(editModalEl);
+            editModal.show();
+        }
+    }, 400); 
+};
 
 // ==========================================
-// 4. ฟังก์ชันหลัก: Update Status
+// 5. API Actions (Quick Start & Email)
 // ==========================================
 async function updateMtStatus(id, currentStatus) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     if (currentStatus === 'Pending') {
-        if (!confirm('Start repair job?')) return;
+        if (!confirm('ยืนยันรับงาน (Start Repair)?')) return;
 
         showSpinner();
         try {
-            const now = new Date();
-            const startISO = toLocalISOString(now);
+            const startISO = getNowDateTimeLocal();
             const response = await fetch(`${MT_API_URL}?action=update_status`, {
                 method: 'POST',
                 headers: { 
@@ -416,7 +426,7 @@ async function updateMtStatus(id, currentStatus) {
             
             const res = await response.json();
             if (res.success) {
-                showToast('เริ่มงานเรียบร้อย (In Progress)', '#28a745');
+                showToast('รับงานเรียบร้อย (In Progress)', '#28a745');
                 fetchMaintenanceData(); 
             } else {
                 showToast(res.message, '#dc3545');
@@ -427,27 +437,49 @@ async function updateMtStatus(id, currentStatus) {
         } finally {
             hideSpinner();
         }
-    } 
-    else if (currentStatus === 'In Progress') {
-        openCompleteModal(id);
+    }
+}
+
+async function resendEmail(id) {
+    if(!confirm('ต้องการส่งอีเมลรายงานซ้ำใช่หรือไม่?')) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    showSpinner();
+    try {
+        const response = await fetch(`${MT_API_URL}?action=resend_email`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) showToast('ส่งอีเมลเรียบร้อยแล้ว', '#28a745');
+        else showToast(result.message, '#dc3545');
+    } catch (error) {
+        showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
+    } finally {
+        hideSpinner();
     }
 }
 
 // ==========================================
-// 6. Maintenance Summary & Export
+// 6. Dashboard Summary & Export
 // ==========================================
 async function fetchMaintenanceSummary() {
+    const dateType = document.getElementById('mtDateFilterType')?.value || 'request_date'; 
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
     const line = document.getElementById('filterLineMt')?.value || '';
 
     try {
-        const response = await fetch(`${MT_API_URL}?action=get_maintenance_summary&startDate=${startDate}&endDate=${endDate}&line=${line}`);
+        const response = await fetch(`${MT_API_URL}?action=get_maintenance_summary&line=${line}&dateType=${dateType}&startDate=${startDate}&endDate=${endDate}`);
         const result = await response.json();
 
         if (result.success) {
             const s = result.summary;
-            
             document.getElementById('sumTotal').textContent = s.Total_Jobs || 0;
             document.getElementById('sumCompleted').textContent = s.Completed_Jobs || 0;
             document.getElementById('sumPending').textContent = s.Pending_Jobs || 0;
@@ -461,32 +493,32 @@ async function fetchMaintenanceSummary() {
 }
 
 async function exportMaintenanceExcel() {
+    const status = document.getElementById('mtFilterStatus')?.value || '';
+    const line = document.getElementById('filterLineMt')?.value || '';
+    const dateType = document.getElementById('mtDateFilterType')?.value || 'request_date'; 
     const startDate = document.getElementById('mtStartDate')?.value || '';
     const endDate = document.getElementById('mtEndDate')?.value || '';
-    const line = document.getElementById('filterLineMt')?.value || '';
-    const status = document.getElementById('mtFilterStatus')?.value || '';
 
     showSpinner();
     try {
-        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&startDate=${startDate}&endDate=${endDate}`);
+        const response = await fetch(`${MT_API_URL}?action=get_requests&status=${status}&line=${line}&dateType=${dateType}&startDate=${startDate}&endDate=${endDate}`);
         const result = await response.json();
-
         if (!result.success || result.data.length === 0) {
             showToast("No data to export", "#ffc107");
             return;
         }
 
         const exportData = result.data.map(item => ({
-            "Job No": `MNT-${item.id}`,
-            "Job Type": item.job_type || 'Repair', // [NEW] ส่งค่า Job Type ออก Excel
+            "Job No": formatJobNo(item.id, item.request_date),
+            "Job Type": item.job_type || 'Repair',
             "Status": item.status,
             "Request Date": item.request_date,
             "Line": item.line,
             "Machine": item.machine,
             "Priority": item.priority,
             "Issue": item.issue_description,
-            "Requester": item.requester_name,
-            "Technician": item.resolver_name || '',
+            "Requester": item.requester_name || item.request_by,
+            "Technician": item.resolver_name || item.resolved_by || '',
             "Started At": item.started_at || '',
             "Finished At": item.resolved_at || '',
             "Tech Note": item.technician_note || '',
@@ -507,7 +539,6 @@ async function exportMaintenanceExcel() {
         XLSX.writeFile(wb, `Maintenance_Report_${startDate}_to_${endDate}.xlsx`);
 
     } catch (err) {
-        console.error(err);
         showToast("Export Failed", "#dc3545");
     } finally {
         hideSpinner();
@@ -515,52 +546,84 @@ async function exportMaintenanceExcel() {
 }
 
 // ==========================================
-// 5. DOMContentLoaded: Event Listeners
+// 7. DOMContentLoaded: ผูก Event Listeners ทั้งหมด
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    loadStandardLines();
+
+    const setButtonLoading = (btn, isLoading) => {
+        if (!btn) return;
+        if (isLoading) {
+            btn.dataset.originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+        } else {
+            btn.disabled = false;
+            if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+        }
+    };
+
+    const addModalEl = document.getElementById('addMaintenanceModal');
+    if (addModalEl) {
+        addModalEl.addEventListener('show.bs.modal', () => {
+            document.getElementById('add_request_date').value = getNowDateTimeLocal();
+        });
+    }
+
     const addMtForm = document.getElementById('addMaintenanceForm');
     if (addMtForm) {
         addMtForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = addMtForm.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
+
             const formData = new FormData(addMtForm);
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
             showSpinner();
             try {
                 const response = await fetch(`${MT_API_URL}?action=add_request`, {
                     method: 'POST',
-                    headers: { 
-                        'X-CSRF-TOKEN': csrfToken 
-                    },
+                    headers: { 'X-CSRF-TOKEN': csrfToken },
                     body: formData 
                 });
                 
                 const res = await response.json();
                 if (res.success) {
                     showToast('ส่งใบแจ้งซ่อมเรียบร้อย', '#28a745');
-                    
-                    const modalEl = document.getElementById('addMaintenanceModal');
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    modal.hide();
+                    bootstrap.Modal.getInstance(document.getElementById('addMaintenanceModal')).hide();
                     addMtForm.reset();
-                    
                     fetchMaintenanceData();
                 } else {
                     showToast(res.message, '#dc3545');
                 }
             } catch (err) {
-                console.error(err);
                 showToast('เกิดข้อผิดพลาดในการส่งข้อมูล', '#dc3545');
             } finally {
                 hideSpinner();
+                setButtonLoading(submitBtn, false);
             }
         });
     }
 
-    // --- B. จัดการ Form ปิดงานซ่อม (Complete Job) ---
     const completeForm = document.getElementById('completeMaintenanceForm');
     if (completeForm) {
         completeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const reqVal = completeForm.dataset.reqDate; 
+            const startVal = document.getElementById('comp_started_at').value;
+            const endVal = document.getElementById('comp_resolved_at').value;
+            
+            const errorMsg = validateTimeline(reqVal, startVal, endVal);
+            if (errorMsg) {
+                showToast(errorMsg, '#dc3545');
+                return; 
+            }
+
+            const submitBtn = completeForm.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
+
             const formData = new FormData(completeForm);
             formData.append('action', 'complete_job');
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -576,32 +639,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (res.success) {
                     showToast('ปิดงานซ่อมเสร็จสมบูรณ์', '#28a745');
-                    
-                    const modalEl = document.getElementById('completeMaintenanceModal');
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                    modalInstance.hide();
+                    bootstrap.Modal.getInstance(document.getElementById('completeMaintenanceModal')).hide();
                     completeForm.reset();
-                    
                     fetchMaintenanceData();
                 } else {
-                    showToast(res.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์', '#dc3545');
+                    showToast(res.message, '#dc3545');
                 }
             } catch (err) {
-                console.error('Upload Error:', err);
-                showToast('เกิดข้อผิดพลาดในการส่งข้อมูล (ตรวจสอบขนาดไฟล์รูป)', '#dc3545');
+                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
             } finally {
                 hideSpinner();
+                setButtonLoading(submitBtn, false);
             }
         });
     }
 
-    // --- D. จัดการ Form แก้ไขข้อมูล (Edit Job) ---
     const editMtForm = document.getElementById('editMaintenanceForm');
     if (editMtForm) {
         editMtForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const reqVal = document.getElementById('edit_request_date').value;
+            const startVal = document.getElementById('edit_started_at').value;
+            const endVal = document.getElementById('edit_resolved_at').value;
+            
+            const errorMsg = validateTimeline(reqVal, startVal, endVal);
+            if (errorMsg) {
+                showToast(errorMsg, '#dc3545');
+                return;
+            }
+
+            const submitBtn = editMtForm.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
+
             const formData = new FormData(editMtForm);
-            formData.append('action', 'edit_request'); // ส่ง Action ไปให้ Backend
+            formData.append('action', 'edit_request'); 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             
             showSpinner();
@@ -616,32 +688,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (res.success) {
                     showToast('อัปเดตข้อมูลเรียบร้อย', '#28a745');
                     bootstrap.Modal.getInstance(document.getElementById('editMaintenanceModal')).hide();
-                    
-                    // รีเฟรชข้อมูลในตารางใหม่
                     fetchMaintenanceData();
                 } else {
-                    showToast(res.message || 'เกิดข้อผิดพลาด', '#dc3545');
+                    showToast(res.message, '#dc3545');
                 }
             } catch (err) {
-                console.error('Edit Error:', err);
                 showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
             } finally {
                 hideSpinner();
+                setButtonLoading(submitBtn, false);
             }
         });
     }
 
-    // --- C. ตรวจจับการเปลี่ยน Tab ---
     const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
     tabEls.forEach(tab => {
         tab.addEventListener('shown.bs.tab', event => {
-            if (event.target.id === 'maintenance-tab') {
-                fetchMaintenanceData();
-            }
+            if (event.target.id === 'maintenance-tab') fetchMaintenanceData();
         })
     });
+
+    const calculateDiffMinutes = (startStr, endStr) => {
+        if (!startStr || !endStr) return '';
+        const start = new Date(startStr.replace(' ', 'T')).getTime();
+        const end = new Date(endStr.replace(' ', 'T')).getTime();
+        if (end > start) {
+            return Math.floor((end - start) / 60000);
+        }
+        return 0;
+    };
+
+    const compStart = document.getElementById('comp_started_at');
+    const compEnd = document.getElementById('comp_resolved_at');
+    const compMinutes = document.getElementById('comp_actual_minutes');
+
+    const updateCompMinutes = () => {
+        const diff = calculateDiffMinutes(compStart.value, compEnd.value);
+        if (diff !== '' && compMinutes) compMinutes.value = diff;
+    };
+    if (compStart) compStart.addEventListener('change', updateCompMinutes);
+    if (compEnd) compEnd.addEventListener('change', updateCompMinutes);
+
+    const editStart = document.getElementById('edit_started_at');
+    const editEnd = document.getElementById('edit_resolved_at');
+    const editMinutes = document.getElementById('edit_actual_minutes');
+
+    const updateEditMinutes = () => {
+        const diff = calculateDiffMinutes(editStart.value, editEnd.value);
+        if (diff !== '' && editMinutes) editMinutes.value = diff;
+    };
+    if (editStart) editStart.addEventListener('change', updateEditMinutes);
+    if (editEnd) editEnd.addEventListener('change', updateEditMinutes);
     
-    // [NEW] ผูก Event เข้ากับ mtStartDate แทน filterStartDate
     document.getElementById('mtStartDate')?.addEventListener('change', fetchMaintenanceData);
     document.getElementById('mtEndDate')?.addEventListener('change', fetchMaintenanceData);
+    document.getElementById('mtFilterStatus')?.addEventListener('change', fetchMaintenanceData);
+    document.getElementById('mtDateFilterType')?.addEventListener('change', fetchMaintenanceData);
 });

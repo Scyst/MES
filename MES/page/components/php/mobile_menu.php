@@ -50,7 +50,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
 
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../management/utilityDashboard.php">
-                    <i class="fas fa-bolt fa-fw me-3 text-warning"></i>
+                    <i class="fas fa-bolt fa-fw me-3"></i>
                     <span>Utility & Energy</span>
                 </a>
             </li>
