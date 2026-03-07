@@ -261,13 +261,31 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                     <div class="card border-0 shadow-sm flex-grow-1 overflow-hidden d-flex flex-column">
                         
                         <div class="card-header bg-dark text-white border-bottom py-3 d-flex justify-content-between align-items-center flex-shrink-0">
-                            <h5 class="card-title mb-0 fw-bold">
-                                <i class="fas fa-chess-king me-2 text-warning"></i> Executive P&L Summary
-                            </h5>
+                            <div class="d-flex align-items-center gap-3">
+                                <h5 class="card-title mb-0 fw-bold">
+                                    <i class="fas fa-chess-king me-2 text-warning"></i> Executive P&L Summary
+                                </h5>
+                                <div class="btn-group btn-group-sm shadow-sm" role="group">
+                                    <input type="radio" class="btn-check" name="execViewToggle" id="execYearly" autocomplete="off" checked onchange="changeExecView('yearly')">
+                                    <label class="btn btn-outline-light fw-bold px-3" for="execYearly">Yearly View</label>
+
+                                    <input type="radio" class="btn-check" name="execViewToggle" id="execDaily" autocomplete="off" onchange="changeExecView('daily')">
+                                    <label class="btn btn-outline-light fw-bold px-3" for="execDaily">Daily View</label>
+                                </div>
+                            </div>
+
                             <div class="d-flex gap-2 align-items-center">
-                                <label class="fw-bold small text-light mb-0">Select Year:</label>
+                                <label class="fw-bold small text-light mb-0">Period:</label>
+                                
                                 <input type="number" id="execYear" class="form-control form-control-sm text-center fw-bold text-dark shadow-sm" 
                                        style="width: 100px;" value="<?php echo date('Y'); ?>" onchange="loadExecutiveData()">
+                                
+                                <input type="month" id="execMonth" class="form-control form-control-sm text-center fw-bold text-info shadow-sm d-none" 
+                                       style="width: 150px;" value="<?php echo date('Y-m'); ?>" onchange="loadExecutiveData()">
+                                
+                                <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold" onclick="exportExecutiveExcel()">
+                                    <i class="fas fa-file-excel me-1"></i> Export
+                                </button>
                             </div>
                         </div>
 

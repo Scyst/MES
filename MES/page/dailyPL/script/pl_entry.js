@@ -89,7 +89,7 @@ function switchMode(mode) {
     const viewExec = document.getElementById('view-executive');
     if (viewExec) viewExec.classList.remove('active');
 
-    // 🔥 2. เคลียร์คลาส Active ออกจาก View ทุกหน้า
+    // 2. เคลียร์คลาส Active ออกจาก View ทุกหน้า
     document.getElementById('view-table').classList.remove('active');
     document.getElementById('view-dashboard').classList.remove('active');
     const viewStatement = document.getElementById('view-statement');
@@ -123,9 +123,14 @@ function switchMode(mode) {
         document.getElementById('view-table').classList.add('active');
         loadEntryData();
 
-    } else if (mode === 'statement') { // 🔥 [NEW]
-        if (viewStatement) viewStatement.classList.add('active'); // โชว์หน้า Statement
+    } else if (mode === 'statement') {
+        if (viewStatement) viewStatement.classList.add('active');
         loadStatementData();
+
+    } else if (mode === 'executive') {
+        if (viewExec) viewExec.classList.add('active');
+        document.getElementById('view-executive').style.display = 'flex';
+        loadExecutiveData();
     }
 }
 
@@ -1550,4 +1555,270 @@ function renderStatementTableDaily(data, year, month) {
     });
 
     tbody.innerHTML = html;
+}
+
+// ========================================================
+// [NEW] EXECUTIVE SUMMARY LOGIC (Custom Mapping + Daily/Yearly)
+// ========================================================
+let currentExecMode = 'yearly';
+
+function changeExecView(view) {
+    currentExecMode = view;
+    if (view === 'yearly') {
+        document.getElementById('execYear').classList.remove('d-none');
+        document.getElementById('execMonth').classList.add('d-none');
+    } else {
+        document.getElementById('execYear').classList.add('d-none');
+        document.getElementById('execMonth').classList.remove('d-none');
+    }
+    loadExecutiveData();
+}
+
+async function loadExecutiveData() {
+    const tbody = document.getElementById('execTableBody');
+    const section = document.getElementById('sectionFilter').value;
+
+    tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-dark"></div></td></tr>';
+
+    try {
+        let res, json;
+        if (currentExecMode === 'yearly') {
+            const year = document.getElementById('execYear').value;
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${section}`);
+            json = await res.json();
+            if (json.success) {
+                calculateStatementFormulas(json.data, 'yearly');
+                renderExecutiveTableYearly(json.data, year);
+            }
+        } else {
+            const monthStr = document.getElementById('execMonth').value;
+            const [year, month] = monthStr.split('-');
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${section}`);
+            json = await res.json();
+            if (json.success) {
+                calculateStatementFormulas(json.data, 'daily');
+                renderExecutiveTableDaily(json.data, year, month);
+            }
+        }
+        
+        if (!json.success) tbody.innerHTML = `<tr><td class="text-center text-danger py-5">${json.message}</td></tr>`;
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td class="text-center text-danger py-5">Connection Error</td></tr>';
+    }
+}
+
+// --------------------------------------------------------
+// โครงสร้าง Template ที่ใช้เหมือนกันทั้ง Yearly และ Daily
+// --------------------------------------------------------
+const getExecTemplate = (getAct, getTgt) => [
+    { label: "Sale", code: "REVENUES", isBold: true, bg: "#e7f1ff", isBase: true },
+    { label: "RM", isBold: true, calcAct: (p) => getAct("GRP_RM", p) + getAct("CR_R", p), calcTgt: (p) => getTgt("GRP_RM", p) + getTgt("CR_R", p) },
+    { label: "RM", indent: 1, code: "GRP_RM" },
+    { label: "CR", indent: 1, code: "CR_R" },
+    { label: "DL,OT", code: "GRP_DL", isBold: true },
+    { label: "DL", indent: 1, calcAct: (p) => getAct("522001+3", p) + getAct("DL_SCAN", p), calcTgt: (p) => getTgt("522001+3", p) + getTgt("DL_SCAN", p) },
+    { label: "OT", indent: 1, calcAct: (p) => getAct("522002+4", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522002+4", p) + getTgt("OT_SCAN", p) },
+    { label: "OH", isBold: true, calcAct: (p) => getAct("OH_FC", p) + getAct("OH_VC", p), calcTgt: (p) => getTgt("OH_FC", p) + getTgt("OH_VC", p) },
+    { label: "OH FC", code: "OH_FC", isBold: true },
+    { label: "Staff exp. (Production)", indent: 1, code: "GRP_STF" },
+    { label: "Depre", indent: 1, code: "GRP_DEP" },
+    { label: "Rent", indent: 1, code: "GRP_RT" },
+    { label: "OH VC", code: "OH_VC", isBold: true },
+    { label: "Utilities", indent: 1, code: "GRP_UTIL" },
+    { label: "Subcontract", indent: 1, code: "GRP_SUB" },
+    { label: "Accessories", indent: 1, code: "GRP _ AC" },
+    { label: "Repair", indent: 1, code: "GRP_REP" },
+    { label: "Other", indent: 1, calcAct: (p) => getAct("GRP_TRV", p) + getAct("GRP _ OT", p) + getAct("GRP_OTR", p), calcTgt: (p) => getTgt("GRP_TRV", p) + getTgt("GRP _ OT", p) + getTgt("GRP_OTR", p) },
+    { label: "COGS", code: "COGS", isBold: true, text: "danger", bg: "#fff3cd" },
+    { label: "Gross Profit", isBold: true, text: "success", bg: "#d1e7dd", calcAct: (p) => getAct("REVENUES", p) - getAct("COGS", p), calcTgt: (p) => getTgt("REVENUES", p) - getTgt("COGS", p) },
+    { label: "Selling VC", code: "SELL_EXP", isBold: true },
+    { label: "Export Exp.", indent: 1, code: "542006" },
+    { label: "Selling VC Other", indent: 1, calcAct: (p) => getAct("SELL_EXP", p) - getAct("542006", p), calcTgt: (p) => getTgt("SELL_EXP", p) - getTgt("542006", p) },
+    { label: "Admin FC other", code: "ADMIN_FC", isBold: true },
+    { label: "Staff exp. (support)", indent: 1, calcAct: (p) => getAct("GRP_AD_STF", p) + getAct("GRP_AD_ST", p), calcTgt: (p) => getTgt("GRP_AD_STF", p) + getTgt("GRP_AD_ST", p) },
+    { label: "Utilities", indent: 1, code: "GRP_AD_UTL" },
+    { label: "service", indent: 1, code: "GRP_SVF" },
+    { label: "rental", indent: 1, code: "GRP_AD_RT" },
+    { label: "depre", indent: 1, code: "GRP_AD_DSP" },
+    { label: "other", indent: 1, calcAct: (p) => getAct("GRP_OFF", p) + getAct("GRP_AD_OT", p), calcTgt: (p) => getTgt("GRP_OFF", p) + getTgt("GRP_AD_OT", p) },
+    { label: "SG&A", isBold: true, text: "danger", bg: "#fff3cd", calcAct: (p) => getAct("SELL_EXP", p) + getAct("ADMIN_FC", p), calcTgt: (p) => getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p) },
+    { label: "Profit", isBold: true, bg: "#f8f9fa", calcAct: (p) => (getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p)), calcTgt: (p) => (getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p)) },
+    { label: "Other income", code: "OT_IC", isBold: true },
+    { label: "Extra Reorganize", indent: 1, code: "541015_3" },
+    { label: "Bonus - OH & Admin", indent: 1, calcAct: (p) => getAct("541014", p) + getAct("541015_1", p), calcTgt: (p) => getTgt("541014", p) + getTgt("541015_1", p) },
+    { label: "Bonus - Mgt", indent: 1, code: "541015_2" },
+    { label: "Extra", code: "EX", isBold: true, text: "danger" },
+    { label: "EBIT", isBold: true, bg: "#e0f8f1", calcAct: (p) => ((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p), calcTgt: (p) => ((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p) },
+    { label: "Interest", code: "ITR_C" },
+    { label: "Tax", code: "TAX" },
+    { label: "EAT", isBold: true, bg: "#e0f8f1", calcAct: (p) => (((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p)) - getAct("ITR_C", p) - getAct("TAX", p), calcTgt: (p) => (((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p)) - getTgt("ITR_C", p) - getTgt("TAX", p) },
+    { label: "depre", text: "muted", calcAct: (p) => getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p), calcTgt: (p) => getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p) },
+    { label: "Interest", text: "muted", code: "ITR_C" },
+    { label: "Tax", text: "muted", code: "TAX" },
+    { label: "EBITDA", isBold: true, text: "primary", bg: "#e7f1ff", calcAct: (p) => (((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p)) + (getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p)), calcTgt: (p) => (((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p)) + (getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p)) }
+];
+
+const execGenCols = (act, tgt, baseAct, baseTgt, isSubtotal) => {
+    let actPct = baseAct ? (act / baseAct * 100) : 0;
+    let tgtPct = baseTgt ? (tgt / baseTgt * 100) : 0;
+    let bg = isSubtotal ? 'bg-year' : '';
+    return `
+        <td class="col-target text-end ${bg}">${formatNumberShort(tgt)}</td>
+        <td class="col-percent text-end text-muted ${bg}">${tgtPct === 0 ? '-' : tgtPct.toFixed(1)+'%'}</td>
+        <td class="col-actual text-end ${bg}">${formatNumberShort(act)}</td>
+        <td class="col-percent text-end text-primary ${bg}">${actPct === 0 ? '-' : actPct.toFixed(1)+'%'}</td>
+    `;
+};
+
+// --------------------------------------------------------
+// 1. RENDER YEARLY VIEW (12 Months + Q1-Q4 + YTD)
+// --------------------------------------------------------
+function renderExecutiveTableYearly(data, year) {
+    const thead = document.getElementById('execThead');
+    const tbody = document.getElementById('execTableBody');
+
+    const getAct = (code, m) => { const item = data.find(d => d.account_code === code); return item ? (parseFloat(item[`m${m}_act`]) || 0) : 0; };
+    const getTgt = (code, m) => { const item = data.find(d => d.account_code === code); return item ? (parseFloat(item[`m${m}_tgt`]) || 0) : 0; };
+    const template = getExecTemplate(getAct, getTgt);
+
+    const months = ['Jan','Feb','Mar','Q1','Apr','May','Jun','Q2','Jul','Aug','Sep','Q3','Oct','Nov','Dec','Q4','YTD'];
+    let headRow1 = `<tr><th rowspan="2" class="align-middle text-start ps-4" style="min-width: 250px;">Account Name</th>`;
+    let headRow2 = `<tr>`;
+
+    months.forEach(m => {
+        let bgClass = m.startsWith('Q') ? 'bg-quarter' : (m === 'YTD' ? 'bg-year' : '');
+        headRow1 += `<th colspan="4" class="${bgClass} border-bottom-0">${m} ${m !== 'YTD' && !m.startsWith('Q') ? year : ''}</th>`;
+        headRow2 += `
+            <th class="${bgClass} text-muted fw-normal" style="width: 80px;">Target</th>
+            <th class="${bgClass} text-muted" style="width: 50px;">%</th>
+            <th class="${bgClass} text-dark" style="width: 80px;">Actual</th>
+            <th class="${bgClass} text-primary" style="width: 50px;">%</th>
+        `;
+    });
+    headRow1 += `</tr>`; headRow2 += `</tr>`;
+    thead.innerHTML = headRow1 + headRow2;
+
+    let baseRev = { act: Array(13).fill(0), tgt: Array(13).fill(0) };
+    for (let m = 1; m <= 12; m++) { baseRev.act[m] = getAct("REVENUES", m); baseRev.tgt[m] = getTgt("REVENUES", m); }
+    const getBaseQ = (q, type) => baseRev[type][q*3-2] + baseRev[type][q*3-1] + baseRev[type][q*3];
+    const getBaseY = (type) => getBaseQ(1, type) + getBaseQ(2, type) + getBaseQ(3, type) + getBaseQ(4, type);
+
+    let html = '';
+    template.forEach(row => {
+        let styleStr = row.isBold ? 'font-weight: 800; ' : '';
+        if (row.bg) styleStr += `background-color: ${row.bg} !important; `;
+        let textClass = row.text ? `text-${row.text}` : 'text-dark';
+        
+        // 🔥 [FIXED] แก้ไขสมการย่อหน้า (บวกเพิ่มระดับละ 1.5rem)
+        let paddingVal = 1.5 + ((row.indent || 0) * 1.5);
+        let indentStyle = `padding-left: ${paddingVal}rem !important;`;
+
+        let rowHtml = `<tr style="${styleStr}"><td class="${textClass}" style="${indentStyle}">${row.label}</td>`;
+        let yAct = 0, yTgt = 0;
+
+        for (let q = 1; q <= 4; q++) {
+            let qAct = 0, qTgt = 0;
+            for (let m = (q*3)-2; m <= q*3; m++) {
+                let act = row.calcAct ? row.calcAct(m) : getAct(row.code, m);
+                let tgt = row.calcTgt ? row.calcTgt(m) : getTgt(row.code, m);
+                qAct += act; qTgt += tgt;
+                rowHtml += execGenCols(act, tgt, baseRev.act[m], baseRev.tgt[m], false);
+            }
+            yAct += qAct; yTgt += qTgt;
+            rowHtml += execGenCols(qAct, qTgt, getBaseQ(q, 'act'), getBaseQ(q, 'tgt'), true);
+        }
+        rowHtml += execGenCols(yAct, yTgt, getBaseY('act'), getBaseY('tgt'), true);
+        rowHtml += `</tr>`;
+        html += rowHtml;
+    });
+    tbody.innerHTML = html;
+}
+
+// --------------------------------------------------------
+// 2. RENDER DAILY VIEW (Day 1 - 31 + MTD)
+// --------------------------------------------------------
+function renderExecutiveTableDaily(data, year, month) {
+    const thead = document.getElementById('execThead');
+    const tbody = document.getElementById('execTableBody');
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const getAct = (code, d) => { const item = data.find(x => x.account_code === code); return item ? (parseFloat(item[`d${d}_act`]) || 0) : 0; };
+    const getTgt = (code, d) => { const item = data.find(x => x.account_code === code); return item ? (parseFloat(item[`d${d}_tgt`]) || 0) : 0; };
+    const template = getExecTemplate(getAct, getTgt);
+
+    let headRow1 = `<tr><th rowspan="2" class="align-middle text-start ps-4" style="min-width: 250px;">Account Name</th>`;
+    let headRow2 = `<tr>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}</th>`;
+        headRow2 += `
+            <th class="text-muted fw-normal" style="width: 80px;">Target</th>
+            <th class="text-muted" style="width: 50px;">%</th>
+            <th class="text-dark" style="width: 80px;">Actual</th>
+            <th class="text-primary" style="width: 50px;">%</th>
+        `;
+    }
+    headRow1 += `<th colspan="4" class="bg-year border-bottom-0">MTD (Total)</th></tr>`;
+    headRow2 += `
+        <th class="bg-year text-muted fw-normal" style="width: 90px;">Target</th>
+        <th class="bg-year text-muted" style="width: 60px;">%</th>
+        <th class="bg-year text-dark" style="width: 90px;">Actual</th>
+        <th class="bg-year text-primary" style="width: 60px;">%</th>
+    </tr>`;
+    thead.innerHTML = headRow1 + headRow2;
+
+    let baseRev = { act: Array(32).fill(0), tgt: Array(32).fill(0) };
+    for (let d = 1; d <= daysInMonth; d++) { baseRev.act[d] = getAct("REVENUES", d); baseRev.tgt[d] = getTgt("REVENUES", d); }
+    const getBaseMTD = (type) => baseRev[type].reduce((a, b) => a + b, 0);
+
+    let html = '';
+    template.forEach(row => {
+        let styleStr = row.isBold ? 'font-weight: 800; ' : '';
+        if (row.bg) styleStr += `background-color: ${row.bg} !important; `;
+        let textClass = row.text ? `text-${row.text}` : 'text-dark';
+        
+        // 🔥 [FIXED] แก้ไขสมการย่อหน้าให้ตรงกัน
+        let paddingVal = 1.5 + ((row.indent || 0) * 1.5);
+        let indentStyle = `padding-left: ${paddingVal}rem !important;`;
+
+        let rowHtml = `<tr style="${styleStr}"><td class="${textClass}" style="${indentStyle}">${row.label}</td>`;
+        let mtdAct = 0, mtdTgt = 0;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            let act = row.calcAct ? row.calcAct(d) : getAct(row.code, d);
+            let tgt = row.calcTgt ? row.calcTgt(d) : getTgt(row.code, d);
+            mtdAct += act; mtdTgt += tgt;
+            rowHtml += execGenCols(act, tgt, baseRev.act[d], baseRev.tgt[d], false);
+        }
+        rowHtml += execGenCols(mtdAct, mtdTgt, getBaseMTD('act'), getBaseMTD('tgt'), true);
+        rowHtml += `</tr>`;
+        html += rowHtml;
+    });
+    tbody.innerHTML = html;
+}
+
+function exportExecutiveExcel() {
+    const section = document.getElementById('sectionFilter').value;
+    const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
+    let filename = '';
+
+    if (currentExecMode === 'yearly') {
+        const year = document.getElementById('execYear').value;
+        filename = `Executive_PL_Y${year}_${safeSection}.xlsx`;
+    } else {
+        const month = document.getElementById('execMonth').value;
+        filename = `Executive_PL_${month}_${safeSection}.xlsx`;
+    }
+    
+    Swal.fire({ title: 'Exporting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const table = document.querySelector('#execTableWrapper table');
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Executive_PL", raw: true });
+        XLSX.writeFile(wb, filename);
+        Swal.close();
+    } catch (e) {
+        Swal.fire('Error', 'Export Failed', 'error');
+    }
 }
