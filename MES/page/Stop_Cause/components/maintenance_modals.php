@@ -237,10 +237,10 @@
                 <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Complete Job (ปิดงานซ่อม)</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <form id="completeMaintenanceForm" enctype="multipart/form-data">
+            
+            <form id="completeMaintenanceForm" enctype="multipart/form-data">
+                <div class="modal-body">
                     <input type="hidden" name="id" id="complete_req_id">
-                    
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">เวลาเริ่มซ่อม (Start Time)</label>
@@ -249,6 +249,16 @@
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">เวลาซ่อมเสร็จ (End Time)</label>
                             <input type="datetime-local" name="resolved_at" id="comp_resolved_at" class="form-control" required>
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-primary">
+                                <i class="fas fa-stopwatch me-1"></i> เวลาที่ใช้ซ่อมจริง (Actual Repair Time)
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="actual_repair_minutes" id="comp_actual_minutes" class="form-control fw-bold text-primary" placeholder="นาที" min="0" required>
+                                <span class="input-group-text bg-light">นาที (Minutes)</span>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -269,14 +279,16 @@
                             <div class="form-text">ถ่ายให้เห็นผลลัพธ์การซ่อม</div>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="completeMaintenanceForm" class="btn btn-success">
-                    <i class="fas fa-save me-1"></i> Save & Close Job
-                </button>
-            </div>
+                </div>
+                
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-1"></i> Save & Close Job
+                    </button>
+                </div>
+            </form>
+            
         </div>
     </div>
 </div>

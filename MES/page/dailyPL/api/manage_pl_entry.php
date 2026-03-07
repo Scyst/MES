@@ -380,6 +380,25 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
+        case 'executive_summary':
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            $section = $_GET['section'] ?? 'ALL';
+
+            if ($year < 2000 || $year > 2100) throw new Exception("Invalid Year");
+
+            $stmt = $pdo->prepare("EXEC dbo.sp_GetPL_ExecutiveSummary :year, :section");
+            $stmt->execute([':year' => $year, ':section' => $section]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($data as &$row) {
+                for ($m = 1; $m <= 12; $m++) {
+                    $row["m{$m}_act"] = (float)$row["m{$m}_act"];
+                    $row["m{$m}_tgt"] = (float)$row["m{$m}_tgt"];
+                }
+            }
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
         default:
             throw new Exception("Unknown Action: " . $action);
     }

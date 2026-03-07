@@ -52,6 +52,11 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeStatement">
                             <i class="fas fa-table me-1"></i> Statement
                         </label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="modeExecutive" autocomplete="off" onclick="switchMode('executive')">
+                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeExecutive" title="Executive Summary">
+                            <i class="fas fa-crown me-1"></i> Executive View
+                        </label>
                     </div>
 
                     <div class="vr text-muted opacity-25 mx-1"></div>
@@ -252,6 +257,30 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                     </div>
                 </div>
 
+                <div id="view-executive" class="view-section h-100 flex-column" style="display: none;">
+                    <div class="card border-0 shadow-sm flex-grow-1 overflow-hidden d-flex flex-column">
+                        
+                        <div class="card-header bg-dark text-white border-bottom py-3 d-flex justify-content-between align-items-center flex-shrink-0">
+                            <h5 class="card-title mb-0 fw-bold">
+                                <i class="fas fa-chess-king me-2 text-warning"></i> Executive P&L Summary
+                            </h5>
+                            <div class="d-flex gap-2 align-items-center">
+                                <label class="fw-bold small text-light mb-0">Select Year:</label>
+                                <input type="number" id="execYear" class="form-control form-control-sm text-center fw-bold text-dark shadow-sm" 
+                                       style="width: 100px;" value="<?php echo date('Y'); ?>" onchange="loadExecutiveData()">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive flex-grow-1 custom-scrollbar position-relative" id="execTableWrapper" style="background-color: #fff;">
+                            <table class="table table-hover table-bordered table-sm mb-0 align-middle statement-table" style="font-size: 0.85rem; width: max-content; min-width: 100%;">
+                                <thead class="bg-light sticky-top text-center shadow-sm" style="z-index: 10;" id="execThead">
+                                    </thead>
+                                <tbody id="execTableBody" class="bg-white">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div> 
         </div> 
     </div> 

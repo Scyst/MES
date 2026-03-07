@@ -19,14 +19,22 @@ function formatForDateTimeLocal(dbDateStr) {
 }
 
 function validateTimeline(reqStr, startStr, endStr) {
-    const reqTime = reqStr ? new Date(reqStr.replace(' ', 'T')).getTime() : 0;
     const startTime = startStr ? new Date(startStr.replace(' ', 'T')).getTime() : 0;
     const endTime = endStr ? new Date(endStr.replace(' ', 'T')).getTime() : 0;
 
-    if (startTime && startTime < reqTime) return "❌ เวลาเริ่มซ่อม ต้องไม่เกิดก่อนเวลาที่แจ้งซ่อม";
-    if (endTime && startTime && endTime < startTime) return "❌ เวลาซ่อมเสร็จ ต้องไม่เกิดก่อนเวลาที่เริ่มซ่อม";
-    if (endTime && !startTime) return "❌ กรุณาระบุเวลาเริ่มซ่อมด้วย";
-    return null; 
+    // ปลดล็อค: ปิดการตรวจสอบ "เวลาเริ่มซ่อม" กับ "เวลาแจ้งซ่อม" ทิ้งไปเลย 
+    // เพื่อรองรับการเปิดบิลย้อนหลังตามหน้างานจริง
+
+    // เช็คแค่ตรรกะพื้นฐาน: เวลาปิดงาน ต้องไม่เกิดก่อน เวลาเริ่มทำงาน
+    if (endTime && startTime && endTime < startTime) {
+        return "❌ เวลาซ่อมเสร็จ ต้องไม่เกิดก่อนเวลาที่เริ่มซ่อม";
+    }
+    
+    if (endTime && !startTime) {
+        return "❌ กรุณาระบุเวลาเริ่มซ่อมด้วย";
+    }
+    
+    return null; // ปล่อยผ่านให้บันทึกได้เลย
 }
 
 function formatJobNo(id, dateString) {
@@ -227,19 +235,21 @@ function switchModal(oldModalId, newModalId) {
     const oldModal = bootstrap.Modal.getInstance(oldModalEl);
     const newModal = bootstrap.Modal.getOrCreateInstance(newModalEl);
 
+    // เช็คว่าถ้า Modal แรกมันดันปิดไปแล้ว ก็ให้เปิดอันใหม่เลย
+    if (!oldModalEl.classList.contains('show')) {
+        newModal.show();
+        return;
+    }
+
     const onHidden = function () {
         newModal.show();
         oldModalEl.removeEventListener('hidden.bs.modal', onHidden);
-        // บังคับคืนสถานะ modal-open
+        // บังคับเปิด Scrollbar คืนมา
         setTimeout(() => document.body.classList.add('modal-open'), 50);
     };
 
     oldModalEl.addEventListener('hidden.bs.modal', onHidden);
-    if (oldModal) {
-        oldModal.hide();
-    } else {
-        newModal.show();
-    }
+    oldModal.hide(); // สั่งปิดตรงนี้ที่เดียวจบ
 }
 
 async function loadMaintenanceMachines() {
@@ -341,11 +351,10 @@ function viewMaintenanceDetails(id) {
         if(btnComplete) {
             btnComplete.classList.remove('d-none');
             btnComplete.onclick = () => {
-                 bootstrap.Modal.getInstance(document.getElementById('viewMaintenanceModal')).hide();
-                 setTimeout(() => openCompleteModal(id), 300); // 💡 Delay เล็กน้อยกัน Modal ทับกัน
+                 openCompleteModal(id); 
             };
         }
-    } 
+    }
     else if (data.status === 'Completed') {
         if(completionSection) completionSection.classList.remove('d-none');
         if(actionCompleted) actionCompleted.classList.remove('d-none');
@@ -384,19 +393,37 @@ window.openCompleteModal = function(id) {
     const item = currentMaintenanceData.find(d => d.id == id);
     if (!item) return;
 
-    document.getElementById('complete_req_id').value = item.id;
-    document.getElementById('completeMaintenanceForm').dataset.reqDate = item.request_date;
+    // เติมข้อมูลลงฟอร์ม
+    const reqIdEl = document.getElementById('complete_req_id');
+    const formEl = document.getElementById('completeMaintenanceForm');
+    if (reqIdEl) reqIdEl.value = item.id;
+    if (formEl) formEl.dataset.reqDate = item.request_date;
 
-    document.getElementById('comp_started_at').value = item.started_at 
-        ? formatForDateTimeLocal(item.started_at) 
-        : getNowDateTimeLocal();
+    const startEl = document.getElementById('comp_started_at');
+    if (startEl) startEl.value = item.started_at ? formatForDateTimeLocal(item.started_at) : getNowDateTimeLocal();
     
-    document.getElementById('comp_resolved_at').value = getNowDateTimeLocal();
-    document.getElementById('comp_resolved_at')?.dispatchEvent(new Event('change'));
+    const endEl = document.getElementById('comp_resolved_at');
+    if (endEl) {
+        endEl.value = getNowDateTimeLocal();
+        endEl.dispatchEvent(new Event('change')); // กระตุ้นให้คำนวณเวลา
+    }
 
-    switchModal('viewMaintenanceModal', 'completeMaintenanceModal');
+    // 🚀 สั่งปิด Modal ตัวเก่า (View)
+    const viewModalEl = document.getElementById('viewMaintenanceModal');
+    if (viewModalEl) {
+        const viewModal = bootstrap.Modal.getInstance(viewModalEl);
+        if (viewModal) viewModal.hide();
+    }
+
+    // ⏳ รอ 400ms ให้เฟดดำหายสนิท แล้วค่อยเปิด Modal ตัวใหม่ (Complete)
+    setTimeout(() => {
+        const compModalEl = document.getElementById('completeMaintenanceModal');
+        if (compModalEl) {
+            const compModal = bootstrap.Modal.getInstance(compModalEl) || new bootstrap.Modal(compModalEl);
+            compModal.show();
+        }
+    }, 400); 
 };
-
 window.openEditModal = function(id) {
     showToast('ปิดปรับปรุงระบบแก้ไขข้อมูลชั่วคราว', '#ffc107'); // แจ้งเตือน
     return;
@@ -702,52 +729,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 🚀 ผูก Event Submit แบบถึกทน (ป้องกันการเงียบหาย)
     const completeForm = document.getElementById('completeMaintenanceForm');
     if (completeForm) {
-        completeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // ใช้ .onsubmit แทนเพื่อบังคับทับ Event เก่าที่อาจจะค้างอยู่
+        completeForm.onsubmit = async function(e) {
+            e.preventDefault(); // หยุดการ Refresh หน้าเว็บ
+            console.log("✅ 1. Submit button clicked!"); 
 
-            const reqVal = completeForm.dataset.reqDate; 
-            const startVal = document.getElementById('comp_started_at').value;
-            const endVal = document.getElementById('comp_resolved_at').value;
-            
-            const errorMsg = validateTimeline(reqVal, startVal, endVal);
-            if (errorMsg) {
-                showToast(errorMsg, '#dc3545');
-                return; 
-            }
-
-            const submitBtn = completeForm.querySelector('button[type="submit"]');
-            setButtonLoading(submitBtn, true);
-
-            const formData = new FormData(completeForm);
-            formData.append('action', 'complete_job');
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            showSpinner();
             try {
+                // ดึงค่าเวลามาเช็ค
+                const reqVal = completeForm.dataset.reqDate; 
+                const startVal = document.getElementById('comp_started_at').value;
+                const endVal = document.getElementById('comp_resolved_at').value;
+                
+                // ตรวจสอบเงื่อนไขเวลา (ถ้ามี)
+                if (typeof validateTimeline === 'function') {
+                    const errorMsg = validateTimeline(reqVal, startVal, endVal);
+                    if (errorMsg) {
+                        console.warn("Timeline Error:", errorMsg);
+                        if (typeof showToast === 'function') showToast(errorMsg, '#dc3545');
+                        else alert(errorMsg);
+                        return; // หยุดการทำงานถ้าเวลาผิด
+                    }
+                }
+
+                console.log("✅ 2. Validation passed. Preparing to send...");
+
+                // เปลี่ยนปุ่มเป็นสถานะโหลด
+                const submitBtn = completeForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                }
+
+                // เตรียมข้อมูลส่ง API
+                const formData = new FormData(completeForm);
+                formData.append('action', 'complete_job');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                console.log("✅ 3. Fetching API...");
+
                 const response = await fetch(MT_API_URL, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken },
                     body: formData 
                 });
-                const res = await response.json();
                 
+                const res = await response.json();
+                console.log("✅ 4. API Response:", res);
+
+                // ตรวจสอบผลลัพธ์
                 if (res.success) {
-                    showToast('ปิดงานซ่อมเสร็จสมบูรณ์', '#28a745');
-                    bootstrap.Modal.getInstance(document.getElementById('completeMaintenanceModal')).hide();
+                    if (typeof showToast === 'function') showToast('ปิดงานซ่อมเสร็จสมบูรณ์', '#28a745');
+                    
+                    const modalInst = bootstrap.Modal.getInstance(document.getElementById('completeMaintenanceModal'));
+                    if (modalInst) modalInst.hide();
+                    
                     completeForm.reset();
-                    fetchMaintenanceData();
+                    if (typeof fetchMaintenanceData === 'function') fetchMaintenanceData();
                 } else {
-                    showToast(res.message, '#dc3545');
+                    if (typeof showToast === 'function') showToast(res.message || 'เกิดข้อผิดพลาด', '#dc3545');
+                    else alert(res.message);
                 }
+
             } catch (err) {
-                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', '#dc3545');
+                // ถ้าโค้ดพังกลางคัน มันจะมาตกตรงนี้ ไม่เงียบหายไปเฉยๆ
+                console.error('❌ Crash inside submit:', err);
+                alert('โปรแกรมขัดข้อง กรุณากด F12 ดูแถบ Console');
             } finally {
-                hideSpinner();
-                setButtonLoading(submitBtn, false);
+                // คืนค่าปุ่มกลับมาให้กดใหม่ได้
+                const submitBtn = completeForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save & Close Job';
+                }
             }
-        });
+        };
     }
 
     const editMtForm = document.getElementById('editMaintenanceForm');

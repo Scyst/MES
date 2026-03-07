@@ -86,6 +86,9 @@ function switchMode(mode) {
         btnSave.style.display = (mode === 'daily') ? 'inline-block' : 'none';
     }
 
+    const viewExec = document.getElementById('view-executive');
+    if (viewExec) viewExec.classList.remove('active');
+
     // 🔥 2. เคลียร์คลาส Active ออกจาก View ทุกหน้า
     document.getElementById('view-table').classList.remove('active');
     document.getElementById('view-dashboard').classList.remove('active');
