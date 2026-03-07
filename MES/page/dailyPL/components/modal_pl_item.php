@@ -130,6 +130,8 @@
                                         <option disabled class="bg-light text-secondary small py-1">─── STANDARD OVERHEADS ───</option>
                                         <option value="AUTO_OH_MACHINE">⚙️ Machine OH (ค่าโสหุ้ยเครื่องจักร)</option>
                                         <option value="AUTO_OH_UTILITY">⚡ Utilities (ค่าไฟ/น้ำ ตามมาตรฐาน)</option>
+                                        <option value="AUTO_UTILITY_ACTUAL">🔌 Utility Cost (Actual - ค่าไฟ/น้ำใช้งานจริงจากมิเตอร์)</option>
+                                        <option value="AUTO_UTILITY_LPG_ACTUAL">🔥 Utility Cost (LPG - ค่าแก๊สใช้งานจริง)</option>
                                         <option value="AUTO_OH_INDIRECT_STD">🏢 Indirect OH (โสหุ้ยทางอ้อม)</option>
                                         <option value="AUTO_OH_STAFF">👔 Staff Cost (ต้นทุนพนักงานรายเดือน)</option>
                                         <option value="AUTO_OH_ACCESSORY">🔩 Accessories (วัสดุสิ้นเปลือง)</option>

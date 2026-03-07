@@ -67,39 +67,16 @@ try {
             if (!validateDate($date)) throw new Exception("Invalid Date");
             if (empty($section)) throw new Exception("Invalid Section");
 
-            $items = json_decode($items_json, true);
-            if (!is_array($items)) throw new Exception("Invalid Data Format (Not JSON)");
-
-            $pdo->beginTransaction();
-            try {
-                // ใช้ SP ที่คุณมีอยู่แล้ว (sp_UpsertDailyPLEntry)
-                $stmt = $pdo->prepare("EXEC dbo." . SP_UPSERT_PL_ENTRY . " @EntryDate=:date, @Section=:sect, @ItemID=:id, @Amount=:amt, @InputBy=:user");
-                
-                foreach ($items as $index => $item) {
-                    // 2. Validate Item Data
-                    if (empty($item['item_id']) || !is_numeric($item['item_id'])) {
-                        continue; // ข้ามรายการขยะ
-                    }
-                    
-                    $amount = isset($item['amount']) ? floatval($item['amount']) : 0.0;
-                    
-                    // Execute
-                    $stmt->execute([
-                        ':date' => $date,
-                        ':sect' => $section,
-                        ':id'   => (int)$item['item_id'],
-                        ':amt'  => $amount,
-                        ':user' => $user_name
-                    ]);
-                }
-                
-                $pdo->commit();
-                echo json_encode(['success' => true, 'message' => 'Saved successfully']);
-            } catch (Exception $ex) {
-                $pdo->rollBack();
-                error_log("Save Error: " . $ex->getMessage()); // Log ไว้ดูเงียบๆ
-                throw new Exception("Database Save Failed: " . $ex->getMessage()); 
-            }
+            // Execute Batch SP ลด N+1 Query ทิ้ง
+            $stmt = $pdo->prepare("EXEC dbo.sp_UpsertDailyPLEntry_Batch :date, :sect, :items, :user");
+            $stmt->execute([
+                ':date'  => $date,
+                ':sect'  => $section,
+                ':items' => $items_json,
+                ':user'  => $user_name
+            ]);
+            
+            echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             break;
 
         // =================================================================
@@ -360,6 +337,47 @@ try {
                 ':u' => $user_name
             ]);
             echo json_encode(['success' => true]);
+            break;
+
+        case 'statement_yearly':
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            $section = $_GET['section'] ?? 'ALL';
+
+            if ($year < 2000 || $year > 2100) throw new Exception("Invalid Year");
+
+            $stmt = $pdo->prepare("EXEC dbo.sp_GetPLStatement_Yearly :year, :section");
+            $stmt->execute([':year' => $year, ':section' => $section]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($data as &$row) {
+                $row['item_level'] = (int)$row['item_level'];
+                for ($m = 1; $m <= 12; $m++) {
+                    $row["m{$m}_act"] = (float)$row["m{$m}_act"];
+                    $row["m{$m}_tgt"] = (float)$row["m{$m}_tgt"];
+                }
+            }
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'statement_daily':
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+            $section = $_GET['section'] ?? 'ALL';
+
+            if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) throw new Exception("Invalid Date");
+
+            $stmt = $pdo->prepare("EXEC dbo.sp_GetPLStatement_Daily :year, :month, :section");
+            $stmt->execute([':year' => $year, ':month' => $month, ':section' => $section]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($data as &$row) {
+                $row['item_level'] = (int)$row['item_level'];
+                for ($d = 1; $d <= 31; $d++) {
+                    $row["d{$d}_act"] = (float)$row["d{$d}_act"];
+                    $row["d{$d}_tgt"] = (float)$row["d{$d}_tgt"];
+                }
+            }
+            echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         default:

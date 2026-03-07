@@ -20,18 +20,14 @@ let chartStructure = null;
 // INITIALIZATION
 // ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // Set default date
     const dateInput = document.getElementById('targetDate');
     if (dateInput && !dateInput.value) {
         dateInput.value = new Date().toISOString().split('T')[0];
     }
 
     await loadSectionList();
-
-    // Initial Load
     loadEntryData();
 
-    // Event Listeners
     dateInput?.addEventListener('change', loadEntryData);
     document.getElementById('sectionFilter')?.addEventListener('change', handleSectionChange);
 });
@@ -49,7 +45,6 @@ async function loadSectionList() {
         if (json.success && json.data.length > 0) {
             select.innerHTML = '';
             
-            // เพิ่ม Option "All Lines"
             select.innerHTML += '<option value="ALL">-- All Lines --</option>';
 
             json.data.forEach(line => {
@@ -59,11 +54,9 @@ async function loadSectionList() {
                 select.appendChild(option);
             });
 
-            // คืนค่าที่เคยเลือกไว้ (ถ้ามีในรายการใหม่)
             if (savedSection && json.data.includes(savedSection)) {
                 select.value = savedSection;
             } else {
-                // [FIXED] ไม่ Fix ชื่อตายตัว ให้เลือกตัวแรกสุดของ List เสมอ
                 if (json.data.length > 0) {
                     select.value = json.data[0]; 
                 }
@@ -71,7 +64,6 @@ async function loadSectionList() {
         }
     } catch (e) {
         console.error("Failed to load sections:", e);
-        // ถ้าโหลดไม่ได้ ให้คงค่า Team 1 ไว้เป็น Fallback
     }
 }
 
@@ -91,18 +83,20 @@ function switchMode(mode) {
 
     const btnSave = document.getElementById('btnSaveSnapshot');
     if (btnSave) {
-        // ให้แสดงเฉพาะโหมด Daily เท่านั้น
         btnSave.style.display = (mode === 'daily') ? 'inline-block' : 'none';
     }
 
-    // 2. จัดการ View Section
+    // 🔥 2. เคลียร์คลาส Active ออกจาก View ทุกหน้า
     document.getElementById('view-table').classList.remove('active');
     document.getElementById('view-dashboard').classList.remove('active');
+    const viewStatement = document.getElementById('view-statement');
+    if (viewStatement) viewStatement.classList.remove('active'); // บังคับซ่อน
+
     document.getElementById('btnSetBudgetWrapper').style.display = 'none';
     document.getElementById('saveStatus').style.visibility = 'hidden';
 
+    // 3. แสดงเฉพาะหน้าที่เลือก
     if (mode === 'daily') {
-        // --- Mode: Daily ---
         document.getElementById('dailyPickerGroup').classList.remove('d-none');
         document.getElementById('view-table').classList.add('active');
         document.getElementById('btnSetBudgetWrapper').style.display = 'block';
@@ -110,24 +104,25 @@ function switchMode(mode) {
         loadEntryData();
 
     } else if (mode === 'dashboard') {
-        // --- Mode: Dashboard ---
         const rangeGroup = document.getElementById('rangePickerGroup');
         rangeGroup.classList.remove('d-none');
         rangeGroup.classList.add('d-flex');
-        
         if(btnDashGo) btnDashGo.classList.remove('d-none');
         
         document.getElementById('view-dashboard').classList.add('active');
         loadDashboardData();
 
     } else if (mode === 'report') {
-        // --- Mode: Report ---
         const rangeGroup = document.getElementById('rangePickerGroup');
         rangeGroup.classList.remove('d-none');
         rangeGroup.classList.add('d-flex');
-
+        
         document.getElementById('view-table').classList.add('active');
         loadEntryData();
+
+    } else if (mode === 'statement') { // 🔥 [NEW]
+        if (viewStatement) viewStatement.classList.add('active'); // โชว์หน้า Statement
+        loadStatementData();
     }
 }
 
@@ -178,7 +173,6 @@ async function loadEntryData() {
             if(typeof updateCharts === 'function') updateCharts(currentData);
             if(typeof calculateSummary === 'function') calculateSummary(currentData);
             
-            // รันสูตรเฉพาะโหมด Daily
             if (currentMode === 'daily') runFormulaEngine(); 
         } else {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-5">${res.message}</td></tr>`;
@@ -230,7 +224,7 @@ function updateCardValue(elementId, value) {
 }
 
 // ========================================================
-// 2. RENDERING (Table UI) - 🔥 UPDATED LOGIC
+// 2. RENDERING (Table UI)
 // ========================================================
 function renderEntryTable(data) {
     const tbody = document.getElementById('entryTableBody');
@@ -277,7 +271,6 @@ function renderEntryTable(data) {
             sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input" data-bs-toggle="tooltip">M</span>`;
         }
 
-        // Values
         const actual = parseFloat(item.actual_amount) || 0;
         const target = parseFloat(item.daily_target) || 0;
         
@@ -296,7 +289,6 @@ function renderEntryTable(data) {
             diffHtml = `<span class="${colorClass}" style="font-size: 0.8rem;" title="Diff: ${formatNumber(diff)}">${arrow} ${Math.abs(percent).toFixed(0)}%</span>`;
         }
 
-        // --- Input Logic (Highlighting) ---
         let inputHtml = '';
         let remarkHtml = '';
 
@@ -305,8 +297,6 @@ function renderEntryTable(data) {
             remarkHtml = `<span class="text-muted small">-</span>`;
         } else {
             const readonlyAttr = (isAuto || isCalc) ? 'readonly' : '';
-            
-            // 🔥 Logic สี Input
             let inputClass = 'input-seamless fw-semibold ';
             if (isAuto) {
                 // สีเทา สำหรับ Auto System
@@ -329,12 +319,12 @@ function renderEntryTable(data) {
                     onblur="formatAndSave(this, ${item.item_id})"
                     onkeydown="if(event.key==='Enter') this.blur()">`;
             
-            // Remark (Auto System ไม่ควรให้แก้ Remark หรือเปล่า? ปกติให้แก้ได้ แต่ถ้าจะปิดก็เพิ่ม readonly ได้)
             remarkHtml = `
                 <input type="text" class="input-seamless text-end text-muted small" 
-                       style="font-family: var(--bs-body-font-family); font-weight: normal;"
-                       placeholder="..." value="${item.remark || ''}"
-                       onblur="formatAndSave(this, ${item.item_id})">`;
+                    style="font-family: var(--bs-body-font-family); font-weight: normal;"
+                    placeholder="..." value="${item.remark || ''}"
+                    maxlength="255"
+                    onblur="formatAndSave(this, ${item.item_id})">`;
         }
 
         html += `
@@ -389,11 +379,9 @@ function formatNumber(num) {
 }
 
 async function formatAndSave(input, itemId) {
-    // 1. Safety Check
     if (input.readOnly) return;
-    if (isSaving) return; // ป้องกันการส่งซ้ำรัวๆ
+    if (isSaving) return;
 
-    // 2. จัดรูปแบบตัวเลขใน Input ให้สวยงาม (ใส่ลูกน้ำ)
     const isRemarkField = input.getAttribute('placeholder') === '...';
     let val = input.value.replace(/,/g, '');
     if (val === '' || isNaN(val)) val = 0;
@@ -401,35 +389,25 @@ async function formatAndSave(input, itemId) {
     
     if (!isRemarkField) {
         input.value = formatNumber(floatVal);
-        
-        // 🔥 อัปเดตค่าลงใน currentData (ตัวแปรกลาง) ทันที เพื่อให้พร้อมส่ง
         const itemIndex = currentData.findIndex(d => d.item_id == itemId);
         if (itemIndex > -1) {
             currentData[itemIndex].actual_amount = floatVal;
         }
-        
-        // รันสูตรคำนวณใหม่ทันที (เพื่อให้ยอดรวมเปลี่ยนก่อน Save)
         runFormulaEngine();
     } else {
-        // กรณีแก้ Remark
         const itemIndex = currentData.findIndex(d => d.item_id == itemId);
         if (itemIndex > -1) {
             currentData[itemIndex].remark = input.value;
         }
     }
 
-    // 3. แสดงสถานะ "กำลังบันทึก..." (แบบเงียบๆ ไม่รกตา)
     const statusEl = document.getElementById('saveStatus');
     statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving...';
     statusEl.classList.remove('opacity-0');
     statusEl.style.visibility = 'visible';
     isSaving = true;
 
-    // ========================================================
-    // 🔥 CORE LOGIC: ส่งข้อมูล "ทั้งหน้า" (Snapshot) ไป Save
-    // ========================================================
     try {
-        // เตรียม Payload เหมือนปุ่ม Save Day เป๊ะๆ
         const payload = currentData.map(item => ({
             item_id: item.item_id,
             amount: parseFloat(item.actual_amount) || 0,
@@ -446,10 +424,8 @@ async function formatAndSave(input, itemId) {
         const json = await res.json();
 
         if (json.success) {
-            // หน่วงเวลาโชว์คำว่า Saved นิดนึง
             setTimeout(() => {
                 statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Auto Saved</span>';
-                // ซ่อนสถานะเมื่อผ่านไป 2 วิ
                 setTimeout(() => { 
                     statusEl.classList.add('opacity-0'); 
                 }, 2000);
@@ -491,7 +467,12 @@ function runFormulaEngine() {
                         }
                         const safeFormula = formula.replace(/[^0-9+\-*/(). ]/g, ''); 
                         if (safeFormula.trim() !== '') {
-                            newVal = new Function('return ' + safeFormula)();
+                            try {
+                                newVal = new Function('return ' + safeFormula)();
+                            } catch(e) {
+                                newVal = 0;
+                                console.warn(`Formula Error on Code ${item.account_code}:`, e);
+                            }
                         }
                     }
                 } catch (e) { newVal = 0; }
@@ -501,7 +482,6 @@ function runFormulaEngine() {
                 if (Math.abs(newVal - oldVal) > 0.001) {
                     item.actual_amount = newVal;
                     hasChanged = true;
-                    // Update DOM
                     const inputEl = document.querySelector(`input[data-id="${item.item_id}"]`);
                     if (inputEl) {
                         inputEl.value = formatNumber(newVal);
@@ -513,7 +493,6 @@ function runFormulaEngine() {
         });
         if (!hasChanged) break;
     }
-    // Update Top Cards after formula
     calculateSummary(currentData);
 }
 
@@ -542,7 +521,6 @@ function openTargetModal() {
     targetModal.show();
 }
 
-// Event Listener สำหรับเปลี่ยนเดือน
 document.getElementById('budgetMonth').addEventListener('change', () => {
     loadModalData();
     loadContainerRate();
@@ -568,9 +546,9 @@ async function fetchCurrentRate() {
         const res = await fetch(`api/manage_pl_entry.php?action=get_exchange_rate&year=${year}&month=${month}`);
         const json = await res.json();
         if(json.success) {
-            displayEl.value = json.rate.toFixed(2); // แสดงทศนิยม 2 ตำแหน่ง
+            displayEl.value = json.rate.toFixed(2);
         } else {
-            displayEl.value = '32.00'; // Default
+            displayEl.value = '32.00';
         }
     } catch(e) {
         console.error(e);
@@ -771,6 +749,7 @@ async function saveContainerRate() {
 // 5. CALENDAR (FullCalendar)
 // ========================================================
 
+// ใน pl_entry.js
 function openCalendarModal() {
     if (!calendarModal) calendarModal = new bootstrap.Modal(document.getElementById('calendarModal'));
     calendarModal.show();
@@ -784,6 +763,28 @@ function openCalendarModal() {
                 headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
                 initialDate: document.getElementById('budgetMonth').value + '-01', 
                 events: 'api/manage_pl_entry.php?action=calendar_read',
+                
+                eventDidMount: function(info) {
+                    const type = info.event.extendedProps.day_type;
+                    if (type === 'HOLIDAY') {
+                        info.el.style.backgroundColor = 'var(--bs-danger)'; // สีแดง
+                        info.el.style.borderColor = 'var(--bs-danger)';
+                        info.el.style.color = '#fff';
+                    } else if (type === 'OFFDAY') {
+                        info.el.style.backgroundColor = 'var(--bs-warning)'; // สีเหลือง
+                        info.el.style.borderColor = 'var(--bs-warning)';
+                        info.el.style.color = '#000';
+                    } else if (type === 'SUNDAY') {
+                        info.el.style.backgroundColor = 'var(--bs-secondary)'; // สีเทา
+                        info.el.style.borderColor = 'var(--bs-secondary)';
+                        info.el.style.color = '#fff';
+                    } else if (type === 'NORMAL') {
+                        info.el.style.backgroundColor = 'var(--bs-success)'; // สีเขียว
+                        info.el.style.borderColor = 'var(--bs-success)';
+                        info.el.style.color = '#fff';
+                    }
+                },
+
                 dateClick: (info) => openHolidayEditor(info.dateStr, null),
                 eventClick: (info) => { info.jsEvent.preventDefault(); openHolidayEditor(info.event.startStr, info.event); }
             });
@@ -865,16 +866,12 @@ async function apiCalendarAction(action, payload) {
 // 6. EXPORT LOGIC (Client-Side SheetJS)
 // ========================================================
 async function exportPLToExcel() {
-    // 1. เตรียม Parameter
     const section = document.getElementById('sectionFilter').value;
     let url = '';
     let filename = '';
-
-    // สร้างชื่อไฟล์ให้สวยงาม
     const timestamp = new Date().toISOString().slice(0,19).replace(/[-:]/g,"").replace("T","_");
     const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
 
-    // เช็ค Mode ว่าจะเอา Daily หรือ Report Range
     if (currentMode === 'daily') {
         const date = document.getElementById('targetDate').value;
         url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`;
@@ -885,8 +882,6 @@ async function exportPLToExcel() {
         url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${section}`;
         filename = `PL_Report_${start}_to_${end}_${safeSection}_${timestamp}.xlsx`;
     }
-
-    // Show Loading
     Swal.fire({
         title: 'Generating Excel...',
         html: 'Please wait while we process the data.',
@@ -895,7 +890,6 @@ async function exportPLToExcel() {
     });
 
     try {
-        // 2. ดึงข้อมูล JSON จาก API
         const response = await fetch(url);
         const json = await response.json();
 
@@ -904,16 +898,12 @@ async function exportPLToExcel() {
             return;
         }
 
-        // 3. จัดเตรียมข้อมูลลง Excel Rows
         const excelRows = [
-            ["Item Name", "Account Code", "Target", "Actual", "Diff", "Note", "Source"] // Header Row
+            ["Item Name", "Account Code", "Target", "Actual", "Diff", "Note", "Source"]
         ];
 
         json.data.forEach(item => {
-            // ย่อหน้าชื่อตาม Level (Visual Indent)
             let indent = "    ".repeat(parseInt(item.item_level) || 0);
-            
-            // คำนวณ Diff
             const target = parseFloat(item.daily_target) || 0;
             const actual = parseFloat(item.actual_amount) || 0;
             const diff = actual - target;
@@ -928,13 +918,9 @@ async function exportPLToExcel() {
                 item.data_source            // G
             ]);
         });
-
-        // 4. สร้าง Workbook
         const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "PL_Data");
-
-        // จัดความกว้างคอลัมน์
         worksheet['!cols'] = [
             { wch: 40 }, // Name
             { wch: 15 }, // Code
@@ -944,12 +930,8 @@ async function exportPLToExcel() {
             { wch: 30 }, // Note
             { wch: 20 }  // Source
         ];
-
-        // 5. ดาวน์โหลด
         XLSX.writeFile(workbook, filename);
-        
-        Swal.close(); // ปิด Loading
-
+        Swal.close();
     } catch (error) {
         console.error("Export Error:", error);
         Swal.fire('Export Failed', error.message, 'error');
@@ -1129,7 +1111,6 @@ async function openRateModal() {
         if(json.success) currentRate = json.rate;
     } catch(e) {}
 
-    // 2. เปิด Popup
     const { value: newRate } = await Swal.fire({
         title: `Exchange Rate (${month}/${year})`,
         text: "กำหนดอัตราแลกเปลี่ยน (USD -> THB)",
@@ -1147,7 +1128,6 @@ async function openRateModal() {
         }
     });
 
-    // 3. บันทึก
     if (newRate) {
         try {
             const res = await fetch('api/manage_pl_entry.php?action=save_exchange_rate', {
@@ -1173,7 +1153,6 @@ async function openRateModal() {
 async function saveDailySnapshot() {
     if (currentMode !== 'daily') return;
 
-    // 1. ถามยืนยันก่อน (เผื่อมือกดพลาด)
     const result = await Swal.fire({
         title: 'Confirm Daily Snapshot?',
         text: "ระบบจะบันทึกค่าทุกช่อง (ทั้ง Manual และ Auto) ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
@@ -1185,15 +1164,18 @@ async function saveDailySnapshot() {
     });
 
     if (!result.isConfirmed) return;
+    const btnSave = document.getElementById('btnSaveSnapshot');
+    if(btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    }
 
-    // 2. เตรียมข้อมูล (ดึงจาก currentData ซึ่งมีค่าล่าสุดที่คำนวณแล้ว)
     const payload = currentData.map(item => ({
         item_id: item.item_id,
-        amount: parseFloat(item.actual_amount) || 0, // เอาค่าที่โชว์อยู่ตอนนี้
+        amount: parseFloat(item.actual_amount) || 0,
         remark: item.remark || ''
     }));
 
-    // 3. แสดงสถานะกำลังบันทึก
     const statusEl = document.getElementById('saveStatus');
     statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
     statusEl.classList.remove('opacity-0');
@@ -1218,8 +1200,6 @@ async function saveDailySnapshot() {
                 showConfirmButton: false
             });
             statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Snapshot Saved</span>';
-            
-            // โหลดข้อมูลใหม่เพื่อให้มั่นใจว่าดึงจาก DB มาโชว์
             loadEntryData(); 
         } else {
             throw new Error(json.message);
@@ -1230,5 +1210,341 @@ async function saveDailySnapshot() {
         statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Save Failed';
     } finally {
         isSaving = false;
+        if(btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="fas fa-save me-1"></i> Save Day';
+        }
     }
+}
+
+// ========================================================
+// [NEW] DASHBOARD DATA LOADER
+// ========================================================
+async function loadDashboardData() {
+    const grid = document.getElementById('dashboardGrid');
+    if (grid) {
+        grid.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <div class="mt-2 text-muted small fw-bold">Loading Dashboard Metrics...</div>
+            </div>`;
+    }
+
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    const section = document.getElementById('sectionFilter').value;
+
+    try {
+        const response = await fetch(`api/manage_pl_entry.php?action=dashboard_stats&start_date=${start}&end_date=${end}&section=${section}`);
+        const json = await response.json();
+
+        if (json.success) {
+            if (typeof renderDashboardCards === 'function') renderDashboardCards(json.data);
+            if (typeof updateDashboardCharts === 'function') updateDashboardCharts(json.data);
+        } else {
+            if (grid) grid.innerHTML = `<div class="col-12 text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>${json.message}</div>`;
+        }
+    } catch (error) {
+        console.error("Dashboard Load Error:", error);
+        if (grid) grid.innerHTML = '<div class="col-12 text-center text-danger py-5 fw-bold"><i class="fas fa-wifi me-2"></i>Connection Error</div>';
+    }
+}
+
+async function loadStatementData() {
+    const tbody = document.getElementById('statementTableBody');
+    const section = document.getElementById('sectionFilter').value;
+
+    tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+    try {
+        let res, json;
+        if (currentStatementView === 'yearly') {
+            const year = document.getElementById('statementYear').value;
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${section}`);
+            json = await res.json();
+            if (json.success) {
+                calculateStatementFormulas(json.data, 'yearly');
+                renderStatementTableYearly(json.data, year); // เปลี่ยนชื่อฟังก์ชันเดิมเป็น renderStatementTableYearly
+            }
+        } else {
+            const monthStr = document.getElementById('statementMonth').value;
+            const [year, month] = monthStr.split('-');
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${section}`);
+            json = await res.json();
+            if (json.success) {
+                calculateStatementFormulas(json.data, 'daily');
+                renderStatementTableDaily(json.data, year, month);
+            }
+        }
+        
+        if (!json.success) tbody.innerHTML = `<tr><td class="text-center text-danger py-5">${json.message}</td></tr>`;
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td class="text-center text-danger py-5">Connection Error</td></tr>';
+    }
+}
+
+function calculateStatementFormulas(data, mode) {
+    let maxLoop = 5;
+    let limit = (mode === 'yearly') ? 12 : 31;
+    let prefix = (mode === 'yearly') ? 'm' : 'd';
+
+    for (let loop = 0; loop < maxLoop; loop++) {
+        let hasChanged = false;
+        data.forEach(item => {
+            if (item.data_source === 'CALCULATED') {
+                for (let i = 1; i <= limit; i++) {
+                    let oldValAct = parseFloat(item[`${prefix}${i}_act`]) || 0;
+                    let newValAct = 0;
+                    
+                    try {
+                        if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
+                            const children = data.filter(child => child.parent_id == item.item_id);
+                            newValAct = children.reduce((sum, child) => sum + (parseFloat(child[`${prefix}${i}_act`]) || 0), 0);
+                        } else if (item.calculation_formula) {
+                            let formula = item.calculation_formula;
+                            const matches = formula.match(/\[(.*?)\]/g);
+                            if (matches) {
+                                matches.forEach(token => {
+                                    const code = token.replace('[', '').replace(']', '');
+                                    const refItem = data.find(d => d.account_code === code);
+                                    const refValAct = refItem ? (parseFloat(refItem[`${prefix}${i}_act`]) || 0) : 0;
+                                    formula = formula.replace(token, refValAct);
+                                });
+                            }
+                            const safeFormula = formula.replace(/[^0-9+\-*/(). ]/g, ''); 
+                            if (safeFormula.trim() !== '') {
+                                newValAct = new Function('return ' + safeFormula)();
+                            }
+                        }
+                    } catch (e) { newValAct = 0; }
+                    
+                    if (!isFinite(newValAct) || isNaN(newValAct)) newValAct = 0;
+                    
+                    if (Math.abs(newValAct - oldValAct) > 0.001) {
+                        item[`${prefix}${i}_act`] = newValAct;
+                        hasChanged = true;
+                    }
+                }
+            }
+        });
+        if (!hasChanged) break;
+    }
+}
+
+function renderStatementTableYearly(data, year) {
+    const thead = document.getElementById('statementThead');
+    const tbody = document.getElementById('statementTableBody');
+
+    // 1. หา Base Revenue รวม (เพื่อนำไปเป็นฐาน 100% ให้การคำนวณ %)
+    let base = { act: Array(13).fill(0), tgt: Array(13).fill(0) };
+    data.forEach(item => {
+        if (item.item_level === 0 && item.item_type === 'REVENUE') { // ยึดรายได้หลักเป็นฐาน
+            for (let i = 1; i <= 12; i++) {
+                base.act[i] += parseFloat(item[`m${i}_act`]) || 0;
+                base.tgt[i] += parseFloat(item[`m${i}_tgt`]) || 0;
+            }
+        }
+    });
+
+    // ฟังก์ชันคำนวณไตรมาสสำหรับ Base
+    const getBaseQ = (q, type) => base[type][q*3-2] + base[type][q*3-1] + base[type][q*3];
+    const getBaseY = (type) => getBaseQ(1, type) + getBaseQ(2, type) + getBaseQ(3, type) + getBaseQ(4, type);
+
+    // 2. สร้าง Header 2 ชั้น
+    const months = ['Jan','Feb','Mar','Q1','Apr','May','Jun','Q2','Jul','Aug','Sep','Q3','Oct','Nov','Dec','Q4','YTD'];
+    
+    let headRow1 = `<tr><th rowspan="2" class="align-middle text-start ps-3">Account Name</th>`;
+    let headRow2 = `<tr>`;
+
+    months.forEach(m => {
+        let bgClass = m.startsWith('Q') ? 'bg-quarter' : (m === 'YTD' ? 'bg-year' : '');
+        headRow1 += `<th colspan="4" class="${bgClass} border-bottom-0">${m} ${m !== 'YTD' && !m.startsWith('Q') ? year : ''}</th>`;
+        headRow2 += `
+            <th class="${bgClass} text-muted fw-normal">Target</th>
+            <th class="${bgClass} text-muted fw-normal">%</th>
+            <th class="${bgClass} text-primary">Actual</th>
+            <th class="${bgClass} text-info">%</th>
+        `;
+    });
+    headRow1 += `</tr>`; headRow2 += `</tr>`;
+    thead.innerHTML = headRow1 + headRow2;
+
+    // 3. สร้าง Body (คำนวณสด)
+    let html = '';
+    
+    // ฟังก์ชันช่วยสร้าง `<td>` 4 ช่อง (Target, %, Actual, %)
+    const genCols = (act, tgt, baseAct, baseTgt, isSubtotal) => {
+        let actPct = baseAct ? (act / baseAct * 100) : 0;
+        let tgtPct = baseTgt ? (tgt / baseTgt * 100) : 0;
+        let bg = isSubtotal ? 'bg-subtotal' : '';
+        return `
+            <td class="col-target ${bg}">${formatNumber(tgt)}</td>
+            <td class="col-percent ${bg}">${tgtPct === 0 ? '-' : tgtPct.toFixed(2)+'%'}</td>
+            <td class="col-actual ${bg}">${formatNumber(act)}</td>
+            <td class="col-percent text-primary ${bg}">${actPct === 0 ? '-' : actPct.toFixed(2)+'%'}</td>
+        `;
+    };
+
+    data.forEach(item => {
+        let level = parseInt(item.item_level) || 0;
+        let indent = level * 1.5;
+        let isTopLevel = (level === 0);
+        let nameStyle = isTopLevel ? 'font-weight: 800; color: #000;' : `padding-left: ${indent}rem; color: #495057;`;
+        
+        let rowHtml = `<tr><td style="${nameStyle}">${isTopLevel ? '<i class="fas fa-folder me-2 text-primary"></i>' : ''}${item.item_name}</td>`;
+
+        let yAct = 0, yTgt = 0;
+
+        // วนลูปรายเดือนและไตรมาส
+        for (let q = 1; q <= 4; q++) {
+            let qAct = 0, qTgt = 0;
+            
+            // 3 เดือนในไตรมาสนั้น
+            for (let m = (q*3)-2; m <= q*3; m++) {
+                let act = parseFloat(item[`m${m}_act`]) || 0;
+                let tgt = parseFloat(item[`m${m}_tgt`]) || 0;
+                qAct += act; qTgt += tgt;
+                
+                rowHtml += genCols(act, tgt, base.act[m], base.tgt[m], false);
+            }
+            // ยอดรวมไตรมาส (Q)
+            yAct += qAct; yTgt += qTgt;
+            rowHtml += genCols(qAct, qTgt, getBaseQ(q, 'act'), getBaseQ(q, 'tgt'), true);
+        }
+        
+        // ยอดรวมทั้งปี (YTD)
+        rowHtml += genCols(yAct, yTgt, getBaseY('act'), getBaseY('tgt'), true);
+        rowHtml += `</tr>`;
+        html += rowHtml;
+    });
+
+    tbody.innerHTML = html;
+}
+
+async function exportStatementExcel() {
+    const year = document.getElementById('statementYear').value;
+    const section = document.getElementById('sectionFilter').value;
+    
+    Swal.fire({
+        title: 'Generating Statement...',
+        text: 'กรุณารอสักครู่ ระบบกำลังจัดรูปแบบโครงสร้างบัญชี',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const table = document.querySelector('.statement-table');
+        const wb = XLSX.utils.table_to_book(table, { 
+            sheet: "P&L_Statement",
+            raw: true
+        });
+        
+        const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
+        const filename = `PL_Statement_Y${year}_${safeSection}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        Swal.close();
+        
+    } catch (e) {
+        console.error("Export Statement Error:", e);
+        Swal.fire('Export Failed', 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel', 'error');
+    }
+}
+
+let currentStatementView = 'yearly'; // 'yearly' หรือ 'daily'
+
+function changeStatementView(view) {
+    currentStatementView = view;
+    if (view === 'yearly') {
+        document.getElementById('statementYear').classList.remove('d-none');
+        document.getElementById('statementMonth').classList.add('d-none');
+    } else {
+        document.getElementById('statementYear').classList.add('d-none');
+        document.getElementById('statementMonth').classList.remove('d-none');
+    }
+    loadStatementData();
+}
+
+function renderStatementTableDaily(data, year, month) {
+    const thead = document.getElementById('statementThead');
+    const tbody = document.getElementById('statementTableBody');
+
+    // หาจำนวนวันในเดือนนั้น (เช่น ก.พ. มี 28 หรือ 29)
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    // 1. หา Base Revenue
+    let base = { act: Array(32).fill(0), tgt: Array(32).fill(0) };
+    data.forEach(item => {
+        if (item.item_level === 0 && item.item_type === 'REVENUE') {
+            for (let i = 1; i <= daysInMonth; i++) {
+                base.act[i] += parseFloat(item[`d${i}_act`]) || 0;
+                base.tgt[i] += parseFloat(item[`d${i}_tgt`]) || 0;
+            }
+        }
+    });
+
+    const getBaseMTD = (type) => base[type].reduce((a, b) => a + b, 0);
+
+    // 2. สร้าง Header (Day 1 - Day 31 + MTD)
+    let headRow1 = `<tr><th rowspan="2" class="align-middle text-start ps-3">Account Name</th>`;
+    let headRow2 = `<tr>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}</th>`;
+        headRow2 += `
+            <th class="text-muted fw-normal">Target</th>
+            <th class="text-muted fw-normal">%</th>
+            <th class="text-primary">Actual</th>
+            <th class="text-info">%</th>
+        `;
+    }
+    
+    // MTD Column
+    headRow1 += `<th colspan="4" class="bg-year border-bottom-0">MTD (Total)</th></tr>`;
+    headRow2 += `
+        <th class="bg-year text-muted fw-normal">Target</th>
+        <th class="bg-year text-muted fw-normal">%</th>
+        <th class="bg-year text-primary">Actual</th>
+        <th class="bg-year text-info">%</th></tr>
+    `;
+    
+    thead.innerHTML = headRow1 + headRow2;
+
+    // 3. สร้าง Body
+    let html = '';
+    const genCols = (act, tgt, baseAct, baseTgt, isSubtotal) => {
+        let actPct = baseAct ? (act / baseAct * 100) : 0;
+        let tgtPct = baseTgt ? (tgt / baseTgt * 100) : 0;
+        let bg = isSubtotal ? 'bg-year' : '';
+        return `
+            <td class="col-target ${bg}">${formatNumber(tgt)}</td>
+            <td class="col-percent ${bg}">${tgtPct === 0 ? '-' : tgtPct.toFixed(2)+'%'}</td>
+            <td class="col-actual ${bg}">${formatNumber(act)}</td>
+            <td class="col-percent text-primary ${bg}">${actPct === 0 ? '-' : actPct.toFixed(2)+'%'}</td>
+        `;
+    };
+
+    data.forEach(item => {
+        let level = parseInt(item.item_level) || 0;
+        let isTopLevel = (level === 0);
+        let nameStyle = isTopLevel ? 'font-weight: 800; color: #000;' : `padding-left: ${level * 1.5}rem; color: #495057;`;
+        
+        let rowHtml = `<tr><td style="${nameStyle}">${isTopLevel ? '<i class="fas fa-folder me-2 text-primary"></i>' : ''}${item.item_name}</td>`;
+
+        let mtdAct = 0, mtdTgt = 0;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            let act = parseFloat(item[`d${d}_act`]) || 0;
+            let tgt = parseFloat(item[`d${d}_tgt`]) || 0;
+            mtdAct += act; mtdTgt += tgt;
+            
+            rowHtml += genCols(act, tgt, base.act[d], base.tgt[d], false);
+        }
+        
+        rowHtml += genCols(mtdAct, mtdTgt, getBaseMTD('act'), getBaseMTD('tgt'), true);
+        rowHtml += `</tr>`;
+        html += rowHtml;
+    });
+
+    tbody.innerHTML = html;
 }

@@ -222,14 +222,16 @@ try {
                     elseif (strpos($rawSrc, 'MAT') !== false) $src = 'AUTO_MAT';
                     elseif (strpos($rawSrc, 'SCRAP') !== false) $src = 'AUTO_SCRAP';
                     elseif (strpos($rawSrc, 'MACHINE') !== false) $src = 'AUTO_OH_MACHINE';
+                    elseif (strpos($rawSrc, 'UTILITY_ACT') !== false) $src = 'AUTO_UTILITY_ACTUAL';
+                    elseif (strpos($rawSrc, 'LPG') !== false) $src = 'AUTO_UTILITY_LPG_ACTUAL';
                     
                     // 1.2 Formula Logic
                     $formula = trim($row['calculation_formula'] ?? '');
                     if ($src === 'CALCULATED' && empty($formula)) $formula = 'SUM_CHILDREN';
-                    if (strpos($src, 'AUTO_') === 0) $formula = ''; // Auto ไม่ต้องมีสูตร
+                    if (strpos($src, 'AUTO_') === 0) $formula = '';
 
                     // 1.3 Validate
-                    if (!validateFormula($formula)) $formula = ''; // ถ้าสูตรอันตราย เคลียร์ทิ้ง
+                    if (!validateFormula($formula)) $formula = '';
 
                     $stmtUpsert->execute([
                         ':code' => strtoupper(trim($row['account_code'])),

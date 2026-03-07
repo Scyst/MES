@@ -8,15 +8,11 @@ if (!hasRole(['admin', 'creator', 'supervisor'])) {
     exit;
 }
 
-// 1. ตั้งค่า Browser Tab Title
 $pageTitle = "Daily P&L Entry";
-
-// 2. 🔥 กำหนดตัวแปรสำหรับ Top Header (ส่วนที่ขาดไป)
 $pageHeaderTitle = "Daily P&L Entry"; 
 $pageHeaderSubtitle = "บันทึกรายรับ-รายจ่าย และดูภาพรวม Dashboard";
 $pageIcon = "fas fa-hand-holding-usd"; 
 
-// 3. Cache Busting
 $v = filemtime(__DIR__ . '/script/pl_entry.js'); 
 ?>
 <!DOCTYPE html>
@@ -24,9 +20,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
-    
     <?php include_once '../components/chart_head.php'; ?>
-    
     <link rel="stylesheet" href="css/pl_entry.css?v=<?php echo $v; ?>">
 </head>
 <body class="layout-top-header bg-light">
@@ -35,7 +29,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
         <?php include_once '../components/php/top_header.php'; ?>
 
         <div id="main-content">
-            
             <div class="toolbar-container shadow-sm z-2">
                 <div class="d-flex align-items-center gap-3">
                     
@@ -54,6 +47,11 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeDashboard">
                             <i class="fas fa-chart-pie me-1"></i> Dashboard
                         </label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="modeStatement" autocomplete="off" onclick="switchMode('statement')">
+                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeStatement">
+                            <i class="fas fa-table me-1"></i> Statement
+                        </label>
                     </div>
 
                     <div class="vr text-muted opacity-25 mx-1"></div>
@@ -68,7 +66,8 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <div class="input-group input-group-sm shadow-sm" style="width: 150px;">
                             <span class="input-group-text bg-white border-end-0 text-success fw-bold">From</span>
                             <input type="date" id="startDate" class="form-control border-start-0 fw-bold" 
-                                   value="<?php echo date('Y-m-01'); ?>" onchange="loadEntryData()"> </div>
+                                   value="<?php echo date('Y-m-01'); ?>" onchange="loadEntryData()"> 
+                        </div>
                         <span class="text-muted"><i class="fas fa-arrow-right"></i></span>
                         <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
                             <span class="input-group-text bg-white border-end-0 text-danger fw-bold">To</span>
@@ -82,9 +81,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                     <div class="input-group input-group-sm shadow-sm" style="width: 200px;">
                         <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fas fa-industry"></i></span>
                         <select id="sectionFilter" class="form-select border-start-0 fw-bold" onchange="handleSectionChange()">
-                            <option value="Team 1">Team 1</option>
-                            <option value="Team 2">Team 2</option>
-                        </select>
+                            </select>
                     </div>
                 </div>
 
@@ -93,8 +90,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <i class="fas fa-check-circle text-success me-1"></i> Saved
                     </span>
 
-                    <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold" 
-                            onclick="saveDailySnapshot()" title="Save All Data (Freeze)">
+                    <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold" onclick="saveDailySnapshot()" title="Save All Data (Freeze)">
                         <i class="fas fa-save me-1"></i> Save Day
                     </button>
 
@@ -115,7 +111,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
             <div class="content-wrapper">
                 
                 <div id="view-table" class="view-section active">
-                    
                     <div class="row g-3 mb-3">
                         <div class="col-6 col-md-3">
                             <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
@@ -128,7 +123,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-6 col-md-3">
                             <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
                                 <div class="card-body p-3">
@@ -140,7 +134,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-6 col-md-3">
                             <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
                                 <div class="card-body p-3">
@@ -152,7 +145,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-6 col-md-3">
                             <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
                                 <div class="card-body p-3">
@@ -201,7 +193,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-md-4">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-white border-0 fw-bold text-secondary">
@@ -215,9 +206,50 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                             </div>
                         </div>
                     </div>
+                    <div id="dashboardGrid" class="row g-3"></div>
+                </div>
 
-                    <div id="dashboardGrid" class="row g-3">
+                <div id="view-statement" class="view-section h-100 flex-column">
+                    <div class="card border-0 shadow-sm flex-grow-1 overflow-hidden d-flex flex-column">
+                        
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-shrink-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <h5 class="card-title mb-0 fw-bold text-primary">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i> P&L Statement
+                                </h5>
+                                <div class="btn-group btn-group-sm shadow-sm" role="group">
+                                    <input type="radio" class="btn-check" name="stmtView" id="stmtYearly" autocomplete="off" checked onchange="changeStatementView('yearly')">
+                                    <label class="btn btn-outline-secondary fw-bold px-3" for="stmtYearly">Yearly View</label>
+
+                                    <input type="radio" class="btn-check" name="stmtView" id="stmtDaily" autocomplete="off" onchange="changeStatementView('daily')">
+                                    <label class="btn btn-outline-secondary fw-bold px-3" for="stmtDaily">Daily View</label>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2 align-items-center">
+                                <label class="fw-bold small text-muted mb-0">Period:</label>
+                                
+                                <input type="number" id="statementYear" class="form-control form-control-sm text-center fw-bold text-primary shadow-sm" 
+                                       style="width: 100px;" value="<?php echo date('Y'); ?>" onchange="loadStatementData()">
+                                
+                                <input type="month" id="statementMonth" class="form-control form-control-sm text-center fw-bold text-info shadow-sm d-none" 
+                                       style="width: 150px;" value="<?php echo date('Y-m'); ?>" onchange="loadStatementData()">
+                                
+                                <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold" onclick="exportStatementExcel()">
+                                    <i class="fas fa-file-excel me-1"></i> Export
+                                </button>
+                            </div>
                         </div>
+
+                        <div class="table-responsive flex-grow-1 custom-scrollbar position-relative" id="statementTableWrapper" style="background-color: #f8f9fa;">
+                            <table class="table table-hover table-bordered table-sm mb-0 align-middle statement-table" style="font-size: 0.75rem; width: max-content; min-width: 100%;">
+                                <thead class="bg-light sticky-top text-center shadow-sm" style="z-index: 10;" id="statementThead">
+                                    </thead>
+                                <tbody id="statementTableBody" class="bg-white">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
             </div> 
