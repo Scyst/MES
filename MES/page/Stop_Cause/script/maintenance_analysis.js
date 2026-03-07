@@ -4,7 +4,7 @@
 const MtDashboard = {
     charts: {},
 
-    // ชุดสี (ตามที่คุณขอ Normal > Urgent > Critical)
+    // ชุดสี
     colors: {
         status: {
             'Pending': '#ffc107',
@@ -24,21 +24,19 @@ const MtDashboard = {
     },
 
     init() {
-        // [SIMPLE LOGIC] ดึงค่าจากหน้าหลักมาใช้เลย จบ.
         const mainStart = document.getElementById('mtStartDate')?.value;
         const mainEnd = document.getElementById('mtEndDate')?.value;
         
-        // Sync ค่าลงใน Modal Input
         if (mainStart) document.getElementById('dash_startDate').value = mainStart;
         if (mainEnd) document.getElementById('dash_endDate').value = mainEnd;
 
-        // เริ่มทำงาน
         this.setupEventListeners();
         this.loadData();
     },
 
     setupEventListeners() {
-        const inputs = ['dash_startDate', 'dash_endDate', 'dash_filterLine'];
+        // 💡 [NEW] เพิ่ม 'dash_dateType' เข้าไปใน Array เพื่อให้ดักจับ Event การเปลี่ยนค่า
+        const inputs = ['dash_startDate', 'dash_endDate', 'dash_filterLine', 'dash_dateType'];
         inputs.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -51,12 +49,16 @@ const MtDashboard = {
         const startDate = document.getElementById('dash_startDate').value;
         const endDate = document.getElementById('dash_endDate').value;
         const line = document.getElementById('dash_filterLine').value;
+        
+        // 💡 [NEW] ดึงค่าประเภทวันที่ (ถ้าหาไม่เจอให้เป็น request_date เป็น Default)
+        const dateType = document.getElementById('dash_dateType')?.value || 'request_date';
 
         if (!startDate || !endDate) return;
 
         showSpinner();
         try {
-            const url = `${MT_API_URL}?action=get_integrated_maintenance_analysis&startDate=${startDate}&endDate=${endDate}&line=${line}`;
+            // 💡 [NEW] แปะตัวแปร dateType ลงใน URL ที่ยิงไปหา API
+            const url = `${MT_API_URL}?action=get_integrated_maintenance_analysis&startDate=${startDate}&endDate=${endDate}&line=${line}&dateType=${dateType}`;
             const res = await fetch(url);
             const data = await res.json();
 
@@ -182,7 +184,7 @@ const MtDashboard = {
             }
         });
 
-        // 4. Priority (Sorted: Normal > Urgent > Critical)
+        // 4. Priority
         const priorityOrder = ['Normal', 'Urgent', 'High', 'Critical']; 
         const sortedPrioData = [...data.prio_dist].sort((a, b) => {
             return priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority);
@@ -236,6 +238,6 @@ const MtDashboard = {
     }
 };
 
-document.getElementById('maintenanceAnalysisModal').addEventListener('shown.bs.modal', () => {
+document.getElementById('maintenanceAnalysisModal')?.addEventListener('shown.bs.modal', () => {
     MtDashboard.init();
 });

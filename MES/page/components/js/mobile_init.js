@@ -1,23 +1,18 @@
-//js/mobile_init.js (ห้ามลบเด็ดขาด เพราะใช้ร่วมกันทั้ง Desktop และ Mobile โดยเฉพาะปุ่ม FAB )
+// js/mobile_init.js (ห้ามลบเด็ดขาด เพราะใช้ร่วมกันทั้ง Desktop และ Mobile โดยเฉพาะปุ่ม FAB)
 
 document.addEventListener('DOMContentLoaded', () => {
     
     // ============================================================
     // 1. ระบบ LOGOUT (ใช้ร่วมกันทั้ง Desktop และ Mobile)
     // ============================================================
-    // ดักจับทุกปุ่มที่มีคลาส .logout-action
     const logoutButtons = document.querySelectorAll('.logout-action');
-
     if (logoutButtons.length > 0) {
         logoutButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.preventDefault(); // หยุดการเปลี่ยนหน้าปกติไว้ก่อน
-
-                // ล้างค่า LocalStorage ที่กำหนด
+                e.preventDefault(); 
                 const keysToRemove = ['pdTableFilters', 'inventoryUIFilters', 'sidebarState'];
                 keysToRemove.forEach(key => localStorage.removeItem(key));
 
-                // Redirect ไปยัง URL ปลายทาง (logout.php)
                 const targetUrl = btn.getAttribute('href');
                 if (targetUrl) {
                     window.location.href = targetUrl;
@@ -29,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     // 2. ระบบ THEME SWITCHER (Mobile Proxy)
     // ============================================================
-    // เมื่อกดปุ่มในมือถือ -> ไปสั่งให้ปุ่มหลัก (Desktop) ทำงานแทน
     const mobileThemeBtn = document.getElementById('theme-switcher-btn-mobile');
     const mainThemeBtn = document.getElementById('theme-switcher-btn');
     
@@ -76,31 +70,37 @@ document.addEventListener('DOMContentLoaded', () => {
             oeeHeader.classList.toggle('filters-expanded');
         });
     }
-});
 
-// ใส่โค้ดนี้ไว้ใน components/js/mobile_init.js
-document.addEventListener('DOMContentLoaded', function() {
+    // ============================================================
+    // 5. ระบบจัดการปุ่มลอย (FAB) ให้สัมพันธ์กับ Modal (ป้องกันการเด้งทับ)
+    // ============================================================
     
-    // 1. เมื่อมี Modal ใดๆ ก็ตามกำลังจะถูกเปิด (Show)
+    // 5.1 เมื่อมี Modal ใดๆ กำลังจะถูกเปิด (ซ่อน FAB)
     document.addEventListener('show.bs.modal', function () {
         const fabs = document.querySelectorAll('.fab-container');
         fabs.forEach(fab => {
             fab.style.transition = 'opacity 0.2s, transform 0.2s';
             fab.style.opacity = '0';
             fab.style.transform = 'scale(0) translateY(20px)';
-            fab.style.pointerEvents = 'none'; // กดไม่ติด
+            fab.style.pointerEvents = 'none';
         });
     });
 
-    // 2. เมื่อ Modal ใดๆ ก็ตามถูกปิดลง (Hidden)
+    // 5.2 เมื่อ Modal ใดๆ ถูกปิดลง 
     document.addEventListener('hidden.bs.modal', function () {
+        // 🔥 [CRITICAL FIX]: ตรวจสอบว่ายังมี Modal อื่นเปิดค้างอยู่ (ซ้อนกัน) หรือไม่
+        // ถ้า body ยังมี class 'modal-open' อยู่ แปลว่ามีการเปิด Modal อื่นรอไว้แล้ว ห้ามแสดง FAB กลับมาเด็ดขาด!
+        if (document.body.classList.contains('modal-open')) {
+            return; 
+        }
+
+        // ถ้าไม่มี Modal ไหนเปิดอยู่แล้ว ถึงจะอนุญาตให้โชว์ FAB กลับมา
         const fabs = document.querySelectorAll('.fab-container');
         fabs.forEach(fab => {
-            // เช็คก่อนว่ามันถูกสั่งให้ display:none ไว้ตั้งแต่แรกหรือไม่
             if(window.getComputedStyle(fab).display !== 'none') {
                 fab.style.opacity = '1';
                 fab.style.transform = 'scale(1) translateY(0)';
-                fab.style.pointerEvents = 'auto'; // กลับมากดได้ปกติ
+                fab.style.pointerEvents = 'auto'; 
             }
         });
     });

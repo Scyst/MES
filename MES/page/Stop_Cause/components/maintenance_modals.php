@@ -15,7 +15,9 @@
                             <input type="datetime-local" name="request_date" id="add_request_date" class="form-control" required>
                         </div>
                         <div class="col-12 col-md-6">
-                            </div>
+                            <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
+                            <input type="text" name="request_by" id="add_request_by" class="form-control" placeholder="ชื่อผู้แจ้ง..." required>
+                        </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Line</label>
@@ -29,11 +31,6 @@
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-muted">ผู้แจ้งซ่อม (Requester)</label>
-                            <input type="text" name="request_by" class="form-control" placeholder="ชื่อผู้แจ้ง...">
-                        </div>
-                        
-                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Job Type (ประเภทงาน)</label>
                             <select name="job_type" class="form-select form-select-sm" required>
                                 <option value="Repair" selected>ซ่อมแซม (Repair)</option>
@@ -44,7 +41,7 @@
                             </select>
                         </div>
 
-                        <div class="col-12 col-md-12">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">Priority</label>
                             <div class="d-flex flex-wrap justify-content-between bg-light p-2 rounded mt-1 px-3">
                                 <div class="form-check mb-0">

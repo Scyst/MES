@@ -389,6 +389,20 @@ try {
             echo json_encode(['success' => true, 'data' => $machines]);
             break;
 
+        case 'get_current_user_name':
+            // เอา username ไปค้นหาชื่อภาษาไทยจากตารางพนักงาน
+            $username = $currentUser['username'] ?? '';
+            $sql = "SELECT COALESCE(E.name_th, U.username) as full_name 
+                    FROM " . USERS_TABLE . " U WITH (NOLOCK)
+                    LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK) ON U.emp_id = E.emp_id
+                    WHERE U.username = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$username]);
+            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'name' => $userData ? $userData['full_name'] : $username]);
+            break;
+
         default:
             throw new Exception("Invalid Action");
     }

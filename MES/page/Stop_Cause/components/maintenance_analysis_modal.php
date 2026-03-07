@@ -11,6 +11,16 @@
 
             <div class="bg-light border-bottom p-3">
                 <div class="row g-2 align-items-end">
+                    
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Date Filter Base</label>
+                        <select id="dash_dateType" class="form-select form-select-sm">
+                            <option value="request_date" selected>วันที่แจ้งซ่อม (Request Date)</option>
+                            <option value="started_at">วันที่เริ่มซ่อม (Start Date)</option>
+                            <option value="resolved_at">วันที่ซ่อมเสร็จ (Resolved Date)</option>
+                        </select>
+                    </div>
+
                     <div class="col-md-3">
                         <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Range Start</label>
                         <div class="input-group input-group-sm">

@@ -483,3 +483,8 @@ body.desktop-only-page::after {
         font-size: 0.7rem;
     }
 }
+
+body.modal-open .mobile-hamburger-btn,
+body.modal-open [class*="fab-"] {
+    display: none !important;
+}

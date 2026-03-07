@@ -1,6 +1,7 @@
 const MT_API_URL = 'api/maintenanceManage.php';
 let currentMaintenanceData = [];
-let standardLines = []; // [NEW] ตัวแปร Global เก็บรายชื่อ Line เพื่อแก้ปัญหาการโหลดทับกัน
+let standardLines = [];
+let currentUserThaiName = '';
 
 // ==========================================
 // 1. ฟังก์ชัน Helper จัดการวันที่และเวลา
@@ -152,7 +153,7 @@ function filterMaintenanceTable() {
 }
 
 // ==========================================
-// 3. ฟังก์ชันดึง Master Data (Line & Machine)
+// 3. ฟังก์ชันดึง Line Master Data
 // ==========================================
 async function loadStandardLines() {
     try {
@@ -160,19 +161,84 @@ async function loadStandardLines() {
         const result = await response.json();
         
         if (result.success) {
-            standardLines = result.data; // เก็บลงตัวแปร Global ด้วย
-            const optionsHTML = '<option value="" disabled selected>-- เลือก Line / แผนก --</option>' + 
-                                result.data.map(line => `<option value="${line}">${line}</option>`).join('');
+            standardLines = result.data; 
+            const validLines = result.data.filter(line => line && line.trim() !== '');
             
-            // ✅ อัปเดต Options ให้ทั้งฟอร์ม Add และ Edit
+            const optionsHTML = '<option value="" disabled selected>-- เลือก Line / แผนก --</option>' + 
+                                validLines.map(line => `<option value="${line.trim()}">${line.trim()}</option>`).join('');
+            
             const addLineEl = document.getElementById('add_line');
             const editLineEl = document.getElementById('edit_line');
             
             if (addLineEl) addLineEl.innerHTML = optionsHTML;
-            if (editLineEl) editLineEl.innerHTML = optionsHTML;
+            if (editLineEl) editLineEl.innerHTML = optionsHTML; 
         }
     } catch (err) {
         console.error('Failed to load standard lines:', err);
+    }
+}
+
+async function loadCurrentUserName() {
+    try {
+        const response = await fetch(`${MT_API_URL}?action=get_current_user_name`);
+        const result = await response.json();
+        if (result.success) {
+            currentUserThaiName = result.name; // เก็บชื่อภาษาไทยไว้ในตัวแปร
+        }
+    } catch (err) {
+        console.error('Failed to load user name');
+    }
+}
+
+// ==========================================
+// Helper: ฟังก์ชันเปลี่ยน Modal อย่างปลอดภัย (ป้องกัน Backdrop ค้าง / FAB เด้ง)
+// ==========================================
+function switchModal(fromModalId, toModalId) {
+    const fromEl = document.getElementById(fromModalId);
+    const toEl = document.getElementById(toModalId);
+    if (!fromEl || !toEl) return;
+
+    const fromModal = bootstrap.Modal.getInstance(fromEl);
+    const toModal = bootstrap.Modal.getOrCreateInstance(toEl);
+
+    // เมื่อ Modal แรกปิดสนิท (Animation จบ) ให้เปิด Modal ถัดไปทันที
+    const onHidden = function () {
+        toModal.show();
+        fromEl.removeEventListener('hidden.bs.modal', onHidden);
+    };
+    
+    fromEl.addEventListener('hidden.bs.modal', onHidden);
+    
+    if (fromModal) {
+        fromModal.hide();
+    } else {
+        toModal.show(); // กรณี Modal แรกไม่ได้เปิดอยู่แล้ว
+    }
+}
+
+// ==========================================
+// ฟังก์ชันเปลี่ยน Modal แบบไร้รอยต่อ (Seamless Transition)
+// ==========================================
+function switchModal(oldModalId, newModalId) {
+    const oldModalEl = document.getElementById(oldModalId);
+    const newModalEl = document.getElementById(newModalId);
+    if (!oldModalEl || !newModalEl) return;
+
+    const oldModal = bootstrap.Modal.getInstance(oldModalEl);
+    const newModal = bootstrap.Modal.getOrCreateInstance(newModalEl);
+
+    const onHidden = function () {
+        newModal.show();
+        oldModalEl.removeEventListener('hidden.bs.modal', onHidden);
+        // บังคับคืนสถานะ modal-open
+        setTimeout(() => document.body.classList.add('modal-open'), 50);
+    };
+
+    oldModalEl.addEventListener('hidden.bs.modal', onHidden);
+    if (oldModal) {
+        oldModal.hide();
+    } else {
+        newModal.show();
     }
 }
 
@@ -252,8 +318,9 @@ function viewMaintenanceDetails(id) {
 
     const btnEdit = document.getElementById('btn_edit_job');
     if(btnEdit) {
-        btnEdit.classList.remove('d-none');
-        btnEdit.onclick = () => openEditModal(id);
+        // ปิดการทำงานปุ่ม Edit ชั่วคราว
+        // btnEdit.classList.remove('d-none');
+        // btnEdit.onclick = () => openEditModal(id);
     }
 
     if(btnStart) btnStart.classList.add('d-none');
@@ -327,44 +394,55 @@ window.openCompleteModal = function(id) {
     document.getElementById('comp_resolved_at').value = getNowDateTimeLocal();
     document.getElementById('comp_resolved_at')?.dispatchEvent(new Event('change'));
 
-    showBootstrapModal('completeMaintenanceModal');
+    switchModal('viewMaintenanceModal', 'completeMaintenanceModal');
 };
 
 window.openEditModal = function(id) {
+    showToast('ปิดปรับปรุงระบบแก้ไขข้อมูลชั่วคราว', '#ffc107'); // แจ้งเตือน
+    return;
     const item = currentMaintenanceData.find(d => d.id == id);
     if (!item) return;
 
     // 1. กำหนดค่า ID
-    const reqIdEl = document.getElementById('edit_req_id');
-    if (reqIdEl) reqIdEl.value = item.id;
+    document.getElementById('edit_req_id').value = item.id;
     
-    // 2. จัดการ Line (แค่ Select ค่า ไม่ต้องล้าง HTML ทิ้งแล้ว!)
+    // 2. จัดการ Line (วิธีใหม่: สร้าง HTML String ใหม่ทั้งหมด ปลอดภัยที่สุด)
     const editLineEl = document.getElementById('edit_line');
-    if (editLineEl && item.line) {
-        let foundInList = false;
-        const currentOptions = editLineEl.querySelectorAll('option');
+    if (editLineEl) {
+        const itemLineTrimmed = (item.line || '').trim();
         
-        // ค้นหาว่ามีชื่อไลน์นี้ (เช่น 'SPOT') ใน Dropdown ที่โหลดมาตอนแรกไหม
-        for (let i = 0; i < currentOptions.length; i++) {
-            if (currentOptions[i].value === item.line) {
-                foundInList = true;
-                break;
-            }
+        // กรองข้อมูลจากตัวแปร Master
+        const validLines = (standardLines || []).filter(l => l && l.trim() !== '');
+        
+        // ตรวจสอบว่า Line ของข้อมูลเก่า มีอยู่ใน Master ไหม?
+        const isExist = validLines.includes(itemLineTrimmed);
+        
+        // สร้าง HTML Option พื้นฐาน
+        let finalOptionsHTML = '<option value="" disabled>-- เลือก Line / แผนก --</option>';
+        
+        // ถ้าเป็นข้อมูลเก่าที่ถูกลบไปแล้ว ให้สร้าง Option พิเศษรอไว้เลย
+        if (itemLineTrimmed !== '' && !isExist) {
+            finalOptionsHTML += `<option value="${itemLineTrimmed}">${itemLineTrimmed} (ข้อมูลเก่า)</option>`;
         }
-
-        // ถ้าหาไม่เจอ (เป็นคำผิด หรือข้อมูลเก่า) ให้เพิ่มเข้าไปดื้อๆ เลย
-        if (!foundInList) {
-            const opt = document.createElement('option');
-            opt.value = item.line;
-            opt.textContent = item.line + ' (ข้อมูลเก่า)';
-            editLineEl.appendChild(opt);
+        
+        // เอา Master Data มาวนลูปต่อ
+        finalOptionsHTML += validLines.map(line => {
+            const lineTrimmed = line.trim();
+            // ถ้าตรงกับค่าปัจจุบัน ให้ Selected ไว้เลย
+            const selectedStr = (lineTrimmed === itemLineTrimmed) ? 'selected' : '';
+            return `<option value="${lineTrimmed}" ${selectedStr}>${lineTrimmed}</option>`;
+        }).join('');
+        
+        // ยัด HTML ใส่ Select สดๆ
+        editLineEl.innerHTML = finalOptionsHTML;
+        
+        // บังคับ Set Value อีกครั้งเพื่อความชัวร์ (กรณีข้อมูลเก่า)
+        if (itemLineTrimmed !== '' && !isExist) {
+            editLineEl.value = itemLineTrimmed;
         }
-
-        // จับมัน Select ค่าให้ตรงกับ Database
-        editLineEl.value = item.line;
     }
 
-    // 3. เติมข้อมูลทั่วไป (ป้องกัน null)
+    // 3. เติมข้อมูลทั่วไป (ป้องกัน error หากหา ID ไม่เจอ)
     const setVal = (elId, val) => {
         const el = document.getElementById(elId);
         if (el) el.value = val || '';
@@ -379,7 +457,6 @@ window.openEditModal = function(id) {
     // 4. จัดการเรื่องคนแจ้ง/คนซ่อม 
     const reqInput = document.querySelector('#editMaintenanceForm input[name="request_by"]');
     const resInput = document.querySelector('#editMaintenanceForm input[name="resolved_by"]');
-    
     if (reqInput) reqInput.value = item.requester_name ?? item.request_by ?? '';
     if (resInput) resInput.value = item.resolver_name ?? item.resolved_by ?? '';
     
@@ -392,34 +469,20 @@ window.openEditModal = function(id) {
     setVal('edit_started_at', formatForDateTimeLocal(item.started_at));
     setVal('edit_resolved_at', formatForDateTimeLocal(item.resolved_at));
 
-    // 6. เวลาซ่อมจริง (Actual Repair Minutes)
+    // 6. เวลาซ่อมจริง
     const editMinutes = document.getElementById('edit_actual_minutes');
     if (editMinutes) {
         if (item.actual_repair_minutes !== null && item.actual_repair_minutes !== undefined) {
             editMinutes.value = item.actual_repair_minutes; 
         } else {
             editMinutes.value = ''; 
-            setTimeout(() => {
-                const resolvedInput = document.getElementById('edit_resolved_at');
-                if (resolvedInput) resolvedInput.dispatchEvent(new Event('change'));
-            }, 100);
+            const resolvedInput = document.getElementById('edit_resolved_at');
+            if (resolvedInput) resolvedInput.dispatchEvent(new Event('change'));
         }
     }
 
-    // 7. ปิดอันเก่า เปิดอันใหม่
-    const viewModalEl = document.getElementById('viewMaintenanceModal');
-    if (viewModalEl) {
-        const viewModal = bootstrap.Modal.getInstance(viewModalEl);
-        if (viewModal) viewModal.hide();
-    }
-    
-    setTimeout(() => {
-        const editModalEl = document.getElementById('editMaintenanceModal');
-        if (editModalEl) {
-            const editModal = bootstrap.Modal.getInstance(editModalEl) || new bootstrap.Modal(editModalEl);
-            editModal.show();
-        }
-    }, 400); 
+    // เรียกฟังก์ชันเปลี่ยน Modal
+    switchModal('viewMaintenanceModal', 'editMaintenanceModal');
 };
 
 // ==========================================
@@ -575,6 +638,7 @@ async function exportMaintenanceExcel() {
 document.addEventListener('DOMContentLoaded', () => {
     loadStandardLines();
     loadMaintenanceMachines();
+    loadCurrentUserName();
 
     const setButtonLoading = (btn, isLoading) => {
         if (!btn) return;
@@ -591,7 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const addModalEl = document.getElementById('addMaintenanceModal');
     if (addModalEl) {
         addModalEl.addEventListener('show.bs.modal', () => {
+            // ประทับเวลา
             document.getElementById('add_request_date').value = getNowDateTimeLocal();
+            
+            // 💡 2. เอาชื่อภาษาไทยที่ดึงมาได้ ยัดใส่ช่องผู้แจ้งซ่อม
+            const reqByInput = document.getElementById('add_request_by');
+            if (reqByInput && !reqByInput.value && currentUserThaiName !== '') { 
+                reqByInput.value = currentUserThaiName;
+            }
         });
     }
 
