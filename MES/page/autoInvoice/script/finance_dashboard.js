@@ -241,8 +241,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const tr = document.createElement('tr');
             
             let statusBadge = '';
-            if (inv.doc_status === 'Pending') statusBadge = `<span class="badge bg-warning text-dark px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-clock"></i> Pending</span>`;
-            else if (inv.doc_status === 'Exported') statusBadge = `<span class="badge bg-info text-dark px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-plane-departure"></i> Exported</span>`;
+            if (inv.doc_status === 'Pending') statusBadge = `<span class="badge bg-warning px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-clock"></i> Pending</span>`;
+            else if (inv.doc_status === 'Exported') statusBadge = `<span class="badge bg-info px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-plane-departure"></i> Exported</span>`;
+            else if (inv.doc_status === 'Invoiced') statusBadge = `<span class="badge px-2 py-1" style="cursor:pointer; background-color: #6f42c1;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-file-invoice"></i> Invoiced</span>`;
             else if (inv.doc_status === 'Paid') statusBadge = `<span class="badge bg-success px-2 py-1" style="cursor:pointer;" onclick="changeStatus('${inv.invoice_no}', '${inv.doc_status}')"><i class="fas fa-check-circle"></i> Paid</span>`;
             else if (inv.doc_status === 'Voided') statusBadge = `<span class="badge bg-danger px-2 py-1"><i class="fas fa-ban"></i> Voided</span>`;
             
@@ -305,11 +306,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateKPIs() {
+        // ฟังก์ชันช่วยรวมยอดเงิน
+        const sumAmount = (arr) => arr.reduce((sum, inv) => sum + (parseFloat(String(inv.total_amount).replace(/,/g, '')) || 0), 0);
+        const formatMoney = (val) => '$' + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        // 1. หมวด ALL
         document.getElementById('kpi-all').innerText = allInvoiceData.length;
-        document.getElementById('kpi-pending').innerText = allInvoiceData.filter(d => d.doc_status === 'Pending').length;
-        document.getElementById('kpi-exported').innerText = allInvoiceData.filter(d => d.doc_status === 'Exported').length;
-        document.getElementById('kpi-paid').innerText = allInvoiceData.filter(d => d.doc_status === 'Paid').length;
-        document.getElementById('kpi-voided').innerText = allInvoiceData.filter(d => d.doc_status === 'Voided').length;
+        if(document.getElementById('kpi-all-val')) document.getElementById('kpi-all-val').innerText = formatMoney(sumAmount(allInvoiceData));
+
+        // 2. หมวด Pending
+        const pendingArr = allInvoiceData.filter(d => d.doc_status === 'Pending');
+        document.getElementById('kpi-pending').innerText = pendingArr.length;
+        if(document.getElementById('kpi-pending-val')) document.getElementById('kpi-pending-val').innerText = formatMoney(sumAmount(pendingArr));
+
+        // 3. หมวด Exported
+        const exportedArr = allInvoiceData.filter(d => d.doc_status === 'Exported');
+        document.getElementById('kpi-exported').innerText = exportedArr.length;
+        if(document.getElementById('kpi-exported-val')) document.getElementById('kpi-exported-val').innerText = formatMoney(sumAmount(exportedArr));
+
+        // 4. หมวด Invoiced (ใน JS ของคุณน่าจะตกการแสดงผลจำนวนของหมวดนี้ไป ผมเติมให้ครับ)
+        const invoicedArr = allInvoiceData.filter(d => d.doc_status === 'Invoiced');
+        const kpiInvoicedEl = document.getElementById('kpi-invoiced');
+        if(kpiInvoicedEl) kpiInvoicedEl.innerText = invoicedArr.length;
+        if(document.getElementById('kpi-invoiced-val')) document.getElementById('kpi-invoiced-val').innerText = formatMoney(sumAmount(invoicedArr));
+
+        // 5. หมวด Paid
+        const paidArr = allInvoiceData.filter(d => d.doc_status === 'Paid');
+        document.getElementById('kpi-paid').innerText = paidArr.length;
+        if(document.getElementById('kpi-paid-val')) document.getElementById('kpi-paid-val').innerText = formatMoney(sumAmount(paidArr));
+
+        // 6. หมวด Voided
+        const voidedArr = allInvoiceData.filter(d => d.doc_status === 'Voided');
+        document.getElementById('kpi-voided').innerText = voidedArr.length;
+        if(document.getElementById('kpi-voided-val')) document.getElementById('kpi-voided-val').innerText = formatMoney(sumAmount(voidedArr));
     }
 
     window.filterStatus = function(status) {
@@ -970,6 +999,7 @@ document.addEventListener('DOMContentLoaded', function() {
             inputOptions: {
                 'Pending': 'รอส่งมอบ (Pending)',
                 'Exported': 'ส่งของแล้ว (Exported)',
+                'Invoiced': 'เปิดบิลแล้ว (Invoiced)',
                 'Paid': 'จ่ายเงินแล้ว (Paid)'
             },
             inputValue: currentStatus,

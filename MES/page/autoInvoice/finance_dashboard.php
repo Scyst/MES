@@ -32,13 +32,15 @@ $pageIcon = "fas fa-file-invoice-dollar";
         <div id="main-content">
             <div class="content-wrapper">
                 
-                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3"> 
                     <div class="col">
                         <div class="card shadow-sm border-0 border-start border-4 border-primary h-100 kpi-card active" id="card-ALL" onclick="filterStatus('ALL')">
                             <div class="card-body p-3">
                                 <div class="text-muted small fw-bold mb-1">ALL INVOICES</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h3 class="mb-0 fw-bold text-primary" id="kpi-all">0</h3>
+                                    <div>
+                                        <h3 class="mb-0 fw-bold text-primary" id="kpi-all">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-all-val" style="font-size: 0.8rem;">$0.00</div> </div>
                                     <i class="fas fa-file-invoice fa-2x text-primary opacity-25"></i>
                                 </div>
                             </div>
@@ -49,7 +51,9 @@ $pageIcon = "fas fa-file-invoice-dollar";
                             <div class="card-body p-3">
                                 <div class="text-muted small fw-bold mb-1">PENDING</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h3 class="mb-0 fw-bold text-warning" id="kpi-pending">0</h3>
+                                    <div>
+                                        <h3 class="mb-0 fw-bold text-warning" id="kpi-pending">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-pending-val" style="font-size: 0.8rem;">$0.00</div> </div>
                                     <i class="fas fa-clock fa-2x text-warning opacity-25"></i>
                                 </div>
                             </div>
@@ -60,18 +64,37 @@ $pageIcon = "fas fa-file-invoice-dollar";
                             <div class="card-body p-3">
                                 <div class="text-muted small fw-bold mb-1">EXPORTED</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h3 class="mb-0 fw-bold text-info" id="kpi-exported">0</h3>
+                                    <div>
+                                        <h3 class="mb-0 fw-bold text-info" id="kpi-exported">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-exported-val" style="font-size: 0.8rem;">$0.00</div> </div>
                                     <i class="fas fa-plane-departure fa-2x text-info opacity-25"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="col">
+                        <div class="card shadow-sm border-0 border-start border-4 border-primary h-100 kpi-card" id="card-Invoiced" onclick="filterStatus('Invoiced')" style="border-left-color: #6f42c1 !important;">
+                            <div class="card-body p-3">
+                                <div class="text-muted small fw-bold mb-1" style="color: #6f42c1 !important;">INVOICED</div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h3 class="mb-0 fw-bold" id="kpi-invoiced" style="color: #6f42c1;">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-invoiced-val" style="font-size: 0.8rem;">$0.00</div> </div>
+                                    <i class="fas fa-file-invoice-dollar fa-2x opacity-25" style="color: #6f42c1;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col">
                         <div class="card shadow-sm border-0 border-start border-4 border-success h-100 kpi-card" id="card-Paid" onclick="filterStatus('Paid')">
                             <div class="card-body p-3">
                                 <div class="text-muted small fw-bold mb-1">PAID</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h3 class="mb-0 fw-bold text-success" id="kpi-paid">0</h3>
+                                    <div>
+                                        <h3 class="mb-0 fw-bold text-success" id="kpi-paid">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-paid-val" style="font-size: 0.8rem;">$0.00</div> </div>
                                     <i class="fas fa-check-circle fa-2x text-success opacity-25"></i>
                                 </div>
                             </div>
@@ -82,7 +105,9 @@ $pageIcon = "fas fa-file-invoice-dollar";
                             <div class="card-body p-3">
                                 <div class="text-muted small fw-bold mb-1">VOIDED</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h3 class="mb-0 fw-bold text-danger" id="kpi-voided">0</h3>
+                                    <div>
+                                        <h3 class="mb-0 fw-bold text-danger" id="kpi-voided">0</h3>
+                                        <div class="small text-muted fw-bold mt-1" id="kpi-voided-val" style="font-size: 0.8rem;">$0.00</div> </div>
                                     <i class="fas fa-ban fa-2x text-danger opacity-25"></i>
                                 </div>
                             </div>
