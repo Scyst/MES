@@ -48,6 +48,15 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 </a>
             </li>
 
+            <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
+            <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../dailyPL/pl_entry.php">
+                    <i class="fas fa-donate fa-fw me-3 text-primary"></i>
+                    <span class="fw-bold text-primary">Daily P&L</span>
+                </a>
+            </li>
+            <?php endif; ?>
+
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../management/utilityDashboard.php">
                     <i class="fas fa-bolt fa-fw me-3"></i>

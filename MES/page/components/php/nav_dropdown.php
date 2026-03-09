@@ -43,6 +43,15 @@
             </a>
         </li>
 
+        <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
+        <li>
+            <a class="dropdown-item-icon" href="../dailyPL/pl_entry.php" title="Daily P&L">
+                <i class="fas fa-donate fa-fw"></i>
+                <span>Daily P&L</span>
+            </a>
+        </li>
+        <?php endif; ?>
+
         <li>
             <a class="dropdown-item-icon" href="../management/utilityDashboard.php" title="Utility & Energy Dashboard">
                 <i class="fas fa-bolt fa-fw"></i> <span>Utility & Energy</span>
