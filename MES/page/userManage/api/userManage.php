@@ -1,193 +1,198 @@
 <?php
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// เรียกใช้ db.php ซึ่งได้โหลด config.php ไว้แล้ว
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
 
-//-- CSRF Protection for non-GET requests --
+header('Content-Type: application/json; charset=utf-8');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    if (
-        !isset($_SERVER['HTTP_X_CSRF_TOKEN']) ||
-        !isset($_SESSION['csrf_token']) ||
-        !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])
-    ) {
-        http_response_code(403); // Forbidden
-        echo json_encode(['success' => false, 'message' => 'CSRF token validation failed. Request rejected.']);
+    if (empty($_SERVER['HTTP_X_CSRF_TOKEN']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'CSRF Token Validation Failed.']);
         exit;
     }
 }
 
-//-- Get Action and Input data --
 $action = $_REQUEST['action'] ?? '';
-$input = json_decode(file_get_contents("php://input"), true);
-if (empty($input) && !empty($_POST)) {
-    $input = $_POST;
-}
+$input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
 
-//-- File-level access control (must be admin or creator) --
 if (!hasRole(['admin', 'creator'])) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized Access.']);
     exit;
 }
 
 try {
-    //-- Set current user for permission checks and logging --
     $currentUser = $_SESSION['user'];
+    $actionBy = $currentUser['username'];
 
-    //-- Branch logic based on the action --
     switch ($action) {
         case 'read':
-            // *** เพิ่ม emp_id ใน SELECT ***
-            $stmt = $pdo->query("SELECT id, username, role, created_at, line, emp_id FROM " . USERS_TABLE . " WHERE role != 'creator' ORDER BY id ASC");
+            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, is_active, is_auto_generated, created_at 
+                                 FROM " . USERS_TABLE . " 
+                                 WHERE role != 'creator' 
+                                 ORDER BY is_active DESC, role ASC, id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($users as &$user) {
-                if ($user['created_at']) $user['created_at'] = (new DateTime($user['created_at']))->format('Y-m-d H:i:s');
-            }
             echo json_encode(['success' => true, 'data' => $users]);
             break;
 
-        case 'create':
-            if (!hasRole(['admin', 'creator'])) { throw new Exception("Permission denied."); }
-            $username = trim($input['username'] ?? '');
-            $password = trim($input['password'] ?? '');
-            $role = trim($input['role'] ?? '');
-            $line = ($role === 'supervisor') ? strtoupper(trim($input['line'] ?? '')) : null;
-            
-            // *** รับค่า emp_id ***
-            $emp_id = !empty($input['emp_id']) ? trim($input['emp_id']) : null;
+        case 'sync_manpower':
+            // 1. อัปเดตข้อมูลพนักงานที่มี User อยู่แล้ว
+            $stmtSync = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_SyncExistingUsersFromManpower @ActionBy=?");
+            $stmtSync->execute([$actionBy]);
+            $syncResult = $stmtSync->fetch(PDO::FETCH_ASSOC);
+            $updatedCount = $syncResult['updated_count'] ?? 0;
 
-            if (empty($username) || empty($password) || empty($role)) { throw new Exception("Username, password, and role are required."); }
-            if ($role === 'supervisor' && empty($line)) { throw new Exception("Line is required for supervisor role.");}
-            if ($role === 'creator') { throw new Exception("Cannot create a user with the 'creator' role."); }
-            if ($role === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can create admin users."); }
-            
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            // *** เพิ่ม emp_id ลงใน SQL ***
-            $sql = "INSERT INTO " . USERS_TABLE . " (username, password, role, line, emp_id) VALUES (?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$username, $hashedPassword, $role, $line, $emp_id]);
-            
-            logAction($pdo, $currentUser['username'], 'CREATE USER', $username, "Role: $role, Line: $line, EmpID: $emp_id");
-            echo json_encode(['success' => true, 'message' => 'User created successfully.']);
+            // 2. กวาดพนักงานที่ยังไม่มี User มาสร้างใหม่ (ดึง department_api มาด้วย)
+            $stmtNew = $pdo->query("
+                SELECT emp_id, name_th, line, department_api 
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " 
+                WHERE is_active = 1 
+                  AND emp_id NOT IN (SELECT emp_id FROM " . USERS_TABLE . " WHERE emp_id IS NOT NULL)
+                  AND emp_id NOT IN (SELECT username FROM " . USERS_TABLE . " WHERE username IS NOT NULL)
+            ");
+            $newEmployees = $stmtNew->fetchAll(PDO::FETCH_ASSOC);
+
+            $addedCount = 0;
+            $stmtAddUser = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='ADD', @Username=?, @PasswordHash=?, @Role='operator', @Line=?, @EmpId=?, @Fullname=?, @TeamGroup=?, @IsAutoGenerated=1, @ActionBy=?");
+
+            foreach ($newEmployees as $emp) {
+                $empId = trim($emp['emp_id']);
+                if(strlen($empId) < 4) continue; 
+
+                $username = $empId;
+                $password = substr($empId, -4); 
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                
+                // Dynamic Extraction สำหรับสร้างคนใหม่ (PHP)
+                $teamGroup = null;
+                $dept = $emp['department_api'] ?? '';
+                if (strpos($dept, '-') !== false) {
+                    $parts = explode('-', $dept);
+                    $afterDash = trim($parts[1] ?? '');
+                    $subParts = explode(' ', $afterDash);
+                    if (!empty($subParts[0]) && strtoupper($subParts[0]) !== 'UNASSIGNED') {
+                        $teamGroup = strtoupper($subParts[0]);
+                    }
+                }
+                
+                $stmtAddUser->execute([
+                    $username, $hashedPassword, $emp['line'], $empId, $emp['name_th'], $teamGroup, $actionBy
+                ]);
+                $addedCount++;
+            }
+
+            echo json_encode([
+                'success' => true, 
+                'message' => "Sync Complete. Updated: {$updatedCount}, Added: {$addedCount} new users."
+            ]);
             break;
 
+        case 'get_emp_info':
+            $empId = trim($_GET['emp_id'] ?? '');
+            if (!$empId) throw new Exception("Employee ID is required");
+            
+            $stmt = $pdo->prepare("
+                SELECT name_th, line, department_api 
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " 
+                WHERE emp_id = ?
+            ");
+            $stmt->execute([$empId]);
+            $emp = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($emp) {
+                // Dynamic Extraction (PHP)
+                $teamGroup = '';
+                $dept = $emp['department_api'] ?? '';
+                if (strpos($dept, '-') !== false) {
+                    $parts = explode('-', $dept);
+                    $afterDash = trim($parts[1] ?? ''); // เช่น "Team1 D-DL" หรือ "B9 D-DL"
+                    $subParts = explode(' ', $afterDash);
+                    if (!empty($subParts[0]) && strtoupper($subParts[0]) !== 'UNASSIGNED') {
+                        $teamGroup = strtoupper($subParts[0]); // ได้ "TEAM1" หรือ "B9"
+                    }
+                }
+
+                echo json_encode(['success' => true, 'data' => [
+                    'name_th' => $emp['name_th'],
+                    'line' => $emp['line'],
+                    'team_group' => $teamGroup
+                ]]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Not found']);
+            }
+            break;
+
+        case 'create':
         case 'update':
             $targetId = (int)($input['id'] ?? 0);
-            if (!$targetId) throw new Exception("Target user ID is required.");
-            $stmt = $pdo->prepare("SELECT id, username, role FROM " . USERS_TABLE . " WHERE id = ?");
-            $stmt->execute([$targetId]);
-            $targetUser = $stmt->fetch();
-            if (!$targetUser) throw new Exception("Target user not found.");
-            if ($targetUser['role'] === 'creator') throw new Exception("Creator accounts cannot be modified.");
-            
-            $isEditingSelf = ($targetId === (int)$currentUser['id']);
-            if (hasRole('admin') && !hasRole('creator')) {
-                if (!$isEditingSelf && $targetUser['role'] === 'admin') { throw new Exception("Admins cannot modify other admins."); }
-            }
-            
-            $updateFields = []; $params = []; $logDetails = [];
-            
-            if (!$isEditingSelf || hasRole('creator')) {
-                if (isset($input['username']) && $input['username'] !== $targetUser['username']) {
-                    $updateFields[] = "username = ?"; $params[] = trim($input['username']); $logDetails[] = "username to " . trim($input['username']);
-                }
-                if (isset($input['role']) && $input['role'] !== $targetUser['role']) {
-                    if ($input['role'] === 'admin' && !hasRole('creator')) { throw new Exception("Only creators can promote users to admin."); }
-                    $updateFields[] = "role = ?"; $params[] = trim($input['role']); $logDetails[] = "role to " . trim($input['role']);
-                }
-            }
-            
-            if (isset($input['role']) && $input['role'] === 'supervisor') {
-                $line = strtoupper(trim($input['line'] ?? ''));
-                if (empty($line)) { throw new Exception("Line is required for supervisor role."); }
-                $updateFields[] = "line = ?"; $params[] = $line; $logDetails[] = "line to " . $line;
-            } elseif (isset($input['role']) && $input['role'] !== 'supervisor') {
-                $updateFields[] = "line = NULL"; $logDetails[] = "line cleared";
-            }
+            $username = trim($input['username'] ?? '');
+            $role = trim($input['role'] ?? '');
+            $line = !empty(trim($input['line'] ?? '')) ? strtoupper(trim($input['line'])) : null;
+            $emp_id = !empty(trim($input['emp_id'] ?? '')) ? trim($input['emp_id']) : null;
+            $fullname = !empty(trim($input['fullname'] ?? '')) ? trim($input['fullname']) : null;
+            $team_group = !empty(trim($input['team_group'] ?? '')) ? strtoupper(trim($input['team_group'])) : null;
+            $password = trim($input['password'] ?? '');
 
-            // *** อัปเดต emp_id ***
-            if (isset($input['emp_id'])) {
-                $emp_id = trim($input['emp_id']) !== '' ? trim($input['emp_id']) : null;
-                $updateFields[] = "emp_id = ?"; $params[] = $emp_id; $logDetails[] = "emp_id to " . $emp_id;
-            }
+            if (empty($role)) throw new Exception("Role is required.");
+            if ($role === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
+            if ($role === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
 
-            if (!empty($input['password'])) {
-                $updateFields[] = "password = ?"; $params[] = password_hash(trim($input['password']), PASSWORD_DEFAULT); $logDetails[] = "password changed";
+            if ($action === 'create') {
+                if (empty($username) || empty($password)) throw new Exception("Username and password are required.");
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='ADD', @Username=?, @PasswordHash=?, @Role=?, @Line=?, @EmpId=?, @Fullname=?, @TeamGroup=?, @ActionBy=?");
+                $stmt->execute([$username, $hashedPassword, $role, $line, $emp_id, $fullname, $team_group, $actionBy]);
+                echo json_encode(['success' => true, 'message' => 'User created successfully.']);
+            } else {
+                if (!$targetId) throw new Exception("Target user ID is required.");
+                
+                $stmtUpdate = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='EDIT', @UserId=?, @Role=?, @Line=?, @EmpId=?, @Fullname=?, @TeamGroup=?, @ActionBy=?");
+                $stmtUpdate->execute([$targetId, $role, $line, $emp_id, $fullname, $team_group, $actionBy]);
+
+                if (!empty($password)) {
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
+                    $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
+                }
+                echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             }
-            
-            if (empty($updateFields)) { echo json_encode(['success' => true, 'message' => 'No changes were made.']); break; }
-            
-            $sql = "UPDATE " . USERS_TABLE . " SET " . implode(', ', $updateFields) . " WHERE id = ?";
-            $params[] = $targetId;
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            
-            logAction($pdo, $currentUser['username'], 'UPDATE USER', $targetUser['username'], implode(', ', $logDetails));
-            echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             break;
-            
-        case 'delete':
-            $targetId = (int)($_REQUEST['id'] ?? 0);
+
+        case 'toggle_status':
+            $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
-            if ($targetId === (int)$currentUser['id']) { throw new Exception("You cannot delete your own account."); }
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
-            $stmt = $pdo->prepare("SELECT username, role FROM " . USERS_TABLE . " WHERE id = ?");
-            $stmt->execute([$targetId]);
-            $targetUser = $stmt->fetch();
-            if (!$targetUser) throw new Exception("User not found.");
-            if ($targetUser['role'] === 'creator') { throw new Exception("Creator accounts cannot be deleted."); }
-            if ($targetUser['role'] === 'admin' && !hasRole('creator')) { throw new Exception("Permission denied. Only creators can delete other admins."); }
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USERS_TABLE ***
-            $deleteStmt = $pdo->prepare("DELETE FROM " . USERS_TABLE . " WHERE id = ?");
-            $deleteStmt->execute([$targetId]);
-            logAction($pdo, $currentUser['username'], 'DELETE USER', $targetUser['username']);
-            echo json_encode(['success' => true, 'message' => 'User deleted successfully.']);
+            if ($targetId === (int)$currentUser['id']) throw new Exception("You cannot disable your own account.");
+            
+            $stmtToggle = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='TOGGLE_STATUS', @UserId=?, @ActionBy=?");
+            $stmtToggle->execute([$targetId, $actionBy]);
+            echo json_encode(['success' => true, 'message' => 'User status updated.']);
             break;
             
         case 'logs':
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 50;
-            $startDate = $_GET['startDate'] ?? null;
-            $endDate = $_GET['endDate'] ?? null;
-            $userFilter = $_GET['user'] ?? null;
-            $actionFilter = $_GET['action_type'] ?? null;
-            $targetFilter = $_GET['target'] ?? null;
-            
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $limit = max(1, intval($_GET['limit'] ?? 50));
             $startRow = ($page - 1) * $limit;
             
-            $conditions = [];
-            $params = [];
-
-            if ($startDate) { $conditions[] = "CAST(created_at AS DATE) >= ?"; $params[] = $startDate; }
-            if ($endDate) { $conditions[] = "CAST(created_at AS DATE) <= ?"; $params[] = $endDate; }
-            if ($userFilter) { $conditions[] = "action_by LIKE ?"; $params[] = '%' . $userFilter . '%'; }
-            if ($actionFilter) { $conditions[] = "action_type LIKE ?"; $params[] = '%' . $actionFilter . '%'; }
-            if ($targetFilter) { $conditions[] = "target_user LIKE ?"; $params[] = '%' . $targetFilter . '%'; }
+            $conditions = []; $params = [];
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(created_at AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(created_at AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['user'])) { $conditions[] = "action_by LIKE ?"; $params[] = '%' . $_GET['user'] . '%'; }
+            if (!empty($_GET['action_type'])) { $conditions[] = "action_type LIKE ?"; $params[] = '%' . $_GET['action_type'] . '%'; }
+            if (!empty($_GET['target'])) { $conditions[] = "target_user LIKE ?"; $params[] = '%' . $_GET['target'] . '%'; }
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USER_LOGS_TABLE ***
-            $totalSql = "SELECT COUNT(*) AS total FROM " . USER_LOGS_TABLE . " $whereClause";
-            $totalStmt = $pdo->prepare($totalSql);
+            $totalStmt = $pdo->prepare("SELECT COUNT(*) AS total FROM " . USER_LOGS_TABLE . " $whereClause");
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
             
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ USER_LOGS_TABLE ***
-            $dataSql = "
-                SELECT * FROM (
-                    SELECT 
-                        id, action_by, action_type, target_user, detail, created_at,
-                        ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum
-                    FROM " . USER_LOGS_TABLE . "
-                    $whereClause
-                ) AS NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
-            ";
+            $dataSql = "SELECT * FROM ( SELECT id, action_by, action_type, target_user, detail, created_at, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum FROM " . USER_LOGS_TABLE . " $whereClause ) AS NumberedRows WHERE RowNum > ? AND RowNum <= ?";
             
-            $endRow = $startRow + $limit;
-            $paginationParams = array_merge($params, [$startRow, $endRow]);
-
+            $paginationParams = array_merge($params, [$startRow, $startRow + $limit]);
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute($paginationParams);
             $logs = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -198,22 +203,14 @@ try {
                 }
             }
             
-            echo json_encode([
-                'success' => true,
-                'data' => $logs,
-                'total' => $total,
-                'page' => $page,
-                'limit' => $limit
-            ]);
+            echo json_encode(['success' => true, 'data' => $logs, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
         default:
-            http_response_code(400);
-            throw new Exception("Invalid action specified for User Management.");
+            throw new Exception("Invalid action specified.");
     }
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    error_log("Error in userManage.php: " . $e->getMessage());
 }
 ?>

@@ -302,9 +302,6 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
         </div>
     </main>
-
-    <?php include_once __DIR__ . '/../components/php/docking_sidebar.php'; ?>
-    <?php include_once __DIR__ . '/../components/php/mobile_menu.php'; ?>
     
     <?php include_once 'components/manpower_modals_bundle.php'; ?>
 

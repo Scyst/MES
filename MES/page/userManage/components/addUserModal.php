@@ -28,6 +28,10 @@
                         <label for="addLine" class="form-label">Assigned Line</label>
                         <input type="text" name="line" class="form-control text-uppercase" id="addLine" placeholder="Enter line for supervisor">
                     </div>
+                    <div class="mb-3">
+                        <label for="addEmpId" class="form-label">Employee ID <small class="text-muted">(Optional)</small></label>
+                        <input type="text" name="emp_id" class="form-control text-uppercase" id="addEmpId" placeholder="e.g., EMP001" autocomplete="off">
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">

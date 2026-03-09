@@ -43,13 +43,12 @@ function openEditUserModal(user) {
     const modal = document.getElementById('editUserModal');
     if (!modal) return;
 
-    // เติมข้อมูลผู้ใช้ลงในฟอร์ม (ส่วนนี้เหมือนเดิม)
     document.getElementById('edit_id').value = user.id;
     document.getElementById('edit_username').value = user.username;
     document.getElementById('edit_role').value = user.role;
     document.getElementById('editLine').value = user.line || '';
+    document.getElementById('editEmpId').value = user.emp_id || ''; // <-- เพิ่มบรรทัดนี้
 
-    // ตรวจสอบเงื่อนไขสิทธิ์ในการแก้ไข (ส่วนนี้เหมือนเดิม)
     const isSelf = (user.id === currentUserId);
     document.getElementById('edit_username').disabled = (currentUserRole === 'admin' && isSelf);
     document.getElementById('edit_role').disabled = (currentUserRole === 'admin' && isSelf) || (currentUserRole === 'creator' && user.role === 'admin');
