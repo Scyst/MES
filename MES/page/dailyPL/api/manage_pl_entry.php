@@ -2,7 +2,6 @@
 // page/pl_daily/api/manage_pl_entry.php
 header('Content-Type: application/json');
 
-// ปิดการแสดง Error หน้าเว็บ (ป้องกัน JSON พัง) ให้ลง Log แทน
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
@@ -10,16 +9,12 @@ require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../db.php';
 
-// =================================================================
-// 1. SECURITY & AUTH CHECK
-// =================================================================
-if (!hasRole(['admin', 'creator', 'supervisor'])) {
+if (!hasPermission('view_pl') && !hasPermission('manage_pl')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Access Denied: Insufficient Permissions']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: You do not have permission to access P&L data.']);
     exit;
 }
 
-// Helper: ตรวจสอบวันที่
 function validateDate($date, $format = 'Y-m-d') {
     $d = DateTime::createFromFormat($format, $date);
     return $d && $d->format($format) === $date;
@@ -30,12 +25,7 @@ $user_name = $_SESSION['user']['username'] ?? 'System';
 
 try {
     switch ($action) {
-
-        // =================================================================
-        // GROUP 1: P&L ENTRY (Daily Actuals)
-        // =================================================================
         case 'read':
-            // Validation
             $date = $_GET['entry_date'] ?? date('Y-m-d');
             if (!validateDate($date)) throw new Exception("Invalid Date Format");
             
@@ -46,7 +36,6 @@ try {
             $stmt->execute([':date' => $date, ':section' => $section]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Type Casting (สำคัญมากสำหรับ JS Frontend)
             foreach ($data as &$row) {
                 $row['actual_amount']  = (float)$row['actual_amount'];
                 $row['daily_target']   = (float)$row['daily_target'];
@@ -59,7 +48,7 @@ try {
             break;
 
         case 'save': 
-            // 1. Validate Inputs
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $date = $_POST['entry_date'] ?? null;
             $section = trim($_POST['section'] ?? '');
             $items_json = $_POST['items'] ?? '[]';
@@ -67,7 +56,6 @@ try {
             if (!validateDate($date)) throw new Exception("Invalid Date");
             if (empty($section)) throw new Exception("Invalid Section");
 
-            // Execute Batch SP ลด N+1 Query ทิ้ง
             $stmt = $pdo->prepare("EXEC dbo.sp_UpsertDailyPLEntry_Batch :date, :sect, :items, :user");
             $stmt->execute([
                 ':date'  => $date,
@@ -79,31 +67,24 @@ try {
             echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             break;
 
-        // =================================================================
-        // GROUP 2: TARGETS (Budgeting)
-        // =================================================================
         case 'save_target':
-            // 1. รับค่าแบบเจาะจง (ใช้ $_POST แทน filter_input เพื่อความชัวร์กับ FormData)
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
             $month = isset($_POST['month']) ? (int)$_POST['month'] : 0;
             $section = $_POST['section'] ?? '';
             $itemsJson = $_POST['items'] ?? '[]';
 
-            // 2. Validation
             if ($year <= 0 || $month <= 0) {
-                // (Optional) Uncomment บรรทัดล่างเพื่อดู Log ถ้ายังแก้ไม่หาย
-                // error_log("SaveTarget Fail: Y=$year M=$month POST=" . print_r($_POST, true));
                 throw new Exception("Invalid Year/Month (Received: $year-$month)");
             }
             if (empty($section)) throw new Exception("Invalid Section");
 
-            // 3. Execute SP
             $stmt = $pdo->prepare("EXEC dbo." . SP_SAVE_MONTHLY_TARGET . " :year, :month, :section, :items, :user");
             $stmt->execute([
                 ':year'    => $year,
                 ':month'   => $month,
                 ':section' => $section,
-                ':items'   => $itemsJson, // ส่ง JSON String ไปให้ SP แตกเอง
+                ':items'   => $itemsJson,
                 ':user'    => $user_name
             ]);
             
@@ -120,18 +101,14 @@ try {
             break;
 
         case 'get_working_days':
-            // 1. รับค่าและแปลงเป็นตัวเลขทันที
             $year = isset($_GET['year']) ? (int)$_GET['year'] : 0;
             $month = isset($_GET['month']) ? (int)$_GET['month'] : 0;
             
-            // 2. ตรวจสอบความถูกต้อง (ป้องกันเดือน 0 หรือค่าว่าง)
             if ($year <= 0 || $month <= 0 || $month > 12) {
-                // ถ้าค่าผิด ให้คืนค่า Default (25 วัน) หรือแจ้ง Error แทน SQL Crash
                 echo json_encode(['success' => true, 'days' => 25]); 
                 exit;
             }
             
-            // 3. เรียก SP
             $stmt = $pdo->prepare("EXEC dbo." . SP_GET_WORKING_DAYS . " :year, :month");
             $stmt->execute([':year' => $year, ':month' => $month]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -143,25 +120,15 @@ try {
             $year = filter_input(INPUT_GET, 'year', FILTER_VALIDATE_INT);
             $month = filter_input(INPUT_GET, 'month', FILTER_VALIDATE_INT);
             $section = $_GET['section'] ?? '';
-
-            // ใช้ Table Name จาก Config เพื่อรองรับ TEST/PROD
             $table = defined('MONTHLY_PL_TARGETS_TABLE') ? MONTHLY_PL_TARGETS_TABLE : 'MONTHLY_PL_TARGETS';
-            
-            // ใช้ Parameter Binding เสมอ (ป้องกัน SQL Injection)
             $stmt = $pdo->prepare("SELECT item_id, target_amount FROM $table WHERE year_val = :y AND month_val = :m AND section_name = :s");
             $stmt->execute([':y' => $year, ':m' => $month, ':s' => $section]);
+            $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
             
-            $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // คืนค่าแบบ [id => amount] สะดวกกับ JS
-            
-            // Cast Values
             foreach ($rows as $k => $v) { $rows[$k] = (float)$v; }
-            
             echo json_encode(['success' => true, 'data' => $rows]);
             break;
 
-        // =================================================================
-        // GROUP 3: REPORTS & DASHBOARD
-        // =================================================================
         case 'report_range':
             $start = $_GET['start_date'];
             $end = $_GET['end_date'];
@@ -183,7 +150,6 @@ try {
             break;
 
         case 'dashboard_stats':
-            // Logic เดียวกันกับ report_range
             $start = $_GET['start_date'];
             $end = $_GET['end_date'];
             if (!validateDate($start) || !validateDate($end)) throw new Exception("Invalid Dates");
@@ -204,9 +170,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // =================================================================
-        // GROUP 4: CALENDAR & RATES (Management)
-        // =================================================================
         case 'calendar_read':
             $stmt = $pdo->prepare("
                 SELECT calendar_date as start, description as title, day_type, work_rate_holiday, ot_rate_holiday 
@@ -221,7 +184,7 @@ try {
                 return [
                     'title' => $r['title'],
                     'start' => $r['start'],
-                    'color' => $isOff ? '#ffc107' : '#e74a3b', // เหลือง หรือ แดง
+                    'color' => $isOff ? '#ffc107' : '#e74a3b',
                     'textColor' => $isOff ? '#000' : '#fff',
                     'extendedProps' => [
                         'work_rate' => (float)$r['work_rate_holiday'],
@@ -234,6 +197,7 @@ try {
             break;
 
         case 'calendar_save':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $in = json_decode(file_get_contents('php://input'), true);
             if (!validateDate($in['date'] ?? '')) throw new Exception("Invalid Date");
 
@@ -244,12 +208,13 @@ try {
                 ':desc'  => $in['description'] ?? '',
                 ':wRate' => floatval($in['work_rate']),
                 ':oRate' => floatval($in['ot_rate']),
-                ':user'  => $user_name // โยน User ไปด้วย (เผื่ออนาคต SP เก็บ Log)
+                ':user'  => $user_name
             ]);
             echo json_encode(['success' => true]);
             break;
 
         case 'calendar_delete':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $in = json_decode(file_get_contents('php://input'), true);
             if (!validateDate($in['date'] ?? '')) throw new Exception("Invalid Date");
 
@@ -301,6 +266,7 @@ try {
             break;
 
         case 'save_exchange_rate':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $input = json_decode(file_get_contents('php://input'), true);
             $stmt = $pdo->prepare("EXEC dbo." . SP_MANAGE_EXCHANGE . " 'SAVE', :y, :m, :r, :u");
             $stmt->execute([
@@ -328,6 +294,7 @@ try {
             break;
 
         case 'save_container_rate':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $input = json_decode(file_get_contents('php://input'), true);
             $stmt = $pdo->prepare("EXEC dbo." . SP_MANAGE_CONTAINER . " 'SAVE', :y, :m, :r, :u");
             $stmt->execute([

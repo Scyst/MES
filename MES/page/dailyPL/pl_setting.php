@@ -2,12 +2,11 @@
 // page/pl_daily/pl_setting.php
 require_once __DIR__ . '/../components/init.php';
 
-if (!hasRole(['admin', 'creator'])) {
+if (!hasPermission('manage_pl')) {
     header("Location: ../../auth/access_denied.php");
     exit;
 }
 
-// 1. ตั้งค่าตัวแปรสำหรับ top_header.php
 $pageTitle = "P&L Structure Setup";
 $pageIcon = "fas fa-sitemap"; 
 $pageHeaderTitle = "P&L Structure Setup"; 
@@ -23,7 +22,6 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/pl_setting.css?v=<?php echo $v; ?>">
     <style>
-        /* CSS เฉพาะหน้า Setting */
         .form-switch .form-check-input {
             width: 2.5em;
             height: 1.25em;
@@ -35,15 +33,13 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
             font-size: 0.85rem;
         }
         
-        /* Toolbar ปรับแต่ง */
         .toolbar-container {
             background: #fff;
             border-bottom: 1px solid #e0e0e0;
             padding: 0.75rem 1.5rem;
-            width: 100%; /* 🔥 บังคับเต็มจอ */
+            width: 100%;
         }
 
-        /* Badge Styles */
         .badge-mini {
             display: inline-flex; align-items: center; justify-content: center;
             width: 20px; height: 20px; border-radius: 4px; 

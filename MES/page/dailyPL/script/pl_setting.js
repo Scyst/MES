@@ -5,29 +5,19 @@ let myModal = null;
 let sortable = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Init Modal
     const modalEl = document.getElementById('plItemModal');
     if(modalEl) myModal = new bootstrap.Modal(modalEl);
 
-    // 2. Bind Toggle Event (สำหรับปุ่ม Show Inactive)
     const toggle = document.getElementById('showInactiveToggle');
     if (toggle) {
         toggle.addEventListener('change', () => loadData());
     }
-
-    // ❌ ลบส่วน Radio Listener ออก เพราะใน modal_pl_item.php เราใช้ onchange="..." หรือ script ในตัวมันเองแล้ว
-
-    // 3. Load Data
     loadData();
 });
-
-// ❌ ลบฟังก์ชัน toggleSourceOptions ออก เพราะย้ายไป modal_pl_item.php แล้ว
 
 async function loadData(isUpdate = false) {
     const tbody = document.getElementById('masterTableBody');
     const currentScroll = window.scrollY;
-
-    // เช็คสถานะปุ่ม Show Inactive
     const showInactive = document.getElementById('showInactiveToggle')?.checked ? 1 : 0;
 
     if (!isUpdate) {
@@ -64,28 +54,21 @@ function renderTable(data) {
         const level = parseInt(item.item_level) || 0;
         const isAuto = item.data_source.includes('AUTO');
         const isCalc = item.data_source === 'CALCULATED';
-        const isActive = parseInt(item.is_active) === 1; // เช็คสถานะ
+        const isActive = parseInt(item.is_active) === 1;
         
-        // --- Row Styling ---
         let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
         let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 2rem;' : `padding-left: ${2 + (level * 1.5)}rem;`);
-        
-        // 🔥 ถ้าถูกลบ ให้ทำสีจางๆ
         let rowStyle = isActive ? '' : 'opacity: 0.6; background-color: #f8f9fa;'; 
-
-        // --- Icons ---
         let iconHtml = '';
         if (level === 0) iconHtml = `<i class="fas fa-folder text-primary me-2 fa-lg"></i>`;
         else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
         else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // --- Badges ---
         let typeBadge = '';
         if (item.item_type === 'REVENUE') typeBadge = `<span class="badge-mini badge-type-rev" title="Revenue">R</span>`;
         else if (item.item_type === 'COGS') typeBadge = `<span class="badge-mini badge-type-cogs" title="Cost of Goods Sold">C</span>`;
         else typeBadge = `<span class="badge-mini badge-type-exp" title="Expense">E</span>`;
 
-        // Status Badge (Deleted)
         let statusBadge = isActive ? '' : '<span class="badge bg-danger ms-2" style="font-size: 0.6rem;">DELETED</span>';
 
         let sourceBadge = '';
@@ -102,16 +85,13 @@ function renderTable(data) {
             sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${formulaDesc}">F</span>`;
         } else sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input">M</span>`;
 
-        // --- Action Buttons ---
         let actionButtons = '';
         if (isActive) {
-            // ปกติ: ปุ่ม Edit / Delete
             actionButtons = `
                 <button class="action-btn btn-light text-primary border" onclick='editItem(${JSON.stringify(item)})'><i class="fas fa-pen fa-xs"></i></button>
                 <button class="action-btn btn-light text-danger border ms-1" onclick="deleteItem(${item.id})"><i class="fas fa-trash fa-xs"></i></button>
             `;
         } else {
-            // ถูกลบ: ปุ่ม Restore
             actionButtons = `
                 <button class="action-btn btn-light text-success border fw-bold px-3" onclick="restoreItem(${item.id})" title="กู้คืนรายการนี้">
                     <i class="fas fa-trash-restore me-1"></i> Restore
@@ -119,7 +99,6 @@ function renderTable(data) {
             `;
         }
 
-        // --- Build Row ---
         html += `
             <tr data-id="${item.id}" class="${rowClass}" style="${rowStyle}">
                 <td style="${indentStyle}" class="pe-3">
@@ -154,7 +133,6 @@ function renderTable(data) {
     tbody.innerHTML = html;
 }
 
-// --- Drag & Drop ---
 function initSortable() {
     const el = document.getElementById('masterTableBody');
     if (sortable) sortable.destroy();
@@ -189,15 +167,11 @@ async function saveReorder() {
     }
 }
 
-// --- Modal Functions ---
 function updateParentOptions(data) {
     const select = document.getElementById('parentId');
     if (!select) return;
     const currentVal = select.value; 
-
     select.innerHTML = '<option value="">-- เป็นรายการหลัก (No Parent) --</option>';
-
-    // กรองเอาเฉพาะตัวที่ Active มาเป็นพ่อ (ไม่ควรเอาตัวที่ถูกลบมาเป็นพ่อ)
     const parents = data.filter(item => 
         (item.is_active == 1) && 
         (!item.parent_id || item.data_source === 'CALCULATED')
@@ -220,14 +194,12 @@ function openModal() {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Add New Item';
     document.getElementById('srcManual').checked = true;
     
-    // Reset Validation
     const formulaInput = document.getElementById('calculationFormula');
     if(formulaInput) {
         formulaInput.classList.remove('is-invalid', 'is-valid');
         formulaInput.setCustomValidity("");
     }
     
-    // 🔥 เรียก toggleSourceOptions() ซึ่งเป็น Global function จาก modal_pl_item.php เพื่อ Reset UI
     if (typeof toggleSourceOptions === 'function') toggleSourceOptions();
 
     myModal.show();
@@ -236,7 +208,6 @@ function openModal() {
 window.editItem = function(item) {
     document.getElementById('modalAction').value = 'save';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>แก้ไขรายการบัญชี';
-    
     document.getElementById('itemId').value = item.id;
     document.getElementById('accountCode').value = item.account_code;
     document.getElementById('itemName').value = item.item_name;
@@ -246,8 +217,6 @@ window.editItem = function(item) {
 
     const formulaInput = document.getElementById('calculationFormula');
     formulaInput.value = item.calculation_formula || '';
-    
-    // Reset Validation visual
     formulaInput.classList.remove('is-invalid', 'is-valid');
     formulaInput.setCustomValidity("");
 
@@ -263,7 +232,6 @@ window.editItem = function(item) {
         document.getElementById('srcManual').checked = true;
     }
 
-    // 🔥 เรียก toggleSourceOptions() จาก modal_pl_item.php
     if (typeof toggleSourceOptions === 'function') toggleSourceOptions(); 
 
     myModal.show();
@@ -304,7 +272,6 @@ window.saveItem = async function() {
     }
 }
 
-// 🔥 ฟังก์ชันลบ (Soft Delete)
 window.deleteItem = async function(id) {
     const result = await Swal.fire({ 
         title: 'Move to Trash?', 
@@ -335,7 +302,6 @@ window.deleteItem = async function(id) {
     }
 }
 
-// 🔥 ฟังก์ชันกู้คืน (Restore)
 window.restoreItem = async function(id) {
     const result = await Swal.fire({ 
         title: 'Restore Item?', 
@@ -366,9 +332,7 @@ window.restoreItem = async function(id) {
     }
 }
 
-// ... (Export/Import Functions คงเดิม) ...
 function exportTemplate() {
-    // ... (Code เดิม) ...
     if (allData.length === 0) {
         Swal.fire('Info', 'No Data', 'info'); return;
     }

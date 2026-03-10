@@ -2,8 +2,7 @@
 // page/pl_daily/pl_entry.php
 require_once __DIR__ . '/../components/init.php';
 
-// Check Permissions
-if (!hasRole(['admin', 'creator', 'supervisor'])) {
+if (!hasPermission('view_pl') && !hasPermission('manage_pl')) {
     header("Location: ../../auth/access_denied.php");
     exit;
 }
