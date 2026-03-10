@@ -53,11 +53,11 @@ try {
                 ];
             }
 
-            // 1.2 Dashboard Data (เฉพาะ Admin/Sup)
+            // 1.2 Dashboard Data (เฉพาะคนที่มีสิทธิ์ดูภาพรวม)
             $dashboardData = [];
             $factoryMood = ['total' => 0, 'sum' => 0, 'avg' => 0];
             
-            if (in_array($userRole, ['admin', 'supervisor', 'creator'])) {
+            if (hasPermission('view_mood')) {
                 $usersTable = USERS_TABLE;
                 // l.* จะดึง reply_message มาด้วยโดยอัตโนมัติ
                 $sqlDash = "SELECT l.*, u.username, u.emp_id, u.line 

@@ -2,8 +2,9 @@
 // MES/page/dailyLog/moodReport.php
 require_once __DIR__ . '/../components/init.php';
 
-// --- Access Control ---
-if (!in_array($_SESSION['user']['role'], ['admin', 'creator'])) {
+// --- Access Control (PBAC) ---
+// อนุญาตให้เข้าถึงได้เฉพาะคนที่มีสิทธิ์ view_mood เท่านั้น
+if (!hasPermission('view_mood')) {
     header("Location: dailyLogUI.php");
     exit;
 }

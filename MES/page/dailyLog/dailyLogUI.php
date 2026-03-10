@@ -8,12 +8,12 @@ $userRole = $isLoggedIn ? $user['role'] : 'guest';
 $fullName = $isLoggedIn ? ($user['fullname'] ?? $user['username']) : 'ผู้เยี่ยมชม (Guest)';
 $pageTitle = "MES TOOLBOX";
 
-// Helper Function
-function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole, $iconColorClass = '') {
-    $hasPermission = in_array($userRole, $allowedRoles);
+function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $iconColorClass = '') {
+    $hasPermission = empty($requiredPermission) ? isset($_SESSION['user']) : hasPermission($requiredPermission);
+    
     $lockClass = $hasPermission ? '' : 'locked';
     $href = $hasPermission ? $url : 'javascript:void(0)';
-    $onClick = $hasPermission ? '' : 'onclick="showLockedAlert(\'' . $title . '\')"';
+    $onClick = $hasPermission ? '' : 'onclick="showLockedAlert(\'' . htmlspecialchars($title, ENT_QUOTES) . '\')"';
     $lockIcon = $hasPermission ? '' : '<i class="fas fa-lock ms-auto text-secondary opacity-50"></i>';
 
     if (empty($iconColorClass)) {
@@ -152,12 +152,12 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         <?php 
                         $themeOps = 'text-primary bg-primary bg-opacity-10';
 
-                        renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
-                        renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeOps);
+                        renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', 'view_production', $themeOps);
+                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', 'view_production', $themeOps);
+                        renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_production', $themeOps);
+                        renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeOps);
+                        renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_production', $themeOps);
+                        renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeOps);
                         ?>
                     </div>
                 </div>
@@ -168,17 +168,17 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         <?php
                         $themeMon = 'text-success bg-success bg-opacity-10';
 
-                        renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', ['admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน (P&L)', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Utility & Energy', 'ติดตามการใช้พลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', ['admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะประจำวัน', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', ['admin', 'creator', 'planner', 'supervisor'], $userRole, $themeMon);
-                        renderServiceLink('Manpower', 'จัดการกำลังคน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', ['supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Forklift Booking', 'จองรถโฟร์คลิฟ และติดตามสถานะ', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', ['operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', ['admin', 'creator'], $userRole, $themeMon);
-                        renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', ['guest', 'operator', 'supervisor', 'admin', 'creator'], $userRole, $themeMon);
+                        renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', '', $themeMon);
+                        renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_dashboard', $themeMon);
+                        renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน (P&L)', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeMon);
+                        renderServiceLink('Utility & Energy', 'ติดตามการใช้พลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_dashboard', $themeMon);
+                        renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะประจำวัน', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeMon);
+                        renderServiceLink('Manpower', 'จัดการกำลังคน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeMon);
+                        renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeMon);
+                        renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeMon);
+                        renderServiceLink('Forklift Booking', 'จองรถโฟร์คลิฟ และติดตามสถานะ', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', '', $themeMon);
+                        renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', 'view_mood', $themeMon);
+                        renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', 'view_documents', $themeMon);
                         ?>
                     </div>
                 </div>
@@ -189,10 +189,10 @@ function renderServiceLink($title, $desc, $icon, $url, $allowedRoles, $userRole,
                         <?php
                         $themeSys = 'text-secondary bg-secondary bg-opacity-10';
 
-                        renderServiceLink('System Settings', 'ตั้งค่าระบบ', '<i class="fas fa-cogs"></i>', '../inventorySettings/inventorySettings.php', ['supervisor', 'admin', 'creator'], $userRole, $themeSys);
-                        renderServiceLink('QR Printer', 'พิมพ์ Location Tag', '<i class="fas fa-qrcode"></i>', '../production/print_location_qr.php', ['admin', 'creator'], $userRole, $themeSys);
-                        renderServiceLink('MT Stock', 'คลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', ['admin', 'creator'], $userRole, $themeSys);
-                        renderServiceLink('User Manager', 'จัดการผู้ใช้งาน', '<i class="fas fa-users-cog"></i>', '../userManage/userManageUI.php', ['admin', 'creator'], $userRole, $themeSys);
+                        renderServiceLink('System Settings', 'ตั้งค่าระบบ', '<i class="fas fa-cogs"></i>', '../inventorySettings/inventorySettings.php', 'manage_settings', $themeSys);
+                        renderServiceLink('QR Printer', 'พิมพ์ Location Tag', '<i class="fas fa-qrcode"></i>', '../production/print_location_qr.php', 'print_qr', $themeSys);
+                        renderServiceLink('MT Stock', 'คลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', 'manage_settings', $themeSys);
+                        renderServiceLink('User Manager', 'จัดการผู้ใช้งาน', '<i class="fas fa-users-cog"></i>', '../userManage/userManageUI.php', 'manage_users', $themeSys);
                         ?>
                     </div>
                 </div>
