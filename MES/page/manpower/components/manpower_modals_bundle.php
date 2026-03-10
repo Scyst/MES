@@ -1,6 +1,5 @@
 <?php 
-// MES/page/manpower/components/manpower_modals_bundle.php 
-// รวม Modal ทั้งหมดไว้ที่นี่ (Updated: Added Start/Resign Date to Employee Edit)
+// MES/page/manpower/components/manpower_modals_bundle.php
 ?>
 
 <div class="modal fade" id="editLogModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">

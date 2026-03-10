@@ -6,7 +6,6 @@ const App = {
     viewMode: 'LINE', // LINE or SHIFT
     autoRefreshTimer: null,
     
-    // ✅ [NEW] ตัวแปรเก็บสถานะสูตร (false=Standard, true=Simulation)
     useNewFormula: false,
 
     init() {
@@ -22,7 +21,6 @@ const App = {
             this.currentDate = new Date().toISOString().split('T')[0];
         }
 
-        // ✅ [NEW] ผูกปุ่ม Toggle สูตรคำนวณ (ถ้ามีใน HTML)
         const toggleBtn = document.getElementById('btnFormulaToggle');
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => this.toggleFormula());
@@ -37,25 +35,19 @@ const App = {
         }
     },
 
-    // ✅ [NEW] ฟังก์ชันสลับสูตร
     toggleFormula() {
-        this.useNewFormula = !this.useNewFormula; // สลับสถานะ
+        this.useNewFormula = !this.useNewFormula;
         
-        // อัปเดตหน้าตาปุ่มเพื่อให้รู้ว่าอยู่โหมดไหน
         const btn = document.getElementById('btnFormulaToggle');
         if (btn) {
             if (this.useNewFormula) {
-                // โหมดใหม่ (Simulation): สีส้ม/แดง
                 btn.className = 'btn btn-warning btn-sm shadow-sm fw-bold transition-btn text-dark';
                 btn.innerHTML = '<i class="fas fa-flask me-2"></i>New Logic (Sim)';
             } else {
-                // โหมดเดิม (Standard): สีขาว/เทา
                 btn.className = 'btn btn-white border text-secondary btn-sm shadow-sm fw-bold transition-btn';
                 btn.innerHTML = '<i class="fas fa-calculator me-2"></i>Standard Cost';
             }
         }
-
-        // โหลดข้อมูลใหม่ทันทีด้วยสูตรที่เลือก
         this.loadData(); 
     },
 

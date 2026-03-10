@@ -29,10 +29,6 @@ session_write_close();
 
 try {
     switch ($action) {
-
-        // ======================================================================
-        // CASE: read_structure (Dropdown Line/Team)
-        // ======================================================================
         case 'read_structure':
             // Lines
             $stmtLine = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC");
@@ -45,14 +41,10 @@ try {
             echo json_encode(['success' => true, 'lines' => $lines, 'teams' => $teams]);
             break;
 
-        // ======================================================================
-        // [FIX] 1. อ่านข้อมูลพนักงานรายคน (Fetch Fresh Data)
-        // ======================================================================
         case 'read_single_employee':
             $empId = $_GET['emp_id'] ?? '';
             if (!$empId) throw new Exception("Employee ID is required.");
 
-            // ✅ [UPDATED] เพิ่ม start_date, resign_date ในการดึงข้อมูล
             $sql = "SELECT emp_id, name_th, position, line, team_group, 
                            default_shift_id, is_active, start_date, resign_date 
                     FROM " . MANPOWER_EMPLOYEES_TABLE . " 
@@ -67,13 +59,8 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: read_employees (List View)
-        // ======================================================================
         case 'read_employees':
             $showAll = filter_var($_GET['show_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            
-            // ✅ แก้ไข SQL: เพิ่ม start_date และ resign_date
             $sql = "SELECT 
                         E.emp_id, 
                         E.name_th, 
@@ -108,9 +95,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: read_team_shifts (Shift Planner)
-        // ======================================================================
         case 'read_team_shifts':
             $sql = "SELECT line, team_group, MAX(default_shift_id) as default_shift_id, COUNT(emp_id) as member_count
                     FROM " . MANPOWER_EMPLOYEES_TABLE . "
@@ -123,9 +107,6 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // ======================================================================
-        // CASE: update_team_shift (Bulk Update)
-        // ======================================================================
         case 'update_team_shift':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
@@ -140,17 +121,12 @@ try {
             $stmt->execute([$newShiftId, $line, $team]);
             
             $count = $stmt->rowCount();
-
-            // Log
             $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'SHIFT_PLAN', ?, GETDATE())")
                 ->execute([$updatedBy, "Shift Change: $line Team $team -> Shift $newShiftId ($count updated)"]);
 
             echo json_encode(['success' => true, 'message' => "Updated $count employees."]);
             break;
 
-        // ======================================================================
-        // CASE: create_employee
-        // ======================================================================
         case 'create_employee':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
@@ -160,8 +136,6 @@ try {
             $line = trim($input['line']);
             $shift = $input['shift_id'] ?? 1;
             $team = trim($input['team_group'] ?? '-');
-            
-            // ✅ [UPDATED] รับค่า start_date
             $startDate = !empty($input['start_date']) ? $input['start_date'] : date('Y-m-d');
 
             // Duplicate Check
@@ -169,7 +143,6 @@ try {
             $stmtCheck->execute([$empId]);
             if ($stmtCheck->fetchColumn() > 0) throw new Exception("Employee ID already exists!");
 
-            // ✅ [UPDATED] เพิ่ม start_date ลงใน Insert
             $sql = "INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " 
                     (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at, start_date)
                     VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE(), ?)";
@@ -178,15 +151,10 @@ try {
             echo json_encode(['success' => true, 'message' => 'Created successfully']);
             break;
 
-        // ======================================================================
-        // [FINAL & SECURE] 2. บันทึกแก้ไขข้อมูลพนักงาน (Update Logic + Retroactive)
-        // ======================================================================
         case 'update_employee':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
 
-            // 1. ประกาศตัวแปร updatedBy ให้ชัดเจน
             $updatedBy = $_SESSION['user']['username'] ?? 'SYSTEM'; 
-
             $empId      = trim($input['emp_id'] ?? '');
             $name       = trim($input['name_th'] ?? '');
             $pos        = trim($input['position'] ?? '');
@@ -194,8 +162,6 @@ try {
             $shift      = $input['shift_id'] ?? ($input['default_shift_id'] ?? null);
             $team       = trim($input['team_group'] ?? '-');
             $active     = isset($input['is_active']) ? intval($input['is_active']) : 1;
-            
-            // รับค่าวันที่ (จากที่คุณเขียนเพิ่มมา)
             $startDate  = !empty($input['start_date']) ? $input['start_date'] : null;
             $resignDate = !empty($input['resign_date']) ? $input['resign_date'] : null;
 
@@ -204,7 +170,6 @@ try {
             $pdo->beginTransaction();
 
             try {
-                // 2.1 Update Master Data
                 $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
                         SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE(),
                         start_date = ?, resign_date = ? 
@@ -212,7 +177,6 @@ try {
                 
                 $pdo->prepare($sql)->execute([$name, $pos, $line, $shift, $team, $active, $startDate, $resignDate, $empId]);
 
-                // 2.2 Retroactive Log Update (อัปเดตย้อนหลัง)
                 if (!empty($input['update_logs']) && !empty($input['effective_date'])) {
                     $effDate = $input['effective_date'];
                     
@@ -224,12 +188,11 @@ try {
                                      updated_by = ?
                                  WHERE emp_id = ? 
                                    AND log_date >= ?
-                                   AND (is_verified = 0 OR is_verified IS NULL)"; // Handle NULL
+                                   AND (is_verified = 0 OR is_verified IS NULL)";
 
                     $pdo->prepare($sqlRetro)->execute([$line, $team, $shift, $updatedBy, $empId, $effDate]);
                 }
 
-                // 2.3 Cleanup Logic (ถ้าปิดการใช้งาน)
                 if ($active === 0) {
                     $sqlCleanLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
                                     WHERE emp_id = ? 
@@ -247,9 +210,6 @@ try {
             }
             break;
 
-        // ======================================================================
-        // CASE: terminate_employee (แจ้งพนักงานลาออก)
-        // ======================================================================
         case 'terminate_employee':
             $emp_id = $input['emp_id'] ?? '';
             $resign_date = $input['resign_date'] ?? '';
@@ -260,10 +220,7 @@ try {
             }
 
             try {
-                // เริ่ม Transaction (ถ้าบรรทัดไหนพัง จะได้ Rollback กลับให้หมด)
                 $pdo->beginTransaction();
-
-                // 1. อัปเดต Master Data: ปิด Active และใส่วันที่ลาออก
                 $sqlUpdate = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
                               SET is_active = 0, resign_date = :resign_date 
                               WHERE emp_id = :emp_id";
@@ -273,8 +230,6 @@ try {
                     ':emp_id' => $emp_id
                 ]);
 
-                // 2. ลบ Daily Logs: ลบข้อมูล "ตั้งแต่วันที่ลาออกเป็นต้นไป" (ป้องกันยอด HC เกิน)
-                // ตารางอาจจะชื่อ MANPOWER_DAILY_LOGS (ตรวจสอบชื่อตารางของคุณให้ตรงนะครับ)
                 $sqlDelete = "DELETE FROM MANPOWER_DAILY_LOGS 
                               WHERE emp_id = :emp_id AND log_date >= :resign_date";
                 $stmtDelete = $pdo->prepare($sqlDelete);
@@ -283,40 +238,27 @@ try {
                     ':resign_date' => $resign_date
                 ]);
 
-                // บันทึกการเปลี่ยนแปลงทั้งหมด
                 $pdo->commit();
 
                 echo json_encode(['success' => true, 'message' => 'Terminated and logs cleared']);
             } catch (Exception $e) {
-                // ถ้ามี Error ให้ย้อนกลับข้อมูลทั้งหมด
                 $pdo->rollBack();
                 echo json_encode(['success' => false, 'message' => $e->getMessage()]);
             }
             break;
 
-        // ======================================================================
-        // CASE: read_mappings
-        // ======================================================================
         case 'read_mappings':
             $stmt = $pdo->prepare("SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name ASC, keyword ASC");
             $stmt->execute();
             echo json_encode(['success' => true, 'categories' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // ======================================================================
-        // CASE: save_mappings (Bulk Save)
-        // ======================================================================
         case 'save_mappings':
             if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
 
             $categories = $input['categories'] ?? [];
-
             $pdo->beginTransaction();
-            
-            // 1. Clear Old
             $pdo->exec("DELETE FROM " . MANPOWER_CATEGORY_MAPPING_TABLE);
-            
-            // 2. Insert New
             $stmt = $pdo->prepare("INSERT INTO " . MANPOWER_CATEGORY_MAPPING_TABLE . " (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
             
             foreach ($categories as $cat) {
@@ -329,9 +271,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
             break;
 
-        // ======================================================================
-        // DEFAULT
-        // ======================================================================
         default:
             throw new Exception("Invalid Action or Method");
     }

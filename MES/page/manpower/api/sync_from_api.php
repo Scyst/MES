@@ -16,12 +16,12 @@ if (isset($_SERVER['HTTP_X_MODE']) && $_SERVER['HTTP_X_MODE'] === 'auto_sync') {
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// 2. Auth Check
+// 2. Auth Check (PBAC)
 if (!$isAutoSync) {
     require_once __DIR__ . '/../../../auth/check_auth.php';
-    if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'supervisor'])) {
+    if (!function_exists('hasPermission') || !hasPermission('manage_manpower')) {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        echo json_encode(['success' => false, 'message' => 'Permission Denied: You do not have permission to sync manpower data.']);
         exit;
     }
 }

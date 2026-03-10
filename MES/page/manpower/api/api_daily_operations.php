@@ -25,10 +25,6 @@ session_write_close();
 
 try {
     switch ($action) {
-        
-        // ======================================================================
-        // CASE: read_daily (ดึงข้อมูลรายวัน) - คงเดิม
-        // ======================================================================
         case 'read_daily':
             $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
             $endDate    = $_GET['endDate']   ?? $startDate; 
@@ -161,14 +157,11 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'summary' => $summary]);
             break;
 
-        // ======================================================================
-        // CASE: read_summary (Dashboard Graph & Table) - Refactored for Toggle Logic
-        // ======================================================================
         case 'read_summary':
             $date = $_GET['date'] ?? date('Y-m-d');
             
             $useNewFormula = isset($_GET['use_new_formula']) && $_GET['use_new_formula'] === 'true' ? 1 : 0;
-            $spName = IS_DEVELOPMENT ? 'sp_GetManpowerDashboardData_TEST' : 'sp_GetManpowerDashboardData'; 
+            $spName = 'sp_GetManpowerDashboardData';
             
             $sql = "EXEC $spName @StartDate = :start, @EndDate = :end, @UseNewFormula = :formula";
             $stmt = $pdo->prepare($sql);
@@ -207,11 +200,8 @@ try {
             echo json_encode(['success' => true, 'raw_data' => $finalData, 'last_update' => date('d/m/Y H:i:s')]);
             break;
 
-        // ======================================================================
-        // CASE: clear_day (Admin Only) - คงเดิม
-        // ======================================================================
         case 'clear_day':
-            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied: Manage manpower right is required.");
 
             $date = $input['date'] ?? '';
             $line = $input['line'] ?? '';
@@ -236,11 +226,8 @@ try {
             echo json_encode(['success' => true, 'message' => "Cleared $deletedCount records."]);
             break;
 
-        // ======================================================================
-        // CASE: update_log_status (Quick Update) - คงเดิม
-        // ======================================================================
         case 'update_log_status':
-            if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied: Manage manpower right is required.");
 
             $logId  = $input['log_id'] ?? '';
             $status = $input['status'] ?? '';
@@ -267,11 +254,8 @@ try {
             echo json_encode(['success' => true, 'message' => 'Updated successfully']);
             break;
 
-        // ======================================================================
-        // CASE: delete_log (Delete Individual) - คงเดิม
-        // ======================================================================
         case 'delete_log':
-            if (!hasRole(['admin', 'creator', 'supervisor'])) throw new Exception("Unauthorized");
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied: Manage manpower right is required.");
 
             $logId = $input['log_id'] ?? '';
             if (empty($logId)) throw new Exception("Missing Log ID");
@@ -282,8 +266,8 @@ try {
 
             if (!$log) throw new Exception("Record not found.");
             
-            if (in_array($log['status'], ['PRESENT', 'LATE']) && !hasRole('admin')) {
-                throw new Exception("ไม่สามารถลบรายการที่มีการสแกนเข้างานแล้วได้");
+            if (in_array($log['status'], ['PRESENT', 'LATE']) && !hasRole(['admin', 'creator'])) {
+                throw new Exception("ไม่สามารถลบรายการที่มีการสแกนเข้างานแล้วได้ (ต้องใช้สิทธิ์ Admin)");
             }
 
             $pdo->beginTransaction();
@@ -297,13 +281,10 @@ try {
             echo json_encode(['success' => true, 'message' => 'Record deleted successfully']);
             break;
 
-        // ======================================================================
-        // CASE: read_trend (ดึงข้อมูลกราฟย้อนหลัง) - คงเดิม
-        // ======================================================================
         case 'read_trend':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
-            $funcName     = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+            $funcName     = 'fn_GetManpowerSummary';
 
             $sql = "
                 WITH DateRange AS (
@@ -335,9 +316,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: read_range_report - คงเดิม
-        // ======================================================================
         case 'read_range_report':
             $startDate = $_GET['startDate'] ?? date('Y-m-01');
             $endDate   = $_GET['endDate']   ?? date('Y-m-t');
@@ -345,7 +323,7 @@ try {
             $shift = isset($_GET['shift']) ? $_GET['shift'] : null;
             $type  = isset($_GET['type']) ? $_GET['type'] : null;
 
-            $spName = IS_DEVELOPMENT ? 'sp_GetExecutiveRangeReport_TEST' : 'sp_GetExecutiveRangeReport';
+            $spName = 'sp_GetExecutiveRangeReport';
 
             $stmt = $pdo->prepare("EXEC $spName @StartDate = ?, @EndDate = ?, @Line = ?, @Shift = ?, @EmpType = ?");
             $stmt->execute([$startDate, $endDate, $line, $shift, $type]);
@@ -361,12 +339,9 @@ try {
             echo json_encode(['success' => true, 'header' => $headerStats, 'trend' => $trendData]);
             break;
 
-        // ======================================================================
-        // CASE: update_log (แก้ไขข้อมูลรายวัน) - คงเดิม
-        // ======================================================================
         case 'update_log':
-            if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'supervisor'])) {
-                throw new Exception("Unauthorized: คุณไม่มีสิทธิ์แก้ไขข้อมูล");
+            if (!hasPermission('manage_manpower')) {
+                throw new Exception("Permission Denied: คุณไม่มีสิทธิ์แก้ไขข้อมูล");
             }
 
             $logId  = $input['log_id'] ?? '';
@@ -405,13 +380,10 @@ try {
             echo json_encode(['success' => true, 'message' => 'Saved successfully']);
             break;
 
-        // ======================================================================
-        // CASE: export_history (ดึงข้อมูลสรุปแยก Line/Shift ตามช่วงเวลา) - คงเดิม
-        // ======================================================================
         case 'export_history':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
-            $funcName     = IS_DEVELOPMENT ? 'fn_GetManpowerSummary_TEST' : 'fn_GetManpowerSummary';
+            $funcName = 'fn_GetManpowerSummary';
 
             $sql = "
                 WITH DateRange AS (
@@ -447,9 +419,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // ======================================================================
-        // CASE: compare_cost (เปรียบเทียบสูตรเก่า vs ใหม่)
-        // ======================================================================
         case 'compare_cost':
             $startDate = $_GET['startDate'] ?? date('Y-m-d');
             $endDate   = $_GET['endDate']   ?? $startDate; 
@@ -487,14 +456,10 @@ try {
                 $endDate   = $_GET['endDate']   ?? date('Y-m-d');
                 $line      = $_GET['line']      ?? 'ALL';
 
-                // ป้องกัน SQL Injection และใช้พารามิเตอร์ที่สะอาด
                 $sql = "EXEC sp_GetIntegratedManpowerAnalysis @StartDate = ?, @EndDate = ?, @Line = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$startDate, $endDate, $line]);
-
-                // Layer 1: Summary (KPI Cards)
                 $summary = $stmt->fetch(PDO::FETCH_ASSOC);
-                // ถ้าไม่มีข้อมูล ให้ส่งค่า Default กลับไปแทน False เพื่อป้องกัน JS พัง
                 if (!$summary) {
                     $summary = [
                         'Total_Unique_HC' => 0,
@@ -506,16 +471,10 @@ try {
                     ];
                 }
                 $stmt->nextRowset();
-
-                // Layer 2: Daily Trend (Charts)
                 $trend = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 $stmt->nextRowset();
-
-                // Layer 3: Financials (Cost Table)
                 $financials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 $stmt->nextRowset();
-
-                // Bonus: Category Distribution (Pie Chart)
                 $distribution = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 echo json_encode([
@@ -526,10 +485,9 @@ try {
                         'financials'   => $financials,
                         'distribution' => $distribution
                     ]
-                ], JSON_NUMERIC_CHECK); // แปลง "123.45" เป็น 123.45 (Number) อัตโนมัติ
+                ], JSON_NUMERIC_CHECK);
 
             } catch (Exception $e) {
-                // Log Error ลงไฟล์ระบบ MES (ถ้ามีระบบ Logger)
                 error_log("Integrated Analysis Error: " . $e->getMessage());
                 
                 echo json_encode([
@@ -539,9 +497,6 @@ try {
             }
             break;
 
-        // ======================================================================
-        // DEFAULT: Error
-        // ======================================================================
         default:
             throw new Exception("Invalid Action: " . htmlspecialchars($action));
     }

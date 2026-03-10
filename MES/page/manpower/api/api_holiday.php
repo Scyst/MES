@@ -5,10 +5,9 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// Check Auth (Admin/Creator only)
-if (!isset($_SESSION['user']) || !hasRole(['admin', 'creator'])) {
+if (!isset($_SESSION['user']) || !hasPermission('manage_manpower')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Permission Denied: You do not have permission to manage holiday settings.']);
     exit;
 }
 
@@ -17,12 +16,12 @@ $action = $_GET['action'] ?? ($input['action'] ?? 'read');
 
 try {
     switch ($action) {
-        // --------------------------------------------------------
-        // READ: ดึงข้อมูลมาแสดงในปฏิทิน
-        // --------------------------------------------------------
         case 'read':
-            $start = $_GET['start'] ?? date('Y-m-01');
-            $end   = $_GET['end']   ?? date('Y-m-t');
+            $startRaw = $_GET['start'] ?? date('Y-m-01');
+            $endRaw   = $_GET['end']   ?? date('Y-m-t');
+            
+            $start = date('Y-m-d', strtotime($startRaw));
+            $end   = date('Y-m-d', strtotime($endRaw));
 
             $sql = "SELECT 
                         calendar_date, 
@@ -37,14 +36,13 @@ try {
             $stmt->execute([$start, $end]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // แปลง format ให้เข้ากับ FullCalendar Events
             $events = [];
             foreach ($rows as $row) {
-                $color = ($row['day_type'] === 'HOLIDAY') ? '#e74a3b' : '#f6c23e'; // แดง=นักขัตฤกษ์, เหลือง=หยุดอื่น
-                if (stripos($row['description'], 'Sunday') !== false) $color = '#858796'; // เทา=วันอาทิตย์
+                $color = ($row['day_type'] === 'HOLIDAY') ? '#e74a3b' : '#f6c23e';
+                if (stripos($row['description'], 'Sunday') !== false) $color = '#858796';
 
                 $events[] = [
-                    'id'    => $row['calendar_date'], // ใช้วันที่ เป็น ID
+                    'id'    => $row['calendar_date'],
                     'title' => $row['description'],
                     'start' => $row['calendar_date'],
                     'allDay'=> true,
@@ -65,9 +63,6 @@ try {
             ]);
             break;
 
-        // --------------------------------------------------------
-        // SAVE: บันทึกวันหยุด (Upsert)
-        // --------------------------------------------------------
         case 'save':
             $date = $input['date'];
             $desc = $input['description'];
@@ -77,7 +72,6 @@ try {
 
             if (!$date || !$desc) throw new Exception("Missing required fields");
 
-            // ใช้ MERGE เพื่อ Insert หรือ Update
             $sql = "MERGE INTO dbo.MANPOWER_CALENDAR AS Target
                     USING (SELECT ? AS d) AS Source
                     ON (Target.calendar_date = Source.d)
@@ -94,16 +88,13 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $date, 
-                $type, $desc, $workRate, $otRate, // Update Params
-                $date, $type, $desc, $workRate, $otRate // Insert Params
+                $type, $desc, $workRate, $otRate,
+                $date, $type, $desc, $workRate, $otRate
             ]);
 
             echo json_encode(['success' => true]);
             break;
 
-        // --------------------------------------------------------
-        // DELETE: ลบวันหยุด (กลับเป็นวันทำงานปกติ)
-        // --------------------------------------------------------
         case 'delete':
             $date = $input['date'];
             if (!$date) throw new Exception("Date required");

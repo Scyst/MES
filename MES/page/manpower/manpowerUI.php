@@ -2,13 +2,11 @@
 // page/manpower/manpowerUI.php
 require_once __DIR__ . '/../components/init.php';
 
-// ตรวจสอบสิทธิ์
-if (!isset($_SESSION['user'])) {
-    header("Location: ../../auth/login_form.php");
+if (!hasPermission('view_manpower') && !hasPermission('manage_manpower')) {
+    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
     exit;
 }
 
-// 1. ตั้งค่า Header Variable
 $currentUser = $_SESSION['user'];
 $pageTitle = "Manpower Management";
 $pageHeaderTitle = "Manpower Dashboard"; 
@@ -88,8 +86,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             
                             <li><a class="dropdown-item" href="#" onclick="Actions.exportDailyRaw()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
                             
-                            <?php if (hasRole(['admin', 'creator'])): ?>
-                    
+                            <?php if (hasPermission('manage_manpower')): ?>
+                                
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
 
