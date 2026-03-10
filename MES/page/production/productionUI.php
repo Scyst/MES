@@ -317,13 +317,10 @@ $currentUserForJS = $_SESSION['user'] ?? null;
                 include('components/summaryModal.php');
                 include('components/historySummaryModal.php');
                 include('components/hourlyProductionModal.php');
-                include('../components/php/autoLogoutUI.php');
             ?>
         </main>    
     </div>
 
-    <?php include_once('../components/php/command_center.php'); ?>
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>

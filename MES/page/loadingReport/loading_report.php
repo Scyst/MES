@@ -22,7 +22,6 @@ $pageTitle = "Loading Inspection";
 
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
     <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
-    <?php include __DIR__ . '/../components/php/docking_sidebar.php'; ?>
 
     <div class="page-container">
         <div id="main-content">

@@ -114,15 +114,12 @@ $currentUser = $_SESSION['user'];
                     include('components/uploadDocModal.php');
                     include('components/deleteConfirmationModal.php');
                 }
-                include('components/viewDocModal.php'); 
-                include('../components/php/autoLogoutUI.php');
+                include('components/viewDocModal.php');
             ?>
 
         </main>
     </div>
     
-    <?php include_once('../components/php/command_center.php'); ?>
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>

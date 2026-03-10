@@ -258,4 +258,124 @@ document.addEventListener('DOMContentLoaded', () => {
     if(editEmpInput) {
         editEmpInput.addEventListener('change', (e) => fetchEmpInfoAndFill(e.target.value, 'edit_'));
     }
+
+    // =================================================================
+    // PBAC: Role Matrix Logic
+    // =================================================================
+    
+    let isMatrixLoaded = false;
+
+    // ผูก Event ตอนเปลี่ยน Tab
+    const rolesTabBtn = document.getElementById('roles-tab');
+    if (rolesTabBtn) {
+        rolesTabBtn.addEventListener('shown.bs.tab', () => {
+            if (!isMatrixLoaded) loadPermissionMatrix();
+        });
+    }
+
+    async function loadPermissionMatrix() {
+        const thead = document.getElementById('matrixThead');
+        const tbody = document.getElementById('matrixTbody');
+        if(!thead || !tbody) return;
+
+        try {
+            const res = await sendRequest('get_permission_matrix', 'GET');
+            if (res.success) {
+                renderMatrixTable(res.data);
+                isMatrixLoaded = true;
+            }
+        } catch (e) {
+            tbody.innerHTML = `<tr><td class="text-center text-danger py-4">Failed to load permissions</td></tr>`;
+        }
+    }
+
+    function renderMatrixTable(data) {
+        const { roles, permissions, mappings } = data;
+        const thead = document.getElementById('matrixThead');
+        const tbody = document.getElementById('matrixTbody');
+
+        // 1. สร้าง Header (เรียง Role ตามแนวนอน)
+        let thHtml = `<tr><th class="text-start ps-3" style="width: 250px;">Module / Permission</th>`;
+        roles.forEach(r => {
+            thHtml += `<th style="min-width: 120px;">
+                        <div class="fw-bold">${r.role_name}</div>
+                        <small class="text-muted fw-normal">${r.role_code}</small>
+                       </th>`;
+        });
+        thHtml += `</tr>`;
+        thead.innerHTML = thHtml;
+
+        // 2. สร้าง Body (จัดกลุ่มตาม Module)
+        tbody.innerHTML = '';
+        let currentModule = '';
+
+        permissions.forEach(p => {
+            // สร้าง Header คั่นแต่ละ Module
+            if (p.module_name !== currentModule) {
+                currentModule = p.module_name;
+                tbody.innerHTML += `
+                    <tr class="table-secondary">
+                        <td colspan="${roles.length + 1}" class="fw-bold text-dark ps-3 py-2">
+                            <i class="fas fa-folder me-2"></i> Module: ${currentModule}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const tr = document.createElement('tr');
+            let tdHtml = `
+                <td class="ps-4">
+                    <div class="fw-semibold text-primary">${p.perm_code}</div>
+                    <small class="text-muted">${p.description}</small>
+                </td>
+            `;
+
+            // วนลูป Role เพื่อสร้าง Checkbox Switch
+            roles.forEach(r => {
+                const isCreator = (r.role_code === 'creator');
+                // เช็คว่า Role นี้มี Permission นี้หรือไม่
+                const hasPerm = isCreator || (mappings[r.role_code] && mappings[r.role_code].includes(p.perm_code));
+                
+                const checkedStr = hasPerm ? 'checked' : '';
+                const disabledStr = isCreator ? 'disabled' : ''; // ห้ามแก้ creator
+                
+                tdHtml += `
+                    <td class="text-center align-middle">
+                        <div class="form-check form-switch d-flex justify-content-center">
+                            <input class="form-check-input perm-switch" type="checkbox" 
+                                   data-role="${r.role_code}" 
+                                   data-perm="${p.perm_code}" 
+                                   ${checkedStr} ${disabledStr} style="cursor: pointer;">
+                        </div>
+                    </td>
+                `;
+            });
+            tr.innerHTML = tdHtml;
+            tbody.appendChild(tr);
+        });
+
+        // 3. ผูก Event Listener ตอนกด Switch
+        document.querySelectorAll('.perm-switch').forEach(sw => {
+            sw.addEventListener('change', async function(e) {
+                const roleCode = this.dataset.role;
+                const permCode = this.dataset.perm;
+                const isGranted = this.checked;
+                
+                this.disabled = true; // ล็อคปุ่มชั่วคราว
+                try {
+                    const res = await sendRequest('toggle_permission', 'POST', {
+                        role_code: roleCode,
+                        perm_code: permCode,
+                        is_granted: isGranted
+                    });
+                    showToast(res.message, res.success ? '#198754' : '#dc3545');
+                    if(!res.success) this.checked = !isGranted; // rollback UI
+                } catch(err) {
+                    this.checked = !isGranted; // rollback UI
+                } finally {
+                    this.disabled = false; // ปลดล็อคปุ่ม
+                }
+            });
+        });
+    }
 });

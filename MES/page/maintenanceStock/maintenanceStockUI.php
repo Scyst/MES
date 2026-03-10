@@ -168,8 +168,6 @@ $currentUser = $_SESSION['user'];
         </main>
     </div>
     
-    <?php include_once('../components/php/command_center.php'); ?>
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>

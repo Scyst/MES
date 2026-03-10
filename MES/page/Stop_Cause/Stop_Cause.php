@@ -293,7 +293,6 @@
         include('components/maintenance_analysis_modal.php');
     ?>
     
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
     
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>

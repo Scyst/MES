@@ -206,6 +206,62 @@ try {
             echo json_encode(['success' => true, 'data' => $logs, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
+        // ------------------------------------------------------------------
+        // PBAC: Role Matrix Management
+        // ------------------------------------------------------------------
+        case 'get_permission_matrix':
+            // ดึง Role ทั้งหมด (เรียงตามลำดับความสำคัญ)
+            $roles = $pdo->query("SELECT role_code, role_name, role_level FROM dbo.SYS_ROLES ORDER BY role_level ASC")->fetchAll(PDO::FETCH_ASSOC);
+            
+            // ดึง Permission ทั้งหมด (จัดกลุ่มตาม Module)
+            $perms = $pdo->query("SELECT perm_code, module_name, description FROM dbo.SYS_PERMISSIONS ORDER BY module_name ASC, perm_code ASC")->fetchAll(PDO::FETCH_ASSOC);
+            
+            // ดึง Mapping ปัจจุบัน
+            $mappings = $pdo->query("SELECT role_code, perm_code FROM dbo.SYS_ROLE_PERMISSIONS")->fetchAll(PDO::FETCH_ASSOC);
+            
+            // จัดรูป Mapping ให้ JS อ่านง่าย
+            $mapDict = [];
+            foreach ($mappings as $m) {
+                $mapDict[$m['role_code']][] = $m['perm_code'];
+            }
+            
+            echo json_encode(['success' => true, 'data' => ['roles' => $roles, 'permissions' => $perms, 'mappings' => $mapDict]]);
+            break;
+
+        case 'toggle_permission':
+            // เช็คว่าคนกดมีสิทธิ์ manage_roles หรือไม่ (ยกเว้น creator ทะลุได้อยู่แล้วผ่านเช็คในฟังก์ชัน)
+            if (!hasPermission('manage_roles')) throw new Exception("Permission denied. You cannot modify roles.");
+            
+            $roleCode = $input['role_code'] ?? '';
+            $permCode = $input['perm_code'] ?? '';
+            $isGranted = filter_var($input['is_granted'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            
+            if (!$roleCode || !$permCode) throw new Exception("Invalid parameters.");
+            
+            // ป้องกันการไปยุ่งกับสิทธิ์ของ System Owner (creator)
+            if ($roleCode === 'creator') throw new Exception("System Owner permissions cannot be modified.");
+
+            if ($isGranted) {
+                // Insert ถ้ายังไม่มี
+                $stmt = $pdo->prepare("
+                    IF NOT EXISTS (SELECT 1 FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code=? AND perm_code=?) 
+                    INSERT INTO dbo.SYS_ROLE_PERMISSIONS (role_code, perm_code) VALUES (?, ?)
+                ");
+                $stmt->execute([$roleCode, $permCode, $roleCode, $permCode]);
+            } else {
+                // Delete เพื่อถอดสิทธิ์
+                $stmt = $pdo->prepare("DELETE FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code=? AND perm_code=?");
+                $stmt->execute([$roleCode, $permCode]);
+            }
+            
+            // บันทึก Log
+            $actionWord = $isGranted ? 'GRANTED' : 'REVOKED';
+            $pdo->prepare("INSERT INTO dbo.USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, 'UPDATE_ROLE', ?, ?, GETDATE())")
+                ->execute([$actionBy, $roleCode, "$actionWord permission '$permCode'"]);
+
+            echo json_encode(['success' => true, 'message' => "Permission $actionWord successfully."]);
+            break;
+
         default:
             throw new Exception("Invalid action specified.");
     }

@@ -74,7 +74,6 @@ $pageHelpId = "helpModal";
     <?php endif; ?>
 
     <?php include('../components/php/top_header.php'); ?>
-    <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">
         <div id="main-content">

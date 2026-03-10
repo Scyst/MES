@@ -29,7 +29,6 @@ $pageHelpId = "execHelpModal";
 <body class="layout-top-header">
     
     <?php include('../components/php/top_header.php'); ?>
-    <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">
         <main id="main-content">

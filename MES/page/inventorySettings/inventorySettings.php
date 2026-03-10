@@ -188,7 +188,6 @@ $currentUser = $_SESSION['user'];
                 include('components/copyBomModal.php');
                 include('components/bomImportPreviewModal.php');
                 include('components/bomBulkImportPreviewModal.php');
-                include('../components/php/autoLogoutUI.php'); 
             ?>
             
             <?php if ($canManage): ?>
@@ -202,8 +201,7 @@ $currentUser = $_SESSION['user'];
         </main>
     </div>
     
-    <?php include_once('../components/php/command_center.php'); ?>
-    <?php include_once('../components/php/docking_sidebar.php'); ?>
+    <?php include_once('../components/php/'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>
@@ -211,7 +209,6 @@ $currentUser = $_SESSION['user'];
         const currentUser = <?php echo json_encode($_SESSION['user']); ?>;
     </script>
     
-    <script src="../components/js/auto_logout.js?v=<?php echo filemtime('../components/js/auto_logout.js'); ?>"></script>
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/inventorySettings.js?v=<?php echo filemtime('script/inventorySettings.js'); ?>"></script>

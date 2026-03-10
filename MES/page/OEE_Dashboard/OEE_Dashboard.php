@@ -304,15 +304,6 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
             <div id="toast"></div>
         </main>
     </div>
-    
-    <?php 
-    if ($isLoggedIn): 
-    ?>
-        <?php include_once('../components/php/command_center.php'); ?>
-        <?php include_once('../components/php/docking_sidebar.php'); ?>
-    <?php 
-    endif; 
-    ?>
 
     <?php include_once('../components/php/mobile_menu.php'); ?>
 

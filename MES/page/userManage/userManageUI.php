@@ -28,159 +28,104 @@ $pageIcon = "fas fa-users-cog";
 
     <main id="main-content">
         <div class="container-fluid py-4">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+            
+            <div class="d-flex justify-content-between align-items-end mb-3">
                 <div>
-                    <div class="input-group" style="width: 300px;">
-                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, Emp ID...">
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" onclick="openModal('addUserModal')">
-                        <i class="fas fa-user-plus me-1"></i> Add User
-                    </button>
-                    <button class="btn btn-outline-success" id="btnSyncManpower">
-                        <i class="fas fa-sync-alt me-1"></i> Sync Manpower
-                    </button>
+                    <h4 class="mb-0 fw-bold">User & Access Management</h4>
+                    <span class="text-muted small">จัดการผู้ใช้งานและสิทธิ์การเข้าถึงระบบ</span>
                 </div>
             </div>
 
-            <div class="card user-card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-custom align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="ps-4">Employee Details</th> <th>Username</th> <th>Role & Dept</th>
-                                    <th>Status</th>
-                                    <th>Source</th>
-                                    <th class="text-end pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userTable">
-                                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading users...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <ul class="nav nav-tabs mb-4" id="userManageTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab"><i class="fas fa-users me-2"></i>Users List</button>
+                </li>
+                <?php if(hasPermission('manage_roles')): ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-primary" id="roles-tab" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab"><i class="fas fa-key me-2"></i>Roles & Permissions</button>
+                </li>
+                <?php endif; ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-secondary" id="logs-tab" data-bs-toggle="tab" data-bs-target="#tab-logs" type="button" role="tab"><i class="fas fa-history me-2"></i>Audit Logs</button>
+                </li>
+            </ul>
 
-        <div class="modal fade" id="addUserModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-user-plus me-2 text-primary"></i>Add User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="tab-content" id="userManageTabsContent">
+                
+                <div class="tab-pane fade show active" id="tab-users" role="tabpanel">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div class="input-group" style="width: 300px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, Emp ID...">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary shadow-sm" onclick="openModal('addUserModal')">
+                                <i class="fas fa-user-plus me-1"></i> Add User
+                            </button>
+                            <button class="btn btn-outline-success shadow-sm" id="btnSyncManpower">
+                                <i class="fas fa-sync-alt me-1"></i> Sync Manpower
+                            </button>
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <form id="addUserForm">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Employee ID</label>
-                                    <input type="text" name="emp_id" id="add_emp_id" class="form-control text-uppercase" placeholder="e.g. 1096...">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Username <span class="text-danger">*</span></label>
-                                    <input type="text" name="username" id="add_username" class="form-control" required>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" name="fullname" id="add_fullname" class="form-control" placeholder="Name - Surname">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Password <span class="text-danger">*</span></label>
-                                    <input type="password" name="password" class="form-control" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Role <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="role" required>
-                                        <option value="">Select...</option>
-                                        <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
-                                        <option value="manager">Manager</option>
-                                        <option value="planner">Planner</option>
-                                        <option value="supervisor">Supervisor</option>
-                                        <option value="qc">QA / QC</option>
-                                        <option value="maintenance">Maintenance</option>
-                                        <option value="operator">Operator</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Team / Group</label>
-                                    <input type="text" name="team_group" id="add_team" class="form-control text-uppercase" placeholder="e.g. A, B">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Line / Area</label>
-                                    <input type="text" name="line" id="add_line" class="form-control text-uppercase" placeholder="e.g. PRESS, ALL">
-                                </div>
+                    <div class="card user-card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-custom align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">Employee Details</th> 
+                                            <th>Username</th> 
+                                            <th>Role & Dept</th>
+                                            <th>Status</th>
+                                            <th>Source</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userTable">
+                                        <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading users...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" form="addUserForm" class="btn btn-primary w-100">Save User</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="modal fade" id="editUserModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-edit me-2 text-warning"></i>Edit User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="editUserForm">
-                            <input type="hidden" name="id" id="edit_id">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Employee ID</label>
-                                    <input type="text" name="emp_id" id="edit_emp_id" class="form-control text-uppercase" autocomplete="off">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Username</label>
-                                    <input type="text" name="username" id="edit_username" class="form-control bg-light" readonly>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" name="fullname" id="edit_fullname" class="form-control">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Reset Password <small class="text-muted">(Leave blank if no change)</small></label>
-                                    <input type="password" name="password" id="edit_password" class="form-control" autocomplete="new-password">
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label">Role <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="role" id="edit_role" required>
-                                        <option value="">Select...</option>
-                                        <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
-                                        <option value="manager">Manager</option>
-                                        <option value="planner">Planner</option>
-                                        <option value="supervisor">Supervisor</option>
-                                        <option value="qc">QA / QC</option>
-                                        <option value="maintenance">Maintenance</option>
-                                        <option value="operator">Operator</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Team / Group</label>
-                                    <input type="text" name="team_group" id="edit_team" class="form-control text-uppercase">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Line / Area</label>
-                                    <input type="text" name="line" id="edit_line" class="form-control text-uppercase">
-                                </div>
+                <div class="tab-pane fade" id="tab-roles" role="tabpanel">
+                    <div class="card user-card border-primary mb-3">
+                        <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold">
+                            <i class="fas fa-shield-alt me-2"></i> Permission Matrix (PBAC)
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover align-middle mb-0" id="matrixTable">
+                                    <thead class="table-light text-center" id="matrixThead">
+                                        </thead>
+                                    <tbody id="matrixTbody">
+                                        <tr><td class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading Matrix...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" form="editUserForm" class="btn btn-warning w-100 text-dark fw-bold">Update User</button>
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="fas fa-info-circle me-1"></i> สิทธิ์ระดับ <b>System Owner (creator)</b> ไม่สามารถแก้ไขได้เพื่อป้องกันการสูญเสียการควบคุมระบบ
                     </div>
                 </div>
-            </div>
-        </div>
 
+                <div class="tab-pane fade" id="tab-logs" role="tabpanel">
+                    <div class="card user-card">
+                        <div class="card-body">
+                            <div class="text-center text-muted py-5"><i class="fas fa-tools fa-2x mb-3"></i><br>Log Viewer Interface Goes Here</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> </div>
+
+        <?php 
+            include_once('components/addUserModal.php'); 
+            include_once('components/editUserModal.php'); 
+        ?>
     </main>
 
     <script>

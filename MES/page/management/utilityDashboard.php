@@ -27,7 +27,6 @@ $pageHeaderSubtitle = "Real-time Power, LPG Consumption & Cost Analysis";
 </head>
 <body class="layout-top-header">
     <?php include('../components/php/top_header.php'); ?>
-    <?php include('../components/php/docking_sidebar.php'); ?>
 
     <div class="page-container">
         <main id="main-content" class="content-wrapper">
