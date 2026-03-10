@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('manage_pl')) {
-    header("Location: ../../auth/access_denied.php");
+    header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 

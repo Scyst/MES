@@ -26,10 +26,10 @@ try {
     switch ($action) {
         
         case 'get_dashboard':
-            if (!isset($_SESSION['user'])) sendError("Unauthorized", 401);
+            if (!isset($_SESSION['user']) || !hasPermission('view_dashboard')) {
+                sendError("Access Denied: Dashboard permission required.", 403);
+            }
 
-            // 🚀 [NEW] เปลี่ยนมารับ Start Date และ End Date
-            // ค่า Default คือวันนี้ของฝ่ายผลิต (เวลาปัจุบัน - 8 ชม.)
             $defaultDate = date('Y-m-d', strtotime('-8 hours'));
             $startDate = $_GET['startDate'] ?? $defaultDate;
             $endDate = $_GET['endDate'] ?? $defaultDate;
@@ -98,17 +98,18 @@ try {
             sendSuccess(['summary' => $summary, 'meters' => $meters, 'trend' => $trendData, 'is_range' => ($startDate !== $endDate)]);
             break;
 
-        // ----------------------------------------------------
-        // [TOU SETTINGS] ดูและบันทึกเรทค่าไฟ/แก๊ส
-        // ----------------------------------------------------
         case 'get_tou_rates':
-            if (!isset($_SESSION['user'])) sendError("Unauthorized", 401);
+            if (!isset($_SESSION['user']) || !hasPermission('manage_settings')) {
+                sendError("Access Denied: Settings permission required.", 403);
+            }
             $stmt = $pdo->query("SELECT * FROM dbo.UTILITY_RATES_TOU ORDER BY utility_type, day_type, start_time");
             sendSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
             break;
 
         case 'save_tou_rates':
-            if (!isset($_SESSION['user'])) sendError("Unauthorized", 401);
+            if (!isset($_SESSION['user']) || !hasPermission('manage_settings')) {
+                sendError("Access Denied: Settings permission required.", 403);
+            }
             if ($method !== 'POST') sendError('Method Not Allowed', 405);
             
             $rates = $input['rates'] ?? [];

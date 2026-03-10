@@ -1,25 +1,18 @@
 <?php
 // MES/page/management/api/planManage.php
-
-// 1. Config Environment (เหมือน Manpower)
 ignore_user_abort(true); 
-set_time_limit(300); // 5 นาที
+set_time_limit(300);
 header('Content-Type: application/json');
 
-// 2. 🔥 Auto-Sync Check (เช็คก่อน Include Auth!)
-// ใช้ $_SERVER แทน getallheaders() เพื่อความชัวร์ 100%
 $is_api_call = false;
 if (isset($_SERVER['HTTP_X_API_KEY']) && $_SERVER['HTTP_X_API_KEY'] === 'MESKey2026') {
     $is_api_call = true;
 }
 
-// 3. Include DB & Config
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// 4. 🔥 Auth Check (ถ้าไม่ใช่ API Call ค่อยเช็คคน)
 if (!$is_api_call) {
-    // Include Auth เฉพาะตอนคนใช้งาน เพื่อกัน Node-RED โดน Redirect
     require_once __DIR__ . '/../../../auth/check_auth.php';
     
     if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'planner'])) {
@@ -29,7 +22,6 @@ if (!$is_api_call) {
     }
 }
 
-// ถ้าเป็น Node-RED (API Call) ให้ปิด Session เพื่อลดภาระ
 if ($is_api_call) {
     session_write_close();
 }
@@ -44,7 +36,6 @@ $itemTable = ITEMS_TABLE;
 try {
     switch ($action) {
         case 'get_plans':
-            // 1. รับค่า Pagination Params
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
             $offset = ($page - 1) * $limit;
@@ -53,15 +44,8 @@ try {
             $endDate = $_GET['endDate'] ?? date('Y-m-d');
             $line = $_GET['line'] ?? null;
             $shift = $_GET['shift'] ?? null;
-
-            // --- 🚀 OPTIMIZATION START 🚀 ---
-            // คำนวณช่วงเวลา (Timestamp) ของกะการผลิต (08:00 ถึง 07:59 ของอีกวัน)
-            // เพื่อให้ Database ใช้ Index ของ transaction_timestamp ได้โดยตรง (SARGable)
             $startTs = date('Y-m-d 08:00:00', strtotime($startDate));
             $endTs   = date('Y-m-d 07:59:59', strtotime($endDate . ' +1 day'));
-
-            // [SQL OPTIMIZATION]
-            // เขียน Subquery ใหม่: กรองช่วงเวลาด้วย Timestamp และ Group By
             $actualsSubQuery = "
                 SELECT 
                     CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) AS ActualDate,
@@ -76,7 +60,6 @@ try {
                 AND t.transaction_timestamp <= :endTs
             ";
 
-            // ถ้ามีการกรอง Line ให้กรองใน Subquery เลยเพื่อลดปริมาณข้อมูลก่อน Grouping
             if ($line) {
                 $actualsSubQuery .= " AND l.production_line = :lineFilter ";
             }
@@ -87,19 +70,13 @@ try {
                 CASE WHEN DATEPART(HOUR, DATEADD(HOUR, -8, transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END,
                 parameter_id
             ";
-            // --- 🚀 OPTIMIZATION END 🚀 ---
 
             $params = [];
-            
-            // Base Where Clause
             $whereClause = " AND (p.plan_date BETWEEN :start AND :end OR actual.ActualDate BETWEEN :start2 AND :end2)";
-            
             $params[':start'] = $startDate;
             $params[':end'] = $endDate;
             $params[':start2'] = $startDate;
             $params[':end2'] = $endDate;
-            
-            // เพิ่ม Params ใหม่สำหรับการ Optimize
             $params[':startTs'] = $startTs;
             $params[':endTs'] = $endTs;
 
@@ -107,7 +84,7 @@ try {
                 $whereClause .= " AND (p.line = :line OR actual.ActualLine = :line2)";
                 $params[':line'] = $line;
                 $params[':line2'] = $line;
-                $params[':lineFilter'] = $line; // สำหรับ Subquery
+                $params[':lineFilter'] = $line;
             }
             if ($shift) {
                 $whereClause .= " AND (p.shift = :shift OR actual.ActualShift = :shift2)";
@@ -115,7 +92,6 @@ try {
                 $params[':shift2'] = $shift;
             }
 
-            // 1. [NEW] Summary Query (ยอดรวม Budget)
             $summarySql = "
                 SELECT 
                     SUM(ISNULL(p.adjusted_planned_quantity, 0) * ISNULL(i.Cost_Total, 0)) as total_plan_cost,
@@ -139,8 +115,6 @@ try {
             $stmtSum = $pdo->prepare($summarySql);
             $stmtSum->execute($summaryParams);
             $summaryData = $stmtSum->fetch(PDO::FETCH_ASSOC);
-
-            // 2. Base Query
             $baseQuery = "
                 FROM ($actualsSubQuery) AS actual
                 FULL OUTER JOIN $planTable p ON 
@@ -152,10 +126,8 @@ try {
                 WHERE 1=1 $whereClause
             ";
 
-            // 3. Count Query
             $countSql = "SELECT COUNT(*) " . $baseQuery;
             $stmtCount = $pdo->prepare($countSql);
-            // ข้อควรระวัง: ต้อง bind params ทั้งหมดที่เตรียมไว้
             foreach ($params as $key => $val) {
                 if ($key !== ':offset' && $key !== ':limit') {
                     $stmtCount->bindValue($key, $val);
@@ -164,8 +136,6 @@ try {
             $stmtCount->execute();
             $totalRecords = $stmtCount->fetchColumn();
             $totalPages = ($limit > 0) ? ceil($totalRecords / $limit) : 1;
-
-            // 4. Data Query
             $dataSql = "
                 SELECT
                     ISNULL(p.plan_id, 0) AS plan_id,
@@ -483,7 +453,7 @@ try {
                     @ShiftMode = :mode, 
                     @SetupTimeHrs = :setup,
                     @OTHours = :ot,
-                    @WorkOnSunday = :sunday, -- 📌 [NEW] พารามิเตอร์ใน SQL
+                    @WorkOnSunday = :sunday,
                     @Overwrite = :ow, 
                     @User = :usr";
                     

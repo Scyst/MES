@@ -23,13 +23,11 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     
     <style>
-        /* เพิ่ม Style สำหรับปุ่ม Toggle กราฟให้ดู Modern ขึ้น */
         .chart-toggle-btn {
             font-size: 0.8rem;
             font-weight: 600;
             padding: 0.25rem 0.75rem;
         }
-        /* Style สำหรับปุ่ม Toggle สูตร */
         .transition-btn {
             transition: all 0.3s ease;
         }

@@ -21,11 +21,9 @@ $pageBackLink = "manpowerUI.php";
     <script src="../../utils/libs/fullcalendar.global.min.js"></script> 
     
     <style>
-        /* UI Clean Layout */
         body.layout-top-header { overflow: hidden; }
 
         #main-content {
-            /* ความสูงหัก Header ออก = พอดีจอเป๊ะ */
             height: calc(100vh - var(--header-height)); 
             display: flex;
             flex-direction: column;
@@ -35,7 +33,7 @@ $pageBackLink = "manpowerUI.php";
 
         .calendar-wrapper {
             background: #fff;
-            padding: 10px 15px; /* ลด Padding นิดนึงเพื่อให้พื้นที่ปฏิทินเยอะขึ้น */
+            padding: 10px 15px;
             border-radius: 8px;
             box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
             flex: 1; 
@@ -45,8 +43,6 @@ $pageBackLink = "manpowerUI.php";
         }
 
         #calendar { flex: 1; height: 100%; }
-
-        /* FullCalendar Customization */
         .fc-event { cursor: pointer; border: none; padding: 2px 4px; font-size: 0.85rem; transition: transform 0.1s; }
         .fc-event:hover { transform: scale(1.02); filter: brightness(0.9); }
         .fc-daygrid-day.fc-day-today { background-color: rgba(78, 115, 223, 0.05) !important; }

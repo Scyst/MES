@@ -169,9 +169,9 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         $themeMon = 'text-success bg-success bg-opacity-10';
 
                         renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', '', $themeMon);
-                        renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_dashboard', $themeMon);
+                        renderServiceLink('Management', 'แดชบอร์ดผู้บริหาร', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_executive', $themeMon);
                         renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน (P&L)', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeMon);
-                        renderServiceLink('Utility & Energy', 'ติดตามการใช้พลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_dashboard', $themeMon);
+                        renderServiceLink('Utility & Energy', 'ติดตามการใช้พลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_executive', $themeMon);
                         renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะประจำวัน', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeMon);
                         renderServiceLink('Manpower', 'จัดการกำลังคน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeMon);
                         renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeMon);

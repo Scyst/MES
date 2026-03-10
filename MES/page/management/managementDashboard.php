@@ -2,20 +2,16 @@
 // MES/page/management/managementDashboard.php
 require_once __DIR__ . '/../components/init.php';
 
-// ตรวจสอบสิทธิ์ (Admin, Creator, Planner)
-if (!hasRole(['admin', 'creator', 'planner'])) {
+if (!hasPermission('view_planning')) {
     header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 
-// ข้อมูล User ปัจจุบันสำหรับส่งให้ JS
 $currentUserForJS = $_SESSION['user'] ?? null;
-
-// Config Header ของ Template
 $pageTitle = "Production Planning";
 $pageHeaderTitle = "Production Planning";
 $pageHeaderSubtitle = "Manage Production Plans & Budget";
-$pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
+$pageHelpId = "helpModal";
 ?>
 
 <!DOCTYPE html>
@@ -271,7 +267,6 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
                     </div> </div> </div>
 
             <div id="toast"></div> <?php
-                // Include Modals (แยกไฟล์เพื่อความสะอาด)
                 include_once('components/planModal.php');
                 include_once('components/dlotModal.php');
                 include_once('components/helpModal.php');
@@ -281,10 +276,7 @@ $pageHelpId = "helpModal"; // ID ของ Modal ช่วยเหลือ
     </div>
 
     <script>
-        // Pass PHP Variables to JS
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
-        
-        // API Endpoints Configuration
         const FILTERS_API = '../OEE_Dashboard/api/get_dashboard_filters.php';
         const PLAN_API = 'api/planManage.php';
         const ITEM_SEARCH_API = '../inventorySettings/api/itemMasterManage.php';

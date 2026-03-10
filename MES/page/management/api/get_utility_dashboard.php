@@ -9,22 +9,16 @@ ini_set('display_errors', 0);
 
 try {
     $date = $_GET['date'] ?? date('Y-m-d');
-    $elecRate = isset($_GET['elecRate']) ? floatval($_GET['elecRate']) : 4.5; // ค่าไฟต่อหน่วย (บาท)
-    $lpgRate = isset($_GET['lpgRate']) ? floatval($_GET['lpgRate']) : 25.0;  // ค่าแก๊สต่อหน่วย (บาท)
-
-    // 1. ดึงข้อมูล Real-time Status ของมิเตอร์ทุกตัว
+    $elecRate = isset($_GET['elecRate']) ? floatval($_GET['elecRate']) : 4.5;
+    $lpgRate = isset($_GET['lpgRate']) ? floatval($_GET['lpgRate']) : 25.0;
     $sqlRealtime = "EXEC dbo.sp_GetUtilityRealtimeStatus";
     $stmtRT = $pdo->prepare($sqlRealtime);
     $stmtRT->execute();
     $realtimeData = $stmtRT->fetchAll(PDO::FETCH_ASSOC);
-
-    // 2. ดึงข้อมูล Hourly Trend สำหรับวาดกราฟ (ไฟฟ้า)
     $sqlHourlyElec = "EXEC dbo.sp_GetUtilityHourlyConsumption @TargetDate = :date, @UtilityType = 'ELECTRIC'";
     $stmtHE = $pdo->prepare($sqlHourlyElec);
     $stmtHE->execute([':date' => $date]);
     $hourlyElec = $stmtHE->fetchAll(PDO::FETCH_ASSOC);
-
-    // คำนวณสรุปผล (Summary) สำหรับ KPI Cards
     $summary = [
         'total_kw' => 0,
         'total_kwh_today' => 0,
@@ -53,7 +47,6 @@ try {
         }
     }
 
-    // หาค่าไฟรวมวันนี้จาก Hourly Trend
     foreach ($hourlyElec as $hr) {
         $summary['total_kwh_today'] += floatval($hr['ConsumptionUsed']);
     }

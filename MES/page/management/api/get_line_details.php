@@ -18,11 +18,8 @@ try {
     
     if (empty($line)) throw new Exception("Line name is required");
 
-    // เตรียมช่วงเวลาสำหรับ Index Seek (SARGable)
     $startDT = $date . ' 08:00:00';
     $endDT = date('Y-m-d', strtotime($date . ' +1 day')) . ' 08:00:00';
-
-    // 1. Hourly Production (ยอดผลิตรายชั่วโมง)
     $sqlHourly = "
         SELECT 
             DATEPART(HOUR, transaction_timestamp) as hr,
@@ -38,12 +35,7 @@ try {
     $stmt = $pdo->prepare($sqlHourly);
     $stmt->execute([':line' => $line, ':start' => $startDT, ':end' => $endDT]);
     $hourlyData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // 2. Downtime (เวลาเครื่องจักรหยุด)
-    // หมายเหตุ: ตรงนี้ถ้าคุณมีตาราง DOWNTIME_LOGS ให้ใช้โครงสร้างคล้ายกัน
     $downtimeData = []; 
-
-    // 3. Scrap Details (รายละเอียดงานเสีย)
     $sqlScrap = "
         SELECT 
             i.part_no, 
@@ -62,8 +54,6 @@ try {
     $stmt = $pdo->prepare($sqlScrap);
     $stmt->execute([':line' => $line, ':start' => $startDT, ':end' => $endDT]);
     $scrapData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // 4. Manpower (รายชื่อพนักงานที่เข้าทำงาน)
     $sqlMan = "
         SELECT e.emp_id, e.name_th, e.position, 
                CONVERT(varchar(5), l.scan_in_time, 108) as check_in

@@ -1,16 +1,11 @@
 <?php
 // MES/page/management/executiveDashboard.php
 require_once __DIR__ . '/../components/init.php';
-
-// Permission check
-if (!hasRole(['admin', 'creator', 'planner', 'viewer'])) {
+if (!hasPermission('view_executive')) {
     header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 
-// =========================================================
-// 1. CONFIG TOP HEADER
-// =========================================================
 $pageTitle = "Executive Dashboard";
 $pageIcon = "fas fa-chart-pie"; 
 $pageHeaderTitle = "Executive Overview"; 

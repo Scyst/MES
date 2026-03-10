@@ -1,5 +1,12 @@
 <?php
+// MES/page/management/utilityDashboard.php
 require_once __DIR__ . '/../components/init.php';
+
+if (!hasPermission('view_executive')) {
+    header("Location: ../../auth/access_denied.php");
+    exit;
+}
+
 $pageTitle = "Energy & Cost Dashboard";
 $pageIcon = "fas fa-bolt"; 
 $pageHeaderTitle = "Utility Monitoring & Cost"; 
@@ -13,7 +20,6 @@ $pageHeaderSubtitle = "Real-time Power, LPG Consumption & Cost Analysis";
     <?php include_once '../components/chart_head.php'; ?>
     <link rel="stylesheet" href="css/executiveDashboard.css?v=<?php echo time(); ?>">
     <style>
-        /* เพิ่มเติมเฉพาะของ Utility เล็กน้อย */
         .icon-watermark {
             position: absolute;
             right: 15px;

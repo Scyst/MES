@@ -24,16 +24,10 @@ try {
 
     $queryStart = $startDate . ' 08:00:00';
     $queryEnd = date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 08:00:00';
-
-    // =========================================================================================
-    // 1. ดึงยอดผลิต & ต้นทุนมาตรฐาน (แยก 2 ขา: All vs FG-Only) - [เหมือนเดิม]
-    // =========================================================================================
     $sqlProd = "
         SELECT 
             l.production_line AS line,
             SUM(t.quantity) as total_units,
-            
-            -- [A] ยอดสำหรับแสดงรายบรรทัด (All Items)
             SUM(t.quantity * ISNULL(i.Price_USD, 0)) as sale_usd_all,
             SUM(t.quantity * ISNULL(i.StandardPrice, 0)) as sale_thb_all, 
             SUM(t.quantity * (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0))) as cost_rm_all,
@@ -43,7 +37,6 @@ try {
                 ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)
             )) as cost_oh_all,
 
-            -- [B] ยอดสำหรับรวม Summary (FG Only - รหัส 40...) กันยอดเบิ้ล
             SUM(CASE WHEN i.sap_no LIKE '40%' THEN t.quantity * ISNULL(i.Price_USD, 0) ELSE 0 END) as sale_usd_fg,
             SUM(CASE WHEN i.sap_no LIKE '40%' THEN t.quantity * ISNULL(i.StandardPrice, 0) ELSE 0 END) as sale_thb_fg,
             SUM(CASE WHEN i.sap_no LIKE '40%' THEN t.quantity * (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0)) ELSE 0 END) as cost_rm_fg,
@@ -69,13 +62,6 @@ try {
     $stmtProd = $pdo->prepare($sqlProd);
     $stmtProd->execute($paramsProd);
     $rawProdData = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
-
-    // =========================================================================================
-    // 2. ดึง Scrap (🔥 UPDATE: เปลี่ยน Logic ให้เหมือน P&L)
-    // =========================================================================================
-    // - เปลี่ยน transaction_type เป็น 'SCRAP'
-    // - ใช้ ABS() เพราะยอดมาเป็นลบ
-    // - กรอง User Team2 ออก
     $sqlScrap = "
         SELECT 
             l.production_line AS line,
@@ -83,12 +69,11 @@ try {
         FROM " . TRANSACTIONS_TABLE . " t
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
         LEFT JOIN " . LOCATIONS_TABLE . " l ON t.from_location_id = l.location_id
-        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id -- 🔥 Join User
-        WHERE t.transaction_type = 'SCRAP' -- 🔥 เปลี่ยนจาก PRODUCTION_SCRAP
+        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+        WHERE t.transaction_type = 'SCRAP'
           AND t.transaction_timestamp >= :qStart 
           AND t.transaction_timestamp < :qEnd
           AND l.production_line IS NOT NULL
-          -- 🔥 กรอง Team2 ทิ้ง (Firewall)
           AND (u.line NOT LIKE '%Team2%' OR u.line IS NULL)
           AND (u.username NOT LIKE '%Team2%' OR u.username IS NULL)
           AND (l.production_line NOT LIKE '%Team2%')
@@ -99,8 +84,6 @@ try {
     $stmtScrap = $pdo->prepare($sqlScrap);
     $stmtScrap->execute($paramsScrap);
     $rawScrapData = $stmtScrap->fetchAll(PDO::FETCH_ASSOC);
-
-    // 3. Headcount [เหมือนเดิม]
     $sqlPeople = "
         SELECT 
             line,
@@ -124,8 +107,6 @@ try {
     $stmtPeople = $pdo->prepare($sqlPeople);
     $stmtPeople->execute($paramsPeople);
     $rawPeopleData = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
-
-    // 4. Actual Labor [เหมือนเดิม]
     $sqlLabor = "
         SELECT 
             line,
@@ -138,12 +119,10 @@ try {
     $paramsLabor = [':start' => $startDate, ':end' => $endDate];
     if ($userLine) { $sqlLabor .= " AND line = :line"; $paramsLabor[':line'] = $userLine; }
     $sqlLabor .= " GROUP BY line";
-
     $stmtLabor = $pdo->prepare($sqlLabor);
     $stmtLabor->execute($paramsLabor);
     $rawLaborData = $stmtLabor->fetchAll(PDO::FETCH_ASSOC);
     
-    // --- Data Normalization ---
     function normalizeMap($rawData, $keyField, $valField) {
         $map = [];
         foreach ($rawData as $row) {
@@ -175,7 +154,6 @@ try {
     $allActiveLines = array_filter($allActiveLines, function($v) { return !empty($v) && $v !== 'ALL' && $v !== 'UNKNOWN'; });
     sort($allActiveLines);
 
-    // --- Final Calculation Loop ---
     $summary = [
         'sale' => 0, 'cost' => 0, 'gp' => 0, 
         'rm' => 0, 'dlot' => 0, 'std_dl' => 0, 
@@ -191,19 +169,15 @@ try {
             'sale_usd_fg' => 0,  'sale_thb_fg' => 0,  'cost_rm_fg' => 0,  'cost_std_dl_fg' => 0,  'cost_oh_fg' => 0
         ];
 
-        // --- 1. Line Level Data (แสดงทุกยอด ไม่กรอง) ---
         $saleVal   = ($p['sale_usd_all'] > 0) ? ($p['sale_usd_all'] * $exchangeRate) : $p['sale_thb_all'];
         $rmCost    = $p['cost_rm_all'];
         $ohCost    = $p['cost_oh_all'];
         $stdDLCost = $p['cost_std_dl_all']; 
-        
-        $laborCost = $laborMap[$lineName] ?? 0; // Actual Labor
+        $laborCost = $laborMap[$lineName] ?? 0;
         $scrapVal  = $scrapMap[$lineName] ?? 0;
         $avgHC     = $peopleMap[$lineName] ?? 0;
-
-        $totalCost = $rmCost + $laborCost + $ohCost + $scrapVal;    // Actual Total for Line
-        $totalStd  = $rmCost + $stdDLCost + $ohCost + $scrapVal;    // Standard Total for Line
-
+        $totalCost = $rmCost + $laborCost + $ohCost + $scrapVal;
+        $totalStd  = $rmCost + $stdDLCost + $ohCost + $scrapVal;
         $lines[$lineName] = [
             'name' => $lineName,
             'sale' => $saleVal,
@@ -220,28 +194,18 @@ try {
             'headcount' => round($avgHC, 1)
         ];
 
-        // --- 2. Summary Level Data (กรอง FG Only เพื่อกันเบิ้ล) ---
         $saleVal_FG   = ($p['sale_usd_fg'] > 0) ? ($p['sale_usd_fg'] * $exchangeRate) : $p['sale_thb_fg'];
         $rmCost_FG    = $p['cost_rm_fg'];
         $ohCost_FG    = $p['cost_oh_fg'];
         $stdDLCost_FG = $p['cost_std_dl_fg'];
-
-        // ยอดรวม (Actual Labor + Scrap นับเต็ม เพราะจ่ายจริงเสียจริง)
-        // ส่วน RM, Revenue, OH นับเฉพาะ FG เพื่อไม่ให้เบิ้ล
         $summary['sale']        += $saleVal_FG;
         $summary['rm']          += $rmCost_FG;
         $summary['oh']          += $ohCost_FG;
         $summary['std_dl']      += $stdDLCost_FG; 
-        
-        $summary['dlot']        += $laborCost; // รวม Actual
-        $summary['scrap']       += $scrapVal;  // รวม Actual Scrap
-        
-        // Cost Actual รวม = (RM ของ FG) + (OH ของ FG) + (ค่าแรงจริงรวม) + (Scrap รวม)
+        $summary['dlot']        += $laborCost;
+        $summary['scrap']       += $scrapVal;
         $summary['cost']        += ($rmCost_FG + $ohCost_FG + $laborCost + $scrapVal);
-        
-        // Cost Standard รวม = (RM ของ FG) + (OH ของ FG) + (Std DL ของ FG) + (Scrap รวม)
         $summary['std_cost']    += ($rmCost_FG + $ohCost_FG + $stdDLCost_FG + $scrapVal);
-
         $summary['total_units'] += $p['total_units'];
         $summary['headcount']   += $avgHC;
     }
@@ -249,8 +213,6 @@ try {
     $summary['gp']           = $summary['sale'] - $summary['cost'];
     $summary['active_lines'] = count($lines);
     $summary['headcount']    = round($summary['headcount'], 0);
-
-    // --- Trend Data Processing ---
     $trendData = [];
     $period = new DatePeriod(new DateTime($startDate), new DateInterval('P1D'), (new DateTime($endDate))->modify('+1 day'));
     foreach ($period as $dt) {
@@ -258,7 +220,6 @@ try {
         $trendData[$dateKey] = ['date' => $dateKey, 'sale' => 0, 'cost' => 0, 'profit' => 0];
     }
 
-    // [Trend] Revenue & Cost (FG Only)
     $sqlDailyProd = "
         SELECT 
             CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) as log_date,
@@ -290,7 +251,6 @@ try {
         }
     }
 
-    // [Trend] Labor (Actual)
     $sqlDailyLabor = "
         SELECT entry_date, SUM(cost_value) as labor_val 
         FROM " . MANUAL_COSTS_TABLE . "
@@ -310,7 +270,6 @@ try {
         }
     }
 
-    // [Trend] Scrap (🔥 UPDATE: แก้ให้ดึงจาก 'SCRAP' + Filter Team2)
     $sqlDailyScrap = "
         SELECT 
             CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) as log_date,
@@ -318,12 +277,12 @@ try {
         FROM " . TRANSACTIONS_TABLE . " t
         JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
         LEFT JOIN " . LOCATIONS_TABLE . " l ON t.from_location_id = l.location_id
-        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id -- 🔥 Join User
-        WHERE t.transaction_type = 'SCRAP' -- 🔥 แก้เป็น SCRAP
+        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+        WHERE t.transaction_type = 'SCRAP'
           AND t.transaction_timestamp >= :qStart 
           AND t.transaction_timestamp < :qEnd
           AND l.production_line IS NOT NULL
-          AND (u.line NOT LIKE '%Team2%' OR u.line IS NULL) -- 🔥 Filter User
+          AND (u.line NOT LIKE '%Team2%' OR u.line IS NULL)
           AND (u.username NOT LIKE '%Team2%' OR u.username IS NULL)
           AND (l.production_line NOT LIKE '%Team2%')
           " . ($userLine ? "AND l.production_line = :line" : "") . "
