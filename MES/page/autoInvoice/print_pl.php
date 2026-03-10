@@ -3,6 +3,10 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
+if (!hasPermission('manage_invoice')) {
+    die("Access Denied: You do not have permission to view or print packing lists.");
+}
+
 $invoice_id = (int)($_GET['id'] ?? 0);
 if ($invoice_id <= 0) die("Invalid Invoice ID.");
 

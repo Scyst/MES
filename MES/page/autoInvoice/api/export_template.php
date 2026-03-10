@@ -6,6 +6,15 @@ while (ob_get_level() > 0) {
     ob_end_clean();
 }
 
+// 1. Auth Check (PBAC)
+require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../auth/check_auth.php';
+
+if (!isset($_SESSION['user']) || !hasPermission('manage_invoice')) {
+    http_response_code(403);
+    die("Access Denied: You do not have permission to download this template.");
+}
+
 $lib_path = __DIR__ . "/../../../utils/libs/xlsxwriter.class.php";
 if (!file_exists($lib_path)) {
     die("Error: ไม่พบไลบรารีที่ Path: " . realpath($lib_path));
@@ -88,3 +97,4 @@ $writer->writeSheetRow('Template', $row, $data_styles);
 
 $writer->writeToStdOut();
 exit(0);
+?>

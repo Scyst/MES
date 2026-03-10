@@ -3,6 +3,10 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
+if (!hasPermission('manage_invoice')) {
+    die("Access Denied: You do not have permission to view or print invoices.");
+}
+
 $invoice_id = (int)($_GET['id'] ?? 0);
 if ($invoice_id <= 0) die("Invalid Invoice ID.");
 
@@ -28,7 +32,6 @@ try {
     die("Database Error: " . $e->getMessage());
 }
 
-// Helper: แปลงข้อความให้รองรับการขึ้นบรรทัดใหม่ (Enter) และตัวหนา (*ข้อความ*)
 function formatAddressText($text) {
     if (empty($text) || $text === '-') return '-';
     

@@ -2,6 +2,11 @@
 // MES/page/finance/finance_dashboard.php
 require_once __DIR__ . '/../components/init.php';
 
+if (!hasPermission('manage_invoice')) {
+    header("Location: ../../auth/access_denied.php");
+    exit;
+}
+
 $pageTitle = "Invoice Management";
 $pageHeaderTitle = "Invoice Management";
 $pageHeaderSubtitle = "ระบบออกบิลและจัดการเวอร์ชันอัตโนมัติ";

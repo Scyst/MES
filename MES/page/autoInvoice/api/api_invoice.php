@@ -10,10 +10,10 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// 2. Auth Check
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+// 2. Auth Check (PBAC)
+if (!isset($_SESSION['user']) || !hasPermission('manage_invoice')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: You do not have permission to manage invoices.']);
     exit;
 }
 
