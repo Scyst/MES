@@ -660,10 +660,10 @@ try {
                     throw new Exception("Original transaction not found.");
                 }
 
-                $is_admin_or_supervisor = hasRole(['admin', 'supervisor', 'creator']);
+                $can_manage = hasPermission('manage_production');
                 $is_owner = ($currentUser['id'] == $owner_user_id);
 
-                if (!$is_admin_or_supervisor && !$is_owner) {
+                if (!$can_manage && !$is_owner) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only update your own records.']);
                     $pdo->rollBack();
@@ -815,10 +815,10 @@ try {
                     throw new Exception("Transaction not found.");
                 }
 
-                $is_admin_or_supervisor = hasRole(['admin', 'supervisor', 'creator']);
+                $can_manage = hasPermission('manage_production');
                 $is_owner = ($currentUser['id'] == $owner_user_id);
 
-                if (!$is_admin_or_supervisor && !$is_owner) {
+                if (!$can_manage && !$is_owner) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only delete your own records.']);
                     $pdo->rollBack();
@@ -946,9 +946,9 @@ try {
             break;
 
         case 'adjust_single_stock':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasPermission('manage_production')) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Unauthorized: You do not have permission to adjust stock.']);
+                echo json_encode(['success' => false, 'message' => 'Permission Denied: You do not have permission to adjust stock.']);
                 exit;
             }
 
@@ -1174,20 +1174,18 @@ try {
             break;
 
         case 'get_pending_shipments':
-            // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้ (เช่น admin, creator, หรือ role ใหม่)
-            if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+            if (!hasPermission('manage_shipment')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
                 exit;
             }
 
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50; // หรือตามต้องการ
+            $limit = 50;
             $offset = ($page - 1) * $limit;
             $params = [];
             $conditions = ["t.transaction_type = 'TRANSFER_PENDING_SHIPMENT'"];
 
-            // เพิ่ม Filter ถ้าต้องการ (เช่น Search, Date Range)
             if (!empty($_GET['search_term'])) {
                 $search_term = '%' . $_GET['search_term'] . '%';
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
@@ -1235,8 +1233,7 @@ try {
             break;
 
         case 'confirm_shipment':
-            // ตรวจสอบสิทธิ์ ผู้ที่ Confirm ได้
-            if (!hasRole(['admin', 'creator'])) { // <-- ปรับ Role ตามต้องการ
+            if (!hasPermission('manage_shipment')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
                 exit;
@@ -1364,7 +1361,7 @@ try {
 
         case 'get_locations_for_qr':
             // ตรวจสอบสิทธิ์ (เฉพาะ Admin/Creator)
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasPermission('print_qr')) {
                  http_response_code(403);
                  echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
                  exit;

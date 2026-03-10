@@ -1,21 +1,15 @@
 <?php
-// ไฟล์: api/transferManage.php
-// API สำหรับจัดการใบโอนย้ายภายใน (Internal Transfer Orders)
-
 header('Content-Type: application/json');
-require_once __DIR__ . '/../../db.php'; //
-require_once __DIR__ . '/../../../auth/check_auth.php'; //
-require_once __DIR__ . '/../../logger.php'; // (ถ้าคุณมี logger.php)
+require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../logger.php';
 
-// --- ตรวจสอบสิทธิ์ ---
-// ทุกคนที่ล็อกอินสามารถสร้างหรือยืนยันได้ (ปรับ Role ได้ตามต้องการ)
-if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
+if (!hasPermission('add_production') && !hasPermission('manage_production')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Permission Denied']);
     exit;
 }
 
-// --- CSRF Check (สำหรับ POST/PUT) ---
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -24,19 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
-// --- กำหนดค่าคงที่ตาราง ---
 $transferTable = TRANSFER_ORDERS_TABLE;
 $itemTable = ITEMS_TABLE;
 $locTable = LOCATIONS_TABLE;
-$spUpdateOnhand = SP_UPDATE_ONHAND; //
-$transTable = TRANSACTIONS_TABLE; //
+$spUpdateOnhand = SP_UPDATE_ONHAND;
+$transTable = TRANSACTIONS_TABLE;
 
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
 
-// --- ฟังก์ชันสร้าง UUID สั้นๆ (เหมือนใน inventoryManage.php) ---
-// (เราไม่ได้ใช้แล้ว เพราะรับ UUID จาก label_printer.js แต่เก็บไว้เผื่ออนาคตได้)
 function generateShortUUID($prefix = 'T-', $length = 8) {
     try {
         $bytes = random_bytes(ceil($length / 2));
@@ -401,8 +392,8 @@ try {
             $transfer_uuid = $input['transfer_uuid'] ?? ''; 
             if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
 
-            if (!hasRole(['supervisor', 'admin', 'creator'])) {
-                 throw new Exception("Unauthorized to cancel transfers.");
+            if (!hasPermission('manage_production')) {
+                 throw new Exception("Unauthorized to cancel transfers. Manage permission required.");
             }
 
             $pdo->beginTransaction();

@@ -1,11 +1,11 @@
 <?php 
     include_once("../../auth/check_auth.php");
     $currentUserForJS = $_SESSION['user'] ?? null;
-    $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
+    $canAdd = hasPermission('print_label');
     
     if (!$canAdd) {
         header("HTTP/1.0 403 Forbidden");
-        echo "Access Denied, insufficient role.";
+        echo "Access Denied: You do not have permission to print transfer labels.";
         exit;
     }
 ?>

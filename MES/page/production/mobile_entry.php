@@ -1,7 +1,13 @@
 <?php 
     include_once("../../auth/check_auth.php");
+    $canAdd = hasPermission('add_production') || hasPermission('manage_production');
     
-    $canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
+    if (!$canAdd) { 
+        header("HTTP/1.0 403 Forbidden");
+        echo "Access Denied: You do not have permission to add or manage production data.";
+        exit;
+    }
+
     $currentUserForJS = $_SESSION['user'] ?? null;
     $g_autofill_data = null;
     $g_transfer_id = null;
@@ -37,12 +43,8 @@
             'from_loc_id' => $_GET['from_loc_id'] ?? null
         ];
     }
+    
     $location_id = $_GET['location_id'] ?? 0;
-    if (!$canAdd) { 
-        header("HTTP/1.0 403 Forbidden");
-        echo "Access Denied, insufficient role.";
-        exit;
-    }
     $is_manual_mode = ($location_id <= 0);
 
     date_default_timezone_set('Asia/Bangkok');

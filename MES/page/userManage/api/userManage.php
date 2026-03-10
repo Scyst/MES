@@ -19,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
 
-if (!hasRole(['admin', 'creator'])) {
+if (!hasPermission('manage_users') && !hasPermission('manage_roles')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized Access.']);
+    echo json_encode(['success' => false, 'message' => 'Permission Denied.']);
     exit;
 }
 

@@ -1,9 +1,10 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
-if (!hasRole(['admin', 'creator'])) {
+if (!hasPermission('manage_users') && !hasPermission('manage_roles')) {
     header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
     exit;
 }
+
 $canManage = true;
 $pageTitle = "User Management";
 $pageHeaderTitle = "User & Access Management"; 
@@ -28,13 +29,6 @@ $pageIcon = "fas fa-users-cog";
 
     <main id="main-content">
         <div class="container-fluid py-4">
-            
-            <div class="d-flex justify-content-between align-items-end mb-3">
-                <div>
-                    <h4 class="mb-0 fw-bold">User & Access Management</h4>
-                    <span class="text-muted small">จัดการผู้ใช้งานและสิทธิ์การเข้าถึงระบบ</span>
-                </div>
-            </div>
 
             <ul class="nav nav-tabs mb-4" id="userManageTabs" role="tablist">
                 <li class="nav-item" role="presentation">

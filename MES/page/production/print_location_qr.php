@@ -3,9 +3,9 @@
 include_once("../../auth/check_auth.php");
 include_once("../components/common_head.php");
 
-// 2. --- ตรวจสอบสิทธิ์ ---
-if (!hasRole(['admin', 'creator'])) {
-    die("Access Denied. You must be an Administrator to print QR codes.");
+// 2. --- ตรวจสอบสิทธิ์ (PBAC) ---
+if (!hasPermission('print_qr')) {
+    die("Access Denied. You do not have permission to print QR codes.");
 }
 ?>
 <!DOCTYPE html>

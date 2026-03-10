@@ -2,9 +2,9 @@
     // 1. --- บังคับ Login ---
     include_once("../../auth/check_auth.php");
     
-    // 2. --- โหลดข้อมูล User ---
+    // 2. --- โหลดข้อมูล User & เช็คสิทธิ์ด้วย PBAC ---
     $currentUserForJS = $_SESSION['user'] ?? null;
-    $canManage = hasRole(['supervisor', 'admin', 'creator']);
+    $canManage = hasPermission('manage_production'); 
 ?>
 <!DOCTYPE html>
 <html lang="en">

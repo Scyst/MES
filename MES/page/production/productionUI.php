@@ -2,13 +2,13 @@
 // MES/page/production/productionUI.php
 require_once __DIR__ . '/../components/init.php';
 
-if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
+if (!hasPermission('view_production') && !hasPermission('manage_production')) {
     header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
     exit;
 }
 
-$canManage = hasRole(['supervisor', 'admin', 'creator']);
-$canAdd = hasRole(['operator', 'supervisor', 'admin', 'creator']);
+$canManage = hasPermission('manage_production');
+$canAdd = hasPermission('add_production') || hasPermission('manage_production');
 $currentUserForJS = $_SESSION['user'] ?? null;
 
 ?>
