@@ -4,6 +4,10 @@ require_once __DIR__ . '/../components/init.php';
 require_once __DIR__ . '/loading_config.php';
 require_once __DIR__ . '/../db.php'; 
 
+if (!hasPermission('view_production')) {
+    die("Access Denied: You do not have permission to view or print this report.");
+}
+
 if (!isset($_GET['report_id'])) die("Error: Missing Report ID");
 $report_id = $_GET['report_id'];
 
@@ -463,6 +467,7 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
                                     <tr class="topic-row">
                                         <td colspan="5"><?php echo $topicId . '. ' . $topic['title']; ?></td>
                                     </tr>
+                                    
                                     <?php if (isset($topic['note']) && !empty($topic['note'])): ?>
                                     <tr class="note-row">
                                         <td colspan="5"><?php echo nl2br(htmlspecialchars($topic['note'])); ?></td>

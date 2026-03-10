@@ -9,9 +9,9 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../components/init.php';
 require_once __DIR__ . '/../loading_config.php';
 
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+if (!isset($_SESSION['user']) || !hasPermission('view_production')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Production permission required.']);
     exit;
 }
 
@@ -315,10 +315,8 @@ try {
         case 'reopen_report':
             $report_id = $_POST['report_id'];
             
-            // [SECURITY] เช็คสิทธิ์
-            $role = $_SESSION['user']['role'] ?? 'operator';
-            if (!in_array($role, ['admin', 'supervisor', 'manager'])) {
-                 throw new Exception("Permission Denied: Supervisor level required.");
+            if (!hasPermission('manage_warehouse')) {
+                 throw new Exception("Permission Denied: Manage production right is required to reopen reports.");
             }
 
             // ตรวจสอบว่ามีงานอยู่จริง

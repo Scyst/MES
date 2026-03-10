@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('view_manpower') && !hasPermission('manage_manpower')) {
-    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 

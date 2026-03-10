@@ -4,7 +4,7 @@ require_once __DIR__ . '/../components/init.php';
 
 // Permission check
 if (!hasRole(['admin', 'creator', 'planner', 'viewer'])) {
-    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 

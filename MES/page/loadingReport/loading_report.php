@@ -2,6 +2,11 @@
 // page/loading/loading_report.php
 require_once __DIR__ . '/../components/init.php';
 
+if (!hasPermission('view_production')) {
+    header("Location: ../dailyLog/dailyLogUI.php");
+    exit;
+}
+
 $pageTitle = "Loading Inspection";
 ?>
 <!DOCTYPE html>

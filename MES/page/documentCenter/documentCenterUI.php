@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
 if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
-    header("Location: ../OEE_Dashboard/OEE_Dashboard.php");
+    header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
 
