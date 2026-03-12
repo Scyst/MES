@@ -172,7 +172,8 @@ try {
 
         case 'calendar_read':
             $stmt = $pdo->prepare("
-                SELECT calendar_date as start, description as title, day_type, work_rate_holiday, ot_rate_holiday 
+                SELECT calendar_date as start, description as title, day_type, 
+                       work_rate_holiday, ot_rate_holiday, exchange_rate, container_rate 
                 FROM MANPOWER_CALENDAR WITH (NOLOCK)
                 WHERE calendar_date BETWEEN :start AND :end
             ");
@@ -189,7 +190,9 @@ try {
                     'extendedProps' => [
                         'work_rate' => (float)$r['work_rate_holiday'],
                         'ot_rate'   => (float)$r['ot_rate_holiday'],
-                        'day_type'  => $r['day_type']
+                        'day_type'  => $r['day_type'],
+                        'ex_rate'   => $r['exchange_rate'],
+                        'ctn_rate'  => $r['container_rate']
                     ]
                 ];
             }, $rows);
@@ -364,6 +367,46 @@ try {
                 }
             }
             echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'save_batch':
+            $checkLock = $pdo->prepare("SELECT is_locked FROM dbo.DAILY_PL_STATUS WHERE entry_date = :d AND section_name = :s");
+            $checkLock->execute([':d' => $_POST['entry_date'], ':s' => $_POST['section']]);
+            if ($checkLock->fetchColumn() == 1) {
+                throw new Exception("Period is locked. Cannot save changes.");
+            }
+
+            $date = $_POST['entry_date'] ?? date('Y-m-d');
+            $section = $_POST['section'] ?? '';
+            $itemsJson = $_POST['items'] ?? '[]';
+
+            $stmt = $pdo->prepare("EXEC " . SP_UPSERT_PL_ENTRY . "_Batch :date, :sect, :items, :user");
+            $stmt->execute([
+                ':date' => $date,
+                ':sect' => $section,
+                ':items' => $itemsJson,
+                ':user' => $user_name
+            ]);
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'toggle_lock':
+            if (!hasPermission('manage_pl')) throw new Exception("Admin rights required to lock/unlock period.");
+            
+            $date = $_POST['entry_date'] ?? '';
+            $section = $_POST['section'] ?? '';
+            
+            if (empty($date) || empty($section)) throw new Exception("Invalid parameters");
+
+            $stmt = $pdo->prepare("EXEC dbo.sp_TogglePLLock :date, :sect, :user");
+            $stmt->execute([
+                ':date' => $date,
+                ':sect' => $section,
+                ':user' => $user_name
+            ]);
+            $res = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'is_locked' => $res['is_locked']]);
             break;
 
         default:

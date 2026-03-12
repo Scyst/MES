@@ -142,6 +142,17 @@
                             <input type="number" class="form-control form-control-sm" id="hOtRate" value="3.0" step="0.5">
                         </div>
                     </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold"><i class="fas fa-dollar-sign"></i> Exchange Rate</label>
+                            <input type="text" class="form-control form-control-sm bg-light text-center text-primary fw-bold" id="hExRate" readonly tabindex="-1">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold"><i class="fas fa-truck"></i> Container Rate</label>
+                            <input type="text" class="form-control form-control-sm bg-light text-center text-primary fw-bold" id="hCtnRate" readonly tabindex="-1">
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer border-top-0 pt-0">

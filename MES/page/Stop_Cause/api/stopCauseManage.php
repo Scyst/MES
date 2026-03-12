@@ -1,9 +1,11 @@
 <?php
+// MES/page/Stop_Cause/api/stopCauseManage.php
+header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-// session_start() is already called in check_auth.php
+requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 
 //-- CSRF Protection for non-GET requests --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

@@ -94,6 +94,10 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <i class="fas fa-check-circle text-success me-1"></i> Saved
                     </span>
 
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm fw-bold me-2" id="btnToggleLock" onclick="togglePeriodLock()">
+                        <i class="fas fa-lock-open me-1" id="iconLock"></i> <span id="textLock">Lock Day</span>
+                    </button>
+
                     <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold" onclick="saveDailySnapshot()" title="Save All Data (Freeze)">
                         <i class="fas fa-save me-1"></i> Save Day
                     </button>

@@ -1,13 +1,9 @@
 <?php 
     require_once __DIR__ . '/../components/init.php';
     
-    if (!hasRole(['operator', 'supervisor', 'admin', 'creator'])) {
-        header("Location: ../dailyLog/dailyLogUI.php");
-        exit;
-    }
+    requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 
-    $canManage = hasRole(['supervisor', 'admin', 'creator']);
-
+    $canManage = hasPermission('manage_maintenance') || hasPermission('manage_production');
     $pageTitle = "Production Events";
     $pageIcon = "fas fa-tools"; 
     $pageHeaderTitle = "Production Events & Maintenance";

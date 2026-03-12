@@ -27,7 +27,7 @@ if (!isset($_SESSION['user'])) return;
 <script>
 "use strict";
 (function() {
-    const INACTIVITY_TIMEOUT = 4.5 * 60 * 1000;
+    const INACTIVITY_TIMEOUT = 4.5 * 60 * 10000;
     const COUNTDOWN_SECONDS = 30;
     const LOGOUT_URL = "<?php echo (defined('BASE_URL') ? BASE_URL : '../..') . '/auth/logout.php?timeout=1'; ?>";
 
