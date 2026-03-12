@@ -11,22 +11,16 @@ try {
     $endDateStr   = $_GET['endDate'] ?? date('Y-m-d');
     $line         = !empty($_GET['line']) ? $_GET['line'] : null;
     $model        = !empty($_GET['model']) ? $_GET['model'] : null;
-
-    // ✅ [แก้ไข 2/2] เปลี่ยนจาก Hardcode เป็นการใช้ค่าคงที่
     $sql = "EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?";
-
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$startDateStr, $endDateStr, $line, $model]);
-
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $formattedRecords = array_map(function($row) {
-        // (ส่วนการจัดรูปแบบวันที่เหมือนเดิม)
         if (isset($row['date'])) {
              try {
                  $dateObj = new DateTime($row['date']);
-                 $row['date'] = $dateObj->format('d-m-y'); // d-m-y ตามที่ JS คาดหวัง
+                 $row['date'] = $dateObj->format('d-m-y');
              } catch (Exception $e) {
-                 // ป้องกัน Error หาก Date Format ผิดพลาด
                  $row['date'] = 'Invalid Date';
              }
         }

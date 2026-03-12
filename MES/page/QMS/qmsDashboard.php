@@ -1,20 +1,7 @@
 <?php
 // page/QMS/qmsDashboard.php
 require_once __DIR__ . '/../components/init.php';
-
-// 1. ดักจับคนที่ยังไม่ล็อกอิน ให้เด้งไปหน้า Login
-if (!isset($_SESSION['user'])) {
-    header("Location: ../../auth/login_form.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
-    exit;
-}
-
-// 2. ดักจับ Account ลูกค้า (ถ้าเผลอเข้ามา ให้หยุดการทำงาน)
-if ($_SESSION['user']['role'] === 'CUSTOMER') {
-    die('<div style="padding:50px; text-align:center; font-family:sans-serif;">
-            <h2 style="color:red;">Access Denied</h2>
-            <p>Customers are not allowed to view the internal QMS Dashboard.<br>Please use the portal link provided in your email.</p>
-         </div>');
-}
+requirePermission('view_qms');
 
 $pageTitle = "iQMS Dashboard";
 $pageHeaderTitle = "iQMS Dashboard";

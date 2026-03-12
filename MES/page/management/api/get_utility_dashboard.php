@@ -7,6 +7,12 @@ header('Content-Type: application/json');
 error_reporting(E_ALL); 
 ini_set('display_errors', 0);
 
+if (!hasPermission('view_dashboard') && !hasPermission('view_executive')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Dashboard permission required.']);
+    exit;
+}
+
 try {
     $date = $_GET['date'] ?? date('Y-m-d');
     $elecRate = isset($_GET['elecRate']) ? floatval($_GET['elecRate']) : 4.5;

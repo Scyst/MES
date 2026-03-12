@@ -9,18 +9,11 @@ try {
     $endDate   = $_GET['endDate'] ?? date('Y-m-d');
     $line      = !empty($_GET['line']) ? $_GET['line'] : null;
     $model     = !empty($_GET['model']) ? $_GET['model'] : null;
-
-    // --- 1. ดึงข้อมูลสรุปทั้งหมดจาก SP ตัวหลัก (สำหรับ Pie Chart) ---
     $pieSql = "EXEC dbo." . SP_CALC_OEE_PIE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?";
-    
     $pieStmt = $pdo->prepare($pieSql);
     $pieStmt->execute([$startDate, $endDate, $line, $model]);
     $summaryData = $pieStmt->fetch(PDO::FETCH_ASSOC);
     $pieStmt->closeCursor();
-
-    // --- 2. [ลบออก] ไม่ต้องดึงข้อมูล Line Chart จากไฟล์นี้แล้ว ---
-
-    // --- 3. รวบรวมข้อมูลเพื่อส่งกลับ (เฉพาะ Pie Chart) ---
     $output = [
         "success" => true,
         "quality" => round((float)($summaryData['Quality'] ?? 0), 1),
@@ -36,7 +29,6 @@ try {
         "downtime" => (float)($summaryData['Downtime'] ?? 0),
         "actual_output" => (int)($summaryData['ActualOutput'] ?? 0),
         "total_theoretical_minutes" => round((float)($summaryData['TotalTheoreticalMinutes'] ?? 0), 2)
-        // [ลบออก] "sparkline_data"
     ];
     echo json_encode($output);
 

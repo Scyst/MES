@@ -1,16 +1,11 @@
 <?php
 // page/QMS/print_car.php
 // FM-QCS-064  Rev.00 11/12/2025
-
-// 1. เพิ่มการตรวจสอบสิทธิ์ (Security)
-session_start();
-if (!isset($_SESSION['user'])) {
-    die('<div style="color:red; font-family:sans-serif; padding:20px;"><b>Error:</b> Unauthorized Access. Please login first.</div>');
-}
-
-require_once('../../utils/libs/tcpdf/tcpdf.php');
-require_once('../../config/config.php');
 require_once('../db.php');
+require_once('../../auth/check_auth.php');
+require_once('../../utils/libs/tcpdf/tcpdf.php');
+
+requirePermission(['view_qms', 'view_production']);
 
 // ตรวจสอบโหมด: ?mode=blank
 $is_blank = (isset($_GET['mode']) && $_GET['mode'] === 'blank');

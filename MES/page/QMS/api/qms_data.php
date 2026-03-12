@@ -2,15 +2,9 @@
 // MES/page/QMS/api/qms_data.php
 
 header('Content-Type: application/json; charset=utf-8');
-require_once '../../../config/config.php';
 require_once '../../db.php';
-
-session_start();
-if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'Unauthorized']);
-    exit;
-}
+require_once '../../../auth/check_auth.php'; 
+requirePermission('view_qms');
 
 $action = $_GET['action'] ?? 'list';
 

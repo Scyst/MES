@@ -2,7 +2,6 @@
 // MES/page/QMS/api/guest_action.php
 
 header('Content-Type: application/json; charset=utf-8');
-require_once '../../../config/config.php';
 require_once '../../db.php';
 
 // *ไม่ต้อง check_auth เพราะลูกค้าไม่มี session*

@@ -6,9 +6,9 @@ include_once("../../../config/config.php");
 
 header('Content-Type: application/json');
 
-if (!hasRole(['admin', 'creator', 'planner', 'viewer', 'supervisor'])) {
+if (!hasPermission('view_dashboard') && !hasPermission('view_executive') && !hasPermission('view_planning')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Dashboard permission required.']);
     exit;
 }
 

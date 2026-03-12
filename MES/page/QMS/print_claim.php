@@ -1,17 +1,10 @@
 <?php
 // page/QMS/print_claim.php
-// Orientation: Landscape (L)
-// Update: Header Vertical Alignment (Center Logo & Title)
-
-// 1. เพิ่มการตรวจสอบสิทธิ์ (Security)
-session_start();
-if (!isset($_SESSION['user'])) {
-    die('<div style="color:red; font-family:sans-serif; padding:20px;"><b>Error:</b> Unauthorized Access. Please login first.</div>');
-}
-
-require_once('../../utils/libs/tcpdf/tcpdf.php');
-require_once('../../config/config.php');
 require_once('../db.php');
+require_once('../../auth/check_auth.php'); 
+require_once('../../utils/libs/tcpdf/tcpdf.php');
+
+requirePermission(['view_qms', 'view_production']);
 
 $is_blank = (isset($_GET['mode']) && $_GET['mode'] === 'blank');
 $case_id = $_GET['id'] ?? 0;

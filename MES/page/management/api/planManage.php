@@ -14,12 +14,7 @@ require_once __DIR__ . '/../../../config/config.php';
 
 if (!$is_api_call) {
     require_once __DIR__ . '/../../../auth/check_auth.php';
-    
-    if (!function_exists('hasRole') || !hasRole(['admin', 'creator', 'planner'])) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit;
-    }
+    requirePermission('view_planning');
 }
 
 if ($is_api_call) {

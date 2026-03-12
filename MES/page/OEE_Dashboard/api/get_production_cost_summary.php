@@ -1,18 +1,15 @@
 <?php
 // Use absolute paths for consistency and reliability
-require_once __DIR__ . '/../../db.php'; // Correct path to db.php which includes config.php
+require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
 if (!isset($_SESSION['user']) && !isset($_SESSION['username'])) {
-    http_response_code(403); // Forbidden
+    http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
-// Allow GET requests
 header('Content-Type: application/json');
-
-// --- Get Filter Parameters ---
 $startDate = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
 $endDate = $_GET['endDate'] ?? date('Y-m-d');
 $line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : null;
@@ -61,23 +58,15 @@ try {
         } 
 
         $isActualCostUsed = false; 
-
-        // [แก้ไข] ดึงข้อมูล DL และ OT แยกกัน
         if ($actualResult && isset($actualResult['TotalActualDLOT']) && is_numeric($actualResult['TotalActualDLOT'])) {
             $actualDLOT = floatval($actualResult['TotalActualDLOT']);
-
             $standardResult['TotalDLCost'] = $actualDLOT;
-            
-            // เพิ่ม 2 บรรทัดนี้เพื่อส่งค่าแยก
             $standardResult['TotalActualDL'] = floatval($actualResult['TotalActualDL'] ?? 0);
             $standardResult['TotalActualOT'] = floatval($actualResult['TotalActualOT'] ?? 0);
-            
             $isActualCostUsed = true; 
-
             $totalRevenue = $standardResult['TotalStdRevenue'] ?? 0;
             $matCost = $standardResult['TotalMatCost'] ?? 0;
             $ohCost = $standardResult['TotalOHCost'] ?? 0;
-
             $standardResult['PercentDL'] = ($totalRevenue > 0) ? ($standardResult['TotalDLCost'] / $totalRevenue) * 100.0 : 0;
             $standardResult['TotalStdCost'] = $matCost + $standardResult['TotalDLCost'] + $ohCost;
             $standardResult['PercentGPStd'] = ($totalRevenue > 0) ? (($totalRevenue - $standardResult['TotalStdCost']) / $totalRevenue) * 100.0 : 0;
@@ -87,12 +76,11 @@ try {
         echo json_encode(['success' => true, 'data' => $standardResult]);
 
     } else {
-        // Return a default structure with zeros if Standard SP returns no row
         $defaultData = [
             "TotalMatCost" => 0, "TotalDLCost" => 0, "TotalOHCost" => 0,
             "TotalStdCost" => 0, "TotalStdRevenue" => 0, "PercentRM" => 0,
             "PercentDL" => 0, "PercentOH" => 0, "PercentGPStd" => 0,
-            "isActualDLCost" => false // Default flag
+            "isActualDLCost" => false
         ];
         echo json_encode(['success' => true, 'data' => $defaultData, 'message' => 'No production data found for the selected filters.']);
     }

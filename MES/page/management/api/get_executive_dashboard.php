@@ -10,9 +10,9 @@ header('Content-Type: application/json');
 error_reporting(E_ALL); 
 ini_set('display_errors', 0);
 
-if (!hasRole(['admin', 'creator', 'planner'])) {
+if (!hasPermission('view_executive')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Access Denied: Executive dashboard permission required.']);
     exit;
 }
 

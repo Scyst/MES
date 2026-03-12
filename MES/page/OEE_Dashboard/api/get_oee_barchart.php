@@ -15,12 +15,6 @@ try {
     $model = !empty($_GET['model']) ? $_GET['model'] : null;
     $actualStartDate = $startDate . ' 08:00:00';
     $actualEndDate = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day 8 hours'));
-
-    // =============================================================
-    // START: LOGIC การคำนวณ BAR CHART
-    // =============================================================
-
-    // --- 1. ดึงข้อมูล Stop Causes (ส่วนนี้แก้ไขแล้วจากครั้งก่อน) ---
     $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; 
     
     $stopConditions = [
@@ -46,10 +40,7 @@ try {
 
     $stopStmt = $pdo->prepare($stopSql);
     $stopStmt->execute($stopParams);
-    $stopResults = $stopStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // --- 2. ดึงข้อมูล Production Results (ส่วนนี้คือที่แก้ไข) ---
-    
+    $stopResults = $stopStmt->fetchAll(PDO::FETCH_ASSOC);    
     $partConditions = [
         "t.transaction_timestamp >= ?", 
         "t.transaction_timestamp < ?"
@@ -87,12 +78,9 @@ try {
     $partStmt = $pdo->prepare($partSql);
     $partStmt->execute($partParams);
     $partResults = $partStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // --- 3. จัดรูปแบบข้อมูลสำหรับ Frontend (ส่วนของ Stop Causes) ---
     $stopCauseLabels = array_column($stopResults, 'label');
     $stopCauseData = array_column($stopResults, 'total_minutes');
 
-    // --- 4. ส่งข้อมูลกลับ ---
     echo json_encode([
         "success" => true,
         "data" => [

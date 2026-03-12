@@ -33,13 +33,9 @@ try {
             $defaultDate = date('Y-m-d', strtotime('-8 hours'));
             $startDate = $_GET['startDate'] ?? $defaultDate;
             $endDate = $_GET['endDate'] ?? $defaultDate;
-
-            // 1. ดึง Real-time 
             $stmtRT = $pdo->prepare("EXEC dbo.sp_GetUtilityRealtimeStatus");
             $stmtRT->execute();
             $realtimeData = $stmtRT->fetchAll(PDO::FETCH_ASSOC);
-
-            // 2. ดึงยอดสะสมแบบ "ช่วงเวลา" (Range Summary)
             $sqlMeterSum = "SELECT m.meter_name, SUM(s.consumption) as period_usage, SUM(s.calculated_cost) as period_cost 
                             FROM dbo.UTILITY_HOURLY_SUMMARY s WITH (NOLOCK)
                             JOIN dbo.UTILITY_METERS m WITH (NOLOCK) ON s.meter_id = m.meter_id
@@ -53,7 +49,6 @@ try {
                 $meterSums[$row['meter_name']] = $row;
             }
 
-            // 3. 🚀 [NEW] กราฟ Trend (ถ้ารันวันเดียว โชว์ 24ชม. / ถ้ารันหลายวัน โชว์แท่งรายวัน)
             if ($startDate === $endDate) {
                 $sqlTrend = "SELECT log_hour AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
                              FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
@@ -70,8 +65,6 @@ try {
                 $stmtHE->execute([':sd' => $startDate, ':ed' => $endDate]);
             }
             $trendData = $stmtHE->fetchAll(PDO::FETCH_ASSOC);
-
-            // ... (โค้ดลูปคำนวณ Summary คงเดิม แต่เปลี่ยนตัวแปร today เป็น period)
             $summary = ['total_kw' => 0, 'period_kwh' => 0, 'period_elec_cost' => 0, 'total_lpg_flow' => 0, 'period_lpg_usage' => 0, 'period_lpg_cost' => 0, 'avg_pf' => 0, 'pf_count' => 0, 'online_meters' => 0, 'total_meters' => count($realtimeData)];
             $meters = [];
             foreach ($realtimeData as $row) {

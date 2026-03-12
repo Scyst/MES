@@ -43,6 +43,72 @@ function hasPermission($permissionCode): bool {
     return in_array($permissionCode, $_SESSION['user']['permissions']);
 }
 
+function requirePermission($permissions) {
+    // 1. ถ้ายังไม่ล็อกอิน ให้เด้งไปหน้า Login อัตโนมัติ
+    if (!isset($_SESSION['user'])) {
+        $current_url = $_SERVER['REQUEST_URI'];
+        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+        header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
+        exit;
+    }
+
+    // 2. เช็คว่ามีสิทธิ์ตามที่ขอหรือไม่ (รองรับทั้งแบบ String และ Array)
+    $hasAccess = false;
+    if (is_array($permissions)) {
+        foreach ($permissions as $perm) {
+            if (hasPermission($perm)) {
+                $hasAccess = true;
+                break;
+            }
+        }
+    } else {
+        $hasAccess = hasPermission($permissions);
+    }
+
+    // 3. ถ้าไม่มีสิทธิ์ ให้ดีดออก!
+    if (!$hasAccess) {
+        // เช็คก่อนว่าเป็นการเรียกผ่าน API (JSON) หรือเปิดหน้าเว็บปกติ
+        $isApiReq = (stripos($_SERVER['REQUEST_URI'], '/api/') !== false) || 
+                    (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+        if ($isApiReq) {
+            // ถ้าเป็น API ให้ตอบกลับเป็น JSON Error
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Access Denied: You lack the required permissions.']);
+            exit;
+        } else {
+            // ถ้าเป็นหน้าเว็บ ให้โชว์หน้า Access Denied สวยๆ พร้อมปุ่มกลับไปหน้าหลัก
+            $homeUrl = defined('BASE_URL') ? BASE_URL . '/page/dailyLog/dailyLogUI.php' : '/MES/page/dailyLog/dailyLogUI.php';
+            die('
+                <!DOCTYPE html>
+                <html lang="th">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Access Denied</title>
+                    <style>
+                        body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f8f9fa; margin: 0; }
+                        .denied-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; border-top: 5px solid #dc3545; }
+                        .denied-icon { font-size: 60px; margin-bottom: 10px; }
+                        .btn-back { display: inline-block; margin-top: 20px; padding: 10px 24px; background-color: #0d6efd; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+                        .btn-back:hover { background-color: #0b5ed7; }
+                    </style>
+                </head>
+                <body>
+                    <div class="denied-card">
+                        <div class="denied-icon">🚫</div>
+                        <h2 style="color: #343a40; margin-top: 0;">Access Denied</h2>
+                        <p style="color: #6c757d; line-height: 1.5; margin-bottom:0;">ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+                        <p style="font-size: 0.8rem; color: #adb5bd;">(Required: ' . (is_array($permissions) ? implode(' หรือ ', $permissions) : $permissions) . ')</p>
+                        <a href="' . $homeUrl . '" class="btn-back">กลับสู่หน้าหลัก</a>
+                    </div>
+                </body>
+                </html>
+            ');
+        }
+    }
+}
+
 // ======================================================================
 // 🛡️ 3. LINE & RECORD LEVEL SECURITY
 // ======================================================================
