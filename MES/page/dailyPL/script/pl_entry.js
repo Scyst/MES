@@ -1652,7 +1652,13 @@ async function loadEntryData() {
     const tbody = document.getElementById('entryTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center align-middle" style="height: 200px;"><div class="spinner-border text-primary mb-2"></div><div class="text-muted small">Loading P&L Data...</div></td></tr>`;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center align-middle" style="height: 200px;">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div class="text-muted small">Loading P&L Data...</div>
+            </td>
+        </tr>`;
 
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
     const todayStr = new Date().toISOString().split('T')[0];
@@ -1675,11 +1681,8 @@ async function loadEntryData() {
         if (res.success) {
             currentData = res.data;
             isPeriodLocked = false; 
-            if (currentMode === 'daily' && currentData.length > 0) {
-                const lockStat = currentData[0].is_locked;
-                if (lockStat == 1 || lockStat === '1' || lockStat === true) {
-                    isPeriodLocked = true;
-                }
+            if (currentMode === 'daily' && res.is_locked === 1) {
+                isPeriodLocked = true;
             }
 
             const btnLock = document.getElementById('btnToggleLock');
@@ -1688,21 +1691,19 @@ async function loadEntryData() {
             
             if (btnLock) {
                 btnLock.classList.remove('btn-outline-danger', 'btn-danger');
-                
                 if (isPeriodLocked) {
                     btnLock.classList.add('btn-danger');
-                    if (iconLock) iconLock.className = 'fas fa-lock';
+                    if (iconLock) iconLock.className = 'fas fa-lock me-1';
                     if (textLock) textLock.innerText = 'Unlock Day';
                 } else {
                     btnLock.classList.add('btn-outline-danger');
-                    if (iconLock) iconLock.className = 'fas fa-lock-open';
+                    if (iconLock) iconLock.className = 'fas fa-lock-open me-1';
                     if (textLock) textLock.innerText = 'Lock Day';
                 }
             }
 
             if (typeof runFormulaEngine === 'function') runFormulaEngine(); 
             renderEntryTable(currentData);
-            if(typeof updateCharts === 'function') updateCharts(currentData);
             if(typeof calculateSummary === 'function') calculateSummary(currentData);
 
             const saveBtn = document.getElementById('btnSaveSnapshot');
@@ -1716,6 +1717,7 @@ async function loadEntryData() {
             } else {
                 if(saveBtn) saveBtn.style.display = 'inline-block';
             }
+            
         } else {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-5">${res.message}</td></tr>`;
         }
@@ -1726,17 +1728,40 @@ async function loadEntryData() {
 }
 
 async function togglePeriodLock() {
+    const btn = document.getElementById('btnToggleLock');
+    if(btn) {
+        if(btn.disabled) return;
+        btn.disabled = true;
+    }
+
     const start = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
 
-    if (!isPeriodLocked) {
-        await saveDailySnapshot(true); 
-    }
-
-    const btn = document.getElementById('btnToggleLock');
-    if(btn) btn.disabled = true;
+    clearTimeout(autoSaveTimer);
 
     try {
+        const isCurrentlyLocked = btn.classList.contains('btn-danger');
+        if (!isCurrentlyLocked) {
+            const payload = currentData.map(item => ({
+                item_id: item.item_id,
+                amount: parseFloat(item.actual_amount) || 0,
+                remark: item.remark || ''
+            }));
+            
+            const formData = new FormData();
+            formData.append('action', 'save_batch');
+            formData.append('entry_date', start);
+            formData.append('section', section);
+            formData.append('items', JSON.stringify(payload));
+            
+            const saveRes = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+            const saveJson = await saveRes.json();
+            
+            if (!saveJson.success) {
+                throw new Error("Save before lock failed: " + saveJson.message);
+            }
+        }
+
         const fd = new FormData();
         fd.append('action', 'toggle_lock');
         fd.append('entry_date', start);
@@ -1746,17 +1771,19 @@ async function togglePeriodLock() {
         const json = await res.json();
         
         if (json.success) {
+            await loadEntryData(); 
+            
             Swal.fire({
                 toast: true, position: 'top-end', showConfirmButton: false, timer: 2000,
                 icon: json.is_locked ? 'success' : 'info',
                 title: json.is_locked ? 'Period Locked 🔒' : 'Period Unlocked 🔓'
             });
-            loadEntryData(); 
         } else {
-            Swal.fire('Error', json.message, 'error');
+            throw new Error(json.message);
         }
     } catch(e) {
-        Swal.fire('Error', 'Connection Failed', 'error');
+        console.error("Lock Error:", e);
+        Swal.fire('Error', e.message || 'Connection Failed', 'error');
     } finally {
         if(btn) btn.disabled = false;
     }
@@ -1766,14 +1793,24 @@ async function saveDailySnapshot(silent = false) {
     if (currentMode !== 'daily') return;
     if (isPeriodLocked) return; 
     
+    const btnSave = document.getElementById('btnSaveSnapshot');
+    if(btnSave) {
+        if(btnSave.disabled) return;
+        btnSave.disabled = true;
+    }
+
     clearTimeout(autoSaveTimer);
-    if (isSaving) return; 
+    
+    if (isSaving) {
+        if(btnSave) btnSave.disabled = false;
+        return; 
+    }
     isSaving = true;
 
     if (!silent) {
         const result = await Swal.fire({
             title: 'Confirm Daily Snapshot?',
-            text: "ระบบจะบันทึกค่าทุกช่อง ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
+            text: "ระบบจะบันทึกค่าทุกช่อง (ทั้ง Manual และ Auto) ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#198754',
@@ -1782,15 +1819,12 @@ async function saveDailySnapshot(silent = false) {
         });
         if (!result.isConfirmed) {
             isSaving = false;
+            if(btnSave) btnSave.disabled = false;
             return;
         }
     }
 
-    const btnSave = document.getElementById('btnSaveSnapshot');
-    if(btnSave) {
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-    }
+    if(btnSave) btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
     const statusEl = document.getElementById('saveStatus');
     if(statusEl) {

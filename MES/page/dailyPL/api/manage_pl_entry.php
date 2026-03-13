@@ -32,6 +32,9 @@ try {
             $section = trim($_GET['section'] ?? '');
             if (empty($section)) throw new Exception("Section is required");
 
+            $lockStmt = $pdo->prepare("SELECT is_locked FROM dbo.DAILY_PL_STATUS WITH (NOLOCK) WHERE entry_date = :d AND section_name = :s");
+            $lockStmt->execute([':d' => $date, ':s' => $section]);
+            $is_locked_status = (int)$lockStmt->fetchColumn();
             $stmt = $pdo->prepare("EXEC dbo." . SP_GET_PL_ENTRY . " :date, :section");
             $stmt->execute([':date' => $date, ':section' => $section]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -43,9 +46,9 @@ try {
                 $row['item_level']     = (int)$row['item_level'];
                 $row['item_id']        = (int)$row['item_id'];
                 $row['parent_id']      = is_numeric($row['parent_id']) ? (int)$row['parent_id'] : null;
-                $row['is_locked']      = isset($row['is_locked']) ? (int)$row['is_locked'] : 0;
+                $row['is_locked']      = $is_locked_status;
             }
-            echo json_encode(['success' => true, 'data' => $data]);
+            echo json_encode(['success' => true, 'is_locked' => $is_locked_status, 'data' => $data]);
             break;
 
         case 'save': 
@@ -56,6 +59,12 @@ try {
 
             if (!validateDate($date)) throw new Exception("Invalid Date");
             if (empty($section)) throw new Exception("Invalid Section");
+
+            $checkLock = $pdo->prepare("SELECT is_locked FROM dbo.DAILY_PL_STATUS WHERE entry_date = :d AND section_name = :s");
+            $checkLock->execute([':d' => $date, ':s' => $section]);
+            if ($checkLock->fetchColumn() == 1) {
+                throw new Exception("Period is locked. Cannot save changes.");
+            }
 
             $stmt = $pdo->prepare("EXEC dbo.sp_UpsertDailyPLEntry_Batch :date, :sect, :items, :user");
             $stmt->execute([
