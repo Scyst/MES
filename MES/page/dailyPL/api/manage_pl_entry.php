@@ -38,11 +38,12 @@ try {
 
             foreach ($data as &$row) {
                 $row['actual_amount']  = (float)$row['actual_amount'];
-                $row['daily_target']   = (float)$row['daily_target'];
+                $row['daily_target']   = (float)($row['daily_target'] ?? 0); 
                 $row['monthly_budget'] = (float)$row['monthly_budget'];
                 $row['item_level']     = (int)$row['item_level'];
                 $row['item_id']        = (int)$row['item_id'];
                 $row['parent_id']      = is_numeric($row['parent_id']) ? (int)$row['parent_id'] : null;
+                $row['is_locked']      = isset($row['is_locked']) ? (int)$row['is_locked'] : 0;
             }
             echo json_encode(['success' => true, 'data' => $data]);
             break;
@@ -117,16 +118,61 @@ try {
             break;
             
         case 'get_target_data':
-            $year = filter_input(INPUT_GET, 'year', FILTER_VALIDATE_INT);
-            $month = filter_input(INPUT_GET, 'month', FILTER_VALIDATE_INT);
-            $section = $_GET['section'] ?? '';
+            // 🔥 [FIX 1] ใช้ (int) แทน filter_input เพื่อแก้ปัญหาเลขเดือนที่มี 0 นำหน้า (เช่น 03)
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : 0;
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : 0;
+            $section = trim($_GET['section'] ?? '');
+            
             $table = defined('MONTHLY_PL_TARGETS_TABLE') ? MONTHLY_PL_TARGETS_TABLE : 'MONTHLY_PL_TARGETS';
             $stmt = $pdo->prepare("SELECT item_id, target_amount FROM $table WHERE year_val = :y AND month_val = :m AND section_name = :s");
             $stmt->execute([':y' => $year, ':m' => $month, ':s' => $section]);
             $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
             
-            foreach ($rows as $k => $v) { $rows[$k] = (float)$v; }
-            echo json_encode(['success' => true, 'data' => $rows]);
+            // 🔥 [FIX 2] บังคับให้ส่งกลับเป็น Object {} เสมอแม้ไม่มีข้อมูล เพื่อให้ JS Mapping ตัวแปรไม่พัง
+            if ($rows) {
+                foreach ($rows as $k => $v) { $rows[$k] = (float)$v; }
+                echo json_encode(['success' => true, 'data' => $rows]);
+            } else {
+                echo json_encode(['success' => true, 'data' => new stdClass()]);
+            }
+            break;
+
+        case 'save_target':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
+            // 🔥 [FIX 3] แคสค่าเป็น int ทันทีเพื่อความชัวร์
+            $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
+            $month = isset($_POST['month']) ? (int)$_POST['month'] : 0;
+            $section = trim($_POST['section'] ?? '');
+            $itemsJson = $_POST['items'] ?? '[]';
+
+            if ($year <= 0 || $month <= 0) {
+                throw new Exception("Invalid Year/Month (Received: $year-$month)");
+            }
+            if (empty($section)) throw new Exception("Invalid Section");
+
+            // ป้องกัน JSON ไม่สมบูรณ์
+            $decoded = json_decode($itemsJson, true);
+            if (!is_array($decoded)) throw new Exception("Invalid Data Format from Client");
+
+            $stmt = $pdo->prepare("EXEC dbo." . SP_SAVE_MONTHLY_TARGET . " :year, :month, :section, :items, :user");
+            $stmt->execute([
+                ':year'    => $year,
+                ':month'   => $month,
+                ':section' => $section,
+                ':items'   => $itemsJson,
+                ':user'    => $user_name
+            ]);
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result && isset($result['success']) && $result['success'] == 1) {
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Budget saved.', 
+                    'working_days' => $result['working_days_used']
+                ]);
+            } else {
+                throw new Exception($result['message'] ?? 'Save failed at Database level');
+            }
             break;
 
         case 'report_range':
@@ -332,22 +378,16 @@ try {
         case 'statement_daily':
             $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
             $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
-            $section = $_GET['section'] ?? 'ALL';
-
-            if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) throw new Exception("Invalid Date");
-
+            $section = trim($_GET['section'] ?? 'ALL');
             $stmt = $pdo->prepare("EXEC dbo.sp_GetPLStatement_Daily :year, :month, :section");
             $stmt->execute([':year' => $year, ':month' => $month, ':section' => $section]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmtLock = $pdo->prepare("SELECT DAY(entry_date) as d FROM dbo.DAILY_PL_STATUS WITH (NOLOCK) WHERE YEAR(entry_date) = :year AND MONTH(entry_date) = :month AND section_name = :section AND is_locked = 1");
+            $stmtLock->execute([':year' => $year, ':month' => $month, ':section' => $section]);
+            $lockedDays = $stmtLock->fetchAll(PDO::FETCH_COLUMN);
+            $lockedDays = array_map('intval', $lockedDays);
 
-            foreach ($data as &$row) {
-                $row['item_level'] = (int)$row['item_level'];
-                for ($d = 1; $d <= 31; $d++) {
-                    $row["d{$d}_act"] = (float)$row["d{$d}_act"];
-                    $row["d{$d}_tgt"] = (float)$row["d{$d}_tgt"];
-                }
-            }
-            echo json_encode(['success' => true, 'data' => $data]);
+            echo json_encode(['success' => true, 'data' => $data, 'locked_days' => $lockedDays]);
             break;
 
         case 'executive_summary':

@@ -201,7 +201,6 @@ $currentUser = $_SESSION['user'];
         </main>
     </div>
     
-    <?php include_once('../components/php/'); ?>
     <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>

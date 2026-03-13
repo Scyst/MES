@@ -14,9 +14,7 @@ let calendarInstance = null;
 let calendarModal = null;
 let editorModal = null;
 let targetModal = null;
-let chartPerformance = null;
-let chartStructure = null;
-
+let autoSaveTimer = null;
 
 // ========================================================
 // INITIALIZATION
@@ -47,35 +45,38 @@ async function loadSectionList() {
         if (json.success && json.data.length > 0) {
             select.innerHTML = '';
             
-            select.innerHTML += '<option value="ALL">-- All Lines --</option>';
-
+            // วนลูปสร้าง Option จาก Database ล้วนๆ
             json.data.forEach(line => {
                 const option = document.createElement('option');
                 option.value = line;
-                option.textContent = line;
+                
+                // หากเจอค่า ALL ให้เปลี่ยนข้อความแสดงผลให้เป็นจุดสังเกตง่ายๆ
+                if (line.toUpperCase() === 'ALL') {
+                    option.textContent = '-- All Lines --';
+                } else {
+                    option.textContent = line;
+                }
+                
                 select.appendChild(option);
             });
 
+            // จำค่าล่าสุดที่เคยเลือกไว้
             if (savedSection && json.data.includes(savedSection)) {
                 select.value = savedSection;
             } else {
-                if (json.data.length > 0) {
-                    select.value = json.data[0]; 
-                }
+                select.value = json.data[0]; 
             }
         }
     } catch (e) {
         console.error("Failed to load sections:", e);
     }
 }
-
 // ========================================================
 // 1. UNIFIED MODE SWITCHER
 // ========================================================
 function switchMode(mode) {
     currentMode = mode;
     
-    // 1. จัดการ Picker Group
     document.getElementById('dailyPickerGroup').classList.add('d-none');
     document.getElementById('rangePickerGroup').classList.remove('d-flex');
     document.getElementById('rangePickerGroup').classList.add('d-none');
@@ -91,31 +92,22 @@ function switchMode(mode) {
     const viewExec = document.getElementById('view-executive');
     if (viewExec) viewExec.classList.remove('active');
 
-    // 2. เคลียร์คลาส Active ออกจาก View ทุกหน้า
     document.getElementById('view-table').classList.remove('active');
-    document.getElementById('view-dashboard').classList.remove('active');
     const viewStatement = document.getElementById('view-statement');
-    if (viewStatement) viewStatement.classList.remove('active'); // บังคับซ่อน
+    if (viewStatement) viewStatement.classList.remove('active'); 
 
-    document.getElementById('btnSetBudgetWrapper').style.display = 'none';
-    document.getElementById('saveStatus').style.visibility = 'hidden';
+    const btnBudget = document.getElementById('btnSetBudgetWrapper');
+    if(btnBudget) btnBudget.style.display = 'none';
+    
+    const saveStat = document.getElementById('saveStatus');
+    if(saveStat) saveStat.style.visibility = 'hidden';
 
-    // 3. แสดงเฉพาะหน้าที่เลือก
     if (mode === 'daily') {
         document.getElementById('dailyPickerGroup').classList.remove('d-none');
         document.getElementById('view-table').classList.add('active');
-        document.getElementById('btnSetBudgetWrapper').style.display = 'block';
-        document.getElementById('saveStatus').style.visibility = 'visible';
+        if(btnBudget) btnBudget.style.display = 'block';
+        if(saveStat) saveStat.style.visibility = 'visible';
         loadEntryData();
-
-    } else if (mode === 'dashboard') {
-        const rangeGroup = document.getElementById('rangePickerGroup');
-        rangeGroup.classList.remove('d-none');
-        rangeGroup.classList.add('d-flex');
-        if(btnDashGo) btnDashGo.classList.remove('d-none');
-        
-        document.getElementById('view-dashboard').classList.add('active');
-        loadDashboardData();
 
     } else if (mode === 'report') {
         const rangeGroup = document.getElementById('rangePickerGroup');
@@ -139,48 +131,50 @@ function switchMode(mode) {
 function handleSectionChange() {
     const section = document.getElementById('sectionFilter').value;
     localStorage.setItem('last_selected_section', section);
-    
-    if (currentMode === 'dashboard') loadDashboardData();
-    else loadEntryData();
+    refreshCurrentView();
 }
 
 function refreshCurrentView() {
-    if (currentMode === 'dashboard') loadDashboardData();
-    else loadEntryData();
-}
-
-function calculateSummary(data) {
-    let totalRevenue = 0;
-    let totalExpense = 0;
-
-    data.forEach(item => {
-        if (parseInt(item.item_level) === 0) {
-            let amount = parseFloat(item.actual_amount) || 0;
-            if (item.item_type === 'REVENUE') {
-                totalRevenue += amount;
-            } else {
-                totalExpense += amount;
-            }
-        }
-    });
-
-    let netProfit = totalRevenue - totalExpense;
-    let margin = (totalRevenue > 0) ? (netProfit / totalRevenue * 100) : 0;
-
-    updateCardValue('cardRevenue', totalRevenue);
-    updateCardValue('cardExpense', totalExpense);
-
-    const elProfit = document.getElementById('cardProfit');
-    if (elProfit) {
-        elProfit.innerText = formatNumber(netProfit);
-        elProfit.className = `mb-0 fw-bold ${netProfit >= 0 ? 'text-success' : 'text-danger'}`;
-        elProfit.closest('.card').className = `card border-0 shadow-sm h-100 border-start border-4 ${netProfit >= 0 ? 'border-success' : 'border-danger'}`;
+    if (currentMode === 'statement') {
+        loadStatementData();
+    } else if (currentMode === 'executive') {
+        loadExecutiveData();
+    } else {
+        loadEntryData();
     }
+}
+function calculateSummary(data) {
+    // 1. ดึงยอดจาก Account Code บรรทัดสุทธิโดยตรง
+    const revItem = data.find(d => d.account_code === 'REVENUES');
+    const netItem = data.find(d => d.account_code === 'NET_PF');
+    
+    const totalRevAct = revItem ? (parseFloat(revItem.actual_amount) || 0) : 0;
+    const netProfitAct = netItem ? (parseFloat(netItem.actual_amount) || 0) : 0;
+    
+    // 2. คำนวณค่าใช้จ่ายรวม (ยอดรายได้ หักลบ ยอดกำไร)
+    const totalExpAct = totalRevAct - netProfitAct; 
+    
+    // 3. คำนวณ % Net Margin
+    const margin = totalRevAct > 0 ? (netProfitAct / totalRevAct) * 100 : 0;
 
-    const elMargin = document.getElementById('cardProfitMargin');
-    if (elMargin) {
-        elMargin.innerText = formatNumber(margin) + '%';
-        elMargin.className = `mb-0 fw-bold ${margin >= 0 ? 'text-info' : 'text-danger'}`;
+    // --- Render ขึ้น DOM ---
+    const revEl = document.getElementById('cardRevenue');
+    if (revEl) revEl.innerText = formatNumber(totalRevAct);
+    
+    const expEl = document.getElementById('cardExpense');
+    if (expEl) expEl.innerText = formatNumber(totalExpAct);
+    
+    const pfEl = document.getElementById('cardProfit');
+    if (pfEl) {
+        pfEl.innerText = formatNumber(netProfitAct);
+        pfEl.className = netProfitAct >= 0 ? 'mb-0 fw-bold text-success' : 'mb-0 fw-bold text-danger';
+        pfEl.parentElement.querySelector('i').className = netProfitAct >= 0 ? 'fas fa-chart-line text-success opacity-50' : 'fas fa-chart-line text-danger opacity-50';
+    }
+    
+    const marginEl = document.getElementById('cardProfitMargin');
+    if (marginEl) {
+        marginEl.innerText = margin.toFixed(2) + '%';
+        marginEl.className = margin >= 0 ? 'mb-0 fw-bold text-success' : 'mb-0 fw-bold text-danger';
     }
 }
 
@@ -206,41 +200,32 @@ function renderEntryTable(data) {
     }
 
     let html = '';
-    
     data.forEach(item => {
         const level = parseInt(item.item_level) || 0;
-        const isAuto = item.data_source.includes('AUTO'); // AUTO_STOCK, AUTO_LABOR
+        const isAuto = item.data_source.includes('AUTO'); 
         const isCalc = item.data_source === 'CALCULATED';
 
-        // Row Styling
         let rowClass = (level === 0) ? 'level-0' : (level === 1 ? 'level-1' : 'level-deep');
         let indentStyle = (level === 0) ? '' : (level === 1 ? 'padding-left: 1.5rem;' : `padding-left: ${1.5 + (level * 1.5)}rem;`);
         let nameCellClass = (level > 1) ? 'child-item' : '';
 
-        // Icons
         let iconHtml = '';
         if (level === 0) iconHtml = `<i class="fas fa-folder text-primary me-2 fa-lg"></i>`;
         else if (level === 1) iconHtml = `<i class="far fa-folder-open text-secondary me-2"></i>`;
         else iconHtml = `<span class="text-muted opacity-25 me-1" style="font-family: monospace;">└─</span><i class="far fa-file-alt text-muted me-2"></i>`;
 
-        // Badges & Status
         let typeBadge = item.item_type === 'REVENUE' ? `<span class="badge-mini badge-type-rev">R</span>` :
                         item.item_type === 'COGS' ? `<span class="badge-mini badge-type-cogs">C</span>` :
                         `<span class="badge-mini badge-type-exp">E</span>`;
 
         let sourceBadge = '';
-        if (isAuto) {
-            sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System (Read-Only)" data-bs-toggle="tooltip">A</span>`;
-        } else if (isCalc) {
-            sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${item.calculation_formula || ''}" data-bs-toggle="tooltip" style="cursor:help;">F</span>`;
-        } else {
-            sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input" data-bs-toggle="tooltip">M</span>`;
-        }
+        if (isAuto) sourceBadge = `<span class="badge-mini badge-src-auto" title="Auto System (Read-Only)">A</span>`;
+        else if (isCalc) sourceBadge = `<span class="badge-mini badge-src-calc" title="Formula: ${item.calculation_formula || ''}">F</span>`;
+        else sourceBadge = `<span class="badge-mini badge-src-manual" title="Manual Input">M</span>`;
 
         const actual = parseFloat(item.actual_amount) || 0;
         const target = parseFloat(item.daily_target) || 0;
         
-        // Diff Logic
         let diffHtml = '<span class="text-muted opacity-25">-</span>';
         if (target > 0) {
             let diff = actual - target;
@@ -264,16 +249,9 @@ function renderEntryTable(data) {
         } else {
             const readonlyAttr = (isAuto || isCalc) ? 'readonly' : '';
             let inputClass = 'input-seamless fw-semibold ';
-            if (isAuto) {
-                // สีเทา สำหรับ Auto System
-                inputClass += 'text-secondary bg-secondary bg-opacity-10 cursor-not-allowed'; 
-            } else if (isCalc) {
-                // สีฟ้า สำหรับ Formula
-                inputClass += 'text-primary bg-info bg-opacity-10 cursor-default'; 
-            } else {
-                // สีปกติ สำหรับ Manual
-                inputClass += 'text-dark bg-white'; 
-            }
+            if (isAuto) inputClass += 'text-secondary bg-secondary bg-opacity-10 cursor-not-allowed'; 
+            else if (isCalc) inputClass += 'text-primary bg-info bg-opacity-10 cursor-default'; 
+            else inputClass += 'text-dark bg-white'; 
 
             inputHtml = `
                 <input type="text" class="${inputClass}" 
@@ -288,8 +266,7 @@ function renderEntryTable(data) {
             remarkHtml = `
                 <input type="text" class="input-seamless text-end text-muted small" 
                     style="font-family: var(--bs-body-font-family); font-weight: normal;"
-                    placeholder="..." value="${item.remark || ''}"
-                    maxlength="255"
+                    placeholder="..." value="${item.remark || ''}" maxlength="255"
                     onblur="formatAndSave(this, ${item.item_id})">`;
         }
 
@@ -302,12 +279,13 @@ function renderEntryTable(data) {
                     <code class="text-muted small bg-light px-1 rounded">${item.account_code}</code>
                 </td>
 
-                <td></td> <td class="text-end text-secondary small align-middle" style="font-family: monospace;">
+                <td></td> 
+                <td class="text-end text-secondary small align-middle target-cell" data-tgt-id="${item.item_id}" style="font-family: monospace;">
                     ${target > 0 ? formatNumber(target) : '-'}
                 </td>
 
                 <td class="text-end" style="width: 140px;">${inputHtml}</td>
-                <td class="text-center align-middle">${diffHtml}</td>
+                <td class="text-center align-middle diff-cell" data-diff-id="${item.item_id}">${diffHtml}</td>
 
                 <td class="text-center px-3">
                     <div class="d-flex justify-content-center">${typeBadge}${sourceBadge}</div>
@@ -318,13 +296,6 @@ function renderEntryTable(data) {
     });
 
     tbody.innerHTML = html;
-
-    /*if (typeof bootstrap !== 'undefined') {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }*/
 }
 
 // ========================================================
@@ -346,120 +317,159 @@ function formatNumber(num) {
 
 async function formatAndSave(input, itemId) {
     if (input.readOnly) return;
-    if (isSaving) return;
 
     const isRemarkField = input.getAttribute('placeholder') === '...';
     let val = input.value.replace(/,/g, '');
     if (val === '' || isNaN(val)) val = 0;
     const floatVal = parseFloat(val);
     
-    if (!isRemarkField) {
-        input.value = formatNumber(floatVal);
-        const itemIndex = currentData.findIndex(d => d.item_id == itemId);
-        if (itemIndex > -1) {
+    // อัปเดตค่าลงใน currentData ทันทีเพื่อให้ UI ตอบสนองเร็ว
+    const itemIndex = currentData.findIndex(d => d.item_id == itemId);
+    if (itemIndex > -1) {
+        if (!isRemarkField) {
+            input.value = formatNumber(floatVal);
             currentData[itemIndex].actual_amount = floatVal;
-        }
-        runFormulaEngine();
-    } else {
-        const itemIndex = currentData.findIndex(d => d.item_id == itemId);
-        if (itemIndex > -1) {
+            runFormulaEngine(currentData); // คำนวณสูตรบนหน้าจอทันที
+        } else {
             currentData[itemIndex].remark = input.value;
         }
     }
 
     const statusEl = document.getElementById('saveStatus');
-    statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving...';
+    statusEl.innerHTML = '<i class="fas fa-ellipsis-h text-muted me-1"></i> Waiting to save...';
     statusEl.classList.remove('opacity-0');
     statusEl.style.visibility = 'visible';
-    isSaving = true;
 
-    try {
-        const payload = currentData.map(item => ({
-            item_id: item.item_id,
-            amount: parseFloat(item.actual_amount) || 0,
-            remark: item.remark || ''
-        }));
+    // หน่วงเวลา 800ms หากมีการกด Tab หรือพิมพ์รัวๆ จะรีเซ็ตเวลาใหม่ (ยิง API แค่รอบเดียวตอนจบ)
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(async () => {
+        if (isSaving) return;
+        isSaving = true;
+        
+        statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving...';
 
-        const formData = new FormData();
-        formData.append('action', 'save');
-        formData.append('entry_date', document.getElementById('targetDate').value);
-        formData.append('section', document.getElementById('sectionFilter').value);
-        formData.append('items', JSON.stringify(payload));
+        try {
+            const payload = currentData.map(item => ({
+                item_id: item.item_id,
+                amount: parseFloat(item.actual_amount) || 0,
+                remark: item.remark || ''
+            }));
 
-        const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
-        const json = await res.json();
+            const formData = new FormData();
+            formData.append('action', 'save');
+            formData.append('entry_date', document.getElementById('targetDate').value);
+            formData.append('section', document.getElementById('sectionFilter').value);
+            formData.append('items', JSON.stringify(payload));
 
-        if (json.success) {
-            setTimeout(() => {
+            const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+            const json = await res.json();
+
+            if (json.success) {
                 statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Auto Saved</span>';
-                setTimeout(() => { 
-                    statusEl.classList.add('opacity-0'); 
-                }, 2000);
-            }, 500);
-        } else {
-            throw new Error(json.message);
+                setTimeout(() => { statusEl.classList.add('opacity-0'); }, 2000);
+            } else {
+                throw new Error(json.message);
+            }
+        } catch (err) {
+            console.error(err);
+            statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Save Failed';
+        } finally {
+            isSaving = false;
         }
-    } catch (err) {
-        console.error(err);
-        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Save Failed';
-    } finally {
-        isSaving = false;
-    }
+    }, 800);
 }
 
-function runFormulaEngine() {
+function runFormulaEngine(dataset = currentData) {
     let hasChanged = false;
-    let maxLoop = 5;
+    let maxLoop = 15;
     for (let i = 0; i < maxLoop; i++) {
         hasChanged = false;
-        currentData.forEach(item => {
+        dataset.forEach(item => {
             if (item.data_source === 'CALCULATED') {
-                const oldVal = parseFloat(item.actual_amount) || 0;
-                let newVal = 0;
+                const oldValAct = parseFloat(item.actual_amount) || 0;
+                const oldValTgt = parseFloat(item.daily_target) || 0;
+                let newValAct = 0;
+                let newValTgt = 0; 
+                
                 try {
                     if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
-                        const children = currentData.filter(child => child.parent_id == item.item_id);
-                        newVal = children.reduce((sum, child) => sum + (parseFloat(child.actual_amount) || 0), 0);
+                        const children = dataset.filter(child => child.parent_id == item.item_id);
+                        newValAct = children.reduce((sum, child) => sum + (parseFloat(child.actual_amount) || 0), 0);
+                        newValTgt = children.reduce((sum, child) => sum + (parseFloat(child.daily_target) || 0), 0);
                     } else if (item.calculation_formula) {
-                        let formula = item.calculation_formula;
-                        const matches = formula.match(/\[(.*?)\]/g);
+                        let formulaAct = item.calculation_formula;
+                        let formulaTgt = item.calculation_formula;
+                        
+                        const matches = formulaAct.match(/\[(.*?)\]/g);
                         if (matches) {
                             matches.forEach(token => {
                                 const code = token.replace('[', '').replace(']', '');
-                                const refItem = currentData.find(d => d.account_code === code);
-                                const refVal = refItem ? (parseFloat(refItem.actual_amount) || 0) : 0;
-                                formula = formula.replace(token, refVal);
+                                const refItem = dataset.find(d => d.account_code === code);
+                                
+                                const refValAct = refItem ? (parseFloat(refItem.actual_amount) || 0) : 0;
+                                const refValTgt = refItem ? (parseFloat(refItem.daily_target) || 0) : 0;
+                                
+                                formulaAct = formulaAct.replace(token, `(${refValAct})`);
+                                formulaTgt = formulaTgt.replace(token, `(${refValTgt})`);
                             });
                         }
-                        const safeFormula = formula.replace(/[^0-9+\-*/(). ]/g, ''); 
-                        if (safeFormula.trim() !== '') {
-                            try {
-                                newVal = new Function('return ' + safeFormula)();
-                            } catch(e) {
-                                newVal = 0;
-                                console.warn(`Formula Error on Code ${item.account_code}:`, e);
-                            }
+                        
+                        const safeFormulaAct = formulaAct.replace(/[^0-9+\-*/(). ]/g, ''); 
+                        const safeFormulaTgt = formulaTgt.replace(/[^0-9+\-*/(). ]/g, '');
+                        
+                        if (safeFormulaAct.trim() !== '') {
+                            try { newValAct = new Function('return ' + safeFormulaAct)(); } catch(e) { newValAct = 0; }
+                        }
+                        if (safeFormulaTgt.trim() !== '') {
+                            try { newValTgt = new Function('return ' + safeFormulaTgt)(); } catch(e) { newValTgt = 0; }
                         }
                     }
-                } catch (e) { newVal = 0; }
+                } catch (e) { newValAct = 0; newValTgt = 0; }
                 
-                if (!isFinite(newVal) || isNaN(newVal)) newVal = 0;
+                if (!isFinite(newValAct) || isNaN(newValAct)) newValAct = 0;
+                if (!isFinite(newValTgt) || isNaN(newValTgt)) newValTgt = 0;
                 
-                if (Math.abs(newVal - oldVal) > 0.001) {
-                    item.actual_amount = newVal;
+                if (Math.abs(newValAct - oldValAct) > 0.001 || Math.abs(newValTgt - oldValTgt) > 0.001) {
+                    item.actual_amount = newValAct;
+                    item.daily_target = newValTgt; 
                     hasChanged = true;
-                    const inputEl = document.querySelector(`input[data-id="${item.item_id}"]`);
-                    if (inputEl) {
-                        inputEl.value = formatNumber(newVal);
-                        inputEl.parentElement.classList.add('bg-warning', 'bg-opacity-25');
-                        setTimeout(() => inputEl.parentElement.classList.remove('bg-warning', 'bg-opacity-25'), 500);
+                    
+                    // อัปเดต UI เฉพาะกรณีที่เป็นข้อมูลชุดหลัก (currentData)
+                    if (dataset === currentData) {
+                        const inputEl = document.querySelector(`input[data-id="${item.item_id}"]`);
+                        if (inputEl) {
+                            inputEl.value = formatNumber(newValAct);
+                            inputEl.parentElement.classList.add('bg-warning', 'bg-opacity-25');
+                            setTimeout(() => inputEl.parentElement.classList.remove('bg-warning', 'bg-opacity-25'), 500);
+                        }
+
+                        const tgtEl = document.querySelector(`.target-cell[data-tgt-id="${item.item_id}"]`);
+                        if (tgtEl) tgtEl.innerText = newValTgt > 0 ? formatNumber(newValTgt) : '-';
+                        
+                        const diffEl = document.querySelector(`.diff-cell[data-diff-id="${item.item_id}"]`);
+                        if (diffEl) {
+                            if (newValTgt > 0) {
+                                let diff = newValAct - newValTgt;
+                                let percent = (diff / newValTgt) * 100;
+                                let colorClass = 'text-muted';
+                                if (item.item_type === 'REVENUE') {
+                                    if (diff < -0.01) colorClass = 'text-danger fw-bold'; else if (diff > 0.01) colorClass = 'text-success fw-bold';
+                                } else {
+                                    if (diff > 0.01) colorClass = 'text-danger fw-bold'; else if (diff < -0.01) colorClass = 'text-success fw-bold';
+                                }
+                                let arrow = diff > 0 ? '↑' : '↓'; if (Math.abs(diff) < 0.01) arrow = '';
+                                diffEl.innerHTML = `<span class="${colorClass}" style="font-size: 0.8rem;" title="Diff: ${formatNumber(diff)}">${arrow} ${Math.abs(percent).toFixed(0)}%</span>`;
+                            } else {
+                                diffEl.innerHTML = '<span class="text-muted opacity-25">-</span>';
+                            }
+                        }
                     }
                 }
             }
         });
         if (!hasChanged) break;
     }
-    calculateSummary(currentData);
+    if (dataset === currentData) calculateSummary(dataset);
 }
 
 // ========================================================
@@ -554,24 +564,30 @@ async function fetchWorkingDays() {
     }
 }
 
+// 1. แก้ไขให้เข้ารหัสชื่อ Section ป้องกัน URL Request พัง
 async function fetchMonthlyBudgets() {
     const monthStr = document.getElementById('budgetMonth').value;
     const [year, month] = monthStr.split('-');
     const section = document.getElementById('sectionFilter').value;
 
     try {
-        const res = await fetch(`api/manage_pl_entry.php?action=get_target_data&year=${year}&month=${month}&section=${section}`);
+        // เพิ่ม encodeURIComponent เพื่อจัดการอักขระพิเศษและเว้นวรรค
+        const res = await fetch(`api/manage_pl_entry.php?action=get_target_data&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
         const json = await res.json();
+        
         if (json.success) {
             const budgetMap = json.data;
             document.querySelectorAll('.budget-input').forEach(input => {
                 const itemId = input.getAttribute('data-id');
                 const val = budgetMap[itemId];
+                // โหลดค่ามาใส่ ถ้าหาไม่เจอให้เป็นช่องว่าง
                 input.value = (val !== undefined && val !== null) ? val : '';
                 calcPreview(input);
             });
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("Fetch Budget Error:", e); 
+    }
 }
 
 function renderTargetStructure() {
@@ -614,13 +630,26 @@ function calcPreview(input) {
     if(row) row.querySelector('.daily-preview').innerText = formatNumber(daily);
 }
 
+// 2. แก้ไขให้บันทึกค่า 0 ลง DB หากมีการเคลียร์ช่อง Input ทิ้ง
 async function saveTarget() {
     const inputs = document.querySelectorAll('.budget-input');
     const payload = [];
+    
     inputs.forEach(inp => {
-        const val = parseFloat(inp.value);
-        if (!isNaN(val)) payload.push({ item_id: inp.getAttribute('data-id'), amount: val });
+        let val = parseFloat(inp.value);
+        if (isNaN(val)) val = 0; // แปลงค่าว่างให้เป็น 0
+        
+        let itemId = parseInt(inp.getAttribute('data-id'));
+        if (!isNaN(itemId)) {
+            payload.push({ item_id: itemId, amount: val });
+        }
     });
+
+    // ดักจับกรณีหน้าจอยังโหลดไม่เสร็จแล้วกด Save
+    if (payload.length === 0) {
+        Swal.fire('Warning', 'No budget inputs found to save.', 'warning');
+        return;
+    }
 
     const monthStr = document.getElementById('budgetMonth').value; 
     const [year, month] = monthStr.split('-');
@@ -629,8 +658,10 @@ async function saveTarget() {
     try {
         const formData = new FormData();
         formData.append('action', 'save_target');
-        formData.append('year', year); formData.append('month', month);
-        formData.append('section', section); formData.append('items', JSON.stringify(payload));
+        formData.append('year', parseInt(year)); 
+        formData.append('month', parseInt(month));
+        formData.append('section', section); 
+        formData.append('items', JSON.stringify(payload));
 
         const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
         const json = await res.json();
@@ -642,7 +673,10 @@ async function saveTarget() {
         } else {
             Swal.fire('Error', json.message, 'error');
         }
-    } catch (err) { console.error(err); Swal.fire('Error', 'Connection Failed', 'error'); }
+    } catch (err) { 
+        console.error(err); 
+        Swal.fire('Error', 'Connection Failed', 'error'); 
+    }
 }
 
 // ========================================================
@@ -893,236 +927,146 @@ async function apiCalendarAction(action, payload) {
 }
 
 // ========================================================
-// 6. EXPORT LOGIC (Client-Side SheetJS)
+// 6. MASTER EXPORT (1-Click All Sheets)
 // ========================================================
-async function exportPLToExcel() {
-    const section = document.getElementById('sectionFilter').value;
-    let url = '';
-    let filename = '';
-    const timestamp = new Date().toISOString().slice(0,19).replace(/[-:]/g,"").replace("T","_");
+async function exportMasterExcel() {
+    const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const date = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
+    const year = date.split('-')[0];
     const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
-
-    if (currentMode === 'daily') {
-        const date = document.getElementById('targetDate').value;
-        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`;
-        filename = `PL_Daily_${date}_${safeSection}_${timestamp}.xlsx`;
-    } else {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${section}`;
-        filename = `PL_Report_${start}_to_${end}_${safeSection}_${timestamp}.xlsx`;
-    }
+    
     Swal.fire({
-        title: 'Generating Excel...',
-        html: 'Please wait while we process the data.',
+        title: 'Generating Master Report...',
+        html: 'ระบบกำลังประมวลผลข้อมูล กรุณารอสักครู่',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
 
     try {
-        const response = await fetch(url);
-        const json = await response.json();
+        const [resDaily, resYearly] = await Promise.all([
+            fetch(`api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}`),
+            fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`)
+        ]);
+        
+        const jsonDaily = await resDaily.json();
+        const jsonYearly = await resYearly.json();
 
-        if (!json.success || !json.data || json.data.length === 0) {
-            Swal.fire('No Data', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'info');
-            return;
-        }
+        if (!jsonDaily.success || !jsonYearly.success) throw new Error("Failed to fetch data");
 
-        const excelRows = [
-            ["Item Name", "Account Code", "Target", "Actual", "Diff", "Note", "Source"]
-        ];
+        let entryData = jsonDaily.data;
+        runFormulaEngine(entryData);
 
-        json.data.forEach(item => {
+        let stmtData = jsonYearly.data;
+        calculateStatementFormulas(stmtData, 'yearly');
+
+        const wb = XLSX.utils.book_new();
+        const ws1_rows = [["Account Name", "Code", "Target", "Actual", "Diff", "Note", "Source"]];
+        entryData.forEach(item => {
             let indent = "    ".repeat(parseInt(item.item_level) || 0);
-            const target = parseFloat(item.daily_target) || 0;
-            const actual = parseFloat(item.actual_amount) || 0;
-            const diff = actual - target;
-
-            excelRows.push([
-                indent + item.item_name,    // A
-                item.account_code,          // B
-                target,                     // C
-                actual,                     // D
-                diff,                       // E
-                item.remark || "",          // F
-                item.data_source            // G
+            let tgt = parseFloat(item.daily_target) || 0;
+            let act = parseFloat(item.actual_amount) || 0;
+            ws1_rows.push([
+                indent + item.item_name, item.account_code, 
+                tgt, act, act - tgt, item.remark || "", item.data_source
             ]);
         });
-        const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "PL_Data");
-        worksheet['!cols'] = [
-            { wch: 40 }, // Name
-            { wch: 15 }, // Code
-            { wch: 15 }, // Target
-            { wch: 15 }, // Actual
-            { wch: 15 }, // Diff
-            { wch: 30 }, // Note
-            { wch: 20 }  // Source
-        ];
-        XLSX.writeFile(workbook, filename);
+        const ws1 = XLSX.utils.aoa_to_sheet(ws1_rows);
+        ws1['!cols'] = [{ wch: 45 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, ws1, `Daily_Entry_${date}`);
+
+        const ws2_rows = buildYearlyAOA(stmtData, year, false);
+        const ws2 = XLSX.utils.aoa_to_sheet(ws2_rows);
+        ws2['!cols'] = [{ wch: 45 }]; for(let i=0; i<70; i++) ws2['!cols'].push({wch: 13});
+        XLSX.utils.book_append_sheet(wb, ws2, `Statement_Y${year}`);
+
+        const ws3_rows = buildYearlyAOA(stmtData, year, true);
+        const ws3 = XLSX.utils.aoa_to_sheet(ws3_rows);
+        ws3['!cols'] = [{ wch: 45 }]; for(let i=0; i<70; i++) ws3['!cols'].push({wch: 13});
+        XLSX.utils.book_append_sheet(wb, ws3, `Executive_Y${year}`);
+
+        XLSX.writeFile(wb, `Master_PL_${year}_${safeSection}.xlsx`);
         Swal.close();
-    } catch (error) {
-        console.error("Export Error:", error);
-        Swal.fire('Export Failed', error.message, 'error');
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Failed to generate Master Excel', 'error');
     }
+}
+
+function buildYearlyAOA(data, year, isExecutive) {
+    let aoa = [];
+    const months = ['Jan','Feb','Mar','Q1','Apr','May','Jun','Q2','Jul','Aug','Sep','Q3','Oct','Nov','Dec','Q4','YTD'];
+    
+    let h1 = ["Account Name"];
+    months.forEach(m => { h1.push(`${m} ${!m.startsWith('Q') && m !== 'YTD' ? year : ''}`, "", "", ""); });
+    aoa.push(h1);
+
+    let h2 = [""];
+    months.forEach(() => { h2.push("Target", "%", "Actual", "%"); });
+    aoa.push(h2);
+
+    let base = { act: Array(13).fill(0), tgt: Array(13).fill(0) };
+    const getAct = (code, m) => { const item = data.find(d => d.account_code === code); return item ? (parseFloat(item[`m${m}_act`]) || 0) : 0; };
+    const getTgt = (code, m) => { const item = data.find(d => d.account_code === code); return item ? (parseFloat(item[`m${m}_tgt`]) || 0) : 0; };
+
+    for(let m=1; m<=12; m++) {
+        base.act[m] = getAct("REVENUES", m);
+        base.tgt[m] = getTgt("REVENUES", m);
+    }
+    
+    const getBaseQ = (q, type) => base[type][q*3-2] + base[type][q*3-1] + base[type][q*3];
+    const getBaseY = (type) => getBaseQ(1, type) + getBaseQ(2, type) + getBaseQ(3, type) + getBaseQ(4, type);
+
+    const genVals = (act, tgt, bAct, bTgt) => {
+        let aPct = bAct ? (act/bAct*100).toFixed(2)+"%" : "-";
+        let tPct = bTgt ? (tgt/bTgt*100).toFixed(2)+"%" : "-";
+        return [tgt, tPct, act, aPct]; 
+    };
+
+    if (!isExecutive) {
+        data.forEach(item => {
+            let row = ["    ".repeat(parseInt(item.item_level)||0) + item.item_name];
+            let yAct=0, yTgt=0;
+            for (let q=1; q<=4; q++) {
+                let qAct=0, qTgt=0;
+                for(let m=(q*3)-2; m<=q*3; m++){
+                    let act = parseFloat(item[`m${m}_act`])||0;
+                    let tgt = parseFloat(item[`m${m}_tgt`])||0;
+                    qAct += act; qTgt += tgt;
+                    row.push(...genVals(act, tgt, base.act[m], base.tgt[m]));
+                }
+                yAct += qAct; yTgt += qTgt;
+                row.push(...genVals(qAct, qTgt, getBaseQ(q,'act'), getBaseQ(q,'tgt')));
+            }
+            row.push(...genVals(yAct, yTgt, getBaseY('act'), getBaseY('tgt')));
+            aoa.push(row);
+        });
+    } else {
+        const template = getExecTemplate(getAct, getTgt);
+        template.forEach(tRow => {
+            let row = ["    ".repeat(tRow.indent||0) + tRow.label];
+            let yAct=0, yTgt=0;
+            for(let q=1; q<=4; q++){
+                let qAct=0, qTgt=0;
+                for(let m=(q*3)-2; m<=q*3; m++){
+                    let act = tRow.calcAct ? tRow.calcAct(m) : getAct(tRow.code, m);
+                    let tgt = tRow.calcTgt ? tRow.calcTgt(m) : getTgt(tRow.code, m);
+                    qAct+=act; qTgt+=tgt;
+                    row.push(...genVals(act, tgt, base.act[m], base.tgt[m]));
+                }
+                yAct += qAct; yTgt += qTgt;
+                row.push(...genVals(qAct, qTgt, getBaseQ(q,'act'), getBaseQ(q,'tgt')));
+            }
+            row.push(...genVals(yAct, yTgt, getBaseY('act'), getBaseY('tgt')));
+            aoa.push(row);
+        });
+    }
+    return aoa;
 }
 
 // ========================================================
 // 7. DASHBOARD CHARTS
 // ========================================================
-function updateDashboardCharts(data) {
-    if (typeof Chart === 'undefined') return;
-
-    let revenue = { actual: 0, target: 0 };
-    let cogs = { actual: 0, target: 0 };
-    let expense = { actual: 0, target: 0 };
-
-    data.forEach(item => {
-        let act = parseFloat(item.actual_mtd) || 0;
-        let tgt = parseFloat(item.target_monthly) || 0;
-
-        if (item.item_type === 'REVENUE') {
-            revenue.actual += act; revenue.target += tgt;
-        } else if (item.item_type === 'COGS') {
-            cogs.actual += act; cogs.target += tgt;
-        } else if (item.item_type === 'EXPENSE') { // <-- ล็อคเงื่อนไข ป้องกันการเอาหัวข้อกำไรไปบวกในค่าใช้จ่าย
-            expense.actual += act; expense.target += tgt;
-        }
-    });
-
-    const netProfit = revenue.actual - cogs.actual - expense.actual;
-    const netProfitTarget = revenue.target - cogs.target - expense.target;
-
-    const ctxBar = document.getElementById('chartPerformance');
-    if(ctxBar) {
-        if (chartPerformance) chartPerformance.destroy();
-        chartPerformance = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: ['Revenue', 'COGS', 'Expense', 'Net Profit'],
-                datasets: [
-                    {
-                        label: 'Target (Month)',
-                        data: [revenue.target, cogs.target, expense.target, netProfitTarget],
-                        backgroundColor: 'rgba(200, 200, 200, 0.3)',
-                        borderColor: 'rgba(150, 150, 150, 1)',
-                        borderWidth: 1,
-                        barPercentage: 0.6
-                    },
-                    {
-                        label: 'Actual (MTD)',
-                        data: [revenue.actual, cogs.actual, expense.actual, netProfit],
-                        backgroundColor: [
-                            'rgba(13, 110, 253, 0.8)',
-                            'rgba(255, 193, 7, 0.8)',
-                            'rgba(220, 53, 69, 0.8)',
-                            (netProfit >= 0 ? 'rgba(25, 135, 84, 0.8)' : 'rgba(220, 53, 69, 0.8)')
-                        ],
-                        borderWidth: 0,
-                        barPercentage: 0.6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' },
-                    datalabels: {
-                        anchor: 'end', align: 'top',
-                        formatter: (val) => val === 0 ? '' : formatNumberShort(val),
-                        font: { size: 11, weight: 'bold' }
-                    }
-                },
-                scales: { y: { beginAtZero: true, grid: { display: false } } }
-            },
-            plugins: [ChartDataLabels]
-        });
-    }
-
-    const ctxPie = document.getElementById('chartStructure');
-    if(ctxPie) {
-        if (chartStructure) chartStructure.destroy();
-        chartStructure = new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['COGS', 'Expense', 'Profit'],
-                datasets: [{
-                    data: [cogs.actual, expense.actual, (netProfit > 0 ? netProfit : 0)],
-                    backgroundColor: ['#ffc107', '#dc3545', '#198754'],
-                    borderWidth: 2,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%',
-                plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 12 } },
-                    datalabels: {
-                        color: '#fff',
-                        formatter: (val, ctx) => {
-                            let sum = 0;
-                            ctx.chart.data.datasets[0].data.map(d => sum += d);
-                            if(sum === 0) return '';
-                            let pct = (val*100 / sum).toFixed(0) + "%";
-                            return pct === '0%' ? '' : pct;
-                        }
-                    }
-                }
-            },
-            plugins: [ChartDataLabels]
-        });
-    }
-}
-
-function renderDashboardCards(data) {
-    const grid = document.getElementById('dashboardGrid');
-    if (!data || data.length === 0) {
-        grid.innerHTML = '<div class="col-12 text-center text-muted py-5">No Data Found</div>';
-        return;
-    }
-
-    grid.innerHTML = data.map(item => {
-        const pct = parseFloat(item.progress_percent);
-        const isRev = item.item_type === 'REVENUE';
-        
-        let colorClass = 'bg-primary';
-        let textClass = 'text-primary';
-
-        if (isRev) {
-            if (pct >= 100) { colorClass = 'bg-success'; textClass = 'text-success'; }
-            else if (pct >= 80) { colorClass = 'bg-warning'; textClass = 'text-warning'; }
-            else { colorClass = 'bg-danger'; textClass = 'text-danger'; }
-        } else {
-            if (pct > 100) { colorClass = 'bg-danger'; textClass = 'text-danger'; }
-            else { colorClass = 'bg-success'; textClass = 'text-success'; }
-        }
-
-        return `
-            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                <div class="card border-0 shadow-sm p-3 dashboard-card h-100">
-                    <div class="progress-label">
-                        <span class="text-truncate" title="${item.item_name}">${item.item_name}</span>
-                        <span class="${textClass}">${pct.toFixed(0)}%</span>
-                    </div>
-                    
-                    <div class="d-flex align-items-end justify-content-between mb-2">
-                         <div class="value-mtd text-dark">${formatNumberShort(item.actual_mtd)}</div>
-                         <div class="text-target small">Target: ${formatNumberShort(item.target_monthly)}</div>
-                    </div>
-                    
-                    <div class="progress bg-light">
-                        <div class="progress-bar ${colorClass}" role="progressbar" style="width: ${Math.min(pct, 100)}%"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
 function formatNumberShort(num) {
     num = parseFloat(num) || 0; 
     if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -1147,7 +1091,7 @@ async function openRateModal() {
         input: 'number',
         inputValue: currentRate,
         
-        target: document.getElementById('targetModal'), 
+        // ลบ target: document.getElementById('targetModal') ออกจากตรงนี้
         didOpen: () => document.querySelector('.swal2-input')?.focus(),
 
         showCancelButton: true,
@@ -1168,7 +1112,7 @@ async function openRateModal() {
             if(json.success) {
                 Swal.fire('Saved', `Exchange Rate: ${newRate} THB/USD`, 'success');
                 loadEntryData();
-                fetchCurrentRate();
+                fetchCurrentRate(); // โหลดค่าใหม่ถ้าเกิดกำลังเปิดหน้า Target Modal อยู่
             }
         } catch(e) {
             Swal.fire('Error', 'Connection failed', 'error');
@@ -1179,225 +1123,31 @@ async function openRateModal() {
 // ========================================================
 // 8. SNAPSHOT LOGIC (SAVE ALL)
 // ========================================================
-
-async function saveDailySnapshot(silent = false) {
-    if (currentMode !== 'daily') return;
-    if (isPeriodLocked) return; // ล็อคแล้วห้ามเซฟ
-    if (isSaving) return; // กัน Double Submit
-    isSaving = true;
-
-    const result = await Swal.fire({
-        title: 'Confirm Daily Snapshot?',
-        text: "ระบบจะบันทึกค่าทุกช่อง (ทั้ง Manual และ Auto) ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#198754',
-        confirmButtonText: '<i class="fas fa-save"></i> Confirm Save',
-        cancelButtonText: 'Cancel'
-    });
-
-    // ถ้ากดยกเลิก ต้องปลด isSaving เพื่อให้กดใหม่ได้
-    if (!result.isConfirmed) {
-        isSaving = false;
-        return;
-    }
-
-    const btnSave = document.getElementById('btnSaveSnapshot');
-    if(btnSave) {
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-    }
-
-    const payload = currentData.map(item => ({
-        item_id: item.item_id,
-        amount: parseFloat(item.actual_amount) || 0,
-        remark: item.remark || ''
-    }));
-
-    const statusEl = document.getElementById('saveStatus');
-    statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
-    statusEl.classList.remove('opacity-0');
-
-    // ดึงค่าวันที่และแผนกจากหน้าจอโดยตรง (แก้บั๊ก ReferenceError)
-    const targetDate = document.getElementById('targetDate').value;
-    const targetSection = document.getElementById('sectionFilter').value;
-
-    try {
-        const formData = new FormData();
-        formData.append('action', 'save_batch');
-        formData.append('entry_date', targetDate);
-        formData.append('section', targetSection);
-        formData.append('items', JSON.stringify(payload));
-
-        const response = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
-        const res = await response.json();
-
-        if (res.success) {
-            if (!silent) Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'Snapshot Saved!' });
-            // ถ้า save สำเร็จ ไม่จำเป็นต้องโหลดหน้าใหม่ทั้งหมด แต่ให้คำนวณสูตรซ้ำเพื่อความชัวร์
-            runFormulaEngine(); 
-        } else {
-            Swal.fire('Error', res.message, 'error');
-        }
-    } catch (e) {
-        console.error(e);
-        Swal.fire('Error', 'Failed to save', 'error');
-    } finally {
-        isSaving = false; // คืนค่าปลดล็อคให้ปุ่มกดต่อได้
-        if(btnSave) {
-            btnSave.disabled = false;
-            btnSave.innerHTML = '<i class="fas fa-save me-1"></i> Save Day';
-        }
-    }
-}
-
-// ========================================================
-// [NEW] DASHBOARD DATA LOADER (HEADLESS FORMULA ENGINE)
-// ========================================================
-async function loadDashboardData() {
-    const grid = document.getElementById('dashboardGrid');
-    if (grid) {
-        grid.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <div class="mt-2 text-muted small fw-bold">Loading Dashboard Metrics...</div>
-            </div>`;
-    }
-
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
-    const section = document.getElementById('sectionFilter').value;
-
-    try {
-        const response = await fetch(`api/manage_pl_entry.php?action=dashboard_stats&start_date=${start}&end_date=${end}&section=${section}`);
-        const json = await response.json();
-
-        if (json.success) {
-            let currentData = json.data;
-            
-            // ---------------------------------------------------------
-            // 🔥 ADVANCED IN-MEMORY FORMULA ENGINE (รองรับ SUM_CHILDREN)
-            // ---------------------------------------------------------
-            let mapAct = {};
-            let mapTgt = {};
-            
-            // 1. โหลดค่าดิบตั้งต้นลง Map
-            currentData.forEach(item => {
-                mapAct[item.account_code] = parseFloat(item.actual_mtd) || 0;
-                mapTgt[item.account_code] = parseFloat(item.target_monthly) || 0;
-            });
-
-            // 2. ฟังก์ชันช่วย: หาผลรวมของลูก (SUM_CHILDREN)
-            function sumChildren(parentId, type) {
-                let total = 0;
-                const children = currentData.filter(c => parseInt(c.parent_id) === parseInt(parentId));
-                children.forEach(c => {
-                    total += (type === 'act') ? (mapAct[c.account_code] || 0) : (mapTgt[c.account_code] || 0);
-                });
-                return total;
-            }
-
-            // 3. กรองเฉพาะช่องที่ต้องคำนวณสูตร และเรียงจากลูกไปหาแม่ (Bottom-Up)
-            // เพื่อให้ลูกถูกคำนวณเสร็จก่อน แล้วค่อยเอาผลลัพธ์ของลูกไปคำนวณแม่
-            let calcItems = currentData.filter(item => item.data_source === 'CALCULATED');
-            calcItems.sort((a, b) => parseInt(b.item_level) - parseInt(a.item_level));
-
-            // 4. วนลูปคำนวณ (ทำซ้ำ 3 รอบเผื่อกรณีมีสูตรซ้อนสูตร)
-            for(let i = 0; i < 3; i++) {
-                let changed = false;
-                calcItems.forEach(item => {
-                    let formula = (item.calculation_formula || "").trim();
-                    let newAct = mapAct[item.account_code];
-                    let newTgt = mapTgt[item.account_code];
-
-                    if (formula === "SUM_CHILDREN") {
-                        newAct = sumChildren(item.item_id, 'act');
-                        newTgt = sumChildren(item.item_id, 'tgt');
-                    } 
-                    else if (formula !== "") {
-                        let fAct = formula;
-                        let fTgt = formula;
-                        
-                        let matches = formula.match(/\[(.*?)\]/g);
-                        if (matches) {
-                            matches.forEach(m => {
-                                let code = m.replace('[', '').replace(']', '');
-                                fAct = fAct.replace(m, mapAct[code] || 0);
-                                fTgt = fTgt.replace(m, mapTgt[code] || 0);
-                            });
-                            
-                            try {
-                                newAct = new Function('return ' + fAct)();
-                                newTgt = new Function('return ' + fTgt)();
-                            } catch(e) {}
-                        }
-                    }
-
-                    if (!isFinite(newAct) || isNaN(newAct)) newAct = 0;
-                    if (!isFinite(newTgt) || isNaN(newTgt)) newTgt = 0;
-
-                    if (mapAct[item.account_code] !== newAct || mapTgt[item.account_code] !== newTgt) {
-                        mapAct[item.account_code] = newAct;
-                        mapTgt[item.account_code] = newTgt;
-                        changed = true;
-                    }
-                });
-                if (!changed) break; // ถ้านิ่งแล้วหยุดลูปเลย
-            }
-
-            // 5. ส่งค่าที่คำนวณเสร็จกลับเข้า Array หลัก
-            currentData.forEach(item => {
-                item.actual_mtd = mapAct[item.account_code] || 0;
-                item.target_monthly = mapTgt[item.account_code] || 0;
-                
-                const tgt = parseFloat(item.target_monthly);
-                const act = parseFloat(item.actual_mtd);
-                item.progress_percent = (tgt > 0) ? (act / tgt * 100) : 0;
-            });
-            // ---------------------------------------------------------
-
-            // 6. กรองเอาเฉพาะข้อมูลแม่สุด (Level 0 / ไม่มี Parent) ไปสร้างการ์ดและกราฟ
-            const rootItems = currentData.filter(item => !item.parent_id || parseInt(item.parent_id) === 0);
-
-            if (typeof renderDashboardCards === 'function') renderDashboardCards(rootItems);
-            if (typeof updateDashboardCharts === 'function') updateDashboardCharts(rootItems);
-            
-        } else {
-            if (grid) grid.innerHTML = `<div class="col-12 text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>${json.message}</div>`;
-        }
-    } catch (error) {
-        console.error("Dashboard Load Error:", error);
-        if (grid) grid.innerHTML = '<div class="col-12 text-center text-danger py-5 fw-bold"><i class="fas fa-wifi me-2"></i>Connection Error</div>';
-    }
-}
-
 async function loadStatementData() {
     const tbody = document.getElementById('statementTableBody');
-    const section = document.getElementById('sectionFilter').value;
-
+    const section = document.getElementById('sectionFilter')?.value || 'ALL';
     tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
         let res, json;
         if (currentStatementView === 'yearly') {
-            const year = document.getElementById('statementYear').value;
-            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${section}`);
+            const year = document.getElementById('statementYear')?.value || new Date().getFullYear();
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'yearly');
-                renderStatementTableYearly(json.data, year); // เปลี่ยนชื่อฟังก์ชันเดิมเป็น renderStatementTableYearly
+                renderStatementTableYearly(json.data, year); 
             }
         } else {
-            const monthStr = document.getElementById('statementMonth').value;
+            const monthStr = document.getElementById('statementMonth')?.value || new Date().toISOString().slice(0,7);
             const [year, month] = monthStr.split('-');
-            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${section}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'daily');
-                renderStatementTableDaily(json.data, year, month);
+                renderStatementTableDaily(json.data, year, month, json.locked_days || []);
             }
         }
-        
         if (!json.success) tbody.innerHTML = `<tr><td class="text-center text-danger py-5">${json.message}</td></tr>`;
     } catch (e) {
         console.error(e);
@@ -1406,7 +1156,7 @@ async function loadStatementData() {
 }
 
 function calculateStatementFormulas(data, mode) {
-    let maxLoop = 5;
+    let maxLoop = 15; // 🔥 [FIX] เพิ่ม Loop จาก 5 เป็น 15 ให้สูตรคำนวณจนจบ
     let limit = (mode === 'yearly') ? 12 : 31;
     let prefix = (mode === 'yearly') ? 'm' : 'd';
 
@@ -1418,38 +1168,64 @@ function calculateStatementFormulas(data, mode) {
                     let oldValAct = parseFloat(item[`${prefix}${i}_act`]) || 0;
                     let newValAct = 0;
                     
+                    // 🔥 [NEW] เพิ่มการคำนวณ Target ด้วย เผื่อต้องการแสดงเป้าในอนาคต
+                    let oldValTgt = parseFloat(item[`${prefix}${i}_tgt`]) || 0;
+                    let newValTgt = 0; 
+                    
                     try {
                         if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
                             const children = data.filter(child => child.parent_id == item.item_id);
                             newValAct = children.reduce((sum, child) => sum + (parseFloat(child[`${prefix}${i}_act`]) || 0), 0);
+                            newValTgt = children.reduce((sum, child) => sum + (parseFloat(child[`${prefix}${i}_tgt`]) || 0), 0);
                         } else if (item.calculation_formula) {
-                            let formula = item.calculation_formula;
-                            const matches = formula.match(/\[(.*?)\]/g);
+                            let formulaAct = item.calculation_formula;
+                            let formulaTgt = item.calculation_formula;
+                            
+                            const matches = formulaAct.match(/\[(.*?)\]/g);
                             if (matches) {
                                 matches.forEach(token => {
                                     const code = token.replace('[', '').replace(']', '');
                                     const refItem = data.find(d => d.account_code === code);
+                                    
                                     const refValAct = refItem ? (parseFloat(refItem[`${prefix}${i}_act`]) || 0) : 0;
-                                    formula = formula.replace(token, refValAct);
+                                    const refValTgt = refItem ? (parseFloat(refItem[`${prefix}${i}_tgt`]) || 0) : 0;
+                                    
+                                    // 🔥 [FIX] ใส่วงเล็บป้องกัน Syntax Error ลบซ้อนลบ
+                                    formulaAct = formulaAct.replace(token, `(${refValAct})`);
+                                    formulaTgt = formulaTgt.replace(token, `(${refValTgt})`);
                                 });
                             }
-                            const safeFormula = formula.replace(/[^0-9+\-*/(). ]/g, ''); 
-                            if (safeFormula.trim() !== '') {
-                                newValAct = new Function('return ' + safeFormula)();
+                            
+                            const safeFormulaAct = formulaAct.replace(/[^0-9+\-*/(). ]/g, ''); 
+                            const safeFormulaTgt = formulaTgt.replace(/[^0-9+\-*/(). ]/g, ''); 
+                            
+                            if (safeFormulaAct.trim() !== '') {
+                                try { newValAct = new Function('return ' + safeFormulaAct)(); } 
+                                catch (e) { newValAct = 0; }
+                            }
+                            
+                            if (safeFormulaTgt.trim() !== '') {
+                                try { newValTgt = new Function('return ' + safeFormulaTgt)(); } 
+                                catch (e) { newValTgt = 0; }
                             }
                         }
-                    } catch (e) { newValAct = 0; }
+                    } catch (e) { 
+                        newValAct = 0; 
+                        newValTgt = 0; 
+                    }
                     
                     if (!isFinite(newValAct) || isNaN(newValAct)) newValAct = 0;
+                    if (!isFinite(newValTgt) || isNaN(newValTgt)) newValTgt = 0;
                     
-                    if (Math.abs(newValAct - oldValAct) > 0.001) {
+                    if (Math.abs(newValAct - oldValAct) > 0.001 || Math.abs(newValTgt - oldValTgt) > 0.001) {
                         item[`${prefix}${i}_act`] = newValAct;
+                        item[`${prefix}${i}_tgt`] = newValTgt;
                         hasChanged = true;
                     }
                 }
             }
         });
-        if (!hasChanged) break;
+        if (!hasChanged) break; // ถ้านิ่งแล้วจบ Loop เพื่อประหยัด CPU
     }
 }
 
@@ -1543,35 +1319,6 @@ function renderStatementTableYearly(data, year) {
     tbody.innerHTML = html;
 }
 
-async function exportStatementExcel() {
-    const year = document.getElementById('statementYear').value;
-    const section = document.getElementById('sectionFilter').value;
-    
-    Swal.fire({
-        title: 'Generating Statement...',
-        text: 'กรุณารอสักครู่ ระบบกำลังจัดรูปแบบโครงสร้างบัญชี',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        const table = document.querySelector('.statement-table');
-        const wb = XLSX.utils.table_to_book(table, { 
-            sheet: "P&L_Statement",
-            raw: true
-        });
-        
-        const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
-        const filename = `PL_Statement_Y${year}_${safeSection}.xlsx`;
-        XLSX.writeFile(wb, filename);
-        Swal.close();
-        
-    } catch (e) {
-        console.error("Export Statement Error:", e);
-        Swal.fire('Export Failed', 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel', 'error');
-    }
-}
-
 let currentStatementView = 'yearly'; // 'yearly' หรือ 'daily'
 
 function changeStatementView(view) {
@@ -1586,14 +1333,11 @@ function changeStatementView(view) {
     loadStatementData();
 }
 
-function renderStatementTableDaily(data, year, month) {
+function renderStatementTableDaily(data, year, month, lockedDays = []) {
     const thead = document.getElementById('statementThead');
     const tbody = document.getElementById('statementTableBody');
-
-    // หาจำนวนวันในเดือนนั้น (เช่น ก.พ. มี 28 หรือ 29)
     const daysInMonth = new Date(year, month, 0).getDate();
 
-    // 1. หา Base Revenue
     let base = { act: Array(32).fill(0), tgt: Array(32).fill(0) };
     data.forEach(item => {
         if (item.item_level === 0 && item.item_type === 'REVENUE') {
@@ -1606,12 +1350,13 @@ function renderStatementTableDaily(data, year, month) {
 
     const getBaseMTD = (type) => base[type].reduce((a, b) => a + b, 0);
 
-    // 2. สร้าง Header (Day 1 - Day 31 + MTD)
     let headRow1 = `<tr><th rowspan="2" class="align-middle text-start ps-3">Account Name</th>`;
     let headRow2 = `<tr>`;
 
     for (let d = 1; d <= daysInMonth; d++) {
-        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}</th>`;
+        // 🔥 ถ้าวันไหนมีใน Array lockedDays ให้แสดงไอคอนแม่กุญแจ 🔒 สีแดง
+        let lockIcon = lockedDays.includes(d) ? ' <i class="fas fa-lock text-danger ms-1" title="Locked"></i>' : '';
+        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}${lockIcon}</th>`;
         headRow2 += `
             <th class="text-muted fw-normal">Target</th>
             <th class="text-muted fw-normal">%</th>
@@ -1620,7 +1365,6 @@ function renderStatementTableDaily(data, year, month) {
         `;
     }
     
-    // MTD Column
     headRow1 += `<th colspan="4" class="bg-year border-bottom-0">MTD (Total)</th></tr>`;
     headRow2 += `
         <th class="bg-year text-muted fw-normal">Target</th>
@@ -1631,7 +1375,6 @@ function renderStatementTableDaily(data, year, month) {
     
     thead.innerHTML = headRow1 + headRow2;
 
-    // 3. สร้าง Body
     let html = '';
     const genCols = (act, tgt, baseAct, baseTgt, isSubtotal) => {
         let actPct = baseAct ? (act / baseAct * 100) : 0;
@@ -1653,12 +1396,10 @@ function renderStatementTableDaily(data, year, month) {
         let rowHtml = `<tr><td style="${nameStyle}">${isTopLevel ? '<i class="fas fa-folder me-2 text-primary"></i>' : ''}${item.item_name}</td>`;
 
         let mtdAct = 0, mtdTgt = 0;
-
         for (let d = 1; d <= daysInMonth; d++) {
             let act = parseFloat(item[`d${d}_act`]) || 0;
             let tgt = parseFloat(item[`d${d}_tgt`]) || 0;
             mtdAct += act; mtdTgt += tgt;
-            
             rowHtml += genCols(act, tgt, base.act[d], base.tgt[d], false);
         }
         
@@ -1689,31 +1430,29 @@ function changeExecView(view) {
 
 async function loadExecutiveData() {
     const tbody = document.getElementById('execTableBody');
-    const section = document.getElementById('sectionFilter').value;
-
+    const section = document.getElementById('sectionFilter')?.value || 'ALL';
     tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-dark"></div></td></tr>';
 
     try {
         let res, json;
         if (currentExecMode === 'yearly') {
-            const year = document.getElementById('execYear').value;
-            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${section}`);
+            const year = document.getElementById('execYear')?.value || new Date().getFullYear();
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'yearly');
                 renderExecutiveTableYearly(json.data, year);
             }
         } else {
-            const monthStr = document.getElementById('execMonth').value;
+            const monthStr = document.getElementById('execMonth')?.value || new Date().toISOString().slice(0,7);
             const [year, month] = monthStr.split('-');
-            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${section}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'daily');
-                renderExecutiveTableDaily(json.data, year, month);
+                renderExecutiveTableDaily(json.data, year, month, json.locked_days || []);
             }
         }
-        
         if (!json.success) tbody.innerHTML = `<tr><td class="text-center text-danger py-5">${json.message}</td></tr>`;
     } catch (e) {
         console.error(e);
@@ -1721,9 +1460,6 @@ async function loadExecutiveData() {
     }
 }
 
-// --------------------------------------------------------
-// โครงสร้าง Template ที่ใช้เหมือนกันทั้ง Yearly และ Daily
-// --------------------------------------------------------
 const getExecTemplate = (getAct, getTgt) => [
     { label: "Sale", code: "REVENUES", isBold: true, bg: "#e7f1ff", isBase: true },
     { label: "RM", isBold: true, calcAct: (p) => getAct("GRP_RM", p) + getAct("CR_R", p), calcTgt: (p) => getTgt("GRP_RM", p) + getTgt("CR_R", p) },
@@ -1851,7 +1587,7 @@ function renderExecutiveTableYearly(data, year) {
 // --------------------------------------------------------
 // 2. RENDER DAILY VIEW (Day 1 - 31 + MTD)
 // --------------------------------------------------------
-function renderExecutiveTableDaily(data, year, month) {
+function renderExecutiveTableDaily(data, year, month, lockedDays = []) {
     const thead = document.getElementById('execThead');
     const tbody = document.getElementById('execTableBody');
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -1864,7 +1600,9 @@ function renderExecutiveTableDaily(data, year, month) {
     let headRow2 = `<tr>`;
 
     for (let d = 1; d <= daysInMonth; d++) {
-        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}</th>`;
+        // 🔥 เพิ่มไอคอนแม่กุญแจ
+        let lockIcon = lockedDays.includes(d) ? ' <i class="fas fa-lock text-danger ms-1" title="Locked"></i>' : '';
+        headRow1 += `<th colspan="4" class="border-bottom-0">Day ${d}${lockIcon}</th>`;
         headRow2 += `
             <th class="text-muted fw-normal" style="width: 80px;">Target</th>
             <th class="text-muted" style="width: 50px;">%</th>
@@ -1891,7 +1629,6 @@ function renderExecutiveTableDaily(data, year, month) {
         if (row.bg) styleStr += `background-color: ${row.bg} !important; `;
         let textClass = row.text ? `text-${row.text}` : 'text-dark';
         
-        // 🔥 [FIXED] แก้ไขสมการย่อหน้าให้ตรงกัน
         let paddingVal = 1.5 + ((row.indent || 0) * 1.5);
         let indentStyle = `padding-left: ${paddingVal}rem !important;`;
 
@@ -1911,52 +1648,24 @@ function renderExecutiveTableDaily(data, year, month) {
     tbody.innerHTML = html;
 }
 
-function exportExecutiveExcel() {
-    const section = document.getElementById('sectionFilter').value;
-    const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
-    let filename = '';
-
-    if (currentExecMode === 'yearly') {
-        const year = document.getElementById('execYear').value;
-        filename = `Executive_PL_Y${year}_${safeSection}.xlsx`;
-    } else {
-        const month = document.getElementById('execMonth').value;
-        filename = `Executive_PL_${month}_${safeSection}.xlsx`;
-    }
-    
-    Swal.fire({ title: 'Exporting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    try {
-        const table = document.querySelector('#execTableWrapper table');
-        const wb = XLSX.utils.table_to_book(table, { sheet: "Executive_PL", raw: true });
-        XLSX.writeFile(wb, filename);
-        Swal.close();
-    } catch (e) {
-        Swal.fire('Error', 'Export Failed', 'error');
-    }
-}
-
 async function loadEntryData() {
     const tbody = document.getElementById('entryTableBody');
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="8" class="text-center align-middle" style="height: 200px;">
-                <div class="spinner-border text-primary mb-2" role="status"></div>
-                <div class="text-muted small">Loading P&L Data...</div>
-            </td>
-        </tr>`;
+    if (!tbody) return;
 
-    const section = document.getElementById('sectionFilter')?.value || 'Team 1';
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center align-middle" style="height: 200px;"><div class="spinner-border text-primary mb-2"></div><div class="text-muted small">Loading P&L Data...</div></td></tr>`;
+
+    const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const todayStr = new Date().toISOString().split('T')[0];
     let url = '';
 
     if (currentMode === 'daily') {
-        const date = document.getElementById('targetDate').value;
-        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${section}`;
-        if(typeof fetchWorkingDays === 'function') fetchWorkingDays(); 
+        const date = document.getElementById('targetDate')?.value || todayStr;
+        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}`;
+        if (typeof fetchWorkingDays === 'function') fetchWorkingDays(); 
     } else {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${section}`;
+        const start = document.getElementById('startDate')?.value || todayStr;
+        const end = document.getElementById('endDate')?.value || todayStr;
+        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${encodeURIComponent(section)}`;
     }
 
     try {
@@ -1965,85 +1674,67 @@ async function loadEntryData() {
 
         if (res.success) {
             currentData = res.data;
-
-            // ---------------------------------------------------------
-            // 🔥 1. เช็คสถานะ Lock จากข้อมูล Backend (ทำเฉพาะโหมด Daily)
-            // ---------------------------------------------------------
             isPeriodLocked = false; 
-            if (currentMode === 'daily' && currentData.length > 0 && currentData[0].is_locked === 1) {
-                isPeriodLocked = true;
+            if (currentMode === 'daily' && currentData.length > 0) {
+                const lockStat = currentData[0].is_locked;
+                if (lockStat == 1 || lockStat === '1' || lockStat === true) {
+                    isPeriodLocked = true;
+                }
             }
 
-            // 🔥 2. ปรับ UI ปุ่ม Lock/Unlock ให้ตรงกับสถานะ
             const btnLock = document.getElementById('btnToggleLock');
             const iconLock = document.getElementById('iconLock');
             const textLock = document.getElementById('textLock');
             
             if (btnLock) {
+                btnLock.classList.remove('btn-outline-danger', 'btn-danger');
+                
                 if (isPeriodLocked) {
-                    btnLock.classList.replace('btn-outline-danger', 'btn-danger');
-                    if (iconLock) iconLock.className = 'fas fa-lock me-1';
+                    btnLock.classList.add('btn-danger');
+                    if (iconLock) iconLock.className = 'fas fa-lock';
                     if (textLock) textLock.innerText = 'Unlock Day';
                 } else {
-                    btnLock.classList.replace('btn-danger', 'btn-outline-danger');
-                    if (iconLock) iconLock.className = 'fas fa-lock-open me-1';
+                    btnLock.classList.add('btn-outline-danger');
+                    if (iconLock) iconLock.className = 'fas fa-lock-open';
                     if (textLock) textLock.innerText = 'Lock Day';
                 }
             }
 
-            // 3. คำนวณสูตรและวาดตารางตามปกติ
-            if (typeof runFormulaEngine === 'function') {
-                runFormulaEngine(); 
-            }
+            if (typeof runFormulaEngine === 'function') runFormulaEngine(); 
             renderEntryTable(currentData);
-            
-            if(typeof updateCharts === 'function') {
-                updateCharts(currentData);
-            }
-            if(typeof calculateSummary === 'function') {
-                calculateSummary(currentData);
-            }
+            if(typeof updateCharts === 'function') updateCharts(currentData);
+            if(typeof calculateSummary === 'function') calculateSummary(currentData);
 
-            // ---------------------------------------------------------
-            // 🔥 4. ล็อคช่องกรอกข้อมูลและซ่อนปุ่ม Save ถ้าระบบถูก Lock แล้ว
-            // ต้องทำหลังจาก renderEntryTable() สร้าง HTML เสร็จแล้วเท่านั้น
-            // ---------------------------------------------------------
-            const saveBtn = document.querySelector('button[onclick^="saveDailySnapshot"]'); // หาปุ่ม Save
-
+            const saveBtn = document.getElementById('btnSaveSnapshot');
             if (isPeriodLocked) {
-                // ปิดไม่ให้กรอกช่อง input ทั้งหมดในตาราง
                 const allInputs = tbody.querySelectorAll('input');
                 allInputs.forEach(inp => {
                     inp.disabled = true;
-                    inp.classList.add('bg-light'); // ทำให้ดูเป็นสีเทาๆ
+                    inp.classList.add('bg-light'); 
                 });
-                // ซ่อนปุ่ม Save
                 if(saveBtn) saveBtn.style.display = 'none';
             } else {
-                // เปิดปุ่ม Save คืนมา
                 if(saveBtn) saveBtn.style.display = 'inline-block';
             }
-            
         } else {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-5">${res.message}</td></tr>`;
         }
     } catch (error) {
-        console.error(error);
+        console.error("Load Data Error:", error);
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-5">Connection Error</td></tr>';
     }
 }
 
 async function togglePeriodLock() {
-    const start = document.getElementById('targetDate').value;
-    const section = document.getElementById('sectionFilter').value;
+    const start = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
+    const section = document.getElementById('sectionFilter')?.value || 'ALL';
 
-    // ถ้ากำลังจะล็อค ให้บังคับเซฟ Snapshot 1 รอบก่อน เพื่อให้ค่าล่าสุดลง DB ชัวร์ๆ
     if (!isPeriodLocked) {
-        await saveDailySnapshot(true); // true = แบบเงียบๆ ไม่เด้ง Alert
+        await saveDailySnapshot(true); 
     }
 
     const btn = document.getElementById('btnToggleLock');
-    btn.disabled = true;
+    if(btn) btn.disabled = true;
 
     try {
         const fd = new FormData();
@@ -2060,13 +1751,93 @@ async function togglePeriodLock() {
                 icon: json.is_locked ? 'success' : 'info',
                 title: json.is_locked ? 'Period Locked 🔒' : 'Period Unlocked 🔓'
             });
-            loadEntryData(); // โหลดหน้าใหม่เพื่อให้ UI เปลี่ยนสถานะ
+            loadEntryData(); 
         } else {
             Swal.fire('Error', json.message, 'error');
         }
     } catch(e) {
         Swal.fire('Error', 'Connection Failed', 'error');
     } finally {
-        btn.disabled = false;
+        if(btn) btn.disabled = false;
+    }
+}
+
+async function saveDailySnapshot(silent = false) {
+    if (currentMode !== 'daily') return;
+    if (isPeriodLocked) return; 
+    
+    clearTimeout(autoSaveTimer);
+    if (isSaving) return; 
+    isSaving = true;
+
+    if (!silent) {
+        const result = await Swal.fire({
+            title: 'Confirm Daily Snapshot?',
+            text: "ระบบจะบันทึกค่าทุกช่อง ณ เวลานี้เก็บไว้ เพื่อป้องกันตัวเลขเปลี่ยนในอนาคต",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: '<i class="fas fa-save"></i> Confirm Save',
+            cancelButtonText: 'Cancel'
+        });
+        if (!result.isConfirmed) {
+            isSaving = false;
+            return;
+        }
+    }
+
+    const btnSave = document.getElementById('btnSaveSnapshot');
+    if(btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    }
+
+    const statusEl = document.getElementById('saveStatus');
+    if(statusEl) {
+        statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
+        statusEl.classList.remove('opacity-0');
+        statusEl.style.visibility = 'visible';
+    }
+
+    const payload = currentData.map(item => ({
+        item_id: item.item_id,
+        amount: parseFloat(item.actual_amount) || 0,
+        remark: item.remark || ''
+    }));
+
+    const targetDate = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
+    const targetSection = document.getElementById('sectionFilter')?.value || 'ALL';
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'save_batch');
+        formData.append('entry_date', targetDate);
+        formData.append('section', targetSection);
+        formData.append('items', JSON.stringify(payload));
+
+        const response = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+        const res = await response.json();
+
+        if (res.success) {
+            if (!silent) Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'Snapshot Saved!' });
+            runFormulaEngine(); 
+        } else {
+            Swal.fire('Error', res.message, 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Failed to save', 'error');
+    } finally {
+        isSaving = false; 
+        if(btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="fas fa-save"></i> <span class="d-none d-md-inline ms-1">Save Day</span>';
+        }
+        if(statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Saved</span>';
+            setTimeout(() => { 
+                if(!isSaving) statusEl.classList.add('opacity-0'); 
+            }, 2000);
+        }
     }
 }

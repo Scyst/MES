@@ -28,90 +28,97 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
         <?php include_once '../components/php/top_header.php'; ?>
 
         <div id="main-content">
-            <div class="toolbar-container shadow-sm z-2">
-                <div class="d-flex align-items-center gap-3">
+            <div class="toolbar-container shadow-sm position-relative" style="z-index: 1050;">
+                <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap w-100">
                     
-                    <div class="btn-group shadow-sm" role="group">
-                        <input type="radio" class="btn-check" name="viewMode" id="modeDaily" autocomplete="off" checked onclick="switchMode('daily')">
-                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeDaily">
-                            <i class="fas fa-edit me-1"></i> Entry
-                        </label>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="btn-group shadow-sm d-none d-xl-flex" role="group">
+                            <input type="radio" class="btn-check" name="viewMode" id="modeDaily" autocomplete="off" checked onclick="switchMode('daily')">
+                            <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeDaily"><i class="fas fa-edit me-1"></i> Entry</label>
 
-                        <input type="radio" class="btn-check" name="viewMode" id="modeReport" autocomplete="off" onclick="switchMode('report')">
-                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeReport">
-                            <i class="fas fa-file-alt me-1"></i> Report
-                        </label>
+                            <input type="radio" class="btn-check" name="viewMode" id="modeReport" autocomplete="off" onclick="switchMode('report')">
+                            <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeReport"><i class="fas fa-file-alt me-1"></i> Report</label>
 
-                        <input type="radio" class="btn-check" name="viewMode" id="modeDashboard" autocomplete="off" onclick="switchMode('dashboard')">
-                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeDashboard">
-                            <i class="fas fa-chart-pie me-1"></i> Dashboard
-                        </label>
+                            <input type="radio" class="btn-check" name="viewMode" id="modeStatement" autocomplete="off" onclick="switchMode('statement')">
+                            <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeStatement"><i class="fas fa-table me-1"></i> Statement</label>
 
-                        <input type="radio" class="btn-check" name="viewMode" id="modeStatement" autocomplete="off" onclick="switchMode('statement')">
-                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeStatement">
-                            <i class="fas fa-table me-1"></i> Statement
-                        </label>
-
-                        <input type="radio" class="btn-check" name="viewMode" id="modeExecutive" autocomplete="off" onclick="switchMode('executive')">
-                        <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeExecutive" title="Executive Summary">
-                            <i class="fas fa-crown me-1"></i> Executive View
-                        </label>
-                    </div>
-
-                    <div class="vr text-muted opacity-25 mx-1"></div>
-
-                    <div id="dailyPickerGroup" class="input-group input-group-sm shadow-sm picker-group" style="width: 170px;">
-                        <span class="input-group-text bg-white border-end-0 text-primary"><i class="far fa-calendar-alt"></i></span>
-                        <input type="date" id="targetDate" class="form-control border-start-0 fw-bold text-dark" 
-                               value="<?php echo date('Y-m-d'); ?>" onchange="loadEntryData()">
-                    </div>
-
-                    <div id="rangePickerGroup" class="d-none align-items-center gap-2 picker-group">
-                        <div class="input-group input-group-sm shadow-sm" style="width: 150px;">
-                            <span class="input-group-text bg-white border-end-0 text-success fw-bold">From</span>
-                            <input type="date" id="startDate" class="form-control border-start-0 fw-bold" 
-                                   value="<?php echo date('Y-m-01'); ?>" onchange="loadEntryData()"> 
+                            <input type="radio" class="btn-check" name="viewMode" id="modeExecutive" autocomplete="off" onclick="switchMode('executive')">
+                            <label class="btn btn-sm btn-outline-primary fw-bold px-3" for="modeExecutive" title="Executive Summary"><i class="fas fa-crown me-1"></i> Summary View</label>
                         </div>
-                        <span class="text-muted"><i class="fas fa-arrow-right"></i></span>
-                        <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
-                            <span class="input-group-text bg-white border-end-0 text-danger fw-bold">To</span>
-                            <input type="date" id="endDate" class="form-control border-start-0 fw-bold" 
-                                   value="<?php echo date('Y-m-d'); ?>" onchange="loadEntryData()">
-                        </div>
-                    </div>
-                    
-                    <div class="vr text-muted opacity-25 mx-1"></div>
 
-                    <div class="input-group input-group-sm shadow-sm" style="width: 200px;">
-                        <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fas fa-industry"></i></span>
-                        <select id="sectionFilter" class="form-select border-start-0 fw-bold" onchange="handleSectionChange()">
+                        <div class="vr text-muted opacity-25 mx-1 d-none d-xl-block"></div>
+
+                        <div class="input-group input-group-sm shadow-sm" style="width: auto; min-width: 140px;">
+                            <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fas fa-industry"></i></span>
+                            <select id="sectionFilter" class="form-select border-start-0 fw-bold" onchange="handleSectionChange()">
+                                <option value="ALL">-- All Lines --</option>
                             </select>
+                        </div>
+
+                        <div id="dailyPickerGroup" class="input-group input-group-sm shadow-sm picker-group" style="width: 150px;">
+                            <span class="input-group-text bg-white border-end-0 text-primary"><i class="far fa-calendar-alt"></i></span>
+                            <input type="date" id="targetDate" class="form-control border-start-0 fw-bold text-dark" value="<?php echo date('Y-m-d'); ?>" onchange="loadEntryData()">
+                        </div>
+
+                        <div id="rangePickerGroup" class="d-none align-items-center gap-1 picker-group">
+                            <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
+                                <span class="input-group-text bg-white border-end-0 text-success fw-bold">F</span>
+                                <input type="date" id="startDate" class="form-control border-start-0 fw-bold px-1" value="<?php echo date('Y-m-01'); ?>" onchange="refreshCurrentView()"> 
+                            </div>
+                            <span class="text-muted small"><i class="fas fa-arrow-right"></i></span>
+                            <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
+                                <span class="input-group-text bg-white border-end-0 text-danger fw-bold">T</span>
+                                <input type="date" id="endDate" class="form-control border-start-0 fw-bold px-1" value="<?php echo date('Y-m-d'); ?>" onchange="refreshCurrentView()">
+                            </div>
+                            <button id="btnDashUpdate" class="btn btn-sm btn-primary fw-bold shadow-sm ms-1" onclick="refreshCurrentView()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="d-flex align-items-center gap-2">
-                    <span id="saveStatus" class="me-2 small fw-bold text-muted d-flex align-items-center transition-fade" style="visibility: hidden;">
-                        <i class="fas fa-check-circle text-success me-1"></i> Saved
-                    </span>
+                    <div class="ms-auto"></div>
 
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm fw-bold me-2" id="btnToggleLock" onclick="togglePeriodLock()">
-                        <i class="fas fa-lock-open me-1" id="iconLock"></i> <span id="textLock">Lock Day</span>
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        
+                        <div id="saveStatus" class="text-muted small fw-bold opacity-0 transition-opacity d-none d-md-block" style="white-space: nowrap;">
+                            <i class="fas fa-check-circle text-success me-1"></i> Auto Saved
+                        </div>
 
-                    <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold" onclick="saveDailySnapshot()" title="Save All Data (Freeze)">
-                        <i class="fas fa-save me-1"></i> Save Day
-                    </button>
-
-                    <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportPLToExcel()" title="Download Excel">
-                        <i class="fas fa-file-excel me-1"></i> Export
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="refreshCurrentView()" title="Reload Data">
-                        <i class="fas fa-sync-alt me-1"></i> Refresh
-                    </button>
-                    <div id="btnSetBudgetWrapper">
-                        <button class="btn btn-outline-info btn-sm rounded-pill px-3 fw-bold" onclick="openTargetModal()">
-                            <i class="fas fa-bullseye me-1"></i> Budget
+                        <button id="btnSaveSnapshot" class="btn btn-success btn-sm rounded-pill fw-bold shadow-sm" onclick="saveDailySnapshot()">
+                            <i class="fas fa-save"></i> <span class="d-none d-md-inline ms-1">Save Day</span>
                         </button>
+                        
+                        <button id="btnToggleLock" class="btn btn-outline-danger btn-sm rounded-pill fw-bold shadow-sm" onclick="togglePeriodLock()">
+                            <i id="iconLock" class="fas fa-lock-open"></i> <span id="textLock" class="d-none d-md-inline ms-1">Lock Day</span>
+                        </button>
+
+                        <div class="dropdown">
+                            <button class="btn btn-secondary btn-sm fw-bold shadow-sm dropdown-toggle rounded-pill px-3" type="button" id="plOptionsDrop" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog"></i> <span class="d-none d-md-inline ms-1">Options</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="plOptionsDrop" style="min-width: 220px;">
+                                <li id="btnSetBudgetWrapper">
+                                    <a class="dropdown-item py-2 fw-bold text-dark" href="#" onclick="openTargetModal()">
+                                        <i class="fas fa-bullseye text-primary me-2 text-center" style="width: 20px;"></i> Set Target / Budget
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2 fw-bold text-dark" href="#" onclick="openRateModal()">
+                                        <i class="fas fa-dollar-sign text-success me-2 text-center" style="width: 20px;"></i> Set Exchange Rate
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2 fw-bold text-dark" href="#" onclick="openCalendarModal()">
+                                        <i class="far fa-calendar-alt text-warning me-2 text-center" style="width: 20px;"></i> Set Working Days
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 fw-bold text-success bg-success bg-opacity-10" href="#" onclick="exportMasterExcel()">
+                                        <i class="fas fa-file-excel me-2 text-center" style="width: 20px;"></i> Export Excel
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -187,36 +194,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                     </div>
                 </div>
 
-                <div id="view-dashboard" class="view-section">
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-8">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-white border-0 fw-bold text-secondary">
-                                    <i class="fas fa-chart-bar text-primary me-2"></i> Performance Summary (MTD)
-                                </div>
-                                <div class="card-body">
-                                    <div style="height: 250px; position: relative;">
-                                        <canvas id="chartPerformance"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-white border-0 fw-bold text-secondary">
-                                    <i class="fas fa-chart-pie text-warning me-2"></i> Cost Breakdown
-                                </div>
-                                <div class="card-body d-flex justify-content-center align-items-center">
-                                    <div style="height: 250px; width: 100%; position: relative;">
-                                        <canvas id="chartStructure"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="dashboardGrid" class="row g-3"></div>
-                </div>
-
                 <div id="view-statement" class="view-section h-100 flex-column">
                     <div class="card border-0 shadow-sm flex-grow-1 overflow-hidden d-flex flex-column">
                         
@@ -242,10 +219,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 
                                 <input type="month" id="statementMonth" class="form-control form-control-sm text-center fw-bold text-info shadow-sm d-none" 
                                        style="width: 150px;" value="<?php echo date('Y-m'); ?>" onchange="loadStatementData()">
-                                
-                                <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold" onclick="exportStatementExcel()">
-                                    <i class="fas fa-file-excel me-1"></i> Export
-                                </button>
                             </div>
                         </div>
 
@@ -266,7 +239,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                         <div class="card-header bg-dark text-white border-bottom py-3 d-flex justify-content-between align-items-center flex-shrink-0">
                             <div class="d-flex align-items-center gap-3">
                                 <h5 class="card-title mb-0 fw-bold">
-                                    <i class="fas fa-chess-king me-2 text-warning"></i> Executive P&L Summary
+                                    <i class="fas fa-chess-king me-2 text-warning"></i> P&L Summary
                                 </h5>
                                 <div class="btn-group btn-group-sm shadow-sm" role="group">
                                     <input type="radio" class="btn-check" name="execViewToggle" id="execYearly" autocomplete="off" checked onchange="changeExecView('yearly')">
@@ -285,10 +258,6 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                 
                                 <input type="month" id="execMonth" class="form-control form-control-sm text-center fw-bold text-info shadow-sm d-none" 
                                        style="width: 150px;" value="<?php echo date('Y-m'); ?>" onchange="loadExecutiveData()">
-                                
-                                <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-bold" onclick="exportExecutiveExcel()">
-                                    <i class="fas fa-file-excel me-1"></i> Export
-                                </button>
                             </div>
                         </div>
 
