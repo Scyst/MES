@@ -90,16 +90,49 @@
                                 <label class="small fw-bold text-primary mb-0">
                                     <i class="fas fa-calculator me-1"></i>Calculation Formula
                                 </label>
+                                
                                 <div class="position-relative">
                                     <input type="text" class="form-control font-monospace fw-bold" 
                                            name="calculation_formula" id="calculationFormula" 
-                                           placeholder="e.g. [4001] + [4002] หรือ SUM_CHILDREN"
-                                           oninput="validateFormula(this)">
+                                           placeholder="e.g. [4001] + [4002]"
+                                           autocomplete="off"
+                                           oninput="validateFormula(this); checkFormulaAutocomplete(this);"
+                                           onkeyup="checkFormulaAutocomplete(this)"
+                                           onclick="checkFormulaAutocomplete(this)">
                                     <div class="invalid-feedback fw-bold" id="formulaErrorMsg">รูปแบบสูตรไม่ถูกต้อง</div>
                                     <div class="valid-feedback fw-bold"><i class="fas fa-check-circle me-1"></i>สูตรถูกต้อง</div>
+                                    
+                                    <div id="formulaAutocomplete" class="dropdown-menu shadow w-100" 
+                                         style="max-height: 200px; overflow-y: auto; display: none; position: absolute; top: 100%; left: 0; z-index: 1050;">
+                                        </div>
                                 </div>
+
                                 <div class="d-flex justify-content-between">
                                     <small class="text-muted" style="font-size: 0.75rem;">รองรับ: <code>+ - * / ( )</code> และ <code>[Code]</code></small>
+                                </div>
+
+                                <div class="mt-1 pt-2 border-top border-primary border-opacity-25">
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge bg-white text-primary border border-primary hover-btn px-2 py-1" 
+                                              style="cursor: pointer;" onclick="setQuickFormula('SUM_CHILDREN')" title="รวมยอดจากบัญชีลูกทั้งหมด">
+                                            <i class="fas fa-sitemap me-1"></i> SUM_CHILDREN
+                                        </span>
+                                        <span class="badge bg-white text-success border border-success hover-btn px-2 py-1" 
+                                              style="cursor: pointer;" onclick="setQuickFormula('USE_TARGET')" title="ใช้ยอดเป้าหมาย (Target) มาเป็นยอดจริง">
+                                            <i class="fas fa-bullseye me-1"></i> USE_TARGET
+                                        </span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3 py-0" style="height: 28px;" onclick="insertSymbol(' + ')" title="บวก">+</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3 py-0" style="height: 28px;" onclick="insertSymbol(' - ')" title="ลบ">-</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3 py-0" style="height: 28px;" onclick="insertSymbol(' * ')" title="คูณ">×</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3 py-0" style="height: 28px;" onclick="insertSymbol(' / ')" title="หาร">÷</button>
+                                        <span class="mx-1 text-primary opacity-50">|</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-2 py-0" style="height: 28px;" onclick="insertSymbol('(')" title="วงเล็บเปิด">(</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-2 py-0" style="height: 28px;" onclick="insertSymbol(')')" title="วงเล็บปิด">)</button>
+                                        <span class="mx-1 text-primary opacity-50">|</span>
+                                        <button type="button" class="btn btn-sm btn-dark fw-bold px-3 py-0 shadow-sm" style="height: 28px;" onclick="insertSymbol('[]')" title="แทรกตัวแปรรหัสบัญชี">[ Code ]</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -111,22 +144,18 @@
                                 </label>
                                 <div>
                                     <select class="form-select fw-bold text-dark" name="data_source_auto" id="autoSystemSelect" style="background-color: rgba(255,255,255,0.7);">
-                                        
                                         <option disabled class="bg-light text-secondary small py-1">─── REVENUE ───</option>
                                         <option value="AUTO_STOCK">📦 Revenue (ยอดขายจากการผลิต FG)</option>
-                                        
                                         <option disabled class="bg-light text-secondary small py-1">─── LABOR (MANPOWER) ───</option>
                                         <option value="AUTO_LABOR">👷 Direct Labor (ค่าแรงฝ่ายผลิต - Base)</option>
                                         <option value="AUTO_LABOR_OT">🕒 Overtime DL (ค่าล่วงเวลาฝ่ายผลิต - OT)</option>
                                         <option value="AUTO_INDIRECT">👨‍💼 Indirect Labor (ค่าแรงทีมซัพพอร์ต - Base)</option>
                                         <option value="AUTO_INDIRECT_OT">🌇 Indirect OT (ค่าล่วงเวลาทีมซัพพอร์ต - OT)</option>
                                         <option value="AUTO_STD_LABOR">📋 Standard DL (ค่าแรงมาตรฐานตาม BOM)</option>
-
                                         <option disabled class="bg-light text-secondary small py-1">─── MATERIAL & SCRAP ───</option>
                                         <option value="AUTO_MAT">🧱 Material Cost (Standard - ต้นทุนมาตรฐาน)</option>
                                         <option value="AUTO_MAT_ACTUAL">🏗️ Material Cost (Actual - เบิกจ่ายจริง)</option>
                                         <option value="AUTO_SCRAP">🗑️ Scrap Cost (มูลค่าของเสีย)</option>
-                                        
                                         <option disabled class="bg-light text-secondary small py-1">─── STANDARD OVERHEADS ───</option>
                                         <option value="AUTO_OH_MACHINE">⚙️ Machine OH (ค่าโสหุ้ยเครื่องจักร)</option>
                                         <option value="AUTO_OH_UTILITY">⚡ Utilities (ค่าไฟ/น้ำ ตามมาตรฐาน)</option>
@@ -136,15 +165,12 @@
                                         <option value="AUTO_OH_STAFF">👔 Staff Cost (ต้นทุนพนักงานรายเดือน)</option>
                                         <option value="AUTO_OH_ACCESSORY">🔩 Accessories (วัสดุสิ้นเปลือง)</option>
                                         <option value="AUTO_OH_OTHER">📦 Other OH (โสหุ้ยอื่นๆ)</option>
-
                                         <option disabled class="bg-light text-secondary small py-1">─── OTHERS (FUTURE) ───</option>
                                         <option value="AUTO_LOGISTICS">🚚 Logistics Cost (ค่าขนส่ง/ตู้)</option>
                                         <option value="AUTO_MAINTENANCE">🔧 Maintenance Cost (ค่าซ่อมบำรุง)</option>
                                         <option value="AUTO_FORKLIFT">🚜 Forklift Cost (ค่าเช่า/แก๊ส)</option>
                                     </select>
-                                    <div class="form-text small text-muted mt-1">
-                                        ระบบจะดึงข้อมูลจากแหล่งที่เลือกให้อัตโนมัติทุกสิ้นวัน
-                                    </div>
+                                    <div class="form-text small text-muted mt-1">ระบบจะดึงข้อมูลจากแหล่งที่เลือกให้อัตโนมัติทุกสิ้นวัน</div>
                                 </div>
                             </div>
                         </div>
@@ -172,7 +198,6 @@
                 if(form) form.reset();
                 toggleSourceOptions(); 
                 
-                // Clear Validation
                 const input = document.getElementById('calculationFormula');
                 if(input) {
                     input.classList.remove('is-valid', 'is-invalid');
@@ -183,30 +208,25 @@
     });
 
     function toggleSourceOptions() {
-        // เช็คสถานะ Radio
         const isCalc = document.getElementById('srcCalculated').checked;
         const isAuto = document.getElementById('srcAuto').checked;
 
-        // Elements
         const formulaSec = document.getElementById('formulaSection');
         const autoSec = document.getElementById('autoOptionSection');
         const formulaInput = document.getElementById('calculationFormula');
 
-        // 1. Formula Section Control
         if (isCalc) {
             formulaSec.classList.remove('d-none');
-            // Auto Focus
             if(document.getElementById('plItemModal').classList.contains('show')) {
                  setTimeout(() => formulaInput.focus(), 150);
             }
             validateFormula(formulaInput);
         } else {
             formulaSec.classList.add('d-none');
-            formulaInput.classList.remove('is-invalid');
+            formulaInput.classList.remove('is-invalid', 'is-valid');
             formulaInput.setCustomValidity("");
         }
 
-        // 2. Auto Section Control
         if (isAuto) {
             autoSec.classList.remove('d-none');
         } else {
@@ -214,31 +234,33 @@
         }
     }
 
-    // อัปเกรดตัวตรวจสอบสูตร (Corrected Version)
-    function validateFormula(input) {
-        let val = input.value.trim();
-        const saveBtn = document.getElementById('btnSaveItem'); 
+    // 🔥 [NEW] ฟังก์ชันสำหรับปุ่ม Quick Formula
+    function setQuickFormula(formula) {
+        const input = document.getElementById('calculationFormula');
+        input.value = formula;
+        validateFormula(input);
+    }
 
-        // 1. กรณีค่าว่าง
+    function validateFormula(input) {
+        let val = input.value.trim().toUpperCase();
+
         if (val === '') { 
             input.classList.remove('is-invalid', 'is-valid'); 
             input.setCustomValidity(""); 
             return true; 
         }
 
-        // 2. กรณีสูตรมาตรฐาน SUM_CHILDREN
-        if (val === 'SUM_CHILDREN') { 
+        // 🔥 [FIX] ยอมรับสูตรพิเศษให้เป็น Valid ทันที
+        if (val === 'SUM_CHILDREN' || val === 'USE_TARGET') { 
             setValid(input); 
             return true; 
         }
 
-        // 3. ตรวจสอบรหัสบัญชีที่อยู่ใน [ ]
         const accountMatches = val.match(/\[(.*?)\]/g);
         if (accountMatches) {
             for (let match of accountMatches) {
                 let code = match.replace('[', '').replace(']', '');
                 
-                // ตรวจสอบว่ามี Code นี้จริงไหม (ถ้าเพิ่งแก้ DB มา อย่าลืม Refresh หน้าเว็บนะครับ ไม่งั้น JS จะจำค่าเก่า)
                 if (typeof allData !== 'undefined') {
                     let exists = allData.some(item => item.account_code === code);
                     if (!exists) {
@@ -247,7 +269,7 @@
                     }
                 }
                 
-                let currentMyCode = document.getElementById('accountCode').value;
+                let currentMyCode = document.getElementById('accountCode').value.toUpperCase();
                 if (code === currentMyCode) {
                     setInvalid(input, "ห้ามใส่รหัสของตัวเองในสูตรคำนวณ");
                     return false;
@@ -255,11 +277,10 @@
             }
         }
 
-        // 4. ตรวจสอบ Syntax คณิตศาสตร์พื้นฐาน
-        let testFormula = val.replace(/\[.*?\]/g, '1');
+        let testFormula = val.replace(/\[(.*?)\]/g, '1');
         
         if (/[^A-Z0-9_\[\]+\-*/(). ]/i.test(val)) { 
-            setInvalid(input, "สูตรมีตัวอักษรที่ไม่ได้รับอนุญาต (ใช้ได้เฉพาะ [Code] A-Z 0-9 และเครื่องหมายคำนวณ)"); 
+            setInvalid(input, "สูตรมีตัวอักษรที่ไม่ได้รับอนุญาต"); 
             return false; 
         }
 
@@ -273,16 +294,12 @@
         }
     }
 
-    // Helper เสริมสำหรับเปลี่ยนสถานะ UI
     function setInvalid(input, msg) {
         input.classList.add('is-invalid');
         input.classList.remove('is-valid');
         input.setCustomValidity(msg);
-        // แสดง Tooltip หรือ Feedback
-        let feedback = input.nextElementSibling;
-        if (feedback && feedback.classList.contains('invalid-feedback')) {
-            feedback.innerText = msg;
-        }
+        let feedback = document.getElementById('formulaErrorMsg');
+        if (feedback) feedback.innerText = msg;
     }
 
     function setValid(input) {
@@ -290,4 +307,112 @@
         input.classList.add('is-valid');
         input.setCustomValidity("");
     }
+    
+    function insertSymbol(symbol) {
+        const input = document.getElementById('calculationFormula');
+        input.focus(); 
+        
+        if (input.selectionStart || input.selectionStart === 0) {
+            let startPos = input.selectionStart;
+            let endPos = input.selectionEnd;
+            let currentVal = input.value;
+            
+            input.value = currentVal.substring(0, startPos) + symbol + currentVal.substring(endPos, currentVal.length);
+            
+            let newPos = startPos + symbol.length;
+            if (symbol === '[]') newPos -= 1;
+            
+            input.setSelectionRange(newPos, newPos);
+        } else {
+            input.value += symbol;
+        }
+        
+        validateFormula(input);
+        checkFormulaAutocomplete(input);
+    }
+
+    function checkFormulaAutocomplete(input) {
+        const dropdown = document.getElementById('formulaAutocomplete');
+        if (!input || !dropdown) return;
+
+        if (typeof allData === 'undefined' || !allData.length) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const cursorPos = input.selectionStart;
+        const text = input.value;
+        let startBracket = -1;
+        for (let i = cursorPos - 1; i >= 0; i--) {
+            if (text[i] === ']') break;
+            if (text[i] === '[') {
+                startBracket = i;
+                break;
+            }
+        }
+
+        if (startBracket !== -1) {
+            let endBracket = text.indexOf(']', startBracket);
+            if (endBracket === -1) endBracket = text.length;
+
+            if (cursorPos <= endBracket || endBracket === text.length) {
+                const searchStr = text.substring(startBracket + 1, cursorPos).toUpperCase();
+                const matches = allData.filter(item => 
+                    item.account_code.toUpperCase().includes(searchStr) || 
+                    item.item_name.toUpperCase().includes(searchStr)
+                );
+
+                if (matches.length > 0) {
+                    renderAutocomplete(matches, startBracket, endBracket);
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.innerHTML = '<div class="p-2 text-muted small text-center"><i class="fas fa-search me-1"></i>ไม่พบรหัสบัญชีที่ค้นหา</div>';
+                    dropdown.style.display = 'block';
+                }
+                return;
+            }
+        }
+        
+        dropdown.style.display = 'none';
+    }
+
+    function renderAutocomplete(matches, startIdx, endIdx) {
+        const dropdown = document.getElementById('formulaAutocomplete');
+        dropdown.innerHTML = '';
+        matches.slice(0, 50).forEach(item => { 
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dropdown-item d-flex justify-content-between align-items-center py-2 border-bottom hover-btn';
+            btn.innerHTML = `
+                <span class="fw-bold text-primary" style="min-width: 70px;">[${item.account_code}]</span>
+                <span class="small text-muted text-truncate text-end ms-2" style="max-width: 60%;">${item.item_name}</span>
+            `;
+            btn.onclick = () => selectAutocomplete(item.account_code, startIdx, endIdx);
+            dropdown.appendChild(btn);
+        });
+    }
+
+    function selectAutocomplete(code, startIdx, endIdx) {
+        const input = document.getElementById('calculationFormula');
+        const text = input.value;
+        
+        const hasClosingBracket = text[endIdx] === ']';
+        const replacement = `[${code}]`;
+        const newText = text.substring(0, startIdx) + replacement + text.substring(hasClosingBracket ? endIdx + 1 : endIdx);
+        input.value = newText;
+        const newCursorPos = startIdx + replacement.length;
+        input.focus();
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        
+        document.getElementById('formulaAutocomplete').style.display = 'none';
+        validateFormula(input);
+    }
+
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('formulaAutocomplete');
+        const input = document.getElementById('calculationFormula');
+        if (dropdown && e.target !== input && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
 </script>

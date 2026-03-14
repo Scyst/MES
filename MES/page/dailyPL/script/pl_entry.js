@@ -392,10 +392,19 @@ function runFormulaEngine(dataset = currentData) {
                 let newValTgt = 0; 
                 
                 try {
-                    if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
+                    // ดึงสูตรมาแปลงเป็นตัวพิมพ์ใหญ่และตัดช่องว่างทิ้ง เพื่อให้เช็คเงื่อนไขง่ายขึ้น
+                    const formulaStr = (item.calculation_formula || '').trim().toUpperCase();
+                    
+                    if (formulaStr === 'SUM_CHILDREN') {
                         const children = dataset.filter(child => child.parent_id == item.item_id);
                         newValAct = children.reduce((sum, child) => sum + (parseFloat(child.actual_amount) || 0), 0);
                         newValTgt = children.reduce((sum, child) => sum + (parseFloat(child.daily_target) || 0), 0);
+                        
+                    // 🔥 [NEW FEATURE] ถ้าสูตรคือ USE_TARGET ให้ก็อปปี้ Target มาใส่ Actual เลย
+                    } else if (formulaStr === 'USE_TARGET') {
+                        newValAct = parseFloat(item.daily_target) || 0;
+                        newValTgt = parseFloat(item.daily_target) || 0;
+                        
                     } else if (item.calculation_formula) {
                         let formulaAct = item.calculation_formula;
                         let formulaTgt = item.calculation_formula;
@@ -1156,7 +1165,7 @@ async function loadStatementData() {
 }
 
 function calculateStatementFormulas(data, mode) {
-    let maxLoop = 15; // 🔥 [FIX] เพิ่ม Loop จาก 5 เป็น 15 ให้สูตรคำนวณจนจบ
+    let maxLoop = 15; 
     let limit = (mode === 'yearly') ? 12 : 31;
     let prefix = (mode === 'yearly') ? 'm' : 'd';
 
@@ -1168,15 +1177,22 @@ function calculateStatementFormulas(data, mode) {
                     let oldValAct = parseFloat(item[`${prefix}${i}_act`]) || 0;
                     let newValAct = 0;
                     
-                    // 🔥 [NEW] เพิ่มการคำนวณ Target ด้วย เผื่อต้องการแสดงเป้าในอนาคต
                     let oldValTgt = parseFloat(item[`${prefix}${i}_tgt`]) || 0;
                     let newValTgt = 0; 
                     
                     try {
-                        if (item.calculation_formula && item.calculation_formula.trim().toUpperCase() === 'SUM_CHILDREN') {
+                        const formulaStr = (item.calculation_formula || '').trim().toUpperCase();
+                        
+                        if (formulaStr === 'SUM_CHILDREN') {
                             const children = data.filter(child => child.parent_id == item.item_id);
                             newValAct = children.reduce((sum, child) => sum + (parseFloat(child[`${prefix}${i}_act`]) || 0), 0);
                             newValTgt = children.reduce((sum, child) => sum + (parseFloat(child[`${prefix}${i}_tgt`]) || 0), 0);
+                            
+                        // 🔥 [NEW FEATURE] คัดลอก Target ของเดือน/วัน นั้นๆ มาใส่ Actual
+                        } else if (formulaStr === 'USE_TARGET') {
+                            newValAct = parseFloat(item[`${prefix}${i}_tgt`]) || 0;
+                            newValTgt = parseFloat(item[`${prefix}${i}_tgt`]) || 0;
+                            
                         } else if (item.calculation_formula) {
                             let formulaAct = item.calculation_formula;
                             let formulaTgt = item.calculation_formula;
@@ -1190,7 +1206,6 @@ function calculateStatementFormulas(data, mode) {
                                     const refValAct = refItem ? (parseFloat(refItem[`${prefix}${i}_act`]) || 0) : 0;
                                     const refValTgt = refItem ? (parseFloat(refItem[`${prefix}${i}_tgt`]) || 0) : 0;
                                     
-                                    // 🔥 [FIX] ใส่วงเล็บป้องกัน Syntax Error ลบซ้อนลบ
                                     formulaAct = formulaAct.replace(token, `(${refValAct})`);
                                     formulaTgt = formulaTgt.replace(token, `(${refValTgt})`);
                                 });
@@ -1225,7 +1240,7 @@ function calculateStatementFormulas(data, mode) {
                 }
             }
         });
-        if (!hasChanged) break; // ถ้านิ่งแล้วจบ Loop เพื่อประหยัด CPU
+        if (!hasChanged) break; 
     }
 }
 
@@ -1460,53 +1475,84 @@ async function loadExecutiveData() {
     }
 }
 
-const getExecTemplate = (getAct, getTgt) => [
-    { label: "Sale", code: "REVENUES", isBold: true, bg: "#e7f1ff", isBase: true },
-    { label: "RM", isBold: true, calcAct: (p) => getAct("GRP_RM", p) + getAct("CR_R", p), calcTgt: (p) => getTgt("GRP_RM", p) + getTgt("CR_R", p) },
-    { label: "RM", indent: 1, code: "GRP_RM" },
-    { label: "CR", indent: 1, code: "CR_R" },
-    { label: "DL,OT", code: "GRP_DL", isBold: true },
-    { label: "DL", indent: 1, calcAct: (p) => getAct("522001+3", p) + getAct("DL_SCAN", p), calcTgt: (p) => getTgt("522001+3", p) + getTgt("DL_SCAN", p) },
-    { label: "OT", indent: 1, calcAct: (p) => getAct("522002+4", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522002+4", p) + getTgt("OT_SCAN", p) },
-    { label: "OH", isBold: true, calcAct: (p) => getAct("OH_FC", p) + getAct("OH_VC", p), calcTgt: (p) => getTgt("OH_FC", p) + getTgt("OH_VC", p) },
-    { label: "OH FC", code: "OH_FC", isBold: true },
-    { label: "Staff exp. (Production)", indent: 1, code: "GRP_STF" },
-    { label: "Depre", indent: 1, code: "GRP_DEP" },
-    { label: "Rent", indent: 1, code: "GRP_RT" },
-    { label: "OH VC", code: "OH_VC", isBold: true },
-    { label: "Utilities", indent: 1, code: "GRP_UTIL" },
-    { label: "Subcontract", indent: 1, code: "GRP_SUB" },
-    { label: "Accessories", indent: 1, code: "GRP _ AC" },
-    { label: "Repair", indent: 1, code: "GRP_REP" },
-    { label: "Other", indent: 1, calcAct: (p) => getAct("GRP_TRV", p) + getAct("GRP _ OT", p) + getAct("GRP_OTR", p), calcTgt: (p) => getTgt("GRP_TRV", p) + getTgt("GRP _ OT", p) + getTgt("GRP_OTR", p) },
-    { label: "COGS", code: "COGS", isBold: true, text: "danger", bg: "#fff3cd" },
-    { label: "Gross Profit", isBold: true, text: "success", bg: "#d1e7dd", calcAct: (p) => getAct("REVENUES", p) - getAct("COGS", p), calcTgt: (p) => getTgt("REVENUES", p) - getTgt("COGS", p) },
-    { label: "Selling VC", code: "SELL_EXP", isBold: true },
-    { label: "Export Exp.", indent: 1, code: "542006" },
-    { label: "Selling VC Other", indent: 1, calcAct: (p) => getAct("SELL_EXP", p) - getAct("542006", p), calcTgt: (p) => getTgt("SELL_EXP", p) - getTgt("542006", p) },
-    { label: "Admin FC other", code: "ADMIN_FC", isBold: true },
-    { label: "Staff exp. (support)", indent: 1, calcAct: (p) => getAct("GRP_AD_STF", p) + getAct("GRP_AD_ST", p), calcTgt: (p) => getTgt("GRP_AD_STF", p) + getTgt("GRP_AD_ST", p) },
-    { label: "Utilities", indent: 1, code: "GRP_AD_UTL" },
-    { label: "service", indent: 1, code: "GRP_SVF" },
-    { label: "rental", indent: 1, code: "GRP_AD_RT" },
-    { label: "depre", indent: 1, code: "GRP_AD_DSP" },
-    { label: "other", indent: 1, calcAct: (p) => getAct("GRP_OFF", p) + getAct("GRP_AD_OT", p), calcTgt: (p) => getTgt("GRP_OFF", p) + getTgt("GRP_AD_OT", p) },
-    { label: "SG&A", isBold: true, text: "danger", bg: "#fff3cd", calcAct: (p) => getAct("SELL_EXP", p) + getAct("ADMIN_FC", p), calcTgt: (p) => getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p) },
-    { label: "Profit", isBold: true, bg: "#f8f9fa", calcAct: (p) => (getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p)), calcTgt: (p) => (getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p)) },
-    { label: "Other income", code: "OT_IC", isBold: true },
-    { label: "Extra Reorganize", indent: 1, code: "541015_3" },
-    { label: "Bonus - OH & Admin", indent: 1, calcAct: (p) => getAct("541014", p) + getAct("541015_1", p), calcTgt: (p) => getTgt("541014", p) + getTgt("541015_1", p) },
-    { label: "Bonus - Mgt", indent: 1, code: "541015_2" },
-    { label: "Extra", code: "EX", isBold: true, text: "danger" },
-    { label: "EBIT", isBold: true, bg: "#e0f8f1", calcAct: (p) => ((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p), calcTgt: (p) => ((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p) },
-    { label: "Interest", code: "ITR_C" },
-    { label: "Tax", code: "TAX" },
-    { label: "EAT", isBold: true, bg: "#e0f8f1", calcAct: (p) => (((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p)) - getAct("ITR_C", p) - getAct("TAX", p), calcTgt: (p) => (((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p)) - getTgt("ITR_C", p) - getTgt("TAX", p) },
-    { label: "depre", text: "muted", calcAct: (p) => getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p), calcTgt: (p) => getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p) },
-    { label: "Interest", text: "muted", code: "ITR_C" },
-    { label: "Tax", text: "muted", code: "TAX" },
-    { label: "EBITDA", isBold: true, text: "primary", bg: "#e7f1ff", calcAct: (p) => (((getAct("REVENUES", p) - getAct("COGS", p)) - (getAct("SELL_EXP", p) + getAct("ADMIN_FC", p))) + getAct("OT_IC", p) - getAct("EX", p)) + (getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p)), calcTgt: (p) => (((getTgt("REVENUES", p) - getTgt("COGS", p)) - (getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p))) + getTgt("OT_IC", p) - getTgt("EX", p)) + (getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p)) }
-];
+const getExecTemplate = (getAct, getTgt) => {
+    // Helper Functions สำหรับคำนวณยอดรวมหลัก
+    const getGrossAct = (p) => getAct("REVENUES", p) - getAct("COGS", p);
+    const getGrossTgt = (p) => getTgt("REVENUES", p) - getTgt("COGS", p);
+    
+    const getSgaAct = (p) => getAct("SELL_EXP", p) + getAct("ADMIN_FC", p);
+    const getSgaTgt = (p) => getTgt("SELL_EXP", p) + getTgt("ADMIN_FC", p);
+
+    // กำไรจากการดำเนินงาน (Profit) = GP - SG&A
+    const getProfitAct = (p) => getGrossAct(p) - getSgaAct(p);
+    const getProfitTgt = (p) => getGrossTgt(p) - getSgaTgt(p);
+
+    // EBIT = Profit + รายได้อื่น - ค่าใช้จ่ายพิเศษ/โบนัส (สมมติว่า EX คือผลรวม Extra แล้ว)
+    const getEbitAct = (p) => getProfitAct(p) + getAct("OT_IC", p) - getAct("EX", p);
+    const getEbitTgt = (p) => getProfitTgt(p) + getTgt("OT_IC", p) - getTgt("EX", p);
+
+    return [
+        { label: "SALE", code: "REVENUES", isBold: true, bg: "#e7f1ff", isBase: true },
+        
+        { label: "RM", isBold: true, calcAct: (p) => getAct("GRP_RM", p) + getAct("CR_R", p), calcTgt: (p) => getTgt("GRP_RM", p) + getTgt("CR_R", p) },
+        
+        { label: "DLOT", code: "GRP_DL", isBold: true },
+        { label: "DL", indent: 1, calcAct: (p) => getAct("522001", p) + getAct("522003", p) + getAct("DL_SCAN", p), calcTgt: (p) => getTgt("522001", p) + getTgt("522003", p) + getTgt("DL_SCAN", p) },
+        { label: "OT", indent: 1, calcAct: (p) => getAct("522002", p) + getAct("522004", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522002", p) + getTgt("522004", p) + getTgt("OT_SCAN", p) },
+        
+        { label: "OH", isBold: true, calcAct: (p) => getAct("OH_FC", p) + getAct("OH_VC", p), calcTgt: (p) => getTgt("OH_FC", p) + getTgt("OH_VC", p) },
+        
+        { label: "OH FC", code: "OH_FC", isBold: true },
+        { label: "Staff expenses", indent: 1, code: "GRP_STF" },
+        { label: "Depreciation", indent: 1, code: "GRP_DEP" },
+        { label: "Rental expense", indent: 1, code: "GRP_RT" },
+        
+        { label: "OH VC", code: "OH_VC", isBold: true },
+        { label: "Utilities", indent: 1, code: "GRP_UTIL" },
+        { label: "Subcontract", indent: 1, code: "GRP_SUB" },
+        { label: "Accessories", indent: 1, code: "GRP_AC" },
+        { label: "Repair", indent: 1, code: "GRP_REP" },
+        { label: "Others", indent: 1, calcAct: (p) => getAct("GRP_TRV", p) + getAct("GRP_OT", p) + getAct("GRP_OTR", p), calcTgt: (p) => getTgt("GRP_TRV", p) + getTgt("GRP_OT", p) + getTgt("GRP_OTR", p) },
+        
+        { label: "Total CoGS", code: "COGS", isBold: true, text: "danger", bg: "#fff3cd" },
+        
+        { label: "Gross Profit", isBold: true, text: "success", bg: "#d1e7dd", calcAct: (p) => getGrossAct(p), calcTgt: (p) => getGrossTgt(p) },
+        
+        { label: "Selling VC", code: "SELL_EXP", isBold: true },
+        { label: "Transportation", indent: 1, code: "542006" }, // แก้ชื่อให้ตรง Excel (เดิมคือ Export Exp.)
+        { label: "Selling VC others", indent: 1, calcAct: (p) => getAct("SELL_EXP", p) - getAct("542006", p), calcTgt: (p) => getTgt("SELL_EXP", p) - getTgt("542006", p) },
+        
+        { label: "Admin FC", code: "ADMIN_FC", isBold: true },
+        { label: "Staff expenses", indent: 1, calcAct: (p) => getAct("GRP_AD_STF", p) + getAct("GRP_AD_ST", p), calcTgt: (p) => getTgt("GRP_AD_STF", p) + getTgt("GRP_AD_ST", p) },
+        { label: "Service fee", indent: 1, code: "GRP_SVF" },
+        { label: "Rental expenses", indent: 1, code: "GRP_AD_RT" },
+        { label: "Depreciation", indent: 1, code: "GRP_AD_DSP" },
+        // ดึง Utilities ของ Admin มารวมใน Others ให้ตรงกับ Excel ที่มีแค่บรรทัด Others ปิดท้าย
+        { label: "Others", indent: 1, calcAct: (p) => getAct("GRP_OFF", p) + getAct("GRP_AD_OT", p) + getAct("GRP_AD_UTL", p), calcTgt: (p) => getTgt("GRP_OFF", p) + getTgt("GRP_AD_OT", p) + getTgt("GRP_AD_UTL", p) },
+        
+        { label: "SG&A", isBold: true, text: "danger", bg: "#fff3cd", calcAct: (p) => getSgaAct(p), calcTgt: (p) => getSgaTgt(p) },
+        
+        { label: "Profit", isBold: true, bg: "#f8f9fa", calcAct: (p) => getProfitAct(p), calcTgt: (p) => getProfitTgt(p) },
+        
+        { label: "Other income", code: "OT_IC", isBold: true },
+        { label: "Bonus OH & Admin", indent: 1, calcAct: (p) => getAct("541014", p) + getAct("541015_1", p), calcTgt: (p) => getTgt("541014", p) + getTgt("541015_1", p) },
+        { label: "Management bonus", indent: 1, code: "541015_2" },
+        { label: "Extra", indent: 1, calcAct: (p) => getAct("541015_3", p) + (getAct("EX", p) - (getAct("541014", p) + getAct("541015_1", p) + getAct("541015_2", p) + getAct("541015_3", p))), calcTgt: (p) => getTgt("541015_3", p) + (getTgt("EX", p) - (getTgt("541014", p) + getTgt("541015_1", p) + getTgt("541015_2", p) + getTgt("541015_3", p))) }, 
+        
+        { label: "EBIT", isBold: true, bg: "#e0f8f1", calcAct: (p) => getEbitAct(p), calcTgt: (p) => getEbitTgt(p) },
+        
+        { label: "Interest expense", code: "ITR_C" },
+        { label: "Tax", code: "TAX" },
+        
+        { label: "EAT", isBold: true, bg: "#e0f8f1", calcAct: (p) => getEbitAct(p) - getAct("ITR_C", p) - getAct("TAX", p), calcTgt: (p) => getEbitTgt(p) - getTgt("ITR_C", p) - getTgt("TAX", p) },
+        
+        { label: "Depreciation", text: "muted", calcAct: (p) => getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p), calcTgt: (p) => getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p) },
+        { label: "Interest expense", text: "muted", code: "ITR_C" },
+        { label: "Tax", text: "muted", code: "TAX" },
+        
+        { label: "EBITDA", isBold: true, text: "primary", bg: "#e7f1ff", calcAct: (p) => getEbitAct(p) + getAct("GRP_DEP", p) + getAct("GRP_AD_DSP", p), calcTgt: (p) => getEbitTgt(p) + getTgt("GRP_DEP", p) + getTgt("GRP_AD_DSP", p) }
+    ];
+};
 
 const execGenCols = (act, tgt, baseAct, baseTgt, isSubtotal) => {
     let actPct = baseAct ? (act / baseAct * 100) : 0;

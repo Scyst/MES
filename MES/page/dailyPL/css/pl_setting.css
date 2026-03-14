@@ -126,3 +126,12 @@ tr.level-deep:hover td {
 .content-wrapper::-webkit-scrollbar-thumb,
 .table-responsive::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .content-wrapper::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+.hover-btn {
+    transition: all 0.2s ease-in-out;
+}
+.hover-btn:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

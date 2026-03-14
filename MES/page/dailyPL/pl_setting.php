@@ -61,10 +61,16 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
 
         <div id="main-content">
             
-            <div class="toolbar-container shadow-sm">
+            <div class="toolbar-container shadow-sm position-relative" style="z-index: 1050;">
                 <div class="d-flex align-items-center w-100">
                     
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <a href="pl_entry.php" class="btn btn-sm btn-outline-secondary fw-bold rounded-pill px-3 shadow-sm hover-btn">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </a>
+
+                        <div class="vr text-muted opacity-25 mx-1"></div>
+
                         <div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
                             <input class="form-check-input mt-0" type="checkbox" id="showInactiveToggle">
                             <label class="form-check-label text-muted fw-bold" for="showInactiveToggle">
@@ -74,19 +80,19 @@ $v = filemtime(__DIR__ . '/script/pl_setting.js');
                     </div>
                     
                     <div class="d-flex align-items-center gap-2 ms-auto">
-                        <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="exportTemplate()">
+                        <button class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm hover-btn" onclick="exportTemplate()">
                             <i class="fas fa-file-excel me-1"></i> Export
                         </button>
                         
                         <input type="file" id="importFile" accept=".xlsx, .xls" class="d-none" onchange="handleFileUpload(this)">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="document.getElementById('importFile').click()">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm hover-btn" onclick="document.getElementById('importFile').click()">
                             <i class="fas fa-file-import me-1"></i> Import
                         </button>
                         
                         <div class="vr text-muted opacity-25 mx-2"></div>
                         
-                        <button class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold" onclick="openModal()">
-                            <i class="fas fa-plus me-1"></i> Add Item
+                        <button class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold hover-btn" onclick="openModal()">
+                            <i class="fas fa-plus me-1"></i> Add
                         </button>
                     </div>
 

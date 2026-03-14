@@ -110,6 +110,16 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
                                         <i class="far fa-calendar-alt text-warning me-2 text-center" style="width: 20px;"></i> Set Working Days
                                     </a>
                                 </li>
+                                
+                                <?php if (hasPermission('manage_pl')): ?>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="pl_setting.php">
+                                        <i class="fas fa-sitemap me-2 text-center" style="width: 20px;"></i> P&L Structure Setup
+                                    </a>
+                                </li>
+                                <?php endif; ?>
+
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item py-2 fw-bold text-success bg-success bg-opacity-10" href="#" onclick="exportMasterExcel()">
