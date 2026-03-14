@@ -177,17 +177,7 @@ $currentUser = $_SESSION['user'];
             <div id="toast"></div>
 
             <?php 
-                include('components/locationModal.php'); 
-                include('components/transferModal.php');
-                include('components/itemModal.php');
-                include('components/routeModal.php'); 
-                include('components/addScheduleModal.php');
-                include('components/editScheduleModal.php');
-                include('components/manageBomModal.php'); 
-                include('components/createBomModal.php');
-                include('components/copyBomModal.php');
-                include('components/bomImportPreviewModal.php');
-                include('components/bomBulkImportPreviewModal.php');
+                include('components/allSettingModal.php');
             ?>
             
             <?php if ($canManage): ?>
