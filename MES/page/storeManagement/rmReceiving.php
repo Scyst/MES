@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
+$currentUserForJS = $_SESSION['user'] ?? null;
+$canManageRM = hasPermission('manage_rm_receiving');
 
 $pageTitle = "RM Receiving & Tagging";
 $pageIcon = "fas fa-pallet"; 
@@ -24,8 +26,81 @@ $pageHelpId = "";
     
     <div class="page-container">
         <div id="main-content">
-            
-            <div class="dashboard-header-sticky">
+            <div class="px-3 pt-3">
+                <div class="row g-2 mb-3">
+                        
+                    <div class="col-6 col-md-3">
+                        <div class="card shadow-sm kpi-card border-primary h-100">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-primary small fw-bold mb-1">รวมทั้งหมด (Tags)</div>
+                                        <h2 class="text-primary fw-bold mb-0" id="kpi-total-tags">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">จำนวนพาเลท/กล่อง</div>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                                        <i class="fas fa-boxes fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="card shadow-sm kpi-card border-info h-100">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-info small fw-bold mb-1">ปริมาณรวม (PCS)</div>
+                                        <h2 class="text-info fw-bold mb-0" id="kpi-total-qty">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">จำนวนชิ้นรับเข้า</div>
+                                    </div>
+                                    <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle">
+                                        <i class="fas fa-cubes fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="card shadow-sm kpi-card border-success h-100">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-success small fw-bold mb-1">พิมพ์แล้ว (Printed)</div>
+                                        <h2 class="text-success fw-bold mb-0" id="kpi-printed">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">พิมพ์สติ๊กเกอร์แล้ว</div>
+                                    </div>
+                                    <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                                        <i class="fas fa-print fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="card shadow-sm kpi-card border-warning h-100">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-warning small fw-bold mb-1">รอพิมพ์ (Pending)</div>
+                                        <h2 class="text-warning fw-bold mb-0" id="kpi-pending">0</h2>
+                                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">ยังไม่ได้พิมพ์ Tag</div>
+                                    </div>
+                                    <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
+                                        <i class="fas fa-exclamation-triangle fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -47,8 +122,8 @@ $pageHelpId = "";
                                     <span class="input-group-text bg-white border-secondary-subtle text-secondary small">Rows:</span>
                                     <select id="rowsPerPage" class="form-select border-secondary-subtle" onchange="changeRowsPerPage()">
                                         <option value="10">10</option>
-                                        <option value="50" selected>50</option>
-                                        <option value="100">100</option>
+                                        <option value="50">50</option>
+                                        <option value="100" selected>100</option>
                                     </select>
                                 </div>
 
@@ -70,9 +145,13 @@ $pageHelpId = "";
                                 <button class="btn btn-info btn-sm fw-bold px-3 shadow-sm text-white" onclick="openTraceModal()">
                                     <i class="fas fa-barcode me-1"></i> ตรวจสอบ Tag
                                 </button>
+
+                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel me-1"></i> Export
+                                </button>
                                 
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openImportModal()">
-                                    <i class="fas fa-file-import me-1"></i> Import Excel
+                                    <i class="fas fa-file-import me-1"></i> Import
                                 </button>
                             </div>
 
@@ -81,7 +160,7 @@ $pageHelpId = "";
                 </div>
             </div>
 
-            <div class="content-wrapper p-3">
+            <div class="content-wrapper px-3 pb-3 pt-2">
                 <div class="card shadow-sm border-0">
                     <div class="table-responsive-custom">
                         <table class="table table-striped table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
@@ -321,7 +400,11 @@ $pageHelpId = "";
     <div id="printArea"></div>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="../../utils/libs/qrcode.min.js"></script> 
+    <script src="../../utils/libs/qrcode.min.js"></script>
+    <script>
+        const currentUser = <?php echo json_encode($currentUserForJS); ?>;
+        const canManageRM = <?php echo json_encode($canManageRM); ?>; 
+    </script>
     <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>"></script>
 </body>
 </html>

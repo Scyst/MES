@@ -10,7 +10,7 @@ let traceModalInstance;
 let allHistoryData = [];
 let filteredHistoryData = [];
 let currentPage = 1;
-let rowsPerPage = 50;
+let rowsPerPage = 100;
 let html5QrCodeTrace = null;
 let html5QrCodeScannerTrace = null;
 
@@ -284,7 +284,7 @@ function clearModalData() {
 function downloadTemplate() {
     const ws_data = [
         ["Item No.", "英文名称", "Des.", "Purchase Order", "Carton/Pallet", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark"],
-        ["RM-12345", "RESISTOR", "10K OHM 1/4W", "PO-2026-001", "1000", "2", "INV-2603-001", "PL-001", "CTN-01", "2612", "2026-03-16", "ของแถม 50 ชิ้น"]
+        ["RM-12345", "RESISTOR", "10K OHM 1/4W", "PO-2026-001", "1000", "2", "INV-2603-001", "PL-001", "CTN-01", "12.26", "2026-03-16", "ขาด 50 ชิ้น"]
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     
@@ -519,6 +519,7 @@ function changeRowsPerPage() {
 }
 
 function renderHistoryTable() {
+    updateDashboardCards();
     const tbody = document.getElementById('historyTbody');
     tbody.innerHTML = '';
     document.getElementById('selectAllCheckbox').checked = false;
@@ -590,6 +591,8 @@ function renderHistoryTable() {
                                     <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag
                                 </a>
                             </li>
+                            
+                            ${canManageRM ? `
                             <li>
                                 <a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;">
                                     <i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล
@@ -601,6 +604,7 @@ function renderHistoryTable() {
                                     <i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล
                                 </a>
                             </li>
+                            ` : ''}
                         </ul>
                     </div>
                 </td>
@@ -927,3 +931,70 @@ window.deleteSelectedTags = function() {
         }
     });
 };
+
+window.exportToExcel = function() {
+    if (filteredHistoryData.length === 0) {
+        Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลสำหรับส่งออก', 'info');
+        return;
+    }
+
+    // 1. สร้างหัวตาราง (เหมือน Template)
+    let ws_data = [
+        ["Item No.", "Category", "Des.", "Purchase Order", "Carton/Pallet", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark", "Serial No.", "Status", "Imported At"]
+    ];
+
+    // 2. ดึงข้อมูลจากตารางที่กรองแล้วมาใส่
+    filteredHistoryData.forEach(row => {
+        ws_data.push([
+            row.item_no || "",
+            row.category || "",
+            row.part_description || row.description_ref || "",
+            row.po_number || "",
+            row.qty_per_pallet || "",
+            "1", // Package Qty (1 Tag = 1 Pack)
+            row.warehouse_no || "",
+            row.pallet_no || "",
+            row.ctn_number || "",
+            row.week_no || "",
+            row.received_date ? row.received_date.split(' ')[0] : "",
+            row.remark || "",
+            row.serial_no || "",
+            row.status || "",
+            row.created_at || ""
+        ]);
+    });
+
+    // 3. สร้างไฟล์และดาวน์โหลด
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "RM_Receiving_Report");
+    
+    // ตั้งชื่อไฟล์พร้อมวันที่
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `RM_Report_${dateStr}.xlsx`);
+};
+
+function updateDashboardCards() {
+    let totalTags = filteredHistoryData.length;
+    let totalQty = 0;
+    let printedTags = 0;
+    let pendingTags = 0;
+
+    // วนลูปนับข้อมูลที่ถูกกรองมาแล้ว
+    filteredHistoryData.forEach(row => {
+        totalQty += parseFloat(row.qty_per_pallet) || 0;
+        
+        // เช็คว่าเคยพิมพ์หรือยัง (print_count มากกว่า 0)
+        if (parseInt(row.print_count) > 0) {
+            printedTags++;
+        } else {
+            pendingTags++;
+        }
+    });
+
+    // โยนตัวเลขขึ้นไปโชว์บนการ์ด (ใส่จุลภาคให้สวยงาม)
+    document.getElementById('kpi-total-tags').innerText = totalTags.toLocaleString();
+    document.getElementById('kpi-total-qty').innerText = totalQty.toLocaleString();
+    document.getElementById('kpi-printed').innerText = printedTags.toLocaleString();
+    document.getElementById('kpi-pending').innerText = pendingTags.toLocaleString();
+}

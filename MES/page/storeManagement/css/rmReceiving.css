@@ -30,6 +30,14 @@
     border-radius: 0.5rem;
 }
 
+/* สไตล์สำหรับการ์ด KPI */
+.kpi-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+.kpi-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+.kpi-card.border-primary { border-left-color: #0d6efd !important; }
+.kpi-card.border-info { border-left-color: #0dcaf0 !important; }
+.kpi-card.border-success { border-left-color: #198754 !important; }
+.kpi-card.border-warning { border-left-color: #ffc107 !important; }
+
 /* 3. ให้ตารางกินพื้นที่อิสระที่เหลือทั้งหมด และ Scroll แค่ตรงนี้ */
 .table-responsive-custom {
     flex-grow: 1;
@@ -62,6 +70,7 @@ thead.sticky-top {
 
 @media print {
     @page {
+        font-family: 'Arial', 'Tahoma', sans-serif !important;
         size: 4in 2in landscape;
         margin: 0;
     }
