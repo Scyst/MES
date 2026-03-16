@@ -1,31 +1,272 @@
 "use strict";
 
+// ==========================================
+// ตัวแปร Global
+// ==========================================
 let parsedData = [];
 let previewData = [];
 let importModalInstance;
+let traceModalInstance;
+let allHistoryData = [];
+let filteredHistoryData = [];
+let currentPage = 1;
+let rowsPerPage = 50;
+let html5QrCodeTrace = null;
+let html5QrCodeScannerTrace = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     importModalInstance = new bootstrap.Modal(document.getElementById('importModal'));
-    loadHistory();
-    
     document.getElementById('importModal').addEventListener('hidden.bs.modal', clearModalData);
+
+    const traceModalEl = document.getElementById('traceModal');
+    if(traceModalEl) {
+        traceModalInstance = new bootstrap.Modal(traceModalEl);
+        traceModalEl.addEventListener('shown.bs.modal', () => {
+            const cameraTab = document.getElementById('trace-camera-tab');
+            if (cameraTab && cameraTab.classList.contains('active')) {
+                startTraceScanning();
+            } else {
+                document.getElementById('scanInput').focus();
+            }
+        });
+
+        traceModalEl.addEventListener('hidden.bs.modal', () => {
+            stopTraceScanning();
+            document.getElementById('traceResult').classList.add('d-none');
+        });
+
+        const cameraTab = document.getElementById('trace-camera-tab');
+        const manualTab = document.getElementById('trace-manual-tab');
+        const fileInput = document.getElementById('trace-image-file');
+
+        if (cameraTab) {
+            cameraTab.addEventListener('shown.bs.tab', (e) => {
+                e.target.classList.add('text-primary');
+                manualTab.classList.remove('text-primary');
+                manualTab.classList.add('text-secondary');
+                startTraceScanning();
+            });
+        }
+        
+        if (manualTab) {
+            manualTab.addEventListener('shown.bs.tab', (e) => {
+                e.target.classList.add('text-primary');
+                cameraTab.classList.remove('text-primary');
+                cameraTab.classList.add('text-secondary');
+                stopTraceScanning();
+                setTimeout(() => document.getElementById('scanInput').focus(), 100);
+            });
+        }
+
+        let cropper = null;
+        const cropModalInstance = new bootstrap.Modal(document.getElementById('cropModal'));
+        const imageToCrop = document.getElementById('imageToCrop');
+        fileInput?.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    imageToCrop.src = event.target.result;
+                    cropModalInstance.show();
+                };
+                reader.readAsDataURL(file);
+                e.target.value = null;
+            }
+        });
+
+        document.getElementById('cropModal').addEventListener('shown.bs.modal', function () {
+            if (cropper) { cropper.destroy(); }
+            cropper = new Cropper(imageToCrop, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 0.8,
+            });
+        });
+
+        document.getElementById('btnConfirmCrop').addEventListener('click', function() {
+            if (!cropper) return;
+            cropper.getCroppedCanvas({
+                fillColor: '#fff' 
+            }).toBlob(async (blob) => {
+                const croppedFile = new File([blob], "cropped_qr.png", { type: "image/png" });
+                cropModalInstance.hide();
+                await handleTraceFileScan(croppedFile); 
+            });
+        });
+    }
+    loadHistory();
 });
 
-window.addEventListener('beforeprint', () => {
-    document.body.classList.remove('desktop-only-page');
-});
-
-window.addEventListener('afterprint', () => {
-    document.body.classList.add('desktop-only-page');
-});
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
-    );
+// ==========================================
+// ฟังก์ชันของ Scanner กล้องมือถือ
+// ==========================================
+function stopTraceScanning() {
+    if (html5QrCodeTrace && html5QrCodeTrace.isScanning) {
+        html5QrCodeTrace.stop().then(() => {
+            console.log("Camera stopped.");
+        }).catch(err => console.log("Stop error", err));
+    }
 }
 
+async function startTraceScanning() {
+    document.getElementById('qr-reader-container-trace').style.display = 'block';
+    if (!html5QrCodeTrace) {
+        html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
+    }
+
+    if (html5QrCodeTrace.isScanning) return;
+    try {
+        await html5QrCodeTrace.start(
+            { facingMode: "environment" },
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            (decodedText) => {
+                stopTraceScanning(); 
+                let serialNo = decodedText.trim();
+                document.getElementById('scanInput').value = serialNo;
+                fetchTagHistory(serialNo);
+            }
+        );
+    } catch (err) {
+        console.warn("ไม่สามารถเริ่มกล้องได้ (อาจยังไม่ได้อนุญาต):", err);
+    }
+}
+
+async function handleTraceFileScan(file) {
+    if (!file) return;
+    stopTraceScanning(); 
+    document.getElementById('traceLoading').classList.remove('d-none');
+    document.getElementById('traceResult').classList.add('d-none');
+
+    try {
+        if (!html5QrCodeTrace) {
+            html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
+        }
+        const decodedText = await html5QrCodeTrace.scanFile(file, false);
+        let serialNo = decodedText.trim();
+        document.getElementById('scanInput').value = serialNo;
+        fetchTagHistory(serialNo);
+
+    } catch (err) {
+        console.error("File scan error:", err);
+        Swal.fire('ข้อผิดพลาด', 'ไม่พบ QR Code แจ้งเตือนจากรูปภาพ', 'error');
+        document.getElementById('traceLoading').classList.add('d-none');
+        startTraceScanning();
+    }
+}
+
+function openTraceModal() {
+    document.getElementById('scanInput').value = '';
+    document.getElementById('traceResult').classList.add('d-none');
+    document.getElementById('traceLoading').classList.add('d-none');
+    traceModalInstance.show();
+}
+
+function handleManualSearchBtn() {
+    const serialNo = document.getElementById('scanInput').value.trim();
+    if (serialNo !== '') {
+        fetchTagHistory(serialNo);
+    } else {
+        document.getElementById('scanInput').focus();
+    }
+}
+
+function handleScanInput(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        handleManualSearchBtn();
+    }
+}
+
+async function fetchTagHistory(serialNo) {
+    document.getElementById('traceLoading').classList.remove('d-none');
+    document.getElementById('traceResult').classList.add('d-none');
+
+    try {
+        const res = await fetch(`api/manageRmReceiving.php?action=trace_tag&serial_no=${encodeURIComponent(serialNo)}`);
+        const json = await res.json();
+
+        document.getElementById('traceLoading').classList.add('d-none');
+
+        if (json.success) {
+            renderTraceData(json.data);
+            document.getElementById('traceResult').classList.remove('d-none');
+            document.getElementById('scanInput').value = ''; 
+        } else {
+            Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo} ในระบบ`, 'warning').then(() => {
+                const manualTabBtn = document.getElementById('trace-manual-tab');
+                if (manualTabBtn) {
+                    new bootstrap.Tab(manualTabBtn).show();
+                }
+            });
+        }
+    } catch (err) {
+        document.getElementById('traceLoading').classList.add('d-none');
+        Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'error');
+    }
+}
+
+function renderTraceData(data) {
+    const tag = data.tag_info;
+    const history = data.history;
+
+    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : 'bg-warning');
+    
+    document.getElementById('traceSerial').innerText = tag.serial_no;
+    document.getElementById('traceStatus').className = `badge ${badgeClass} fs-6`;
+    document.getElementById('traceStatus').innerText = tag.status;
+    document.getElementById('traceItem').innerText = tag.item_no;
+    document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
+    document.getElementById('tracePO').innerText = tag.po_number || '-';
+    document.getElementById('traceInv').innerText = tag.warehouse_no || '-';
+    document.getElementById('traceQty').innerText = parseFloat(tag.current_qty).toLocaleString() + ' / ' + parseFloat(tag.qty_per_pallet).toLocaleString();
+    document.getElementById('traceRemark').innerText = tag.remark || '-';
+
+    const tbody = document.getElementById('traceHistoryTbody');
+    tbody.innerHTML = '';
+
+    if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีประวัติการเคลื่อนไหว</td></tr>';
+        return;
+    }
+
+    history.forEach(row => {
+        let typeBadge = row.transaction_type === 'RECEIVE_RM' ? '<span class="badge bg-success bg-opacity-10 text-success border border-success">RECEIVE</span>' : 
+                        '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary">ISSUE</span>';
+        
+        let displayTime = row.transaction_timestamp ? row.transaction_timestamp.substring(0, 16) : '-';
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${displayTime}</td>
+                <td>${typeBadge}</td>
+                <td class="text-end fw-bold ${row.transaction_type === 'RECEIVE_RM' ? 'text-success' : 'text-danger'}">
+                    ${row.transaction_type === 'RECEIVE_RM' ? '+' : '-'}${parseFloat(row.quantity).toLocaleString()}
+                </td>
+                <td><small>${escapeHTML(row.notes || '-')}</small></td>
+                <td><small>${escapeHTML(row.actor_name || '-')}</small></td>
+            </tr>
+        `;
+    });
+}
+
+
+// ==========================================
+// Helper Utilities
+// ==========================================
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+}
+
+
+// ==========================================
+// ส่วนของการสร้าง Template และนำเข้า Excel
+// ==========================================
 function openImportModal() {
     clearModalData();
     importModalInstance.show();
@@ -40,13 +281,24 @@ function clearModalData() {
     document.getElementById('btnSave').classList.add('d-none');
 }
 
+function downloadTemplate() {
+    const ws_data = [
+        ["Item No.", "英文名称", "Des.", "Purchase Order", "Carton/Pallet", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark"],
+        ["RM-12345", "RESISTOR", "10K OHM 1/4W", "PO-2026-001", "1000", "2", "INV-2603-001", "PL-001", "CTN-01", "2612", "2026-03-16", "ของแถม 50 ชิ้น"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    
+    ws['!cols'] = [ {wch: 15}, {wch: 20}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 20} ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Import_Template");
+    XLSX.writeFile(wb, "RM_Receiving_Template.xlsx");
+}
+
 function processExcel() {
     const fileInput = document.getElementById('excelFile');
     const file = fileInput.files[0];
-    if (!file) {
-        Swal.fire('แจ้งเตือน', 'กรุณาเลือกไฟล์ Excel', 'warning');
-        return;
-    }
+    if (!file) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกไฟล์ Excel', 'warning'); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -54,7 +306,6 @@ function processExcel() {
         const workbook = XLSX.read(data, {type: 'array'});
         const firstSheetName = workbook.SheetNames[0];
         const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1, defval: ""});
-
         extractData(rawRows);
     };
     reader.readAsArrayBuffer(file);
@@ -77,12 +328,13 @@ function extractData(rawRows) {
                 else if (colName.includes('英文名称') || colName.includes('category')) colMap['cat'] = index;
                 else if (colName.includes('des.')) colMap['des'] = index;
                 else if (colName.includes('date')) colMap['date'] = index;
-                else if (colName.includes('warehouse')) colMap['wh'] = index;
+                else if (colName.includes('warehouse') || colName.includes('invoice') || colName.includes('inv')) colMap['wh'] = index;
                 else if (colName.includes('carton/pallet') || colName.includes('每箱')) colMap['qty'] = index;
                 else if (colName.includes('package qty') || colName === '件数') colMap['pack'] = index;
                 else if (colName.includes('pallet/carton') || colName.includes('托号')) colMap['pallet'] = index;
                 else if (colName.includes('ctn number')) colMap['ctn'] = index;
                 else if (colName.includes('week')) colMap['week'] = index;
+                else if (colName.includes('remark') || colName.includes('note') || colName.includes('หมายเหตุ') || colName.includes('备注')) colMap['remark'] = index;
             });
             break;
         }
@@ -105,28 +357,20 @@ function extractData(rawRows) {
         let palletNo = row[colMap['pallet']] || '';
         let ctnNo = row[colMap['ctn']] || '';
         let weekNo = row[colMap['week']] || '';
-        
+        let remark = row[colMap['remark']] || '';
         let qtyPerPallet = parseFloat(row[colMap['qty']]) || 0;
         let packageQty = parseInt(row[colMap['pack']]) || 1;
         let formattedDate = formatExcelDate(row[colMap['date']]);
 
         if (qtyPerPallet > 0) {
-            previewData.push({
-                item_no: itemNo, category: category, des: des, po_number: poNo, qty: qtyPerPallet, pack: packageQty, wh: whNo
-            });
+            previewData.push({ item_no: itemNo, category: category, des: des, po_number: poNo, qty: qtyPerPallet, pack: packageQty, wh: whNo, remark: remark });
 
             for (let p = 0; p < packageQty; p++) {
                 parsedData.push({
-                    item_no: String(itemNo).trim(),
-                    po_number: String(poNo).trim(),
-                    category: String(category).trim(), 
-                    des: String(des).trim(),
-                    received_date: formattedDate,
-                    warehouse_no: String(whNo).trim(),
-                    qty: qtyPerPallet,
-                    pallet_no: String(palletNo).trim(),
-                    ctn_number: String(ctnNo).trim(),
-                    week: String(weekNo).trim()
+                    item_no: String(itemNo).trim(), po_number: String(poNo).trim(), category: String(category).trim(), 
+                    des: String(des).trim(), received_date: formattedDate, warehouse_no: String(whNo).trim(),
+                    qty: qtyPerPallet, pallet_no: String(palletNo).trim(), ctn_number: String(ctnNo).trim(), week: String(weekNo).trim(),
+                    remark: String(remark).trim()
                 });
             }
         }
@@ -149,17 +393,13 @@ function formatExcelDate(excelDate) {
 
 function formatDateForPrint(dateStr) {
     if (!dateStr) return '';
-    
     const datePart = String(dateStr).split(' ')[0];
     const parts = datePart.split('-');
-    
     if (parts.length !== 3) return dateStr;
-
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const year = parts[0].substring(2);
-    const month = months[parseInt(parts[1], 10) - 1];
+    const year = parts[0].substring(2); 
+    const month = months[parseInt(parts[1], 10) - 1]; 
     const day = parts[2].padStart(2, '0'); 
-    
     return `${day}-${month}-${year}`;
 }
 
@@ -183,7 +423,7 @@ function renderPreview() {
                 <td class="text-end text-primary fw-bold">${row.qty.toLocaleString()}</td>
                 <td class="text-end">${row.pack}</td>
                 <td>${escapeHTML(row.wh)}</td>
-            </tr>
+                <td class="text-danger small">${escapeHTML(row.remark)}</td> </tr>
         `;
     });
 
@@ -193,7 +433,6 @@ function renderPreview() {
 
 async function submitToDatabase() {
     if (parsedData.length === 0) return;
-
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = true;
     btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
@@ -212,15 +451,9 @@ async function submitToDatabase() {
             renderPrintTags(json.data);
             
             Swal.fire({ 
-                title: 'สำเร็จ', 
-                text: 'บันทึกข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', 
-                icon: 'success', 
-                timer: 1500, 
-                showConfirmButton: false 
-            }).then(() => {
-                setTimeout(() => { window.print(); }, 300);
-            });
-
+                title: 'สำเร็จ', text: 'บันทึกข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
+                timer: 1500, showConfirmButton: false 
+            }).then(() => { setTimeout(() => { window.print(); }, 300); });
         } else {
             Swal.fire('ผิดพลาด', json.message, 'error');
             btnSave.disabled = false;
@@ -233,12 +466,250 @@ async function submitToDatabase() {
     } 
 }
 
+async function loadHistory() {
+    const tbody = document.getElementById('historyTbody');
+    if (!tbody) return; 
+    
+    tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...</td></tr>';
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateBatchPrintBtn();
+    
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+    
+    try {
+        const res = await fetch(`api/manageRmReceiving.php?action=get_history&start_date=${startDate}&end_date=${endDate}`);
+        const json = await res.json();
+        
+        if(json.success) {
+            allHistoryData = json.data;
+            filteredHistoryData = [...allHistoryData];
+            currentPage = 1;
+            renderHistoryTable();
+        }
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-danger">โหลดประวัติล้มเหลว</td></tr>';
+    }
+}
+
+function handleSearch() {
+    const keyword = document.getElementById('searchInput').value.toLowerCase();
+    
+    filteredHistoryData = allHistoryData.filter(row => {
+        return (
+            (row.serial_no && row.serial_no.toLowerCase().includes(keyword)) ||
+            (row.item_no && row.item_no.toLowerCase().includes(keyword)) ||
+            (row.category && row.category.toLowerCase().includes(keyword)) ||
+            (row.po_number && row.po_number.toLowerCase().includes(keyword)) ||
+            (row.warehouse_no && row.warehouse_no.toLowerCase().includes(keyword)) ||
+            (row.pallet_no && row.pallet_no.toLowerCase().includes(keyword)) ||
+            (row.ctn_number && row.ctn_number.toLowerCase().includes(keyword)) ||
+            (row.remark && row.remark.toLowerCase().includes(keyword))
+        );
+    });
+    
+    currentPage = 1;
+    renderHistoryTable();
+}
+
+function changeRowsPerPage() {
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
+    currentPage = 1;
+    renderHistoryTable();
+}
+
+function renderHistoryTable() {
+    const tbody = document.getElementById('historyTbody');
+    tbody.innerHTML = '';
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateBatchPrintBtn();
+
+    if (filteredHistoryData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
+        updatePaginationInfo();
+        renderPaginationControls();
+        return;
+    }
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedItems = filteredHistoryData.slice(startIndex, endIndex);
+
+    paginatedItems.forEach(row => {
+        let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : 'bg-warning');
+        let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
+        let receiveDate = row.received_date ? formatDateForPrint(row.received_date) : '-';
+        
+        let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
+        
+        tbody.innerHTML += `
+            <tr class="align-middle">
+                <td class="text-center">
+                    <input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()">
+                </td>
+                <td class="text-muted"><small>${displayTime}</small></td>
+                <td>${receiveDate}</td>
+                <td class="text-center fw-bold text-primary">${escapeHTML(row.serial_no)}</td>
+                
+                <td class="text-truncate text-center" style="max-width: 100px;" title="${escapeHTML(row.item_no)} | ${escapeHTML(row.category || '')}">
+                    ${escapeHTML(row.item_no)} <br> <small class="text-muted">${escapeHTML(row.category || '')}</small>
+                </td>
+                
+                <td class="text-truncate text-center" style="max-width: 350px;" title="${escapeHTML(row.po_number)}">
+                    ${escapeHTML(row.po_number) || '-'}
+                </td>
+                
+                <td class="text-truncate text-center" style="max-width: 120px;" title="${escapeHTML(row.warehouse_no)}">
+                    ${escapeHTML(row.warehouse_no) || '-'}
+                </td>
+                
+                <td class="text-center">${escapeHTML(row.pallet_no) || '-'} / ${escapeHTML(row.ctn_number) || '-'}</td>
+                <td class="text-center">${escapeHTML(row.week_no) || '-'}</td>
+                <td class="text-center fw-bold">${parseFloat(row.qty_per_pallet).toLocaleString()}</td>
+                
+                <td class="text-center text-truncate text-danger small" style="max-width: 250px;" title="${escapeHTML(row.remark || '')}">
+                    ${escapeHTML(row.remark || '')}
+                </td>
+
+                <td class="text-center">
+                    ${row.print_count > 0 
+                        ? `<span class="badge bg-info text-dark" title="พิมพ์ล่าสุด: ${row.last_printed_at}"><i class="fas fa-print me-1"></i>${row.print_count}</span>` 
+                        : `<span class="badge bg-light text-muted border"><i class="fas fa-print"></i> 0</span>`
+                    }
+                </td>
+                
+                <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status)}</span></td>
+                <td class="text-center align-middle">
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; border-radius: 50%;">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.9rem; z-index: 1050;">
+                            <li>
+                                <a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;">
+                                    <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;">
+                                    <i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${row.serial_no}'); return false;">
+                                    <i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    updatePaginationInfo();
+    renderPaginationControls();
+}
+
+function updatePaginationInfo() {
+    const total = filteredHistoryData.length;
+    const start = total === 0 ? 0 : ((currentPage - 1) * rowsPerPage) + 1;
+    const end = Math.min(currentPage * rowsPerPage, total);
+    document.getElementById('paginationInfo').innerText = `แสดง ${start} ถึง ${end} จาก ${total} รายการ`;
+}
+
+function renderPaginationControls() {
+    const totalPages = Math.ceil(filteredHistoryData.length / rowsPerPage);
+    const paginationUl = document.getElementById('paginationControls');
+    paginationUl.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    paginationUl.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage - 1}, event)">ก่อนหน้า</a></li>`;
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) { startPage = Math.max(1, endPage - 4); }
+
+    for (let i = startPage; i <= endPage; i++) {
+        paginationUl.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="changePage(${i}, event)">${i}</a></li>`;
+    }
+
+    paginationUl.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage + 1}, event)">ถัดไป</a></li>`;
+}
+
+function changePage(page, event) {
+    if (event) event.preventDefault();
+    const totalPages = Math.ceil(filteredHistoryData.length / rowsPerPage);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderHistoryTable();
+}
+
+// ==========================================
+// ส่วนของการพิมพ์ Print Tag
+// ==========================================
+function toggleSelectAll(source) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBatchPrintBtn();
+}
+
+function updateBatchPrintBtn() {
+    const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+    const btnPrint = document.getElementById('btnBatchPrint');
+    const btnDelete = document.getElementById('btnBatchDelete'); // ปุ่มลบ
+    const selectAllCb = document.getElementById('selectAllCheckbox');
+    const totalCount = document.querySelectorAll('.row-checkbox').length;
+    
+    if(checkedCount > 0) {
+        if(btnPrint) { btnPrint.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
+        if(btnDelete) { btnDelete.classList.remove('d-none'); document.getElementById('selectedDeleteCount').innerText = checkedCount; }
+    } else {
+        if(btnPrint) btnPrint.classList.add('d-none');
+        if(btnDelete) btnDelete.classList.add('d-none');
+    }
+    
+    if(selectAllCb) { selectAllCb.checked = (checkedCount === totalCount && totalCount > 0); }
+}
+
+window.printSingleTag = async function(encodedRow) {
+    const tag = JSON.parse(decodeURIComponent(encodedRow));
+    renderPrintTags([tag]);
+    
+    await logPrintStatus([tag.serial_no]);
+    loadHistory(); 
+    
+    setTimeout(() => { window.print(); }, 200); 
+}
+
+window.printSelectedTags = async function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    if(checkboxes.length === 0) return;
+    
+    let tagsToPrint = [];
+    let serialsToLog = [];
+    
+    checkboxes.forEach(cb => { 
+        let tag = JSON.parse(decodeURIComponent(cb.value));
+        tagsToPrint.push(tag); 
+        serialsToLog.push(tag.serial_no);
+    });
+    
+    renderPrintTags(tagsToPrint);
+    
+    await logPrintStatus(serialsToLog);
+    loadHistory();
+    
+    setTimeout(() => { window.print(); }, 300);
+}
+
 function renderPrintTags(tags) {
     const printArea = document.getElementById('printArea');
     printArea.innerHTML = '';
     
     tags.forEach(tag => {
-        // [NEW] รวมชื่อ Part Description จาก Master Data ถ้าไม่มีให้ใช้จาก Excel แทน
         let displayDesc = tag.part_description || tag.description_ref || '';
 
         let tagHTML = `
@@ -262,7 +733,8 @@ function renderPrintTags(tags) {
                         <td><b>Week:</b> ${escapeHTML(tag.week_no)}</td>
                     </tr>
                     <tr>
-                        <td colspan="2"><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date))}</td>
+                        <td><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date))}</td>
+                        <td><b>Remark:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">${escapeHTML(tag.remark || '-')}</span></td>
                     </tr>
                 </table>
             </div>
@@ -277,107 +749,181 @@ function renderPrintTags(tags) {
         
         if(typeof QRCode !== 'undefined') {
             new QRCode(document.getElementById(`qr-${tag.serial_no}`), {
-                text: tag.serial_no,
-                width: 85,
-                height: 85,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M 
+                text: tag.serial_no, width: 85, height: 85,
+                colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
             });
         }
     });
 }
 
-function toggleSelectAll(source) {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = source.checked);
-    updateBatchPrintBtn();
-}
-
-function updateBatchPrintBtn() {
-    const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
-    const btn = document.getElementById('btnBatchPrint');
-    const countSpan = document.getElementById('selectedCount');
-    const selectAllCb = document.getElementById('selectAllCheckbox');
-    const totalCount = document.querySelectorAll('.row-checkbox').length;
-    
-    if(checkedCount > 0) {
-        btn.classList.remove('d-none');
-        countSpan.innerText = checkedCount;
-    } else {
-        btn.classList.add('d-none');
-    }
-    
-    if(selectAllCb) {
-        selectAllCb.checked = (checkedCount === totalCount && totalCount > 0);
+async function logPrintStatus(serials) {
+    if(!serials || serials.length === 0) return;
+    const formData = new FormData();
+    formData.append('action', 'update_print_status');
+    formData.append('serials', JSON.stringify(serials));
+    try {
+        await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+    } catch(err) {
+        console.error("Failed to log print status", err);
     }
 }
 
-window.printSingleTag = function(encodedRow) {
-    const tag = JSON.parse(decodeURIComponent(encodedRow));
-    renderPrintTags([tag]);
-    setTimeout(() => { window.print(); }, 200); 
-}
+// ==========================================
+// ส่วนของการแก้ไขและลบข้อมูล
+// ==========================================
 
-window.printSelectedTags = function() {
+window.deleteTag = function(serialNo) {
+    Swal.fire({
+        title: 'ยืนยันการลบข้อมูล?',
+        text: `คุณต้องการลบ Tag: ${serialNo} ใช่หรือไม่? \n(การกระทำนี้ไม่สามารถย้อนกลับได้)`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, ลบทิ้งเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'delete_tag');
+            formData.append('serial_no', serialNo);
+            
+            try {
+                const res = await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                if(json.success) {
+                    Swal.fire('ลบสำเร็จ!', 'ข้อมูลถูกลบออกจากระบบแล้ว', 'success');
+                    loadHistory(); // โหลดตารางใหม่
+                } else {
+                    Swal.fire('ลบไม่สำเร็จ', json.message, 'error');
+                }
+            } catch(err) {
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            }
+        }
+    });
+};
+
+window.editTag = function(encodedRow) {
+    const row = JSON.parse(decodeURIComponent(encodedRow));
+    
+    Swal.fire({
+        title: 'แก้ไขข้อมูลอ้างอิง',
+        width: '600px',
+        html: `
+            <div class="text-start px-2" style="font-size: 0.9rem;">
+                <label class="form-label fw-bold mb-1 text-muted">Serial No.</label>
+                <input class="form-control form-control-sm mb-3 bg-light" value="${row.serial_no}" readonly>
+                
+                <div class="row g-2 mb-2">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold mb-1 text-primary">PO Number</label>
+                        <input id="swal-edit-po" class="form-control form-control-sm" value="${row.po_number || ''}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold mb-1 text-primary">Invoice No.</label>
+                        <input id="swal-edit-inv" class="form-control form-control-sm" value="${row.warehouse_no || ''}">
+                    </div>
+                </div>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold mb-1 text-primary">Pallet No.</label>
+                        <input id="swal-edit-pallet" class="form-control form-control-sm" value="${row.pallet_no || ''}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold mb-1 text-primary">CTN No.</label>
+                        <input id="swal-edit-ctn" class="form-control form-control-sm" value="${row.ctn_number || ''}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold mb-1 text-primary">Week</label>
+                        <input id="swal-edit-week" class="form-control form-control-sm" value="${row.week_no || ''}">
+                    </div>
+                </div>
+
+                <label class="form-label fw-bold mb-1 text-primary">Remark (หมายเหตุ)</label>
+                <textarea id="swal-edit-remark" class="form-control form-control-sm" rows="2">${row.remark || ''}</textarea>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-save"></i> บันทึกการแก้ไข',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {
+            return {
+                po: document.getElementById('swal-edit-po').value.trim(),
+                inv: document.getElementById('swal-edit-inv').value.trim(),
+                pallet: document.getElementById('swal-edit-pallet').value.trim(),
+                ctn: document.getElementById('swal-edit-ctn').value.trim(),
+                week: document.getElementById('swal-edit-week').value.trim(),
+                remark: document.getElementById('swal-edit-remark').value.trim()
+            }
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'edit_tag');
+            formData.append('serial_no', row.serial_no);
+            formData.append('po_number', result.value.po);
+            formData.append('warehouse_no', result.value.inv);
+            formData.append('pallet_no', result.value.pallet);
+            formData.append('ctn_number', result.value.ctn);
+            formData.append('week_no', result.value.week);
+            formData.append('remark', result.value.remark);
+            
+            try {
+                const res = await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                if(json.success) {
+                    Swal.fire({ title: 'บันทึกสำเร็จ!', icon: 'success', timer: 1500, showConfirmButton: false });
+                    loadHistory();
+                } else {
+                    Swal.fire('ล้มเหลว', json.message, 'error');
+                }
+            } catch(err) {
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            }
+        }
+    });
+};
+
+window.deleteSelectedTags = function() {
     const checkboxes = document.querySelectorAll('.row-checkbox:checked');
     if(checkboxes.length === 0) return;
     
-    let tagsToPrint = [];
-    checkboxes.forEach(cb => {
-        tagsToPrint.push(JSON.parse(decodeURIComponent(cb.value)));
+    let serials = [];
+    checkboxes.forEach(cb => { 
+        let rowData = JSON.parse(decodeURIComponent(cb.value));
+        serials.push(rowData.serial_no); 
     });
     
-    renderPrintTags(tagsToPrint);
-    setTimeout(() => { window.print(); }, 300);
-}
-
-async function loadHistory() {
-    const tbody = document.getElementById('historyTbody');
-    if (!tbody) return; 
-    
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...</td></tr>';
-    document.getElementById('selectAllCheckbox').checked = false;
-    updateBatchPrintBtn();
-    
-    try {
-        const res = await fetch('api/manageRmReceiving.php?action=get_history');
-        const json = await res.json();
-        
-        if(json.success) {
-            tbody.innerHTML = '';
-            if(json.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">ยังไม่มีประวัติการรับเข้า</td></tr>';
-                return;
-            }
+    Swal.fire({
+        title: 'ยืนยันการลบหลายรายการ?',
+        text: `คุณกำลังจะลบ Tag จำนวน ${serials.length} รายการ ออกจากระบบ ใช่หรือไม่? \n(Tag ที่ถูกเบิกไปแล้วจะลบไม่ได้)`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, ลบทั้งหมดเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'delete_bulk_tags');
+            formData.append('serials', JSON.stringify(serials)); // ส่ง Array ไปให้ PHP
             
-            json.data.forEach(row => {
-                let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : 'bg-warning');
-                let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
-                let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
-                
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="text-center">
-                            <input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()">
-                        </td>
-                        <td>${displayTime}</td>
-                        <td class="fw-bold text-primary">${escapeHTML(row.serial_no)}</td>
-                        <td>${escapeHTML(row.item_no)} <br> <small class="text-muted">${escapeHTML(row.category || '')}</small></td>
-                        <td>${escapeHTML(row.po_number) || '-'}</td>
-                        <td>${escapeHTML(row.pallet_no) || '-'}</td>
-                        <td class="text-end">${parseFloat(row.qty_per_pallet).toLocaleString()}</td>
-                        <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status)}</span></td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-dark" onclick="printSingleTag('${rowDataEncoded}')" title="พิมพ์ Tag ใบนี้">
-                                <i class="fas fa-print"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+            try {
+                const res = await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                if(json.success) {
+                    Swal.fire('ลบสำเร็จ!', `ข้อมูล ${serials.length} รายการถูกลบแล้ว`, 'success');
+                    loadHistory();
+                } else {
+                    Swal.fire('ลบไม่สำเร็จ', json.message, 'error');
+                }
+            } catch(err) {
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            }
         }
-    } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">โหลดประวัติล้มเหลว</td></tr>';
-    }
-}
+    });
+};

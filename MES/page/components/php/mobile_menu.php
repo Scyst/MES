@@ -109,6 +109,13 @@ $userRole = $_SESSION['user']['role'] ?? null;
             </li>
 
             <li class="list-group-item list-group-item-action">
+                <a class="text-decoration-none text-body d-block" href="../storeManagement/rmReceiving.php">
+                    <i class="fas fa-pallet fa-fw me-3"></i>
+                    <span>RM Receiving & Tag</span>
+                </a>
+            </li>
+
+            <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../storeManagement/storeRequest.php">
                     <i class="fas fa-dolly-flatbed fa-fw me-3"></i>
                     <span>Scrap & Replacement</span>

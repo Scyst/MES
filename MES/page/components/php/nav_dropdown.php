@@ -101,6 +101,14 @@
                 <span>Loading Report</span>
             </a>
         </li>
+
+        <li>
+            <a class="dropdown-item-icon" href="../storeManagement/rmReceiving.php" title="RM Receiving & Tagging">
+                <i class="fas fa-pallet fa-fw"></i>
+                <span>RM Receiving & Tag</span>
+            </a>
+        </li>
+        
         <li>
             <a class="dropdown-item-icon" href="../storeManagement/storeRequest.php" title="Store Request & Scrap">
                 <i class="fas fa-dolly-flatbed fa-fw"></i>
