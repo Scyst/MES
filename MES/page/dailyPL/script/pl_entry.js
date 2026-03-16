@@ -639,8 +639,10 @@ function calcPreview(input) {
     if(row) row.querySelector('.daily-preview').innerText = formatNumber(daily);
 }
 
-// 2. แก้ไขให้บันทึกค่า 0 ลง DB หากมีการเคลียร์ช่อง Input ทิ้ง
 async function saveTarget() {
+    const btnSave = document.querySelector('#targetModal .btn-primary'); // ปุ่ม Save ใน Modal
+    if (isSaving) return;
+
     const inputs = document.querySelectorAll('.budget-input');
     const payload = [];
     
@@ -654,7 +656,6 @@ async function saveTarget() {
         }
     });
 
-    // ดักจับกรณีหน้าจอยังโหลดไม่เสร็จแล้วกด Save
     if (payload.length === 0) {
         Swal.fire('Warning', 'No budget inputs found to save.', 'warning');
         return;
@@ -665,6 +666,12 @@ async function saveTarget() {
     const section = document.getElementById('sectionFilter').value;
 
     try {
+        isSaving = true;
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        }
+
         const formData = new FormData();
         formData.append('action', 'save_target');
         formData.append('year', parseInt(year)); 
@@ -673,6 +680,10 @@ async function saveTarget() {
         formData.append('items', JSON.stringify(payload));
 
         const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+        
+        // ดัก Error ระดับ Network (HTTP 500)
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        
         const json = await res.json();
 
         if (json.success) {
@@ -684,7 +695,13 @@ async function saveTarget() {
         }
     } catch (err) { 
         console.error(err); 
-        Swal.fire('Error', 'Connection Failed', 'error'); 
+        Swal.fire('Error', 'Connection Failed or Server Error', 'error'); 
+    } finally {
+        isSaving = false;
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = 'Save Target';
+        }
     }
 }
 
@@ -1775,8 +1792,8 @@ async function loadEntryData() {
 
 async function togglePeriodLock() {
     const btn = document.getElementById('btnToggleLock');
-    if(btn) {
-        if(btn.disabled) return;
+    if (btn) {
+        if (btn.disabled || isSaving) return;
         btn.disabled = true;
     }
 
@@ -1786,7 +1803,9 @@ async function togglePeriodLock() {
     clearTimeout(autoSaveTimer);
 
     try {
+        isSaving = true;
         const isCurrentlyLocked = btn.classList.contains('btn-danger');
+        
         if (!isCurrentlyLocked) {
             const payload = currentData.map(item => ({
                 item_id: item.item_id,
@@ -1801,11 +1820,10 @@ async function togglePeriodLock() {
             formData.append('items', JSON.stringify(payload));
             
             const saveRes = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
-            const saveJson = await saveRes.json();
+            if (!saveRes.ok) throw new Error(`HTTP Error on save: ${saveRes.status}`);
             
-            if (!saveJson.success) {
-                throw new Error("Save before lock failed: " + saveJson.message);
-            }
+            const saveJson = await saveRes.json();
+            if (!saveJson.success) throw new Error("Save before lock failed: " + saveJson.message);
         }
 
         const fd = new FormData();
@@ -1814,6 +1832,8 @@ async function togglePeriodLock() {
         fd.append('section', section);
 
         const res = await fetch('api/manage_pl_entry.php', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(`HTTP Error on lock: ${res.status}`);
+        
         const json = await res.json();
         
         if (json.success) {
@@ -1831,27 +1851,16 @@ async function togglePeriodLock() {
         console.error("Lock Error:", e);
         Swal.fire('Error', e.message || 'Connection Failed', 'error');
     } finally {
-        if(btn) btn.disabled = false;
+        isSaving = false;
+        if (btn) btn.disabled = false;
     }
 }
 
 async function saveDailySnapshot(silent = false) {
-    if (currentMode !== 'daily') return;
-    if (isPeriodLocked) return; 
+    if (currentMode !== 'daily' || isPeriodLocked || isSaving) return; 
     
     const btnSave = document.getElementById('btnSaveSnapshot');
-    if(btnSave) {
-        if(btnSave.disabled) return;
-        btnSave.disabled = true;
-    }
-
-    clearTimeout(autoSaveTimer);
-    
-    if (isSaving) {
-        if(btnSave) btnSave.disabled = false;
-        return; 
-    }
-    isSaving = true;
+    if (btnSave && btnSave.disabled) return;
 
     if (!silent) {
         const result = await Swal.fire({
@@ -1863,32 +1872,34 @@ async function saveDailySnapshot(silent = false) {
             confirmButtonText: '<i class="fas fa-save"></i> Confirm Save',
             cancelButtonText: 'Cancel'
         });
-        if (!result.isConfirmed) {
-            isSaving = false;
-            if(btnSave) btnSave.disabled = false;
-            return;
-        }
+        if (!result.isConfirmed) return;
     }
-
-    if(btnSave) btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-
-    const statusEl = document.getElementById('saveStatus');
-    if(statusEl) {
-        statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
-        statusEl.classList.remove('opacity-0');
-        statusEl.style.visibility = 'visible';
-    }
-
-    const payload = currentData.map(item => ({
-        item_id: item.item_id,
-        amount: parseFloat(item.actual_amount) || 0,
-        remark: item.remark || ''
-    }));
-
-    const targetDate = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
-    const targetSection = document.getElementById('sectionFilter')?.value || 'ALL';
 
     try {
+        isSaving = true;
+        clearTimeout(autoSaveTimer);
+
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+        }
+
+        const statusEl = document.getElementById('saveStatus');
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> Saving Snapshot...';
+            statusEl.classList.remove('opacity-0');
+            statusEl.style.visibility = 'visible';
+        }
+
+        const payload = currentData.map(item => ({
+            item_id: item.item_id,
+            amount: parseFloat(item.actual_amount) || 0,
+            remark: item.remark || ''
+        }));
+
+        const targetDate = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
+        const targetSection = document.getElementById('sectionFilter')?.value || 'ALL';
+
         const formData = new FormData();
         formData.append('action', 'save_batch');
         formData.append('entry_date', targetDate);
@@ -1896,28 +1907,34 @@ async function saveDailySnapshot(silent = false) {
         formData.append('items', JSON.stringify(payload));
 
         const response = await fetch('api/manage_pl_entry.php', { method: 'POST', body: formData });
+        
+        // ดัก Error ระดับ Network ป้องกัน JSON Parse Error
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
         const res = await response.json();
 
         if (res.success) {
             if (!silent) Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'Snapshot Saved!' });
             runFormulaEngine(); 
+            
+            if (statusEl) {
+                statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Saved</span>';
+                setTimeout(() => { if(!isSaving) statusEl.classList.add('opacity-0'); }, 2000);
+            }
         } else {
             Swal.fire('Error', res.message, 'error');
+            if (statusEl) statusEl.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i> Save Failed';
         }
     } catch (e) {
         console.error(e);
-        Swal.fire('Error', 'Failed to save', 'error');
+        Swal.fire('Error', 'Failed to connect to server', 'error');
+        const statusEl = document.getElementById('saveStatus');
+        if (statusEl) statusEl.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i> Network Error';
     } finally {
         isSaving = false; 
-        if(btnSave) {
+        if (btnSave) {
             btnSave.disabled = false;
             btnSave.innerHTML = '<i class="fas fa-save"></i> <span class="d-none d-md-inline ms-1">Save Day</span>';
-        }
-        if(statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> <span class="text-success fw-bold">Saved</span>';
-            setTimeout(() => { 
-                if(!isSaving) statusEl.classList.add('opacity-0'); 
-            }, 2000);
         }
     }
 }

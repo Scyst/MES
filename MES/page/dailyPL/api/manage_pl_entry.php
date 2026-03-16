@@ -463,15 +463,15 @@ try {
     }
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    
-    // Return Error JSON
+    error_log("P&L API Error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false, 
-        'message' => $e->getMessage() // หรือจะซ่อน Message ถ้าระบบขึ้น Prod แล้ว
+        'message' => 'เกิดข้อผิดพลาดในการประมวลผล กรุณาติดต่อผู้ดูแลระบบ'
     ]);
+    exit;
 }
 ?>
