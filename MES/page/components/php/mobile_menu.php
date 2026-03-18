@@ -52,7 +52,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../dailyPL/pl_entry.php">
                     <i class="fas fa-donate fa-fw me-3 text-primary"></i>
-                    <span class="fw-bold text-primary">Daily P&L</span>
+                    <span>Daily P&L</span>
                 </a>
             </li>
             <?php endif; ?>

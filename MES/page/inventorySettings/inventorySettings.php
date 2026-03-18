@@ -87,26 +87,20 @@ $currentUser = $_SESSION['user'];
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <button class="btn btn-outline-secondary" id="toggleInactiveBtn" title="Show/Hide Inactive Items">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-info" id="importItemsBtn" title="Import from Excel (Template)">
                                             <i class="fas fa-file-import"></i> Import
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#" id="importUpdateBomsBtn">For Update (Multi-Sheet)</a></li>
-                                            <li><a class="dropdown-item" href="#" id="importCreateBomsBtn">For Initial Create (Single-Sheet)</a></li>
-                                        </ul>
-                                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <button class="btn btn-primary" id="exportItemsBtn" title="Export to Excel (Template)">
                                             <i class="fas fa-file-export"></i> Export
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#" id="exportAllConsolidatedBtn">All BOMs (Consolidated)</a></li>
-                                            <li><a class="dropdown-item disabled" href="#" id="exportSelectedDetailedBtn">Selected BOMs (Detailed)</a></li>
-                                        </ul>
-                                        <input type="file" id="bulkUpdateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
-                                        <input type="file" id="initialCreateImportFile" accept=".csv, .xlsx, .xls" class="d-none">
-                                        <button class="btn btn-danger d-none" id="deleteSelectedBomBtn">
-                                            <i class="fas fa-trash-alt"></i> Delete Selected
+                                        <input type="file" id="itemImportFile" class="d-none" accept=".xlsx, .xls">
+                                        
+                                        <button class="btn btn-success" id="addNewItemBtn">
+                                            <i class="fas fa-plus"></i> Add New Item
                                         </button>
-                                        <button class="btn btn-success" id="createNewBomBtn"><i class="fas fa-plus"></i> Create New BOM</button>
                                     </div>
                                 </div>
                             </div>

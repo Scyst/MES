@@ -140,6 +140,8 @@
                                                 <option value="Dimension">ขนาดไม่ได้ (Dimension)</option>
                                                 <option value="Rust">สนิม (Rust)</option>
                                                 <option value="Contamination">สิ่งปนเปื้อน (Contamination)</option>
+                                                <option value="Incoming">รับเข้า (Incoming)</option>
+                                                <option value="Qty_Mismatch">จำนวนไม่ตรงกับป้ายบ่งชี้ (Quantity Mismatch)</option>
                                                 <option value="Others">อื่นๆ (Others)</option>
                                             </select>
                                         </div>

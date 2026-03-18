@@ -12,7 +12,6 @@ let allItems = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 50;
 let selectedItemId = null;
-// 🔴 'selectedItem' (สำหรับ Transfer) ถูกลบออกแล้ว
 
 // Variables from paraManage.js
 let allSchedules = [], allMissingParams = [], allBomFgs = [];
@@ -22,11 +21,9 @@ let manageBomModal;
 let validatedBomImportData = [];
 let validatedBulkBomImportData = [];
 
-
 // =================================================================
 // SECTION 2: CORE & SHARED FUNCTIONS
 // =================================================================
-
 async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
@@ -69,9 +66,8 @@ function closeModal(modalId) {
     }
 }
 
-
 // =================================================================
-// SECTION 3: TAB-SPECIFIC FUNCTIONS (ฟังก์ชันสำหรับแต่ละแท็บ)
+// SECTION 3: TAB-SPECIFIC FUNCTIONS
 // =================================================================
 
 // --- LOCATIONS TAB FUNCTIONS ---
@@ -88,7 +84,6 @@ async function loadLocations() {
                 tr.style.cursor = 'pointer';
                 tr.title = 'Click to edit';
                 
-                // ⭐️ 1. แก้ไข: เพิ่ม production_line และ location_type
                 tr.innerHTML = `
                     <td>${location.location_name}</td>
                     <td>${location.location_description || ''}</td>
@@ -105,7 +100,6 @@ async function loadLocations() {
                 tbody.appendChild(tr);
             });
         } else {
-            // ⭐️ 2. แก้ไข: ปรับ colspan เป็น 5
             tbody.innerHTML = '<tr><td colspan="5" class="text-center">No locations found. Click "Add New Location" to start.</td></tr>';
         }
     } finally {
@@ -149,12 +143,10 @@ async function openLocationModal(location = null) {
         if (location.production_line) {
             lineSelect.value = location.production_line;
         }
-        // ⭐️ 3. แก้ไข: ตั้งค่า location_type เมื่อแก้ไข
-        document.getElementById('location_type').value = location.location_type || 'WIP'; // ถ้าไม่มีค่า ให้เป็น WIP
+        document.getElementById('location_type').value = location.location_type || 'WIP'; 
     } else {
         modalTitle.textContent = 'Add New Location';
-        // ⭐️ 4. แก้ไข: ตั้งค่า Default location_type เมื่อเพิ่มใหม่
-        document.getElementById('location_type').value = 'WIP'; // ตั้งค่า Default
+        document.getElementById('location_type').value = 'WIP'; 
     }
     
     modal.show();
@@ -165,11 +157,8 @@ async function handleLocationFormSubmit(event) {
     const form = event.target;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-    data.is_active = document.getElementById('location_is_active').checked;
+    data.is_active = document.getElementById('location_is_active').checked ? 1 : 0;
     
-    // ⭐️ 5. แก้ไข: ตรวจสอบว่า location_type ถูกส่งไป (ซึ่งควรจะทำได้อัตโนมัติ)
-    // console.log("Data to send:", data); // ใช้สำหรับ Debug ถ้าจำเป็น
-
     const result = await sendRequest(LOCATIONS_API, 'save_location', 'POST', data);
     
     if (result.success) {
@@ -180,29 +169,6 @@ async function handleLocationFormSubmit(event) {
         showToast(result.message, 'var(--bs-danger)');
     }
 }
-
-
-// 🔴 --- (กลุ่มฟังก์ชัน STOCK TRANSFER TAB ถูกลบออกทั้งหมด) ---
-// 🔴 fetchTransferHistory()
-// 🔴 openTransferModal()
-// 🔴 populateTransferInitialData()
-// 🔴 updateStockDisplay()
-// 🔴 updateBothStockDisplays()
-// 🔴 setupTransferAutocomplete()
-// 🔴 handleTransferFormSubmit()
-// 🔴 handleCellEdit()
-// 🔴 --- (จบกลุ่ม Stock Transfer) ---
-
-
-// 🔴 --- (กลุ่มฟังก์ชัน OPENING BALANCE TAB ถูกลบออกทั้งหมด) ---
-// 🔴 populateOpeningBalanceLocations()
-// 🔴 loadItemsForLocation()
-// 🔴 renderOpeningBalanceItemsTable()
-// 🔴 setupStockAdjustmentAutocomplete()
-// 🔴 addItemToTable()
-// 🔴 saveStockTake()
-// 🔴 --- (จบกลุ่ม Opening Balance) ---
-
 
 // --- ITEM MASTER & ROUTES TAB FUNCTIONS ---
 async function fetchItems(page = 1) {
@@ -220,12 +186,13 @@ async function fetchItems(page = 1) {
         if (result.success) {
             renderItemsTable(result.data, result.total, page);
         } else {
-            document.getElementById('itemsTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${result.message}</td></tr>`;
+            document.getElementById('itemsTableBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">${result.message}</td></tr>`;
         }
     } finally {
         hideSpinner();
     }
 }
+
 function setupItemMasterAutocomplete() {
     const searchInput = document.getElementById('itemMasterSearch');
     if (!searchInput) return;
@@ -234,6 +201,7 @@ function setupItemMasterAutocomplete() {
         window.debounceTimer = setTimeout(() => fetchItems(1), 500);
     });
 }
+
 function setupModelFilterAutocomplete() {
     const searchInput = document.getElementById('modelFilterSearch');
     const valueInput = document.getElementById('modelFilterValue');
@@ -271,9 +239,7 @@ function renderItemsTable(items, totalItems, page) {
             <td class="text-center">${item.sku || '-'}</td>
             <td>${item.used_in_models || ''}</td>
             <td>${item.part_description || ''}</td>
-            
             <td class="text-center">${item.route_speed_range || 'N/A'}</td>
-            
             <td class="text-center">${parseFloat(item.min_stock || 0).toFixed(3)}</td>
             <td class="text-center">${parseFloat(item.max_stock || 0).toFixed(3)}</td>
             <td class="text-end">${formatCurrency(item.Cost_Total)}</td>
@@ -318,6 +284,7 @@ async function selectItem(itemId, selectedRow) {
         hideSpinner();
     }
 }
+
 function renderRoutesTable(routes) {
     const tbody = document.getElementById('routesTableBody');
     tbody.innerHTML = '';
@@ -339,6 +306,7 @@ function renderRoutesTable(routes) {
         tbody.appendChild(tr);
     });
 }
+
 function openRouteModal(route = null) {
     const form = document.getElementById('routeForm');
     form.reset();
@@ -356,6 +324,7 @@ function openRouteModal(route = null) {
     }
     modal.show();
 }
+
 async function handleRouteFormSubmit(event) {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target).entries());
@@ -369,6 +338,7 @@ async function handleRouteFormSubmit(event) {
         showToast(result.message, 'var(--bs-danger)');
     }
 }
+
 async function deleteRoute(routeId) {
     if (confirm('Are you sure you want to delete this route?')) {
         const result = await sendRequest(ITEM_MASTER_API, 'delete_route', 'POST', { route_id: routeId });
@@ -388,32 +358,52 @@ async function openItemModal(item = null) {
     const modal = new bootstrap.Modal(document.getElementById('itemModal'));
     const modalTitle = document.getElementById('itemModalLabel');
     const routesTbody = document.getElementById('modalRoutesTableBody');
-    routesTbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading routes...</td></tr>';
+    if (routesTbody) routesTbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading routes...</td></tr>';
     
-    document.getElementById('deleteItemBtn').style.display = 'none';
+    if(document.getElementById('deleteItemBtn')) document.getElementById('deleteItemBtn').style.display = 'none';
 
+    // Reset Tab to first page
+    const triggerEl = document.querySelector('#itemFormTabs button[data-bs-target="#basic-pane"]');
+    if (triggerEl) bootstrap.Tab.getInstance(triggerEl)?.show() || new bootstrap.Tab(triggerEl).show();
+
+    // Helper Function สำหรับใส่ค่าตัวเลขให้สวยงาม
     const setInputValue = (id, value) => {
         const element = document.getElementById(id);
         if (element) {
-            const numValue = parseFloat(value || 0); 
-            element.value = numValue.toFixed(6); 
-        } else {
-            console.warn(`Element with ID ${id} not found in modal.`);
+            let val = value ? parseFloat(value) : 0;
+            if (id === 'planned_output' || id === 'CTN') {
+                element.value = parseInt(val);
+            } else {
+                element.value = val === 0 ? "0" : val; 
+            }
         }
     };
 
     if (item) {
         modalTitle.textContent = `Edit Item: ${item.sap_no}`;
         document.getElementById('item_id').value = item.item_id;
-        document.getElementById('sap_no').value = item.sap_no;
-        document.getElementById('part_no').value = item.part_no;
-        document.getElementById('itemSku').value = item.sku || ''; 
-        document.getElementById('part_description').value = item.part_description;
-        document.getElementById('min_stock').value = parseFloat(item.min_stock || 0).toFixed(3);
-        document.getElementById('max_stock').value = parseFloat(item.max_stock || 0).toFixed(3);
-        document.getElementById('ctn').value = parseInt(item.CTN || 0);
-        document.getElementById('deleteItemBtn').style.display = 'inline-block';
+        
+        // Basic Info
+        document.getElementById('sap_no').value = item.sap_no || '';
+        document.getElementById('part_no').value = item.part_no || '';
+        document.getElementById('sku').value = item.sku || '';
+        document.getElementById('material_type').value = item.material_type || 'FG';
+        document.getElementById('part_description').value = item.part_description || '';
+        
+        setInputValue('planned_output', item.planned_output);
+        setInputValue('min_stock', item.min_stock);
+        setInputValue('max_stock', item.max_stock);
+        document.getElementById('is_active').checked = (item.is_active == 1);
+        
+        // Logistics
+        setInputValue('CTN', item.CTN);
+        setInputValue('net_weight', item.net_weight);
+        setInputValue('gross_weight', item.gross_weight);
+        setInputValue('cbm', item.cbm);
+        document.getElementById('invoice_product_type').value = item.invoice_product_type || '';
+        document.getElementById('invoice_description').value = item.invoice_description || '';
 
+        // Costing
         setInputValue('Cost_RM', item.Cost_RM);
         setInputValue('Cost_PKG', item.Cost_PKG);
         setInputValue('Cost_SUB', item.Cost_SUB);
@@ -424,35 +414,30 @@ async function openItemModal(item = null) {
         setInputValue('Cost_OH_Staff', item.Cost_OH_Staff);
         setInputValue('Cost_OH_Accessory', item.Cost_OH_Accessory);
         setInputValue('Cost_OH_Others', item.Cost_OH_Others);
-        setInputValue('Cost_Total', item.Cost_Total);
         setInputValue('StandardPrice', item.StandardPrice);
-        setInputValue('StandardGP', item.StandardGP);
         setInputValue('Price_USD', item.Price_USD);
+
+        if(document.getElementById('deleteItemBtn')) document.getElementById('deleteItemBtn').style.display = 'inline-block';
 
         const result = await sendRequest(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
         const routes = result.success ? result.data : [];
-        renderRoutesInModal(routes);
+        if (routesTbody) renderRoutesInModal(routes);
 
     } else {
         modalTitle.textContent = 'Add New Item';
         document.getElementById('item_id').value = '0';
-        document.getElementById('itemSku').value = '';
-        document.getElementById('ctn').value = 0;
-        setInputValue('Cost_RM', 0);
-        setInputValue('Cost_PKG', 0);
-        setInputValue('Cost_SUB', 0);
-        setInputValue('Cost_DL', 0);
-        setInputValue('Cost_OH_Machine', 0);
-        setInputValue('Cost_OH_Utilities', 0);
-        setInputValue('Cost_OH_Indirect', 0);
-        setInputValue('Cost_OH_Staff', 0);
-        setInputValue('Cost_OH_Accessory', 0);
-        setInputValue('Cost_OH_Others', 0);
-        setInputValue('Cost_Total', 0);
-        setInputValue('StandardPrice', 0);
-        setInputValue('StandardGP', 0);
-        setInputValue('Price_USD', 0);
-        renderRoutesInModal([]);
+        document.getElementById('is_active').checked = true;
+        document.getElementById('sku').value = '';
+        
+        setInputValue('planned_output', 0); setInputValue('min_stock', 0); setInputValue('max_stock', 0);
+        setInputValue('CTN', 0); setInputValue('net_weight', 0); setInputValue('gross_weight', 0); setInputValue('cbm', 0);
+        
+        setInputValue('Cost_RM', 0); setInputValue('Cost_PKG', 0); setInputValue('Cost_SUB', 0); setInputValue('Cost_DL', 0);
+        setInputValue('Cost_OH_Machine', 0); setInputValue('Cost_OH_Utilities', 0); setInputValue('Cost_OH_Indirect', 0);
+        setInputValue('Cost_OH_Staff', 0); setInputValue('Cost_OH_Accessory', 0); setInputValue('Cost_OH_Others', 0);
+        setInputValue('StandardPrice', 0); setInputValue('Price_USD', 0);
+        
+        if (routesTbody) renderRoutesInModal([]);
     }
     
     modal.show();
@@ -460,6 +445,7 @@ async function openItemModal(item = null) {
 
 function renderRoutesInModal(routes) {
     const tbody = document.getElementById('modalRoutesTableBody');
+    if(!tbody) return;
     tbody.innerHTML = '';
     
     if (routes.length === 0) {
@@ -471,12 +457,12 @@ function renderRoutesInModal(routes) {
 
 function addRouteRow(route = {}) {
     const tbody = document.getElementById('modalRoutesTableBody');
-    // ลบแถว 'No routes defined' ถ้ามี
+    if(!tbody) return;
+    
     const noRoutesRow = tbody.querySelector('.no-routes-row');
     if (noRoutesRow) noRoutesRow.remove();
     
     const tr = document.createElement('tr');
-    // เก็บข้อมูล route_id และสถานะของแถว (ใหม่/เก่า)
     tr.dataset.routeId = route.route_id || '0'; 
     tr.dataset.status = 'existing';
     if (!route.route_id) tr.dataset.status = 'new';
@@ -490,14 +476,11 @@ function addRouteRow(route = {}) {
         </td>
     `;
     
-    // เพิ่ม Event Listener ให้ปุ่มลบ
     tr.querySelector('.btn-delete-route').addEventListener('click', () => {
         if (confirm('Are you sure you want to remove this route?')) {
-            // ถ้าเป็นแถวที่สร้างใหม่ ให้ลบออกจาก DOM เลย
             if (tr.dataset.status === 'new') {
                 tr.remove();
             } else {
-                // ถ้าเป็นแถวเก่า ให้ซ่อนและเปลี่ยนสถานะเป็น 'deleted'
                 tr.style.display = 'none';
                 tr.dataset.status = 'deleted';
             }
@@ -510,61 +493,81 @@ function addRouteRow(route = {}) {
 async function handleItemFormSubmit(event) {
     event.preventDefault();
     const form = document.getElementById('itemAndRoutesForm');
+    const btnSave = document.getElementById('btnSaveItem');
     
-    const itemDetails = {
-        item_id: form.querySelector('#item_id').value,
-        sap_no: form.querySelector('#sap_no').value,
-        part_no: form.querySelector('#part_no').value,
-        sku: form.querySelector('#itemSku').value,
-        part_description: form.querySelector('#part_description').value,
-        min_stock: form.querySelector('#min_stock').value,
-        max_stock: form.querySelector('#max_stock').value,
-
-        ctn: form.querySelector('#ctn').value,
-        Cost_RM: form.querySelector('#Cost_RM').value,
-        Cost_PKG: form.querySelector('#Cost_PKG').value,
-        Cost_SUB: form.querySelector('#Cost_SUB').value,
-        Cost_DL: form.querySelector('#Cost_DL').value,
-        Cost_OH_Machine: form.querySelector('#Cost_OH_Machine').value,
-        Cost_OH_Utilities: form.querySelector('#Cost_OH_Utilities').value,
-        Cost_OH_Indirect: form.querySelector('#Cost_OH_Indirect').value,
-        Cost_OH_Staff: form.querySelector('#Cost_OH_Staff').value,
-        Cost_OH_Accessory: form.querySelector('#Cost_OH_Accessory').value,
-        Cost_OH_Others: form.querySelector('#Cost_OH_Others').value,
-        //Cost_Total: form.querySelector('#Cost_Total').value,
-        StandardPrice: form.querySelector('#StandardPrice').value,
-        //StandardGP: form.querySelector('#StandardGP').value,
-        Price_USD: form.querySelector('#Price_USD').value
-    };
-
-    const routesData = [];
-    const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');     
-    routeRows.forEach(tr => {
-        routesData.push({
-            route_id: tr.dataset.routeId,
-            status: tr.dataset.status,
-            line: tr.querySelector('[name="route_line"]').value,
-            model: tr.querySelector('[name="route_model"]').value,
-            planned_output: tr.querySelector('[name="route_planned_output"]').value
-        });
-    });
-
-    const payload = {
-        item_details: itemDetails,
-        routes_data: routesData
-    };
+    if (btnSave && btnSave.disabled) return;
     
-    const result = await sendRequest(ITEM_MASTER_API, 'save_item_and_routes', 'POST', payload);
-    
-    if (result.success) {
-        closeModal('itemModal');
-        await fetchItems(currentPage);
-        showToast(result.message, 'var(--bs-success)');
-        if (typeof fetchAlerts === 'function') {
-            fetchAlerts();
+    try {
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         }
-    } else {
-        showToast(result.message, 'var(--bs-danger)');
+
+        const itemDetails = {
+            item_id: form.querySelector('#item_id').value,
+            sap_no: form.querySelector('#sap_no').value,
+            part_no: form.querySelector('#part_no').value,
+            sku: form.querySelector('#sku').value,
+            material_type: form.querySelector('#material_type').value,
+            part_description: form.querySelector('#part_description').value,
+            planned_output: form.querySelector('#planned_output').value,
+            min_stock: form.querySelector('#min_stock').value,
+            max_stock: form.querySelector('#max_stock').value,
+            is_active: form.querySelector('#is_active').checked ? 1 : 0,
+
+            CTN: form.querySelector('#CTN').value,
+            net_weight: form.querySelector('#net_weight').value,
+            gross_weight: form.querySelector('#gross_weight').value,
+            cbm: form.querySelector('#cbm').value,
+            invoice_product_type: form.querySelector('#invoice_product_type').value,
+            invoice_description: form.querySelector('#invoice_description').value,
+
+            Cost_RM: form.querySelector('#Cost_RM').value,
+            Cost_PKG: form.querySelector('#Cost_PKG').value,
+            Cost_SUB: form.querySelector('#Cost_SUB').value,
+            Cost_DL: form.querySelector('#Cost_DL').value,
+            Cost_OH_Machine: form.querySelector('#Cost_OH_Machine').value,
+            Cost_OH_Utilities: form.querySelector('#Cost_OH_Utilities').value,
+            Cost_OH_Indirect: form.querySelector('#Cost_OH_Indirect').value,
+            Cost_OH_Staff: form.querySelector('#Cost_OH_Staff').value,
+            Cost_OH_Accessory: form.querySelector('#Cost_OH_Accessory').value,
+            Cost_OH_Others: form.querySelector('#Cost_OH_Others').value,
+            StandardPrice: form.querySelector('#StandardPrice').value,
+            Price_USD: form.querySelector('#Price_USD').value
+        };
+
+        const routesData = [];
+        const routeRows = document.querySelectorAll('#modalRoutesTableBody tr:not(.no-routes-row)');     
+        routeRows.forEach(tr => {
+            routesData.push({
+                route_id: tr.dataset.routeId,
+                status: tr.dataset.status,
+                line: tr.querySelector('[name="route_line"]').value,
+                model: tr.querySelector('[name="route_model"]').value,
+                planned_output: tr.querySelector('[name="route_planned_output"]').value
+            });
+        });
+
+        const payload = {
+            item_details: itemDetails,
+            routes_data: routesData
+        };
+        
+        const result = await sendRequest(ITEM_MASTER_API, 'save_item_and_routes', 'POST', payload);
+        
+        if (result.success) {
+            closeModal('itemModal');
+            await fetchItems(currentPage);
+            showToast(result.message, 'var(--bs-success)');
+            if (typeof fetchAlerts === 'function') fetchAlerts();
+        } else {
+            showToast(result.message, 'var(--bs-danger)');
+        }
+    } finally {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        }
     }
 }
 
@@ -590,53 +593,12 @@ async function deleteItem() {
     }
 }
 
-async function exportItemsToExcel() {
-    showSpinner();
-    try {
-        const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { page: 1, limit: -1, show_inactive: true });
-        if (result.success && result.data.length > 0) {
-            const worksheetData = result.data.map(item => ({
-                'sap_no': item.sap_no, 'part_no': item.part_no, 'part_description': item.part_description,
-                'planned_output': item.planned_output || 0, 'is_active': item.is_active ? '1' : '0'
-            }));
-            const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "ItemMaster");
-            XLSX.writeFile(workbook, `ItemMaster_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
-        } else {
-            showToast('No items to export.', 'var(--bs-warning)');
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-async function handleItemImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        showSpinner();
-        try {
-            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const itemsToImport = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-            if (itemsToImport.length > 0 && confirm(`Import/update ${itemsToImport.length} items?`)) {
-                const result = await sendRequest(ITEM_MASTER_API, 'bulk_import_items', 'POST', itemsToImport);
-                showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-                if (result.success) await fetchItems(1);
-            }
-        } finally {
-            event.target.value = '';
-            hideSpinner();
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
 
 // --- BOM MANAGER TAB FUNCTIONS (from paraManage.js) ---
 function initializeBomManager() {
     const searchInput = document.getElementById('bomSearchInput');
     const fgListTableBody = document.getElementById('bomFgListTableBody');
-    manageBomModal = new bootstrap.Modal(document.getElementById('manageBomModal'));
+    if(document.getElementById('manageBomModal')) manageBomModal = new bootstrap.Modal(document.getElementById('manageBomModal'));
     
     async function loadAndRenderBomFgTable() {
         showSpinner();
@@ -651,7 +613,7 @@ function initializeBomManager() {
 
     function filterAndRenderBomFgTable() {
         bomCurrentPage = 1;
-        const filteredData = getFilteredBoms(searchInput.value);
+        const filteredData = getFilteredBoms(searchInput ? searchInput.value : '');
         renderBomFgTable(filteredData);
     }
 
@@ -690,7 +652,6 @@ function initializeCreateBomModal() {
                         const resultItem = document.createElement('div');
                         resultItem.className = 'autocomplete-item';
                         resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
-                        
                         
                         resultItem.addEventListener('click', () => {
                             const createModalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -731,12 +692,10 @@ function initializeCreateBomModal() {
     });
 }
 
-// ✅ เพิ่มฟังก์ชันนี้ หรือแทนที่ของเดิมใน inventorySettings.js
 function setupBomComponentAutocomplete() {
     const searchInput = document.getElementById('modalComponentSearch');
     if (!searchInput) return;
 
-    // สร้างกล่องแสดงผลลัพธ์ถ้ายังไม่มี
     let resultsWrapper = searchInput.parentNode.querySelector('.autocomplete-results');
     if (!resultsWrapper) {
         resultsWrapper = document.createElement('div');
@@ -753,7 +712,6 @@ function setupBomComponentAutocomplete() {
         if (value.length < 2) return;
 
         componentDebounce = setTimeout(async () => {
-            // เราจะใช้ API จาก itemMasterManage เพราะมีฟังก์ชันค้นหา Item ที่สมบูรณ์อยู่แล้ว
             const result = await sendRequest(ITEM_MASTER_API, 'get_items', 'GET', null, { search: value });
             
             if (result.success) {
@@ -762,7 +720,6 @@ function setupBomComponentAutocomplete() {
                     result.data.slice(0, 10).forEach(item => {
                         const resultItem = document.createElement('div');
                         resultItem.className = 'autocomplete-item';
-                        // ✅ แสดง Part Description ในผลการค้นหา
                         resultItem.innerHTML = `<strong>${item.sap_no}</strong> - ${item.part_no}<br><small class="text-muted">${item.part_description || ''}</small>`;
                         
                         resultItem.addEventListener('click', () => {
@@ -829,6 +786,7 @@ function getFilteredBoms(searchTerm) {
 
 function renderBomFgTable(fgData) {
     const fgListTableBody = document.getElementById('bomFgListTableBody');
+    if(!fgListTableBody) return;
     fgListTableBody.innerHTML = '';
     const start = (bomCurrentPage - 1) * ROWS_PER_PAGE;
     const pageData = fgData.slice(start, start + ROWS_PER_PAGE);
@@ -862,7 +820,7 @@ function renderBomFgTable(fgData) {
 
 function manageBom(fg) {
     currentEditingBom = fg;
-    manageBomModal.show();
+    if(manageBomModal) manageBomModal.show();
     loadBomForModal(fg);
 };
 
@@ -950,7 +908,7 @@ function initializeManageBomModalListeners() {
                      });
                      showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
                      if (result.success) {
-                         manageBomModal.hide();
+                         if(manageBomModal) manageBomModal.hide();
                          await initializeBomManager();
                      }
                  } finally {
@@ -967,39 +925,41 @@ async function loadBomForModal(fg) {
         const modalTitle = document.getElementById('bomModalTitle');
         const modalBomTableBody = document.getElementById('modalBomTableBody');
         
-        modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no || fg.fg_sap_no}`;
-        document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
+        if(modalTitle) modalTitle.textContent = `Managing BOM for: ${fg.fg_part_no || fg.fg_sap_no}`;
+        if(document.getElementById('modalSelectedFgItemId')) document.getElementById('modalSelectedFgItemId').value = fg.fg_item_id;
         
-        modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading components...</td></tr>';
+        if(modalBomTableBody) modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading components...</td></tr>';
         
         const bomResult = await sendRequest(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: fg.fg_item_id });
 
-        modalBomTableBody.innerHTML = '';
-        if (bomResult.success && bomResult.data.length > 0) {
-            bomResult.data.forEach(comp => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${comp.component_sap_no}</td> 
-                    <td>${comp.part_description || ''}</td>
-                    <td class="text-center">
-                        <input 
-                            type="number" 
-                            class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
-                            value="${parseFloat(comp.quantity_required)}" 
-                            data-bom-id="${comp.bom_id}" 
-                            min="0.0001" 
-                            step="any" 
-                            readonly>
-                    </td>
-                    <td class="text-center">
-                        <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
-                        <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
-                    </td>
-                `;
-                modalBomTableBody.appendChild(tr);
-            });
-        } else {
-            modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No components found. Use the form below to add one.</td></tr>';
+        if(modalBomTableBody) {
+            modalBomTableBody.innerHTML = '';
+            if (bomResult.success && bomResult.data.length > 0) {
+                bomResult.data.forEach(comp => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${comp.component_sap_no}</td> 
+                        <td>${comp.part_description || ''}</td>
+                        <td class="text-center">
+                            <input 
+                                type="number" 
+                                class="form-control form-control-sm text-center bom-quantity-input bom-input-readonly" 
+                                value="${parseFloat(comp.quantity_required)}" 
+                                data-bom-id="${comp.bom_id}" 
+                                min="0.0001" 
+                                step="any" 
+                                readonly>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" data-action="edit-comp">Edit</button>
+                            <button class="btn btn-danger btn-sm" data-action="delete-comp" data-comp-id="${comp.bom_id}">Delete</button>
+                        </td>
+                    `;
+                    modalBomTableBody.appendChild(tr);
+                });
+            } else {
+                modalBomTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No components found. Use the form below to add one.</td></tr>';
+            }
         }
     } finally {
         hideSpinner();
@@ -1048,7 +1008,6 @@ async function exportSelectedBoms() {
                     QUANTITY_REQUIRED: row.QUANTITY_REQUIRED
                 }));
                 const ws = XLSX.utils.json_to_sheet(sheetData);
-                // Sheet name ไม่ควรยาวเกิน 31 ตัวอักษรและไม่มีอักขระพิเศษ
                 const safeSheetName = fgSapNo.replace(/[\*:\/\\?\[\]]/g, "_").substring(0, 31);
                 XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
             }
@@ -1063,9 +1022,6 @@ async function exportSelectedBoms() {
     }
 }
 
-// --- B. ฟังก์ชันสำหรับ Import ---
-
-// B1. สำหรับ Multi-Sheet (Update)
 async function handleBulkBomImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1095,10 +1051,9 @@ async function handleBulkBomImport(event) {
 
 function displayBulkImportPreview(validationData) {
     const { summary, sheets } = validationData;
-    validatedBulkBomImportData = sheets; // เก็บข้อมูลไว้สำหรับส่งไป execute
+    validatedBulkBomImportData = sheets;
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bomBulkImportPreviewModal'));
     
-    // Update summary counts
     document.getElementById('bulk-summary-create-count').textContent = summary.create;
     document.getElementById('bulk-summary-overwrite-count').textContent = summary.overwrite;
     document.getElementById('bulk-summary-skipped-count').textContent = summary.skipped;
@@ -1131,7 +1086,6 @@ function displayBulkImportPreview(validationData) {
         }
     });
 
-    // Handle empty states
     if (lists.CREATE.children.length === 0) lists.CREATE.innerHTML = '<li class="list-group-item text-muted">No new BOMs to create.</li>';
     if (lists.OVERWRITE.children.length === 0) lists.OVERWRITE.innerHTML = '<li class="list-group-item text-muted">No existing BOMs to overwrite.</li>';
     if (lists.SKIPPED.children.length === 0) lists.SKIPPED.innerHTML = '<div class="p-3 text-muted">No sheets were skipped.</div>';
@@ -1152,8 +1106,8 @@ async function executeBulkBomImport() {
         const result = await sendRequest(BOM_API_ENDPOINT, 'execute_bulk_import', 'POST', { sheets: validSheets });
         if (result.success) {
             showToast(result.message, 'var(--bs-success)');
-            modal.hide();
-            await initializeBomManager(); // Reload data
+            if(modal) modal.hide();
+            await initializeBomManager();
         } else {
             showToast(result.message, 'var(--bs-danger)');
         }
@@ -1162,7 +1116,6 @@ async function executeBulkBomImport() {
     }
 }
 
-// B2. สำหรับ Single-Sheet (Initial Create)
 async function handleInitialBomImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1182,7 +1135,7 @@ async function handleInitialBomImport(event) {
         const result = await sendRequest(BOM_API_ENDPOINT, 'create_initial_boms', 'POST', { rows });
         if (result.success) {
             showToast(result.message, 'var(--bs-success)');
-            await initializeBomManager(); // Reload data
+            await initializeBomManager();
         } else {
             showToast(result.message || 'Failed to create initial BOMs.', 'var(--bs-danger)');
         }
@@ -1195,13 +1148,14 @@ async function handleInitialBomImport(event) {
     }
 }
 
-// --- LINE SCHEDULES TAB FUNCTIONS (from paraManage.js) ---
+// --- LINE SCHEDULES TAB FUNCTIONS ---
 async function loadSchedules() {
     showSpinner();
     try {
         const result = await sendRequest(ITEM_MASTER_API, 'read_schedules', 'GET');
         if (result?.success) {
             const tbody = document.getElementById('schedulesTableBody');
+            if(!tbody) return;
             tbody.innerHTML = '';
             if (result.data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center">No schedules found.</td></tr>`;
@@ -1254,12 +1208,13 @@ async function deleteSchedule(id) {
     }
 }
 
-// --- HEALTH CHECK TAB FUNCTIONS (from paraManage.js) ---
+// --- HEALTH CHECK TAB FUNCTIONS ---
 async function loadHealthCheckData() {
     showSpinner();
     try {
         const result = await sendRequest(ITEM_MASTER_API, 'health_check_parameters', 'GET');
         const listBody = document.getElementById('missingParamsList');
+        if(!listBody) return;
         listBody.innerHTML = '';
         if (result?.success) {
             if (result.data.length === 0) {
@@ -1281,7 +1236,9 @@ async function loadHealthCheckData() {
 }
 
 function jumpToItemMaster(sapNo) {
-    const tab = new bootstrap.Tab(document.getElementById('item-master-tab'));
+    const tabElement = document.getElementById('item-master-tab');
+    if(!tabElement) return;
+    const tab = new bootstrap.Tab(tabElement);
     tab.show();
     setTimeout(() => {
         const searchInput = document.getElementById('itemMasterSearch');
@@ -1290,157 +1247,6 @@ function jumpToItemMaster(sapNo) {
             searchInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }, 150);
-}
-
-async function handleCostingImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    function parseCostValue(value) {
-        if (typeof value === 'number') return value;
-        if (typeof value === 'string') {
-            const cleanedValue = value.replace(/,/g, '').trim();
-            if (cleanedValue === '') return 0;
-            const num = parseFloat(cleanedValue);
-            return Number.isNaN(num) ? 0 : num;
-        }
-        return 0;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        showSpinner();
-        try {
-            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-
-            // --- MES: Read header, trim, AND convert to lowercase ---
-            const headerRowRaw = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
-            // Convert to lowercase AFTER trimming
-            const headerRow = headerRowRaw.map(h => (typeof h === 'string' ? h.trim().toLowerCase() : h)); 
-            // --- END MES ---
-
-            // --- MES: Use the normalized (trimmed, lowercase) header row ---
-            const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: null, header: headerRow, range: 1 }); // range: 1 skips header row
-            // --- END MES ---
-
-
-            if (rawData.length === 0) {
-                showToast('CSV file has no data rows.', 'var(--bs-warning)');
-                return;
-            }
-
-            const costingPayload = [];
-            let skippedRows = 0;
-
-            for (const row of rawData) {
-                // ----- MES: USE LOWERCASE KEYS FOR ACCESSING DATA -----
-                // Convert expected keys to lowercase here for consistency
-                const materialKey = 'material';
-                const lotSizeKey = 'lot size'; // Assuming header is 'Lot Size' -> 'lot size'
-                const rawMaterialKey = 'raw material';
-                const packagingKey = 'packaging material';
-                const subContractKey = 'sub contract';
-                const directLaborKey = 'direct labor';
-                const machineDepreKey = 'machine/tool depre';
-                const utilitiesKey = 'utilities';
-                const indirectLaborKey = 'indirect labor';
-                const staffExpenseKey = 'staff expense oh';
-                const accessoryKey = 'accessory';
-                const othersOverheadKey = 'others overhead';
-                const costKey = 'cost';
-                const priceKey = 'price';
-                const gpKey = 'gp';
-                const usdKey = 'usd';
-
-                const material = row[materialKey] ? String(row[materialKey]).trim() : null; 
-                const lotSizeRaw = row[lotSizeKey]; 
-                const lotSize = parseCostValue(lotSizeRaw);
-
-                if (!material || lotSize <= 0) {
-                    console.warn('Skipping row due to missing Material or invalid Lot Size:', row);
-                    skippedRows++;
-                    continue;
-                }
-
-                // Access row data using lowercase keys
-                const costRM = parseCostValue(row[rawMaterialKey]) / lotSize;
-                const costPKG = parseCostValue(row[packagingKey]) / lotSize;
-                const costSUB = parseCostValue(row[subContractKey]) / lotSize;
-                const costDL = parseCostValue(row[directLaborKey]) / lotSize; 
-                const costOHMachine = parseCostValue(row[machineDepreKey]) / lotSize;
-                const costOHUtilities = parseCostValue(row[utilitiesKey]) / lotSize;
-                const costOHIndirect = parseCostValue(row[indirectLaborKey]) / lotSize;
-                const costOHStaff = parseCostValue(row[staffExpenseKey]) / lotSize;
-                const costOHAccessory = parseCostValue(row[accessoryKey]) / lotSize;
-                const costOHOthers = parseCostValue(row[othersOverheadKey]) / lotSize;
-
-                const costTotal = parseCostValue(row[costKey]);
-                const standardPrice = parseCostValue(row[priceKey]);
-                const standardGP = parseCostValue(row[gpKey]);
-                const priceUSD = parseCostValue(row[usdKey]);
-                // ----- END MES -----
-
-                const costItem = {
-                    sap_no: material, // Keep original case for sap_no if needed, or convert too
-                    Cost_RM: costRM, Cost_PKG: costPKG, Cost_SUB: costSUB, Cost_DL: costDL,
-                    Cost_OH_Machine: costOHMachine, Cost_OH_Utilities: costOHUtilities, Cost_OH_Indirect: costOHIndirect,
-                    Cost_OH_Staff: costOHStaff, Cost_OH_Accessory: costOHAccessory, Cost_OH_Others: costOHOthers,
-                    Cost_Total: costTotal, StandardPrice: standardPrice, StandardGP: standardGP, Price_USD: priceUSD
-                };
-                costingPayload.push(costItem);
-            }
-
-            if (costingPayload.length > 0) {
-                if (confirm(`Import costing data for ${costingPayload.length} items?`)) {
-                    const result = await sendRequest(ITEM_MASTER_API, 'import_costing_json', 'POST', costingPayload);
-                    
-                    if (result.success) {
-                        // --- ส่วนที่เพิ่มใหม่: สร้างข้อความรายงานผล ---
-                        let reportMsg = "✅ " + result.message + "\n\n";
-                        
-                        if (result.report) {
-                            // 1. แสดงรายการที่หาไม่เจอ (สำคัญมาก)
-                            if (result.report.not_found && result.report.not_found.length > 0) {
-                                reportMsg += "❌ Items Not Found (SAP No):\n";
-                                reportMsg += result.report.not_found.slice(0, 15).join(", "); // โชว์แค่ 15 ตัวแรกกันรก
-                                if (result.report.not_found.length > 15) {
-                                    reportMsg += `\n...and ${result.report.not_found.length - 15} more.`;
-                                }
-                                reportMsg += "\n\n";
-                            }
-                            
-                            // 2. แสดง Error (ถ้ามี)
-                            if (result.report.skipped && result.report.skipped.length > 0) {
-                                reportMsg += "⚠️ Errors:\n" + result.report.skipped.join("\n") + "\n\n";
-                            }
-
-                            // 3. แสดง Unchanged
-                            if (result.report.unchanged_count > 0) {
-                                reportMsg += "ℹ️ Unchanged (Data identical): " + result.report.unchanged_count + " items";
-                            }
-                        }
-
-                        alert(reportMsg); // ใช้ Alert แสดงผลเพื่อให้คุณอ่านได้ทันที
-                        await fetchItems(1);
-                    } else {
-                        showToast(result.message, 'var(--bs-danger)');
-                    }
-                }
-            } else {
-                 showToast(`No valid costing data found.`, 'var(--bs-warning)');
-            }
-
-        } catch (error) {
-            console.error("Error processing costing CSV:", error);
-            showToast(`Error processing file: ${error.message}`, 'var(--bs-danger)');
-        } finally {
-            event.target.value = '';
-            hideSpinner();
-        }
-    };
-    reader.readAsArrayBuffer(file);
 }
 
 // =================================================================
@@ -1481,48 +1287,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 4.2 Auto Calculation Logic (Standard Costing) ---
-    const costInputIds = [
-        'Cost_RM', 'Cost_PKG', 'Cost_SUB', 'Cost_DL',
-        'Cost_OH_Machine', 'Cost_OH_Utilities', 'Cost_OH_Indirect',
-        'Cost_OH_Staff', 'Cost_OH_Accessory', 'Cost_OH_Others'
-    ];
-
-    function calculateItemCosts() {
-        let totalCost = 0;
-        costInputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) totalCost += parseFloat(el.value) || 0;
-        });
-
-        // แสดงผลในช่อง Total Cost
-        const totalCostEl = document.getElementById('Cost_Total');
-        if (totalCostEl) {
-            totalCostEl.value = totalCost.toFixed(6);
-        }
-
-        // คำนวณ GP (Gross Profit) อัตโนมัติ
-        const priceEl = document.getElementById('StandardPrice');
-        const gpEl = document.getElementById('StandardGP');
-        
-        if (priceEl && gpEl) {
-            const price = parseFloat(priceEl.value) || 0;
-            if (price > 0) {
-                const gpPercentage = ((price - totalCost) / price) * 100;
-                gpEl.value = gpPercentage.toFixed(2);
-            } else {
-                gpEl.value = "0.00";
-            }
-        }
-    }
-
-    // ผูก Event Listener ให้ช่องที่เกี่ยวข้องกับการคำนวณทั้งหมด
-    costInputIds.forEach(id => {
-        document.getElementById(id)?.addEventListener('input', calculateItemCosts);
-    });
-    document.getElementById('StandardPrice')?.addEventListener('input', calculateItemCosts);
-
-
     // --- 4.3 Tab Event Listeners ---
     document.querySelectorAll('#settingsTab button[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', event => {
@@ -1536,7 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 4.4 Item Master & Route Events ---
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => {
         openItemModal();
-        calculateItemCosts(); // รีเซ็ตตัวเลขเป็น 0 ตอนเพิ่มใหม่
     });
     
     document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
@@ -1556,19 +1319,132 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchItems(1);
     });
 
-    document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsToExcel);
+    // --- EXPORT MASTER (Symmetric Template) ---
+    document.getElementById('exportItemsBtn')?.addEventListener('click', async () => {
+        Swal.fire({ title: 'Exporting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            // ดึงข้อมูลทั้งหมดโดยไม่ Limit
+            const res = await fetch(`${ITEM_MASTER_API}?action=get_items&page=1&limit=-1`);
+            const json = await res.json();
+            
+            if (json.success) {
+                // โครงสร้าง Header 27 คอลัมน์ที่ตรงกับฐานข้อมูล
+                const wsData = [[
+                    "SAP No", "Part No", "Customer SKU", "Material Type", "Description", "Planned Output", "Min Stock", "Max Stock", "Is Active",
+                    "CTN", "Net Weight", "Gross Weight", "CBM", "Invoice Product Type", "Invoice Description",
+                    "Standard Price", "Price USD", "Cost RM", "Cost PKG", "Cost SUB", "Cost DL",
+                    "OH Machine", "OH Utilities", "OH Indirect", "OH Staff", "OH Accessory", "OH Others"
+                ]];
 
-    // --- 4.5 Import Actions ---
-    const importItemsBtn = document.getElementById('importItemsBtn');
-    const itemImportFile = document.getElementById('itemImportFile');
-    importItemsBtn?.addEventListener('click', () => itemImportFile.click());
-    itemImportFile?.addEventListener('change', handleItemImport);
+                json.data.forEach(item => {
+                    wsData.push([
+                        item.sap_no || '', item.part_no || '', item.sku || '', item.material_type || 'FG', item.part_description || '', item.planned_output || 0, item.min_stock || 0, item.max_stock || 0, item.is_active == 1 ? 'Yes' : 'No',
+                        item.CTN || 0, item.net_weight || 0, item.gross_weight || 0, item.cbm || 0, item.invoice_product_type || '', item.invoice_description || '',
+                        item.StandardPrice || 0, item.Price_USD || 0, item.Cost_RM || 0, item.Cost_PKG || 0, item.Cost_SUB || 0, item.Cost_DL || 0,
+                        item.Cost_OH_Machine || 0, item.Cost_OH_Utilities || 0, item.Cost_OH_Indirect || 0, item.Cost_OH_Staff || 0, item.Cost_OH_Accessory || 0, item.Cost_OH_Others || 0
+                    ]);
+                });
 
-    const importCostingBtn = document.getElementById('importCostingBtn');
-    const costImportFile = document.getElementById('costImportFile');
-    importCostingBtn?.addEventListener('click', () => costImportFile.click());
-    costImportFile?.addEventListener('change', handleCostingImport);
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
 
+                // 🔥 [FIXED] ปรับความกว้างคอลัมน์ (Width) ให้พอดีและอ่านง่าย
+                ws['!cols'] = [
+                    { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 45 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+                    { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 22 }, { wch: 30 },
+                    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+                    { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+                ];
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "ItemMaster");
+                XLSX.writeFile(wb, `ItemMaster_${new Date().toISOString().split('T')[0]}.xlsx`);
+                Swal.close();
+            } else {
+                throw new Error(json.message);
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message || 'Export failed', 'error');
+        }
+    });
+
+    // --- IMPORT MASTER (Symmetric Template) ---
+    document.getElementById('importItemsBtn')?.addEventListener('click', () => {
+        document.getElementById('itemImportFile').click();
+    });
+
+    document.getElementById('itemImportFile')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (jsonRows.length === 0) throw new Error("Empty file");
+
+                // Mapping ให้ตรงกับชื่อคอลัมน์ Excel Header
+                const payload = jsonRows.map(row => ({
+                    sap_no: row["SAP No"] || '',
+                    part_no: row["Part No"] || '',
+                    sku: row["Customer SKU"] || '',
+                    material_type: row["Material Type"] || 'FG',
+                    part_description: row["Description"] || '',
+                    planned_output: parseInt(row["Planned Output"]) || 0,
+                    min_stock: parseFloat(row["Min Stock"]) || 0,
+                    max_stock: parseFloat(row["Max Stock"]) || 0,
+                    is_active: (row["Is Active"] && String(row["Is Active"]).trim().toLowerCase() === 'no') ? 0 : 1,
+                    
+                    ctn: parseInt(row["CTN"]) || 0,
+                    net_weight: parseFloat(row["Net Weight"]) || 0,
+                    gross_weight: parseFloat(row["Gross Weight"]) || 0,
+                    cbm: parseFloat(row["CBM"]) || 0,
+                    invoice_product_type: row["Invoice Product Type"] || '',
+                    invoice_description: row["Invoice Description"] || '',
+
+                    StandardPrice: parseFloat(row["Standard Price"]) || 0,
+                    Price_USD: parseFloat(row["Price USD"]) || 0,
+                    Cost_RM: parseFloat(row["Cost RM"]) || 0,
+                    Cost_PKG: parseFloat(row["Cost PKG"]) || 0,
+                    Cost_SUB: parseFloat(row["Cost SUB"]) || 0,
+                    Cost_DL: parseFloat(row["Cost DL"]) || 0,
+                    Cost_OH_Machine: parseFloat(row["OH Machine"]) || 0,
+                    Cost_OH_Utilities: parseFloat(row["OH Utilities"]) || 0,
+                    Cost_OH_Indirect: parseFloat(row["OH Indirect"]) || 0,
+                    Cost_OH_Staff: parseFloat(row["OH Staff"]) || 0,
+                    Cost_OH_Accessory: parseFloat(row["OH Accessory"]) || 0,
+                    Cost_OH_Others: parseFloat(row["OH Others"]) || 0
+                })).filter(r => r.sap_no !== ''); // กรองตัวที่ไม่มี SAP No ทิ้ง
+
+                if (payload.length === 0) return Swal.fire('Error', 'No valid SAP No. found', 'error');
+
+                const btnImport = document.getElementById('importItemsBtn');
+                btnImport.disabled = true;
+                btnImport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+
+                // ยิง API ตัวใหม่ ที่ยุบรวมเป็น Batch เดียว
+                const result = await sendRequest(ITEM_MASTER_API, 'unified_bulk_import', 'POST', payload);
+                if (result.success) {
+                    Swal.fire({ icon: 'success', title: 'Import Complete', text: result.message });
+                    await fetchItems(currentPage);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (err) {
+                Swal.fire('Error', err.message || 'Invalid File Format', 'error');
+            } finally {
+                const btnImport = document.getElementById('importItemsBtn');
+                btnImport.disabled = false;
+                btnImport.innerHTML = '<i class="fas fa-file-import"></i> Import';
+                e.target.value = ''; // Reset file input
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
 
     // --- 4.6 BOM Manager Events ---
     document.getElementById('createNewBomBtn')?.addEventListener('click', () => {

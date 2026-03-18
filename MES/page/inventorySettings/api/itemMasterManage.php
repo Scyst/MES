@@ -78,24 +78,25 @@ try {
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
+            // 🔥 [FIXED] เพิ่มคอลัมน์ที่ขาดหายไปทั้งหมดให้ครบ (Logistics, Costing, Planned Output)
             $costingCols_CTE = "
+                , i.planned_output, i.material_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
                 , i.Cost_RM, i.Cost_PKG, i.Cost_SUB, i.Cost_DL
                 , i.Cost_OH_Machine, i.Cost_OH_Utilities, i.Cost_OH_Indirect, i.Cost_OH_Staff, i.Cost_OH_Accessory, i.Cost_OH_Others
                 , i.Cost_Total, i.StandardPrice, i.StandardGP, i.Price_USD
             ";
             $costingCols_Final = "
+                , planned_output, material_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
                 , Cost_RM, Cost_PKG, Cost_SUB, Cost_DL
                 , Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others
                 , Cost_Total, StandardPrice, StandardGP, Price_USD
             ";
 
-            // 🔥 [UPDATED] เพิ่ม i.CTN ใน SELECT
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
                         DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
-                        i.is_active, i.min_stock, i.max_stock, i.is_tracking,
-                        i.CTN -- [NEW]
+                        i.is_active, i.min_stock, i.max_stock, i.is_tracking
                         {$costingCols_CTE} 
                         ,
                         STUFF((
@@ -118,7 +119,7 @@ try {
                 )
                 SELECT 
                     item_id, sap_no, part_no, sku, part_description, created_at, is_active, used_in_models,
-                    route_speed_range, min_stock, max_stock, is_tracking, CTN -- [NEW]
+                    route_speed_range, min_stock, max_stock, is_tracking
                 {$costingCols_Final} 
                 FROM NumberedRows
                 WHERE RowNum > ? AND RowNum <= ?
@@ -188,154 +189,37 @@ try {
             echo json_encode(['success' => true, 'data' => $models]);
             break;
 
-        case 'bulk_import_items':
+        case 'unified_bulk_import':
+            if (!hasRole(['admin', 'creator'])) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized to import master data.']);
+                exit;
+            }
+
             $items = $input;
             if (empty($items)) throw new Exception("No items to import.");
             
             $pdo->beginTransaction();
             try {
-                // [UPDATED] เพิ่ม sku และ CTN ใน MERGE
-                $sql = "
-                    MERGE INTO " . ITEMS_TABLE . " AS target
-                    USING (VALUES (?)) AS source (sap_no)
-                    ON target.sap_no = source.sap_no
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            part_no = ?, 
-                            sku = ?, 
-                            part_description = ?,
-                            planned_output = ?, 
-                            is_active = ?,
-                            CTN = ? -- [NEW]
-                    WHEN NOT MATCHED THEN
-                        INSERT (sap_no, part_no, sku, part_description, planned_output, is_active, CTN, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE());
-                ";
-                $stmt = $pdo->prepare($sql);
-
-                foreach ($items as $item) {
-                    $sap_no = trim($item['sap_no'] ?? '');
-                    if (empty($sap_no)) continue;
-
-                    $part_no = trim($item['part_no'] ?? $sap_no);
-                    $sku = trim($item['sku'] ?? '');
-                    $desc = trim($item['part_description'] ?? '');
-                    $planned_output = (int)($item['planned_output'] ?? 0);
-                    $is_active = (bool)($item['is_active'] ?? true);
-                    $ctn = (int)($item['ctn'] ?? 0); // [NEW] รับค่า CTN จากไฟล์ Excel
-                    
-                    $stmt->execute([
-                        $sap_no, 
-                        $part_no, $sku, $desc, $planned_output, $is_active, $ctn, // UPDATE Params
-                        $sap_no, $part_no, $sku, $desc, $planned_output, $is_active, $ctn // INSERT Params
-                    ]);
-                }
+                $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch :json, :user");
+                $stmt->execute([
+                    ':json' => json_encode($items),
+                    ':user' => $currentUser['username']
+                ]);
+                
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $inserted = $result['InsertedCount'] ?? 0;
+                $updated = $result['UpdatedCount'] ?? 0;
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'BULK IMPORT ITEMS', null, "Processed " . count($items) . " items.");
-                echo json_encode(['success' => true, 'message' => "Import successful. " . count($items) . " items have been processed."]);
-
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
-        case 'import_costing_json':
-            if (!hasRole(['admin', 'creator'])) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Unauthorized to import costing data.']);
-                exit;
-            }
-
-            $costingData = $input; 
-            if (empty($costingData)) throw new Exception("No costing data received to import.");
-
-            function sanitize_cost($val) {
-                if (is_null($val) || trim((string)$val) === '') return 0.0;
-                $clean = str_replace(',', '', (string)$val);
-                if (!is_numeric($clean)) return 0.0;
-                return (float)$clean;
-            }
-
-            $pdo->beginTransaction();
-            try {
-                $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                        Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
-                        Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, 
-                        Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
-                        StandardPrice = ?, Price_USD = ?
-                    WHERE sap_no = ?";
-                
-                $checkExistSql = "SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?";
-                $checkStmt = $pdo->prepare($checkExistSql);
-
-                $updatedCount = 0;
-                $notFoundList = [];
-                $unchangedList = [];
-                $skippedList = [];
-
-                foreach ($costingData as $index => $itemCost) {
-                    $rowNum = $index + 2; 
-                    $sap_no = trim($itemCost['sap_no'] ?? '');
-                    
-                    if (empty($sap_no) || strtolower($sap_no) === 'material' || strtolower($sap_no) === 'sap_no') { 
-                        continue; 
-                    }
-
-                    $params = [
-                        (float)sanitize_cost($itemCost['Cost_RM'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_PKG'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_SUB'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_DL'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Machine'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Utilities'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Indirect'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Staff'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Accessory'] ?? 0),
-                        (float)sanitize_cost($itemCost['Cost_OH_Others'] ?? 0),
-                        (float)sanitize_cost($itemCost['StandardPrice'] ?? 0),
-                        (float)sanitize_cost($itemCost['Price_USD'] ?? 0),
-                        $sap_no
-                    ];
-
-                    try {
-                        $success = $stmt->execute($params);
-                        
-                        if ($success && $stmt->rowCount() > 0) {
-                            $updatedCount++;
-                        } else {
-                            $checkStmt->execute([$sap_no]);
-                            if ($checkStmt->fetch()) {
-                                $unchangedList[] = $sap_no; 
-                            } else {
-                                $notFoundList[] = $sap_no; 
-                            }
-                        }
-                    } catch (Exception $rowEx) {
-                        $skippedList[] = "Row $rowNum ($sap_no): " . $rowEx->getMessage();
-                    }
-                }
-
-                $pdo->commit();
-                
-                $message = "Import complete. Updated: {$updatedCount}.";
-                if (!empty($notFoundList)) $message .= " Not Found: " . count($notFoundList) . ".";
-                if (!empty($skippedList)) $message .= " Errors: " . count($skippedList) . ".";
-
                 echo json_encode([
                     'success' => true, 
-                    'message' => $message,
-                    'report' => [ 
-                        'not_found' => $notFoundList,
-                        'unchanged_count' => count($unchangedList),
-                        'skipped' => $skippedList
-                    ]
+                    'message' => "Import successful. Inserted: {$inserted}, Updated: {$updated}."
                 ]);
 
             } catch (Exception $e) {
                 $pdo->rollBack();
-                throw new Exception("System Error: " . $e->getMessage()); 
+                throw $e;
             }
             break;
 
@@ -380,6 +264,7 @@ try {
                 exit;
             }
 
+            // รองรับ Payload รูปแบบเดิมของคุณ (มี item_details และ routes_data)
             $item_details = $input['item_details'] ?? [];
             $routes_data = $input['routes_data'] ?? [];
 
@@ -389,85 +274,97 @@ try {
             
             $pdo->beginTransaction();
             try {
-                $item_id = (int)$item_details['item_id'];
-                $min_stock = !empty($item_details['min_stock']) ? $item_details['min_stock'] : 0;
-                $max_stock = !empty($item_details['max_stock']) ? $item_details['max_stock'] : 0;
+                $item_id = (int)($item_details['item_id'] ?? 0);
+                $sap_no = trim($item_details['sap_no']);
+                $part_no = trim($item_details['part_no']);
                 $sku = trim($item_details['sku'] ?? '');
-                $ctn = !empty($item_details['ctn']) ? (int)$item_details['ctn'] : 0; // 🔥 [NEW] รับค่า CTN
+                $desc = trim($item_details['part_description'] ?? '');
+                $mat_type = trim($item_details['material_type'] ?? 'FG');
+                
+                $planned_output = (int)($item_details['planned_output'] ?? 0);
+                $min_stock = (float)($item_details['min_stock'] ?? 0);
+                $max_stock = (float)($item_details['max_stock'] ?? 0);
+                $is_active = (int)($item_details['is_active'] ?? 1);
+                $is_tracking = (int)($item_details['is_tracking'] ?? 0);
+                
+                $ctn = (int)($item_details['CTN'] ?? 0);
+                $nw = (float)($item_details['net_weight'] ?? 0);
+                $gw = (float)($item_details['gross_weight'] ?? 0);
+                $cbm = (float)($item_details['cbm'] ?? 0);
+                $inv_type = trim($item_details['invoice_product_type'] ?? '');
+                $inv_desc = trim($item_details['invoice_description'] ?? '');
 
-                // Costing variables
-                $Cost_RM = !empty($item_details['Cost_RM']) ? $item_details['Cost_RM'] : 0;
-                $Cost_PKG = !empty($item_details['Cost_PKG']) ? $item_details['Cost_PKG'] : 0;
-                $Cost_SUB = !empty($item_details['Cost_SUB']) ? $item_details['Cost_SUB'] : 0;
-                $Cost_DL = !empty($item_details['Cost_DL']) ? $item_details['Cost_DL'] : 0;
-                $Cost_OH_Machine = !empty($item_details['Cost_OH_Machine']) ? $item_details['Cost_OH_Machine'] : 0;
-                $Cost_OH_Utilities = !empty($item_details['Cost_OH_Utilities']) ? $item_details['Cost_OH_Utilities'] : 0;
-                $Cost_OH_Indirect = !empty($item_details['Cost_OH_Indirect']) ? $item_details['Cost_OH_Indirect'] : 0;
-                $Cost_OH_Staff = !empty($item_details['Cost_OH_Staff']) ? $item_details['Cost_OH_Staff'] : 0;
-                $Cost_OH_Accessory = !empty($item_details['Cost_OH_Accessory']) ? $item_details['Cost_OH_Accessory'] : 0;
-                $Cost_OH_Others = !empty($item_details['Cost_OH_Others']) ? $item_details['Cost_OH_Others'] : 0;
-                $StandardPrice = !empty($item_details['StandardPrice']) ? $item_details['StandardPrice'] : 0;
-                $Price_USD = !empty($item_details['Price_USD']) ? $item_details['Price_USD'] : 0;
+                $c_rm = (float)($item_details['Cost_RM'] ?? 0);
+                $c_pkg = (float)($item_details['Cost_PKG'] ?? 0);
+                $c_sub = (float)($item_details['Cost_SUB'] ?? 0);
+                $c_dl = (float)($item_details['Cost_DL'] ?? 0);
+                $c_ohm = (float)($item_details['Cost_OH_Machine'] ?? 0);
+                $c_ohu = (float)($item_details['Cost_OH_Utilities'] ?? 0);
+                $c_ohi = (float)($item_details['Cost_OH_Indirect'] ?? 0);
+                $c_ohs = (float)($item_details['Cost_OH_Staff'] ?? 0);
+                $c_oha = (float)($item_details['Cost_OH_Accessory'] ?? 0);
+                $c_oho = (float)($item_details['Cost_OH_Others'] ?? 0);
+                $p_std = (float)($item_details['StandardPrice'] ?? 0);
+                $p_usd = (float)($item_details['Price_USD'] ?? 0);
 
                 if ($item_id > 0) {
-                    // 🔥 [UPDATED] เพิ่ม CTN ใน UPDATE
+                    // UPDATE
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, min_stock = ?, max_stock = ?, is_tracking = ?, CTN = ?,
+                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, material_type = ?,
+                                min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, is_active = ?,
+                                CTN = ?, net_weight = ?, gross_weight = ?, cbm = ?, invoice_product_type = ?, invoice_description = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
                                 StandardPrice = ?, Price_USD = ?
                             WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $item_details['sap_no'], 
-                        $item_details['part_no'], 
-                        $sku, 
-                        $item_details['part_description'],
-                        $min_stock,
-                        $max_stock,
-                        (bool)($item_details['is_tracking'] ?? false),
-                        $ctn, // [NEW]
-                        $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
-                        $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
-                        $StandardPrice, $Price_USD,
+                        $sap_no, $part_no, $sku, $desc, $mat_type,
+                        $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
+                        $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
+                        $c_rm, $c_pkg, $c_sub, $c_dl,
+                        $c_ohm, $c_ohu, $c_ohi, $c_ohs, $c_oha, $c_oho,
+                        $p_std, $p_usd,
                         $item_id
                     ]);
-                    logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
+                    logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$sap_no}");
                 } else {
-                    // 🔥 [UPDATED] เพิ่ม CTN ใน INSERT
+                    // INSERT
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, sku, part_description, created_at, min_stock, max_stock, is_tracking, CTN,
+                                sap_no, part_no, sku, part_description, material_type, created_at, 
+                                min_stock, max_stock, is_tracking, planned_output, is_active,
+                                CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 StandardPrice, Price_USD
                             ) VALUES (
-                                ?, ?, ?, ?, GETDATE(), ?, ?, ?, ?,
+                                ?, ?, ?, ?, ?, GETDATE(), 
+                                ?, ?, ?, ?, ?,
+                                ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, 
                                 ?, ?, ?, ?, ?, ?, 
                                 ?, ?
                             )";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $item_details['sap_no'], 
-                        $item_details['part_no'], 
-                        $sku, 
-                        $item_details['part_description'],  
-                        $min_stock,
-                        $max_stock,
-                        (bool)($item_details['is_tracking'] ?? false),
-                        $ctn, // [NEW]
-                        $Cost_RM, $Cost_PKG, $Cost_SUB, $Cost_DL,
-                        $Cost_OH_Machine, $Cost_OH_Utilities, $Cost_OH_Indirect, $Cost_OH_Staff, $Cost_OH_Accessory, $Cost_OH_Others,
-                        $StandardPrice, $Price_USD
+                        $sap_no, $part_no, $sku, $desc, $mat_type,
+                        $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
+                        $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
+                        $c_rm, $c_pkg, $c_sub, $c_dl,
+                        $c_ohm, $c_ohu, $c_ohi, $c_ohs, $c_oha, $c_oho,
+                        $p_std, $p_usd
                     ]);
                     $item_id = $pdo->lastInsertId();
-                    logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$item_details['sap_no']}");
+                    logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$sap_no}");
                 }
 
-                // Handle Routes
+                // Handle Routes (ยังคงรูปแบบ Array Object ของเดิมไว้)
                 foreach ($routes_data as $route) {
-                    $route_id = (int)$route['route_id'];
-                    $status = $route['status'];
+                    $route_id = (int)($route['route_id'] ?? 0);
+                    $status = $route['status'] ?? '';
+                    $r_line = trim($route['line'] ?? '');
+                    $r_model = trim($route['model'] ?? '');
+                    $r_plan = (int)($route['planned_output'] ?? 0);
 
                     if ($status === 'deleted' && $route_id > 0) {
                         $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
@@ -475,13 +372,13 @@ try {
                     } else if ($status === 'new') {
                         $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
                         $stmt = $pdo->prepare($sql);
-                        $stmt->execute([$item_id, $route['line'], $route['model'], (int)$route['planned_output']]);
-                    } else if ($status === 'existing') {
+                        $stmt->execute([$item_id, $r_line, $r_model, $r_plan]);
+                    } else if ($status === 'existing' && $route_id > 0) {
                         $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
                         $stmt = $pdo->prepare($sql);
-                        $stmt->execute([$route['line'], $route['model'], (int)$route['planned_output'], $route_id]);
+                        $stmt->execute([$r_line, $r_model, $r_plan, $route_id]);
                     }
-               }
+                }
                 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Item and routes saved successfully.']);
@@ -490,14 +387,6 @@ try {
                 $pdo->rollBack();
                 throw $e;
             }
-            break;
-            
-        case 'delete_route':
-            $route_id = $input['route_id'] ?? 0;
-            if (!$route_id) throw new Exception("Route ID is required.");
-            $stmt = $pdo->prepare("DELETE FROM " . ROUTES_TABLE . " WHERE route_id = ?");
-            $stmt->execute([$route_id]);
-            echo json_encode(['success' => true, 'message' => 'Route deleted successfully.']);
             break;
             
         case 'read_schedules':
@@ -515,7 +404,9 @@ try {
             $end_time = $input['end_time'] ?? '17:00';
             $break_min = (int)($input['planned_break_minutes'] ?? 0);
             $is_active = !empty($input['is_active']) ? 1 : 0;
+            
             if (empty($line) || empty($shift_name)) throw new Exception("Line and Shift Name are required.");
+            
             if ($id > 0) {
                 $sql = "UPDATE " . SCHEDULES_TABLE . " SET line = ?, shift_name = ?, start_time = ?, end_time = ?, planned_break_minutes = ?, is_active = ? WHERE id = ?";
                 $params = [$line, $shift_name, $start_time, $end_time, $break_min, $is_active, $id];
@@ -550,15 +441,18 @@ try {
             http_response_code(400);
             throw new Exception("Invalid action specified for Item Master.");
     }
-} catch (PDOException $e) {
-    http_response_code(500);
-    if ($e->getCode() == '23000') {
-        echo json_encode(['success' => false, 'message' => "Error: SAP No. '{$input['sap_no']}' already exists."]);
-    } else {
-        echo json_encode(['success' => false, 'message' => "Database error: " . $e->getMessage()]);
-    }
+
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log("Item Master API Error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    
+    $msg = (strpos($e->getMessage(), 'SQLSTATE') !== false) 
+        ? 'เกิดข้อผิดพลาดในการประมวลผลฐานข้อมูล กรุณาติดต่อผู้ดูแลระบบ' 
+        : $e->getMessage();
+        
+    echo json_encode(['success' => false, 'message' => $msg]);
 }
 ?>
