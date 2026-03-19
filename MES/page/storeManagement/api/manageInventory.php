@@ -21,18 +21,28 @@ try {
 
     switch ($action) {
         case 'get_locations':
-            // ดึงรายชื่อ Location ที่มีสถานะ Active มาทำ Dropdown
             $stmtLoc = $pdo->query("SELECT location_id, location_name, location_type FROM dbo.LOCATIONS WHERE is_active = 1 ORDER BY location_name");
             echo json_encode(['success' => true, 'data' => $stmtLoc->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
         case 'get_dashboard':
             $location_id = $_GET['location_id'] ?? 'ALL';
-            
-            // สร้างเงื่อนไขกรอง Location (ถ้าเลือก ALL ก็ไม่กรอง)
+            $material_type = $_GET['material_type'] ?? 'ALL';
+            $hide_zero = $_GET['hide_zero'] ?? 'false';
             $locFilter = ($location_id !== 'ALL' && $location_id !== '') ? "AND location_id = " . (int)$location_id : "";
+            $matFilter = "";
+            if ($material_type !== 'ALL') {
+                $allowed_types = ['RM', 'FG', 'SEMI', 'WIP', 'PKG'];
+                if (in_array(strtoupper($material_type), $allowed_types)) {
+                    $matFilter = "AND i.material_type = '" . strtoupper($material_type) . "'";
+                }
+            }
 
-            // ใช้ Dynamic SQL CTE เพื่อให้ดึงข้อมูล 0 ได้ และกรอง Location ได้
+            $zeroFilter = "";
+            if ($hide_zero === 'true') {
+                $zeroFilter = "AND (ISNULL(o.available_qty, 0) > 0 OR ISNULL(p.pending_qty, 0) > 0)";
+            }
+
             $sql = "
             WITH OnhandSum AS (
                 SELECT parameter_id AS item_id, SUM(quantity) AS available_qty
@@ -50,6 +60,7 @@ try {
                 i.item_id,
                 ISNULL(i.part_no, i.sap_no) AS item_no,
                 i.part_description,
+                ISNULL(i.material_type, 'UNKNOWN') AS material_type,
                 ISNULL(o.available_qty, 0) AS available_qty,
                 ISNULL(p.pending_qty, 0) AS pending_qty,
                 (ISNULL(o.available_qty, 0) + ISNULL(p.pending_qty, 0)) AS total_qty,
@@ -58,20 +69,18 @@ try {
             FROM dbo.ITEMS i WITH (NOLOCK)
             LEFT JOIN OnhandSum o ON i.item_id = o.item_id
             LEFT JOIN PendingSum p ON i.item_id = p.item_id
-            WHERE i.is_active = 1 AND i.material_type = 'RM'
+            WHERE i.is_active = 1 $matFilter $zeroFilter
             ORDER BY o.available_qty ASC, total_value DESC
             ";
 
             $stmt = $pdo->query($sql);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // คำนวณ KPI สรุปยอดรวม (ตัวแปรสำหรับส่งไปหน้าเว็บ)
             $kpi = [
                 'total_skus' => count($data),
-                'out_of_stock' => 0, // [NEW] นับไอเทมที่สต็อกหมดหรือติดลบ
+                'out_of_stock' => 0,
                 'total_pending_qty' => 0,
                 'total_value' => 0,
-                'toolbar_total_pcs' => 0 // ยอดรวมชิ้นที่บอกว่าไม่มีประโยชน์ ย้ายมาไว้แค่นี้
+                'toolbar_total_pcs' => 0
             ];
 
             foreach ($data as $row) {
@@ -97,6 +106,115 @@ try {
             $pending_details = $stmtPend->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'available_details' => $available_details, 'pending_details' => $pending_details]);
+            break;
+
+        // =========================================================
+        // ระบบเบิกจ่าย (Smart Material Issue)
+        // =========================================================
+        case 'issue_rm':
+            $barcode = trim($_POST['barcode'] ?? '');
+            $qty = (int)($_POST['qty'] ?? 1);
+            $to_location = (int)($_POST['to_location'] ?? 0);
+            $userId = $_SESSION['user']['id'];
+
+            if (empty($barcode) || $qty < 1 || $to_location == 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (Barcode, QTY, Location)");
+            }
+
+            $stmt = $pdo->prepare("EXEC sp_Store_IssueRM @ScanValue=?, @TagsToIssue=?, @ToLocationID=?, @UserID=?");
+            $stmt->execute([$barcode, $qty, $to_location, $userId]);
+            $issuedTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'issued_count' => count($issuedTags),
+                'issued_tags' => $issuedTags
+            ]);
+            break;
+
+        // =========================================================
+        // [NEW] ดึงรายชื่อ Tag ย่อยใน Master Pallet
+        // =========================================================
+        case 'get_pallet_tags':
+            $barcode = trim($_GET['barcode'] ?? '');
+            if (empty($barcode)) throw new Exception("กรุณาระบุบาร์โค้ด");
+
+            $stmt = $pdo->prepare("
+                SELECT t.serial_no, ISNULL(i.part_no, i.sap_no) as part_no, t.current_qty 
+                FROM RM_SERIAL_TAGS t WITH (NOLOCK)
+                JOIN ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                WHERE (t.master_pallet_no = ? OR t.ctn_number = ? OR t.serial_no = ?)
+                  AND t.status = 'AVAILABLE' AND t.current_qty > 0
+                ORDER BY t.serial_no ASC
+            ");
+            $stmt->execute([$barcode, $barcode, $barcode]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        // =========================================================
+        // ยืนยันเบิกเฉพาะ Tag ที่เลือก (Smart Issue)
+        // =========================================================
+        case 'issue_selected_tags':
+            $serials = $_POST['serials'] ?? '';
+            $to_location = (int)($_POST['to_location'] ?? 0);
+            $userId = $_SESSION['user']['id'];
+
+            if (empty($serials) || $to_location == 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (ยังไม่ได้เลือก Tag หรือ โลเคชั่น)");
+            }
+
+            // ⭐️ ท่าไม้ตายฝั่ง PHP: สั่งปิดการพ่น Exception เมื่อเจอ Warning
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
+            
+            $stmt = $pdo->prepare("EXEC sp_Store_IssueSpecificTags @SerialNumbers=?, @ToLocationID=?, @UserID=?");
+            $success = $stmt->execute([$serials, $to_location, $userId]);
+            
+            // ดึง Error ออกมาเช็คด้วยตัวเอง
+            $errors = $stmt->errorInfo();
+            
+            // ⭐️ เปิด Exception กลับมาให้ระบบอื่นทำงานปกติ
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+
+            // ถ้าทำงานไม่สำเร็จ และ Error Code ไม่ใช่ 00000 (ปกติ), 01000 (Warning), 01003 (Warning)
+            if (!$success && isset($errors[0]) && !in_array($errors[0], ['00000', '01000', '01003'])) {
+                throw new Exception($errors[2] ?? "เกิดข้อผิดพลาดในการรันคำสั่ง");
+            }
+
+            $issuedTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'issued_count' => count($issuedTags),
+                'issued_tags' => $issuedTags // ส่งรายชื่อกลับไปพ่นสติ๊กเกอร์
+            ]);
+            break;
+
+        // =========================================================
+        // [NEW] ดึงข้อมูล Tag สำหรับปริ้นท์สติ๊กเกอร์ WIP 
+        // =========================================================
+        case 'get_print_tags':
+            $serials = $_POST['serials'] ?? '';
+            if(empty($serials)) throw new Exception("ไม่มีรายการให้ปริ้นท์");
+            
+            $serialList = explode(',', $serials);
+            $placeholders = str_repeat('?,', count($serialList) - 1) . '?';
+            
+            $sql = "SELECT 
+                        t.serial_no, 
+                        ISNULL(i.part_no, i.sap_no) AS part_no, 
+                        i.part_description, 
+                        t.current_qty AS qty, 
+                        t.po_number, 
+                        t.received_date 
+                    FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                    LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    WHERE t.serial_no IN ($placeholders)";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($serialList);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         default:

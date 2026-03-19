@@ -28,15 +28,11 @@ try {
             }
 
             $userId = $_SESSION['user']['id'];
-
-            // เรียกใช้ SP สำหรับ Import (สถานะจะเป็น PENDING เสมอ)
             $stmt = $pdo->prepare("EXEC sp_Store_ImportRMShipping @JsonData = :json, @UserId = :uid");
             $stmt->bindParam(':json', $jsonData, PDO::PARAM_STR);
             $stmt->bindParam(':uid', $userId, PDO::PARAM_INT);
             $stmt->execute();
-
             $tags = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
             echo json_encode([
                 'success' => true, 
                 'data' => $tags, 
@@ -93,7 +89,7 @@ try {
             break;
 
         // =========================================================
-        // [NEW] รวมกลุ่ม Master Pallet
+        // รวมกลุ่ม Master Pallet
         // =========================================================
         case 'group_master_pallet':
             $serials = json_decode($_POST['serials'], true);
@@ -102,18 +98,13 @@ try {
             }
 
             $pdo->beginTransaction();
-
-            // 1. Generate Master Pallet Number (เช่น MPL-2603-0001)
             $prefix = 'MPL-' . date('ym') . '-';
             $stmtLast = $pdo->query("SELECT TOP 1 master_pallet_no FROM RM_SERIAL_TAGS WITH (UPDLOCK) WHERE master_pallet_no LIKE '$prefix%' ORDER BY master_pallet_no DESC");
             $lastNo = $stmtLast->fetchColumn();
             $nextSeq = $lastNo ? ((int)substr($lastNo, -4)) + 1 : 1;
             $newMasterPalletNo = $prefix . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
-
-            // 2. Update ข้อมูลให้รายการที่ถูกเลือก
             $placeholders = implode(',', array_fill(0, count($serials), '?'));
-            $updStmt = $pdo->prepare("UPDATE RM_SERIAL_TAGS SET master_pallet_no = ? WHERE serial_no IN ($placeholders) AND status = 'PENDING'");
-            
+            $updStmt = $pdo->prepare("UPDATE RM_SERIAL_TAGS SET master_pallet_no = ? WHERE serial_no IN ($placeholders) AND status = 'PENDING'");            
             $params = array_merge([$newMasterPalletNo], $serials);
             $updStmt->execute($params);
 
@@ -121,7 +112,6 @@ try {
                 throw new Exception("ไม่สามารถจัดกลุ่มได้ (อาจมีบางรายการถูกรับเข้าสต็อกไปแล้ว)");
             }
 
-            // 3. ดึงยอดสรุปของ Master Pallet ใบนี้ เพื่อส่งกลับไปปริ้นท์
             $selStmt = $pdo->prepare("
                 SELECT 
                     MAX(t.master_pallet_no) AS master_pallet_no,
@@ -143,18 +133,17 @@ try {
             break;
 
         // =========================================================
-        // [NEW] รับเข้าสต็อกด้วย Smart Scanner
+        // รับเข้าสต็อกด้วย Smart Scanner
         // =========================================================
         case 'receive_scanned_tag':
             $barcode = trim($_POST['barcode'] ?? '');
-            $location_id = (int)($_POST['location_id'] ?? 1); // ค่าเริ่มต้นรับเข้าคลัง RM = 1
+            $location_id = (int)($_POST['location_id'] ?? 1);
             $userId = $_SESSION['user']['id'];
             
             if (empty($barcode)) {
                 throw new Exception("ไม่พบรหัสบาร์โค้ด");
             }
 
-            // ระบบสมองกล: แยกว่าที่ยิงมาคือ Serial, CTN หรือ Master Pallet
             $scanMode = 'SERIAL'; 
             $checkStmt = $pdo->prepare("SELECT TOP 1 serial_no, master_pallet_no, ctn_number FROM RM_SERIAL_TAGS WHERE serial_no = ? OR master_pallet_no = ? OR ctn_number = ?");
             $checkStmt->execute([$barcode, $barcode, $barcode]);
@@ -170,7 +159,6 @@ try {
                 $scanMode = 'CTN';
             }
 
-            // ยิงเรียก SP ไปจัดการบวกสต็อกหลังบ้าน
             $execStmt = $pdo->prepare("EXEC sp_Store_ScanReceiveRM @ScanMode=?, @BarcodeValue=?, @LocationID=?, @UserID=?");
             $execStmt->execute([$scanMode, $barcode, $location_id, $userId]);
             $result = $execStmt->fetch(PDO::FETCH_ASSOC);
@@ -185,12 +173,9 @@ try {
             $barcode = isset($_GET['serial_no']) ? trim($_GET['serial_no']) : '';
             if (empty($barcode)) { throw new Exception("กรุณาระบุ Barcode"); }
 
-            // ดึงข้อมูลแบบ Aggregation (ถ้ายิงตู้ หรือ Master Pallet มันจะรวมยอดให้เลย)
             $sqlTag = "SELECT 
                         MAX(ISNULL(t.master_pallet_no, t.serial_no)) AS serial_no, 
                         MAX(t.master_pallet_no) AS master_pallet_no,
-                        
-                        -- เช็คว่าถ้าพาเลทนี้มีหลาย Part No ให้พ่นคำว่า MIXED PARTS
                         CASE WHEN COUNT(DISTINCT i.item_id) > 1 THEN 'MIXED PARTS' ELSE MAX(i.part_no) END AS item_no, 
                         CASE WHEN COUNT(DISTINCT i.item_id) > 1 THEN 'พาเลทรวมสินค้าหลายชนิด (Consolidated Pallet)' ELSE MAX(i.part_description) END AS part_description, 
                         
@@ -214,12 +199,9 @@ try {
                     FROM RM_SERIAL_TAGS t WITH (NOLOCK)
                     LEFT JOIN ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
                     LEFT JOIN USERS u WITH (NOLOCK) ON t.created_by = u.id
-                    
-                    -- ⭐️ [FIXED BUG]: เปลี่ยนจาก :barcode เป็นเครื่องหมาย ? 3 ตัว
                     WHERE t.serial_no = ? OR t.master_pallet_no = ? OR t.ctn_number = ?";
             
             $stmtTag = $pdo->prepare($sqlTag);
-            // ⭐️ [FIXED BUG]: ส่งค่า $barcode เข้าไป 3 ตัว ให้พอดีกับ ? ในคำสั่ง SQL
             $stmtTag->execute([$barcode, $barcode, $barcode]);
             $tagInfo = $stmtTag->fetch(PDO::FETCH_ASSOC);
 
@@ -228,13 +210,11 @@ try {
                 exit;
             }
 
-            // ถ้ามีใบเดียว ให้ซ่อน total_tags เพื่อไม่ให้หน้าเว็บโชว์กล่อง Master Pallet
             if ($tagInfo['total_tags'] <= 1 && empty($tagInfo['master_pallet_no'])) {
                 unset($tagInfo['total_tags']);
                 unset($tagInfo['total_qty']);
             }
 
-            // ประวัติ (จำลองชั่วคราว ดึงจากใบที่ 1 ของกลุ่มมาเป็นตัวแทน)
             $history = [];
             if ($tagInfo['status'] != 'PENDING') {
                 $history[] = [
@@ -248,7 +228,7 @@ try {
 
             echo json_encode(['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]]);
             break;
-            
+
         case 'delete_bulk_tags':
             $serials = json_decode($_POST['serials'], true);
             if (!is_array($serials) || empty($serials)) {

@@ -290,15 +290,16 @@ function renderTraceData(data) {
 }
 
 // ==========================================
-// [NEW] ส่วนของ Smart Scanner (รับเข้าสต็อก)
+// Smart Scanner
 // ==========================================
 window.receiveScannedTag = async function() {
     if (!currentScannedBarcode) return;
+    const locId = document.getElementById('receiveLocation').value;
     
     const formData = new FormData();
     formData.append('action', 'receive_scanned_tag');
     formData.append('barcode', currentScannedBarcode);
-    formData.append('location_id', 1); // ค่า Default Location RM Store (รหัส 1)
+    formData.append('location_id', locId);
     
     try {
         const btnReceive = document.querySelector('#traceActionArea button');
@@ -308,25 +309,21 @@ window.receiveScannedTag = async function() {
         const json = await res.json();
         
         if(json.success) {
-            // โชว์ Alert เล็กๆ มุมขวาบนแบบไม่บังจอ (Toast)
             const Toast = Swal.mixin({
                 toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true
             });
             Toast.fire({ icon: 'success', title: 'รับเข้าสำเร็จ!' });
 
-            loadHistory(); // รีเฟรชตารางหลังบ้าน
+            loadHistory(); 
             
-            // เปลี่ยนหน้าจอให้เป็น AVAILABLE ทันที
             document.getElementById('traceActionArea').classList.add('d-none');
             document.getElementById('traceStatus').className = 'badge bg-success fs-6';
             document.getElementById('traceStatus').innerText = 'AVAILABLE';
             
-            // เช็คว่าเปิดสแกนต่อเนื่องไว้ไหม
             const autoReceive = document.getElementById('continuousScanToggle');
             if (autoReceive && autoReceive.checked) {
                 document.getElementById('scanInput').value = '';
                 document.getElementById('scanInput').focus();
-                // ถ้าเปิดกล้องอยู่ ให้เริ่มกล้องใหม่
                 const cameraTab = document.getElementById('trace-camera-tab');
                 if (cameraTab && cameraTab.classList.contains('active')) {
                     setTimeout(() => startTraceScanning(), 1000); 
@@ -350,7 +347,7 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// ส่วนของการสร้าง Template และนำเข้า Excel
+// Template และนำเข้า Excel
 // ==========================================
 function openImportModal() {
     clearModalData();

@@ -18,6 +18,29 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
         /* ไฮไลท์แถวที่สต็อกเป็น 0 หรือติดลบ */
         .row-out-of-stock { background-color: #fff5f5 !important; }
         .row-out-of-stock td { color: #dc3545 !important; }
+
+        /* 🖨️ รูปแบบสำหรับเครื่องปริ้นท์สติ๊กเกอร์บาร์โค้ด */
+        @media print {
+            body * { visibility: hidden !important; }
+            #printArea, #printArea * { visibility: visible !important; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            
+            /* ขนาดสติ๊กเกอร์ กว้าง 8cm x สูง 5cm (ปรับได้ตามกระดาษจริง) */
+            .tag-print-card { 
+                width: 80mm; height: 50mm; 
+                border: 2px solid #000; 
+                padding: 4mm; 
+                margin-bottom: 5mm; 
+                page-break-after: always;
+                font-family: Arial, sans-serif;
+                display: flex; flex-direction: column; justify-content: space-between;
+                box-sizing: border-box;
+            }
+            .tag-print-header { font-size: 16px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 3px; text-align: center; }
+            .tag-print-body { display: flex; justify-content: space-between; align-items: center; flex-grow: 1; margin-top: 5px;}
+            .tag-print-info { font-size: 13px; line-height: 1.5; width: 60%; }
+            .tag-print-qr { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end;}
+        }
     </style>
 </head>
 
@@ -104,20 +127,35 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                     <div class="card-body p-2 bg-body-tertiary rounded d-flex justify-content-between align-items-center flex-wrap gap-2">
                         
                         <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                            <div class="input-group input-group-sm" style="max-width: 250px;">
+                            <div class="input-group input-group-sm" style="max-width: 200px;">
                                 <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Item No. หรือชื่อ..." onkeyup="handleSearch()">
+                                <input type="text" id="searchInput" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Item..." onkeyup="handleSearch()">
                             </div>
                             
-                            <div class="input-group input-group-sm shadow-sm" style="max-width: 220px;">
+                            <div class="input-group input-group-sm shadow-sm" style="max-width: 200px;">
                                 <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
                                 <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary" onchange="loadDashboardData()">
-                                    <option value="ALL">ทุกคลังสินค้า (All Locations)</option>
-                                    </select>
+                                    <option value="ALL">All Location</option>
+                                </select>
+                            </div>
+
+                            <div class="input-group input-group-sm shadow-sm" style="max-width: 120px;">
+                                <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
+                                <select id="matTypeFilter" class="form-select border-secondary-subtle fw-bold text-dark" onchange="loadDashboardData()">
+                                    <option value="ALL" selected>All</option>
+                                    <option value="RM">RM</option>
+                                    <option value="SEMI">SEMI</option>
+                                    <option value="FG">FG</option>
+                                </select>
+                            </div>
+
+                            <div class="form-check form-switch ms-1 d-flex align-items-center">
+                                <input class="form-check-input mt-0 shadow-sm" type="checkbox" id="hideZeroToggle" onchange="loadDashboardData()" style="transform: scale(1.2); cursor: pointer;">
+                                <label class="form-check-label ms-2 small fw-bold text-secondary cursor-pointer" for="hideZeroToggle">ซ่อนยอด 0</label>
                             </div>
                             
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success d-none d-md-inline-flex align-items-center px-2 py-1">
-                                <i class="fas fa-check-circle me-1"></i> รวมพร้อมใช้: <span id="toolbar-total-avail" class="ms-1 fw-bold fs-6">0</span> &nbsp;PCS.
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success d-none d-xl-inline-flex align-items-center px-2 py-1 ms-auto">
+                                <i class="fas fa-check-circle me-1"></i> พร้อมใช้รวม: <span id="toolbar-total-avail" class="ms-1 fw-bold fs-6">0</span> &nbsp;PCS.
                             </span>
                         </div>
 
@@ -133,6 +171,10 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                             <button class="btn btn-outline-secondary btn-sm" onclick="loadDashboardData()" title="Refresh Data">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
+                            
+                            <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openIssueModal()">
+                                <i class="fas fa-dolly me-1"></i> เบิกจ่าย (Issue)
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -144,7 +186,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                         <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
                             <thead class="table-light sticky-top shadow-sm">
                                 <tr>
-                                    <th style="min-width: 150px;">Item No.</th>
+                                    <th style="min-width: 180px;">Item No.</th>
                                     <th style="min-width: 300px;">Description</th>
                                     <th class="text-end" style="min-width: 120px;">รอรับเข้า (Pending)</th>
                                     <th class="text-end" style="min-width: 120px;">พร้อมใช้ (Available)</th>
@@ -199,6 +241,70 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea" class="d-none"></div>
+
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-dolly me-2"></i> เบิกจ่ายวัตถุดิบ (Smart Issue)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    
+                    <div class="row g-2 mb-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold text-secondary">1. สแกนพาเลทแม่ / CTN / Serial</label>
+                            <div class="input-group input-group-lg shadow-sm border border-primary rounded">
+                                <span class="input-group-text bg-white text-primary border-0"><i class="fas fa-barcode"></i></span>
+                                <input type="text" id="issueBarcode" class="form-control border-0 fw-bold text-primary" placeholder="สแกนหรือพิมพ์รหัส..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" onclick="fetchPalletTags()">
+                                <i class="fas fa-search me-2"></i> ดึงข้อมูล
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark"><i class="fas fa-list-check me-2"></i> 2. เลือก Tag ที่ต้องการเบิกจริง</span>
+                            <span class="badge bg-primary rounded-pill" id="selectedTagsCount">เลือก 0 รายการ</span>
+                        </div>
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table table-sm table-hover table-striped align-middle mb-0 text-nowrap">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="text-center" style="width: 50px;">
+                                            <input class="form-check-input" type="checkbox" id="checkAllTags" onchange="toggleAllTags(this)">
+                                        </th>
+                                        <th>Serial No. (ป้ายย่อย)</th>
+                                        <th>Part No.</th>
+                                        <th class="text-end pe-3">QTY</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="issueTagsTbody">
+                                    <tr><td colspan="4" class="text-center py-4 text-muted">กรุณาสแกนบาร์โค้ดเพื่อดึงรายการ</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary">3. โลเคชั่นปลายทาง (ส่งเข้าไลน์ไหน)</label>
+                        <select id="issueToLocation" class="form-select form-select-lg fw-bold shadow-sm"></select>
+                    </div>
+
+                    <button class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btnSubmitIssue" onclick="submitSpecificIssue()" disabled>
+                        <i class="fas fa-print me-2"></i> ยืนยันเบิก & พิมพ์สติ๊กเกอร์ (Issue & Print)
+                    </button>
+                    
                 </div>
             </div>
         </div>

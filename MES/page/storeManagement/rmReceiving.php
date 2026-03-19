@@ -394,11 +394,20 @@ $pageHelpId = "";
                                 </div>
 
                                 <div id="traceActionArea" class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded text-center d-none">
-                                    <h6 class="text-warning fw-bold mb-2"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
-                                    <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="receiveScannedTag()">
-                                        <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
-                                    </button>
-                                </div>
+                                            <h6 class="text-warning fw-bold mb-3"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
+                                            
+                                            <div class="mb-3 text-start">
+                                                <label class="form-label fw-bold text-dark small mb-1">นำของไปเก็บที่ (Location):</label>
+                                                <select id="receiveLocation" class="form-select fw-bold border-secondary-subtle shadow-sm">
+                                                    <option value="1008" selected>Store (คลังวัตถุดิบหลัก)</option>
+                                                    <option value="1007">Warehouse (คลังสินค้า)</option>
+                                                </select>
+                                            </div>
+
+                                            <button class="btn btn-success w-100 fw-bold px-4 shadow-sm" onclick="receiveScannedTag()">
+                                                <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
+                                            </button>
+                                        </div>
 
                             </div>
                         </div>
