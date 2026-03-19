@@ -114,6 +114,7 @@ function loadMasterData() {
             const selectLine = document.getElementById('select_line');
             if(selectLine) {
                 let lineHTML = '<option value="" selected disabled>-- เลือกไลน์ผลิต --</option>';
+                lineHTML += `<option value="Incoming">Incoming</option>`;
                 res.data.lines.forEach(l => {
                     lineHTML += `<option value="${escapeHTML(l.line_name)}">${escapeHTML(l.line_name)}</option>`;
                 });

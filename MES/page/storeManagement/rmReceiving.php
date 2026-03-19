@@ -134,12 +134,27 @@ $pageHelpId = "";
                             </div>
 
                             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                                <button class="btn btn-dark btn-sm shadow-sm d-none" id="btnBatchPrint" onclick="printSelectedTags()">
-                                    <i class="fas fa-print me-1"></i> Print Selected (<span id="selectedCount">0</span>)
-                                </button>
+                                <div class="dropdown d-none" id="btnBatchPrintDropdown">
+                                    <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-layer-group me-1"></i> จัดการรายการ (<span id="selectedCount">0</span>)
+                                    </button>
+                                    <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.95rem;">
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold" href="#" onclick="printSelectedTags()">
+                                                <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์แยกใบ (Individual)
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="groupToMasterPallet()">
+                                                <i class="fas fa-boxes fa-fw me-2"></i> จัดพาเลทรวม (Master Pallet)
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                                 
-                                <button class="btn btn-danger btn-sm shadow-sm d-none" id="btnBatchDelete" onclick="deleteSelectedTags()">
-                                    <i class="fas fa-trash me-1"></i> Delete Selected (<span id="selectedDeleteCount">0</span>)
+                                <button class="btn btn-danger btn-sm shadow-sm d-none fw-bold" id="btnBatchDelete" onclick="deleteSelectedTags()">
+                                    <i class="fas fa-trash me-1"></i> ลบ (<span id="selectedDeleteCount">0</span>)
                                 </button>
 
                                 <button class="btn btn-info btn-sm fw-bold px-3 shadow-sm text-white" onclick="openTraceModal()">
@@ -282,11 +297,19 @@ $pageHelpId = "";
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg bg-body-tertiary">
                 <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i> ตรวจสอบประวัติแท็ก (Tag Traceability)</h5>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i> ตรวจสอบ / รับเข้า (Scanner)</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-3 p-md-4">
                     
+                    <div class="d-flex justify-content-between align-items-center mb-3 bg-light p-2 px-3 border rounded shadow-sm">
+                        <span class="fw-bold text-primary" style="font-size: 0.9rem;"><i class="fas fa-bolt text-warning me-1"></i> โหมดรับเข้าสต็อก</span>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="continuousScanToggle" style="cursor: pointer; transform: scale(1.2); margin-right: 10px;">
+                            <label class="form-check-label text-dark fw-bold small cursor-pointer" for="continuousScanToggle">สแกนต่อเนื่อง</label>
+                        </div>
+                    </div>
+
                     <div class="scanner-box mb-4 shadow-sm">
                         <ul class="nav nav-tabs nav-fill bg-white rounded-top pt-2 px-2 border-bottom-0" id="traceScanTab" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -369,6 +392,14 @@ $pageHelpId = "";
                                     <span class="text-muted small">Remark:</span> 
                                     <span class="fw-bold text-danger small" id="traceRemark">-</span>
                                 </div>
+
+                                <div id="traceActionArea" class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded text-center d-none">
+                                    <h6 class="text-warning fw-bold mb-2"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
+                                    <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="receiveScannedTag()">
+                                        <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
 

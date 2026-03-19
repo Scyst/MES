@@ -14,6 +14,10 @@ let rowsPerPage = 100;
 let html5QrCodeTrace = null;
 let html5QrCodeScannerTrace = null;
 
+// [NEW] ตัวแปรสำหรับ Smart Scanner
+let currentScannedBarcode = '';
+let currentScannedStatus = '';
+
 document.addEventListener('DOMContentLoaded', () => {
     importModalInstance = new bootstrap.Modal(document.getElementById('importModal'));
     document.getElementById('importModal').addEventListener('hidden.bs.modal', clearModalData);
@@ -33,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
         traceModalEl.addEventListener('hidden.bs.modal', () => {
             stopTraceScanning();
             document.getElementById('traceResult').classList.add('d-none');
+            const actionArea = document.getElementById('traceActionArea');
+            if(actionArea) actionArea.classList.add('d-none'); // [NEW] ซ่อนกล่องรับเข้า
         });
 
         const cameraTab = document.getElementById('trace-camera-tab');
@@ -141,6 +147,8 @@ async function handleTraceFileScan(file) {
     stopTraceScanning(); 
     document.getElementById('traceLoading').classList.remove('d-none');
     document.getElementById('traceResult').classList.add('d-none');
+    const actionArea = document.getElementById('traceActionArea');
+    if(actionArea) actionArea.classList.add('d-none');
 
     try {
         if (!html5QrCodeTrace) {
@@ -162,6 +170,8 @@ async function handleTraceFileScan(file) {
 function openTraceModal() {
     document.getElementById('scanInput').value = '';
     document.getElementById('traceResult').classList.add('d-none');
+    const actionArea = document.getElementById('traceActionArea');
+    if(actionArea) actionArea.classList.add('d-none');
     document.getElementById('traceLoading').classList.add('d-none');
     traceModalInstance.show();
 }
@@ -185,6 +195,8 @@ function handleScanInput(event) {
 async function fetchTagHistory(serialNo) {
     document.getElementById('traceLoading').classList.remove('d-none');
     document.getElementById('traceResult').classList.add('d-none');
+    const actionArea = document.getElementById('traceActionArea');
+    if(actionArea) actionArea.classList.add('d-none');
 
     try {
         const res = await fetch(`api/manageRmReceiving.php?action=trace_tag&serial_no=${encodeURIComponent(serialNo)}`);
@@ -197,11 +209,12 @@ async function fetchTagHistory(serialNo) {
             document.getElementById('traceResult').classList.remove('d-none');
             document.getElementById('scanInput').value = ''; 
         } else {
-            Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo} ในระบบ`, 'warning').then(() => {
+            Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก/พาเลท: ${serialNo} ในระบบ`, 'warning').then(() => {
                 const manualTabBtn = document.getElementById('trace-manual-tab');
                 if (manualTabBtn) {
                     new bootstrap.Tab(manualTabBtn).show();
                 }
+                setTimeout(() => { document.getElementById('scanInput').value = ''; document.getElementById('scanInput').focus(); }, 300);
             });
         }
     } catch (err) {
@@ -214,16 +227,25 @@ function renderTraceData(data) {
     const tag = data.tag_info;
     const history = data.history;
 
-    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : 'bg-warning');
+    currentScannedBarcode = tag.master_pallet_no || tag.serial_no;
+    currentScannedStatus = tag.status;
+
+    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning' : 'bg-info'));
     
-    document.getElementById('traceSerial').innerText = tag.serial_no;
+    document.getElementById('traceSerial').innerText = currentScannedBarcode;
     document.getElementById('traceStatus').className = `badge ${badgeClass} fs-6`;
     document.getElementById('traceStatus').innerText = tag.status;
     document.getElementById('traceItem').innerText = tag.item_no;
     document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
     document.getElementById('tracePO').innerText = tag.po_number || '-';
     document.getElementById('traceInv').innerText = tag.warehouse_no || '-';
-    document.getElementById('traceQty').innerText = parseFloat(tag.current_qty).toLocaleString() + ' / ' + parseFloat(tag.qty_per_pallet).toLocaleString();
+    
+    if(tag.total_tags) {
+        document.getElementById('traceQty').innerText = `${parseFloat(tag.total_qty).toLocaleString()} (รวม ${tag.total_tags} รายการ)`;
+    } else {
+        document.getElementById('traceQty').innerText = parseFloat(tag.current_qty).toLocaleString() + ' / ' + parseFloat(tag.qty_per_pallet).toLocaleString();
+    }
+    
     document.getElementById('traceRemark').innerText = tag.remark || '-';
 
     const tbody = document.getElementById('traceHistoryTbody');
@@ -231,29 +253,93 @@ function renderTraceData(data) {
 
     if (history.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีประวัติการเคลื่อนไหว</td></tr>';
-        return;
+    } else {
+        history.forEach(row => {
+            let typeBadge = row.transaction_type === 'RECEIVE_RM' ? '<span class="badge bg-success bg-opacity-10 text-success border border-success">RECEIVE</span>' : 
+                            '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary">ISSUE</span>';
+            
+            let displayTime = row.transaction_timestamp ? row.transaction_timestamp.substring(0, 16) : '-';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${displayTime}</td>
+                    <td>${typeBadge}</td>
+                    <td class="text-end fw-bold ${row.transaction_type === 'RECEIVE_RM' ? 'text-success' : 'text-danger'}">
+                        ${row.transaction_type === 'RECEIVE_RM' ? '+' : '-'}${parseFloat(row.quantity).toLocaleString()}
+                    </td>
+                    <td><small>${escapeHTML(row.notes || '-')}</small></td>
+                    <td><small>${escapeHTML(row.actor_name || '-')}</small></td>
+                </tr>
+            `;
+        });
     }
 
-    history.forEach(row => {
-        let typeBadge = row.transaction_type === 'RECEIVE_RM' ? '<span class="badge bg-success bg-opacity-10 text-success border border-success">RECEIVE</span>' : 
-                        '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary">ISSUE</span>';
+    // [NEW] ตรวจสอบว่าจะโชว์ปุ่มรับเข้าหรือไม่
+    const actionArea = document.getElementById('traceActionArea');
+    if (tag.status === 'PENDING') {
+        if (actionArea) actionArea.classList.remove('d-none');
         
-        let displayTime = row.transaction_timestamp ? row.transaction_timestamp.substring(0, 16) : '-';
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${displayTime}</td>
-                <td>${typeBadge}</td>
-                <td class="text-end fw-bold ${row.transaction_type === 'RECEIVE_RM' ? 'text-success' : 'text-danger'}">
-                    ${row.transaction_type === 'RECEIVE_RM' ? '+' : '-'}${parseFloat(row.quantity).toLocaleString()}
-                </td>
-                <td><small>${escapeHTML(row.notes || '-')}</small></td>
-                <td><small>${escapeHTML(row.actor_name || '-')}</small></td>
-            </tr>
-        `;
-    });
+        // ฟีเจอร์ Auto-Receive (ถ้าเปิดสวิตซ์สแกนต่อเนื่องไว้)
+        const autoReceive = document.getElementById('continuousScanToggle');
+        if (autoReceive && autoReceive.checked) {
+            setTimeout(() => receiveScannedTag(), 300); // ดีเลย์ 0.3 วิแล้วรับเข้าเลย
+        }
+    } else {
+        if (actionArea) actionArea.classList.add('d-none');
+    }
 }
 
+// ==========================================
+// [NEW] ส่วนของ Smart Scanner (รับเข้าสต็อก)
+// ==========================================
+window.receiveScannedTag = async function() {
+    if (!currentScannedBarcode) return;
+    
+    const formData = new FormData();
+    formData.append('action', 'receive_scanned_tag');
+    formData.append('barcode', currentScannedBarcode);
+    formData.append('location_id', 1); // ค่า Default Location RM Store (รหัส 1)
+    
+    try {
+        const btnReceive = document.querySelector('#traceActionArea button');
+        if(btnReceive) { btnReceive.disabled = true; btnReceive.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังรับเข้า...'; }
+
+        const res = await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        
+        if(json.success) {
+            // โชว์ Alert เล็กๆ มุมขวาบนแบบไม่บังจอ (Toast)
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true
+            });
+            Toast.fire({ icon: 'success', title: 'รับเข้าสำเร็จ!' });
+
+            loadHistory(); // รีเฟรชตารางหลังบ้าน
+            
+            // เปลี่ยนหน้าจอให้เป็น AVAILABLE ทันที
+            document.getElementById('traceActionArea').classList.add('d-none');
+            document.getElementById('traceStatus').className = 'badge bg-success fs-6';
+            document.getElementById('traceStatus').innerText = 'AVAILABLE';
+            
+            // เช็คว่าเปิดสแกนต่อเนื่องไว้ไหม
+            const autoReceive = document.getElementById('continuousScanToggle');
+            if (autoReceive && autoReceive.checked) {
+                document.getElementById('scanInput').value = '';
+                document.getElementById('scanInput').focus();
+                // ถ้าเปิดกล้องอยู่ ให้เริ่มกล้องใหม่
+                const cameraTab = document.getElementById('trace-camera-tab');
+                if (cameraTab && cameraTab.classList.contains('active')) {
+                    setTimeout(() => startTraceScanning(), 1000); 
+                }
+            }
+        } else {
+            Swal.fire('ล้มเหลว', json.message, 'error');
+            if(btnReceive) { btnReceive.disabled = false; btnReceive.innerHTML = '<i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)'; }
+        }
+    } catch(err) {
+        Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'error');
+    }
+};
 
 // ==========================================
 // Helper Utilities
@@ -262,7 +348,6 @@ function escapeHTML(str) {
     if (!str) return '';
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
 }
-
 
 // ==========================================
 // ส่วนของการสร้าง Template และนำเข้า Excel
@@ -287,9 +372,7 @@ function downloadTemplate() {
         ["RM-12345", "RESISTOR", "10K OHM 1/4W", "PO-2026-001", "1000", "2", "INV-2603-001", "PL-001", "CTN-01", "12.26", "2026-03-16", "ขาด 50 ชิ้น"]
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    
     ws['!cols'] = [ {wch: 15}, {wch: 20}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 20} ];
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Import_Template");
     XLSX.writeFile(wb, "RM_Receiving_Template.xlsx");
@@ -451,7 +534,7 @@ async function submitToDatabase() {
             renderPrintTags(json.data);
             
             Swal.fire({ 
-                title: 'สำเร็จ', text: 'บันทึกข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
+                title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย (สถานะ PENDING) กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
                 timer: 1500, showConfirmButton: false 
             }).then(() => { setTimeout(() => { window.print(); }, 300); });
         } else {
@@ -498,6 +581,7 @@ function handleSearch() {
     filteredHistoryData = allHistoryData.filter(row => {
         return (
             (row.serial_no && row.serial_no.toLowerCase().includes(keyword)) ||
+            (row.master_pallet_no && row.master_pallet_no.toLowerCase().includes(keyword)) ||
             (row.item_no && row.item_no.toLowerCase().includes(keyword)) ||
             (row.category && row.category.toLowerCase().includes(keyword)) ||
             (row.po_number && row.po_number.toLowerCase().includes(keyword)) ||
@@ -537,9 +621,9 @@ function renderHistoryTable() {
     const paginatedItems = filteredHistoryData.slice(startIndex, endIndex);
 
     paginatedItems.forEach(row => {
-        let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : 'bg-warning');
+        let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : (row.status === 'PENDING' ? 'bg-warning' : 'bg-info'));
         let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
-        let receiveDate = row.received_date ? formatDateForPrint(row.received_date) : '-';
+        let receiveDate = row.actual_receive_date ? formatDateForPrint(row.actual_receive_date) : '-'; // [NEW] โชว์วันที่รับจริง
         
         let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
         
@@ -550,7 +634,10 @@ function renderHistoryTable() {
                 </td>
                 <td class="text-muted"><small>${displayTime}</small></td>
                 <td>${receiveDate}</td>
-                <td class="text-center fw-bold text-primary">${escapeHTML(row.serial_no)}</td>
+                <td class="text-center fw-bold text-primary">
+                    ${escapeHTML(row.serial_no)}
+                    ${row.master_pallet_no ? `<br><span class="badge bg-primary bg-opacity-10 text-primary border border-primary mt-1" title="Pallet Tag"><i class="fas fa-boxes"></i> ${escapeHTML(row.master_pallet_no)}</span>` : ''}
+                </td>
                 
                 <td class="text-truncate text-center" style="max-width: 100px;" title="${escapeHTML(row.item_no)} | ${escapeHTML(row.category || '')}">
                     ${escapeHTML(row.item_no)} <br> <small class="text-muted">${escapeHTML(row.category || '')}</small>
@@ -588,17 +675,25 @@ function renderHistoryTable() {
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.9rem; z-index: 1050;">
                             <li>
                                 <a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;">
-                                    <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag
+                                    <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag (ใบย่อย)
                                 </a>
                             </li>
                             
+                            ${row.master_pallet_no ? `
+                            <li>
+                                <a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${row.master_pallet_no}'); return false;">
+                                    <i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet Tag
+                                </a>
+                            </li>
+                            ` : ''}
+                            
                             ${canManageRM ? `
+                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;">
                                     <i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล
                                 </a>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${row.serial_no}'); return false;">
                                     <i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล
@@ -652,7 +747,7 @@ function changePage(page, event) {
 }
 
 // ==========================================
-// ส่วนของการพิมพ์ Print Tag
+// [NEW] ส่วนของการพิมพ์ Print Tag & Pallet Tag
 // ==========================================
 function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
@@ -662,50 +757,162 @@ function toggleSelectAll(source) {
 
 function updateBatchPrintBtn() {
     const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
-    const btnPrint = document.getElementById('btnBatchPrint');
-    const btnDelete = document.getElementById('btnBatchDelete'); // ปุ่มลบ
+    // [MODIFIED] เปลี่ยนไปชี้ที่ btnBatchPrintDropdown แทนปุ่ม Print แบบเดิม
+    const btnPrintDropdown = document.getElementById('btnBatchPrintDropdown');
+    const btnDelete = document.getElementById('btnBatchDelete'); 
     const selectAllCb = document.getElementById('selectAllCheckbox');
     const totalCount = document.querySelectorAll('.row-checkbox').length;
     
     if(checkedCount > 0) {
-        if(btnPrint) { btnPrint.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
+        if(btnPrintDropdown) { btnPrintDropdown.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
         if(btnDelete) { btnDelete.classList.remove('d-none'); document.getElementById('selectedDeleteCount').innerText = checkedCount; }
     } else {
-        if(btnPrint) btnPrint.classList.add('d-none');
+        if(btnPrintDropdown) btnPrintDropdown.classList.add('d-none');
         if(btnDelete) btnDelete.classList.add('d-none');
     }
     
     if(selectAllCb) { selectAllCb.checked = (checkedCount === totalCount && totalCount > 0); }
 }
 
+window.groupToMasterPallet = async function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    if(checkboxes.length === 0) return;
+    
+    let serials = [];
+    checkboxes.forEach(cb => { 
+        let rowData = JSON.parse(decodeURIComponent(cb.value));
+        serials.push(rowData.serial_no); 
+    });
+
+    Swal.fire({
+        title: 'จัดกลุ่ม Pallet Tag?',
+        text: `คุณต้องการนำ Tag ทั้ง ${serials.length} รายการนี้ มัดรวมเป็นพาเลทเดียวกันใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, จัดกลุ่มและพิมพ์ใบหน้า',
+        cancelButtonText: 'ยกเลิก'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'group_master_pallet');
+            formData.append('serials', JSON.stringify(serials));
+            
+            try {
+                Swal.fire({ title: 'กำลังประมวลผล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('api/manageRmReceiving.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                
+                if(json.success) {
+                    renderMasterPalletTag(json.data); // วาดใบพาเลท
+                    loadHistory(); // รีเฟรชตาราง
+                    Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false })
+                    .then(() => { setTimeout(() => window.print(), 300); });
+                } else {
+                    Swal.fire('ข้อผิดพลาด', json.message, 'error');
+                }
+            } catch(err) {
+                Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'error');
+            }
+        }
+    });
+};
+
+window.renderMasterPalletTag = function(masterData) {
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = '';
+    
+    let isMixed = masterData.distinct_items > 1;
+    let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || 'MIXED PARTS');
+    let displayDesc = isMixed ? 'พาเลทรวมสินค้าหลายชนิด (Consolidated Pallet)' : escapeHTML(masterData.part_description || masterData.description_ref || '');
+
+    let tagHTML = `
+    <div class="tag-card">
+        <div class="tag-details">
+            <div class="t-title" style="font-size: 1.1rem; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 1px;">
+                <i class="fas fa-layer-group"></i> PALLET TAG
+            </div>
+            <div class="t-sub" style="font-size: 1rem; font-weight: bold; color: #000;">${displayItemNo}</div>
+            <div class="t-desc" style="height: 18px; margin-bottom: 4px;">${displayDesc}</div>
+            
+            <table class="t-table">
+                <tr>
+                    <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty || masterData.qty_per_pallet).toLocaleString()}</span></td>
+                    <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${masterData.total_tags || 1}</span></td>
+                </tr>
+                <tr>
+                    <td colspan="2"><b>PO:</b> ${escapeHTML(masterData.po_number || '-')}</td>
+                </tr>
+                <tr>
+                    <td><b>Date:</b> ${escapeHTML(formatDateForPrint(masterData.received_date))}</td>
+                    <td><b>Inv:</b> ${escapeHTML(masterData.warehouse_no || '-')}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="tag-qr">
+            <div id="qr-${masterData.master_pallet_no}"></div>
+            <div class="t-serial" style="font-size: 0.65rem; word-wrap: break-word; text-align: center; line-height: 1.1; margin-top: 3px;">
+                ${masterData.master_pallet_no}
+            </div>
+        </div>
+    </div>
+    `;
+    printArea.innerHTML = tagHTML;
+    
+    if(typeof QRCode !== 'undefined') {
+        new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), {
+            text: masterData.master_pallet_no, width: 85, height: 85,
+            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
+        });
+    }
+};
+
+window.reprintMasterPallet = async function(masterPalletNo) {
+    try {
+        Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        const res = await fetch(`api/manageRmReceiving.php?action=trace_tag&serial_no=${encodeURIComponent(masterPalletNo)}`);
+        const json = await res.json();
+        
+        if (json.success && json.data && json.data.tag_info) {
+            let masterData = json.data.tag_info;
+            masterData.master_pallet_no = masterPalletNo;
+            
+            renderMasterPalletTag(masterData);
+            
+            Swal.close();
+            setTimeout(() => window.print(), 300);
+        } else {
+            Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูล Pallet Tag นี้ในระบบ', 'error');
+        }
+    } catch(err) {
+        Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'error');
+    }
+};
+
 window.printSingleTag = async function(encodedRow) {
     const tag = JSON.parse(decodeURIComponent(encodedRow));
     renderPrintTags([tag]);
-    
     await logPrintStatus([tag.serial_no]);
     loadHistory(); 
-    
     setTimeout(() => { window.print(); }, 200); 
 }
 
 window.printSelectedTags = async function() {
     const checkboxes = document.querySelectorAll('.row-checkbox:checked');
     if(checkboxes.length === 0) return;
-    
     let tagsToPrint = [];
     let serialsToLog = [];
-    
     checkboxes.forEach(cb => { 
         let tag = JSON.parse(decodeURIComponent(cb.value));
         tagsToPrint.push(tag); 
         serialsToLog.push(tag.serial_no);
     });
-    
     renderPrintTags(tagsToPrint);
-    
     await logPrintStatus(serialsToLog);
     loadHistory();
-    
     setTimeout(() => { window.print(); }, 300);
 }
 
