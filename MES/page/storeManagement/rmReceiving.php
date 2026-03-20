@@ -1,4 +1,5 @@
 <?php
+// MES/page/storeManagement/rmReceiving.php
 require_once __DIR__ . '/../components/init.php';
 requirePermission('view_warehouse');
 
@@ -21,7 +22,6 @@ $pageHelpId = "";
     <style>
         .table-responsive-custom { max-height: calc(100vh - 350px); overflow-y: auto; }
         .row-checkbox { transform: scale(1.2); cursor: pointer; }
-        /* หมายเหตุ: CSS สำหรับ Print ถูกย้ายไปที่ components/store_scanner.php แล้ว */
     </style>
 </head>
 

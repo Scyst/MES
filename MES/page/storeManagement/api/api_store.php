@@ -15,8 +15,6 @@ try {
 
     $currentUser = $_SESSION['user'];
     $action = $_REQUEST['action'] ?? '';
-
-    // 🛡️ CSRF Protection สำหรับ Method ที่เปลี่ยนแปลงข้อมูล
     $writeActions = [
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
@@ -508,14 +506,13 @@ try {
                 ];
             }
 
-            // ดึงประวัติเพิ่มเติม (การเบิก/ย้าย)
             $transSql = "SELECT t.transaction_timestamp, t.transaction_type, t.quantity, t.notes, ISNULL(e.name_th, u.username) AS actor_name
                          FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
                          LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
                          LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
                          WHERE t.reference_id = ? ORDER BY t.transaction_timestamp ASC";
             $transStmt = $pdo->prepare($transSql);
-            $transStmt->execute([$tagInfo['po_number']]); // หรืออ้างอิงจาก lot/serial ตามความเหมาะสม
+            $transStmt->execute([$tagInfo['po_number']]);
             $history = array_merge($history, $transStmt->fetchAll(PDO::FETCH_ASSOC));
 
             echo json_encode(['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]]);
@@ -738,7 +735,6 @@ try {
                 throw new Exception("ข้อมูลไม่ครบถ้วน (Item, Location หรือยอดนับจริงไม่ถูกต้อง)");
             }
 
-            // เช็คว่ามีรายการรออนุมัติของ Item + Location นี้อยู่แล้วหรือไม่ ป้องกันส่งซ้ำ
             $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM dbo.INVENTORY_CYCLE_COUNTS WITH (NOLOCK) WHERE item_id = ? AND location_id = ? AND status = 'PENDING'");
             $checkStmt->execute([$item_id, $location_id]);
             if ($checkStmt->fetchColumn() > 0) {
@@ -752,7 +748,6 @@ try {
             break;
 
         case 'get_pending_counts':
-            // ดึงรายการที่รออนุมัติทั้งหมดมาแสดง
             $sql = "
                 SELECT 
                     c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at,

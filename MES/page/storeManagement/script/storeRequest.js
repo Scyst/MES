@@ -1,3 +1,4 @@
+// MES/page/storeManagement/script/storeRequest.js
 "use strict";
 
 let allItems = [];
@@ -6,9 +7,6 @@ let currentPage = 1;
 let rowsPerPage = 100;
 let totalPages = 1;
 
-// =================================================================
-// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API (มี Loading & CSRF)
-// =================================================================
 async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
     let btn = null;
     let originalHtml = '';
@@ -61,9 +59,6 @@ async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null
     }
 }
 
-// =================================================================
-// 2. INITIALIZATION
-// =================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     await initData();
     
@@ -86,7 +81,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function initData() {
     try {
-        // ใช้ API กลาง get_master_data (ใช้ร่วมกับหน้า Dashboard)
         const res = await fetchAPI('get_master_data', 'GET');
         if (res && res.data) {
             allItems = res.data.items || [];
@@ -123,9 +117,6 @@ async function initData() {
     }
 }
 
-// =================================================================
-// 3. AUTOCOMPLETE (CLIENT-SIDE)
-// =================================================================
 const searchInp = document.getElementById('item_search');
 const listDiv = document.getElementById('autocomplete-list');
 
@@ -204,9 +195,6 @@ function openRequestModal() {
     }, 500);
 }
 
-// =================================================================
-// 4. MAIN DATA & RENDER
-// =================================================================
 async function loadRequests() {
     const status = document.getElementById('filterStatus')?.value || 'ALL';
     const search = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
@@ -225,11 +213,9 @@ async function loadRequests() {
     if(cardCon) cardCon.innerHTML = `<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>`;
 
     try {
-        // ยิง API เส้นเดียว ได้ทั้ง Data, Pagination และ KPI
         const queryParams = `get_scrap_requests&status=${status}&search=${search}&start_date=${startDate}&end_date=${endDate}&page=${currentPage}&limit=${rowsPerPage}`;
         const res = await fetchAPI(queryParams, 'GET');
 
-        // Render KPI
         if (res.kpi) {
             const fmt = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             const fmtMoney = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -238,11 +224,8 @@ async function loadRequests() {
             document.getElementById('sumQty').innerText = fmt.format(res.kpi.total_qty);
             document.getElementById('sumCost').innerText = fmtMoney.format(res.kpi.total_cost);
         }
-
-        // Render Table & Cards
         renderTableHTML(res.data);
 
-        // Render Pagination
         if (res.pagination) {
             totalPages = res.pagination.total_pages || 1;
             renderPaginationControls(res.pagination.total_records);
@@ -381,9 +364,6 @@ function changePage(page, event) {
     loadRequests();
 }
 
-// =================================================================
-// 5. POST ACTIONS (CREATE / APPROVE / REJECT)
-// =================================================================
 async function submitRequest(e) {
     e.preventDefault();
     
@@ -409,11 +389,9 @@ async function submitRequest(e) {
         defect_source: sourceVal
     };
 
-    // ส่ง Request พร้อม Lock ปุ่ม Submit ใน Form
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const btnId = submitBtn ? submitBtn.id : null;
     
-    // หากปุ่มไม่มี ID ให้ตั้งชั่วคราวเพื่อให้ fetchAPI จัดการได้
     if (submitBtn && !btnId) submitBtn.id = 'tempSubmitBtn';
 
     const res = await fetchAPI('create_request', 'POST', data, submitBtn ? submitBtn.id : null);
@@ -441,18 +419,12 @@ window.rejectReq = async (id) => {
     if (res) loadRequests();
 };
 
-// =================================================================
-// 6. EXPORT EXCEL
-// =================================================================
 async function exportData() {
     const status = document.getElementById('filterStatus')?.value || 'ALL';
     const search = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
     const startDate = document.getElementById('filterStartDate')?.value || '';
     const endDate = document.getElementById('filterEndDate')?.value || '';
-
-    // เพิ่ม Flag export=true เพื่อให้ API ส่งกลับมาทั้งหมดโดยไม่ติด Limit
     const queryParams = `get_scrap_requests&status=${status}&search=${search}&start_date=${startDate}&end_date=${endDate}&export=true`;
-
     const res = await fetchAPI(queryParams, 'GET', null, 'btnExportExcel');
     
     if (res && res.data && res.data.length > 0) {
@@ -503,7 +475,6 @@ async function exportData() {
     }
 }
 
-// 7. TOAST UI
 function showToast(msg, color) {
     const t = document.getElementById('liveToast');
     const tb = document.getElementById('toastMessage');

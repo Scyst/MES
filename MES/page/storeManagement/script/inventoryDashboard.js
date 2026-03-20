@@ -1,3 +1,4 @@
+// MES/page/storeManagement/script/inventoryDashboard.js
 "use strict";
 
 let currentPage = 1;
@@ -10,14 +11,10 @@ let cycleCountModal;
 let approvalModal;
 let ccHistoryModal;
 
-// =================================================================
-// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API (มี Loading & CSRF)
-// =================================================================
 async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
     let btn = null;
     let originalHtml = '';
     
-    // Operator Proofing: ล็อกปุ่มทันที
     if (buttonId) {
         btn = document.getElementById(buttonId);
         if (btn) {
@@ -66,27 +63,19 @@ async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null
     }
 }
 
-// =================================================================
-// 2. INITIALIZATION
-// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Init Modals
     const issueModalEl = document.getElementById('issueModal');
     if (issueModalEl) issueModal = new bootstrap.Modal(issueModalEl);
 
     const detailsModalEl = document.getElementById('detailsModal');
     if (detailsModalEl) detailsModalInstance = new bootstrap.Modal(detailsModalEl);
 
-    // Load Data
     loadLocations();
     loadDashboardData();
 
-    // ผูก Event Listeners ให้ Filters
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('materialFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('hideZeroStock')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
-    
-    // ผูก Event ให้ช่อง Search (ใช้ Debounce ป้องกันยิง API รัวๆ)
     document.getElementById('filterSearch')?.addEventListener('input', () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
@@ -95,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 
-    // ตรวจจับการกด Enter ในช่องสแกนเบิกของ
     document.getElementById('issueBarcode')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -153,9 +141,6 @@ async function openCcHistoryModal() {
     }
 }
 
-// =================================================================
-// 3. MASTER DATA & DASHBOARD
-// =================================================================
 async function loadLocations() {
     try {
         const result = await fetchAPI('get_master_data', 'GET');
@@ -189,7 +174,6 @@ async function loadDashboardData() {
         const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
 
-        // Render KPI Header
         if (result.kpi) {
             document.getElementById('totalSkus').innerText = result.kpi.total_skus.toLocaleString();
             document.getElementById('outOfStock').innerText = result.kpi.out_of_stock.toLocaleString();
@@ -197,7 +181,6 @@ async function loadDashboardData() {
             document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
-        // Render Table
         tbody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
@@ -210,8 +193,6 @@ async function loadDashboardData() {
             if (availableQty <= 0) tr.className = 'row-out-of-stock';
             
             const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
-
-            // แทรก HTML สำหรับตารางที่มี 10 คอลัมน์ตามหน้า UI ใหม่
             tr.innerHTML = `
                 <td>${runningNumber}</td>
                 <td class="fw-bold text-primary">${row.item_no}</td>
@@ -236,7 +217,6 @@ async function loadDashboardData() {
             tbody.appendChild(tr);
         });
 
-        // Render Pagination
         if (result.pagination) {
             totalPages = result.pagination.total_pages || 1;
             const pageInfo = document.getElementById('pageInfo');
@@ -260,9 +240,6 @@ function changePage(direction) {
     loadDashboardData();
 }
 
-// =================================================================
-// 4. ISSUE & PRINT (ระบบเบิกจ่าย และ พิมพ์สติ๊กเกอร์)
-// =================================================================
 async function fetchPalletTags() {
     const inputEl = document.getElementById('issueBarcode');
     const barcode = inputEl.value.trim();
@@ -385,7 +362,6 @@ function printIssueTags(tagsArray) {
             printArea.innerHTML += html;
         });
         
-        // Render QR Code (Requires qrcode.min.js loaded in PHP)
         if (typeof QRCode !== 'undefined') {
             tagsArray.forEach((tag, index) => {
                 new QRCode(document.getElementById('qr-code-' + index), {
@@ -397,7 +373,6 @@ function printIssueTags(tagsArray) {
             });
         }
         
-        // สั่ง Print
         setTimeout(() => {
             window.print();
             printArea.classList.add('d-none');
@@ -410,9 +385,6 @@ function printIssueTags(tagsArray) {
     }
 }
 
-// =================================================================
-// 5. VIEW ITEM DETAILS (เปิด Modal ดูพิกัด)
-// =================================================================
 async function showItemDetails(itemId, itemNo, itemDesc) {
     document.getElementById('modalItemNo').innerText = itemNo;
     document.getElementById('modalItemDesc').innerText = itemDesc || '-';
@@ -464,23 +436,15 @@ function escapeHTML(str) {
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
 }
 
-// ผูก Event นับจำนวน Tag ตอนติ๊ก Checkbox ໃນหน้า Issue
 function updateSelectedCount() {
     const checkedCount = document.querySelectorAll('.tag-checkbox:checked').length;
     document.getElementById('selectedTagsCount').innerText = `เลือก ${checkedCount} รายการ`;
 }
 document.getElementById('issueTagsTbody')?.addEventListener('change', updateSelectedCount);
-
-// =================================================================
-// 6. CYCLE COUNT (ระบบปรับปรุงสต็อก)
-// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     cycleCountModal = new bootstrap.Modal(document.getElementById('cycleCountModal'));
     approvalModal = new bootstrap.Modal(document.getElementById('approvalModal'));
-    
-    // เช็คสิทธิ์และดึงตัวเลขแจ้งเตือน ถ้าเป็น Admin/Supervisor
     checkPendingApprovals();
-    // สั่งให้เช็คเรื่อยๆ ทุก 30 วินาที
     setInterval(checkPendingApprovals, 30000);
 });
 
@@ -490,7 +454,6 @@ function openCycleCountModal(itemId, itemNo, itemDesc) {
     document.getElementById('ccItemNo').innerText = itemNo;
     document.getElementById('ccItemDesc').innerText = itemDesc || '-';
 
-    // คัดลอก Options จาก locationFilter มาใส่ (ยกเว้น ALL)
     const locSelect = document.getElementById('ccLocation');
     const filterSelect = document.getElementById('locationFilter');
     locSelect.innerHTML = '<option value="" selected disabled>เลือกคลังสินค้าที่ตรวจนับ...</option>';
@@ -501,7 +464,6 @@ function openCycleCountModal(itemId, itemNo, itemDesc) {
         }
     });
 
-    // ถ้ามีการ Filter Location อยู่แล้วให้ Auto Select
     const currentFilterLoc = document.getElementById('locationFilter').value;
     if (currentFilterLoc !== 'ALL') {
         locSelect.value = currentFilterLoc;
@@ -526,7 +488,7 @@ async function submitCycleCount(e) {
     if (res) {
         Swal.fire({ title: 'สำเร็จ', text: res.message, icon: 'success', timer: 1500, showConfirmButton: false });
         cycleCountModal.hide();
-        checkPendingApprovals(); // อัปเดตตัวเลขแจ้งเตือน
+        checkPendingApprovals();
     }
 }
 
@@ -607,17 +569,15 @@ async function processApproval(countId, actionType) {
     const res = await fetchAPI('approve_cycle_count', 'POST', formData);
     if (res) {
         showToast(res.message, 'var(--bs-success)');
-        openApprovalModal(); // รีเฟรชตารางอนุมัติ
-        loadDashboardData(); // รีเฟรชตารางหน้าหลัก
-        checkPendingApprovals(); // อัปเดตตัวเลขแจ้งเตือน
+        openApprovalModal();
+        loadDashboardData();
+        checkPendingApprovals();
     }
 }
 
-// นำฟังก์ชัน showToast มาใส่เผื่อหน้า Dashboard ยังไม่มี
 function showToast(msg, color) {
     let t = document.getElementById('liveToast');
     if (!t) {
-        // หากไม่มี Toast ใน HTML ให้สร้างแทรกสด
         const toastHTML = `
             <div id="toast" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
                 <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">

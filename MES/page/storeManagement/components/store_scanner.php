@@ -230,4 +230,4 @@
     </div>
 </div>
 
-<script src="script/store_scanner.js?v=<?php filemtime(__DIR__ . '/script/store_scanner.js'); ?>" defer></script>
+<script src="script/storeScanner.js?v=<?php filemtime(__DIR__ . '/../script/storeScanner.js'); ?>" defer></script>

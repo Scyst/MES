@@ -1,4 +1,4 @@
-// MES/page/storeManagement/components/store_scanner.js
+// MES/page/storeManagement/script/storeScanner.js
 "use strict";
 
 let traceModalInstance;
@@ -52,7 +52,7 @@ const cropModalEl = document.getElementById('cropModal');
                     cropModalInstance.show();
                 };
                 reader.readAsDataURL(file);
-                e.target.value = null; // รีเซ็ตค่าให้สามารถอัปโหลดรูปเดิมซ้ำได้
+                e.target.value = null;
             }
         });
 
@@ -177,8 +177,7 @@ function renderTraceData(data) {
     document.getElementById('traceItem').innerText = tag.item_no;
     document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
     document.getElementById('tracePO').innerText = tag.po_number || '-';
-    document.getElementById('traceInv').innerText = tag.warehouse_no || '-';
-    
+    document.getElementById('traceInv').innerText = tag.warehouse_no || '-';  
     document.getElementById('traceQty').innerText = tag.total_tags 
         ? `${parseFloat(tag.total_qty).toLocaleString()} (รวม ${tag.total_tags} ใบ)` 
         : `${parseFloat(tag.current_qty).toLocaleString()} / ${parseFloat(tag.qty_per_pallet).toLocaleString()}`;
@@ -206,9 +205,6 @@ function renderTraceData(data) {
         });
     }
 
-    // -----------------------------------------
-    // ควบคุมการแสดงปุ่ม Action (รับเข้า / เบิกจ่าย)
-    // -----------------------------------------
     const actionArea = document.getElementById('traceActionArea');
     const receiveArea = document.getElementById('traceReceiveArea');
     const issueArea = document.getElementById('traceIssueArea');
@@ -217,7 +213,6 @@ function renderTraceData(data) {
     receiveArea.classList.add('d-none');
     issueArea.classList.add('d-none');
 
-    // ถ้า Tag เป็น PENDING และมีสิทธิ์จัดการ RM -> แสดงปุ่ม "รับเข้า"
     if (tag.status === 'PENDING' && typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM) {
         actionArea.classList.remove('d-none');
         receiveArea.classList.remove('d-none');
@@ -226,15 +221,13 @@ function renderTraceData(data) {
         if (autoReceive && autoReceive.checked) {
             setTimeout(() => receiveScannedTag(), 300);
         }
-    } 
-    // ถ้า Tag เป็น AVAILABLE และมีสิทธิ์จัดการ WAREHOUSE -> แสดงปุ่ม "เบิกจ่าย"
+    }
     else if (tag.status === 'AVAILABLE' && typeof CAN_MANAGE_WH !== 'undefined' && CAN_MANAGE_WH) {
         actionArea.classList.remove('d-none');
         issueArea.classList.remove('d-none');
     }
 }
 
-// ฟังก์ชันรับเข้าสต็อก (ใช้ fetchAPI เหมือนเดิม)
 window.receiveScannedTag = async function() {
     if (!currentScannedBarcode) return;
     const locId = document.getElementById('receiveLocationTrace').value;
@@ -246,14 +239,12 @@ window.receiveScannedTag = async function() {
     const result = await fetchAPI('receive_scanned_tag', 'POST', formData, 'btnReceiveTrace');
     
     if(result) {
-        // ใช้ Toast ของหน้าหลัก
         if (typeof showToast === 'function') {
             showToast('รับเข้าสต็อกสำเร็จ!', 'var(--bs-success)');
         } else {
             Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'รับเข้าสำเร็จ!' });
         }
         
-        // ถ้าหน้าต่างนั้นมีฟังก์ชันโหลดตาราง ให้รีเฟรชตารางด้วย
         if (typeof loadHistory === 'function') loadHistory();
         if (typeof loadDashboardData === 'function') loadDashboardData();
         
@@ -271,14 +262,13 @@ window.receiveScannedTag = async function() {
     }
 };
 
-// ฟังก์ชันเบิกจ่ายสต็อก (จากหน้า Trace Scanner)
 window.issueScannedTag = async function(ignoreFifo = false) {
     if (!currentScannedBarcode) return;
     const locId = document.getElementById('issueLocationTrace').value;
     
     const formData = new FormData();
     formData.append('barcode', currentScannedBarcode);
-    formData.append('qty', 1); // สแกนเบิกทีละแท็ก/พาเลท
+    formData.append('qty', 1);
     formData.append('to_location', locId);
     
     if (ignoreFifo) formData.append('ignore_fifo', 'true');
@@ -286,7 +276,6 @@ window.issueScannedTag = async function(ignoreFifo = false) {
     const result = await fetchAPI('issue_rm', 'POST', formData, 'btnIssueTrace');
     
     if(result) {
-        // 🚨 ดัก Soft FIFO
         if (result.require_fifo_confirm) {
             Swal.fire({
                 title: '⚠️ แจ้งเตือน FIFO',
@@ -303,25 +292,18 @@ window.issueScannedTag = async function(ignoreFifo = false) {
             return; 
         }
 
-        // กรณีเบิกสำเร็จ
         if (typeof showToast === 'function') {
             showToast('เบิกจ่ายสำเร็จ!', 'var(--bs-success)');
         } else {
             Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'เบิกจ่ายสำเร็จ!' });
         }
-        
-        // โหลดข้อมูล Trace ใหม่เพื่ออัปเดตสถานะบนหน้าจอเป็น EMPTY
         executeTraceScan();
 
-        // รีเฟรชตารางหน้าหลัก (ถ้ามี)
         if (typeof loadHistory === 'function') loadHistory();
         if (typeof loadDashboardData === 'function') loadDashboardData();
     }
 };
 
-// =================================================================
-// ส่วนการ Print (ถูกแยกมาเป็นศูนย์กลางที่เดียว)
-// =================================================================
 window.renderPrintTags = function(tags) {
     const printArea = document.getElementById('printArea');
     if(!printArea) return;

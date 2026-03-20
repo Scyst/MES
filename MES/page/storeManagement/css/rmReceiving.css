@@ -1,8 +1,4 @@
-/* ========================================= */
-/* --- UI Styles (Full-screen Layout) --- */
-/* ========================================= */
-
-/* --- Sticky Header Section --- */
+/* MES/page/storeManagement/css/rmReceiving.js*/
 .dashboard-header-sticky {
     position: sticky;
     top: 0;
@@ -13,24 +9,21 @@
     transition: background-color 0.3s;
 }
 
-/* 1. ล็อกความสูงของพื้นที่เนื้อหาให้พอดีกับจอ (หัก Top Header และ Toolbar ออก) */
 .content-wrapper {
     height: calc(100vh - 140px); 
     display: flex;
     flex-direction: column;
 }
 
-/* 2. บังคับให้การ์ดยืดเต็มพื้นที่ที่เหลือ */
 .content-wrapper > .card {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* ไม่ให้ทะลุจอ */
+    overflow: hidden;
     margin-bottom: 0;
     border-radius: 0.5rem;
 }
 
-/* สไตล์สำหรับการ์ด KPI */
 .kpi-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
 .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
 .kpi-card.border-primary { border-left-color: #0d6efd !important; }
@@ -38,7 +31,6 @@
 .kpi-card.border-success { border-left-color: #198754 !important; }
 .kpi-card.border-warning { border-left-color: #ffc107 !important; }
 
-/* 3. ให้ตารางกินพื้นที่อิสระที่เหลือทั้งหมด และ Scroll แค่ตรงนี้ */
 .table-responsive-custom {
     flex-grow: 1;
     overflow-y: auto;
@@ -46,7 +38,6 @@
     background-color: var(--bs-secondary-bg);
 }
 
-/* Table Header Sticky */
 thead.sticky-top {
     position: sticky;
     top: 0;
@@ -55,17 +46,12 @@ thead.sticky-top {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-/* 4. ทำ Pagination ให้อยู่ล่างสุดเสมอ (Sticky Footer) */
 .card-footer {
     background-color: #fff;
     border-top: 1px solid var(--bs-border-color) !important;
     z-index: 10;
 }
 
-
-/* ========================================= */
-/* --- Print Tag Styles (สติ๊กเกอร์ 4x2") --- */
-/* ========================================= */
 #printArea { display: none; }
 
 @media print {
@@ -148,9 +134,6 @@ thead.sticky-top {
     .t-serial { font-size: 11px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
 }
 
-/* ========================================= */
-/* --- Scanner UI Styles --- */
-/* ========================================= */
 #qr-reader-trace { 
     width: 100%; 
     border: 1px solid var(--bs-border-color); 
@@ -180,7 +163,7 @@ thead.sticky-top {
 .qr-file-scanner-overlay .btn:hover {
     background-color: rgba(0, 0, 0, 0.6);
 }
-/* ซ่อนปุ่มขยะที่ติดมากับ Library html5-qrcode */
+
 #qr-reader-trace__dashboard { display: none !important; }
 #html5-qrcode-button-camera-stop { display: none !important; }
 #html5-qrcode-anchor-scan-type-change { display: none !important; }

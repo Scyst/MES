@@ -1,8 +1,6 @@
+// MES/page/storeManagement/script/rmReceiving.js
 "use strict";
 
-// ==========================================
-// ตัวแปร Global
-// ==========================================
 let parsedData = [];
 let previewData = [];
 let importModalInstance;
@@ -11,9 +9,6 @@ let rowsPerPage = 100;
 let totalPages = 1;
 let searchTimer;
 
-// =================================================================
-// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API
-// =================================================================
 async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
     let btn = null;
     let originalHtml = '';
@@ -66,9 +61,6 @@ async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null
     }
 }
 
-// ==========================================
-// 2. INITIALIZATION
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const importModalEl = document.getElementById('importModal');
     if (importModalEl) {
@@ -76,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         importModalEl.addEventListener('hidden.bs.modal', clearModalData);
     }
 
-    // Server-Side Search Debounce
     document.getElementById('searchInput')?.addEventListener('input', () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
@@ -91,9 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
 });
 
-// ==========================================
-// 3. MAIN DATA TABLE (Server-Side Pagination)
-// ==========================================
 async function loadHistory() {
     const tbody = document.getElementById('historyTbody');
     if (!tbody) return; 
@@ -110,7 +98,6 @@ async function loadHistory() {
         const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&search=${search}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
         
-        // Render KPI
         if (result.kpi) {
             document.getElementById('kpi-total-tags').innerText = result.kpi.total_tags.toLocaleString();
             document.getElementById('kpi-total-qty').innerText = parseFloat(result.kpi.total_qty).toLocaleString();
@@ -118,7 +105,6 @@ async function loadHistory() {
             document.getElementById('kpi-pending').innerText = result.kpi.pending_tags.toLocaleString();
         }
 
-        // Render Table
         tbody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
@@ -204,7 +190,6 @@ async function loadHistory() {
             `;
         });
 
-        // Pagination
         if (result.pagination) {
             totalPages = result.pagination.total_pages || 1;
             renderPaginationControls(result.pagination.total_records);
@@ -253,8 +238,6 @@ window.exportToExcel = async function() {
     const startDate = document.getElementById('filterStartDate').value;
     const endDate = document.getElementById('filterEndDate').value;
     const search = encodeURIComponent(document.getElementById('searchInput').value.trim());
-    
-    // ดึงข้อมูลทั้งหมดที่เข้าเงื่อนไข (ไม่จำกัดจำนวน/หน้า) สำหรับ Export
     const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&search=${search}&export=true`;
     
     const result = await fetchAPI(queryParams, 'GET', null, 'btnExportExcel');
@@ -282,9 +265,6 @@ window.exportToExcel = async function() {
     XLSX.writeFile(wb, `RM_Report_${dateStr}.xlsx`);
 };
 
-// ==========================================
-// 4. PRINT, GROUP PALLET, EXCEL IMPORT
-// ==========================================
 function openImportModal() {
     clearModalData();
     importModalInstance.show();
@@ -548,9 +528,6 @@ async function logPrintStatus(serials) {
     } catch(err) {}
 }
 
-// ==========================================
-// 5. EDIT & DELETE
-// ==========================================
 window.deleteTag = function(serialNo) {
     Swal.fire({
         title: 'ยืนยันการลบข้อมูล?',

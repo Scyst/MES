@@ -1,4 +1,4 @@
-/* --- Sticky Header Section --- */
+/* MES/page/storeManagement/css/storeRequest.js*/
 .dashboard-header-sticky {
     position: sticky;
     top: 0;
@@ -9,9 +9,7 @@
     transition: background-color 0.3s;
 }
 
-/* --- Table Styles --- */
 .table-responsive-custom {
-    /* ความสูงพอดีจอ (หัก Header ออก) */
     height: calc(100vh - 220px); 
     overflow: auto;
     border: 1px solid var(--bs-border-color);
@@ -19,7 +17,6 @@
     background-color: var(--bs-secondary-bg);
 }
 
-/* Table Header Sticky */
 thead.sticky-top {
     position: sticky;
     top: 0;
@@ -27,7 +24,6 @@ thead.sticky-top {
     background-color: var(--bs-light);
 }
 
-/* --- Utilities --- */
 .req-card {
     transition: transform 0.2s;
 }
@@ -36,7 +32,6 @@ thead.sticky-top {
 .req-card.status-COMPLETED { border-left: 5px solid #198754; }
 .req-card.status-REJECTED { border-left: 5px solid #dc3545; }
 
-/* Autocomplete */
 .autocomplete-results {
     position: absolute; border: 1px solid #d4d4d4; border-top: none; z-index: 2050; 
     top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto;
@@ -48,7 +43,6 @@ thead.sticky-top {
 }
 .autocomplete-item:hover { background-color: #f8f9fa; }
 
-/* Store Selection Grid */
 .store-grid-wrapper {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
@@ -70,7 +64,6 @@ thead.sticky-top {
     background-color: #e7f1ff; border-color: #0d6efd; color: #0d6efd; font-weight: 600;
 }
 
-/* --- FAB Button (ถ้าต้องการเอากลับมาใช้) --- */
 @media (max-width: 991.98px) {
     .fab-container {
         position: fixed;

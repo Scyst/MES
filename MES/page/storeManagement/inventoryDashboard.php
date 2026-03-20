@@ -1,4 +1,5 @@
 <?php
+// MES/page/storeManagement/inventoryDashboard.php
 require_once __DIR__ . '/../components/init.php';
 requirePermission('view_warehouse');
 
@@ -16,12 +17,9 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
         .kpi-card { transition: transform 0.2s; border-left: 4px solid; }
         .kpi-card:hover { transform: translateY(-3px); }
         .table-responsive-custom { max-height: calc(100vh - 300px); overflow-y: auto; }
-        
-        /* ไฮไลท์แถวที่สต็อกเป็น 0 หรือติดลบ */
         .row-out-of-stock { background-color: #fff5f5 !important; }
         .row-out-of-stock td { color: #dc3545 !important; }
 
-        /* 🖨️ รูปแบบสำหรับเครื่องปริ้นท์สติ๊กเกอร์บาร์โค้ด */
         @media print {
             body * { visibility: hidden !important; }
             #printArea, #printArea * { visibility: visible !important; }
