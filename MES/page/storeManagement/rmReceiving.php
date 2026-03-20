@@ -285,7 +285,6 @@ $pageHelpId = "";
     </script>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
-    <script src="script/rmReceiving.js?v=<?php echo time(); ?>"></script>
+    <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>" defer></script>
 </body>
 </html>
