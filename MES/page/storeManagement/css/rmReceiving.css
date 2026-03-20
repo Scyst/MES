@@ -1,4 +1,4 @@
-/* MES/page/storeManagement/css/rmReceiving.js*/
+/* MES/page/storeManagement/css/rmReceiving.css*/
 .dashboard-header-sticky {
     position: sticky;
     top: 0;
@@ -36,6 +36,13 @@
     overflow-y: auto;
     border-bottom: 1px solid var(--bs-border-color);
     background-color: var(--bs-secondary-bg);
+    max-height: calc(100vh - 350px);
+}
+
+
+.row-checkbox { 
+    transform: scale(1.2);
+    cursor: pointer; 
 }
 
 thead.sticky-top {

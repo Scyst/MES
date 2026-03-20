@@ -18,11 +18,6 @@ $pageHelpId = "";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <link rel="stylesheet" href="css/rmReceiving.css?v=<?php echo filemtime(__DIR__ . '/css/rmReceiving.css'); ?>">
-    
-    <style>
-        .table-responsive-custom { max-height: calc(100vh - 350px); overflow-y: auto; }
-        .row-checkbox { transform: scale(1.2); cursor: pointer; }
-    </style>
 </head>
 
 <body class="layout-top-header bg-body-tertiary">
