@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
+requirePermission('view_warehouse');
+
 $currentUserForJS = $_SESSION['user'] ?? null;
 $canManageRM = hasPermission('manage_rm_receiving');
 
@@ -18,6 +20,37 @@ $pageHelpId = "";
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    <style>
+        .table-responsive-custom { max-height: calc(100vh - 350px); overflow-y: auto; }
+        .row-checkbox { transform: scale(1.2); cursor: pointer; }
+        
+        @media print {
+            body * { visibility: hidden !important; }
+            #printArea, #printArea * { visibility: visible !important; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            
+            .tag-card { 
+                width: 80mm; height: 50mm; 
+                border: 2px solid #000; padding: 4mm; margin-bottom: 5mm; 
+                page-break-after: always; font-family: Arial, sans-serif;
+                display: flex; flex-direction: row; justify-content: space-between;
+                box-sizing: border-box;
+            }
+            .tag-details { width: 70%; padding-right: 5px; display: flex; flex-direction: column; }
+            .t-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
+            .t-sub { font-size: 10px; font-weight: bold; color: #555; margin-bottom: 2px; }
+            .t-desc { font-size: 9px; line-height: 1.2; height: 22px; overflow: hidden; margin-bottom: 3px;}
+            
+            .t-table { width: 100%; font-size: 9px; line-height: 1.3; }
+            .t-table td { padding: 1px 0; vertical-align: top; }
+            .t-hl { font-size: 14px; font-weight: bold; }
+            
+            .tag-qr { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+            .tag-qr img, .tag-qr canvas { width: 65px !important; height: 65px !important; }
+            .t-serial { font-size: 9px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
+        }
+    </style>
 </head>
 
 <body class="layout-top-header bg-body-tertiary">
@@ -26,9 +59,9 @@ $pageHelpId = "";
     
     <div class="page-container">
         <div id="main-content">
+            
             <div class="px-3 pt-3">
                 <div class="row g-2 mb-3">
-                        
                     <div class="col-6 col-md-3">
                         <div class="card shadow-sm kpi-card border-primary h-100">
                             <div class="card-body p-3">
@@ -96,7 +129,6 @@ $pageHelpId = "";
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -108,22 +140,22 @@ $pageHelpId = "";
                             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                                 <div class="input-group input-group-sm" style="max-width: 250px;">
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="searchInput" class="form-control border-secondary-subtle ps-2" placeholder="Search Serial, Item, PO..." onkeyup="handleSearch()">
+                                    <input type="text" id="searchInput" class="form-control border-secondary-subtle ps-2" placeholder="Search Serial, Item, PO...">
                                 </div>
                                 
                                 <div class="input-group input-group-sm shadow-sm" style="width: auto;">
                                     <span class="input-group-text bg-white border-secondary-subtle text-secondary small">วันที่:</span>
-                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-01'); ?>" onchange="loadHistory()">
+                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-01'); ?>">
                                     <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
-                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d'); ?>" onchange="loadHistory()">
+                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d'); ?>">
                                 </div>
 
                                 <div class="input-group input-group-sm d-none d-md-flex" style="max-width: 150px;">
                                     <span class="input-group-text bg-white border-secondary-subtle text-secondary small">Rows:</span>
                                     <select id="rowsPerPage" class="form-select border-secondary-subtle" onchange="changeRowsPerPage()">
-                                        <option value="10">10</option>
                                         <option value="50">50</option>
                                         <option value="100" selected>100</option>
+                                        <option value="500">500</option>
                                     </select>
                                 </div>
 
@@ -161,13 +193,15 @@ $pageHelpId = "";
                                     <i class="fas fa-barcode me-1"></i> ตรวจสอบ Tag
                                 </button>
 
-                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="exportToExcel()">
+                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" id="btnExportExcel" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel me-1"></i> Export
                                 </button>
                                 
+                                <?php if($canManageRM): ?>
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openImportModal()">
                                     <i class="fas fa-file-import me-1"></i> Import
                                 </button>
+                                <?php endif; ?>
                             </div>
 
                         </div>
@@ -176,16 +210,16 @@ $pageHelpId = "";
             </div>
 
             <div class="content-wrapper px-3 pb-3 pt-2">
-                <div class="card shadow-sm border-0">
-                    <div class="table-responsive-custom">
+                <div class="card shadow-sm border-0 h-100 d-flex flex-column">
+                    <div class="table-responsive-custom flex-grow-1">
                         <table class="table table-striped table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
-                            <thead class="sticky-top">
+                            <thead class="sticky-top table-light shadow-sm">
                                 <tr class="text-secondary small text-uppercase align-middle">
                                     <th class="text-center" style="width: 40px;">
                                         <input class="form-check-input" type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
                                     </th>
                                     <th style="min-width: 110px;">เพิ่มเข้าระบบ</th>
-                                    <th style="min-width: 90px;">วันที่ (Tag)</th>
+                                    <th style="min-width: 90px;">วันที่รับจริง</th>
                                     <th class="text-center" style="min-width: 130px;">Serial No.</th>
                                     <th class="text-center" style="min-width: 100px;">Item No.</th>
                                     <th class="text-center" style="width:300px; max-width: 350px;">PO Number</th>
@@ -200,16 +234,15 @@ $pageHelpId = "";
                                 </tr>
                             </thead>
                             <tbody id="historyTbody">
-                                <tr><td colspan="9" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="14" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>
                     
-                    <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center pt-3 pb-3 rounded-bottom">
+                    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center pt-2 pb-2 rounded-bottom">
                         <small class="text-muted fw-bold" id="paginationInfo">แสดง 0 ถึง 0 จาก 0 รายการ</small>
                         <nav>
-                            <ul class="pagination pagination-sm mb-0" id="paginationControls">
-                                </ul>
+                            <ul class="pagination pagination-sm mb-0" id="paginationControls"></ul>
                         </nav>
                     </div>
                 </div>
@@ -252,10 +285,11 @@ $pageHelpId = "";
                                     <th class="text-end">Qty/Pallet</th>
                                     <th class="text-end">Package QTY</th>
                                     <th>Invoice No.</th>
-                                    <th>Remark</th> </tr>
+                                    <th>Remark</th> 
+                                </tr>
                             </thead>
                             <tbody id="previewTbody">
-                                <tr><td colspan="7" class="text-center text-muted py-5">กรุณาเลือกไฟล์และกดแสดงตัวอย่าง</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted py-5">กรุณาเลือกไฟล์และกดแสดงตัวอย่าง</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -329,7 +363,7 @@ $pageHelpId = "";
                                 <div id="qr-reader-container-trace">
                                     <div id="qr-reader-trace"></div>
                                     <div class="qr-file-scanner-overlay">
-                                        <label for="trace-image-file" class="btn btn-sm px-3 rounded-pill shadow-sm cursor-pointer">
+                                        <label for="trace-image-file" class="btn btn-sm px-3 rounded-pill shadow-sm cursor-pointer" style="background: rgba(255,255,255,0.8); color: #333; border: 1px solid #ccc;">
                                             <i class="fas fa-image me-1"></i> อัปโหลดรูปภาพ
                                         </label>
                                         <input type="file" id="trace-image-file" accept="image/*" style="display: none;">
@@ -394,20 +428,20 @@ $pageHelpId = "";
                                 </div>
 
                                 <div id="traceActionArea" class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded text-center d-none">
-                                            <h6 class="text-warning fw-bold mb-3"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
-                                            
-                                            <div class="mb-3 text-start">
-                                                <label class="form-label fw-bold text-dark small mb-1">นำของไปเก็บที่ (Location):</label>
-                                                <select id="receiveLocation" class="form-select fw-bold border-secondary-subtle shadow-sm">
-                                                    <option value="1008" selected>Store (คลังวัตถุดิบหลัก)</option>
-                                                    <option value="1007">Warehouse (คลังสินค้า)</option>
-                                                </select>
-                                            </div>
+                                    <h6 class="text-warning fw-bold mb-3"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
+                                    
+                                    <div class="mb-3 text-start">
+                                        <label class="form-label fw-bold text-dark small mb-1">นำของไปเก็บที่ (Location):</label>
+                                        <select id="receiveLocation" class="form-select fw-bold border-secondary-subtle shadow-sm">
+                                            <option value="1008" selected>Store (คลังวัตถุดิบหลัก)</option>
+                                            <option value="1007">Warehouse (คลังสินค้า)</option>
+                                        </select>
+                                    </div>
 
-                                            <button class="btn btn-success w-100 fw-bold px-4 shadow-sm" onclick="receiveScannedTag()">
-                                                <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
-                                            </button>
-                                        </div>
+                                    <button class="btn btn-success w-100 fw-bold px-4 shadow-sm" id="btnReceiveTrace" onclick="receiveScannedTag()">
+                                        <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
+                                    </button>
+                                </div>
 
                             </div>
                         </div>
@@ -426,7 +460,7 @@ $pageHelpId = "";
                                         </tr>
                                     </thead>
                                     <tbody id="traceHistoryTbody">
-                                        </tbody>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
@@ -437,14 +471,17 @@ $pageHelpId = "";
         </div>
     </div>
 
-    <div id="printArea"></div>
+    <div id="printArea" class="d-none"></div>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="../../utils/libs/qrcode.min.js"></script>
+    
     <script>
-        const currentUser = <?php echo json_encode($currentUserForJS); ?>;
-        const canManageRM = <?php echo json_encode($canManageRM); ?>; 
+        const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;
+        const CAN_MANAGE_WH = <?php echo json_encode(hasPermission('manage_warehouse')); ?>;
+        const CAN_MANAGE_RM = <?php echo json_encode(hasPermission('manage_rm_receiving')); ?>;
     </script>
-    <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>"></script>
+    
+    <script src="script/rmReceiving.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

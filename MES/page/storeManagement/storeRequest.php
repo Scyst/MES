@@ -1,6 +1,7 @@
 <?php
 // MES/page/storeManagement/storeRequest.php
 require_once __DIR__ . '/../components/init.php';
+requirePermission('view_warehouse');
 
 if (!isset($_SESSION['user'])) { header("Location: ../../auth/login_form.php"); exit; }
 
@@ -13,31 +14,26 @@ $pageHeaderTitle = "Scrap & Replacement";
 $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสีย (Scrap Claim)"; 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <link rel="stylesheet" href="css/storeRequest.css?v=<?php echo filemtime(__DIR__ . '/css/storeRequest.css'); ?>">
 </head>
 
-<body class="layout-top-header">
-
-    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
-        <div class="spinner-border text-primary mb-3" role="status"></div>
-        <h5 class="fw-bold text-muted">Processing...</h5>
-    </div>
+<body class="layout-top-header bg-body-tertiary">
 
     <?php include('../components/php/top_header.php'); ?>
 
     <div class="page-container">
         <div id="main-content">
             
-            <div class="dashboard-header-sticky">
+            <div class="dashboard-header-sticky px-3 pt-3">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                             
-                            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                                 <div class="input-group input-group-sm" style="max-width: 300px;">
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                     <input type="text" id="filterSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search SAP, Part, Req ID...">
@@ -84,7 +80,7 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
                                     <span class="small text-muted ms-1">฿</span>
                                 </div>
 
-                                <button class="btn btn-light btn-sm border-secondary-subtle shadow-sm" onclick="exportData()" title="Export to Excel">
+                                <button id="btnExportExcel" class="btn btn-light btn-sm border-secondary-subtle shadow-sm fw-bold" onclick="exportData()" title="Export to Excel">
                                     <i class="fas fa-file-excel text-success me-1"></i> Export
                                 </button>
 
@@ -99,9 +95,9 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
             </div>
 
             <div class="content-wrapper p-3">
-                <div class="card shadow-sm border-0 d-none d-md-block">
-                    <div class="table-responsive-custom">
-                        <table class="table table-striped table-hover align-middle mb-0">
+                <div class="card shadow-sm border-0 d-none d-md-flex flex-column h-100">
+                    <div class="table-responsive flex-grow-1" style="max-height: calc(100vh - 230px); overflow-y: auto;">
+                        <table class="table table-striped table-hover align-middle mb-0 text-nowrap">
                             <thead class="sticky-top bg-light shadow-sm">
                                 <tr class="text-secondary small text-uppercase">
                                     <th style="width: 10%">Date</th>
@@ -116,8 +112,16 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
                                     <th class="text-center" style="width: 5%">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="reqTableBody"></tbody>
+                            <tbody id="reqTableBody">
+                                </tbody>
                         </table>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center pt-2 pb-2 rounded-bottom">
+                        <small class="text-muted fw-bold" id="paginationInfo">แสดง 0 ถึง 0 จาก 0 รายการ</small>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0" id="paginationControls"></ul>
+                        </nav>
                     </div>
                 </div>
 
@@ -137,34 +141,19 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
     <div id="toast" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
         <div id="liveToast" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body" id="toastMessage">Action successful</div>
+                <div class="toast-body fw-bold" id="toastMessage">Action successful</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'api/scrapManage.php'; 
         const IS_STORE_ROLE = <?php echo json_encode($isStore); ?>;
-        
-        function showToast(msg, color) {
-            const toastEl = document.getElementById('liveToast');
-            const toastBody = document.getElementById('toastMessage');
-            if(toastEl && toastBody) {
-                toastBody.innerText = msg;
-                const colorMap = {
-                    'var(--bs-danger)': 'bg-danger',
-                    'var(--bs-warning)': 'bg-warning',
-                    'var(--bs-success)': 'bg-success'
-                };
-                toastEl.className = `toast align-items-center text-white border-0 ${colorMap[color] || 'bg-primary'}`;
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
-            }
-        }
-        function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
-        function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
+        const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;
+        const CAN_MANAGE_WH = <?php echo json_encode(hasPermission('manage_warehouse')); ?>;
+        const CAN_MANAGE_RM = <?php echo json_encode(hasPermission('manage_rm_receiving')); ?>;
     </script>
+    
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
 </body>

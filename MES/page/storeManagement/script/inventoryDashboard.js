@@ -1,399 +1,636 @@
 "use strict";
 
-let allData = [];
-let filteredData = [];
 let currentPage = 1;
 let rowsPerPage = 100;
-let detailsModal;
+let totalPages = 1;
 let issueModal;
+let detailsModalInstance;
+let searchTimer;
+let cycleCountModal;
+let approvalModal;
+let ccHistoryModal;
 
-document.addEventListener('DOMContentLoaded', () => {
-    detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
-    issueModal = new bootstrap.Modal(document.getElementById('issueModal'));
-    loadLocations(); 
-});
-
-// ⭐️ [เทคนิคใหม่]: จับ Event กด Enter ของช่องสแกนบาร์โค้ดแบบไม่มีบั๊กแน่นอน
-document.addEventListener('keypress', function(e) {
-    if (e.target && e.target.id === 'issueBarcode' && e.key === 'Enter') {
-        e.preventDefault();
-        fetchPalletTags();
+// =================================================================
+// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API (มี Loading & CSRF)
+// =================================================================
+async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
+    let btn = null;
+    let originalHtml = '';
+    
+    // Operator Proofing: ล็อกปุ่มทันที
+    if (buttonId) {
+        btn = document.getElementById(buttonId);
+        if (btn) {
+            if (btn.disabled) return null; 
+            originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        }
     }
+
+    try {
+        const url = `api/api_store.php?action=${action}`;
+        const options = { method: method };
+
+        if (method === 'POST') {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            
+            if (bodyData instanceof FormData) {
+                bodyData.append('csrf_token', csrfToken);
+                options.body = bodyData;
+            } else {
+                bodyData = bodyData || {};
+                bodyData.csrf_token = csrfToken;
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(bodyData);
+            }
+        }
+
+        const response = await fetch(url, options);
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || `HTTP Error: ${response.status}`);
+        }
+        return result;
+        
+    } catch (error) {
+        Swal.fire('Error', error.message, 'error');
+        throw error;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+}
+
+// =================================================================
+// 2. INITIALIZATION
+// =================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Init Modals
+    const issueModalEl = document.getElementById('issueModal');
+    if (issueModalEl) issueModal = new bootstrap.Modal(issueModalEl);
+
+    const detailsModalEl = document.getElementById('detailsModal');
+    if (detailsModalEl) detailsModalInstance = new bootstrap.Modal(detailsModalEl);
+
+    // Load Data
+    loadLocations();
+    loadDashboardData();
+
+    // ผูก Event Listeners ให้ Filters
+    document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
+    document.getElementById('materialFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
+    document.getElementById('hideZeroStock')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
+    
+    // ผูก Event ให้ช่อง Search (ใช้ Debounce ป้องกันยิง API รัวๆ)
+    document.getElementById('filterSearch')?.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            currentPage = 1; 
+            loadDashboardData();
+        }, 500);
+    });
+
+    // ตรวจจับการกด Enter ในช่องสแกนเบิกของ
+    document.getElementById('issueBarcode')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchPalletTags();
+        }
+    });
+    const historyModalEl = document.getElementById('ccHistoryModal');
+    if (historyModalEl) ccHistoryModal = new bootstrap.Modal(historyModalEl);
 });
 
+async function openCcHistoryModal() {
+    ccHistoryModal.show();
+    const tbody = document.getElementById('ccHistoryTbody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i></td></tr>';
+    
+    try {
+        const res = await fetchAPI('get_cycle_count_history', 'GET');
+        tbody.innerHTML = '';
+        
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ยังไม่มีประวัติการปรับยอด</td></tr>';
+            return;
+        }
+
+        res.data.forEach(row => {
+            const diff = parseFloat(row.diff_qty);
+            const diffClass = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-muted');
+            const diffSign = diff > 0 ? '+' : '';
+            
+            const badge = row.status === 'APPROVED' 
+                ? '<span class="badge bg-success">APPROVED</span>' 
+                : '<span class="badge bg-danger">REJECTED</span>';
+
+            const timeStr = row.approved_at ? row.approved_at.substring(0, 16) : '-';
+
+            const tr = `
+                <tr>
+                    <td class="text-muted small">${timeStr}</td>
+                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${row.item_no}</td>
+                    <td>${escapeHTML(row.location_name)}</td>
+                    <td class="text-end fw-bold text-secondary">${parseFloat(row.system_qty).toLocaleString()}</td>
+                    <td class="text-end fw-bold text-dark">${parseFloat(row.actual_qty).toLocaleString()}</td>
+                    <td class="text-end fw-bold ${diffClass}">${diffSign}${diff.toLocaleString()}</td>
+                    <td class="text-center">${badge}</td>
+                    <td class="small">
+                        <div><span class="text-muted">นับ:</span> ${escapeHTML(row.counter_name)}</div>
+                        <div><span class="text-muted">อนุมัติ:</span> <span class="fw-bold">${escapeHTML(row.approver_name)}</span></div>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+        });
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการโหลดประวัติ</td></tr>';
+    }
+}
+
+// =================================================================
+// 3. MASTER DATA & DASHBOARD
+// =================================================================
 async function loadLocations() {
     try {
-        const res = await fetch('api/manageInventory.php?action=get_locations');
-        const json = await res.json();
+        const result = await fetchAPI('get_master_data', 'GET');
+        const filterSelect = document.getElementById('locationFilter');
+        const issueSelect = document.getElementById('issueToLocation');
         
-        if (json.success) {
-            const filterSelect = document.getElementById('locationFilter');
-            const issueSelect = document.getElementById('issueToLocation');
-            
-            if(issueSelect) issueSelect.innerHTML = '';
-            
-            json.data.forEach(loc => {
-                if(filterSelect) filterSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
-                if(issueSelect) issueSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name} (${loc.location_type || 'N/A'})</option>`;
-            });
-        }
+        if (issueSelect) issueSelect.innerHTML = '';
+        if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
+        
+        result.data.locations.forEach(loc => {
+            if (filterSelect) filterSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
+            if (issueSelect) issueSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
+        });
     } catch (err) {
-        console.error("Failed to load locations", err);
+        console.error("Failed to load master data:", err);
     }
-    loadDashboardData();
 }
 
 async function loadDashboardData() {
-    const tbody = document.getElementById('inventoryTbody');
-    if(!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดข้อมูล...</td></tr>';
-    
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
-    const matType = document.getElementById('matTypeFilter')?.value || 'ALL';
-    const hideZero = document.getElementById('hideZeroToggle')?.checked || false;
+    const matType = document.getElementById('materialFilter')?.value || 'ALL';
+    const hideZero = document.getElementById('hideZeroStock')?.checked || false;
+    const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
+
+    const tbody = document.getElementById('dashboardTbody');
+    if (!tbody) return;
     
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+
     try {
-        const res = await fetch(`api/manageInventory.php?action=get_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}`);
-        const json = await res.json();
-        
-        if (json.success) {
-            allData = json.data;
-            filteredData = [...allData];
-            
-            document.getElementById('kpi-skus').innerText = json.kpi.total_skus.toLocaleString();
-            document.getElementById('kpi-out-of-stock').innerText = json.kpi.out_of_stock.toLocaleString();
-            document.getElementById('kpi-pending').innerText = json.kpi.total_pending_qty.toLocaleString();
-            document.getElementById('toolbar-total-avail').innerText = json.kpi.toolbar_total_pcs.toLocaleString();
+        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
+        const result = await fetchAPI(queryParams, 'GET');
 
-            let val = json.kpi.total_value;
-            let valStr = val > 1000000 ? (val / 1000000).toFixed(2) + ' M' : val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('kpi-value').innerText = valStr;
-
-            currentPage = 1;
-            renderTable();
-        } else {
-            Swal.fire('ข้อผิดพลาด', json.message, 'error');
+        // Render KPI Header
+        if (result.kpi) {
+            document.getElementById('totalSkus').innerText = result.kpi.total_skus.toLocaleString();
+            document.getElementById('outOfStock').innerText = result.kpi.out_of_stock.toLocaleString();
+            document.getElementById('totalPending').innerText = parseFloat(result.kpi.total_pending_qty).toLocaleString();
+            document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
+
+        // Render Table
+        tbody.innerHTML = '';
+        if (!result.data || result.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
+            return;
+        }
+
+        result.data.forEach((row, index) => {
+            const availableQty = parseFloat(row.available_qty);
+            const tr = document.createElement('tr');
+            if (availableQty <= 0) tr.className = 'row-out-of-stock';
+            
+            const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
+
+            // แทรก HTML สำหรับตารางที่มี 10 คอลัมน์ตามหน้า UI ใหม่
+            tr.innerHTML = `
+                <td>${runningNumber}</td>
+                <td class="fw-bold text-primary">${row.item_no}</td>
+                <td class="text-truncate" style="max-width: 250px;" title="${row.part_description || '-'}">${row.part_description || '-'}</td>
+                <td><span class="badge bg-secondary">${row.material_type}</span></td>
+                <td class="text-end text-warning fw-bold">${parseFloat(row.pending_qty).toLocaleString()}</td>
+                <td class="text-end fw-bold text-success">${availableQty.toLocaleString()}</td>
+                <td class="text-end fw-bold">${parseFloat(row.total_qty).toLocaleString()}</td>
+                <td class="text-end text-muted">${parseFloat(row.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="text-end text-primary fw-bold">${parseFloat(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="text-center">
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${row.item_no}', '${escapeHTML(row.part_description)}')" title="ดูพิกัดสต็อก">
+                            <i class="fas fa-search-location"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${row.item_no}', '${escapeHTML(row.part_description)}')" title="นับ/ปรับสต็อก">
+                            <i class="fas fa-clipboard-list"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Render Pagination
+        if (result.pagination) {
+            totalPages = result.pagination.total_pages || 1;
+            const pageInfo = document.getElementById('pageInfo');
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+            
+            if (pageInfo) pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+            if (btnPrev) btnPrev.disabled = currentPage <= 1;
+            if (btnNext) btnNext.disabled = currentPage >= totalPages;
+        }
+
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">ไม่สามารถโหลดข้อมูลได้</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> โหลดข้อมูลล้มเหลว</td></tr>';
     }
 }
 
-function handleSearch() {
-    const keyword = document.getElementById('searchInput').value.toLowerCase();
-    filteredData = allData.filter(row => 
-        (row.item_no && row.item_no.toLowerCase().includes(keyword)) ||
-        (row.part_description && row.part_description.toLowerCase().includes(keyword))
-    );
-    currentPage = 1;
-    renderTable();
+function changePage(direction) {
+    currentPage += direction;
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    loadDashboardData();
 }
 
-function changeRowsPerPage() {
-    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
-    currentPage = 1;
-    renderTable();
+// =================================================================
+// 4. ISSUE & PRINT (ระบบเบิกจ่าย และ พิมพ์สติ๊กเกอร์)
+// =================================================================
+async function fetchPalletTags() {
+    const inputEl = document.getElementById('issueBarcode');
+    const barcode = inputEl.value.trim();
+    if (!barcode) return;
+
+    try {
+        const result = await fetchAPI(`get_pallet_tags&barcode=${encodeURIComponent(barcode)}`, 'GET');
+        const tbody = document.getElementById('issueTagsTbody');
+        if (result.data && result.data.length > 0) {
+            tbody.innerHTML = '';
+            result.data.forEach(tag => {
+                const isWIP = (tag.status !== 'AVAILABLE' && tag.status);
+                const rowHtml = `
+                    <tr class="${isWIP ? 'table-warning' : ''}">
+                        <td class="text-center">
+                            <input class="form-check-input tag-checkbox" type="checkbox" value="${tag.serial_no}" ${isWIP ? 'disabled' : 'checked'}>
+                        </td>
+                        <td>${tag.serial_no} ${isWIP ? '<span class="badge bg-warning text-dark">WIP</span>' : ''}</td>
+                        <td>${tag.part_no}</td>
+                        <td class="text-end fw-bold">${parseFloat(tag.qty).toLocaleString()}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', rowHtml);
+            });
+            document.getElementById('btnSubmitIssue').disabled = false;
+            updateSelectedCount();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-3">ไม่พบข้อมูล หรือวัตถุดิบถูกเบิกไปแล้ว</td></tr>`;
+            document.getElementById('btnSubmitIssue').disabled = true;
+            updateSelectedCount();
+        }
+    } catch (error) {
+    } finally {
+        inputEl.value = '';
+        inputEl.focus();
+    }
 }
 
-function renderTable() {
-    const tbody = document.getElementById('inventoryTbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
+function toggleAllTags(source) {
+    const checkboxes = document.querySelectorAll('.tag-checkbox:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
 
-    if (filteredData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">ไม่พบข้อมูลสต็อก</td></tr>';
-        updatePaginationInfo();
-        renderPaginationControls();
+async function submitSpecificIssue(ignoreFifo = false) {
+    const selectedCheckboxes = document.querySelectorAll('.tag-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        Swal.fire('แจ้งเตือน', 'กรุณาเลือกอย่างน้อย 1 รายการ', 'warning');
         return;
     }
 
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedItems = filteredData.slice(startIndex, endIndex);
+    const serials = Array.from(selectedCheckboxes).map(cb => cb.value).join(',');
+    const toLocation = document.getElementById('issueToLocation').value;
 
-    paginatedItems.forEach(row => {
-        let availQty = parseFloat(row.available_qty);
-        let pendQty = parseFloat(row.pending_qty);
-        let totalQty = parseFloat(row.total_qty);
-        let value = parseFloat(row.total_value);
+    const formData = new FormData();
+    formData.append('serials', serials);
+    formData.append('to_location', toLocation);
+    
+    if (ignoreFifo) formData.append('ignore_fifo', 'true');
 
-        let rowClass = availQty <= 0 ? 'row-out-of-stock' : '';
-        let availDisplay = availQty <= 0 ? '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i> 0</span>' : availQty.toLocaleString();
-
-        let typeBadge = '';
-        if(row.material_type === 'RM') typeBadge = '<span class="badge bg-primary ms-2" style="font-size:0.65rem;">RM</span>';
-        else if(row.material_type === 'FG') typeBadge = '<span class="badge bg-success ms-2" style="font-size:0.65rem;">FG</span>';
-        else if(row.material_type === 'SEMI' || row.material_type === 'WIP') typeBadge = '<span class="badge bg-warning text-dark ms-2" style="font-size:0.65rem;">SEMI</span>';
-        else typeBadge = `<span class="badge bg-secondary ms-2" style="font-size:0.65rem;">${escapeHTML(row.material_type)}</span>`;
-
-        let rowHtml = `
-            <tr class="${rowClass}">
-                <td class="fw-bold text-dark d-flex align-items-center border-bottom-0">
-                    ${escapeHTML(row.item_no)} ${typeBadge}
-                </td>
-                <td class="text-truncate text-muted" style="max-width: 300px;" title="${escapeHTML(row.part_description || '')}">${escapeHTML(row.part_description || '-')}</td>
-                <td class="text-end text-warning fw-bold">${pendQty > 0 ? pendQty.toLocaleString() : '-'}</td>
-                <td class="text-end fw-bold ${availQty > 0 ? 'text-success' : ''}">${availDisplay}</td>
-                <td class="text-end text-primary fw-bold" style="font-size: 1.05rem;">${totalQty.toLocaleString()}</td>
-                <td class="text-end text-secondary">฿ ${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 30px; height: 30px; padding: 0;" onclick="viewDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description ? row.part_description.replace(/'/g, "\\'") : '')}')" title="ดูพิกัดสต็อก">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        tbody.innerHTML += rowHtml;
-    });
-
-    updatePaginationInfo();
-    renderPaginationControls();
-}
-
-function updatePaginationInfo() {
-    const total = filteredData.length;
-    const start = total === 0 ? 0 : ((currentPage - 1) * rowsPerPage) + 1;
-    const end = Math.min(currentPage * rowsPerPage, total);
-    const info = document.getElementById('paginationInfo');
-    if(info) info.innerText = `แสดง ${start} ถึง ${end} จาก ${total} รายการ`;
-}
-
-function renderPaginationControls() {
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginationUl = document.getElementById('paginationControls');
-    if(!paginationUl) return;
-    paginationUl.innerHTML = '';
-
-    if (totalPages <= 1) return;
-
-    paginationUl.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage - 1}, event)">ก่อนหน้า</a></li>`;
-
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
-    if (endPage - startPage < 4) { startPage = Math.max(1, endPage - 4); }
-
-    for (let i = startPage; i <= endPage; i++) {
-        paginationUl.innerHTML += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="changePage(${i}, event)">${i}</a></li>`;
+    const result = await fetchAPI('issue_selected_tags', 'POST', formData, 'btnSubmitIssue');
+    
+    if (result) {
+        if (result.require_fifo_confirm) {
+            Swal.fire({
+                title: '⚠️ แจ้งเตือน FIFO',
+                text: result.message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'ยืนยันจ่ายแท็กนี้ (ข้าม FIFO)',
+                cancelButtonText: 'ยกเลิก (ไปหยิบแท็กเก่า)'
+            }).then((confirmRes) => {
+                if (confirmRes.isConfirmed) {
+                    submitSpecificIssue(true); 
+                }
+            });
+            return;
+        }
+        Swal.fire('สำเร็จ', `เบิกจ่ายสำเร็จ ${result.issued_count} รายการ`, 'success').then(() => {
+            issueModal.hide();
+            loadDashboardData(); 
+            if(result.issued_tags && result.issued_tags.length > 0) {
+                printIssueTags(result.issued_tags);
+            }
+        });
     }
-
-    paginationUl.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage + 1}, event)">ถัดไป</a></li>`;
 }
 
-function changePage(page, event) {
-    if (event) event.preventDefault();
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    if (page < 1 || page > totalPages) return;
-    currentPage = page;
-    renderTable();
+function printIssueTags(tagsArray) {
+    try {
+        const printArea = document.getElementById('printArea');
+        if (!printArea) return;
+
+        printArea.innerHTML = '';
+        printArea.classList.remove('d-none');
+
+        tagsArray.forEach((tag, index) => {
+            const qrId = "qr-code-" + index;
+            const html = `
+                <div class="tag-print-wrapper" style="page-break-after: always; display: flex; flex-direction: column; justify-content: center; height: 100vh;">
+                    <div class="tag-print-container" style="border: 2px solid #000; padding: 10px; width: 100%; display: flex; font-family: sans-serif; position: relative;">
+                        <div class="tag-print-info" style="width: 70%; padding-right: 10px;">
+                            <div style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; margin-bottom: 5px; padding-bottom: 5px;">
+                                SNC FORMER PCL. <br><small>WIP MATERIAL TAG</small>
+                            </div>
+                            <b>Item:</b> <span style="font-size: 16px; font-weight: bold;">${tag.item_no || tag.part_no}</span><br>
+                            <b style="font-size: 10px;">Desc:</b> <span style="font-size: 10px;">${tag.part_description}</span><br>
+                            <b>QTY:</b> <span style="font-size: 16px; font-weight: bold;">${parseFloat(tag.qty).toLocaleString()}</span><br>
+                            <b>Date:</b> ${tag.received_date ? tag.received_date.split(' ')[0] : '-'}
+                        </div>
+                        <div class="tag-print-qr" style="width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <div id="${qrId}"></div>
+                            <div style="font-size: 10px; margin-top: 5px; font-weight: bold;">${tag.serial_no}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            printArea.innerHTML += html;
+        });
+        
+        // Render QR Code (Requires qrcode.min.js loaded in PHP)
+        if (typeof QRCode !== 'undefined') {
+            tagsArray.forEach((tag, index) => {
+                new QRCode(document.getElementById('qr-code-' + index), {
+                    text: tag.serial_no,
+                    width: 70, height: 70,
+                    colorDark : "#000000", colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.M 
+                });
+            });
+        }
+        
+        // สั่ง Print
+        setTimeout(() => {
+            window.print();
+            printArea.classList.add('d-none');
+            printArea.innerHTML = ''; 
+        }, 500);
+
+    } catch(err) {
+        console.error("Print Error:", err);
+        Swal.fire('Print Error', 'ไม่สามารถสร้างสติ๊กเกอร์ได้', 'error');
+    }
 }
 
-window.viewDetails = async function(itemId, itemNo, itemDesc) {
+// =================================================================
+// 5. VIEW ITEM DETAILS (เปิด Modal ดูพิกัด)
+// =================================================================
+async function showItemDetails(itemId, itemNo, itemDesc) {
     document.getElementById('modalItemNo').innerText = itemNo;
     document.getElementById('modalItemDesc').innerText = itemDesc || '-';
-    document.getElementById('modalAvailTbody').innerHTML = '<tr><td colspan="2" class="text-center text-muted">กำลังโหลด...</td></tr>';
-    document.getElementById('modalPendTbody').innerHTML = '<tr><td colspan="2" class="text-center text-muted">กำลังโหลด...</td></tr>';
     
-    detailsModal.show();
+    const availTbody = document.getElementById('modalAvailTbody');
+    const pendTbody = document.getElementById('modalPendTbody');
+    
+    availTbody.innerHTML = '<tr><td colspan="2" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+    pendTbody.innerHTML = '<tr><td colspan="2" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+    
+    detailsModalInstance.show();
 
     try {
-        const res = await fetch(`api/manageInventory.php?action=get_item_details&item_id=${itemId}`);
-        const json = await res.json();
-
-        if (json.success) {
-            let availHtml = '';
-            if (json.available_details.length === 0) {
-                availHtml = '<tr><td colspan="2" class="text-center text-muted small">ไม่มีของในคลัง</td></tr>';
-            } else {
-                json.available_details.forEach(r => {
-                    availHtml += `<tr><td><i class="fas fa-map-marker-alt text-success me-2"></i>${escapeHTML(r.location_name)}</td><td class="text-end fw-bold">${parseFloat(r.qty).toLocaleString()}</td></tr>`;
-                });
-            }
-            document.getElementById('modalAvailTbody').innerHTML = availHtml;
-
-            let pendHtml = '';
-            if (json.pending_details.length === 0) {
-                pendHtml = '<tr><td colspan="2" class="text-center text-muted small">ไม่มีของรอรับเข้า</td></tr>';
-            } else {
-                json.pending_details.forEach(r => {
-                    let po = r.po_number ? `<br><small class="text-muted">PO: ${escapeHTML(r.po_number)}</small>` : '';
-                    pendHtml += `<tr><td><i class="fas fa-box text-warning me-2"></i>${escapeHTML(r.tracking_no || 'ไม่ระบุ')}${po}</td><td class="text-end fw-bold">${parseFloat(r.qty).toLocaleString()}</td></tr>`;
-                });
-            }
-            document.getElementById('modalPendTbody').innerHTML = pendHtml;
+        const res = await fetchAPI(`get_item_details&item_id=${itemId}`, 'GET');
+        
+        availTbody.innerHTML = '';
+        if (res.available_details && res.available_details.length > 0) {
+            res.available_details.forEach(loc => {
+                availTbody.innerHTML += `<tr><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold text-success">${parseFloat(loc.qty).toLocaleString()}</td></tr>`;
+            });
+        } else {
+            availTbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">ไม่มีของในคลัง</td></tr>';
         }
+
+        pendTbody.innerHTML = '';
+        if (res.pending_details && res.pending_details.length > 0) {
+            res.pending_details.forEach(p => {
+                pendTbody.innerHTML += `
+                    <tr>
+                        <td>
+                            ${escapeHTML(p.tracking_no)}
+                            <div class="small text-muted">PO: ${escapeHTML(p.po_number || '-')}</div>
+                        </td>
+                        <td class="text-end fw-bold text-warning align-middle">${parseFloat(p.qty).toLocaleString()}</td>
+                    </tr>`;
+            });
+        } else {
+            pendTbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">ไม่มีของรอรับเข้า</td></tr>';
+        }
+        
     } catch (err) {
-        document.getElementById('modalAvailTbody').innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error</td></tr>';
-        document.getElementById('modalPendTbody').innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error</td></tr>';
+        availTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
+        pendTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
     }
-};
+}
 
 function escapeHTML(str) {
     if (!str) return '';
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
 }
 
-// ==========================================
-// 🚀 ระบบเบิกจ่ายแบบเลือก Tag (Smart Issue)
-// ==========================================
-window.openIssueModal = function() {
-    document.getElementById('issueBarcode').value = '';
-    document.getElementById('issueTagsTbody').innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">กรุณาสแกนบาร์โค้ดเพื่อดึงรายการ</td></tr>';
-    document.getElementById('checkAllTags').checked = false;
-    document.getElementById('selectedTagsCount').innerText = 'เลือก 0 รายการ';
-    document.getElementById('btnSubmitIssue').disabled = true;
-    
-    issueModal.show();
-    setTimeout(() => { document.getElementById('issueBarcode').focus(); }, 500);
-};
-
-window.fetchPalletTags = async function() {
-    const barcode = document.getElementById('issueBarcode').value.trim();
-    if(!barcode) return;
-
-    const tbody = document.getElementById('issueTagsTbody');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><i class="fas fa-spinner fa-spin text-primary"></i> กำลังโหลด...</td></tr>';
-    
-    try {
-        const res = await fetch(`api/manageInventory.php?action=get_pallet_tags&barcode=${barcode}`);
-        const json = await res.json();
-        
-        if(json.success && json.data.length > 0) {
-            tbody.innerHTML = '';
-            json.data.forEach(tag => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="text-center">
-                            <input class="form-check-input issue-tag-checkbox" type="checkbox" value="${tag.serial_no}" onchange="updateSelectedCount()">
-                        </td>
-                        <td class="fw-bold text-primary">${tag.serial_no}</td>
-                        <td class="text-muted">${tag.part_no}</td>
-                        <td class="text-end pe-3 fw-bold">${parseFloat(tag.current_qty).toLocaleString()}</td>
-                    </tr>
-                `;
-            });
-            document.getElementById('checkAllTags').checked = false;
-            updateSelectedCount();
-        } else {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger fw-bold">ไม่พบข้อมูล หรือถูกเบิกไปแล้ว</td></tr>';
-        }
-    } catch(err) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">เกิดข้อผิดพลาด</td></tr>';
-    }
-};
-
-window.toggleAllTags = function(source) {
-    const checkboxes = document.querySelectorAll('.issue-tag-checkbox');
-    checkboxes.forEach(cb => cb.checked = source.checked);
-    updateSelectedCount();
-};
-
-window.updateSelectedCount = function() {
-    const checkedCount = document.querySelectorAll('.issue-tag-checkbox:checked').length;
+// ผูก Event นับจำนวน Tag ตอนติ๊ก Checkbox ໃນหน้า Issue
+function updateSelectedCount() {
+    const checkedCount = document.querySelectorAll('.tag-checkbox:checked').length;
     document.getElementById('selectedTagsCount').innerText = `เลือก ${checkedCount} รายการ`;
-    document.getElementById('btnSubmitIssue').disabled = (checkedCount === 0);
-};
+}
+document.getElementById('issueTagsTbody')?.addEventListener('change', updateSelectedCount);
 
-window.submitSpecificIssue = async function() {
-    const checkedBoxes = document.querySelectorAll('.issue-tag-checkbox:checked');
-    const serials = Array.from(checkedBoxes).map(cb => cb.value).join(',');
-    const toLocation = document.getElementById('issueToLocation').value;
-
-    const btnSubmit = document.getElementById('btnSubmitIssue');
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังตัดสต็อก...';
-
-    const formData = new FormData();
-    formData.append('action', 'issue_selected_tags');
-    formData.append('serials', serials);
-    formData.append('to_location', toLocation);
-
-    try {
-        const res = await fetch('api/manageInventory.php', { method: 'POST', body: formData });
-        const json = await res.json();
-
-        if (json.success) {
-            Swal.fire({
-                title: 'เบิกสำเร็จ!',
-                text: `ตัดสต็อกจำนวน ${json.issued_count} รายการ กำลังเตรียมปริ้นท์...`,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            issueModal.hide();
-            loadDashboardData(); 
-            printIssuedTags(json.issued_tags);
-        } else {
-            Swal.fire('ล้มเหลว', json.message, 'error');
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fas fa-print me-2"></i> ยืนยันเบิก & พิมพ์สติ๊กเกอร์';
-        }
-    } catch (err) {
-        Swal.fire('Error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'error');
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<i class="fas fa-print me-2"></i> ยืนยันเบิก & พิมพ์สติ๊กเกอร์';
-    }
-};
-
-// ==========================================
-// 🖨️ ระบบสร้างและสั่งปริ้นท์สติ๊กเกอร์ WIP Tag
-// ==========================================
-async function printIssuedTags(issuedTagsArray) {
-    if (!issuedTagsArray || issuedTagsArray.length === 0) return;
-    const serials = issuedTagsArray.map(t => t.serial_no).join(',');
-    const formData = new FormData();
-    formData.append('action', 'get_print_tags');
-    formData.append('serials', serials);
+// =================================================================
+// 6. CYCLE COUNT (ระบบปรับปรุงสต็อก)
+// =================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    cycleCountModal = new bootstrap.Modal(document.getElementById('cycleCountModal'));
+    approvalModal = new bootstrap.Modal(document.getElementById('approvalModal'));
     
-    try {
-        const res = await fetch('api/manageInventory.php', { method: 'POST', body: formData });
-        const json = await res.json();
-        
-        if (json.success && json.data.length > 0) {
-            const printArea = document.getElementById('printArea');
-            printArea.innerHTML = '';
-            printArea.classList.remove('d-none');
-            json.data.forEach((tag, index) => {
-                const qrId = 'qr-code-' + index;
-                const html = `
-                    <div class="tag-print-card">
-                        <div class="tag-print-header">WIP TAG (Line Issue)</div>
-                        <div class="tag-print-body">
-                            <div class="tag-print-info">
-                                <b>Item:</b> ${tag.part_no}<br>
-                                <b>Desc:</b> ${tag.part_description ? tag.part_description.substring(0, 15) + '...' : '-'}<br>
-                                <b>QTY:</b> <span style="font-size: 16px; font-weight: bold;">${parseFloat(tag.qty).toLocaleString()}</span><br>
-                                <b>Date:</b> ${tag.received_date ? tag.received_date.split(' ')[0] : '-'}
-                            </div>
-                            <div class="tag-print-qr">
-                                <div id="${qrId}"></div>
-                                <div style="font-size: 10px; margin-top: 5px; font-weight: bold;">${tag.serial_no}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                printArea.innerHTML += html;
-            });
-            
-            if (typeof QRCode !== 'undefined') {
-                json.data.forEach((tag, index) => {
-                    new QRCode(document.getElementById('qr-code-' + index), {
-                        text: tag.serial_no,
-                        width: 70, height: 70,
-                        colorDark : "#000000", colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.M 
-                    });
-                });
-            }
-            
-            setTimeout(() => {
-                window.print();
-                printArea.classList.add('d-none');
-                printArea.innerHTML = ''; 
-            }, 500);
+    // เช็คสิทธิ์และดึงตัวเลขแจ้งเตือน ถ้าเป็น Admin/Supervisor
+    checkPendingApprovals();
+    // สั่งให้เช็คเรื่อยๆ ทุก 30 วินาที
+    setInterval(checkPendingApprovals, 30000);
+});
+
+function openCycleCountModal(itemId, itemNo, itemDesc) {
+    document.getElementById('cycleCountForm').reset();
+    document.getElementById('ccItemId').value = itemId;
+    document.getElementById('ccItemNo').innerText = itemNo;
+    document.getElementById('ccItemDesc').innerText = itemDesc || '-';
+
+    // คัดลอก Options จาก locationFilter มาใส่ (ยกเว้น ALL)
+    const locSelect = document.getElementById('ccLocation');
+    const filterSelect = document.getElementById('locationFilter');
+    locSelect.innerHTML = '<option value="" selected disabled>เลือกคลังสินค้าที่ตรวจนับ...</option>';
+    
+    Array.from(filterSelect.options).forEach(opt => {
+        if (opt.value !== 'ALL') {
+            locSelect.add(new Option(opt.text, opt.value));
         }
-    } catch(err) {
-        console.error("Print Error:", err);
-        Swal.fire('Print Error', 'ไม่สามารถสร้างสติ๊กเกอร์ได้', 'error');
+    });
+
+    // ถ้ามีการ Filter Location อยู่แล้วให้ Auto Select
+    const currentFilterLoc = document.getElementById('locationFilter').value;
+    if (currentFilterLoc !== 'ALL') {
+        locSelect.value = currentFilterLoc;
     }
+
+    cycleCountModal.show();
+    setTimeout(() => document.getElementById('ccActualQty').focus(), 500);
+}
+
+async function submitCycleCount(e) {
+    e.preventDefault();
+    
+    if (!confirm('ยืนยันส่งยอดที่นับได้? (ระบบจะส่งคำขอไปให้หัวหน้าอนุมัติ)')) return;
+
+    const formData = new FormData();
+    formData.append('item_id', document.getElementById('ccItemId').value);
+    formData.append('location_id', document.getElementById('ccLocation').value);
+    formData.append('actual_qty', document.getElementById('ccActualQty').value);
+    formData.append('remark', document.getElementById('ccRemark').value);
+
+    const res = await fetchAPI('submit_cycle_count', 'POST', formData, 'btnSubmitCC');
+    if (res) {
+        Swal.fire({ title: 'สำเร็จ', text: res.message, icon: 'success', timer: 1500, showConfirmButton: false });
+        cycleCountModal.hide();
+        checkPendingApprovals(); // อัปเดตตัวเลขแจ้งเตือน
+    }
+}
+
+async function checkPendingApprovals() {
+    if (typeof CAN_MANAGE_WH === 'undefined' || !CAN_MANAGE_WH) return;
+
+    try {
+        const res = await fetchAPI('get_pending_counts', 'GET');
+        const btn = document.getElementById('btnApprovalModal');
+        const badge = document.getElementById('badgePendingCount');
+        
+        if (res && btn && badge) {
+            btn.classList.remove('d-none');
+            if (res.count > 0) {
+                badge.innerText = res.count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch (e) { console.error('Failed to check approvals', e); }
+}
+
+async function openApprovalModal() {
+    const tbody = document.getElementById('approvalTbody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-warning"></i></td></tr>';
+    approvalModal.show();
+
+    try {
+        const res = await fetchAPI('get_pending_counts', 'GET');
+        tbody.innerHTML = '';
+        
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">ไม่มีรายการรออนุมัติ</td></tr>';
+            document.getElementById('badgePendingCount').style.display = 'none';
+            return;
+        }
+
+        res.data.forEach(row => {
+            const diff = parseFloat(row.diff_qty);
+            const diffClass = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-muted');
+            const diffSign = diff > 0 ? '+' : '';
+            
+            const tr = `
+                <tr>
+                    <td class="text-muted small">${row.counted_at.substring(0,16)}</td>
+                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${row.item_no}</td>
+                    <td>${escapeHTML(row.location_name)}</td>
+                    <td class="text-end fw-bold text-secondary">${parseFloat(row.system_qty).toLocaleString()}</td>
+                    <td class="text-end fw-bold text-primary fs-6">${parseFloat(row.actual_qty).toLocaleString()}</td>
+                    <td class="text-end fw-bold ${diffClass}">${diffSign}${diff.toLocaleString()}</td>
+                    <td class="small text-truncate" style="max-width: 150px;" title="${escapeHTML(row.remark)}">${escapeHTML(row.remark || '-')}</td>
+                    <td class="small">${escapeHTML(row.counter_name)}</td>
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-success" onclick="processApproval(${row.count_id}, 'APPROVE')" title="อนุมัติ"><i class="fas fa-check"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="processApproval(${row.count_id}, 'REJECT')" title="ไม่อนุมัติ"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+        });
+
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    }
+}
+
+async function processApproval(countId, actionType) {
+    let msg = actionType === 'APPROVE' ? 'ยืนยันการอนุมัติเพื่อปรับยอดสต็อกจริง?' : 'ไม่อนุมัติและปัดตกคำขอนี้?';
+    if (!confirm(msg)) return;
+
+    const formData = new FormData();
+    formData.append('count_id', countId);
+    formData.append('approval_action', actionType);
+
+    const res = await fetchAPI('approve_cycle_count', 'POST', formData);
+    if (res) {
+        showToast(res.message, 'var(--bs-success)');
+        openApprovalModal(); // รีเฟรชตารางอนุมัติ
+        loadDashboardData(); // รีเฟรชตารางหน้าหลัก
+        checkPendingApprovals(); // อัปเดตตัวเลขแจ้งเตือน
+    }
+}
+
+// นำฟังก์ชัน showToast มาใส่เผื่อหน้า Dashboard ยังไม่มี
+function showToast(msg, color) {
+    let t = document.getElementById('liveToast');
+    if (!t) {
+        // หากไม่มี Toast ใน HTML ให้สร้างแทรกสด
+        const toastHTML = `
+            <div id="toast" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+                <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body fw-bold" id="toastMessage"></div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', toastHTML);
+        t = document.getElementById('liveToast');
+    }
+    const tb = document.getElementById('toastMessage');
+    tb.innerText = msg;
+    t.className = `toast align-items-center text-white border-0 ${color.replace('var(--bs-','bg-')}`;
+    new bootstrap.Toast(t).show();
 }
