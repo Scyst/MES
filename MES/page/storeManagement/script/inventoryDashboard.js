@@ -346,7 +346,8 @@ async function submitSpecificIssue(ignoreFifo = false) {
             issueModal.hide();
             loadDashboardData(); 
             if(result.issued_tags && result.issued_tags.length > 0) {
-                printIssueTags(result.issued_tags);
+                renderPrintTags(result.issued_tags);
+                setTimeout(() => { window.print(); }, 300);
             }
         });
     }

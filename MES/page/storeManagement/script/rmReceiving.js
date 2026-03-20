@@ -6,18 +6,13 @@
 let parsedData = [];
 let previewData = [];
 let importModalInstance;
-let traceModalInstance;
 let currentPage = 1;
 let rowsPerPage = 100;
 let totalPages = 1;
 let searchTimer;
 
-let html5QrCodeTrace = null;
-let currentScannedBarcode = '';
-let currentScannedStatus = '';
-
 // =================================================================
-// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API (มี Loading & CSRF)
+// 1. CORE UTILITY: ฟังก์ชันกลางสำหรับเรียก API
 // =================================================================
 async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
     let btn = null;
@@ -75,83 +70,10 @@ async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null
 // 2. INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    importModalInstance = new bootstrap.Modal(document.getElementById('importModal'));
-    document.getElementById('importModal').addEventListener('hidden.bs.modal', clearModalData);
-
-    const traceModalEl = document.getElementById('traceModal');
-    if(traceModalEl) {
-        traceModalInstance = new bootstrap.Modal(traceModalEl);
-        traceModalEl.addEventListener('shown.bs.modal', () => {
-            const cameraTab = document.getElementById('trace-camera-tab');
-            if (cameraTab && cameraTab.classList.contains('active')) {
-                startTraceScanning();
-            } else {
-                document.getElementById('scanInput').focus();
-            }
-        });
-
-        traceModalEl.addEventListener('hidden.bs.modal', () => {
-            stopTraceScanning();
-            document.getElementById('traceResult').classList.add('d-none');
-            const actionArea = document.getElementById('traceActionArea');
-            if(actionArea) actionArea.classList.add('d-none'); 
-        });
-
-        const cameraTab = document.getElementById('trace-camera-tab');
-        const manualTab = document.getElementById('trace-manual-tab');
-        const fileInput = document.getElementById('trace-image-file');
-
-        if (cameraTab) {
-            cameraTab.addEventListener('shown.bs.tab', (e) => {
-                e.target.classList.add('text-primary');
-                manualTab.classList.remove('text-primary');
-                manualTab.classList.add('text-secondary');
-                startTraceScanning();
-            });
-        }
-        
-        if (manualTab) {
-            manualTab.addEventListener('shown.bs.tab', (e) => {
-                e.target.classList.add('text-primary');
-                cameraTab.classList.remove('text-primary');
-                cameraTab.classList.add('text-secondary');
-                stopTraceScanning();
-                setTimeout(() => document.getElementById('scanInput').focus(), 100);
-            });
-        }
-
-        let cropper = null;
-        const cropModalInstance = new bootstrap.Modal(document.getElementById('cropModal'));
-        const imageToCrop = document.getElementById('imageToCrop');
-        fileInput?.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    imageToCrop.src = event.target.result;
-                    cropModalInstance.show();
-                };
-                reader.readAsDataURL(file);
-                e.target.value = null;
-            }
-        });
-
-        document.getElementById('cropModal').addEventListener('shown.bs.modal', function () {
-            if (cropper) { cropper.destroy(); }
-            cropper = new Cropper(imageToCrop, {
-                aspectRatio: 1, viewMode: 1, autoCropArea: 0.8,
-            });
-        });
-
-        document.getElementById('btnConfirmCrop').addEventListener('click', function() {
-            if (!cropper) return;
-            cropper.getCroppedCanvas({ fillColor: '#fff' }).toBlob(async (blob) => {
-                const croppedFile = new File([blob], "cropped_qr.png", { type: "image/png" });
-                cropModalInstance.hide();
-                await handleTraceFileScan(croppedFile); 
-            });
-        });
+    const importModalEl = document.getElementById('importModal');
+    if (importModalEl) {
+        importModalInstance = new bootstrap.Modal(importModalEl);
+        importModalEl.addEventListener('hidden.bs.modal', clearModalData);
     }
 
     // Server-Side Search Debounce
@@ -170,206 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 3. SCANNER LOGIC
-// ==========================================
-function stopTraceScanning() {
-    if (html5QrCodeTrace && html5QrCodeTrace.isScanning) {
-        html5QrCodeTrace.stop().then(() => {
-            console.log("Camera stopped.");
-        }).catch(err => console.log("Stop error", err));
-    }
-}
-
-async function startTraceScanning() {
-    document.getElementById('qr-reader-container-trace').style.display = 'block';
-    if (!html5QrCodeTrace) {
-        html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
-    }
-    if (html5QrCodeTrace.isScanning) return;
-    try {
-        await html5QrCodeTrace.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-            (decodedText) => {
-                stopTraceScanning(); 
-                let serialNo = decodedText.trim();
-                document.getElementById('scanInput').value = serialNo;
-                fetchTagHistory(serialNo);
-            }
-        );
-    } catch (err) {
-        console.warn("ไม่สามารถเริ่มกล้องได้:", err);
-    }
-}
-
-async function handleTraceFileScan(file) {
-    if (!file) return;
-    stopTraceScanning(); 
-    document.getElementById('traceLoading').classList.remove('d-none');
-    document.getElementById('traceResult').classList.add('d-none');
-    const actionArea = document.getElementById('traceActionArea');
-    if(actionArea) actionArea.classList.add('d-none');
-
-    try {
-        if (!html5QrCodeTrace) html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
-        const decodedText = await html5QrCodeTrace.scanFile(file, false);
-        let serialNo = decodedText.trim();
-        document.getElementById('scanInput').value = serialNo;
-        fetchTagHistory(serialNo);
-    } catch (err) {
-        Swal.fire('ข้อผิดพลาด', 'ไม่พบ QR Code แจ้งเตือนจากรูปภาพ', 'error');
-        document.getElementById('traceLoading').classList.add('d-none');
-        startTraceScanning();
-    }
-}
-
-function openTraceModal() {
-    document.getElementById('scanInput').value = '';
-    document.getElementById('traceResult').classList.add('d-none');
-    const actionArea = document.getElementById('traceActionArea');
-    if(actionArea) actionArea.classList.add('d-none');
-    document.getElementById('traceLoading').classList.add('d-none');
-    traceModalInstance.show();
-}
-
-function handleManualSearchBtn() {
-    const serialNo = document.getElementById('scanInput').value.trim();
-    if (serialNo !== '') fetchTagHistory(serialNo);
-    else document.getElementById('scanInput').focus();
-}
-
-function handleScanInput(event) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        handleManualSearchBtn();
-    }
-}
-
-// ใช้ fetchAPI สำหรับดึงประวัติ Tag
-async function fetchTagHistory(serialNo) {
-    document.getElementById('traceLoading').classList.remove('d-none');
-    document.getElementById('traceResult').classList.add('d-none');
-    const actionArea = document.getElementById('traceActionArea');
-    if(actionArea) actionArea.classList.add('d-none');
-
-    try {
-        const json = await fetchAPI(`trace_tag&serial_no=${encodeURIComponent(serialNo)}`, 'GET');
-        document.getElementById('traceLoading').classList.add('d-none');
-
-        if (json.data) {
-            renderTraceData(json.data);
-            document.getElementById('traceResult').classList.remove('d-none');
-            document.getElementById('scanInput').value = ''; 
-        } else {
-            throw new Error("No data returned");
-        }
-    } catch (err) {
-        document.getElementById('traceLoading').classList.add('d-none');
-        Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo}`, 'warning').then(() => {
-            const manualTabBtn = document.getElementById('trace-manual-tab');
-            if (manualTabBtn) new bootstrap.Tab(manualTabBtn).show();
-            setTimeout(() => { document.getElementById('scanInput').value = ''; document.getElementById('scanInput').focus(); }, 300);
-        });
-    }
-}
-
-function renderTraceData(data) {
-    const tag = data.tag_info;
-    const history = data.history;
-
-    currentScannedBarcode = tag.master_pallet_no || tag.serial_no;
-    currentScannedStatus = tag.status;
-
-    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning' : 'bg-info'));
-    
-    document.getElementById('traceSerial').innerText = currentScannedBarcode;
-    document.getElementById('traceStatus').className = `badge ${badgeClass} fs-6`;
-    document.getElementById('traceStatus').innerText = tag.status;
-    document.getElementById('traceItem').innerText = tag.item_no;
-    document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
-    document.getElementById('tracePO').innerText = tag.po_number || '-';
-    document.getElementById('traceInv').innerText = tag.warehouse_no || '-';
-    
-    if(tag.total_tags) {
-        document.getElementById('traceQty').innerText = `${parseFloat(tag.total_qty).toLocaleString()} (รวม ${tag.total_tags} รายการ)`;
-    } else {
-        document.getElementById('traceQty').innerText = parseFloat(tag.current_qty).toLocaleString() + ' / ' + parseFloat(tag.qty_per_pallet).toLocaleString();
-    }
-    
-    document.getElementById('traceRemark').innerText = tag.remark || '-';
-
-    const tbody = document.getElementById('traceHistoryTbody');
-    tbody.innerHTML = '';
-
-    if (!history || history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีประวัติการเคลื่อนไหว</td></tr>';
-    } else {
-        history.forEach(row => {
-            let typeBadge = row.transaction_type === 'RECEIVE_RM' ? '<span class="badge bg-success bg-opacity-10 text-success border border-success">RECEIVE</span>' : 
-                            '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary">ISSUE</span>';
-            
-            let displayTime = row.transaction_timestamp ? row.transaction_timestamp.substring(0, 16) : '-';
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>${displayTime}</td>
-                    <td>${typeBadge}</td>
-                    <td class="text-end fw-bold ${row.transaction_type === 'RECEIVE_RM' ? 'text-success' : 'text-danger'}">
-                        ${row.transaction_type === 'RECEIVE_RM' ? '+' : '-'}${parseFloat(row.quantity).toLocaleString()}
-                    </td>
-                    <td><small>${escapeHTML(row.notes || '-')}</small></td>
-                    <td><small>${escapeHTML(row.actor_name || '-')}</small></td>
-                </tr>
-            `;
-        });
-    }
-
-    const actionArea = document.getElementById('traceActionArea');
-    if (tag.status === 'PENDING') {
-        if (actionArea) actionArea.classList.remove('d-none');
-        
-        const autoReceive = document.getElementById('continuousScanToggle');
-        if (autoReceive && autoReceive.checked) {
-            setTimeout(() => receiveScannedTag(), 300);
-        }
-    } else {
-        if (actionArea) actionArea.classList.add('d-none');
-    }
-}
-
-window.receiveScannedTag = async function() {
-    if (!currentScannedBarcode) return;
-    const locId = document.getElementById('receiveLocation').value;
-    
-    const formData = new FormData();
-    formData.append('barcode', currentScannedBarcode);
-    formData.append('location_id', locId);
-    
-    // ใช้ fetchAPI ล็อกปุ่มอัตโนมัติ 
-    const result = await fetchAPI('receive_scanned_tag', 'POST', formData, 'btnReceiveTrace');
-    
-    if(result) {
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true, icon: 'success', title: 'รับเข้าสำเร็จ!' });
-        loadHistory(); 
-        
-        document.getElementById('traceActionArea').classList.add('d-none');
-        document.getElementById('traceStatus').className = 'badge bg-success fs-6';
-        document.getElementById('traceStatus').innerText = 'AVAILABLE';
-        
-        const autoReceive = document.getElementById('continuousScanToggle');
-        if (autoReceive && autoReceive.checked) {
-            document.getElementById('scanInput').value = '';
-            document.getElementById('scanInput').focus();
-            const cameraTab = document.getElementById('trace-camera-tab');
-            if (cameraTab && cameraTab.classList.contains('active')) {
-                setTimeout(() => startTraceScanning(), 1000); 
-            }
-        }
-    }
-};
-
-// ==========================================
-// 4. MAIN DATA TABLE (Server-Side Pagination)
+// 3. MAIN DATA TABLE (Server-Side Pagination)
 // ==========================================
 async function loadHistory() {
     const tbody = document.getElementById('historyTbody');
@@ -461,7 +184,7 @@ async function loadHistory() {
                                     </a>
                                 </li>
                                 ` : ''}
-                                ${typeof canManageRM !== 'undefined' && canManageRM ? `
+                                ${typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM ? `
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;">
@@ -560,9 +283,8 @@ window.exportToExcel = async function() {
 };
 
 // ==========================================
-// 5. PRINT, GROUP PALLET, EXCEL IMPORT
+// 4. PRINT, GROUP PALLET, EXCEL IMPORT
 // ==========================================
-
 function openImportModal() {
     clearModalData();
     importModalInstance.show();
@@ -723,7 +445,6 @@ async function submitToDatabase() {
     const formData = new FormData();
     formData.append('data', JSON.stringify(parsedData));
 
-    // ใช้ fetchAPI ล็อกปุ่มอัตโนมัติ
     const result = await fetchAPI('import_excel', 'POST', formData, 'btnSave');
     
     if (result) {
@@ -732,7 +453,7 @@ async function submitToDatabase() {
         renderPrintTags(result.data);
         
         Swal.fire({ 
-            title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย (สถานะ PENDING) กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
+            title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
             timer: 1500, showConfirmButton: false 
         }).then(() => { setTimeout(() => { window.print(); }, 300); });
     }
@@ -795,66 +516,6 @@ window.groupToMasterPallet = async function() {
     });
 };
 
-window.renderMasterPalletTag = function(masterData) {
-    const printArea = document.getElementById('printArea');
-    printArea.innerHTML = '';
-    
-    let isMixed = masterData.distinct_items > 1;
-    let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || 'MIXED PARTS');
-    let displayDesc = isMixed ? 'พาเลทรวมสินค้าหลายชนิด (Consolidated Pallet)' : escapeHTML(masterData.part_description || masterData.description_ref || '');
-
-    let tagHTML = `
-    <div class="tag-card">
-        <div class="tag-details">
-            <div class="t-title" style="font-size: 1.1rem; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 1px;">
-                <i class="fas fa-layer-group"></i> PALLET TAG
-            </div>
-            <div class="t-sub" style="font-size: 1rem; font-weight: bold; color: #000;">${displayItemNo}</div>
-            <div class="t-desc" style="height: 18px; margin-bottom: 4px;">${displayDesc}</div>
-            
-            <table class="t-table">
-                <tr>
-                    <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty || masterData.qty_per_pallet).toLocaleString()}</span></td>
-                    <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${masterData.total_tags || 1}</span></td>
-                </tr>
-                <tr><td colspan="2"><b>PO:</b> ${escapeHTML(masterData.po_number || '-')}</td></tr>
-                <tr>
-                    <td><b>Date:</b> ${escapeHTML(formatDateForPrint(masterData.received_date))}</td>
-                    <td><b>Inv:</b> ${escapeHTML(masterData.warehouse_no || '-')}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="tag-qr">
-            <div id="qr-${masterData.master_pallet_no}"></div>
-            <div class="t-serial" style="font-size: 0.65rem; word-wrap: break-word; text-align: center; line-height: 1.1; margin-top: 3px;">
-                ${masterData.master_pallet_no}
-            </div>
-        </div>
-    </div>
-    `;
-    printArea.innerHTML = tagHTML;
-    
-    if(typeof QRCode !== 'undefined') {
-        new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), {
-            text: masterData.master_pallet_no, width: 85, height: 85,
-            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
-        });
-    }
-};
-
-window.reprintMasterPallet = async function(masterPalletNo) {
-    Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const res = await fetchAPI(`trace_tag&serial_no=${encodeURIComponent(masterPalletNo)}`, 'GET');
-    
-    if (res && res.data && res.data.tag_info) {
-        let masterData = res.data.tag_info;
-        masterData.master_pallet_no = masterPalletNo;
-        renderMasterPalletTag(masterData);
-        Swal.close();
-        setTimeout(() => window.print(), 300);
-    }
-};
-
 window.printSingleTag = async function(encodedRow) {
     const tag = JSON.parse(decodeURIComponent(encodedRow));
     renderPrintTags([tag]);
@@ -878,55 +539,6 @@ window.printSelectedTags = async function() {
     setTimeout(() => { window.print(); }, 300);
 }
 
-function renderPrintTags(tags) {
-    const printArea = document.getElementById('printArea');
-    printArea.innerHTML = '';
-    
-    tags.forEach(tag => {
-        let displayDesc = tag.part_description || tag.description_ref || '';
-        let tagHTML = `
-        <div class="tag-card">
-            <div class="tag-details">
-                <div class="t-title">${escapeHTML(tag.item_no)}</div>
-                <div class="t-sub">${escapeHTML(tag.category || '')}</div>
-                <div class="t-desc" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
-                
-                <table class="t-table">
-                    <tr>
-                        <td style="width: 55%;"><b>QTY:</b> <span class="t-hl">${parseFloat(tag.qty_per_pallet).toLocaleString()}</span></td>
-                        <td style="width: 45%;"><b>Inv:</b> ${escapeHTML(tag.warehouse_no)}</td>
-                    </tr>
-                    <tr>
-                        <td><b>PO:</b> ${escapeHTML(tag.po_number)}</td>
-                        <td><b>Pallet:</b> ${escapeHTML(tag.pallet_no)}</td>
-                    </tr>
-                    <tr>
-                        <td><b>CTN:</b> ${escapeHTML(tag.ctn_number)}</td>
-                        <td><b>Week:</b> ${escapeHTML(tag.week_no)}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date))}</td>
-                        <td><b>Remark:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">${escapeHTML(tag.remark || '-')}</span></td>
-                    </tr>
-                </table>
-            </div>
-            <div class="tag-qr">
-                <div id="qr-${tag.serial_no}"></div>
-                <div class="t-serial">${tag.serial_no}</div>
-            </div>
-        </div>
-        `;
-        printArea.insertAdjacentHTML('beforeend', tagHTML);
-        
-        if(typeof QRCode !== 'undefined') {
-            new QRCode(document.getElementById(`qr-${tag.serial_no}`), {
-                text: tag.serial_no, width: 85, height: 85,
-                colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
-            });
-        }
-    });
-}
-
 async function logPrintStatus(serials) {
     if(!serials || serials.length === 0) return;
     const formData = new FormData();
@@ -937,7 +549,7 @@ async function logPrintStatus(serials) {
 }
 
 // ==========================================
-// 6. EDIT & DELETE
+// 5. EDIT & DELETE
 // ==========================================
 window.deleteTag = function(serialNo) {
     Swal.fire({

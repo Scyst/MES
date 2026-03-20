@@ -55,7 +55,7 @@
 <head>
     <title>Mobile Data Entry</title>
     <?php include_once '../components/common_head.php'; ?>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="../../utils/libs/html5-qrcode.min.js"></script>
     <style>
         /* --- 1. Layout พื้นฐาน --- */
         body {

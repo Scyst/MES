@@ -17,39 +17,11 @@ $pageHelpId = "";
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <link rel="stylesheet" href="css/rmReceiving.css?v=<?php echo filemtime(__DIR__ . '/css/rmReceiving.css'); ?>">
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
     <style>
         .table-responsive-custom { max-height: calc(100vh - 350px); overflow-y: auto; }
         .row-checkbox { transform: scale(1.2); cursor: pointer; }
-        
-        @media print {
-            body * { visibility: hidden !important; }
-            #printArea, #printArea * { visibility: visible !important; }
-            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-            
-            .tag-card { 
-                width: 80mm; height: 50mm; 
-                border: 2px solid #000; padding: 4mm; margin-bottom: 5mm; 
-                page-break-after: always; font-family: Arial, sans-serif;
-                display: flex; flex-direction: row; justify-content: space-between;
-                box-sizing: border-box;
-            }
-            .tag-details { width: 70%; padding-right: 5px; display: flex; flex-direction: column; }
-            .t-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
-            .t-sub { font-size: 10px; font-weight: bold; color: #555; margin-bottom: 2px; }
-            .t-desc { font-size: 9px; line-height: 1.2; height: 22px; overflow: hidden; margin-bottom: 3px;}
-            
-            .t-table { width: 100%; font-size: 9px; line-height: 1.3; }
-            .t-table td { padding: 1px 0; vertical-align: top; }
-            .t-hl { font-size: 14px; font-weight: bold; }
-            
-            .tag-qr { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-            .tag-qr img, .tag-qr canvas { width: 65px !important; height: 65px !important; }
-            .t-serial { font-size: 9px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
-        }
+        /* หมายเหตุ: CSS สำหรับ Print ถูกย้ายไปที่ components/store_scanner.php แล้ว */
     </style>
 </head>
 
@@ -304,184 +276,16 @@ $pageHelpId = "";
         </div>
     </div>
 
-    <div class="modal fade" id="cropModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-crop-alt me-2"></i> ครอบตัดเฉพาะ QR Code</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center bg-light p-3">
-                    <p class="text-muted small mb-2">เลื่อนและขยายกรอบให้พอดีกับ QR Code</p>
-                    <div style="max-height: 60vh; overflow: hidden; border: 1px dashed #ccc; background: #fff;">
-                        <img id="imageToCrop" src="" style="max-width: 100%; display: block;">
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-primary fw-bold px-4" id="btnConfirmCrop">
-                        <i class="fas fa-check me-1"></i> ยืนยันและสแกน
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="traceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg bg-body-tertiary">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i> ตรวจสอบ / รับเข้า (Scanner)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-3 p-md-4">
-                    
-                    <div class="d-flex justify-content-between align-items-center mb-3 bg-light p-2 px-3 border rounded shadow-sm">
-                        <span class="fw-bold text-primary" style="font-size: 0.9rem;"><i class="fas fa-bolt text-warning me-1"></i> โหมดรับเข้าสต็อก</span>
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="continuousScanToggle" style="cursor: pointer; transform: scale(1.2); margin-right: 10px;">
-                            <label class="form-check-label text-dark fw-bold small cursor-pointer" for="continuousScanToggle">สแกนต่อเนื่อง</label>
-                        </div>
-                    </div>
-
-                    <div class="scanner-box mb-4 shadow-sm">
-                        <ul class="nav nav-tabs nav-fill bg-white rounded-top pt-2 px-2 border-bottom-0" id="traceScanTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active fw-bold border-bottom-0" id="trace-camera-tab" data-bs-toggle="tab" data-bs-target="#trace-camera-pane" type="button" role="tab">
-                                    <i class="fas fa-qrcode"></i> สแกน (กล้อง)
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link fw-bold border-bottom-0 text-secondary" id="trace-manual-tab" data-bs-toggle="tab" data-bs-target="#trace-manual-pane" type="button" role="tab">
-                                    <i class="fas fa-keyboard"></i> พิมพ์รหัส
-                                </button>
-                            </li>
-                        </ul>
-                
-                        <div class="tab-content bg-white p-3 border border-top-0 rounded-bottom" id="traceScanTabContent">
-                            <div class="tab-pane fade show active" id="trace-camera-pane" role="tabpanel">
-                                <div id="qr-reader-container-trace">
-                                    <div id="qr-reader-trace"></div>
-                                    <div class="qr-file-scanner-overlay">
-                                        <label for="trace-image-file" class="btn btn-sm px-3 rounded-pill shadow-sm cursor-pointer" style="background: rgba(255,255,255,0.8); color: #333; border: 1px solid #ccc;">
-                                            <i class="fas fa-image me-1"></i> อัปโหลดรูปภาพ
-                                        </label>
-                                        <input type="file" id="trace-image-file" accept="image/*" style="display: none;">
-                                    </div>
-                                </div>
-                            </div>
-                    
-                            <div class="tab-pane fade" id="trace-manual-pane" role="tabpanel">
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-light text-primary border-end-0"><i class="fas fa-barcode"></i></span>
-                                    <input type="text" id="scanInput" class="form-control border-start-0 ps-0" placeholder="กรอก Serial No. แล้วกด Enter..." onkeypress="handleScanInput(event)" autocomplete="off">
-                                    <button class="btn btn-primary px-4 fw-bold" type="button" onclick="handleManualSearchBtn()">
-                                        <i class="fas fa-search"></i> ค้นหา
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="traceLoading" class="text-center py-5 d-none">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <div class="mt-2 text-muted fw-bold">กำลังค้นหาข้อมูล...</div>
-                    </div>
-
-                    <div id="traceResult" class="d-none">
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-3 border-bottom pb-2">
-                                    <div>
-                                        <h4 class="fw-bold text-primary mb-1" id="traceSerial">-</h4>
-                                        <span class="text-muted small">Serial Number</span>
-                                    </div>
-                                    <span id="traceStatus" class="badge bg-secondary fs-6">-</span>
-                                </div>
-                                
-                                <div class="row g-3 text-sm">
-                                    <div class="col-sm-6">
-                                        <div class="text-muted small">Item No. / Description</div>
-                                        <div class="fw-bold text-dark"><span id="traceItem"></span></div>
-                                        <div class="text-truncate" style="max-width: 250px;" id="traceDesc"></div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <div class="text-muted small">PO Number</div>
-                                                <div class="fw-bold" id="tracePO">-</div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="text-muted small">Invoice No.</div>
-                                                <div class="fw-bold" id="traceInv">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-3 p-2 bg-light border rounded text-center">
-                                    <span class="text-muted me-2">Qty (คงเหลือ / รับเข้า):</span>
-                                    <span class="fw-bold fs-5 text-dark" id="traceQty">0 / 0</span>
-                                </div>
-                                <div class="mt-2 text-center">
-                                    <span class="text-muted small">Remark:</span> 
-                                    <span class="fw-bold text-danger small" id="traceRemark">-</span>
-                                </div>
-
-                                <div id="traceActionArea" class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded text-center d-none">
-                                    <h6 class="text-warning fw-bold mb-3"><i class="fas fa-exclamation-circle"></i> สถานะ: รอรับเข้า (PENDING)</h6>
-                                    
-                                    <div class="mb-3 text-start">
-                                        <label class="form-label fw-bold text-dark small mb-1">นำของไปเก็บที่ (Location):</label>
-                                        <select id="receiveLocation" class="form-select fw-bold border-secondary-subtle shadow-sm">
-                                            <option value="1008" selected>Store (คลังวัตถุดิบหลัก)</option>
-                                            <option value="1007">Warehouse (คลังสินค้า)</option>
-                                        </select>
-                                    </div>
-
-                                    <button class="btn btn-success w-100 fw-bold px-4 shadow-sm" id="btnReceiveTrace" onclick="receiveScannedTag()">
-                                        <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก (Receive)
-                                    </button>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <h6 class="fw-bold text-secondary mb-2 mt-4"><i class="fas fa-history me-1"></i> ประวัติการเคลื่อนไหว (Transaction History)</h6>
-                        <div class="card border-0 shadow-sm overflow-hidden">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0 text-nowrap" style="font-size: 0.9rem;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>วัน-เวลา</th>
-                                            <th>ประเภท</th>
-                                            <th class="text-end">จำนวน</th>
-                                            <th>หมายเหตุ</th>
-                                            <th>ผู้ทำรายการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="traceHistoryTbody">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="printArea" class="d-none"></div>
-
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="../../utils/libs/qrcode.min.js"></script>
+    <?php include_once __DIR__ . '/components/store_scanner.php'; ?>
     
     <script>
         const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;
         const CAN_MANAGE_WH = <?php echo json_encode(hasPermission('manage_warehouse')); ?>;
         const CAN_MANAGE_RM = <?php echo json_encode(hasPermission('manage_rm_receiving')); ?>;
     </script>
-    
+
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
     <script src="script/rmReceiving.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

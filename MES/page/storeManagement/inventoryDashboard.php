@@ -252,6 +252,12 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                         </div>
                     </div>
                 </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="openTraceModal()" data-bs-dismiss="modal">
+                        <i class="fas fa-barcode me-2"></i> สแกนเพื่อเบิกจ่าย
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -421,12 +427,14 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
         </div>
     </div>
 
-    <script src="../../utils/libs/qrcode.min.js"></script>
+    <?php include_once __DIR__ . '/components/store_scanner.php'; ?>
+
     <script>
         const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;
         const CAN_MANAGE_WH = <?php echo json_encode(hasPermission('manage_warehouse')); ?>;
         const CAN_MANAGE_RM = <?php echo json_encode(hasPermission('manage_rm_receiving')); ?>;
     </script>
-    <script src="script/inventoryDashboard.js?v=<?php echo time(); ?>"></script>
+    <script src="../../utils/libs/qrcode.min.js"></script>
+    <script src="script/inventoryDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/inventoryDashboard.js'); ?>" defer></script>
 </body>
 </html>
