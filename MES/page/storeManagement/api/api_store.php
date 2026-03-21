@@ -34,14 +34,7 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    // =========================================================
-    // CENTRALIZED SWITCH-CASE API
-    // =========================================================
     switch ($action) {
-        
-        // ---------------------------------------------------------
-        // 1. MASTER DATA
-        // ---------------------------------------------------------
         case 'get_master_data':
             $locStmt = $pdo->query("SELECT location_id, location_name, location_type, production_line FROM dbo.LOCATIONS WITH (NOLOCK) WHERE is_active = 1 ORDER BY location_name");
             $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM dbo.ITEMS WITH (NOLOCK) WHERE is_active = 1 ORDER BY sap_no");
@@ -57,9 +50,6 @@ try {
             ]);
             break;
 
-        // ---------------------------------------------------------
-        // 2. INVENTORY DASHBOARD
-        // ---------------------------------------------------------
         case 'get_inventory_dashboard':
             $location_id = $_GET['location_id'] ?? 'ALL';
             $material_type = $_GET['material_type'] ?? 'ALL';
@@ -171,9 +161,6 @@ try {
             echo json_encode(['success' => true, 'available_details' => $available_details, 'pending_details' => $pending_details]);
             break;
 
-        // ---------------------------------------------------------
-        // 3. SMART ISSUE
-        // ---------------------------------------------------------
         case 'issue_rm':
             $barcode = trim($_POST['barcode'] ?? '');
             $qty = (float)($_POST['qty'] ?? 1);
@@ -345,9 +332,6 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // ---------------------------------------------------------
-        // 4. RM RECEIVING (Import, Scan, Edit, Delete)
-        // ---------------------------------------------------------
         case 'import_excel':
             $jsonData = $_POST['data'] ?? '';
             if (empty($jsonData)) throw new Exception("ไม่พบข้อมูลสำหรับการนำเข้า");
@@ -532,9 +516,9 @@ try {
             $params = [$startDate . " 00:00:00", date('Y-m-d', strtotime($endDate . ' +1 day')) . " 00:00:00"];
 
             if (!empty($search)) {
-                $conditions[] = "(t.serial_no LIKE ? OR t.master_pallet_no LIKE ? OR i.part_no LIKE ? OR i.sap_no LIKE ? OR t.po_number LIKE ? OR t.warehouse_no LIKE ?)";
+                $conditions[] = "(t.serial_no LIKE ? OR t.master_pallet_no LIKE ? OR i.part_no LIKE ? OR i.sap_no LIKE ? OR t.po_number LIKE ? OR t.warehouse_no LIKE ? OR t.pallet_no LIKE ? OR t.ctn_number LIKE ?)";
                 $searchWildcard = "%$search%";
-                $params = array_merge($params, array_fill(0, 6, $searchWildcard));
+                $params = array_merge($params, array_fill(0, 8, $searchWildcard));
             }
 
             $whereClause = implode(" AND ", $conditions);
@@ -569,9 +553,6 @@ try {
             ]);
             break;
 
-        // ---------------------------------------------------------
-        // 5. SCRAP & REPLACEMENT (Store Request)
-        // ---------------------------------------------------------
         case 'get_scrap_requests':
             $status = $_GET['status'] ?? 'ALL';
             $search = $_GET['search'] ?? '';
@@ -721,9 +702,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อย']);
             break;
 
-        // =========================================================
-        // CYCLE COUNT (ระบบตรวจนับและปรับปรุงสต็อก)
-        // =========================================================
         case 'submit_cycle_count':
             $item_id = (int)($_POST['item_id'] ?? 0);
             $location_id = (int)($_POST['location_id'] ?? 0);

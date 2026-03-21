@@ -47,30 +47,76 @@
         }
         
         .tag-card { 
-            width: 80mm; height: 50mm; 
-            border: 2px solid #000; padding: 4mm; margin-bottom: 5mm; 
-            page-break-after: always; font-family: Arial, sans-serif;
-            display: flex; flex-direction: row; justify-content: space-between;
-            box-sizing: border-box; color: #000; background-color: #fff;
+            width: 4in; 
+            height: 2in; 
+            box-sizing: border-box;
+            padding: 2mm 4mm 2mm 8mm; 
+            page-break-after: always;
+            font-family: 'Arial', sans-serif;
+            color: #000;
+            background-color: #fff;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            overflow: hidden;
         }
-        .tag-details { width: 70%; padding-right: 5px; display: flex; flex-direction: column; }
-        .t-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
-        .t-sub { font-size: 10px; font-weight: bold; color: #555; margin-bottom: 2px; }
-        .t-desc { font-size: 9px; line-height: 1.2; height: 22px; overflow: hidden; margin-bottom: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal;}
+
+        .tag-details {
+            width: 70%;
+            padding-right: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            height: 100%;
+        }
+
+        .t-title { font-size: 18px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
+        .t-sub { font-size: 11px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
         
-        .t-table { width: 100%; font-size: 9px; line-height: 1.3; }
-        .t-table td { padding: 1px 0; vertical-align: top; }
-        .t-hl { font-size: 14px; font-weight: bold; display: inline-block; }
+        .t-desc { 
+            font-size: 11px; 
+            line-height: 1.1; 
+            margin-bottom: 6px; 
+            border-bottom: 1px solid #000; 
+            padding-bottom: 4px; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2; 
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal; 
+        }
         
-        .tag-qr { width: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .tag-qr img, .tag-qr canvas { width: 65px !important; height: 65px !important; }
-        .t-serial { font-size: 9px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
+        .t-table { width: 100%; font-size: 11px; line-height: 1.2; }
+        .t-table td { padding: 2px 0 0 0; vertical-align: bottom; }
+        .t-hl { font-size: 16px; font-weight: bold; line-height: 0.8; display: inline-block; }
+
+        .tag-qr {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tag-qr canvas, .tag-qr img { width: 85px !important; height: 85px !important; }
+        .t-serial { font-size: 11px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
     }
 
-    /* ซ่อน Library Trash */
     #qr-reader-trace__dashboard { display: none !important; }
     #html5-qrcode-button-camera-stop { display: none !important; }
     #html5-qrcode-anchor-scan-type-change { display: none !important; }
+    #qr-reader-container-trace {
+        width: 100%;
+        min-height: 260px;
+    }
+    #qr-reader-trace video {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 250px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
 </style>
 
 <div id="printArea" class="d-none"></div>
@@ -107,8 +153,8 @@
             
                     <div class="tab-content bg-white p-3 border border-top-0 rounded-bottom">
                         <div class="tab-pane fade show active" id="trace-camera-pane" role="tabpanel">
-                            <div id="qr-reader-container-trace" style="position:relative; border-radius:8px; overflow:hidden; border: 1px solid #dee2e6;">
-                                <div id="qr-reader-trace" style="width: 100%;"></div>
+                            <div id="qr-reader-container-trace" style="position:relative; border-radius:8px; overflow:hidden; border: 1px solid #dee2e6; min-height: 250px;">
+                                <div id="qr-reader-trace" style="width: 100%; min-height: 250px;"></div>
                             </div>
                         </div>
 
@@ -230,4 +276,4 @@
     </div>
 </div>
 
-<script src="script/storeScanner.js?v=<?php filemtime(__DIR__ . '/../script/storeScanner.js'); ?>" defer></script>
+<script src="script/storeScanner.js?v=<?php echo filemtime(__DIR__ . '/../script/storeScanner.js'); ?>" defer></script>

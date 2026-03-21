@@ -99,10 +99,10 @@ async function loadHistory() {
         const result = await fetchAPI(queryParams, 'GET');
         
         if (result.kpi) {
-            document.getElementById('kpi-total-tags').innerText = result.kpi.total_tags.toLocaleString();
-            document.getElementById('kpi-total-qty').innerText = parseFloat(result.kpi.total_qty).toLocaleString();
-            document.getElementById('kpi-printed').innerText = result.kpi.printed_tags.toLocaleString();
-            document.getElementById('kpi-pending').innerText = result.kpi.pending_tags.toLocaleString();
+            document.getElementById('kpi-total-tags').innerText = (parseInt(result.kpi.total_tags) || 0).toLocaleString();
+            document.getElementById('kpi-total-qty').innerText = (parseFloat(result.kpi.total_qty) || 0).toLocaleString();
+            document.getElementById('kpi-printed').innerText = (parseInt(result.kpi.printed_tags) || 0).toLocaleString();
+            document.getElementById('kpi-pending').innerText = (parseInt(result.kpi.pending_tags) || 0).toLocaleString();
         }
 
         tbody.innerHTML = '';

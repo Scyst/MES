@@ -121,19 +121,47 @@ function stopTraceScanning() {
 }
 
 async function startTraceScanning() {
-    if (!html5QrCodeTrace) html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
-    if (html5QrCodeTrace.isScanning) return;
-    try {
-        await html5QrCodeTrace.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-            (decodedText) => {
-                stopTraceScanning(); 
-                document.getElementById('scanInput').value = decodedText.trim();
-                executeTraceScan();
+    const qrContainer = document.getElementById("qr-reader-trace");
+    if (!qrContainer) return;
+
+    // ฟังก์ชันรอให้ Modal กางเสร็จ (กว้าง > 0)
+    const tryStartCamera = async (attempts = 0) => {
+        const currentWidth = qrContainer.clientWidth || qrContainer.offsetWidth;
+        
+        // ถ้าขนาดกล่องยังเป็น 0 แปลว่า Modal/Tab ยังแสดงผลไม่เสร็จ ให้รอ 100ms แล้วเช็คใหม่
+        if (currentWidth === 0 && attempts < 20) {
+            setTimeout(() => tryStartCamera(attempts + 1), 100);
+            return;
+        }
+
+        // ล้าง Instance เดิมที่อาจจะ Error ค้างอยู่ทิ้งให้หมด
+        if (html5QrCodeTrace) {
+            if (html5QrCodeTrace.isScanning) {
+                try { await html5QrCodeTrace.stop(); } catch(e) {}
             }
-        );
-    } catch (err) { console.warn("Camera start failed:", err); }
+            html5QrCodeTrace.clear();
+            html5QrCodeTrace = null;
+        }
+
+        html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
+
+        try {
+            await html5QrCodeTrace.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                (decodedText) => {
+                    stopTraceScanning(); 
+                    document.getElementById('scanInput').value = decodedText.trim();
+                    executeTraceScan();
+                }
+            );
+        } catch (err) { 
+            console.warn("Camera start failed:", err); 
+        }
+    };
+
+    // หน่วง 200ms รอให้ Bootstrap Modal เตรียมตัว
+    setTimeout(() => tryStartCamera(0), 200);
 }
 
 window.executeTraceScan = async function() {
