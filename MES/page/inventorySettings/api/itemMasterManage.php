@@ -201,11 +201,12 @@ try {
             
             $pdo->beginTransaction();
             try {
-                $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch :json, :user");
-                $stmt->execute([
-                    ':json' => json_encode($items),
-                    ':user' => $currentUser['username']
-                ]);
+                $jsonData = json_encode($items, JSON_UNESCAPED_UNICODE);
+                $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch ?, ?");
+                $stmt->bindValue(1, $jsonData, PDO::PARAM_STR);
+                $stmt->bindValue(2, $currentUser['username'], PDO::PARAM_STR);
+                
+                $stmt->execute();
                 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
                 $inserted = $result['InsertedCount'] ?? 0;
@@ -449,10 +450,7 @@ try {
     error_log("Item Master API Error: " . $e->getMessage());
     http_response_code(500);
     
-    $msg = (strpos($e->getMessage(), 'SQLSTATE') !== false) 
-        ? 'เกิดข้อผิดพลาดในการประมวลผลฐานข้อมูล กรุณาติดต่อผู้ดูแลระบบ' 
-        : $e->getMessage();
-        
-    echo json_encode(['success' => false, 'message' => $msg]);
+    // ⚠️ เอาการซ่อน Error ออกชั่วคราว เพื่อหา Root Cause
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

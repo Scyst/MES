@@ -9,58 +9,6 @@ let rowsPerPage = 100;
 let totalPages = 1;
 let searchTimer;
 
-async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
-    let btn = null;
-    let originalHtml = '';
-    
-    if (buttonId) {
-        btn = document.getElementById(buttonId);
-        if (btn) {
-            if (btn.disabled) return null; 
-            originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        }
-    }
-
-    try {
-        const url = `api/api_store.php?action=${action}`;
-        const options = { method: method };
-
-        if (method === 'POST') {
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-            
-            if (bodyData instanceof FormData) {
-                bodyData.append('csrf_token', csrfToken);
-                options.body = bodyData;
-            } else {
-                bodyData = bodyData || {};
-                bodyData.csrf_token = csrfToken;
-                options.headers = { 'Content-Type': 'application/json' };
-                options.body = JSON.stringify(bodyData);
-            }
-        }
-
-        const response = await fetch(url, options);
-        const result = await response.json();
-        
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || `HTTP Error: ${response.status}`);
-        }
-        return result;
-        
-    } catch (error) {
-        Swal.fire('Error', error.message, 'error');
-        throw error;
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const importModalEl = document.getElementById('importModal');
     if (importModalEl) {
@@ -84,10 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadHistory() {
     const tbody = document.getElementById('historyTbody');
-    if (!tbody) return; 
+    const cardContainer = document.getElementById('historyCardContainer');
     
-    tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...</td></tr>';
-    document.getElementById('selectAllCheckbox').checked = false;
+    if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...</td></tr>';
+    if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
+    
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
     updateBatchPrintBtn();
     
     const startDate = document.getElementById('filterStartDate').value;
@@ -105,25 +56,30 @@ async function loadHistory() {
             document.getElementById('kpi-pending').innerText = (parseInt(result.kpi.pending_tags) || 0).toLocaleString();
         }
 
-        tbody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
+            if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 text-secondary"></i><br>ไม่พบข้อมูล</div>';
             document.getElementById('paginationControls').innerHTML = '';
             document.getElementById('paginationInfo').innerText = 'แสดง 0 ถึง 0 จาก 0 รายการ';
             return;
         }
 
+        let htmlTable = '';
+        let htmlCards = '';
+
         result.data.forEach(row => {
             let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : (row.status === 'PENDING' ? 'bg-warning' : 'bg-info'));
             let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
-            let receiveDate = row.actual_receive_date ? formatDateForPrint(row.actual_receive_date) : '-';
+            let receiveDate = '-';
+            if (row.actual_receive_date) {
+                receiveDate = typeof formatDateForPrint === 'function' ? formatDateForPrint(row.actual_receive_date) : String(row.actual_receive_date).substring(0,10);
+            }
             let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
             
-            tbody.innerHTML += `
+            // 1. สร้าง ROW สำหรับ Desktop
+            htmlTable += `
                 <tr class="align-middle">
-                    <td class="text-center">
-                        <input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()">
-                    </td>
+                    <td class="text-center"><input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()"></td>
                     <td class="text-muted"><small>${displayTime}</small></td>
                     <td>${receiveDate}</td>
                     <td class="text-center fw-bold text-primary">
@@ -133,62 +89,82 @@ async function loadHistory() {
                     <td class="text-truncate text-center" style="max-width: 100px;" title="${escapeHTML(row.item_no)} | ${escapeHTML(row.category || '')}">
                         ${escapeHTML(row.item_no)} <br> <small class="text-muted">${escapeHTML(row.category || '')}</small>
                     </td>
-                    <td class="text-truncate text-center" style="max-width: 350px;" title="${escapeHTML(row.po_number)}">
-                        ${escapeHTML(row.po_number) || '-'}
-                    </td>
-                    <td class="text-truncate text-center" style="max-width: 120px;" title="${escapeHTML(row.warehouse_no)}">
-                        ${escapeHTML(row.warehouse_no) || '-'}
-                    </td>
+                    <td class="text-truncate text-center" style="max-width: 350px;">${escapeHTML(row.po_number) || '-'}</td>
+                    <td class="text-truncate text-center" style="max-width: 120px;">${escapeHTML(row.warehouse_no) || '-'}</td>
                     <td class="text-center">${escapeHTML(row.pallet_no) || '-'} / ${escapeHTML(row.ctn_number) || '-'}</td>
                     <td class="text-center">${escapeHTML(row.week_no) || '-'}</td>
                     <td class="text-center fw-bold">${parseFloat(row.qty_per_pallet).toLocaleString()}</td>
-                    <td class="text-center text-truncate text-danger small" style="max-width: 250px;" title="${escapeHTML(row.remark || '')}">
-                        ${escapeHTML(row.remark || '')}
-                    </td>
+                    <td class="text-center text-truncate text-danger small" style="max-width: 250px;" title="${escapeHTML(row.remark || '')}">${escapeHTML(row.remark || '')}</td>
                     <td class="text-center">
-                        ${row.print_count > 0 
-                            ? `<span class="badge bg-info text-dark" title="พิมพ์ล่าสุด: ${row.last_printed_at}"><i class="fas fa-print me-1"></i>${row.print_count}</span>` 
-                            : `<span class="badge bg-light text-muted border"><i class="fas fa-print"></i> 0</span>`
-                        }
+                        ${row.print_count > 0 ? `<span class="badge bg-info text-dark"><i class="fas fa-print me-1"></i>${row.print_count}</span>` : `<span class="badge bg-light text-muted border"><i class="fas fa-print"></i> 0</span>`}
                     </td>
                     <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status)}</span></td>
                     <td class="text-center align-middle">
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; border-radius: 50%;">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.9rem; z-index: 1050;">
-                                <li>
-                                    <a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;">
-                                        <i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag (ใบย่อย)
-                                    </a>
-                                </li>
-                                ${row.master_pallet_no ? `
-                                <li>
-                                    <a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${row.master_pallet_no}'); return false;">
-                                        <i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet Tag
-                                    </a>
-                                </li>
-                                ` : ''}
+                            <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.9rem;">
+                                <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag</a></li>
+                                ${row.master_pallet_no ? `<li><a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${escapeHTML(row.master_pallet_no)}'); return false;"><i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet</a></li>` : ''}
                                 ${typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM ? `
                                 <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;">
-                                        <i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${row.serial_no}'); return false;">
-                                        <i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล
-                                    </a>
-                                </li>
+                                <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;"><i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล</a></li>
+                                <li><a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${escapeHTML(row.serial_no)}'); return false;"><i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล</a></li>
                                 ` : ''}
                             </ul>
                         </div>
                     </td>
                 </tr>
             `;
+
+            // 2. สร้าง CARD สำหรับ Mobile
+            let borderLeftColor = row.status === 'AVAILABLE' ? 'var(--bs-success)' : (row.status === 'PENDING' ? 'var(--bs-warning)' : 'var(--bs-info)');
+            htmlCards += `
+                <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <input class="form-check-input mt-0 row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()" style="transform: scale(1.3);">
+                                <span class="badge ${badgeClass}">${escapeHTML(row.status)}</span>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-light border-0 shadow-sm" data-bs-toggle="dropdown" style="width: 30px; height: 30px; border-radius: 50%;"><i class="fas fa-ellipsis-v"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li><a class="dropdown-item fw-bold py-2" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print me-2 text-dark"></i>พิมพ์ Tag</a></li>
+                                    ${row.master_pallet_no ? `<li><a class="dropdown-item fw-bold text-primary py-2 bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${escapeHTML(row.master_pallet_no)}'); return false;"><i class="fas fa-boxes me-2"></i>พิมพ์ Pallet</a></li>` : ''}
+                                    ${typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM ? `
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item fw-bold py-2" href="#" onclick="editTag('${rowDataEncoded}'); return false;"><i class="fas fa-edit me-2 text-primary"></i>แก้ไขข้อมูล</a></li>
+                                    <li><a class="dropdown-item fw-bold text-danger py-2" href="#" onclick="deleteTag('${escapeHTML(row.serial_no)}'); return false;"><i class="fas fa-trash me-2"></i>ลบข้อมูล</a></li>
+                                    ` : ''}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h6 class="fw-bold text-primary mb-1" style="font-size: 1.1rem;">${escapeHTML(row.serial_no)}</h6>
+                        
+                        <div class="row g-2 text-muted mt-1" style="font-size: 0.85rem;">
+                            <div class="col-8 text-truncate fw-bold text-dark"><i class="fas fa-cube me-1 text-secondary"></i> ${escapeHTML(row.item_no)}</div>
+                            <div class="col-4 text-end fw-bold text-dark" style="font-size: 1rem;">${parseFloat(row.qty_per_pallet).toLocaleString()}</div>
+                            
+                            <div class="col-6 text-truncate"><i class="fas fa-file-invoice me-1"></i> ${escapeHTML(row.po_number) || '-'}</div>
+                            <div class="col-6 text-end"><i class="far fa-calendar-alt me-1"></i> ${receiveDate}</div>
+                            
+                            <div class="col-12 text-truncate"><i class="fas fa-pallet me-1"></i> Pallet: ${escapeHTML(row.pallet_no) || '-'} / CTN: ${escapeHTML(row.ctn_number) || '-'}</div>
+                            
+                            ${row.remark ? `
+                            <div class="col-12 mt-2">
+                                <div class="p-2 bg-danger bg-opacity-10 text-danger rounded border border-danger border-opacity-25 small">
+                                    <i class="fas fa-exclamation-circle me-1"></i> ${escapeHTML(row.remark)}
+                                </div>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
         });
+
+        if (tbody) tbody.innerHTML = htmlTable;
+        if (cardContainer) cardContainer.innerHTML = htmlCards;
 
         if (result.pagination) {
             totalPages = result.pagination.total_pages || 1;
@@ -196,7 +172,9 @@ async function loadHistory() {
         }
 
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-danger">โหลดประวัติล้มเหลว</td></tr>';
+        console.error("Load History Error:", err); 
+        if (tbody) tbody.innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i> โหลดประวัติล้มเหลว: ${err.message}</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-50"></i><br>โหลดประวัติล้มเหลว<br><small>${err.message}</small></div>`;
     }
 }
 
@@ -274,9 +252,54 @@ function clearModalData() {
     parsedData = [];
     previewData = [];
     document.getElementById('excelFile').value = '';
-    document.getElementById('previewTbody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5">กรุณาเลือกไฟล์และกดแสดงตัวอย่าง</td></tr>';
+    // ล็อกความสูง 280px เพื่อให้ตารางกางเต็มพื้นที่เสมอ
+    document.getElementById('previewTbody').innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center text-muted align-middle" style="height: 280px;">
+                <i class="fas fa-file-excel fa-3x mb-3 opacity-25"></i><br>
+                <span class="fw-bold">กรุณาเลือกไฟล์ Excel เพื่อดูตัวอย่างข้อมูล</span>
+            </td>
+        </tr>`;
     document.getElementById('previewCount').innerText = `พบข้อมูล: 0 พาเลท`;
     document.getElementById('btnSave').classList.add('d-none');
+}
+
+function renderPreview() {
+    let tbody = document.getElementById('previewTbody');
+    let htmlContent = '';
+
+    if (previewData.length === 0) {
+        // ล็อกความสูง 280px สำหรับ Error State ด้วย
+        tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center text-danger align-middle" style="height: 280px;">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-50"></i><br>
+                <span class="fw-bold">ไม่พบข้อมูลที่ถูกต้องในไฟล์</span><br>
+                <small class="text-muted">กรุณาตรวจสอบคอลัมน์ให้ตรงกับ Template</small>
+            </td>
+        </tr>`;
+        document.getElementById('btnSave').classList.add('d-none');
+        return;
+    }
+
+    previewData.forEach(row => {
+        htmlContent += `
+            <tr>
+                <td class="px-3 fw-bold text-primary">${escapeHTML(row.item_no)}</td>
+                <td>${escapeHTML(row.category)}</td>
+                <td class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.des)}">${escapeHTML(row.des)}</td>
+                <td>${escapeHTML(row.po_number)}</td>
+                <td class="text-end fw-bold text-dark">${row.qty.toLocaleString()}</td>
+                <td class="text-end">${row.pack}</td>
+                <td class="px-2">${escapeHTML(row.wh)}</td>
+                <td class="px-3 text-danger" style="font-size: 0.8rem;">${escapeHTML(row.remark)}</td> 
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = htmlContent;
+    document.getElementById('previewCount').innerText = `เตรียมสร้าง Tag จำนวน: ${parsedData.length} ใบ`;
+    document.getElementById('btnSave').classList.remove('d-none');
 }
 
 function downloadTemplate() {
@@ -294,17 +317,42 @@ function downloadTemplate() {
 function processExcel() {
     const fileInput = document.getElementById('excelFile');
     const file = fileInput.files[0];
-    if (!file) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกไฟล์ Excel', 'warning'); return; }
+    
+    if (!file) { 
+        clearModalData(); 
+        return; 
+    }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const firstSheetName = workbook.SheetNames[0];
-        const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1, defval: ""});
-        extractData(rawRows);
-    };
-    reader.readAsArrayBuffer(file);
+    document.getElementById('previewTbody').innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center text-primary align-middle" style="height: 280px;">
+                <i class="fas fa-circle-notch fa-spin fa-3x mb-3"></i><br>
+                <span class="fw-bold fs-5">กำลังอ่านข้อมูลจากไฟล์ Excel...</span><br>
+                <small class="text-muted">ไฟล์ขนาดใหญ่อาจใช้เวลาสักครู่ กรุณารอหน้าต่างโหลดข้อมูล</small>
+            </td>
+        </tr>`;
+    document.getElementById('previewCount').innerText = `กำลังประมวลผล...`;
+    document.getElementById('btnSave').classList.add('d-none');
+    setTimeout(() => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1, defval: ""});
+                extractData(rawRows);
+                
+            } catch (error) {
+                console.error("Excel Parsing Error: ", error);
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถอ่านไฟล์ Excel ได้ หรือไฟล์อาจเสียหาย', 'error');
+                clearModalData();
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        
+    }, 100); 
 }
 
 function extractData(rawRows) {
@@ -382,44 +430,6 @@ function formatExcelDate(excelDate) {
     return String(excelDate).split(' ')[0].trim();
 }
 
-function formatDateForPrint(dateStr) {
-    if (!dateStr) return '';
-    const datePart = String(dateStr).split(' ')[0];
-    const parts = datePart.split('-');
-    if (parts.length !== 3) return dateStr;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${parts[2].padStart(2, '0')}-${months[parseInt(parts[1], 10) - 1]}-${parts[0].substring(2)}`;
-}
-
-function renderPreview() {
-    let tbody = document.getElementById('previewTbody');
-    tbody.innerHTML = '';
-
-    if (previewData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">ไม่พบข้อมูลที่รับเข้าได้</td></tr>';
-        document.getElementById('btnSave').classList.add('d-none');
-        return;
-    }
-
-    previewData.forEach(row => {
-        tbody.innerHTML += `
-            <tr>
-                <td><b>${escapeHTML(row.item_no)}</b></td>
-                <td>${escapeHTML(row.category)}</td>
-                <td class="text-truncate" style="max-width: 200px;" title="${escapeHTML(row.des)}">${escapeHTML(row.des)}</td>
-                <td>${escapeHTML(row.po_number)}</td>
-                <td class="text-end text-primary fw-bold">${row.qty.toLocaleString()}</td>
-                <td class="text-end">${row.pack}</td>
-                <td>${escapeHTML(row.wh)}</td>
-                <td class="text-danger small">${escapeHTML(row.remark)}</td> 
-            </tr>
-        `;
-    });
-
-    document.getElementById('previewCount').innerText = `เตรียมสร้าง Tag จำนวน: ${parsedData.length} ใบ`;
-    document.getElementById('btnSave').classList.remove('d-none');
-}
-
 async function submitToDatabase() {
     if (parsedData.length === 0) return;
     const formData = new FormData();
@@ -430,15 +440,18 @@ async function submitToDatabase() {
     if (result) {
         importModalInstance.hide();
         loadHistory();
-        renderPrintTags(result.data);
         
         Swal.fire({ 
             title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
             timer: 1500, showConfirmButton: false 
-        }).then(() => { setTimeout(() => { window.print(); }, 300); });
+        }).then(() => {
+            if (result.data && result.data.length > 0) {
+                renderPrintTags(result.data);
+                setTimeout(() => { window.print(); }, 300);
+            }
+        });
     }
 }
-
 function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
@@ -452,13 +465,29 @@ function updateBatchPrintBtn() {
     const selectAllCb = document.getElementById('selectAllCheckbox');
     const totalCount = document.querySelectorAll('.row-checkbox').length;
     
+    // ดึงกล่อง Wrapper มาจัดการ
+    const actionWrapper = document.getElementById('actionWrapper');
+    
     if(checkedCount > 0) {
         if(btnPrintDropdown) { btnPrintDropdown.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
         if(btnDelete) { btnDelete.classList.remove('d-none'); document.getElementById('selectedDeleteCount').innerText = checkedCount; }
+        
+        // ถ้ามีการติ๊กเลือก ให้โชว์กล่อง Action บนมือถือ
+        if(actionWrapper) { 
+            actionWrapper.classList.remove('d-none', 'd-md-flex'); 
+            actionWrapper.classList.add('d-flex'); 
+        }
     } else {
         if(btnPrintDropdown) btnPrintDropdown.classList.add('d-none');
         if(btnDelete) btnDelete.classList.add('d-none');
+        
+        // ถ้าไม่ได้ติ๊ก ให้ซ่อนกล่อง Action บนมือถือ (แต่โชว์บนคอมเหมือนเดิม)
+        if(actionWrapper) { 
+            actionWrapper.classList.remove('d-flex'); 
+            actionWrapper.classList.add('d-none', 'd-md-flex'); 
+        }
     }
+    
     if(selectAllCb) selectAllCb.checked = (checkedCount === totalCount && totalCount > 0);
 }
 
@@ -487,7 +516,7 @@ window.groupToMasterPallet = async function() {
             const res = await fetchAPI('group_master_pallet', 'POST', formData);
             
             if(res) {
-                renderMasterPalletTag(res.data);
+                if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(res.data);
                 loadHistory();
                 Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false })
                 .then(() => { setTimeout(() => window.print(), 300); });
@@ -498,7 +527,7 @@ window.groupToMasterPallet = async function() {
 
 window.printSingleTag = async function(encodedRow) {
     const tag = JSON.parse(decodeURIComponent(encodedRow));
-    renderPrintTags([tag]);
+    if(typeof renderPrintTags === 'function') renderPrintTags([tag]);
     await logPrintStatus([tag.serial_no]);
     loadHistory(); 
     setTimeout(() => { window.print(); }, 200); 
@@ -513,7 +542,7 @@ window.printSelectedTags = async function() {
         tagsToPrint.push(tag); 
         serialsToLog.push(tag.serial_no);
     });
-    renderPrintTags(tagsToPrint);
+    if(typeof renderPrintTags === 'function') renderPrintTags(tagsToPrint);
     await logPrintStatus(serialsToLog);
     loadHistory();
     setTimeout(() => { window.print(); }, 300);
@@ -577,18 +606,18 @@ window.editTag = function(encodedRow) {
         html: `
             <div class="text-start px-2" style="font-size: 0.9rem;">
                 <label class="form-label fw-bold mb-1 text-muted">Serial No.</label>
-                <input class="form-control form-control-sm mb-3 bg-light" value="${row.serial_no}" readonly>
+                <input class="form-control form-control-sm mb-3 bg-light" value="${escapeHTML(row.serial_no)}" readonly>
                 <div class="row g-2 mb-2">
-                    <div class="col-sm-6"><label class="form-label fw-bold mb-1 text-primary">PO Number</label><input id="swal-edit-po" class="form-control form-control-sm" value="${row.po_number || ''}"></div>
-                    <div class="col-sm-6"><label class="form-label fw-bold mb-1 text-primary">Invoice No.</label><input id="swal-edit-inv" class="form-control form-control-sm" value="${row.warehouse_no || ''}"></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold mb-1 text-primary">PO Number</label><input id="swal-edit-po" class="form-control form-control-sm" value="${escapeHTML(row.po_number || '')}"></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold mb-1 text-primary">Invoice No.</label><input id="swal-edit-inv" class="form-control form-control-sm" value="${escapeHTML(row.warehouse_no || '')}"></div>
                 </div>
                 <div class="row g-2 mb-3">
-                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">Pallet No.</label><input id="swal-edit-pallet" class="form-control form-control-sm" value="${row.pallet_no || ''}"></div>
-                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">CTN No.</label><input id="swal-edit-ctn" class="form-control form-control-sm" value="${row.ctn_number || ''}"></div>
-                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">Week</label><input id="swal-edit-week" class="form-control form-control-sm" value="${row.week_no || ''}"></div>
+                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">Pallet No.</label><input id="swal-edit-pallet" class="form-control form-control-sm" value="${escapeHTML(row.pallet_no || '')}"></div>
+                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">CTN No.</label><input id="swal-edit-ctn" class="form-control form-control-sm" value="${escapeHTML(row.ctn_number || '')}"></div>
+                    <div class="col-sm-4"><label class="form-label fw-bold mb-1 text-primary">Week</label><input id="swal-edit-week" class="form-control form-control-sm" value="${escapeHTML(row.week_no || '')}"></div>
                 </div>
                 <label class="form-label fw-bold mb-1 text-primary">Remark</label>
-                <textarea id="swal-edit-remark" class="form-control form-control-sm" rows="2">${row.remark || ''}</textarea>
+                <textarea id="swal-edit-remark" class="form-control form-control-sm" rows="2">${escapeHTML(row.remark || '')}</textarea>
             </div>
         `,
         focusConfirm: false, showCancelButton: true, confirmButtonText: '<i class="fas fa-save"></i> บันทึก', cancelButtonText: 'ยกเลิก',
@@ -620,7 +649,20 @@ window.editTag = function(encodedRow) {
     });
 };
 
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+function toggleMobileCards() {
+    const container = document.getElementById('kpiContainer');
+    const btn = document.getElementById('btnToggleCards');
+    const icon = btn.querySelector('i');
+    
+    if (container.classList.contains('d-none')) {
+        container.classList.remove('d-none');
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        container.classList.add('d-none');
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary', 'text-white');
+        icon.className = 'fas fa-eye';
+    }
 }

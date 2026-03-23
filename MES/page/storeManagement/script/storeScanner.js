@@ -8,35 +8,31 @@ let cropper = null;
 let cropModalInstance;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. จัดการ Modal Scanner
     const traceModalEl = document.getElementById('traceModal');
     if (traceModalEl) {
         traceModalInstance = new bootstrap.Modal(traceModalEl);
         
+        // เมื่อเปิด Modal ให้เปิดกล้องและโฟกัสช่องพิมพ์
         traceModalEl.addEventListener('shown.bs.modal', () => {
-            const cameraTab = document.getElementById('trace-camera-tab');
-            if (cameraTab && cameraTab.classList.contains('active')) {
-                startTraceScanning();
-            } else {
-                document.getElementById('scanInput').focus();
-            }
+            startTraceScanning();
+            document.getElementById('scanInput').focus();
         });
 
+        // เมื่อปิด Modal ให้ปิดกล้องและล้างข้อมูล
         traceModalEl.addEventListener('hidden.bs.modal', () => {
             stopTraceScanning();
             resetTraceUI();
         });
 
-        document.getElementById('trace-camera-tab')?.addEventListener('shown.bs.tab', startTraceScanning);
-        document.getElementById('trace-manual-tab')?.addEventListener('shown.bs.tab', () => {
-            stopTraceScanning();
-            setTimeout(() => document.getElementById('scanInput').focus(), 100);
-        });
-
+        // กด Enter ในช่องค้นหา
         document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') executeTraceScan();
         });
     }
-const cropModalEl = document.getElementById('cropModal');
+
+    // 2. จัดการ Modal ครอปรูปภาพ (Crop Modal)
+    const cropModalEl = document.getElementById('cropModal');
     if (cropModalEl) {
         cropModalInstance = new bootstrap.Modal(cropModalEl);
         const imageToCrop = document.getElementById('imageToCrop');
@@ -52,7 +48,7 @@ const cropModalEl = document.getElementById('cropModal');
                     cropModalInstance.show();
                 };
                 reader.readAsDataURL(file);
-                e.target.value = null;
+                e.target.value = null; // รีเซ็ต input ให้กดอัปโหลดซ้ำได้
             }
         });
 
@@ -124,17 +120,16 @@ async function startTraceScanning() {
     const qrContainer = document.getElementById("qr-reader-trace");
     if (!qrContainer) return;
 
-    // ฟังก์ชันรอให้ Modal กางเสร็จ (กว้าง > 0)
     const tryStartCamera = async (attempts = 0) => {
         const currentWidth = qrContainer.clientWidth || qrContainer.offsetWidth;
         
-        // ถ้าขนาดกล่องยังเป็น 0 แปลว่า Modal/Tab ยังแสดงผลไม่เสร็จ ให้รอ 100ms แล้วเช็คใหม่
+        // รอให้ Modal กางเสร็จ
         if (currentWidth === 0 && attempts < 20) {
             setTimeout(() => tryStartCamera(attempts + 1), 100);
             return;
         }
 
-        // ล้าง Instance เดิมที่อาจจะ Error ค้างอยู่ทิ้งให้หมด
+        // ล้าง Instance เดิม
         if (html5QrCodeTrace) {
             if (html5QrCodeTrace.isScanning) {
                 try { await html5QrCodeTrace.stop(); } catch(e) {}
@@ -160,7 +155,6 @@ async function startTraceScanning() {
         }
     };
 
-    // หน่วง 200ms รอให้ Bootstrap Modal เตรียมตัว
     setTimeout(() => tryStartCamera(0), 200);
 }
 
@@ -184,8 +178,6 @@ window.executeTraceScan = async function() {
     } catch (err) {
         document.getElementById('traceLoading').classList.add('d-none');
         Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo}`, 'warning').then(() => {
-            const manualTab = document.getElementById('trace-manual-tab');
-            if (manualTab) new bootstrap.Tab(manualTab).show();
             setTimeout(() => document.getElementById('scanInput').focus(), 300);
         });
     }
@@ -197,10 +189,11 @@ function renderTraceData(data) {
 
     currentScannedBarcode = tag.master_pallet_no || tag.serial_no;
 
-    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info'));
+    // เปลี่ยนสี Badge ให้สวยขึ้น (ใช้ bg-warning ธรรมดา แต่ตัวหนังสือเข้ม)
+    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info text-dark'));
     
     document.getElementById('traceSerial').innerText = currentScannedBarcode;
-    document.getElementById('traceStatus').className = `badge ${badgeClass} fs-6`;
+    document.getElementById('traceStatus').className = `badge ${badgeClass} rounded-pill fs-6 px-3 py-2 shadow-sm`;
     document.getElementById('traceStatus').innerText = tag.status;
     document.getElementById('traceItem').innerText = tag.item_no;
     document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
@@ -210,24 +203,21 @@ function renderTraceData(data) {
         ? `${parseFloat(tag.total_qty).toLocaleString()} (รวม ${tag.total_tags} ใบ)` 
         : `${parseFloat(tag.current_qty).toLocaleString()} / ${parseFloat(tag.qty_per_pallet).toLocaleString()}`;
     
-    document.getElementById('traceRemark').innerText = tag.remark || '-';
-
     const tbody = document.getElementById('traceHistoryTbody');
     tbody.innerHTML = '';
 
     if (!history || history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีประวัติการเคลื่อนไหว</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">ยังไม่มีประวัติการเคลื่อนไหว</td></tr>';
     } else {
         history.forEach(row => {
             let typeColor = row.transaction_type.includes('IN') || row.transaction_type.includes('RECEIVE') ? 'text-success' : 'text-danger';
             let sign = typeColor === 'text-success' ? '+' : '-';
+            // วาดข้อมูลให้ตรงกับตาราง 3 คอลัมน์ (เวลา, สถานะ, จำนวน)
             tbody.innerHTML += `
                 <tr>
-                    <td>${row.transaction_timestamp.substring(0, 16)}</td>
-                    <td><span class="badge bg-light text-dark border">${row.transaction_type}</span></td>
-                    <td class="text-end fw-bold ${typeColor}">${sign}${parseFloat(row.quantity).toLocaleString()}</td>
-                    <td><small>${escapeHTML(row.notes || '-')}</small></td>
-                    <td><small>${escapeHTML(row.actor_name || '-')}</small></td>
+                    <td class="py-2 px-3"><div class="fw-bold text-dark">${row.transaction_timestamp.substring(11, 16)}</div><small class="text-muted">${row.transaction_timestamp.substring(0, 10)}</small></td>
+                    <td class="py-2"><span class="badge bg-light text-dark border">${row.transaction_type}</span></td>
+                    <td class="text-end fw-bold ${typeColor} py-2 px-3 fs-6">${sign}${parseFloat(row.quantity).toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -277,15 +267,12 @@ window.receiveScannedTag = async function() {
         if (typeof loadDashboardData === 'function') loadDashboardData();
         
         document.getElementById('traceActionArea').classList.add('d-none');
-        document.getElementById('traceStatus').className = 'badge bg-success fs-6';
+        document.getElementById('traceStatus').className = 'badge bg-success fs-6 shadow-sm';
         document.getElementById('traceStatus').innerText = 'AVAILABLE';
         
         const autoReceive = document.getElementById('continuousScanToggle');
         if (autoReceive && autoReceive.checked) {
-            const cameraTab = document.getElementById('trace-camera-tab');
-            if (cameraTab && cameraTab.classList.contains('active')) {
-                setTimeout(() => startTraceScanning(), 1000); 
-            }
+            setTimeout(() => startTraceScanning(), 1000); 
         }
     }
 };
@@ -429,17 +416,3 @@ window.renderMasterPalletTag = function(masterData) {
         });
     }
 };
-
-function formatDateForPrint(dateStr) {
-    if (!dateStr) return '';
-    const datePart = String(dateStr).split(' ')[0];
-    const parts = datePart.split('-');
-    if (parts.length !== 3) return dateStr;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${parts[2]}-${months[parseInt(parts[1], 10) - 1]}-${parts[0].substring(2)}`;
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
-}

@@ -176,7 +176,7 @@ try {
 
                 if ($utilityType === 'ELECTRIC') {
                     $dt = new DateTime($logTimeStr);
-                    $dt->modify('-7 hours');
+                    $dt->modify('0 hours');
                     $logTimeStr = $dt->format('Y-m-d H:i:s');
                 }
 

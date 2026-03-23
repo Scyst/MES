@@ -30,15 +30,11 @@
                             <div class="row g-2"> 
                                 <div class="col-6">
                                     <input type="radio" class="btn-check" name="defect_source" id="source_snc" value="SNC" checked>
-                                    <label class="btn btn-outline-primary w-100 fw-bold" for="source_snc">
-                                        <i class="fas fa-industry me-1"></i> SNC (ภายใน)
-                                    </label>
+                                    <label class="btn btn-outline-primary w-100 fw-bold" for="source_snc">SNC (ภายใน)</label>
                                 </div>
                                 <div class="col-6">
                                     <input type="radio" class="btn-check" name="defect_source" id="source_vendor" value="Vendor">
-                                    <label class="btn btn-outline-primary w-100 fw-bold" for="source_vendor">
-                                        <i class="fas fa-truck-loading me-1"></i> Vendor (ภายนอก)
-                                    </label>
+                                    <label class="btn btn-outline-primary w-100 fw-bold" for="source_vendor">Vendor (ภายนอก)</label>
                                 </div>
                             </div>
                         </div>
