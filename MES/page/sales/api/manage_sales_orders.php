@@ -1,6 +1,6 @@
 <?php
 // page/sales/api/manage_sales_orders.php
-// [REFACTORED V2] - Fixed Date Parsing & Prevent Overwriting Past Dates
+define('SYSTEM_INJECTION_LOADED', true);
 
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
@@ -25,25 +25,22 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    // --- [UPDATED] Helper Functions (ฉลาดขึ้นและแม่นยำ) ---
+    // --- Helper Functions ---
     $fnDate = function($val) {
         if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
-        $val = explode(' ', $val)[0]; // ตัดเวลาทิ้ง
+        $val = explode(' ', $val)[0]; 
 
-        // 1. เช็ค Excel Serial Date (ต้องมากกว่า 40000 เพื่อกันเลข PO 38xxx หลุดเข้ามา)
         if (is_numeric($val)) {
             if ($val > 40000) return gmdate("Y-m-d", ($val - 25569) * 86400);
-            return null; // ถ้าเลขน้อยกว่านี้ ตีว่าเป็นขยะ ไม่ใช่วันที่
+            return null; 
         }
 
-        // 2. บังคับอ่านแบบ d/m/Y (วัน/เดือน/ปี) เท่านั้น
         $d = DateTime::createFromFormat('d/m/Y', $val);
         if ($d && $d->format('d/m/Y') === $val) {
             return $d->format('Y-m-d');
         }
 
-        // 3. กรณีสุดท้าย (เผื่อไฟล์มาเป็น Y-m-d หรืออื่นๆ)
         $ts = strtotime(str_replace('/', '-', $val));
         if ($ts !== false) return date('Y-m-d', $ts);
         
@@ -67,9 +64,7 @@ try {
             $startDate = $_GET['start_date'] ?? '';
             $endDate   = $_GET['end_date'] ?? '';
             
-            // [ADDED] Date Type Filter Logic
             $dateType  = $_GET['date_type'] ?? 'loading_date';
-            // Whitelist for security
             $allowedDateCols = ['loading_date', 'production_date', 'inspection_date'];
             if (!in_array($dateType, $allowedDateCols)) {
                 $dateType = 'loading_date';
@@ -87,7 +82,7 @@ try {
                 $dateParams[] = $endDate;
             }
 
-            // Query Data
+            // [ADDED] s.team
             $columns = "
                 s.id, s.po_number, s.sku, s.quantity, 
                 s.order_date, s.description, s.color,
@@ -96,13 +91,13 @@ try {
                 s.is_loading_done, s.is_production_done, 
                 s.is_confirmed, s.custom_order, s.created_at,
                 s.production_date, s.loading_date, s.inspection_date,
-                s.inspection_status, s.ticket_number
+                s.inspection_status, s.ticket_number, s.team
             ";
 
             $sql = "SELECT $columns, 
                     (COALESCE(i.Price_USD, i.StandardPrice, 0) * ISNULL(s.quantity, 0)) as price 
-                    FROM $table s 
-                    LEFT JOIN $itemsTable i ON s.sku = i.sku 
+                    FROM $table s WITH (NOLOCK)
+                    LEFT JOIN $itemsTable i WITH (NOLOCK) ON s.sku = i.sku 
                     WHERE 1=1";
             
             if ($filter === 'ACTIVE') $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
@@ -117,14 +112,13 @@ try {
             $stmt->execute($dateParams);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Query KPI Summary
             $sumSql = "SELECT 
                        COUNT(*) as total_all,
                        SUM(CASE WHEN ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as total_active,
                        SUM(CASE WHEN ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_prod,
                        SUM(CASE WHEN is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_load,
                        SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as prod_done
-                       FROM $table s 
+                       FROM $table s WITH (NOLOCK)
                        WHERE 1=1 " . $dateCondition;
 
             $stmtSum = $pdo->prepare($sumSql);
@@ -174,14 +168,14 @@ try {
                 return '';
             };
 
-            $sqlMax = "SELECT MAX(custom_order) FROM $table";
+            $sqlMax = "SELECT MAX(custom_order) FROM $table WITH (NOLOCK)";
             $maxOrder = $pdo->query($sqlMax)->fetchColumn();
             $currentOrder = ($maxOrder) ? (int)$maxOrder : 0; 
 
-            // [UPDATED SQL] เพิ่ม Logic ป้องกันการเขียนทับวันที่ที่เป็นอดีต
+            // [ADDED] parameter team into MERGE
             $sql = "MERGE INTO $table AS T 
-                    USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
-                    AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder)
+                    USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
+                    AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder, team)
                     ON T.po_number = S.po 
                     WHEN MATCHED THEN UPDATE SET 
                         T.sku = S.sku,
@@ -191,21 +185,17 @@ try {
                         T.dc_location = S.dc,
                         T.loading_week = S.lweek, 
                         T.shipping_week = S.sweek,
-                        
-                        -- Logic: ถ้า Production Date เป็นอดีต ห้ามทับ
+                        T.team = ISNULL(NULLIF(S.team, ''), T.team), 
                         T.production_date = CASE 
                             WHEN T.production_date IS NOT NULL AND T.production_date < CAST(GETDATE() AS DATE) THEN T.production_date 
                             ELSE S.pdate 
                         END,
                         T.is_production_done = S.pdone,
-                        
-                        -- Logic: ถ้า Loading Date เป็นอดีต ห้ามทับ
                         T.loading_date = CASE 
                             WHEN T.loading_date IS NOT NULL AND T.loading_date < CAST(GETDATE() AS DATE) THEN T.loading_date 
                             ELSE S.ldate 
                         END,
                         T.is_loading_done = S.ldone,
-                        
                         T.ticket_number = S.ticket, 
                         T.inspection_date = S.idate, 
                         T.inspection_status = S.istat, 
@@ -216,8 +206,8 @@ try {
                     WHEN NOT MATCHED THEN INSERT 
                         (order_date, description, color, sku, po_number, quantity, dc_location, 
                         loading_week, shipping_week, production_date, is_production_done, 
-                        loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order)
-                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder);";
+                        loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order, team)
+                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
 
             $stmt = $pdo->prepare($sql);
 
@@ -227,6 +217,7 @@ try {
 
                 $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
                 $sku = $getCol($row, ['sku', 'item code', 'material']);
+                $team = $getCol($row, ['team', 'team group', 'group']); // [ADDED]
                 
                 if (empty($po)) { 
                     if (implode('', $row) !== '') $skippedCount++; 
@@ -274,7 +265,8 @@ try {
                         $fnDate($rawInspDate),
                         $finalInspStatus, 
                         $getCol($row, ['remark', 'comment']),
-                        $isConf, $currentOrder
+                        $isConf, $currentOrder,
+                        $team // [ADDED]
                     ]);
                     $count++;
                 } catch (Exception $ex) {
@@ -284,7 +276,7 @@ try {
             }
             $pdo->commit();
             echo json_encode([
-                'success' => true, 'imported_count' => $count-1, 'skipped_count' => $skippedCount,
+                'success' => true, 'imported_count' => $count > 0 ? $count-1 : 0, 'skipped_count' => $skippedCount,
                 'errors' => array_slice($errorLogs, 0, 10)
             ]);
             break;
@@ -294,7 +286,7 @@ try {
             $in = json_decode(file_get_contents('php://input'), true);
             if (!empty($in['orderedIds'])) {
                 $pdo->beginTransaction();
-                $sql = "UPDATE $table SET custom_order = ? WHERE id = ?";
+                $sql = "UPDATE $table SET custom_order = ?, updated_at = GETDATE() WHERE id = ?";
                 $stmt = $pdo->prepare($sql);
                 foreach ($in['orderedIds'] as $idx => $id) $stmt->execute([$idx + 1, $id]);
                 $pdo->commit();
@@ -327,12 +319,12 @@ try {
         // 5. UPDATE CELL
         case 'update_cell':
             $in = json_decode(file_get_contents('php://input'), true);
-            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date', 'ticket_number'];
+            // [ADDED] 'team' into allowed fields
+            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
             if (in_array($in['field'], $allowed)) {
                 $val = $in['value'] ?: null;
                 if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);
 
-                // Normal update (Logic Sync ถูกเอาออกแล้วตาม Requirement)
                 $pdo->prepare("UPDATE $table SET {$in['field']} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
 
                 echo json_encode(['success'=>true]);
@@ -344,11 +336,16 @@ try {
         // 6. CREATE SINGLE
         case 'create_single':
             $in = json_decode(file_get_contents('php://input'), true);
-            $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table")->fetchColumn();
+            $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table WITH (NOLOCK)")->fetchColumn();
             $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
             $oDate = $fnDate($in['order_date'] ?: null);
-            $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
-            $pdo->prepare($sql)->execute([$in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder]);
+            $team = !empty($in['team']) ? $in['team'] : 'Team1'; // [ADDED] Set Default
+
+            $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, team, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+            $pdo->prepare($sql)->execute([
+                $in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, 
+                $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder, $team
+            ]);
             echo json_encode(['success'=>true]); 
             break;
 
@@ -364,74 +361,6 @@ try {
                 echo json_encode(['success'=>false, 'message'=>'Invalid ID']);
             }
             break;
-
-        // 8. EXPORT CSV
-        case 'export':
-            header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename=Sales_Plan_Export.csv');
-            $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM
-
-            fputcsv($output, [
-                'Seq', 'PO Number', 'SKU', 'Description', 'Color', 'Quantity', 'DC',
-                'Order Date', 'Loading Week', 'Shipping Week', 
-                'Prd Completed Date', 'Loading Date', 'Inspection Date',
-                'Production Status', 'Loading Status', 'Confirmed', 
-                'Inspection Status', 
-                'Ticket Number', 
-                'Price (USD)',   
-                'Price (THB)',   
-                'Remark'
-            ]);
-
-            $yn = function($v) { return ($v == 1) ? 'Yes' : 'No'; };
-            $dt = function($d) { return ($d) ? date('d/m/Y', strtotime($d)) : ''; };
-
-            $isInspPass = function($v) {
-                if (empty($v)) return 'No';
-                $v = strtolower(trim($v));
-                return (in_array($v, ['pass', 'ok', 'done', 'yes', '1', 'true'])) ? 'Yes' : 'No';
-            };
-
-            // [NEW] Helper: ล้างข้อความให้เรียบร้อย (ลบ Enter ออก)
-            $clean = function($str) {
-                if (empty($str)) return '';
-                $str = str_replace(["\r\n", "\r", "\n"], ' ', $str);
-                return trim(preg_replace('/\s+/', ' ', $str));
-            };
-
-            $sql = "SELECT s.*, COALESCE(i.Price_USD, i.StandardPrice, 0) as unit_price 
-                    FROM $table s 
-                    LEFT JOIN $itemsTable i ON s.sku = i.sku
-                    ORDER BY ISNULL(custom_order, 999999) ASC, id DESC";
-            
-            $stmt = $pdo->query($sql);
-            
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $qty = intval($row['quantity'] ?: 0);
-                $totalUSD = floatval($row['unit_price']) * $qty;
-                $totalTHB = $totalUSD * 32.0;
-
-                fputcsv($output, [
-                    $row['custom_order'], 
-                    $row['po_number'], $row['sku'], 
-                    $clean($row['description']), 
-                    $row['color'], $qty, 
-                    $clean($row['dc_location']),
-                    $dt($row['order_date']), $row['loading_week'], $row['shipping_week'],
-                    $dt($row['production_date']), $dt($row['loading_date']), $dt($row['inspection_date']),
-                    $yn($row['is_production_done']), 
-                    $yn($row['is_loading_done']),    
-                    $yn($row['is_confirmed']),       
-                    $isInspPass($row['inspection_status']), 
-                    $row['ticket_number'], 
-                    number_format($totalUSD, 2, '.', ''), 
-                    number_format($totalTHB, 2, '.', ''), 
-                    $clean($row['remark'])
-                ]);
-            }
-            fclose($output);
-            exit;
 
         default:
             echo json_encode(['success'=>false, 'message'=>'Invalid Action']);

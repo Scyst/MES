@@ -236,7 +236,9 @@ $pageHelpId = "helpModal";
                                     <th class="sortable" data-sort="dc_location">DC <i class="sort-icon fas fa-sort ms-1"></i></th>
                                     <th class="sortable" data-sort="loading_week">Load Wk <i class="sort-icon fas fa-sort ms-1"></i></th>
                                     <th class="sortable" data-sort="shipping_week">Ship Wk <i class="sort-icon fas fa-sort ms-1"></i></th>
-                                    
+
+                                    <th class="text-center sortable" data-sort="team">Team <i class="sort-icon fas fa-sort ms-1"></i></th>
+
                                     <th class="text-center bg-warning bg-opacity-10 sortable" data-sort="production_date">
                                         Prod Date <i class="sort-icon fas fa-sort ms-1"></i>
                                     </th>
@@ -266,6 +268,7 @@ $pageHelpId = "helpModal";
                             <tbody id="tableBody" class="bg-white"></tbody>
                         </table>
                     </div>
+                    <div id="paginationContainer" class="py-2 px-3 border-top bg-light"></div>
                 </div>
             </div>
         </div>

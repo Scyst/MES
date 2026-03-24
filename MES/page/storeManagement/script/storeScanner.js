@@ -381,22 +381,19 @@ window.renderMasterPalletTag = function(masterData) {
     if(!printArea) return;
     printArea.innerHTML = '';
     
-    let isMixed = masterData.distinct_items > 1;
-    let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || 'MIXED PARTS');
-    let displayDesc = isMixed ? 'พาเลทรวมสินค้าหลายชนิด (Consolidated Pallet)' : escapeHTML(masterData.part_description || masterData.description_ref || '');
+    let isMixed = (masterData.distinct_items > 1);
+    let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || masterData.part_no || 'MIXED');
+    let displayDesc = isMixed ? 'พาเลทรวมสินค้าหลายชนิด' : escapeHTML(masterData.part_description || masterData.description_ref || '');
 
     let tagHTML = `
     <div class="tag-card">
         <div class="tag-details">
-            <div class="t-title" style="border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 1px;">
-                <i class="fas fa-layer-group"></i> PALLET TAG
-            </div>
+            <div class="t-title" style="border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px;"><i class="fas fa-layer-group"></i> PALLET TAG</div>
             <div class="t-sub" style="font-size: 1rem; color: #000;">${displayItemNo}</div>
-            <div class="t-desc" style="height: 18px; margin-bottom: 4px;">${displayDesc}</div>
-            
+            <div class="t-desc">${displayDesc}</div>
             <table class="t-table">
                 <tr>
-                    <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty || masterData.qty_per_pallet).toLocaleString()}</span></td>
+                    <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty).toLocaleString()}</span></td>
                     <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${masterData.total_tags || 1}</span></td>
                 </tr>
                 <tr><td colspan="2"><b>PO:</b> ${escapeHTML(masterData.po_number || '-')}</td></tr>
@@ -408,18 +405,30 @@ window.renderMasterPalletTag = function(masterData) {
         </div>
         <div class="tag-qr">
             <div id="qr-${masterData.master_pallet_no}"></div>
-            <div class="t-serial" style="font-size: 0.65rem; word-wrap: break-word; text-align: center; line-height: 1.1; margin-top: 3px;">
-                ${masterData.master_pallet_no}
-            </div>
+            <div class="t-serial">${masterData.master_pallet_no}</div>
         </div>
-    </div>
-    `;
+    </div>`;
     printArea.innerHTML = tagHTML;
-    
     if(typeof QRCode !== 'undefined') {
-        new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), {
-            text: masterData.master_pallet_no, width: 85, height: 85,
-            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
-        });
+        new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), { text: masterData.master_pallet_no, width: 85, height: 85 });
+    }
+};
+
+window.reprintMasterPallet = async function(masterPalletNo) {
+    if (!masterPalletNo) return;
+    try {
+        const result = await fetchAPI(`get_master_pallet_details&master_pallet_no=${encodeURIComponent(masterPalletNo)}`, 'GET');
+        if (result.success && result.data) {
+            // ✅ แก้ไขชื่อฟังก์ชันให้ตรงกับ renderMasterPalletTag ที่ประกาศไว้ด้านบน
+            if (typeof renderMasterPalletTag === 'function') {
+                renderMasterPalletTag(result.data); 
+                setTimeout(() => { window.print(); }, 500);
+            } else {
+                console.error("ฟังก์ชันสำหรับพิมพ์ (renderMasterPalletTag) ไม่ได้ถูกนิยามไว้");
+                Swal.fire('Error', 'ไม่พบโมดูลการพิมพ์สติ๊กเกอร์ในระบบ', 'error');
+            }
+        }
+    } catch (error) {
+        console.error("Reprint Error:", error);
     }
 };

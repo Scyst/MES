@@ -243,6 +243,7 @@ $pageHelpId = "helpModal";
                                     <th class="col-sm">Tare</th>
                                     <th class="col-week">Week</th>
                                     <th style="width: 150px;">DC</th>
+                                    <th class="col-sm">Team</th>
                                     
                                     <th class="col-sm">CTN Size</th>
                                     <th class="col-sm">N.W.</th>

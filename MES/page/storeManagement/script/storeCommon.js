@@ -1,4 +1,4 @@
-// MES/page/storeManagement/script/store_common.js
+// MES/page/storeManagement/script/storeCommon.js
 "use strict";
 
 async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {

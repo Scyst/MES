@@ -788,6 +788,41 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
+        case 'get_master_pallet_details':
+            $masterPalletNo = $_GET['master_pallet_no'] ?? '';
+            if (empty($masterPalletNo)) {
+                throw new Exception("Master Pallet Number is required");
+            }
+            $sql = "
+                SELECT 
+                    t.master_pallet_no,
+                    MAX(i.part_no) as part_no,
+                    MAX(i.part_description) as part_description,
+                    MAX(t.po_number) as po_number,
+                    MAX(t.warehouse_no) as warehouse_no,
+                    MAX(t.received_date) as received_date,
+                    SUM(t.current_qty) as total_qty,
+                    COUNT(t.tag_id) as total_tags
+                FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                WHERE t.master_pallet_no = :master_pallet_no
+                GROUP BY t.master_pallet_no
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['master_pallet_no' => $masterPalletNo]);
+            $data = $stmt->fetch();
+
+            if (!$data) {
+                throw new Exception("ไม่พบข้อมูลพาเลทหมายเลข: $masterPalletNo");
+            }
+
+            echo json_encode([
+                'success' => true,
+                'data' => $data
+            ]);
+            break;
+
         default:
             http_response_code(400);
             throw new Exception("Invalid API Action Request");

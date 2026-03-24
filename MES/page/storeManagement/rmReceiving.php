@@ -315,7 +315,7 @@ $pageHelpId = "";
         </div>
     </div>
     
-    <?php include_once __DIR__ . '/components/store_scanner.php'; ?>
+    <?php include_once __DIR__ . '/components/storeScanner.php'; ?>
     
     <script>
         const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;
@@ -324,7 +324,7 @@ $pageHelpId = "";
     </script>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/store_common.js?v=<?php echo filemtime(__DIR__ . '/script/store_common.js'); ?>" defer></script>
+    <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>" defer></script>
     <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>" defer></script>
 </body>
 </html>

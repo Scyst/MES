@@ -1,13 +1,4 @@
-/**
- * page/sales/script/shipping_loading.js
- * COMPLETE VERSION
- * - Gatekeeper Auth
- * - Smart KPI & Pipeline Logic
- * - Read-only view for Customers
- * - Full Import/Export Functionality
- * - [UPDATED] Use 'loading_date' instead of 'snc_load_day'
- */
-
+// page/sales/script/shipping_loading.js
 "use strict";
 
 const API_URL = 'api/manage_shipping.php';
@@ -21,25 +12,17 @@ let currentStatusFilter = 'TODAY'; // Default View
 let lastFilterMode = 'ALL';
 let currentFilterMode = 'ALL';
 
-// Note: ตัวแปร 'isCustomer' ถูกประกาศไว้ในไฟล์ PHP แล้ว (Global Scope)
-
 $(document).ready(function() {
-    // 1. Init Import Modal
     const modalEl = document.getElementById('importResultModal');
     if (modalEl) {
         importModal = new bootstrap.Modal(modalEl);
     }
     
-    // 2. Load Data
     loadData();
-
-    // 3. Set Default UI State
     setTimeout(() => {
-        // Highlight การ์ดแรก (TODAY)
         $('#defaultCard').addClass('ring-2');
     }, 500);
 
-    // 4. Search Event (Debounce)
     $('#universalSearch').on('keyup', function() {
         clearTimeout(searchTimer);
         showSpinner(); 
@@ -52,7 +35,6 @@ $(document).ready(function() {
         loadData();
     });
 
-    // [NEW] ฟังก์ชันล้างค่าวันที่
     window.clearDateFilter = function() {
         $('#filterStartDate').val('');
         $('#filterEndDate').val('');
@@ -82,7 +64,6 @@ async function verifyPasscode() {
         const json = await res.json();
         
         if (json.success) {
-            // รหัสถูกต้อง -> รีโหลดหน้าจอเพื่อเข้าสู่ระบบในฐานะ Guest
             window.location.reload();
         } else {
             err.style.display = 'block';
@@ -119,13 +100,8 @@ function loadData() {
         dataType: 'json',
         success: function(response) {
             if (response.success) {
-                // 1. เก็บข้อมูลลงตัวแปรหลัก
                 allData = response.data;
-
-                // 2. [สำคัญ] คำนวณตัวเลขบนการ์ด KPI ใหม่ทันที
-                calculateKPI(allData);
-
-                // 3. [สำคัญ] เรียก applyGlobalFilter แทน renderTable 
+                calculateKPI(allData); 
                 applyGlobalFilter(); 
             } else {
                 hideSpinner();
@@ -155,21 +131,13 @@ function calculateKPI(data) {
     data.forEach(row => {
         countTotal++;
         
-        // [CHANGED] ใช้ loading_date
         const loadDate = getDateObj(row.loading_date);
-        
-        // 1 = เสร็จ, ค่าอื่น (0, null) = ยังไม่เสร็จ
         const isLoadDone = (row.is_loading_done == 1);
         const isProdDone = (row.is_production_done == 1);
-        
-        // Active = งานที่ยังไม่จบ (ยังไม่โหลด)
         if (!isLoadDone) countActive++; 
-        
-        // Wait Load = ผลิตเสร็จ(1) แต่ยังไม่โหลด
         if (isProdDone && !isLoadDone) countWaitLoad++;
 
         if (loadDate) {
-            // TODAY Card: รวม Backlog (งานเก่าที่ยังไม่เสร็จ) + งานวันนี้
             if (loadDate < today && !isLoadDone) {
                 countBacklog++;
                 countToday++; 
@@ -177,14 +145,12 @@ function calculateKPI(data) {
                 countToday++;
             }
 
-            // 7 DAYS Card: งานล่วงหน้า 7 วัน
             if (loadDate > today && loadDate <= next7Days) {
                 count7Days++;
             }
         }
     });
 
-    // Update KPI Cards UI
     $('#kpi-today').text(countToday.toLocaleString());
     
     if (countBacklog > 0) {
@@ -208,9 +174,7 @@ function filterTable(status) {
     showSpinner();
     setTimeout(() => {
         currentStatusFilter = status;
-        currentPage = 1; // Reset หน้าไปหน้าแรก
-
-        // Update UI Active State
+        currentPage = 1;
         $('.kpi-card').removeClass('ring-2');
         if (status === 'TODAY') $('#defaultCard').addClass('ring-2');
         else if (status === '7DAYS') $('.kpi-card.border-info').addClass('ring-2');
@@ -231,23 +195,17 @@ function applyGlobalFilter() {
     next7Days.setDate(today.getDate() + 7);
 
     filteredData = allData.filter(row => {
-        // 1. Search Text
         const txt = Object.values(row).join(' ').toLowerCase();
         if (term && !txt.includes(term)) return false;
 
         const isLoadDone = (row.is_loading_done == 1);
         const isProdDone = (row.is_production_done == 1);
-        
-        // [CHANGED] ใช้ loading_date
         const loadDate = getDateObj(row.loading_date);
-
-        // 2. Filter by Card Status
         if (currentStatusFilter === 'ALL') return true;
         if (currentStatusFilter === 'ACTIVE') return !isLoadDone;
         if (currentStatusFilter === 'WAIT_LOADING') return isProdDone && !isLoadDone;
-
         if (currentStatusFilter === 'TODAY') {
-            if (!loadDate) return false; // ไม่มีวันที่ ไม่โชว์ใน Today
+            if (!loadDate) return false;
             const isBacklog = loadDate < today && !isLoadDone;
             const isToday = loadDate.getTime() === today.getTime();
             return isToday || isBacklog;
@@ -255,7 +213,7 @@ function applyGlobalFilter() {
 
         if (currentStatusFilter === '7DAYS') {
             if (!loadDate) return false;
-            const isBacklog = loadDate < today && !isLoadDone; // รวม Backlog ให้เห็นด้วยเผื่อตกหล่น
+            const isBacklog = loadDate < today && !isLoadDone;
             const isNext7 = loadDate > today && loadDate <= next7Days;
             return isBacklog || isNext7; 
         }
@@ -263,23 +221,20 @@ function applyGlobalFilter() {
         return true;
     });
 
-    // 3. Sorting (Priority: Delay > Today > Future > No Date)
     filteredData.sort((a, b) => {
-        // [CHANGED] ใช้ loading_date
         const da = getDateObj(a.loading_date);
         const db = getDateObj(b.loading_date);
 
         if (!da && !db) return 0;
-        if (!da) return 1; // ไม่มีวันที่เอาไปท้ายสุด
+        if (!da) return 1;
         if (!db) return -1;
 
-        // เช็ค Delay (เพื่อดันงาน Delay ขึ้นบนสุด)
         const delayA = (da < today && a.is_loading_done != 1) ? 1 : 0;
         const delayB = (db < today && b.is_loading_done != 1) ? 1 : 0;
 
-        if (delayA !== delayB) return delayB - delayA; // Delay มาก่อน
+        if (delayA !== delayB) return delayB - delayA;
 
-        return da - db; // วันที่น้อย (ใกล้) มาก่อน
+        return da - db;
     });
 
     renderTable(); 
@@ -296,7 +251,7 @@ function renderTable() {
     todayDate.setHours(0,0,0,0);
 
     if (filteredData.length === 0) {
-        tableBody.html('<tr><td colspan="31" class="text-center py-5 text-muted">ไม่พบข้อมูลตามเงื่อนไข</td></tr>');
+        tableBody.html('<tr><td colspan="32" class="text-center py-5 text-muted">ไม่พบข้อมูลตามเงื่อนไข</td></tr>');
         $('#paginationContainer').html('');
         return;
     }
@@ -322,7 +277,9 @@ function renderTable() {
                     ? `<span class="text-dark">${val}</span>` 
                     : '<span class="text-muted fw-light">-</span>';
             }
-            return `<input class="editable-input text-${align}" value="${val || ''}" onchange="upd(${row.id}, '${field}', this.value, this)" placeholder="-">`;
+            // Add font-weight for Team column to make it pop
+            const fwClass = field === 'team' ? 'fw-bold' : '';
+            return `<input class="editable-input text-${align} ${fwClass}" value="${val || ''}" onchange="upd(${row.id}, '${field}', this.value, this)" placeholder="-">`;
         };
 
         const dateDisplay = (val) => {
@@ -331,7 +288,6 @@ function renderTable() {
             return d; 
         };
 
-        // [CHANGED] ใช้ loading_date
         const loadDateObj = getDateObj(row.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
         
@@ -342,12 +298,10 @@ function renderTable() {
             : `<span class="text-primary fw-bold font-monospace" style="font-size: 0.9rem;">${row.po_number}</span>`;
 
         let dateHtml = '';
-        // [CHANGED] ใช้ loading_date
         const dateVal = fnDateDisplay(row.loading_date);
         if(isCustomer) {
             dateHtml = `<span class="${isDelay ? 'text-danger fw-bold' : ''}">${dateVal || '<span class="text-muted fw-light">-</span>'}</span>`;
         } else {
-            // [CHANGED] data-field="loading_date"
             dateHtml = `<input type="text" class="editable-input datepicker text-center ${isDelay?'text-danger fw-bold':''}" value="${dateVal}" data-field="loading_date" data-id="${row.id}" placeholder="-" style="width:85px; font-size:0.85rem;">`;
         }
 
@@ -387,7 +341,10 @@ function renderTable() {
             <td class="text-center">${inputHTML('seal_no', row.seal_no)}</td>
             <td class="text-center">${inputHTML('container_tare', row.container_tare)}</td>
             <td class="text-center">${row.shipping_week || '-'}</td>
+            
             <td class="text-center">${inputHTML('dc_location', row.dc_location)}</td>
+            
+            <td class="text-center">${inputHTML('team', row.team)}</td>
             
             <td class="text-center">${inputHTML('ctn_size', row.ctn_size)}</td>
             <td class="text-center">${inputHTML('net_weight', row.net_weight)}</td>
@@ -461,30 +418,23 @@ function changePage(page) {
 // ============================================================
 
 // Helpers
-// แทนที่ฟังก์ชันเดิม
 function getDateObj(dateStr) {
     if (!dateStr || dateStr === '0000-00-00') return null;
     
-    // Support yyyy-mm-dd format
     const parts = dateStr.split('-');
     if (parts.length === 3) {
-        // Construct date using local time explicitly
-        // Month is 0-indexed in JS Date
         return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     }
     
-    // Fallback if format is weird, but try to keep logic consistent
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
     return d;
 }
 
-// แก้ไขฟังก์ชัน fnDateDisplay ในไฟล์ shipping_loading.js
 const fnDateDisplay = (d) => {
     if (!d || d === '0000-00-00' || d === '1900-01-01' || d === 'null') return '';
     
-    // ถ้า d เป็น Date Object (เช่น new Date()) ให้แปลงเป็นสตริงก่อน
     if (d instanceof Date) {
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -492,9 +442,8 @@ const fnDateDisplay = (d) => {
         return `${day}/${month}/${year}`;
     }
 
-    // ถ้าเป็นสตริง (จากฐานข้อมูล) ให้ทำเหมือนเดิม
     let datePart = d.split(' ')[0];
-    if (datePart.includes('/')) return datePart; // ถ้ามี / อยู่แล้วก็คืนค่าไปเลย หรือจะจัด format ใหม่ก็ได้
+    if (datePart.includes('/')) return datePart; 
     const parts = datePart.split('-');
     if (parts.length !== 3) return d; 
     const [y, m, day] = parts;
@@ -513,7 +462,6 @@ function initDatePickers() {
                 if (!dateStr) return;
                 const id = instance.element.getAttribute('data-id');
                 const field = instance.element.getAttribute('data-field');
-                // แปลงเป็น YYYY-MM-DD เพื่อส่ง API
                 const [d, m, y] = dateStr.split('/');
                 upd(id, field, `${y}-${m}-${d}`, instance.element);
             }
@@ -532,13 +480,11 @@ function upd(id, field, val, inputElement) {
             $el.css({'background-color': '#d1e7dd', 'border-color': '#198754'});
             setTimeout(() => $el.css({'background-color': 'transparent', 'border-color': 'transparent'}), 1000);
             
-            // อัปเดตข้อมูลในตัวแปรหลัก
             const row = allData.find(d => d.id == id);
             if(row) row[field] = val;
 
-            // --- ส่วนสำคัญ: สั่งคำนวณใหม่ทั้งหมดหน้าจอ ---
-            calculateKPI(allData);  // อัปเดตตัวเลขบน Card (Today, 7Days, etc.)
-            applyGlobalFilter();    // อัปเดตตารางและเรียก updateSummary() อัตโนมัติ
+            calculateKPI(allData);  
+            applyGlobalFilter();    
         } else {
             alert('Save failed: ' + res.message);
         }
@@ -554,21 +500,93 @@ function toggleStatus(id, type, currentVal) {
     $.post(API_URL, { action: 'update_check', id, field, checked: newVal })
     .done(res => {
         if(res.success) {
-            // อัปเดตข้อมูลใน Local เพื่อความรวดเร็ว (หรือจะ Load ใหม่เลยก็ได้)
             const row = allData.find(d => d.id == id);
             if(row) row[field] = newVal;
             updateSummary();
             
-            calculateKPI(allData); // คำนวณ KPI ใหม่
-            applyGlobalFilter();   // วาดตารางใหม่
+            calculateKPI(allData); 
+            applyGlobalFilter();   
         } else { 
             hideSpinner(); alert('Failed: ' + res.message); 
         }
     });
 }
 
-function exportToCSV() {
-    window.location.href = `${API_URL}?action=export`;
+async function exportToCSV() {
+    if (allData.length === 0) return alert('No data to export');
+    showSpinner();
+    
+    try {
+        const dataToExport = typeof filteredData !== 'undefined' && filteredData.length > 0 ? filteredData : allData;
+        
+        const rawDate = (d) => {
+            if (!d || d === '0000-00-00') return '';
+            const ds = getDateObj(d);
+            return ds ? `${String(ds.getDate()).padStart(2, '0')}/${String(ds.getMonth()+1).padStart(2, '0')}/${ds.getFullYear()}` : d;
+        };
+
+        const excelData = dataToExport.map(row => {
+            const isLoad = row.is_loading_done == 1 ? 'Done' : 'Wait';
+            const isProd = row.is_production_done == 1 ? 'Done' : 'Wait';
+            
+            return {
+                'Seq': row.custom_order,
+                'PO Number': row.po_number,
+                'Remark': row.remark,
+                'SKU': row.sku,
+                'Description': row.description,
+                'Quantity': parseInt(row.quantity || 0),
+                'Load Status': isLoad,
+                'Prod Status': isProd,
+                'Load Date': rawDate(row.loading_date),
+                'Load Time': row.load_time ? row.load_time.substring(0, 5) : '',
+                'DC Location': row.dc_location,
+                'Team': row.team,
+                'Booking No': row.booking_no,
+                'Invoice No': row.invoice_no,
+                'Container No': row.container_no,
+                'Seal No': row.seal_no,
+                'Size': row.ctn_size,
+                'Tare': row.container_tare,
+                'Net Weight': row.net_weight,
+                'Gross Weight': row.gross_weight,
+                'CBM': row.cbm,
+                'Feeder Vessel': row.feeder_vessel,
+                'Mother Vessel': row.mother_vessel,
+                'SNC CI No': row.snc_ci_no,
+                'SI/VGM Cutoff': rawDate(row.si_vgm_cut_off),
+                'Pickup Date': rawDate(row.pickup_date),
+                'Return Date': rawDate(row.return_date),
+                'ETD': rawDate(row.etd),
+                'Inspect Type': row.inspect_type,
+                'Inspect Res': row.inspection_result,
+                'Cutoff Date': rawDate(row.cutoff_date),
+                'Cutoff Time': row.cutoff_time ? row.cutoff_time.substring(0, 5) : ''
+            };
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+
+        ws['!cols'] = [
+            { wch: 8 },  { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 10 },
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
+            { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 10 },
+            { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+            { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+            { wch: 15 }, { wch: 12 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Shipping Data");
+        const dateStr = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Shipping_Schedule_Export_${dateStr}.xlsx`);
+
+    } catch (err) {
+        console.error(err);
+        alert('Export failed');
+    } finally {
+        hideSpinner();
+    }
 }
 
 async function uploadFile() {
@@ -580,10 +598,9 @@ async function uploadFile() {
     const file = fileInput.files[0];
     showSpinner();
 
-    // สร้าง FormData เพื่อส่งไฟล์ไปทั้งก้อน
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('action', 'import_file'); // เปลี่ยน action เป็น import_file
+    formData.append('action', 'import_file'); 
 
     try {
         const res = await fetch(API_URL, {
@@ -630,12 +647,10 @@ function showImportResult(res) {
 function guestLogout() {
     if(!confirm('ต้องการล็อคหน้าจอใช่หรือไม่?')) return;
     
-    // เรียก API เพื่อล้าง Session
     fetch('api/auth_guest.php?action=logout')
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // รีโหลดหน้าจอ -> จะกลับไปเจอ Gatekeeper Modal เพราะไม่มี Session แล้ว
                 window.location.reload();
             }
         })
@@ -643,8 +658,6 @@ function guestLogout() {
 }
 
 function updateSummary() {
-    // [CHANGED] ใช้ filteredData (ข้อมูลที่กรองแล้ว) แทนการ Fix เป็น Today
-    // เพื่อให้ตัวเลขสรุปเปลี่ยนไปตามช่วงวันที่ หรือสถานะที่เราเลือกดูอยู่
     const targetData = filteredData; 
 
     if (!targetData || targetData.length === 0) {
@@ -655,33 +668,26 @@ function updateSummary() {
         return;
     }
 
-    // คำนวณ Containers (นับ Unique)
     const uniqueContainers = [...new Set(targetData
         .map(row => {
-            // ถ้ามีเลขตู้ (Container No) ให้ใช้เลขตู้เพื่อจัดการตู้ที่รวมหลาย PO
             if (row.container_no && row.container_no !== '' && row.container_no !== '-') {
                 return row.container_no;
             }
-            // ถ้าไม่มีเลขตู้ ให้ใช้ PO Number หรือ ID แถวเพื่อให้นับเป็น 1 รายการ
             return 'PENDING_' + row.id; 
         })
     )].length;
 
-    // คำนวณ Pcs
     const totalPcs = targetData.reduce((sum, row) => sum + (parseInt(row.quantity) || 0), 0);
 
-    // คำนวณ Progress (เฉพาะงานใน Filter นั้นๆ)
     const totalRows = targetData.length;
     const loadedCount = targetData.filter(row => row.is_loading_done == 1).length;
     const loadPercent = totalRows > 0 ? Math.round((loadedCount / totalRows) * 100) : 0;
 
-    // อัปเดต UI
     $('#sumTotalContainers').text(uniqueContainers.toLocaleString());
     $('#sumTotalPcs').text(totalPcs.toLocaleString());
     $('#sumLoadProgress').text(`${loadedCount}/${totalRows}`);
     $('#loadProgressBar').css('width', loadPercent + '%');
     
-    // เปลี่ยนสีหลอดตามความคืบหน้า
     if (loadPercent === 100 && totalRows > 0) {
         $('#loadProgressBar').removeClass('bg-primary').addClass('bg-success');
     } else {
