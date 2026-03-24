@@ -61,9 +61,10 @@ try {
             $sql = "SELECT $topLimit 
                         id, invoice_no, version, total_amount, created_at, 
                         customer_data_json, shipping_data_json, 
-                        ISNULL(doc_status, 'Pending') AS doc_status
+                        ISNULL(doc_status, 'Pending') AS doc_status,
+                        remark
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
-                    WHERE $whereSql"; // เอา ORDER BY ออก เพราะเราจะเรียงด้วย PHP
+                    WHERE $whereSql";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -72,9 +73,9 @@ try {
             $data = array_map(function($row) {
                 $customer = json_decode($row['customer_data_json'], true) ?: [];
                 $shipping = json_decode($row['shipping_data_json'], true) ?: [];
-                
                 $booking_no = isset($shipping['booking_no']) && $shipping['booking_no'] !== '' ? trim($shipping['booking_no']) : '-';
                 $team_name = isset($shipping['team_name']) && $shipping['team_name'] !== '' ? trim($shipping['team_name']) : '';
+                $admin_memo = isset($shipping['admin_memo']) ? trim($shipping['admin_memo']) : '';
 
                 return [
                     'id' => $row['id'],
@@ -86,17 +87,17 @@ try {
                     'vessel' => $shipping['feeder_vessel'] ?? '-',
                     'booking_no' => $booking_no, 
                     'team_name' => $team_name,
-                    'invoice_date' => $shipping['invoice_date'] ?? '-', // 📌 ดึง Invoice Date ออกมา
+                    'admin_memo' => $admin_memo,
+                    'invoice_date' => $shipping['invoice_date'] ?? '-',
                     'etd_date' => $shipping['etd_date'] ?? '-',
                     'eta_date' => $shipping['eta_date'] ?? '-',
                     'total_amount' => number_format((float)$row['total_amount'], 2),
+                    'remark' => $row['remark'] ? $row['remark'] : '-',
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
             }, $invoices);
 
-            // 📌 เริ่มต้นการเรียงลำดับ (Sort) ด้วย PHP
             usort($data, function($a, $b) {
-                // ฟังก์ชันช่วยแปลงวันที่จาก DD/MM/YYYY เป็น Timestamp
                 $getTimestamp = function($dateStr) {
                     if (!$dateStr || $dateStr === '-') return 0;
                     $d = DateTime::createFromFormat('d/m/Y', $dateStr);
@@ -106,12 +107,10 @@ try {
                 $tsA = $getTimestamp($a['invoice_date']);
                 $tsB = $getTimestamp($b['invoice_date']);
 
-                // ถ้า Invoice Date เท่ากัน ให้เรียงตาม ID ใหม่ล่าสุดขึ้นก่อน
                 if ($tsA == $tsB) {
                     return $b['id'] <=> $a['id'];
                 }
                 
-                // เรียงจากมากไปน้อย (ล่าสุดอยู่บน)
                 return $tsB <=> $tsA;
             });
 
@@ -125,8 +124,6 @@ try {
             $customerJson = json_encode($input['customer'] ?? [], JSON_UNESCAPED_UNICODE);
             $shippingJson = json_encode($input['shipping'] ?? [], JSON_UNESCAPED_UNICODE);
             $detailsJson  = json_encode($input['details'] ?? [], JSON_UNESCAPED_UNICODE);
-
-            // เรียกใช้ SP ของ Production หรือ TEST ขึ้นอยู่กับ Environment
             $spName = IS_DEVELOPMENT ? 'sp_Finance_ImportInvoice_TEST' : 'sp_Finance_ImportInvoice';
 
             $stmt = $pdo->prepare("
@@ -246,8 +243,6 @@ try {
         case 'restore_invoice':
             $invoice_no = $input['invoice_no'] ?? '';
             if (!$invoice_no) throw new Exception("ข้อมูลไม่ครบถ้วน");
-
-            // เคลียร์ void_reason ทิ้ง และปรับ Status เป็น Pending
             $updateSql = "UPDATE dbo.FINANCE_INVOICES 
                           SET doc_status = 'Pending', void_reason = NULL 
                           WHERE invoice_no = ? AND is_active = 1";
@@ -256,9 +251,6 @@ try {
             echo json_encode(['success' => true, 'message' => "กู้คืนบิล $invoice_no สำเร็จ!"]);
             break;
 
-        // ======================================================================
-        // CASE: get_item_info (ดึงข้อมูล Master ของสินค้าจาก SKU)
-        // ======================================================================
         case 'get_item_info':
             $sku = $_GET['sku'] ?? '';
             if (!$sku) throw new Exception("ไม่พบรหัส SKU");
@@ -273,10 +265,10 @@ try {
                         CTN,
                         invoice_product_type
                     FROM dbo.ITEMS WITH (NOLOCK) 
-                    WHERE sku = ? AND is_active = 1";
+                    WHERE (sku = ? OR sap_no = ?) AND is_active = 1";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$sku]);
+            $stmt->execute([$sku, $sku]);
             $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($item) {
@@ -286,11 +278,7 @@ try {
             }
             break;
 
-        // ======================================================================
-        // CASE: get_last_invoice_defaults (ดึงข้อมูลซ้ำๆ จากบิลล่าสุดมาเป็นค่าเริ่มต้น)
-        // ======================================================================
         case 'get_last_invoice_defaults':
-            // ดึงบิลล่าสุดที่ Active
             $stmt = $pdo->query("SELECT TOP 1 id, customer_data_json, shipping_data_json 
                                  FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
                                  WHERE is_active = 1 
@@ -306,8 +294,6 @@ try {
             if ($lastInvoice) {
                 $defaults['customer'] = json_decode($lastInvoice['customer_data_json'], true) ?: [];
                 $defaults['shipping'] = json_decode($lastInvoice['shipping_data_json'], true) ?: [];
-                
-                // ดึง Product Type จากรายการสินค้าแรกของบิลนั้น
                 $stmtDet = $pdo->prepare("SELECT TOP 1 product_type FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
                 $stmtDet->execute([$lastInvoice['id']]);
                 $lastDetail = $stmtDet->fetch(PDO::FETCH_ASSOC);
@@ -320,14 +306,9 @@ try {
             echo json_encode(['success' => true, 'data' => $defaults]);
             break;
 
-        // ======================================================================
-        // CASE: get_invoice_by_no (ค้นหาและดึงข้อมูลบิลล่าสุดด้วยเลข Invoice No)
-        // ======================================================================
         case 'get_invoice_by_no':
             $invNo = $_GET['invoice_no'] ?? '';
             if (!$invNo) throw new Exception("กรุณาระบุ Invoice No");
-
-            // หา ID ของเวอร์ชันล่าสุดที่ Active อยู่
             $stmtId = $pdo->prepare("SELECT id FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE invoice_no = ? AND is_active = 1");
             $stmtId->execute([$invNo]);
             $rowId = $stmtId->fetch(PDO::FETCH_ASSOC);
@@ -337,17 +318,13 @@ try {
                 break;
             }
 
-            // ถ้าเจอ ให้ทำงานเหมือน get_invoice_detail ทุกประการ
             $invoice_id = $rowId['id'];
-
             $stmt = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICES WITH (NOLOCK) WHERE id = ?");
             $stmt->execute([$invoice_id]);
             $header = $stmt->fetch(PDO::FETCH_ASSOC);
-
             $stmtDet = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
             $stmtDet->execute([$invoice_id]);
             $details = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
-
             $customer = json_decode($header['customer_data_json'], true) ?: [];
             $shipping = json_decode($header['shipping_data_json'], true) ?: [];
 
@@ -358,6 +335,27 @@ try {
                 'shipping' => $shipping,
                 'details' => $details
             ]);
+            break;
+
+        case 'update_memo':
+            $invoice_no = $input['invoice_no'] ?? '';
+            $memo = $input['memo'] ?? '';
+
+            if (!$invoice_no) throw new Exception("ข้อมูลไม่ครบถ้วน");
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT shipping_data_json FROM dbo.FINANCE_INVOICES WITH (UPDLOCK) WHERE invoice_no = ? AND is_active = 1");
+            $stmt->execute([$invoice_no]);
+            $inv = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$inv) throw new Exception("ไม่พบข้อมูลบิล");
+            $shipping = json_decode($inv['shipping_data_json'], true) ?: [];
+            $shipping['admin_memo'] = $memo;
+            $new_shipping_json = json_encode($shipping, JSON_UNESCAPED_UNICODE);
+            $updateStmt = $pdo->prepare("UPDATE dbo.FINANCE_INVOICES SET shipping_data_json = ? WHERE invoice_no = ? AND is_active = 1");
+            $updateStmt->execute([$new_shipping_json, $invoice_no]);
+            $pdo->commit();
+
+            echo json_encode(['success' => true, 'message' => 'บันทึก Memo สำเร็จ']);
             break;
 
         default:

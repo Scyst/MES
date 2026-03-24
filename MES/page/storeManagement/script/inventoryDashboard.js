@@ -166,9 +166,10 @@ async function loadDashboardData() {
     const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
 
     const tbody = document.getElementById('dashboardTbody');
-    if (!tbody) return;
+    const cardContainer = document.getElementById('dashboardCardContainer');
     
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+    if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
 
     try {
         const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
@@ -181,42 +182,87 @@ async function loadDashboardData() {
             document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
-        tbody.innerHTML = '';
         if (!result.data || result.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
+            if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i><br>ไม่พบข้อมูลในระบบ</div>';
             return;
         }
 
+        let htmlTable = '';
+        let htmlCards = '';
+
         result.data.forEach((row, index) => {
             const availableQty = parseFloat(row.available_qty);
-            const tr = document.createElement('tr');
-            if (availableQty <= 0) tr.className = 'row-out-of-stock';
-            
+            const pendingQty = parseFloat(row.pending_qty);
+            const totalQty = parseFloat(row.total_qty);
+            const isOutOfStock = availableQty <= 0;
             const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
-            tr.innerHTML = `
-                <td>${runningNumber}</td>
-                <td class="fw-bold text-primary">${row.item_no}</td>
-                <td class="text-truncate" style="max-width: 250px;" title="${row.part_description || '-'}">${row.part_description || '-'}</td>
-                <td><span class="badge bg-secondary">${row.material_type}</span></td>
-                <td class="text-end text-warning fw-bold">${parseFloat(row.pending_qty).toLocaleString()}</td>
-                <td class="text-end fw-bold text-success">${availableQty.toLocaleString()}</td>
-                <td class="text-end fw-bold">${parseFloat(row.total_qty).toLocaleString()}</td>
-                <td class="text-end text-muted">${parseFloat(row.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="text-end text-primary fw-bold">${parseFloat(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="text-center">
-                    <div class="btn-group shadow-sm">
-                        <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${row.item_no}', '${escapeHTML(row.part_description)}')" title="ดูพิกัดสต็อก">
-                            <i class="fas fa-search-location"></i>
-                        </button>
-                        <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${row.item_no}', '${escapeHTML(row.part_description)}')" title="นับ/ปรับสต็อก">
-                            <i class="fas fa-clipboard-list"></i>
-                        </button>
-                    </div>
-                </td>
+            const badgeType = row.material_type === 'RM' ? 'bg-primary' : (row.material_type === 'FG' ? 'bg-success' : 'bg-secondary');
+            const rowClass = isOutOfStock ? 'table-danger' : '';
+            const borderLeftColor = isOutOfStock ? 'var(--bs-danger)' : (availableQty > 0 ? 'var(--bs-success)' : 'var(--bs-secondary)');
+
+            htmlTable += `
+                <tr class="${rowClass}">
+                    <td class="text-center text-muted">${runningNumber}</td>
+                    <td class="fw-bold text-primary">${escapeHTML(row.item_no)}</td>
+                    <td class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.part_description || '-')}">${escapeHTML(row.part_description || '-')}</td>
+                    <td><span class="badge ${badgeType}">${escapeHTML(row.material_type)}</span></td>
+                    <td class="text-end text-warning fw-bold">${pendingQty.toLocaleString()}</td>
+                    <td class="text-end fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'}">${availableQty.toLocaleString()}</td>
+                    <td class="text-end fw-bold text-dark">${totalQty.toLocaleString()}</td>
+                    <td class="text-end text-muted">${parseFloat(row.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="text-end text-primary fw-bold">${parseFloat(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="ดูพิกัดสต็อก">
+                                <i class="fas fa-search-location"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="นับ/ปรับสต็อก">
+                                <i class="fas fa-clipboard-list"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
             `;
-            tbody.appendChild(tr);
+
+            htmlCards += `
+                <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                <span class="badge ${badgeType} me-1">${escapeHTML(row.material_type)}</span>
+                                ${isOutOfStock ? '<span class="badge bg-danger">OUT OF STOCK</span>' : ''}
+                            </div>
+                            <div class="btn-group shadow-sm">
+                                <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-search-location"></i></button>
+                                <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-clipboard-list"></i></button>
+                            </div>
+                        </div>
+                        
+                        <h6 class="fw-bold text-primary mb-1 mt-1" style="font-size: 1.1rem;">${escapeHTML(row.item_no)}</h6>
+                        <div class="text-muted small mb-2 text-truncate">${escapeHTML(row.part_description || '-')}</div>
+                        
+                        <div class="row g-2 text-center mt-2 border-top pt-2" style="font-size: 0.85rem;">
+                            <div class="col-4 border-end">
+                                <div class="text-muted" style="font-size: 0.7rem;">Pending</div>
+                                <div class="fw-bold text-warning">${pendingQty.toLocaleString()}</div>
+                            </div>
+                            <div class="col-4 border-end">
+                                <div class="text-muted" style="font-size: 0.7rem;">Available</div>
+                                <div class="fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'} fs-6">${availableQty.toLocaleString()}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted" style="font-size: 0.7rem;">Total</div>
+                                <div class="fw-bold text-dark">${totalQty.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
 
+        if (tbody) tbody.innerHTML = htmlTable;
+        if (cardContainer) cardContainer.innerHTML = htmlCards;
         if (result.pagination) {
             totalPages = result.pagination.total_pages || 1;
             const pageInfo = document.getElementById('pageInfo');
@@ -229,7 +275,9 @@ async function loadDashboardData() {
         }
 
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> โหลดข้อมูลล้มเหลว</td></tr>';
+        console.error("Dashboard Load Error:", err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> โหลดข้อมูลล้มเหลว</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>โหลดข้อมูลล้มเหลว</div>`;
     }
 }
 
@@ -594,4 +642,21 @@ function showToast(msg, color) {
     tb.innerText = msg;
     t.className = `toast align-items-center text-white border-0 ${color.replace('var(--bs-','bg-')}`;
     new bootstrap.Toast(t).show();
+}
+
+function toggleMobileCards() {
+    const container = document.getElementById('kpiContainer');
+    const btn = document.getElementById('btnToggleCards');
+    const icon = btn.querySelector('i');
+    if (container.classList.contains('d-none')) {
+        container.classList.remove('d-none');
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+        icon.className = 'fas fa-eye-slash'; 
+    } else {
+        container.classList.add('d-none');
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary', 'text-white');
+        icon.className = 'fas fa-eye'; 
+    }
 }

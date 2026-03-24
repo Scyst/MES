@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const start = encodeURIComponent(document.getElementById('filterStartDate')?.value || '');
         const end = encodeURIComponent(document.getElementById('filterEndDate')?.value || '');
         
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
         fetch(`api/api_invoice.php?action=get_history&date_type=${dateType}&start=${start}&end=${end}`)
             .then(res => res.json())
             .then(resData => {
@@ -188,12 +188,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderTable();
                     updateKPIs();
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</td></tr>';
                 }
             })
             .catch(err => {
                 console.error(err);
-                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
             });
     }
 
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateToolbarSums(filteredData);
 
         if (filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-5">
+            tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-5">
                 <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลที่ค้นหา
             </td></tr>`;
             return;
@@ -284,6 +284,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <td class="text-center text-muted small" title="วันที่บันทึกเข้าระบบ">
                     <i class="fas fa-save me-1 opacity-50"></i>${inv.created_at}
+                </td>
+                
+                <td>
+                    <input type="text" class="form-control form-control-sm border-secondary-subtle bg-light text-primary" 
+                           style="min-width: 140px; font-size: 0.8rem; text-align: center;" 
+                           value="${(inv.admin_memo || '').replace(/"/g, '&quot;')}"
+                           maxlength="255" placeholder="-" 
+                           onchange="saveMemo('${inv.invoice_no}', this.value)" 
+                           title="พิมพ์แล้วกด Enter หรือคลิกที่อื่นเพื่อบันทึกอัตโนมัติ">
                 </td>
                 
                 <td class="text-center">
@@ -1076,4 +1085,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    window.saveMemo = function(invoiceNo, memoValue) {
+        fetch('api/api_invoice.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_memo', invoice_no: invoiceNo, memo: memoValue })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.success) {
+                const target = allInvoiceData.find(inv => inv.invoice_no === invoiceNo);
+                if (target) target.admin_memo = memoValue;
+                Swal.fire({
+                    icon: 'success', title: 'บันทึก Memo แล้ว',
+                    timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'
+                });
+            } else {
+                Swal.fire('Error', resData.message, 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire('Error', 'ไม่สามารถบันทึก Memo ได้', 'error');
+        });
+    };
 });

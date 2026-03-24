@@ -324,8 +324,11 @@ window.renderPrintTags = function(tags) {
     if(!printArea) return;
     printArea.innerHTML = '';
     
-    tags.forEach(tag => {
+    tags.forEach((tag, index) => {
         let displayDesc = tag.part_description || tag.description_ref || '';
+        let safeSerial = tag.serial_no ? String(tag.serial_no).replace(/[^a-zA-Z0-9-]/g, '') : 'unknown';
+        let uniqueQrId = `qr-${safeSerial}-${index}`;
+        
         let tagHTML = `
         <div class="tag-card">
             <div class="tag-details">
@@ -335,35 +338,39 @@ window.renderPrintTags = function(tags) {
                 
                 <table class="t-table">
                     <tr>
-                        <td style="width: 55%;"><b>QTY:</b> <span class="t-hl">${parseFloat(tag.qty_per_pallet).toLocaleString()}</span></td>
-                        <td style="width: 45%;"><b>Inv:</b> ${escapeHTML(tag.warehouse_no)}</td>
+                        <td style="width: 55%;"><b>QTY:</b> <span class="t-hl">${parseFloat(tag.qty_per_pallet || tag.qty || 0).toLocaleString()}</span></td>
+                        <td style="width: 45%;"><b>Inv:</b> ${escapeHTML(tag.warehouse_no || tag.wh || '')}</td>
                     </tr>
                     <tr>
-                        <td><b>PO:</b> ${escapeHTML(tag.po_number)}</td>
-                        <td><b>Pallet:</b> ${escapeHTML(tag.pallet_no)}</td>
+                        <td><b>PO:</b> ${escapeHTML(tag.po_number || '')}</td>
+                        <td><b>Pallet:</b> ${escapeHTML(tag.pallet_no || '')}</td>
                     </tr>
                     <tr>
-                        <td><b>CTN:</b> ${escapeHTML(tag.ctn_number)}</td>
-                        <td><b>Week:</b> ${escapeHTML(tag.week_no)}</td>
+                        <td><b>CTN:</b> ${escapeHTML(tag.ctn_number || '')}</td>
+                        <td><b>Week:</b> ${escapeHTML(tag.week_no || '')}</td>
                     </tr>
                     <tr>
-                        <td><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date || tag.created_at))}</td>
+                        <td><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date || tag.created_at || ''))}</td>
                         <td><b>Remark:</b> <span style="display:inline-block; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">${escapeHTML(tag.remark || '-')}</span></td>
                     </tr>
                 </table>
             </div>
             <div class="tag-qr">
-                <div id="qr-${tag.serial_no}"></div>
-                <div class="t-serial">${tag.serial_no}</div>
+                <div id="${uniqueQrId}"></div>
+                <div class="t-serial">${escapeHTML(tag.serial_no || '-')}</div>
             </div>
         </div>
         `;
         printArea.insertAdjacentHTML('beforeend', tagHTML);
         
         if(typeof QRCode !== 'undefined') {
-            new QRCode(document.getElementById(`qr-${tag.serial_no}`), {
-                text: tag.serial_no, width: 85, height: 85,
-                colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M 
+            new QRCode(document.getElementById(uniqueQrId), {
+                text: String(tag.serial_no || ''), 
+                width: 85, 
+                height: 85,
+                colorDark : "#000000", 
+                colorLight : "#ffffff", 
+                correctLevel : QRCode.CorrectLevel.M 
             });
         }
     });

@@ -211,11 +211,13 @@ $pageIcon = "fas fa-file-invoice-dollar";
                                     <th class="text-end">Total (USD)</th>
                                     <th class="text-center">Ver.</th>
                                     <th class="text-center">Status</th>
-                                    <th class="text-center">Created</th> <th class="text-center" style="width: 180px;">Action</th>
+                                    <th class="text-center">Created</th>
+                                    <th class="text-center">Remark</th>
+                                    <th class="text-center" style="width: 180px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="11" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="12" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>
