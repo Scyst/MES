@@ -7,8 +7,9 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-3">
-                <form id="addMaintenanceForm" enctype="multipart/form-data">
+            
+            <form id="addMaintenanceForm" enctype="multipart/form-data">
+                <div class="modal-body pt-3">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">วัน/เวลา ที่แจ้งซ่อม (Request Time)</label>
@@ -66,16 +67,16 @@
                         
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted">Photo (ถ่ายให้เห็นปัญหา)</label>
-                            <input type="file" name="photo_before" class="form-control form-control-sm" accept="image/*" required>
+                            <input type="file" id="add_photo_before" name="photo_before" class="form-control form-control-sm" accept="image/*" required>
                         </div>
                     </div>
-                </form>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold px-4">Submit</button>
+                </div>
+            </form>
             </div>
-            <div class="modal-footer border-top-0 pt-0">
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="addMaintenanceForm" class="btn btn-primary btn-sm fw-bold px-4">Submit</button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -222,6 +223,9 @@
                     <button id="btn_edit_job" class="btn btn-sm btn-warning rounded-pill px-4 shadow-sm d-none" onclick="">
                         <i class="fas fa-edit me-1"></i> Edit
                     </button>
+                    <button id="btn_update_progress" class="btn btn-sm btn-info rounded-pill px-4 shadow-sm d-none" onclick="">
+                        <i class="fas fa-clipboard-check me-1"></i> Update Note
+                    </button>
                     <button id="btn_start_job" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm d-none" onclick="">Start Repair</button>
                     <button id="btn_complete_job" class="btn btn-sm btn-success rounded-pill px-4 shadow-sm d-none" onclick="">Complete Job</button>
                 </div>
@@ -275,7 +279,7 @@
                             <label class="form-label fw-bold text-success">
                                 <i class="fas fa-camera me-1"></i>หลังซ่อม (After)
                             </label>
-                            <input type="file" name="photo_after" class="form-control" accept="image/*" required>
+                            <input type="file" id="photo_after" name="photo_after" class="form-control" accept="image/*" required>
                             <div class="form-text">ถ่ายให้เห็นผลลัพธ์การซ่อม</div>
                         </div>
                     </div>
@@ -302,8 +306,9 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-3">
-                <form id="editMaintenanceForm">
+            
+            <form id="editMaintenanceForm">
+                <div class="modal-body pt-3">
                     <input type="hidden" name="id" id="edit_req_id">
                     <div class="row g-3">
 
@@ -311,19 +316,18 @@
                             <label class="form-label small fw-bold text-muted">เวลาแจ้งซ่อม</label>
                             <input type="datetime-local" name="request_date" id="edit_request_date" class="form-control" required>
                         </div>
-                        <div class="col-12 col-md-6">
-                            </div>
                         
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">เวลาเริ่มซ่อม</label>
                             <input type="datetime-local" name="started_at" id="edit_started_at" class="form-control">
                         </div>
+                        
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-muted">เวลาซ่อมเสร็จ</label>
                             <input type="datetime-local" name="resolved_at" id="edit_resolved_at" class="form-control">
                         </div>
                         
-                        <div class="col-12 mt-2">
+                        <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-primary">
                                 <i class="fas fa-stopwatch me-1"></i> เวลาที่ใช้ซ่อมจริง (Actual Repair Time)
                             </label>
@@ -397,12 +401,43 @@
                             <textarea name="issue_description" id="edit_issue_description" class="form-control" rows="3" required placeholder="Describe the problem..."></textarea>
                         </div>
                     </div>
-                </form>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold px-4 text-dark">Save Changes</button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="updateProgressModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-dark border-bottom-0 pb-2">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-clipboard-check me-2"></i>อัปเดตความคืบหน้า
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-footer border-top-0 pt-0">
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="editMaintenanceForm" class="btn btn-warning btn-sm fw-bold px-4 text-dark">Save Changes</button>
-            </div>
+            <form id="updateProgressForm">
+                <div class="modal-body pt-3">
+                    <input type="hidden" name="id" id="prog_req_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Technician Note (บันทึกการซ่อม/สาเหตุที่รอ)</label>
+                        <textarea name="technician_note" id="prog_tech_note" class="form-control" rows="4" required placeholder="เช่น ถอดมอเตอร์แล้ว กำลังรอเบิกอะไหล่..."></textarea>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-bold text-muted">Spare Parts (อะไหล่ที่เบิกมาใช้ชั่วคราว)</label>
+                        <textarea name="spare_parts_list" id="prog_spare_parts" class="form-control" rows="2" placeholder="- สายพาน 1 เส้น"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info btn-sm fw-bold text-dark px-4">Save Note</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

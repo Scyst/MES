@@ -64,11 +64,9 @@
 
                                     <div class="input-group input-group-sm flex-grow-1" style="max-width: 350px;">
                                         <input list="lineListFilter" id="filterLineMt" class="form-control border-end-0 fw-bold text-secondary" placeholder="Line..." style="max-width: 90px;" onchange="fetchMaintenanceData()">
-                                        
                                         <span class="input-group-text bg-white text-muted border-start-0 border-end-0 px-2">
                                             <i class="fas fa-search"></i>
                                         </span>
-                                        
                                         <input type="text" id="mtSearchBox" class="form-control border-start-0 ps-0" placeholder="Search Job, Machine, Issue..." oninput="filterMaintenanceTable()">
                                     </div>
 
@@ -259,7 +257,7 @@
                                             <th>Cause</th>
                                             <th>Recoverer</th>
                                             <th>Note</th>
-                                            <?php if ($canManage): ?><th class="text-end pe-3">Actions</th><?php endif; ?>
+                                            <?php if ($canManage): ?><th class="text-center pe-3">Actions</th><?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody id="stopTableBody" class="border-top-0"></tbody>
@@ -289,7 +287,6 @@
         include('components/maintenance_analysis_modal.php');
     ?>
     
-    
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/paginationTable.js?v=<?php echo filemtime('script/paginationTable.js'); ?>"></script>
     <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
@@ -300,7 +297,7 @@
     
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;
-        
+
         function showSpinner() { 
             const el = document.getElementById('loadingOverlay');
             if(el) el.style.display = 'flex'; 
@@ -308,6 +305,34 @@
         function hideSpinner() { 
             const el = document.getElementById('loadingOverlay');
             if(el) el.style.display = 'none'; 
+        }
+
+        function showToast(message, colorCode = '#333') {
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                });
+                
+                let iconType = 'info';
+                if (colorCode.includes('a745') || colorCode.includes('success')) iconType = 'success';
+                else if (colorCode.includes('3545') || colorCode.includes('danger')) iconType = 'error';
+                else if (colorCode.includes('c107') || colorCode.includes('warning')) iconType = 'warning';
+
+                Toast.fire({
+                    icon: iconType,
+                    title: message
+                });
+            } else {
+                alert(message);
+            }
         }
 
         function updateMobileFab(activeTabId) {
@@ -330,7 +355,9 @@
                     newFabBtn.style.backgroundColor = '#198754'; 
                     newFabBtn.style.color = '#fff';
                     newFabBtn.innerHTML = '<i class="fas fa-plus"></i>';
-                    newFabBtn.onclick = () => openAddStopModal();
+                    newFabBtn.onclick = () => {
+                        if (typeof openAddStopModal === 'function') openAddStopModal();
+                    };
                 } else {
                     fabContainer.style.display = 'none';
                 }
@@ -345,25 +372,23 @@
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             
-            const todayStr = `${year}-${month}-${day}`;     // วันนี้
-            const firstDayStr = `${year}-${month}-01`;      // วันที่ 1 ของเดือน
+            const todayStr = `${year}-${month}-${day}`;
+            const firstDayStr = `${year}-${month}-01`;
 
-            // --- 1. Filter ของ Stop Cause ---
             const startDateEl = document.getElementById("filterStartDate");
             const endDateEl = document.getElementById("filterEndDate");
             if (startDateEl && !startDateEl.value) startDateEl.value = todayStr;
             if (endDateEl && !endDateEl.value) endDateEl.value = todayStr;
 
-            // --- 2. Filter ของ Maintenance (ตั้งเป็น วันที่ 1 - วันนี้) ---
             const mtStartEl = document.getElementById("mtStartDate");
             const mtEndEl = document.getElementById("mtEndDate");
-            
-            if (mtStartEl && !mtStartEl.value) mtStartEl.value = firstDayStr; 
-            if (mtEndEl && !mtEndEl.value) mtEndEl.value = todayStr;          
+            if (mtStartEl && !mtStartEl.value) mtStartEl.value = firstDayStr;
+            if (mtEndEl && !mtEndEl.value) mtEndEl.value = todayStr;
 
-            // Load Data
-            if (typeof fetchMaintenanceData === 'function') fetchMaintenanceData();
-            if (typeof fetchStopData === 'function') fetchStopData(1);
+            setTimeout(() => {
+                if (typeof fetchMaintenanceData === 'function') fetchMaintenanceData();
+                if (typeof fetchStopData === 'function') fetchStopData(1);
+            }, 100);
 
             const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
             tabEls.forEach(tab => {

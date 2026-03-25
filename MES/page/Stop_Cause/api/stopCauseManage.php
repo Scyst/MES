@@ -7,7 +7,6 @@ require_once __DIR__ . '/../../logger.php';
 
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 
-//-- CSRF Protection for non-GET requests --
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -41,29 +40,23 @@ try {
             if (!empty($_GET['machine'])) { $conditions[] = "LOWER(machine) = LOWER(?)"; $params[] = $_GET['machine']; }
             if (!empty($_GET['startDate'])) { $conditions[] = "log_date >= ?"; $params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $conditions[] = "log_date <= ?"; $params[] = $_GET['endDate']; }
-            if (!empty($_GET['startDate']) && $_GET['startDate'] !== 'undefined') { // เพิ่มเช็ค !== 'undefined'
+            if (!empty($_GET['startDate']) && $_GET['startDate'] !== 'undefined') {
                 $conditions[] = "log_date >= ?"; 
                 $params[] = $_GET['startDate']; 
             }
-            if (!empty($_GET['endDate']) && $_GET['endDate'] !== 'undefined') { // เพิ่มเช็ค !== 'undefined'
+            if (!empty($_GET['endDate']) && $_GET['endDate'] !== 'undefined') {
                 $conditions[] = "log_date <= ?"; 
                 $params[] = $_GET['endDate']; 
             }
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
-            
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $totalSql = "SELECT COUNT(*) AS total FROM " . STOP_CAUSES_TABLE . " $whereClause";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
-
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $dataSql = "WITH NumberedRows AS (SELECT *, ROW_NUMBER() OVER (ORDER BY stop_begin DESC, id DESC) AS RowNum FROM " . STOP_CAUSES_TABLE . " $whereClause) SELECT * FROM NumberedRows WHERE RowNum > ? AND RowNum <= ?";
             $dataStmt = $pdo->prepare($dataSql);
             $dataStmt->execute(array_merge($params, [$startRow, $startRow + $limit]));
             $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $summarySql = "SELECT line, COUNT(*) AS count, SUM(duration) AS total_minutes FROM " . STOP_CAUSES_TABLE . " $whereClause GROUP BY line ORDER BY total_minutes DESC";
             $summaryStmt = $pdo->prepare($summarySql);
             $summaryStmt->execute($params);
@@ -78,7 +71,6 @@ try {
                 throw new Exception('Invalid or missing ID for editing.');
             }
             $id = $_GET['id'];
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $stmt = $pdo->prepare("SELECT * FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
             $stmt->execute([$id]);
             $stop = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -108,7 +100,6 @@ try {
                 $stop_end_dt->modify('+1 day');
             }
             
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $sql = "INSERT INTO " . STOP_CAUSES_TABLE . " (log_date, stop_begin, stop_end, line, machine, cause, recovered_by, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $params = [$input['log_date'], $stop_begin_dt->format('Y-m-d H:i:s'), $stop_end_dt->format('Y-m-d H:i:s'), $line, $input['machine'], $input['cause'], $input['recovered_by'], $input['note'] ?? null];
             $stmt = $pdo->prepare($sql);
@@ -131,7 +122,6 @@ try {
             $id = $input['id'];
             if (!filter_var($id, FILTER_VALIDATE_INT)) throw new Exception('Invalid ID format.');
 
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $stmt = $pdo->prepare("SELECT line FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
             $stmt->execute([$id]);
             $stop = $stmt->fetch();
@@ -155,7 +145,6 @@ try {
                 $stop_end_dt->modify('+1 day');
             }
             
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $sql = "UPDATE " . STOP_CAUSES_TABLE . " SET log_date = ?, stop_begin = ?, stop_end = ?, line = ?, machine = ?, cause = ?, recovered_by = ?, note = ? WHERE id = ?";
             $params = [$log_date, $stop_begin_dt->format('Y-m-d H:i:s'), $stop_end_dt->format('Y-m-d H:i:s'), $line, $input['machine'], $input['cause'], $input['recovered_by'], $input['note'] ?? null, $id];
             $stmt = $pdo->prepare($sql);
@@ -177,7 +166,6 @@ try {
                 http_response_code(400);
                 throw new Exception('Invalid or missing Stop Cause ID.');
             }
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $stmt = $pdo->prepare("SELECT * FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
             $stmt->execute([$id]);
             $stopToDelete = $stmt->fetch();
@@ -186,7 +174,6 @@ try {
             } else {
                 throw new Exception("Stop Cause record not found.");
             }
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $deleteStmt = $pdo->prepare("DELETE FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
             $deleteStmt->execute([$id]);
             if ($deleteStmt->rowCount() > 0) {
@@ -202,18 +189,15 @@ try {
             if ($currentUser['role'] === 'supervisor') {
                 echo json_encode(['success' => true, 'data' => [$currentUser['line']]]);
             } else {
-                // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
                 $stmt = $pdo->query("SELECT DISTINCT line FROM " . STOP_CAUSES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
                 echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
             }
             break;
         case 'get_machines':
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $stmt = $pdo->query("SELECT DISTINCT machine FROM " . STOP_CAUSES_TABLE . " WHERE machine IS NOT NULL AND machine != '' ORDER BY machine");
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
             break;
         case 'get_causes':
-            // *** แก้ไข: เปลี่ยนมาใช้ค่าคงที่ STOP_CAUSES_TABLE ***
             $stmt = $pdo->query("SELECT DISTINCT cause FROM " . STOP_CAUSES_TABLE . " WHERE cause IS NOT NULL AND cause != '' ORDER BY cause");
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
             break;

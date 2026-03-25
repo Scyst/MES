@@ -6,15 +6,21 @@ const STOP_CAUSE_API_URL = 'api/stopCauseManage.php';
  * @returns {URLSearchParams} Object ที่มี Parameters ทั้งหมดสำหรับส่งไปกับ Request
  */
 function getStopCauseFilterParams() {
+    // Helper function สำหรับป้องกัน TypeError
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    };
+
     return new URLSearchParams({
         action: 'get_stops',
-        startDate: document.getElementById("filterStartDate")?.value,
-        endDate: document.getElementById("filterEndDate")?.value,
-        line: document.getElementById("filterLine")?.value.trim() || '',
-        machine: document.getElementById("filterMachine")?.value.trim() || '',
-        cause: document.getElementById("filterCause")?.value.trim() || '',
+        startDate: getValue("filterStartDate"),
+        endDate: getValue("filterEndDate"),
+        line: getValue("filterLine"),
+        machine: getValue("filterMachine"),
+        cause: getValue("filterCause"),
         page: 1,
-        limit: 100000 //-- กำหนด limit ให้สูงเพื่อดึงข้อมูลทั้งหมดสำหรับการ Export --
+        limit: 100000 // กำหนด limit ให้สูงเพื่อดึงข้อมูลทั้งหมดสำหรับการ Export
     });
 }
 
@@ -30,74 +36,42 @@ function formatDurationForExport(totalMinutes) {
     return `${h}h ${m}m`;
 }
 
-// --- ฟังก์ชันหลักสำหรับการ Export ---
+async function exportToExcel() {
+    const notify = (msg, color) => {
+        if (typeof showToast === 'function') showToast(msg, color);
+        else alert(msg);
+    };
 
-/**
- * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ PDF
- */
-/*
-async function exportToPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    if (!doc.autoTable) {
-        showToast("jsPDF AutoTable plugin not loaded.", '#dc3545');
-        return;
-    }
+    notify("Preparing Excel export... Please wait.", '#0dcaf0');
+    if (typeof showSpinner === 'function') showSpinner();
     
-    showToast("Preparing PDF export... Please wait.", '#0dcaf0');
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
     try {
         const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
         const result = await response.json();
 
-        if (!result.success || result.data.length === 0) {
-            showToast("No data to export.", '#ffc107');
+        if (!result.success || !result.data || result.data.length === 0) {
+            notify("No data to export.", '#ffc107');
             return;
         }
 
-        // ... (โค้ดสร้าง PDF เหมือนเดิม) ...
-        doc.save(`Stop_Cause_History_${new Date().toISOString().split('T')[0]}.pdf`);
-
-    } catch (error) {
-        console.error("PDF Export failed:", error);
-        showToast("An error occurred during PDF export.", '#dc3545');
-    } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
-    }
-}
-/*
-
-/**
- * ฟังก์ชันสำหรับ Export ข้อมูลเป็นไฟล์ Excel แบบหลาย Sheet
- */
-async function exportToExcel() {
-    showToast("Preparing Excel export... Please wait.", '#0dcaf0');
-    showSpinner(); // <-- เพิ่ม: แสดง Spinner
-    try {
-        const response = await fetch(`${STOP_CAUSE_API_URL}?${getStopCauseFilterParams().toString()}`);
-        const result = await response.json();
-
-        if (!result.success || result.data.length === 0) {
-            showToast("No data to export.", '#ffc107');
-            return;
+        if (typeof XLSX === 'undefined') {
+            throw new Error('XLSX library (SheetJS) is not loaded.');
         }
 
         const workbook = XLSX.utils.book_new();
-
-        //-- 1. เตรียมข้อมูลสำหรับ Sheet "Stop Cause Summary" --
-        const totalOccurrences = result.summary.reduce((acc, curr) => acc + Number(curr.count || 0), 0);
+        const totalOccurrences = result.summary ? result.summary.reduce((acc, curr) => acc + Number(curr.count || 0), 0) : 0;
         const grandTotalRow = { 
             "Line": "Grand Total", 
             "Occurrences": totalOccurrences,
             "Total Duration": formatDurationForExport(result.grand_total_minutes)
         };
-        const summaryData = result.summary.map(row => ({
+        
+        const summaryData = result.summary ? result.summary.map(row => ({
             "Line": row.line || 'N/A',
             "Occurrences": row.count,
             "Total Duration": formatDurationForExport(row.total_minutes)
-        }));
+        })) : [];
 
-        //-- 2. เตรียมข้อมูลสำหรับ Sheet "Raw Data" --
         const rawData = result.data.map(row => ({
             "ID": row.id,
             "Date": row.log_date,
@@ -111,19 +85,18 @@ async function exportToExcel() {
             "Note": row.note || ''
         }));
         
-        //-- สร้าง Worksheet และเพิ่มลงใน Workbook --
         const rawDataSheet = XLSX.utils.json_to_sheet(rawData);
         XLSX.utils.book_append_sheet(workbook, rawDataSheet, "Raw Data");
+        
         const summarySheet = XLSX.utils.json_to_sheet([grandTotalRow, ...summaryData]);
         XLSX.utils.book_append_sheet(workbook, summarySheet, "Stop Cause Summary");
-        
-        //-- สั่งดาวน์โหลดไฟล์ Excel --
-        XLSX.writeFile(workbook, `Stop_Cause_History_${new Date().toISOString().split('T')[0]}.xlsx`);
+        const exportDate = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `Stop_Cause_History_${exportDate}.xlsx`);
 
     } catch (error) {
         console.error('Excel Export failed:', error);
-        showToast('Failed to export data.', '#dc3545');
+        notify('Failed to export data. Please check console.', '#dc3545');
     } finally {
-        hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+        if (typeof hideSpinner === 'function') hideSpinner();
     }
 }

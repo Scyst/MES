@@ -19,9 +19,6 @@ $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $currentUser = $_SESSION['user'];
 
-/**
- * ฟังก์ชันตรวจสอบและอัปโหลดรูปภาพ (Security & Validation)
- */
 function validateAndUploadImage($fileInput, $prefix, $id = '') {
     if (!isset($fileInput['error']) || is_array($fileInput['error'])) {
         throw new Exception("Invalid file upload parameters.");
@@ -127,8 +124,6 @@ try {
             }
 
             $dateFilterSql = "($dateType >= ? AND $dateType < DATEADD(DAY, 1, CAST(? AS DATE)))";
-
-            // 💡 [UPDATED] อัปเดตให้รองรับคอลัมน์ actual_repair_minutes ในส่วนของหน้า Summary 
             $sqlStats = "SELECT 
                             COUNT(*) as Total_Jobs,
                             SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as Completed_Jobs,
@@ -211,8 +206,6 @@ try {
             $spareParts = $input['spare_parts_list'] ?? $_POST['spare_parts_list'] ?? null;
             $startedAt = $input['started_at'] ?? $_POST['started_at'] ?? null;
             $resolvedAt = $input['resolved_at'] ?? $_POST['resolved_at'] ?? null;
-
-            // 💡 [NEW] รับค่า actual_repair_minutes
             $actualMinutes = isset($_POST['actual_repair_minutes']) && $_POST['actual_repair_minutes'] !== '' ? (int)$_POST['actual_repair_minutes'] : null;
 
             if (!$id) throw new Exception("Invalid ID.");
@@ -225,8 +218,7 @@ try {
                 if ($techNote !== null) { $updateFields[] = "technician_note = ?"; $params[] = $techNote; }
                 if ($spareParts !== null) { $updateFields[] = "spare_parts_list = ?"; $params[] = $spareParts; }
                 if (!empty($startedAt)) { $updateFields[] = "started_at = ?"; $params[] = str_replace('T', ' ', $startedAt); }
-                
-                // 💡 [NEW] อัปเดตเวลาซ่อมจริง
+
                 if ($actualMinutes !== null) { 
                     $updateFields[] = "actual_repair_minutes = ?"; 
                     $params[] = $actualMinutes; 
@@ -307,8 +299,6 @@ try {
             $jobType = $input['job_type'] ?? $_POST['job_type'] ?? 'Repair';
             $priority = $input['priority'] ?? $_POST['priority'] ?? 'Normal';
             $issue = $input['issue_description'] ?? $_POST['issue_description'] ?? '';
-
-            // [NEW] รับค่า Note และอะไหล่
             $techNote = $input['technician_note'] ?? $_POST['technician_note'] ?? null;
             $spareParts = $input['spare_parts_list'] ?? $_POST['spare_parts_list'] ?? null;
 
@@ -332,7 +322,6 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // [FIXED] เพิ่ม technician_note และ spare_parts_list ลงใน SQL
                 $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " 
                         SET line = ?, machine = ?, job_type = ?, priority = ?, issue_description = ?, 
                             request_by = ?, resolved_by = ?, 
@@ -393,7 +382,6 @@ try {
             break;
 
         case 'get_current_user_name':
-            // เอา username ไปค้นหาชื่อภาษาไทยจากตารางพนักงาน
             $username = $currentUser['username'] ?? '';
             $sql = "SELECT COALESCE(E.name_th, U.username) as full_name 
                     FROM " . USERS_TABLE . " U WITH (NOLOCK)
@@ -404,6 +392,40 @@ try {
             $userData = $stmt->fetch(PDO::FETCH_ASSOC);
             
             echo json_encode(['success' => true, 'name' => $userData ? $userData['full_name'] : $username]);
+            break;
+
+        case 'update_progress':
+            $id = $input['id'] ?? '';
+            $note = $input['technician_note'] ?? '';
+            $spare = $input['spare_parts_list'] ?? '';
+
+            if (empty($id) || empty($note)) {
+                echo json_encode(['success' => false, 'message' => 'Missing Job ID or Technician Note.']);
+                exit;
+            }
+
+            try {
+                $pdo->beginTransaction();
+                $sql = "UPDATE " . MAINTENANCE_REQUESTS_TABLE . " 
+                        SET technician_note = ?, spare_parts_list = ?
+                        WHERE id = ? AND status = 'In Progress'";
+                
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$note, $spare, $id]);
+
+                if ($stmt->rowCount() > 0) {
+                    $pdo->commit();
+                    echo json_encode(['success' => true]);
+                } else {
+                    $pdo->rollBack();
+                    echo json_encode(['success' => false, 'message' => 'ไม่สามารถบันทึกได้ (งานอาจถูกปิดไปแล้ว หรือไม่มีการเปลี่ยนแปลงเนื้อหา)']);
+                }
+            } catch (Exception $ex) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $ex->getMessage()]);
+            }
             break;
 
         default:
