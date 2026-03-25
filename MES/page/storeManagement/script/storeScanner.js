@@ -86,12 +86,29 @@ async function loadLocations() {
         if (issueTraceSelect) issueTraceSelect.innerHTML = '';
         
         if (result.data && result.data.locations) {
+            let storeSelected = false;
+            let wipSelected = false;
+
             result.data.locations.forEach(loc => {
-                const locOption = `<option value="${loc.location_id}">${escapeHTML(loc.location_name)}</option>`;
+                let isReceiveDefault = '';
+                if (loc.location_type === 'STORE' && !storeSelected) {
+                    isReceiveDefault = 'selected';
+                    storeSelected = true; 
+                }
+
+                let isIssueDefault = '';
+                if (loc.location_type === 'WIP' && !wipSelected) {
+                    isIssueDefault = 'selected';
+                    wipSelected = true;
+                }
+
+                const filterOption = `<option value="${loc.location_id}">${escapeHTML(loc.location_name)}</option>`;
+                const receiveOption = `<option value="${loc.location_id}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
+                const issueOption = `<option value="${loc.location_id}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
                 
-                if (filterSelect) filterSelect.innerHTML += locOption;
-                if (receiveTraceSelect) receiveTraceSelect.innerHTML += locOption;
-                if (issueTraceSelect) issueTraceSelect.innerHTML += locOption;
+                if (filterSelect) filterSelect.innerHTML += filterOption;
+                if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
+                if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
             });
         }
     } catch (err) {

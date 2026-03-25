@@ -75,7 +75,7 @@ try {
             }
 
             $locFilter = ($location_id !== 'ALL' && $location_id !== '') ? "AND o.location_id = " . (int)$location_id : "";
-            $zeroFilter = ($hide_zero === 'true') ? "HAVING (ISNULL(SUM(o.quantity), 0) > 0 OR ISNULL(SUM(p.qty_per_pallet), 0) > 0)" : "";
+            $zeroFilter = ($hide_zero === 'true') ? "HAVING (ISNULL(SUM(o.quantity), 0) <> 0 OR ISNULL(SUM(p.qty_per_pallet), 0) > 0)" : "";
             $whereClause = implode(" AND ", $conditions);
             $whereSQL = !empty($whereClause) ? "WHERE " . $whereClause : "";
             $countSql = "
@@ -822,6 +822,92 @@ try {
             echo json_encode([
                 'success' => true,
                 'data' => $data
+            ]);
+            break;
+
+        case 'get_stock_ledger':
+            $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
+            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+            $search = $_GET['search'] ?? '';
+            $locationId = $_GET['location_id'] ?? 'ALL';
+            $typeFilter = $_GET['type_filter'] ?? 'ALL';
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $limit = max(10, (int)($_GET['limit'] ?? 100));
+            $offset = ($page - 1) * $limit;
+            $isExport = isset($_GET['export']) && $_GET['export'] === 'true';
+
+            $conditions = ["t.transaction_timestamp >= ?", "t.transaction_timestamp <= ?"];
+            $params = [$startDate . " 00:00:00", $endDate . " 23:59:59"];
+
+            if ($locationId !== 'ALL') {
+                $conditions[] = "(t.from_location_id = ? OR t.to_location_id = ?)";
+                $params[] = $locationId;
+                $params[] = $locationId;
+            }
+
+            if ($typeFilter !== 'ALL') {
+                if ($typeFilter === 'RECEIPT') {
+                    $conditions[] = "t.transaction_type LIKE '%RECEIPT%'";
+                } elseif ($typeFilter === 'INTERNAL_TRANSFER') {
+                    $conditions[] = "t.transaction_type LIKE '%TRANSFER%'";
+                } else {
+                    $conditions[] = "t.transaction_type = ?";
+                    $params[] = $typeFilter;
+                }
+            }
+
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR t.notes LIKE ?)";
+                $searchWildcard = "%$search%";
+                $params = array_merge($params, array_fill(0, 4, $searchWildcard));
+            }
+
+            $whereClause = implode(" AND ", $conditions);
+
+            // คำนวณ KPI ด้านบน (ยอด IN / OUT รวม)
+            $kpiSql = "SELECT COUNT(*) as total_trans,
+                              SUM(CASE WHEN t.quantity > 0 THEN t.quantity ELSE 0 END) as total_in,
+                              SUM(CASE WHEN t.quantity < 0 THEN ABS(t.quantity) ELSE 0 END) as total_out
+                       FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
+                       LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                       WHERE $whereClause";
+            
+            $kpiStmt = $pdo->prepare($kpiSql);
+            $kpiStmt->execute($params);
+            $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
+
+            // ดึงข้อมูลประวัติ
+            $sql = "SELECT t.transaction_id, t.transaction_timestamp, t.transaction_type, t.quantity, t.reference_id, t.notes,
+                           ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                           loc_from.location_name AS from_loc, loc_to.location_name AS to_loc,
+                           ISNULL(e.name_th, u.username) AS actor_name
+                    FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
+                    LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                    LEFT JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                    LEFT JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                    WHERE $whereClause
+                    ORDER BY t.transaction_timestamp DESC";
+
+            if (!$isExport) {
+                $offsetInt = (int)$offset;
+                $limitInt = (int)$limit;
+                $sql .= " OFFSET $offsetInt ROWS FETCH NEXT $limitInt ROWS ONLY";
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            echo json_encode([
+                'success' => true, 
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC), 
+                'kpi' => $kpi,
+                'pagination' => $isExport ? null : [
+                    'total_records' => $kpi['total_trans'], 
+                    'current_page' => $page, 
+                    'total_pages' => ceil($kpi['total_trans'] / $limit)
+                ]
             ]);
             break;
 

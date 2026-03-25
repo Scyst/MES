@@ -176,7 +176,7 @@ $pageHelpId = "";
                                 </button>
                                 
                                 <button class="btn btn-info btn-sm fw-bold px-3 shadow-sm text-white d-none d-md-inline-block" onclick="openTraceModal()">
-                                    <i class="fas fa-barcode me-1"></i> ตรวจสอบ Tag
+                                    <i class="fas fa-qrcode me-1"></i> ตรวจสอบ Tag
                                 </button>
                                 <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm d-none d-md-inline-block" id="btnExportExcel" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel me-1"></i> Export
@@ -248,7 +248,7 @@ $pageHelpId = "";
         <button class="btn btn-info text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
                 onclick="openTraceModal()" title="สแกนรับ / เบิก" 
                 style="width: 60px; height: 60px; font-size: 24px;">
-            <i class="fas fa-barcode"></i>
+            <i class="fas fa-qrcode"></i>
         </button>
     </div>
 

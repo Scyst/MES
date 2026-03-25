@@ -50,7 +50,7 @@
             width: 4in; 
             height: 2in; 
             box-sizing: border-box;
-            padding: 2mm 0mm 2mm 4mm; 
+            padding: 2mm 2mm 2mm 6mm; 
             page-break-after: always;
             font-family: 'Arial', sans-serif;
             color: #000;
@@ -208,7 +208,7 @@
 
                     <div>
                         <h6 class="fw-bold text-secondary small mb-2"><i class="fas fa-history me-1"></i> ประวัติการเคลื่อนไหว</h6>
-                        <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 180px;">
+                        <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 35vh;">
                             <table class="table table-sm table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
                                 <thead class="table-light sticky-top">
                                     <tr class="text-secondary">

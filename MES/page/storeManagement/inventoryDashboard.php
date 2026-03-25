@@ -23,6 +23,29 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
         <div id="main-content">
             
             <div class="px-3 pt-3" id="kpiContainer">
+                <style>
+                    .hide-scrollbar::-webkit-scrollbar { display: none; }
+                    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+                    @media (max-width: 767.98px) {
+                        .mobile-fixed-footer {
+                            position: fixed !important;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            z-index: 1040;
+                            border-radius: 0 !important;
+                            padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)) !important; 
+                            box-shadow: 0 -4px 15px rgba(0,0,0,0.08) !important;
+                        }
+                        .fab-container {
+                            bottom: calc(70px + env(safe-area-inset-bottom)) !important; 
+                        }
+                        #dashboardCardContainer {
+                            padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; 
+                        }
+                    }
+                </style>
                 <div class="row g-2 mb-1 flex-nowrap overflow-x-auto pb-1 hide-scrollbar" style="-webkit-overflow-scrolling: touch;">
                     <div class="col-8 col-sm-6 col-md-3" style="min-width: 180px;">
                         <div class="card shadow-sm kpi-card border-secondary h-100">
@@ -100,7 +123,8 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100">
                             
                             <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 flex-grow-1">
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto" style="max-width: 350px;">
+                                
+                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto" style="max-width: 480px;">
                                     <div class="input-group input-group-sm flex-grow-1">
                                         <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                         <input type="text" id="filterSearch" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Item No. หรือชื่อ...">
@@ -111,23 +135,32 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px;">
                                         <i class="fas fa-eye-slash"></i>
                                     </button>
+                                    <div class="input-group input-group-sm d-none d-md-flex flex-shrink-0" style="width: 75px;">
+                                        <select id="rowsPerPage" class="form-select border-secondary-subtle px-2" onchange="changeRowsPerPage()">
+                                            <option value="50">50</option>
+                                            <option value="100" selected>100</option>
+                                            <option value="500">500</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 
-                                <div class="input-group input-group-sm shadow-sm w-100 w-md-auto" style="max-width: 200px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
-                                    <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
-                                        <option value="ALL">All Location</option>
-                                    </select>
-                                </div>
+                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
+                                        <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
+                                            <option value="ALL">All Locations</option>
+                                        </select>
+                                    </div>
 
-                                <div class="input-group input-group-sm shadow-sm w-100 w-md-auto" style="max-width: 150px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
-                                    <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark">
-                                        <option value="ALL" selected>All</option>
-                                        <option value="RM">RM</option>
-                                        <option value="SEMI">SEMI</option>
-                                        <option value="FG">FG</option>
-                                    </select>
+                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
+                                        <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark">
+                                            <option value="ALL" selected>All</option>
+                                            <option value="RM">RM</option>
+                                            <option value="SEMI">SEMI</option>
+                                            <option value="FG">FG</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div class="form-check form-switch ms-1 d-flex align-items-center w-100 w-md-auto">
@@ -135,27 +168,21 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     <label class="form-check-label ms-2 small fw-bold text-secondary cursor-pointer" for="hideZeroStock">ซ่อนยอด 0</label>
                                 </div>
 
-                                <div class="input-group input-group-sm d-none d-md-flex ms-md-2" style="width: 90px;">
-                                    <select id="rowsPerPage" class="form-select border-secondary-subtle" onchange="changeRowsPerPage()">
-                                        <option value="50">50</option>
-                                        <option value="100" selected>100</option>
-                                        <option value="500">500</option>
-                                    </select>
-                                </div>
                             </div>
 
-                            <div class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-md-end">
-                                <button class="btn btn-outline-info btn-sm fw-bold px-3 shadow-sm" onclick="openCcHistoryModal()">
+                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-md-end">
+                                <button class="btn btn-info text-white btn-sm fw-bold px-3 shadow-sm" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
+                                    <i class="fas fa-qrcode me-1"></i> สแกนรับ / เบิก
+                                </button>
+                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="openCcHistoryModal()">
                                     <i class="fas fa-history me-1"></i> ประวัติปรับยอด
                                 </button>
-                                <button id="btnApprovalModal" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm position-relative d-none" onclick="openApprovalModal()">
-                                    <i class="fas fa-clipboard-check text-dark me-1"></i> อนุมัติปรับยอด
+                                <button id="btnApprovalModal" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm position-relative d-none" onclick="openApprovalModal()">
+                                    <i class="fas fa-clipboard-check text-white me-1"></i> อนุมัติปรับยอด
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="badgePendingCount" style="display:none;">0</span>
                                 </button>
-                                <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
-                                    <i class="fas fa-qrcode me-1"></i> สแกนเบิก/ตรวจสอบ
-                                </button>
                             </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -167,7 +194,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                     <div class="table-responsive-custom flex-grow-1 d-none d-md-block">
                         <table class="table table-striped table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
                             <thead class="table-light sticky-top shadow-sm">
-                                <tr class="text-secondary small text-uppercase">
+                                <tr class="text-secondary small text-uppercase align-middle">
                                     <th class="text-center" style="width: 50px;">#</th>
                                     <th style="min-width: 150px;">Part No.</th>
                                     <th style="min-width: 250px;">Description</th>
@@ -206,13 +233,12 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
     </div>
 
     <div class="fab-container d-md-none" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050;">
-        <button class="btn btn-primary text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
-                onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกนเบิกจ่าย" 
+        <button class="btn btn-info text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+                onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกนรับ / เบิก" 
                 style="width: 60px; height: 60px; font-size: 24px;">
-            <i class="fas fa-qrcode"></i> </button>
+            <i class="fas fa-qrcode"></i> 
+        </button>
     </div>
-
-    <div id="printArea" class="d-none"></div>
 
     <?php include_once __DIR__ . '/components/InventoryModal.php'; ?>
     <?php include_once __DIR__ . '/components/storeScanner.php'; ?>

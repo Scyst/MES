@@ -84,7 +84,6 @@ async function loadDashboardData() {
             const rowClass = isOutOfStock ? 'row-out-of-stock' : '';
             const borderLeftColor = isOutOfStock ? 'var(--bs-danger)' : (availableQty > 0 ? 'var(--bs-success)' : 'var(--bs-secondary)');
 
-            // Table View
             htmlTable += `
                 <tr class="${rowClass}">
                     <td class="text-center text-muted">${runningNumber}</td>
@@ -109,7 +108,6 @@ async function loadDashboardData() {
                 </tr>
             `;
 
-            // Card View
             htmlCards += `
                 <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
                     <div class="card-body p-3">
@@ -419,6 +417,7 @@ function toggleMobileCards() {
     const container = document.getElementById('kpiContainer');
     const btn = document.getElementById('btnToggleCards');
     const icon = btn.querySelector('i');
+    
     if (container.classList.contains('d-none')) {
         container.classList.remove('d-none');
         btn.classList.remove('btn-primary', 'text-white');
