@@ -76,10 +76,10 @@ async function loadHistory() {
             }
             let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
             
-            // 1. สร้าง ROW สำหรับ Desktop
+            // 1. สร้าง ROW สำหรับ Desktop (เพิ่ม syncCheckbox(this))
             htmlTable += `
                 <tr class="align-middle">
-                    <td class="text-center"><input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()"></td>
+                    <td class="text-center"><input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()"></td>
                     <td class="text-muted"><small>${displayTime}</small></td>
                     <td>${receiveDate}</td>
                     <td class="text-center fw-bold text-primary">
@@ -116,14 +116,14 @@ async function loadHistory() {
                 </tr>
             `;
 
-            // 2. สร้าง CARD สำหรับ Mobile
+            // 2. สร้าง CARD สำหรับ Mobile (เพิ่ม syncCheckbox(this))
             let borderLeftColor = row.status === 'AVAILABLE' ? 'var(--bs-success)' : (row.status === 'PENDING' ? 'var(--bs-warning)' : 'var(--bs-info)');
             htmlCards += `
                 <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center gap-2">
-                                <input class="form-check-input mt-0 row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="updateBatchPrintBtn()" style="transform: scale(1.3);">
+                                <input class="form-check-input mt-0 row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()" style="transform: scale(1.3);">
                                 <span class="badge ${badgeClass}">${escapeHTML(row.status)}</span>
                             </div>
                             <div class="dropdown">
@@ -252,7 +252,6 @@ function clearModalData() {
     parsedData = [];
     previewData = [];
     document.getElementById('excelFile').value = '';
-    // ล็อกความสูง 280px เพื่อให้ตารางกางเต็มพื้นที่เสมอ
     document.getElementById('previewTbody').innerHTML = `
         <tr>
             <td colspan="8" class="text-center text-muted align-middle" style="height: 280px;">
@@ -269,7 +268,6 @@ function renderPreview() {
     let htmlContent = '';
 
     if (previewData.length === 0) {
-        // ล็อกความสูง 280px สำหรับ Error State ด้วย
         tbody.innerHTML = `
         <tr>
             <td colspan="8" class="text-center text-danger align-middle" style="height: 280px;">
@@ -452,6 +450,13 @@ async function submitToDatabase() {
         });
     }
 }
+
+// ✅ ฟังก์ชัน Sync Checkbox ให้ Desktop กับ Mobile ตรงกันตลอด
+window.syncCheckbox = function(source) {
+    const matchingCheckboxes = document.querySelectorAll(`.row-checkbox[value="${source.value}"]`);
+    matchingCheckboxes.forEach(cb => cb.checked = source.checked);
+};
+
 function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
@@ -459,20 +464,24 @@ function toggleSelectAll(source) {
 }
 
 function updateBatchPrintBtn() {
-    const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+    // ✅ ใช้ Set เพื่อตัดข้อมูลที่ซ้ำกัน (Deduplicate) ระหว่าง Table กับ Card
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const uniqueChecked = new Set(Array.from(checkedBoxes).map(cb => cb.value));
+    const checkedCount = uniqueChecked.size;
+    
+    const allBoxes = document.querySelectorAll('.row-checkbox');
+    const uniqueAll = new Set(Array.from(allBoxes).map(cb => cb.value));
+    const totalCount = uniqueAll.size;
+    
     const btnPrintDropdown = document.getElementById('btnBatchPrintDropdown');
     const btnDelete = document.getElementById('btnBatchDelete'); 
     const selectAllCb = document.getElementById('selectAllCheckbox');
-    const totalCount = document.querySelectorAll('.row-checkbox').length;
-    
-    // ดึงกล่อง Wrapper มาจัดการ
     const actionWrapper = document.getElementById('actionWrapper');
     
     if(checkedCount > 0) {
         if(btnPrintDropdown) { btnPrintDropdown.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
         if(btnDelete) { btnDelete.classList.remove('d-none'); document.getElementById('selectedDeleteCount').innerText = checkedCount; }
         
-        // ถ้ามีการติ๊กเลือก ให้โชว์กล่อง Action บนมือถือ
         if(actionWrapper) { 
             actionWrapper.classList.remove('d-none', 'd-md-flex'); 
             actionWrapper.classList.add('d-flex'); 
@@ -481,7 +490,6 @@ function updateBatchPrintBtn() {
         if(btnPrintDropdown) btnPrintDropdown.classList.add('d-none');
         if(btnDelete) btnDelete.classList.add('d-none');
         
-        // ถ้าไม่ได้ติ๊ก ให้ซ่อนกล่อง Action บนมือถือ (แต่โชว์บนคอมเหมือนเดิม)
         if(actionWrapper) { 
             actionWrapper.classList.remove('d-flex'); 
             actionWrapper.classList.add('d-none', 'd-md-flex'); 
@@ -492,14 +500,16 @@ function updateBatchPrintBtn() {
 }
 
 window.groupToMasterPallet = async function() {
-    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-    if(checkboxes.length === 0) return;
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if(checkedBoxes.length === 0) return;
     
-    let serials = [];
-    checkboxes.forEach(cb => { 
+    // ✅ ใช้ Set เพื่อตัด serial_no ที่เบิ้ลกัน
+    let serialsSet = new Set();
+    checkedBoxes.forEach(cb => { 
         let rowData = JSON.parse(decodeURIComponent(cb.value));
-        serials.push(rowData.serial_no); 
+        serialsSet.add(rowData.serial_no); 
     });
+    let serials = Array.from(serialsSet);
 
     Swal.fire({
         title: 'จัดกลุ่ม Pallet Tag?',
@@ -518,8 +528,7 @@ window.groupToMasterPallet = async function() {
             if(res) {
                 if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(res.data);
                 loadHistory();
-                Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false })
-                .then(() => { setTimeout(() => window.print(), 300); });
+                Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
             }
         }
     });
@@ -530,22 +539,25 @@ window.printSingleTag = async function(encodedRow) {
     if(typeof renderPrintTags === 'function') renderPrintTags([tag]);
     await logPrintStatus([tag.serial_no]);
     loadHistory(); 
-    setTimeout(() => { window.print(); }, 200); 
 }
 
 window.printSelectedTags = async function() {
-    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-    if(checkboxes.length === 0) return;
-    let tagsToPrint = [], serialsToLog = [];
-    checkboxes.forEach(cb => { 
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if(checkedBoxes.length === 0) return;
+    
+    // ✅ ใช้ Map เพื่อรวม Array ให้เหลือแค่ชุดข้อมูลที่ไม่ซ้ำกัน
+    let tagsMap = new Map();
+    checkedBoxes.forEach(cb => { 
         let tag = JSON.parse(decodeURIComponent(cb.value));
-        tagsToPrint.push(tag); 
-        serialsToLog.push(tag.serial_no);
+        tagsMap.set(tag.serial_no, tag);
     });
+    
+    let tagsToPrint = Array.from(tagsMap.values());
+    let serialsToLog = Array.from(tagsMap.keys());
+    
     if(typeof renderPrintTags === 'function') renderPrintTags(tagsToPrint);
     await logPrintStatus(serialsToLog);
     loadHistory();
-    setTimeout(() => { window.print(); }, 300);
 }
 
 async function logPrintStatus(serials) {
@@ -577,10 +589,16 @@ window.deleteTag = function(serialNo) {
 };
 
 window.deleteSelectedTags = function() {
-    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-    if(checkboxes.length === 0) return;
-    let serials = [];
-    checkboxes.forEach(cb => serials.push(JSON.parse(decodeURIComponent(cb.value)).serial_no));
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if(checkedBoxes.length === 0) return;
+    
+    // ✅ ใช้ Set กรอง Serial ก่อนส่งไปลบ
+    let serialsSet = new Set();
+    checkedBoxes.forEach(cb => {
+        let tag = JSON.parse(decodeURIComponent(cb.value));
+        serialsSet.add(tag.serial_no);
+    });
+    let serials = Array.from(serialsSet);
     
     Swal.fire({
         title: 'ยืนยันการลบหลายรายการ?', text: `คุณกำลังจะลบ Tag จำนวน ${serials.length} รายการ?`,

@@ -8,30 +8,24 @@ let cropper = null;
 let cropModalInstance;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. จัดการ Modal Scanner
     const traceModalEl = document.getElementById('traceModal');
     if (traceModalEl) {
         traceModalInstance = new bootstrap.Modal(traceModalEl);
-        
-        // เมื่อเปิด Modal ให้เปิดกล้องและโฟกัสช่องพิมพ์
         traceModalEl.addEventListener('shown.bs.modal', () => {
             startTraceScanning();
             document.getElementById('scanInput').focus();
         });
 
-        // เมื่อปิด Modal ให้ปิดกล้องและล้างข้อมูล
         traceModalEl.addEventListener('hidden.bs.modal', () => {
             stopTraceScanning();
             resetTraceUI();
         });
 
-        // กด Enter ในช่องค้นหา
         document.getElementById('scanInput')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') executeTraceScan();
         });
     }
 
-    // 2. จัดการ Modal ครอปรูปภาพ (Crop Modal)
     const cropModalEl = document.getElementById('cropModal');
     if (cropModalEl) {
         cropModalInstance = new bootstrap.Modal(cropModalEl);
@@ -48,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cropModalInstance.show();
                 };
                 reader.readAsDataURL(file);
-                e.target.value = null; // รีเซ็ต input ให้กดอัปโหลดซ้ำได้
+                e.target.value = null;
             }
         });
 
@@ -123,13 +117,11 @@ async function startTraceScanning() {
     const tryStartCamera = async (attempts = 0) => {
         const currentWidth = qrContainer.clientWidth || qrContainer.offsetWidth;
         
-        // รอให้ Modal กางเสร็จ
         if (currentWidth === 0 && attempts < 20) {
             setTimeout(() => tryStartCamera(attempts + 1), 100);
             return;
         }
 
-        // ล้าง Instance เดิม
         if (html5QrCodeTrace) {
             if (html5QrCodeTrace.isScanning) {
                 try { await html5QrCodeTrace.stop(); } catch(e) {}
@@ -186,10 +178,7 @@ window.executeTraceScan = async function() {
 function renderTraceData(data) {
     const tag = data.tag_info;
     const history = data.history;
-
     currentScannedBarcode = tag.master_pallet_no || tag.serial_no;
-
-    // เปลี่ยนสี Badge ให้สวยขึ้น (ใช้ bg-warning ธรรมดา แต่ตัวหนังสือเข้ม)
     let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info text-dark'));
     
     document.getElementById('traceSerial').innerText = currentScannedBarcode;
@@ -212,7 +201,6 @@ function renderTraceData(data) {
         history.forEach(row => {
             let typeColor = row.transaction_type.includes('IN') || row.transaction_type.includes('RECEIVE') ? 'text-success' : 'text-danger';
             let sign = typeColor === 'text-success' ? '+' : '-';
-            // วาดข้อมูลให้ตรงกับตาราง 3 คอลัมน์ (เวลา, สถานะ, จำนวน)
             tbody.innerHTML += `
                 <tr>
                     <td class="py-2 px-3"><div class="fw-bold text-dark">${row.transaction_timestamp.substring(11, 16)}</div><small class="text-muted">${row.transaction_timestamp.substring(0, 10)}</small></td>
@@ -322,7 +310,9 @@ window.issueScannedTag = async function(ignoreFifo = false) {
 window.renderPrintTags = function(tags) {
     const printArea = document.getElementById('printArea');
     if(!printArea) return;
+    
     printArea.innerHTML = '';
+    printArea.classList.remove('d-none');
     
     tags.forEach((tag, index) => {
         let displayDesc = tag.part_description || tag.description_ref || '';
@@ -374,12 +364,20 @@ window.renderPrintTags = function(tags) {
             });
         }
     });
+
+    setTimeout(() => {
+        window.print();
+        printArea.classList.add('d-none');
+        printArea.innerHTML = ''; 
+    }, 500);
 };
 
 window.renderMasterPalletTag = function(masterData) {
     const printArea = document.getElementById('printArea');
     if(!printArea) return;
+
     printArea.innerHTML = '';
+    printArea.classList.remove('d-none');
     
     let isMixed = (masterData.distinct_items > 1);
     let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || masterData.part_no || 'MIXED');
@@ -408,10 +406,17 @@ window.renderMasterPalletTag = function(masterData) {
             <div class="t-serial">${masterData.master_pallet_no}</div>
         </div>
     </div>`;
+    
     printArea.innerHTML = tagHTML;
+    
     if(typeof QRCode !== 'undefined') {
         new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), { text: masterData.master_pallet_no, width: 85, height: 85 });
     }
+    setTimeout(() => {
+        window.print();
+        printArea.classList.add('d-none');
+        printArea.innerHTML = '';
+    }, 500);
 };
 
 window.reprintMasterPallet = async function(masterPalletNo) {
@@ -419,12 +424,9 @@ window.reprintMasterPallet = async function(masterPalletNo) {
     try {
         const result = await fetchAPI(`get_master_pallet_details&master_pallet_no=${encodeURIComponent(masterPalletNo)}`, 'GET');
         if (result.success && result.data) {
-            // ✅ แก้ไขชื่อฟังก์ชันให้ตรงกับ renderMasterPalletTag ที่ประกาศไว้ด้านบน
             if (typeof renderMasterPalletTag === 'function') {
-                renderMasterPalletTag(result.data); 
-                setTimeout(() => { window.print(); }, 500);
+                renderMasterPalletTag(result.data);
             } else {
-                console.error("ฟังก์ชันสำหรับพิมพ์ (renderMasterPalletTag) ไม่ได้ถูกนิยามไว้");
                 Swal.fire('Error', 'ไม่พบโมดูลการพิมพ์สติ๊กเกอร์ในระบบ', 'error');
             }
         }
