@@ -169,7 +169,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                             <thead class="table-light sticky-top shadow-sm">
                                 <tr class="text-secondary small text-uppercase">
                                     <th class="text-center" style="width: 50px;">#</th>
-                                    <th style="min-width: 150px;">Item No.</th>
+                                    <th style="min-width: 150px;">Part No.</th>
                                     <th style="min-width: 250px;">Description</th>
                                     <th class="text-center">Type</th>
                                     <th class="text-end">รอรับเข้า (Pending)</th>

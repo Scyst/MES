@@ -225,7 +225,7 @@ window.exportToExcel = async function() {
     }
 
     let ws_data = [
-        ["Item No.", "Category", "Des.", "Purchase Order", "Carton/Pallet", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark", "Serial No.", "Status", "Imported At"]
+        ["Item No.", "Category", "Des.", "Purchase Order", "Carton/Package", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark", "Serial No.", "Status", "Imported At"]
     ];
 
     result.data.forEach(row => {
@@ -302,7 +302,7 @@ function renderPreview() {
 
 function downloadTemplate() {
     const ws_data = [
-        ["Item No.", "英文名称", "Des.", "Purchase Order", "Carton/Pallet", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark"],
+        ["Item No.", "英文名称", "Des.", "Purchase Order", "Carton/Package", "Package QTY", "Invoice No.", "Pallet/Carton", "CTN Number", "Week", "Date", "Remark"],
         ["RM-12345", "RESISTOR", "10K OHM 1/4W", "PO-2026-001", "1000", "2", "INV-2603-001", "PL-001", "CTN-01", "12.26", "2026-03-16", "ขาด 50 ชิ้น"]
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
@@ -371,7 +371,7 @@ function extractData(rawRows) {
                 else if (colName.includes('des.')) colMap['des'] = index;
                 else if (colName.includes('date')) colMap['date'] = index;
                 else if (colName.includes('warehouse') || colName.includes('invoice') || colName.includes('inv')) colMap['wh'] = index;
-                else if (colName.includes('carton/pallet') || colName.includes('每箱')) colMap['qty'] = index;
+                else if (colName.includes('carton/package') || colName.includes('carton/pallet') || colName.includes('每箱')) colMap['qty'] = index;
                 else if (colName.includes('package qty') || colName === '件数') colMap['pack'] = index;
                 else if (colName.includes('pallet/carton') || colName.includes('托号')) colMap['pallet'] = index;
                 else if (colName.includes('ctn number')) colMap['ctn'] = index;

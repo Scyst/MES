@@ -802,7 +802,9 @@ try {
                     MAX(t.warehouse_no) as warehouse_no,
                     MAX(t.received_date) as received_date,
                     SUM(t.current_qty) as total_qty,
-                    COUNT(t.tag_id) as total_tags
+                    COUNT(t.tag_id) as total_tags,
+                    MAX(t.week_no) as week_no,
+                    MAX(t.remark) as remark
                 FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
                 WHERE t.master_pallet_no = :master_pallet_no

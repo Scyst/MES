@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const approvalModalEl = document.getElementById('approvalModal');
     if (approvalModalEl) approvalModal = new bootstrap.Modal(approvalModalEl);
 
-    loadLocations();
     loadDashboardData();
 
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
@@ -40,21 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     checkPendingApprovals();
     setInterval(checkPendingApprovals, 30000);
 });
-
-async function loadLocations() {
-    try {
-        const result = await fetchAPI('get_master_data', 'GET');
-        const filterSelect = document.getElementById('locationFilter');
-        
-        if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
-        
-        result.data.locations.forEach(loc => {
-            if (filterSelect) filterSelect.innerHTML += `<option value="${loc.location_id}">${loc.location_name}</option>`;
-        });
-    } catch (err) {
-        console.error("Failed to load master data:", err);
-    }
-}
 
 async function loadDashboardData() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';

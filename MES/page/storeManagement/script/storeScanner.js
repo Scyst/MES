@@ -8,9 +8,12 @@ let cropper = null;
 let cropModalInstance;
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadLocations();
+    
     const traceModalEl = document.getElementById('traceModal');
     if (traceModalEl) {
         traceModalInstance = new bootstrap.Modal(traceModalEl);
+        
         traceModalEl.addEventListener('shown.bs.modal', () => {
             startTraceScanning();
             document.getElementById('scanInput').focus();
@@ -42,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cropModalInstance.show();
                 };
                 reader.readAsDataURL(file);
-                e.target.value = null;
+                e.target.value = null; 
             }
         });
 
@@ -71,6 +74,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+async function loadLocations() {
+    try {
+        const result = await fetchAPI('get_master_data', 'GET');
+        const filterSelect = document.getElementById('locationFilter');
+        const receiveTraceSelect = document.getElementById('receiveLocationTrace'); 
+        const issueTraceSelect = document.getElementById('issueLocationTrace');     
+        
+        if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
+        if (receiveTraceSelect) receiveTraceSelect.innerHTML = '';
+        if (issueTraceSelect) issueTraceSelect.innerHTML = '';
+        
+        if (result.data && result.data.locations) {
+            result.data.locations.forEach(loc => {
+                const locOption = `<option value="${loc.location_id}">${escapeHTML(loc.location_name)}</option>`;
+                
+                if (filterSelect) filterSelect.innerHTML += locOption;
+                if (receiveTraceSelect) receiveTraceSelect.innerHTML += locOption;
+                if (issueTraceSelect) issueTraceSelect.innerHTML += locOption;
+            });
+        }
+    } catch (err) {
+        console.error("Failed to load master data for locations:", err);
+    }
+}
+
 async function handleTraceFileScan(file) {
     if (!file) return;
     stopTraceScanning(); 
@@ -96,11 +124,21 @@ window.openTraceModal = function() {
     traceModalInstance.show();
 };
 
+window.resumeScanning = function() {
+    resetTraceUI();
+    startTraceScanning();
+    setTimeout(() => {
+        const scanInput = document.getElementById('scanInput');
+        if(scanInput) scanInput.focus();
+    }, 300);
+};
+
 function resetTraceUI() {
     document.getElementById('scanInput').value = '';
     document.getElementById('traceResult').classList.add('d-none');
     document.getElementById('traceActionArea').classList.add('d-none');
     document.getElementById('traceLoading').classList.add('d-none');
+    document.getElementById('resumeScanOverlay')?.classList.add('d-none');
     currentScannedBarcode = '';
 }
 
@@ -108,11 +146,14 @@ function stopTraceScanning() {
     if (html5QrCodeTrace && html5QrCodeTrace.isScanning) {
         html5QrCodeTrace.stop().catch(err => console.log("Stop camera error:", err));
     }
+    document.getElementById('resumeScanOverlay')?.classList.remove('d-none');
 }
 
 async function startTraceScanning() {
     const qrContainer = document.getElementById("qr-reader-trace");
     if (!qrContainer) return;
+
+    document.getElementById('resumeScanOverlay')?.classList.add('d-none');
 
     const tryStartCamera = async (attempts = 0) => {
         const currentWidth = qrContainer.clientWidth || qrContainer.offsetWidth;
@@ -170,7 +211,9 @@ window.executeTraceScan = async function() {
     } catch (err) {
         document.getElementById('traceLoading').classList.add('d-none');
         Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo}`, 'warning').then(() => {
-            setTimeout(() => document.getElementById('scanInput').focus(), 300);
+            setTimeout(() => {
+                resumeScanning();
+            }, 300);
         });
     }
 }
@@ -178,11 +221,13 @@ window.executeTraceScan = async function() {
 function renderTraceData(data) {
     const tag = data.tag_info;
     const history = data.history;
+
     currentScannedBarcode = tag.master_pallet_no || tag.serial_no;
-    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success' : (tag.status === 'EMPTY' ? 'bg-secondary' : (tag.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info text-dark'));
+
+    let badgeClass = tag.status === 'AVAILABLE' ? 'bg-success text-white' : (tag.status === 'EMPTY' ? 'bg-secondary text-white' : (tag.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info text-dark'));
     
     document.getElementById('traceSerial').innerText = currentScannedBarcode;
-    document.getElementById('traceStatus').className = `badge ${badgeClass} rounded-pill fs-6 px-3 py-2 shadow-sm`;
+    document.getElementById('traceStatus').className = `badge ${badgeClass} px-3 py-2 rounded-pill shadow-sm`;
     document.getElementById('traceStatus').innerText = tag.status;
     document.getElementById('traceItem').innerText = tag.item_no;
     document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
@@ -215,21 +260,20 @@ function renderTraceData(data) {
     const receiveArea = document.getElementById('traceReceiveArea');
     const issueArea = document.getElementById('traceIssueArea');
     
-    actionArea.classList.add('d-none');
+    actionArea.classList.remove('d-none');
     receiveArea.classList.add('d-none');
     issueArea.classList.add('d-none');
 
+    const autoReceive = document.getElementById('continuousScanToggle');
+    const isContinuous = (autoReceive && autoReceive.checked);
+
     if (tag.status === 'PENDING' && typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM) {
-        actionArea.classList.remove('d-none');
         receiveArea.classList.remove('d-none');
-        
-        const autoReceive = document.getElementById('continuousScanToggle');
-        if (autoReceive && autoReceive.checked) {
+        if (isContinuous) {
             setTimeout(() => receiveScannedTag(), 300);
         }
     }
     else if (tag.status === 'AVAILABLE' && typeof CAN_MANAGE_WH !== 'undefined' && CAN_MANAGE_WH) {
-        actionArea.classList.remove('d-none');
         issueArea.classList.remove('d-none');
     }
 }
@@ -254,13 +298,13 @@ window.receiveScannedTag = async function() {
         if (typeof loadHistory === 'function') loadHistory();
         if (typeof loadDashboardData === 'function') loadDashboardData();
         
-        document.getElementById('traceActionArea').classList.add('d-none');
-        document.getElementById('traceStatus').className = 'badge bg-success fs-6 shadow-sm';
+        document.getElementById('traceReceiveArea').classList.add('d-none');
+        document.getElementById('traceStatus').className = 'badge bg-success text-white rounded-pill px-3 py-2 shadow-sm';
         document.getElementById('traceStatus').innerText = 'AVAILABLE';
         
         const autoReceive = document.getElementById('continuousScanToggle');
         if (autoReceive && autoReceive.checked) {
-            setTimeout(() => startTraceScanning(), 1000); 
+            setTimeout(() => resumeScanning(), 800); 
         }
     }
 };
@@ -296,14 +340,24 @@ window.issueScannedTag = async function(ignoreFifo = false) {
         }
 
         if (typeof showToast === 'function') {
-            showToast('เบิกจ่ายสำเร็จ!', 'var(--bs-success)');
+            showToast('โอนย้าย/เบิกจ่าย สำเร็จ!', 'var(--bs-success)');
         } else {
             Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'เบิกจ่ายสำเร็จ!' });
         }
+        
         executeTraceScan();
 
         if (typeof loadHistory === 'function') loadHistory();
         if (typeof loadDashboardData === 'function') loadDashboardData();
+
+        document.getElementById('traceIssueArea').classList.add('d-none');
+        document.getElementById('traceStatus').className = 'badge bg-warning text-dark rounded-pill px-3 py-2 shadow-sm';
+        document.getElementById('traceStatus').innerText = 'WIP';
+
+        const autoReceive = document.getElementById('continuousScanToggle');
+        if (autoReceive && autoReceive.checked) {
+            setTimeout(() => resumeScanning(), 800); 
+        }
     }
 };
 
@@ -329,19 +383,19 @@ window.renderPrintTags = function(tags) {
                 <table class="t-table">
                     <tr>
                         <td style="width: 55%;"><b>QTY:</b> <span class="t-hl">${parseFloat(tag.qty_per_pallet || tag.qty || 0).toLocaleString()}</span></td>
-                        <td style="width: 45%;"><b>Inv:</b> ${escapeHTML(tag.warehouse_no || tag.wh || '')}</td>
+                        <td style="width: 45%;"><b>Inv:</b> <span style="display:inline-block; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.warehouse_no || tag.wh || '')}">${escapeHTML(tag.warehouse_no || tag.wh || '')}</span></td>
                     </tr>
                     <tr>
-                        <td><b>PO:</b> ${escapeHTML(tag.po_number || '')}</td>
-                        <td><b>Pallet:</b> ${escapeHTML(tag.pallet_no || '')}</td>
+                        <td style="padding-right: 5px;"><b>PO:</b> <span style="display:inline-block; max-width:115px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.po_number || '')}">${escapeHTML(tag.po_number || '')}</span></td>
+                        <td><b>Pallet:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.pallet_no || '')}">${escapeHTML(tag.pallet_no || '')}</span></td>
                     </tr>
                     <tr>
-                        <td><b>CTN:</b> ${escapeHTML(tag.ctn_number || '')}</td>
-                        <td><b>Week:</b> ${escapeHTML(tag.week_no || '')}</td>
+                        <td style="padding-right: 5px;"><b>CTN:</b> <span style="display:inline-block; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.ctn_number || '')}">${escapeHTML(tag.ctn_number || '')}</span></td>
+                        <td><b>Week:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.week_no || '')}">${escapeHTML(tag.week_no || '')}</span></td>
                     </tr>
                     <tr>
-                        <td><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date || tag.created_at || ''))}</td>
-                        <td><b>Remark:</b> <span style="display:inline-block; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">${escapeHTML(tag.remark || '-')}</span></td>
+                        <td style="padding-right: 5px;"><b>Date:</b> ${escapeHTML(formatDateForPrint(tag.received_date || tag.created_at || ''))}</td>
+                        <td><b>Remark:</b> <span style="display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(tag.remark || '')}">${escapeHTML(tag.remark || '-')}</span></td>
                     </tr>
                 </table>
             </div>
@@ -394,10 +448,16 @@ window.renderMasterPalletTag = function(masterData) {
                     <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty).toLocaleString()}</span></td>
                     <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${masterData.total_tags || 1}</span></td>
                 </tr>
-                <tr><td colspan="2"><b>PO:</b> ${escapeHTML(masterData.po_number || '-')}</td></tr>
                 <tr>
-                    <td><b>Date:</b> ${escapeHTML(formatDateForPrint(masterData.received_date))}</td>
-                    <td><b>Inv:</b> ${escapeHTML(masterData.warehouse_no || '-')}</td>
+                    <td colspan="2"><b>PO:</b> <span style="display:inline-block; max-width:115px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(masterData.po_number || '-')}">${escapeHTML(masterData.po_number || '-')}</span></td>
+                </tr>
+                <tr>
+                    <td style="padding-right: 5px;"><b>Inv:</b> <span style="display:inline-block; max-width:115px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(masterData.warehouse_no || '-')}">${escapeHTML(masterData.warehouse_no || '-')}</span></td>
+                    <td><b>Week:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(masterData.week_no || '')}">${escapeHTML(masterData.week_no || '-')}</span></td>
+                </tr>
+                <tr>
+                    <td style="padding-right: 5px;"><b>Date:</b> ${escapeHTML(formatDateForPrint(masterData.received_date))}</td>
+                    <td><b>Remark:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(masterData.remark || '')}">${escapeHTML(masterData.remark || '-')}</span></td>
                 </tr>
             </table>
         </div>
@@ -412,6 +472,7 @@ window.renderMasterPalletTag = function(masterData) {
     if(typeof QRCode !== 'undefined') {
         new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), { text: masterData.master_pallet_no, width: 85, height: 85 });
     }
+
     setTimeout(() => {
         window.print();
         printArea.classList.add('d-none');
@@ -425,7 +486,7 @@ window.reprintMasterPallet = async function(masterPalletNo) {
         const result = await fetchAPI(`get_master_pallet_details&master_pallet_no=${encodeURIComponent(masterPalletNo)}`, 'GET');
         if (result.success && result.data) {
             if (typeof renderMasterPalletTag === 'function') {
-                renderMasterPalletTag(result.data);
+                renderMasterPalletTag(result.data); 
             } else {
                 Swal.fire('Error', 'ไม่พบโมดูลการพิมพ์สติ๊กเกอร์ในระบบ', 'error');
             }

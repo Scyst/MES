@@ -50,7 +50,7 @@
             width: 4in; 
             height: 2in; 
             box-sizing: border-box;
-            padding: 2mm 4mm 2mm 8mm; 
+            padding: 2mm 0mm 2mm 4mm; 
             page-break-after: always;
             font-family: 'Arial', sans-serif;
             color: #000;
@@ -62,21 +62,21 @@
         }
 
         .tag-details {
-            width: 70%;
-            padding-right: 8px;
+            width: 75%;
+            padding-right: 4px;
             display: flex;
             flex-direction: column;
             justify-content: center; 
             height: 100%;
         }
 
-        .t-title { font-size: 18px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
-        .t-sub { font-size: 11px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
+        .t-title { font-size: 18px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; }
+        .t-sub { font-size: 11px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; }
         
         .t-desc { 
             font-size: 11px; 
-            line-height: 1.1; 
-            margin-bottom: 6px; 
+            line-height: 1.2; 
+            margin-bottom: 4px; 
             border-bottom: 1px solid #000; 
             padding-bottom: 4px; 
             display: -webkit-box;
@@ -87,12 +87,12 @@
             white-space: normal; 
         }
         
-        .t-table { width: 100%; font-size: 11px; line-height: 1.2; }
-        .t-table td { padding: 2px 0 0 0; vertical-align: bottom; }
+        .t-table { width: 100%; font-size: 11px; line-height: 1.15; }
+        .t-table td { padding: 2px 0 2px 0; vertical-align: middle; }
         .t-hl { font-size: 16px; font-weight: bold; line-height: 0.8; display: inline-block; }
 
         .tag-qr {
-            width: 30%;
+            width: 26%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -106,6 +106,7 @@
     #qr-reader-trace__dashboard { display: none !important; }
     #html5-qrcode-button-camera-stop { display: none !important; }
     #html5-qrcode-anchor-scan-type-change { display: none !important; }
+    
     #qr-reader-container-trace {
         width: 100%;
         min-height: 260px;
@@ -145,11 +146,18 @@
                         <input type="file" id="trace-image-file" accept="image/*" class="d-none">
                     </div>
 
-                    <div id="qr-reader-container-trace" class="bg-dark rounded overflow-hidden" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                        <div id="qr-reader-trace" style="width: 100%;"></div>
+                    <div id="scannerContainer" class="position-relative bg-dark rounded-3 overflow-hidden shadow-sm" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <div id="qr-reader-trace" class="w-100"></div>
+                        
+                        <div id="resumeScanOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center bg-dark bg-opacity-75" style="z-index: 10;">
+                            <button class="btn btn-outline-light rounded-circle shadow mb-2 d-flex align-items-center justify-content-center" onclick="resumeScanning()" style="width: 60px; height: 60px;">
+                                <i class="fas fa-qrcode fa-2x"></i>
+                            </button>
+                            <span class="text-white fw-bold small">แตะเพื่อสแกนบาร์โค้ดถัดไป</span>
+                        </div>
                     </div>
 
-                    <div class="input-group input-group-sm mt-2 shadow-sm">
+                    <div class="input-group input-group-sm mt-3 shadow-sm">
                         <span class="input-group-text bg-light text-primary border-secondary-subtle"><i class="fas fa-keyboard"></i></span>
                         <input type="text" id="scanInput" class="form-control border-secondary-subtle fw-bold text-primary" placeholder="สแกนด้วยปืน หรือพิมพ์ Serial No..." autocomplete="off">
                         <button class="btn btn-primary fw-bold px-3" type="button" onclick="executeTraceScan()">
@@ -164,72 +172,43 @@
                     <span class="ms-2 text-muted fw-bold small">กำลังค้นหาข้อมูล...</span>
                 </div>
 
-                <div id="traceResult" class="d-none mt-3">
+                <div id="traceResult" class="d-none">
                     
-                    <div class="d-flex justify-content-between align-items-start mb-3 px-1">
-                        <div>
-                            <div class="text-muted small mb-1"><i class="fas fa-barcode me-1"></i> Serial / Pallet No.</div>
-                            <h4 class="fw-bold text-primary mb-0" id="traceSerial">-</h4>
-                        </div>
-                        <span id="traceStatus" class="badge rounded-pill fs-6 px-3 py-2 shadow-sm">-</span>
+                    <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded-3 border shadow-sm">
+                        <h6 class="fw-bold text-primary mb-0 ms-1" id="traceSerial" style="letter-spacing: 0.5px;">-</h6>
+                        <span id="traceStatus" class="badge px-3 py-2 rounded-pill shadow-sm">-</span>
                     </div>
 
-                    <div class="bg-white border rounded-3 p-3 shadow-sm mb-3">
-                        <div class="mb-3 border-bottom pb-2">
-                            <div class="fw-bold text-dark fs-6" id="traceItem">-</div>
-                            <div class="text-muted small" id="traceDesc">-</div>
-                        </div>
-                        
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <div class="text-muted small" style="font-size: 0.75rem;">PO Number</div>
-                                <div class="fw-bold text-dark text-truncate" id="tracePO">-</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-muted small" style="font-size: 0.75rem;">Invoice No.</div>
-                                <div class="fw-bold text-dark text-truncate" id="traceInv">-</div>
-                            </div>
-                        </div>
-
-                        <div class="p-2 bg-light rounded border border-secondary-subtle d-flex justify-content-between align-items-center">
-                            <span class="text-muted fw-bold small">Qty (เหลือ / รับเข้า):</span>
-                            <span class="fw-bold text-primary fs-5" id="traceQty">0 / 0</span>
+                    <div class="bg-white border rounded p-2 shadow-sm mb-3 text-muted" style="font-size: 0.85rem;">
+                        <div class="row g-2 px-1">
+                            <div class="col-8 fw-bold text-dark text-truncate"><i class="fas fa-cube me-1"></i> <span id="traceItem">-</span></div>
+                            <div class="col-4 text-end fw-bold text-primary fs-6" id="traceQty">-</div>
+                            <div class="col-12 text-truncate border-bottom pb-2 mb-1" id="traceDesc">-</div>
+                            <div class="col-6 text-truncate"><i class="fas fa-file-invoice me-1"></i> <span id="tracePO">-</span></div>
+                            <div class="col-6 text-end text-truncate"><i class="fas fa-warehouse me-1"></i> <span id="traceInv">-</span></div>
                         </div>
                     </div>
 
                     <div id="traceActionArea" class="d-none mb-3">
-                        
-                        <div id="traceReceiveArea" class="d-none bg-warning bg-opacity-10 border border-warning rounded-3 p-3 shadow-sm">
-                            <label class="form-label fw-bold text-dark small mb-2"><i class="fas fa-download text-warning me-1"></i> เลือกคลังเพื่อรับเข้า:</label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <select id="receiveLocationTrace" class="form-select fw-bold border-warning text-dark fs-6">
-                                    <option value="1008" selected>Store (วัตถุดิบ)</option>
-                                    <option value="1007">Warehouse (สินค้า)</option>
-                                </select>
-                                <button class="btn btn-success fw-bold px-3 fs-6" id="btnReceiveTrace" onclick="receiveScannedTag()">
-                                    รับเข้าสต็อก
-                                </button>
+                        <div id="traceReceiveArea" class="d-none">
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-success text-white border-success"><i class="fas fa-download"></i></span>
+                                <select id="receiveLocationTrace" class="form-select border-success fw-bold text-success"></select>
+                                <button class="btn btn-success fw-bold px-3" id="btnReceiveTrace" onclick="receiveScannedTag()">รับเข้าสต็อก</button>
                             </div>
                         </div>
-
-                        <div id="traceIssueArea" class="d-none bg-primary bg-opacity-10 border border-primary rounded-3 p-3 shadow-sm">
-                            <label class="form-label fw-bold text-dark small mb-2"><i class="fas fa-upload text-primary me-1"></i> เลือกปลายทางเบิกจ่าย:</label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <select id="issueLocationTrace" class="form-select fw-bold border-primary text-dark fs-6">
-                                    <option value="1009" selected>WIP (ไลน์ผลิต)</option>
-                                    <option value="1010">Scrap (ของเสีย)</option>
-                                </select>
-                                <button class="btn btn-primary fw-bold px-3 fs-6" id="btnIssueTrace" onclick="issueScannedTag()">
-                                    เบิกจ่าย
-                                </button>
+                        <div id="traceIssueArea" class="d-none">
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-warning text-dark border-warning"><i class="fas fa-dolly"></i></span>
+                                <select id="issueLocationTrace" class="form-select border-warning fw-bold text-dark"></select>
+                                <button class="btn btn-warning text-dark fw-bold px-3" id="btnIssueTrace" onclick="issueScannedTag()">เบิกจ่าย</button>
                             </div>
                         </div>
-
                     </div>
 
                     <div>
                         <h6 class="fw-bold text-secondary small mb-2"><i class="fas fa-history me-1"></i> ประวัติการเคลื่อนไหว</h6>
-                        <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 200px;">
+                        <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 180px;">
                             <table class="table table-sm table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
                                 <thead class="table-light sticky-top">
                                     <tr class="text-secondary">

@@ -205,7 +205,7 @@ $pageHelpId = "";
                                     <th style="min-width: 110px;">เพิ่มเข้าระบบ</th>
                                     <th style="min-width: 90px;">วันที่รับจริง</th>
                                     <th class="text-center" style="min-width: 130px;">Serial No.</th>
-                                    <th class="text-center" style="min-width: 100px;">Item No.</th>
+                                    <th class="text-center" style="min-width: 100px;">Part No.</th>
                                     <th class="text-center" style="width:300px; max-width: 350px;">PO Number</th>
                                     <th class="text-center" style="width: 120px; max-width: 120px;">Invoice No.</th>
                                     <th class="text-center" style="min-width: 100px;">Pallet / CTN</th>
@@ -281,7 +281,7 @@ $pageHelpId = "";
                         <table class="table table-sm table-striped table-hover align-middle mb-0 text-nowrap" id="previewTable" style="font-size: 0.875rem;">
                             <thead class="table-secondary sticky-top shadow-sm" style="z-index: 10;">
                                 <tr class="text-secondary">
-                                    <th class="px-3 py-2">Item No.</th>
+                                    <th class="px-3 py-2">Part No.</th>
                                     <th class="py-2">Category</th>
                                     <th class="py-2">Description</th>
                                     <th class="py-2">PO Number</th>
