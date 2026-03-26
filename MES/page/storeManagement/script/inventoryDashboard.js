@@ -103,6 +103,9 @@ async function loadDashboardData() {
                             <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="นับ/ปรับสต็อก">
                                 <i class="fas fa-clipboard-list"></i>
                             </button>
+                            <button class="btn btn-sm btn-light border text-info" onclick="openCreateTransferModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}', ${availableQty})" title="โอนย้าย/ส่ง Shipping">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -120,6 +123,9 @@ async function loadDashboardData() {
                                 <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-search-location"></i></button>
                                 <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-clipboard-list"></i></button>
                             </div>
+                            <button class="btn btn-sm btn-light border text-info" onclick="openCreateTransferModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}', ${availableQty})" title="โอนย้าย/ส่ง Shipping">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
                         </div>
                         
                         <h6 class="fw-bold text-primary mb-1 mt-1" style="font-size: 1.1rem;">${escapeHTML(row.item_no)}</h6>
@@ -283,24 +289,33 @@ async function submitCycleCount(e) {
     }
 }
 
+function updateMainAlertBadge() {
+    const c1 = parseInt(document.getElementById('badgePendingCount').innerText) || 0;
+    const c2 = parseInt(document.getElementById('badgeTransferCount').innerText) || 0;
+    const mainBadge = document.getElementById('badgeTotalAlert');
+    
+    if (mainBadge) {
+        if (c1 + c2 > 0) mainBadge.classList.remove('d-none');
+        else mainBadge.classList.add('d-none');
+    }
+}
+
 async function checkPendingApprovals() {
     if (typeof CAN_MANAGE_WH === 'undefined' || !CAN_MANAGE_WH) return;
-
     try {
         const res = await fetchAPI('get_pending_counts', 'GET');
-        const btn = document.getElementById('btnApprovalModal');
         const badge = document.getElementById('badgePendingCount');
-        
-        if (res && btn && badge) {
-            btn.classList.remove('d-none');
+        if (res && badge) {
             if (res.count > 0) {
                 badge.innerText = res.count;
-                badge.style.display = 'block';
+                badge.classList.remove('d-none');
             } else {
-                badge.style.display = 'none';
+                badge.innerText = '0';
+                badge.classList.add('d-none');
             }
+            updateMainAlertBadge();
         }
-    } catch (e) { console.error('Failed to check approvals', e); }
+    } catch (e) { console.error(e); }
 }
 
 async function openApprovalModal() {
@@ -428,5 +443,262 @@ function toggleMobileCards() {
         btn.classList.remove('btn-outline-primary');
         btn.classList.add('btn-primary', 'text-white');
         icon.className = 'fas fa-eye'; 
+    }
+}
+
+// --- ระบบโอนย้าย (Stock Transfer) ---
+let createTransferModalInst;
+let confirmTransferModalInst;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const ctModalEl = document.getElementById('createTransferModal');
+    if(ctModalEl) createTransferModalInst = new bootstrap.Modal(ctModalEl);
+    
+    const cfModalEl = document.getElementById('confirmTransferModal');
+    if(cfModalEl) confirmTransferModalInst = new bootstrap.Modal(cfModalEl);
+
+    checkPendingTransfers();
+    setInterval(checkPendingTransfers, 30000); // เช็คยอดรอส่งทุก 30 วิ
+});
+
+function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
+    document.getElementById('formCreateTransfer').reset();
+    document.getElementById('transItemId').value = itemId;
+    document.getElementById('transItemNo').innerText = itemNo;
+    document.getElementById('transItemDesc').innerText = itemDesc || '-';
+    document.getElementById('transAvailQty').innerText = parseFloat(availQty).toLocaleString();
+    
+    // โหลด Location ใส่ Dropdown
+    const filterSelect = document.getElementById('locationFilter');
+    const fromLoc = document.getElementById('transFromLoc');
+    const toLoc = document.getElementById('transToLoc');
+    
+    fromLoc.innerHTML = '<option value="" selected disabled>เลือกต้นทาง...</option>';
+    toLoc.innerHTML = '<option value="" selected disabled>เลือกปลายทาง...</option>';
+    
+    Array.from(filterSelect.options).forEach(opt => {
+        if (opt.value !== 'ALL') {
+            fromLoc.add(new Option(opt.text, opt.value));
+            toLoc.add(new Option(opt.text, opt.value));
+            
+            // ตั้งค่า Default ปลายทางเป็น Shipping ถ้ามีคำว่า Shipping
+            if(opt.text.toUpperCase().includes('SHIPPING')) {
+                toLoc.value = opt.value;
+            }
+        }
+    });
+
+    createTransferModalInst.show();
+    setTimeout(() => document.getElementById('transQty').focus(), 500);
+}
+
+async function submitTransferRequest(e) {
+    e.preventDefault();
+    if (!confirm('ยืนยันสร้างรายการโอนย้าย? (สถานะจะเป็น รอรับของ)')) return;
+
+    const formData = new FormData();
+    formData.append('item_id', document.getElementById('transItemId').value);
+    formData.append('from_loc_id', document.getElementById('transFromLoc').value);
+    formData.append('to_loc_id', document.getElementById('transToLoc').value);
+    formData.append('quantity', document.getElementById('transQty').value);
+    formData.append('remark', document.getElementById('transRemark').value);
+
+    const res = await fetchAPI('create_transfer_request', 'POST', formData, 'btnSubmitTransfer');
+    if (res) {
+        showToast(res.message, 'var(--bs-success)');
+        createTransferModalInst.hide();
+        checkPendingTransfers();
+        loadDashboardData(); // อัปเดตยอด Pending ทันที
+    }
+}
+
+async function checkPendingTransfers() {
+    try {
+        const res = await fetchAPI('get_pending_transfers', 'GET');
+        const badge = document.getElementById('badgeTransferCount');
+        if (res && badge) {
+            if (res.count > 0) {
+                badge.innerText = res.count;
+                badge.classList.remove('d-none');
+            } else {
+                badge.innerText = '0';
+                badge.classList.add('d-none');
+            }
+            updateMainAlertBadge();
+        }
+    } catch (e) { console.error(e); }
+}
+
+// หน่วงเวลาพิมพ์ค้นหาใน Modal 0.5 วิ
+let pendingSearchTimer;
+document.getElementById('pendingSearch')?.addEventListener('input', () => {
+    clearTimeout(pendingSearchTimer);
+    pendingSearchTimer = setTimeout(() => { loadPendingTransfers(); }, 500);
+});
+
+// เพิ่มตัวแปรสำหรับคุม Pagination ของ Modal
+let pendingCurrentPage = 1;
+let pendingRowsPerPage = 100;
+let pendingTotalPages = 1;
+
+// อัปเดตฟังก์ชัน open ให้รีเซ็ตหน้ากลับไปหน้า 1 เสมอ
+function openConfirmTransferModal() {
+    document.getElementById('pendingTypeFilter').value = 'ALL'; 
+    document.getElementById('pendingSearch').value = ''; 
+    document.getElementById('selectAllTransfers').checked = false;
+    pendingCurrentPage = 1; // รีเซ็ตหน้า
+    updateBulkButton();
+    confirmTransferModalInst.show();
+    loadPendingTransfers();
+}
+
+// อัปเดตฟังก์ชันโหลดข้อมูล ให้ส่ง page และ limit ไปด้วย
+async function loadPendingTransfers() {
+    const tbody = document.getElementById('pendingTransferTbody');
+    const typeFilter = document.getElementById('pendingTypeFilter').value;
+    const searchStr = encodeURIComponent(document.getElementById('pendingSearch').value.trim());
+    
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></td></tr>';
+    document.getElementById('selectAllTransfers').checked = false;
+    updateBulkButton();
+
+    try {
+        // ส่งตัวแปร page และ limit ไปที่ API
+        const res = await fetchAPI(`get_pending_transfers&type=${typeFilter}&search=${searchStr}&page=${pendingCurrentPage}&limit=${pendingRowsPerPage}`, 'GET');
+        tbody.innerHTML = '';
+        
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่มีรายการที่ตรงกับเงื่อนไข</td></tr>';
+            document.getElementById('pendingPaginationInfo').innerText = 'แสดง 0 ถึง 0 จาก 0 รายการ';
+            document.getElementById('pendingPaginationControls').innerHTML = '';
+            return;
+        }
+
+        res.data.forEach(row => {
+            const isReplacement = row.notes && row.notes.includes('Replacement');
+            const typeBadge = isReplacement ? '<span class="badge bg-danger ms-1">ชดเชยของเสีย</span>' : '';
+
+            const tr = `
+                <tr>
+                    <td class="text-center px-2">
+                        <input class="form-check-input transfer-checkbox shadow-sm" type="checkbox" value="${row.transfer_id}" onchange="updateBulkButton()" style="transform: scale(1.2); cursor:pointer;">
+                    </td>
+                    <td class="px-2 text-muted small">${row.created_at.substring(0,16)}</td>
+                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)} ${typeBadge}</td>
+                    <td>
+                        <span class="badge bg-secondary">${escapeHTML(row.from_loc)}</span> 
+                        <i class="fas fa-arrow-right text-muted mx-1"></i> 
+                        <span class="badge bg-info text-dark">${escapeHTML(row.to_loc)}</span>
+                    </td>
+                    <td class="text-end fw-bold text-dark fs-6">${parseFloat(row.quantity).toLocaleString()}</td>
+                    <td class="small">${escapeHTML(row.requester)}</td>
+                    <td class="small text-truncate" style="max-width: 150px;" title="${escapeHTML(row.notes)}">${escapeHTML(row.notes || '-')}</td>
+                    <td class="text-center px-3">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-sm btn-success fw-bold" onclick="processTransfer(${row.transfer_id}, 'COMPLETED')" title="รับของเข้าปลายทาง"><i class="fas fa-check"></i></button>
+                            <button class="btn btn-sm btn-danger fw-bold" onclick="processTransfer(${row.transfer_id}, 'CANCELLED')" title="ยกเลิกรายการ"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+        });
+
+        // วาด Pagination
+        if (res.pagination) {
+            pendingTotalPages = res.pagination.total_pages || 1;
+            renderPendingPagination(res.pagination.total_records);
+        }
+
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    }
+}
+
+// ฟังก์ชันวาดปุ่ม Pagination
+function renderPendingPagination(totalRecords) {
+    const start = totalRecords === 0 ? 0 : ((pendingCurrentPage - 1) * pendingRowsPerPage) + 1;
+    const end = Math.min(pendingCurrentPage * pendingRowsPerPage, totalRecords);
+    document.getElementById('pendingPaginationInfo').innerText = `แสดง ${start} ถึง ${end} จาก ${totalRecords} รายการ`;
+
+    const paginationUl = document.getElementById('pendingPaginationControls');
+    paginationUl.innerHTML = '';
+    if (pendingTotalPages <= 1) return;
+
+    paginationUl.innerHTML += `<li class="page-item ${pendingCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePendingPage(${pendingCurrentPage - 1}, event)">ก่อนหน้า</a></li>`;
+
+    let startPage = Math.max(1, pendingCurrentPage - 2);
+    let endPage = Math.min(pendingTotalPages, startPage + 4);
+    if (endPage - startPage < 4) { startPage = Math.max(1, endPage - 4); }
+
+    for (let i = startPage; i <= endPage; i++) {
+        paginationUl.innerHTML += `<li class="page-item ${pendingCurrentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="changePendingPage(${i}, event)">${i}</a></li>`;
+    }
+    paginationUl.innerHTML += `<li class="page-item ${pendingCurrentPage === pendingTotalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePendingPage(${pendingCurrentPage + 1}, event)">ถัดไป</a></li>`;
+}
+
+function changePendingPage(page, event) {
+    if (event) event.preventDefault();
+    if (page < 1 || page > pendingTotalPages) return;
+    pendingCurrentPage = page;
+    loadPendingTransfers();
+}
+
+// ฟังก์ชัน Select All
+function toggleSelectAllTransfers(checkbox) {
+    const checkboxes = document.querySelectorAll('.transfer-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateBulkButton();
+}
+
+// อัปเดตจำนวนและแสดงปุ่ม Bulk
+function updateBulkButton() {
+    const checkedCount = document.querySelectorAll('.transfer-checkbox:checked').length;
+    const btnApprove = document.getElementById('btnBulkApprove');
+    document.getElementById('selectedCount').innerText = checkedCount;
+    
+    if (checkedCount > 0) {
+        btnApprove.classList.remove('d-none');
+    } else {
+        btnApprove.classList.add('d-none');
+        document.getElementById('selectAllTransfers').checked = false;
+    }
+}
+
+// ยิง API Bulk Approve
+async function bulkProcessTransfer(status) {
+    const checkboxes = document.querySelectorAll('.transfer-checkbox:checked');
+    const transferIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (transferIds.length === 0) return;
+    if (!confirm(`ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ รวดเดียว?`)) return;
+
+    const formData = new FormData();
+    formData.append('transfer_ids', JSON.stringify(transferIds));
+    formData.append('action_status', status);
+
+    const res = await fetchAPI('bulk_process_transfer_request', 'POST', formData);
+    if (res) {
+        showToast(res.message, 'var(--bs-success)');
+        loadPendingTransfers(); 
+        checkPendingTransfers(); 
+        loadDashboardData(); 
+    }
+}
+
+async function processTransfer(transferId, status) {
+    let msg = status === 'COMPLETED' ? 'ยืนยันรับของเข้าปลายทาง (ตัดสต็อกจริง)?' : 'ต้องการยกเลิกคำขอนี้ใช่หรือไม่?';
+    if (!confirm(msg)) return;
+
+    const formData = new FormData();
+    formData.append('transfer_id', transferId);
+    formData.append('action_status', status);
+
+    const res = await fetchAPI('process_transfer_request', 'POST', formData);
+    if (res) {
+        showToast(res.message, 'var(--bs-success)');
+        loadPendingTransfers();
+        checkPendingTransfers();
+        loadDashboardData();
     }
 }

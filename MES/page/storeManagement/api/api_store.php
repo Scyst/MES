@@ -18,7 +18,8 @@ try {
     $writeActions = [
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
-        'update_print_status', 'create_request', 'approve_request', 'reject_request'
+        'update_print_status', 'create_request', 'approve_request', 'reject_request',
+        'bulk_receive_tags'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -506,36 +507,48 @@ try {
             $startDate = $_GET['start_date'] ?? date('Y-m-d');
             $endDate = $_GET['end_date'] ?? date('Y-m-d');
             $search = $_GET['search'] ?? '';
+            $statusFilter = $_GET['status'] ?? 'ALL';
             $isExport = isset($_GET['export']) && $_GET['export'] === 'true';
 
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
 
-            $conditions = ["t.created_at >= ?", "t.created_at < ?"];
+            $baseConditions = ["t.created_at >= ?", "t.created_at < ?"];
             $params = [$startDate . " 00:00:00", date('Y-m-d', strtotime($endDate . ' +1 day')) . " 00:00:00"];
 
             if (!empty($search)) {
-                $conditions[] = "(t.serial_no LIKE ? OR t.master_pallet_no LIKE ? OR i.part_no LIKE ? OR i.sap_no LIKE ? OR t.po_number LIKE ? OR t.warehouse_no LIKE ? OR t.pallet_no LIKE ? OR t.ctn_number LIKE ?)";
+                $baseConditions[] = "(t.serial_no LIKE ? OR t.master_pallet_no LIKE ? OR i.part_no LIKE ? OR i.sap_no LIKE ? OR t.po_number LIKE ? OR t.warehouse_no LIKE ? OR t.pallet_no LIKE ? OR t.ctn_number LIKE ?)";
                 $searchWildcard = "%$search%";
                 $params = array_merge($params, array_fill(0, 8, $searchWildcard));
             }
 
-            $whereClause = implode(" AND ", $conditions);
-
-            $kpiSql = "SELECT COUNT(*) as total_tags, ISNULL(SUM(qty_per_pallet), 0) as total_qty, SUM(CASE WHEN ISNULL(print_count, 0) > 0 THEN 1 ELSE 0 END) as printed_tags, SUM(CASE WHEN ISNULL(print_count, 0) = 0 THEN 1 ELSE 0 END) as pending_tags
+            $kpiWhereClause = implode(" AND ", $baseConditions);
+            $kpiSql = "SELECT COUNT(*) as total_tags, ISNULL(SUM(qty_per_pallet), 0) as total_qty, 
+                              SUM(CASE WHEN ISNULL(print_count, 0) > 0 THEN 1 ELSE 0 END) as printed_tags, 
+                              SUM(CASE WHEN ISNULL(print_count, 0) = 0 THEN 1 ELSE 0 END) as pending_tags
                        FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                        LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-                       WHERE $whereClause";
+                       WHERE $kpiWhereClause";
             
             $kpiStmt = $pdo->prepare($kpiSql);
             $kpiStmt->execute($params);
             $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
-
+            $tableConditions = $baseConditions;
+            
+            if ($statusFilter === 'PENDING') {
+                $tableConditions[] = "t.status = 'PENDING'";
+            } elseif ($statusFilter === 'AVAILABLE') {
+                $tableConditions[] = "t.status = 'AVAILABLE'";
+            } elseif ($statusFilter === 'ISSUED') {
+                $tableConditions[] = "t.status NOT IN ('PENDING', 'AVAILABLE')";
+            }
+            
+            $tableWhereClause = implode(" AND ", $tableConditions);
             $sql = "SELECT t.*, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description 
                     FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                     LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-                    WHERE $whereClause
+                    WHERE $tableWhereClause
                     ORDER BY t.created_at DESC";
 
             if (!$isExport) {
@@ -546,10 +559,15 @@ try {
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $countFilteredSql = "SELECT COUNT(*) FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK) LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id WHERE $tableWhereClause";
+            $countFilteredStmt = $pdo->prepare($countFilteredSql);
+            $countFilteredStmt->execute($params);
+            $filteredRecords = $countFilteredStmt->fetchColumn();
             
             echo json_encode([
-                'success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC), 'kpi' => $kpi,
-                'pagination' => $isExport ? null : ['total_records' => $kpi['total_tags'], 'current_page' => $page, 'total_pages' => ceil($kpi['total_tags'] / $limit)]
+                'success' => true, 'data' => $data, 'kpi' => $kpi,
+                'pagination' => $isExport ? null : ['total_records' => $filteredRecords, 'current_page' => $page, 'total_pages' => ceil($filteredRecords / $limit)]
             ]);
             break;
 
@@ -909,6 +927,197 @@ try {
                     'total_pages' => ceil($kpi['total_trans'] / $limit)
                 ]
             ]);
+            break;
+
+        case 'create_transfer_request':
+            $item_id = (int)($_POST['item_id'] ?? 0);
+            $from_loc_id = (int)($_POST['from_loc_id'] ?? 0);
+            $to_loc_id = (int)($_POST['to_loc_id'] ?? 0);
+            $qty = (float)($_POST['quantity'] ?? 0);
+            $remark = trim($_POST['remark'] ?? '');
+
+            if ($item_id === 0 || $from_loc_id === 0 || $to_loc_id === 0 || $qty <= 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (Item, Locations, Qty)");
+            }
+            if ($from_loc_id === $to_loc_id) {
+                throw new Exception("คลังต้นทางและปลายทางต้องไม่ซ้ำกัน");
+            }
+
+            $uuid = 'TRF-' . strtoupper(substr(md5(uniqid()), 0, 8));
+            $sql = "INSERT INTO dbo.STOCK_TRANSFER_ORDERS 
+                    (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, GETDATE())";
+            
+            $pdo->prepare($sql)->execute([$uuid, $item_id, $qty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark]);
+            
+            echo json_encode(['success' => true, 'message' => 'สร้างรายการรอโอนย้ายสำเร็จ']);
+            break;
+
+        case 'get_pending_transfers':
+            $typeFilter = $_GET['type'] ?? 'ALL';
+            $search = $_GET['search'] ?? '';
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $limit = max(10, (int)($_GET['limit'] ?? 100));
+            $offset = ($page - 1) * $limit;
+            
+            $conditions = ["t.status = 'PENDING'"];
+            $params = [];
+
+            if ($typeFilter === 'REPLACEMENT') {
+                $conditions[] = "t.notes LIKE '%Replacement:%'";
+            } elseif ($typeFilter === 'NORMAL') {
+                $conditions[] = "(t.notes NOT LIKE '%Replacement:%' OR t.notes IS NULL)";
+            }
+
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.notes LIKE ?)";
+                $searchWildcard = "%$search%";
+                array_push($params, $searchWildcard, $searchWildcard, $searchWildcard);
+            }
+
+            $whereClause = implode(" AND ", $conditions);
+            $countSql = "SELECT COUNT(*) 
+                         FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                         JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                         WHERE $whereClause";
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $totalRecords = (int)$countStmt->fetchColumn();
+            $sql = "SELECT t.transfer_id, t.transfer_uuid, t.quantity, t.created_at, t.notes,
+                           ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                           loc_from.location_name AS from_loc, loc_to.location_name AS to_loc,
+                           ISNULL(e.name_th, u.username) AS requester
+                    FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                    JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                    WHERE $whereClause
+                    ORDER BY t.created_at ASC
+                    OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY"; 
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $totalBadgeCount = $pdo->query("SELECT COUNT(*) FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE status = 'PENDING'")->fetchColumn();
+
+            echo json_encode([
+                'success' => true, 
+                'data' => $data, 
+                'count' => $totalBadgeCount,
+                'pagination' => [
+                    'total_records' => $totalRecords,
+                    'current_page' => $page,
+                    'total_pages' => ceil($totalRecords / $limit)
+                ]
+            ]);
+            break;
+
+        case 'process_transfer_request':
+            $transfer_id = (int)($_POST['transfer_id'] ?? 0);
+            $action_status = $_POST['action_status'] ?? '';
+
+            if ($transfer_id === 0 || !in_array($action_status, ['COMPLETED', 'CANCELLED'])) {
+                throw new Exception("คำสั่งไม่ถูกต้อง");
+            }
+
+            $pdo->beginTransaction();
+
+            $sqlGet = "SELECT * FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?";
+            $stmtGet = $pdo->prepare($sqlGet);
+            $stmtGet->execute([$transfer_id]);
+            $req = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+            if (!$req) throw new Exception("ไม่พบรายการนี้");
+            if ($req['status'] !== 'PENDING') throw new Exception("รายการนี้ถูกจัดการไปแล้ว");
+
+            if ($action_status === 'COMPLETED') {
+                $qty = (float)$req['quantity'];
+                $spStock = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
+                $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
+                $transSql = "INSERT INTO dbo.STOCK_TRANSACTIONS 
+                             (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, notes) 
+                             VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?)";
+                $pdo->prepare($transSql)->execute([
+                    $req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], 
+                    $currentUser['id'], $req['transfer_uuid'], $req['notes']
+                ]);
+            }
+
+            $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = ?, confirmed_by_user_id = ?, confirmed_at = GETDATE() WHERE transfer_id = ?")
+                ->execute([$action_status, $currentUser['id'], $transfer_id]);
+
+            $pdo->commit();
+            $msg = $action_status === 'COMPLETED' ? "โอนย้ายสต็อกสำเร็จ!" : "ยกเลิกรายการสำเร็จ!";
+            echo json_encode(['success' => true, 'message' => $msg]);
+            break;
+
+        case 'bulk_process_transfer_request':
+            $transfer_ids = json_decode($_POST['transfer_ids'], true);
+            $action_status = $_POST['action_status'] ?? ''; // 'COMPLETED' or 'CANCELLED'
+
+            if (empty($transfer_ids) || !is_array($transfer_ids) || !in_array($action_status, ['COMPLETED', 'CANCELLED'])) {
+                throw new Exception("ข้อมูลไม่ถูกต้อง");
+            }
+
+            $pdo->beginTransaction();
+            $successCount = 0;
+
+            $spStock = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+            $transStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, notes) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?)");
+            $updStmt = $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = ?, confirmed_by_user_id = ?, confirmed_at = GETDATE() WHERE transfer_id = ?");
+
+            $sqlGet = "SELECT * FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?";
+            $stmtGet = $pdo->prepare($sqlGet);
+
+            foreach ($transfer_ids as $tid) {
+                $stmtGet->execute([$tid]);
+                $req = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+                if ($req && $req['status'] === 'PENDING') {
+                    if ($action_status === 'COMPLETED') {
+                        $qty = (float)$req['quantity'];
+                        $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
+                        $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
+                        
+                        $transStmt->execute([
+                            $req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], 
+                            $currentUser['id'], $req['transfer_uuid'], $req['notes']
+                        ]);
+                    }
+                    $updStmt->execute([$action_status, $currentUser['id'], $tid]);
+                    $successCount++;
+                }
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "ดำเนินการเสร็จสิ้นจำนวน $successCount รายการ"]);
+            break;
+
+        case 'bulk_receive_tags':
+            $serials = json_decode($_POST['serials'], true);
+            $location_id = (int)($_POST['location_id'] ?? 0);
+
+            if (!is_array($serials) || empty($serials)) {
+                throw new Exception("ไม่มีรายการที่เลือกรับเข้า");
+            }
+            if ($location_id === 0) {
+                throw new Exception("กรุณาระบุคลัง (Location) ที่ต้องการรับเข้า");
+            }
+
+            $pdo->beginTransaction();
+            $successCount = 0;
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ScanReceiveRM @ScanMode='SERIAL', @BarcodeValue=?, @LocationID=?, @UserID=?");
+            
+            foreach ($serials as $serial) {
+                $stmt->execute([$serial, $location_id, $currentUser['id']]);
+                $successCount++;
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "ยืนยันรับเข้าสต็อกสำเร็จจำนวน $successCount พาเลท/กล่อง"]);
             break;
 
         default:

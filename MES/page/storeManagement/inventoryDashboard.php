@@ -120,67 +120,91 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
             <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
                             
-                            <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 flex-grow-1">
+                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
                                 
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto" style="max-width: 480px;">
-                                    <div class="input-group input-group-sm flex-grow-1">
-                                        <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Item No. หรือชื่อ...">
-                                    </div>
-                                    <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadDashboardData()" title="Refresh Data" style="width: 32px; height: 32px;">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px;">
-                                        <i class="fas fa-eye-slash"></i>
-                                    </button>
-                                    <div class="input-group input-group-sm d-none d-md-flex flex-shrink-0" style="width: 75px;">
-                                        <select id="rowsPerPage" class="form-select border-secondary-subtle px-2" onchange="changeRowsPerPage()">
-                                            <option value="50">50</option>
-                                            <option value="100" selected>100</option>
-                                            <option value="500">500</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
-                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
-                                        <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
-                                            <option value="ALL">All Locations</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
-                                        <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark">
-                                            <option value="ALL" selected>All</option>
-                                            <option value="RM">RM</option>
-                                            <option value="SEMI">SEMI</option>
-                                            <option value="FG">FG</option>
-                                        </select>
-                                    </div>
+                                <div class="input-group input-group-sm shadow-sm" style="flex: 1 1 200px; max-width: 350px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
                                 </div>
 
-                                <div class="form-check form-switch ms-1 d-flex align-items-center w-100 w-md-auto">
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 140px; max-width: 150px;">
+                                    <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-dark">
+                                        <option value="ALL">All Locations</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 110px; max-width: 100px;">
+                                    <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark">
+                                        <option value="ALL" selected>All</option>
+                                        <option value="RM">RM</option>
+                                        <option value="SEMI">SEMI</option>
+                                        <option value="FG">FG</option>
+                                    </select>
+                                </div>
+
+                                <div class="input-group input-group-sm shadow-sm d-none d-md-flex ms-md-2" style="width: 75px;">
+                                    <select id="rowsPerPage" class="form-select border-secondary-subtle px-2" onchange="changeRowsPerPage()">
+                                        <option value="50">50</option>
+                                        <option value="100" selected>100</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                </div>
+                                
+                                <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadDashboardData()" title="Refresh Data" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                
+                                <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-eye-slash"></i>
+                                </button>
+
+                                <div class="form-check form-switch ms-1 d-flex align-items-center">
                                     <input class="form-check-input mt-0 shadow-sm" type="checkbox" id="hideZeroStock" style="transform: scale(1.2); cursor: pointer;">
-                                    <label class="form-check-label ms-2 small fw-bold text-secondary cursor-pointer" for="hideZeroStock">ซ่อนยอด 0</label>
+                                    <label class="form-check-label ms-2 small fw-bold text-secondary cursor-pointer text-nowrap" for="hideZeroStock">ซ่อนยอด 0</label>
                                 </div>
-
+                                
                             </div>
 
-                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-md-end">
-                                <button class="btn btn-info text-white btn-sm fw-bold px-3 shadow-sm" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
-                                    <i class="fas fa-qrcode me-1"></i> สแกนรับ / เบิก
+                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
+
+                                <button class="btn btn-sm fw-bold px-3 py-1 rounded ms-1 shadow transition-btn text-white border-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
+                                    <i class="fas fa-barcode me-1"></i> สแกน
                                 </button>
-                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="openCcHistoryModal()">
-                                    <i class="fas fa-history me-1"></i> ประวัติปรับยอด
-                                </button>
-                                <button id="btnApprovalModal" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm position-relative d-none" onclick="openApprovalModal()">
-                                    <i class="fas fa-clipboard-check text-white me-1"></i> อนุมัติปรับยอด
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="badgePendingCount" style="display:none;">0</span>
-                                </button>
+
+                                <div class="dropdown ms-1">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v fa-fw"></i>
+                                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="badgeTotalAlert" style="width: 12px; height: 12px;"></span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
+                                        
+                                        <li><h6 class="dropdown-header text-dark fw-bold">จัดการระบบคลัง</h6></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openConfirmTransferModal()">
+                                                <span><i class="fas fa-truck-loading text-info fa-fw me-2"></i> รอส่ง Shipping</span>
+                                                <span class="badge bg-danger rounded-pill d-none" id="badgeTransferCount">0</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openApprovalModal()">
+                                                <span><i class="fas fa-clipboard-check text-warning fa-fw me-2"></i> อนุมัติปรับยอด</span>
+                                                <span class="badge bg-danger rounded-pill d-none" id="badgePendingCount">0</span>
+                                            </a>
+                                        </li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openCcHistoryModal()"><i class="fas fa-history text-danger fa-fw me-2"></i> ประวัติปรับยอดสต็อก</a></li>
+                                        
+                                        
+                                        <li><hr class="dropdown-divider"></li>
+                                        
+                                        <li><h6 class="dropdown-header text-dark fw-bold">นำทาง (Navigation)</h6></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10" href="inventoryDashboard.php"><i class="fas fa-boxes text-primary fa-fw me-2"></i> RM Inventory (หน้าหลัก)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> RM Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="stockLedger.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Ledger (ประวัติฯ)</a></li>
+                                    </ul>
+                                </div>
+
                             </div>
                             
                         </div>
@@ -233,9 +257,9 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
     </div>
 
     <div class="fab-container d-md-none" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050;">
-        <button class="btn btn-info text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+        <button class="btn text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center border-0 transition-btn" 
                 onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกนรับ / เบิก" 
-                style="width: 60px; height: 60px; font-size: 24px;">
+                style="width: 60px; height: 60px; font-size: 24px; background: linear-gradient(135deg, #0dcaf0, #0b5ed7);">
             <i class="fas fa-qrcode"></i> 
         </button>
     </div>

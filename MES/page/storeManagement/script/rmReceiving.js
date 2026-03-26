@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('filterStartDate')?.addEventListener('change', () => { currentPage = 1; loadHistory(); });
     document.getElementById('filterEndDate')?.addEventListener('change', () => { currentPage = 1; loadHistory(); });
+    document.getElementById('statusFilter')?.addEventListener('change', () => { currentPage = 1; loadHistory(); }); // ดักจับตอนเปลี่ยนสถานะ
 
     loadHistory();
 });
@@ -34,19 +35,20 @@ async function loadHistory() {
     const tbody = document.getElementById('historyTbody');
     const cardContainer = document.getElementById('historyCardContainer');
     
-    if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดข้อมูล...</td></tr>';
-    if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+    if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</div>';
     
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     if (selectAllCheckbox) selectAllCheckbox.checked = false;
     updateBatchPrintBtn();
     
-    const startDate = document.getElementById('filterStartDate').value;
-    const endDate = document.getElementById('filterEndDate').value;
-    const search = encodeURIComponent(document.getElementById('searchInput').value.trim());
+    const startDate = document.getElementById('filterStartDate')?.value || '';
+    const endDate = document.getElementById('filterEndDate')?.value || '';
+    const statusFilter = document.getElementById('statusFilter')?.value || 'ALL'; // อ่านค่า Status
+    const search = encodeURIComponent(document.getElementById('searchInput')?.value.trim() || '');
     
     try {
-        const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&search=${search}&page=${currentPage}&limit=${rowsPerPage}`;
+        const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&status=${statusFilter}&search=${search}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
         
         if (result.kpi) {
@@ -57,8 +59,8 @@ async function loadHistory() {
         }
 
         if (!result.data || result.data.length === 0) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
-            if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 text-secondary"></i><br>ไม่พบข้อมูล</div>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูล</td></tr>';
+            if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูล</div>';
             document.getElementById('paginationControls').innerHTML = '';
             document.getElementById('paginationInfo').innerText = 'แสดง 0 ถึง 0 จาก 0 รายการ';
             return;
@@ -68,7 +70,7 @@ async function loadHistory() {
         let htmlCards = '';
 
         result.data.forEach(row => {
-            let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : (row.status === 'PENDING' ? 'bg-warning' : 'bg-info'));
+            let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : (row.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info'));
             let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
             let receiveDate = '-';
             if (row.actual_receive_date) {
@@ -76,10 +78,10 @@ async function loadHistory() {
             }
             let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
             
-            // 1. สร้าง ROW สำหรับ Desktop (เพิ่ม syncCheckbox(this))
+            // 1. สร้าง ROW สำหรับ Desktop
             htmlTable += `
                 <tr class="align-middle">
-                    <td class="text-center"><input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()"></td>
+                    <td class="text-center"><input class="form-check-input row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()" style="cursor:pointer; transform:scale(1.2);"></td>
                     <td class="text-muted"><small>${displayTime}</small></td>
                     <td>${receiveDate}</td>
                     <td class="text-center fw-bold text-primary">
@@ -98,7 +100,7 @@ async function loadHistory() {
                     <td class="text-center">
                         ${row.print_count > 0 ? `<span class="badge bg-info text-dark"><i class="fas fa-print me-1"></i>${row.print_count}</span>` : `<span class="badge bg-light text-muted border"><i class="fas fa-print"></i> 0</span>`}
                     </td>
-                    <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status)}</span></td>
+                    <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status === 'AVAILABLE' ? 'COMPLETED' : row.status)}</span></td>
                     <td class="text-center align-middle">
                         <div class="dropdown">
                             <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
@@ -116,7 +118,7 @@ async function loadHistory() {
                 </tr>
             `;
 
-            // 2. สร้าง CARD สำหรับ Mobile (เพิ่ม syncCheckbox(this))
+            // 2. สร้าง CARD สำหรับ Mobile
             let borderLeftColor = row.status === 'AVAILABLE' ? 'var(--bs-success)' : (row.status === 'PENDING' ? 'var(--bs-warning)' : 'var(--bs-info)');
             htmlCards += `
                 <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
@@ -124,7 +126,7 @@ async function loadHistory() {
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center gap-2">
                                 <input class="form-check-input mt-0 row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()" style="transform: scale(1.3);">
-                                <span class="badge ${badgeClass}">${escapeHTML(row.status)}</span>
+                                <span class="badge ${badgeClass}">${escapeHTML(row.status === 'AVAILABLE' ? 'COMPLETED' : row.status)}</span>
                             </div>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-light border-0 shadow-sm" data-bs-toggle="dropdown" style="width: 30px; height: 30px; border-radius: 50%;"><i class="fas fa-ellipsis-v"></i></button>
@@ -212,11 +214,14 @@ function changePage(page, event) {
     loadHistory();
 }
 
+// อัปเดตให้รองรับ Status Filter
 window.exportToExcel = async function() {
-    const startDate = document.getElementById('filterStartDate').value;
-    const endDate = document.getElementById('filterEndDate').value;
-    const search = encodeURIComponent(document.getElementById('searchInput').value.trim());
-    const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&search=${search}&export=true`;
+    const startDate = document.getElementById('filterStartDate')?.value || '';
+    const endDate = document.getElementById('filterEndDate')?.value || '';
+    const statusFilter = document.getElementById('statusFilter')?.value || 'ALL'; 
+    const search = encodeURIComponent(document.getElementById('searchInput')?.value.trim() || '');
+    
+    const queryParams = `get_rm_history&start_date=${startDate}&end_date=${endDate}&status=${statusFilter}&search=${search}&export=true`;
     
     const result = await fetchAPI(queryParams, 'GET', null, 'btnExportExcel');
     if (!result || !result.data || result.data.length === 0) {
@@ -451,7 +456,6 @@ async function submitToDatabase() {
     }
 }
 
-// ✅ ฟังก์ชัน Sync Checkbox ให้ Desktop กับ Mobile ตรงกันตลอด
 window.syncCheckbox = function(source) {
     const matchingCheckboxes = document.querySelectorAll(`.row-checkbox[value="${source.value}"]`);
     matchingCheckboxes.forEach(cb => cb.checked = source.checked);
@@ -464,7 +468,6 @@ function toggleSelectAll(source) {
 }
 
 function updateBatchPrintBtn() {
-    // ✅ ใช้ Set เพื่อตัดข้อมูลที่ซ้ำกัน (Deduplicate) ระหว่าง Table กับ Card
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
     const uniqueChecked = new Set(Array.from(checkedBoxes).map(cb => cb.value));
     const checkedCount = uniqueChecked.size;
@@ -474,13 +477,11 @@ function updateBatchPrintBtn() {
     const totalCount = uniqueAll.size;
     
     const btnPrintDropdown = document.getElementById('btnBatchPrintDropdown');
-    const btnDelete = document.getElementById('btnBatchDelete'); 
     const selectAllCb = document.getElementById('selectAllCheckbox');
     const actionWrapper = document.getElementById('actionWrapper');
     
     if(checkedCount > 0) {
         if(btnPrintDropdown) { btnPrintDropdown.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
-        if(btnDelete) { btnDelete.classList.remove('d-none'); document.getElementById('selectedDeleteCount').innerText = checkedCount; }
         
         if(actionWrapper) { 
             actionWrapper.classList.remove('d-none', 'd-md-flex'); 
@@ -488,7 +489,6 @@ function updateBatchPrintBtn() {
         }
     } else {
         if(btnPrintDropdown) btnPrintDropdown.classList.add('d-none');
-        if(btnDelete) btnDelete.classList.add('d-none');
         
         if(actionWrapper) { 
             actionWrapper.classList.remove('d-flex'); 
@@ -499,11 +499,104 @@ function updateBatchPrintBtn() {
     if(selectAllCb) selectAllCb.checked = (checkedCount === totalCount && totalCount > 0);
 }
 
+window.bulkReceiveTags = async function() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire('แจ้งเตือน', 'กรุณาติ๊กเลือกรายการที่ต้องการรับเข้า', 'warning');
+        return;
+    }
+
+    let serialsSet = new Set();
+    let hasNonPending = false; 
+
+    checkedBoxes.forEach(cb => {
+        let tag = JSON.parse(decodeURIComponent(cb.value));
+        if (tag.status !== 'PENDING') {
+            hasNonPending = true;
+        }
+        serialsSet.add(tag.serial_no);
+    });
+
+    if (hasNonPending) {
+        Swal.fire('คำเตือน', 'คุณเลือกรายการที่รับเข้าสต็อกไปแล้ว หรือไม่สามารถรับเข้าได้ กรุณาเลือกเฉพาะสถานะ "รอรับเข้า"', 'warning');
+        return;
+    }
+
+    let serials = Array.from(serialsSet);
+    let locOptions = {};
+    let defaultStoreId = '';
+
+    try {
+        Swal.fire({ title: 'กำลังโหลดข้อมูลคลัง...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await fetchAPI('get_master_data', 'GET');
+        Swal.close();
+        
+        if (res && res.data && res.data.locations) {
+            res.data.locations.forEach(loc => {
+                locOptions[loc.location_id] = loc.location_name;
+
+                if (!defaultStoreId) {
+                    const type = (loc.location_type || '').toUpperCase();
+                    const name = (loc.location_name || '').toUpperCase();
+                    if (type === 'STORE' || name.includes('STORE') || name.includes('RM')) {
+                        defaultStoreId = loc.location_id;
+                    }
+                }
+            });
+        }
+    } catch(e) {
+        console.error(e);
+        Swal.fire('Error', 'ไม่สามารถโหลดรายชื่อคลังได้', 'error');
+        return;
+    }
+
+    const { value: locationId } = await Swal.fire({
+        title: `รับเข้าสต็อก ${serials.length} พาเลท/กล่อง`,
+        text: "กรุณาเลือกคลังปลายทางที่ของจะไปวาง:",
+        icon: 'question',
+        input: 'select',
+        inputOptions: locOptions,
+        inputValue: defaultStoreId,
+        inputPlaceholder: '-- เลือกคลังปลายทาง --',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--bs-success)',
+        confirmButtonText: '<i class="fas fa-download"></i> ยืนยันรับเข้า',
+        cancelButtonText: 'ยกเลิก',
+        inputValidator: (value) => {
+            if (!value) return 'คุณต้องเลือกคลังปลายทางก่อนยืนยัน!';
+        }
+    });
+
+    if (locationId) {
+        Swal.fire({
+            title: 'กำลังรับเข้าสต็อก...',
+            text: 'กรุณารอสักครู่ ระบบกำลังอัปเดตยอดคงเหลือ',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        const formData = new FormData();
+        formData.append('serials', JSON.stringify(serials));
+        formData.append('location_id', locationId);
+
+        try {
+            const result = await fetchAPI('bulk_receive_tags', 'POST', formData);
+            if (result) {
+                Swal.fire('สำเร็จ!', result.message, 'success');
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateBatchPrintBtn(); 
+                loadHistory(); 
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+};
+
 window.groupToMasterPallet = async function() {
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
     if(checkedBoxes.length === 0) return;
     
-    // ✅ ใช้ Set เพื่อตัด serial_no ที่เบิ้ลกัน
     let serialsSet = new Set();
     checkedBoxes.forEach(cb => { 
         let rowData = JSON.parse(decodeURIComponent(cb.value));
@@ -545,7 +638,6 @@ window.printSelectedTags = async function() {
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
     if(checkedBoxes.length === 0) return;
     
-    // ✅ ใช้ Map เพื่อรวม Array ให้เหลือแค่ชุดข้อมูลที่ไม่ซ้ำกัน
     let tagsMap = new Map();
     checkedBoxes.forEach(cb => { 
         let tag = JSON.parse(decodeURIComponent(cb.value));
@@ -592,7 +684,6 @@ window.deleteSelectedTags = function() {
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
     if(checkedBoxes.length === 0) return;
     
-    // ✅ ใช้ Set กรอง Serial ก่อนส่งไปลบ
     let serialsSet = new Set();
     checkedBoxes.forEach(cb => {
         let tag = JSON.parse(decodeURIComponent(cb.value));
@@ -611,6 +702,8 @@ window.deleteSelectedTags = function() {
             const res = await fetchAPI('delete_bulk_tags', 'POST', formData);
             if(res) {
                 Swal.fire('ลบสำเร็จ!', `ข้อมูล ${serials.length} รายการถูกลบแล้ว`, 'success');
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateBatchPrintBtn();
                 loadHistory();
             }
         }

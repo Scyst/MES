@@ -88,60 +88,73 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
             <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
                             
-                            <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 flex-grow-1">
+                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
                                 
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto" style="max-width: 400px;">
-                                    <div class="input-group input-group-sm flex-grow-1">
-                                        <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหา Item No., Lot, Ref...">
-                                    </div>
-                                    <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadLedgerData()" title="Refresh Data" style="width: 32px; height: 32px;">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
+                                <div class="input-group input-group-sm shadow-sm" style="flex: 1 1 200px; max-width: 350px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No., Lot, Ref...">
                                 </div>
                                 
-                                <div class="input-group input-group-sm shadow-sm w-100 w-md-auto" style="max-width: 350px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small">วันที่:</span>
-                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>">
-                                    <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
-                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d'); ?>">
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 250px; max-width: 350px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-calendar-alt me-1"></i> วันที่:</span>
+                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>">
+                                    <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0 px-1">-</span>
+                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d'); ?>">
                                 </div>
 
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
-                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
-                                        <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
-                                            <option value="ALL">All Locations</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="input-group input-group-sm shadow-sm w-50 w-md-auto">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
-                                        <select id="typeFilter" class="form-select border-secondary-subtle fw-bold text-dark">
-                                            <option value="ALL" selected>All Types</option>
-                                            <option value="RECEIPT">RECEIPT (รับเข้า)</option>
-                                            <option value="INTERNAL_TRANSFER">TRANSFER (โอนย้าย)</option>
-                                            <option value="CONSUMPTION">CONSUMPTION (เบิกจ่าย/ผลิต)</option>
-                                            <option value="ADJUSTMENT">ADJUSTMENT (ปรับยอด)</option>
-                                        </select>
-                                    </div>
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 140px; max-width: 180px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
+                                    <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
+                                        <option value="ALL">All Locations</option>
+                                    </select>
                                 </div>
 
-                                <div class="input-group input-group-sm d-none d-md-flex ms-md-1" style="width: 90px;">
-                                    <select id="rowsPerPage" class="form-select border-secondary-subtle" onchange="changeRowsPerPage()">
+                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 140px; max-width: 180px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
+                                    <select id="typeFilter" class="form-select border-secondary-subtle fw-bold text-dark">
+                                        <option value="ALL" selected>All Types</option>
+                                        <option value="RECEIPT">RECEIPT (รับเข้า)</option>
+                                        <option value="INTERNAL_TRANSFER">TRANSFER (โอนย้าย)</option>
+                                        <option value="CONSUMPTION">CONSUMPTION (เบิกจ่าย)</option>
+                                        <option value="ADJUSTMENT">ADJUSTMENT (ปรับยอด)</option>
+                                    </select>
+                                </div>
+
+                                <div class="input-group input-group-sm shadow-sm d-none d-md-flex" style="width: 75px;">
+                                    <select id="rowsPerPage" class="form-select border-secondary-subtle px-2" onchange="changeRowsPerPage()">
                                         <option value="50">50</option>
                                         <option value="100" selected>100</option>
                                         <option value="500">500</option>
                                     </select>
                                 </div>
+                                
+                                <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadLedgerData()" title="Refresh Data" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                
                             </div>
 
-                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-md-end">
-                                <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="exportLedgerToExcel()">
-                                    <i class="fas fa-file-excel me-1"></i> Export Excel
-                                </button>
+                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
+                                
+                                <div class="dropdown ms-1">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v fa-fw"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
+                                        <li><h6 class="dropdown-header text-dark fw-bold">จัดการข้อมูล</h6></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="exportLedgerToExcel()"><i class="fas fa-file-excel text-success fa-fw me-2"></i> Export to Excel</a></li>
+                                        
+                                        <li><hr class="dropdown-divider"></li>
+                                        
+                                        <li><h6 class="dropdown-header text-dark fw-bold">เมนูนำทาง (Navigation)</h6></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> RM Inventory (หน้าหลัก)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> RM Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10" href="stockLedger.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Ledger (ประวัติความเคลื่อนไหว)</a></li>
+                                    </ul>
+                                </div>
+
                             </div>
                             
                         </div>
