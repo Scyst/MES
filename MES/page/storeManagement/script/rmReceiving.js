@@ -8,6 +8,7 @@ let currentPage = 1;
 let rowsPerPage = 100;
 let totalPages = 1;
 let searchTimer;
+let manualAddModalInstance;
 
 document.addEventListener('DOMContentLoaded', () => {
     const importModalEl = document.getElementById('importModal');
@@ -29,7 +30,86 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('statusFilter')?.addEventListener('change', () => { currentPage = 1; loadHistory(); }); // ดักจับตอนเปลี่ยนสถานะ
 
     loadHistory();
+
+    const manualModalEl = document.getElementById('manualAddModal');
+    if (manualModalEl) {
+        manualAddModalInstance = new bootstrap.Modal(manualModalEl);
+        manualModalEl.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('manualAddForm').reset();
+            document.getElementById('man_date').value = new Date().toISOString().split('T')[0];
+        });
+    }
 });
+
+function openManualAddModal() {
+    if (!CAN_MANAGE_RM) {
+        Swal.fire('ปฏิเสธการเข้าถึง', 'คุณไม่มีสิทธิ์ทำรายการนี้', 'warning');
+        return;
+    }
+    manualAddModalInstance.show();
+}
+
+async function submitManualAdd(e) {
+    e.preventDefault();
+    
+    // Client-side Validation 
+    const qty = parseFloat(document.getElementById('man_qty').value);
+    const packQty = parseInt(document.getElementById('man_pack').value);
+    
+    if (isNaN(qty) || qty <= 0 || isNaN(packQty) || packQty <= 0) {
+        Swal.fire('ข้อมูลไม่ถูกต้อง', 'Carton/Package และ Package QTY ต้องมากกว่า 0', 'warning');
+        return;
+    }
+
+    const item_no = document.getElementById('man_item_no').value.trim();
+    const po_number = document.getElementById('man_po').value.trim();
+    if(!item_no || !po_number) {
+        Swal.fire('ข้อมูลไม่ถูกต้อง', 'กรุณาระบุ Item No. และ Purchase Order', 'warning');
+        return;
+    }
+
+    // วนลูปจำลอง Data ให้อยู่ในฟอร์แมตเดียวกับการแกะไฟล์ Excel 
+    let manualData = [];
+    for(let i = 0; i < packQty; i++) {
+        manualData.push({
+            item_no: item_no,
+            po_number: po_number,
+            category: document.getElementById('man_category').value.trim() || 'MANUAL_ENTRY', // 英文名称
+            des: document.getElementById('man_desc').value.trim(),                            // Des.
+            received_date: document.getElementById('man_date').value,                         // Date
+            warehouse_no: document.getElementById('man_inv').value.trim(),                    // Invoice No.
+            qty: qty,                                                                         // Carton/Package
+            pallet_no: document.getElementById('man_pallet').value.trim(),                    // Pallet/Carton
+            ctn_number: document.getElementById('man_ctn').value.trim(),                      // CTN Number
+            week: document.getElementById('man_week').value.trim(),                           // Week
+            remark: document.getElementById('man_remark').value.trim()                        // Remark
+        });
+    }
+
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(manualData)); 
+
+    // ใช้ API ตัวเดียวกับ Import Excel เพื่อทำการรับเข้าและสร้าง Tag (Re-use SP logic)
+    const res = await fetchAPI('import_excel', 'POST', formData, 'btnSubmitManual');
+    
+    if (res) {
+        manualAddModalInstance.hide();
+        loadHistory();
+        
+        Swal.fire({ 
+            title: 'สำเร็จ', 
+            text: `เพิ่มข้อมูล ${packQty} ป้ายเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...`, 
+            icon: 'success', 
+            timer: 1500, 
+            showConfirmButton: false 
+        }).then(() => {
+            if (res.data && res.data.length > 0) {
+                if(typeof renderPrintTags === 'function') renderPrintTags(res.data);
+                setTimeout(() => { window.print(); }, 300);
+            }
+        });
+    }
+}
 
 async function loadHistory() {
     const tbody = document.getElementById('historyTbody');

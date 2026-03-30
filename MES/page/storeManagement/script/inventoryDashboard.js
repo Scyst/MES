@@ -111,21 +111,28 @@ async function loadDashboardData() {
                 </tr>
             `;
 
+            // 🔥 แก้ไขส่วนปุ่มในการ์ดมือถือ (รวมเป็น btn-group ก้อนเดียว)
             htmlCards += `
                 <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
                     <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <div>
-                                <span class="badge ${badgeType} me-1">${escapeHTML(row.material_type)}</span>
+                        
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="badge ${badgeType}">${escapeHTML(row.material_type)}</span>
                                 ${isOutOfStock ? '<span class="badge bg-danger">OUT OF STOCK</span>' : ''}
                             </div>
-                            <div class="btn-group shadow-sm">
-                                <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-search-location"></i></button>
-                                <button class="btn btn-sm btn-light border text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px;"><i class="fas fa-clipboard-list"></i></button>
+                            
+                            <div class="btn-group shadow-sm flex-shrink-0 ms-2">
+                                <button class="btn btn-sm btn-light border text-secondary" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px; padding:0;" title="ดูพิกัด">
+                                    <i class="fas fa-search-location"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light border-top border-bottom border-secondary-subtle text-warning" onclick="openCycleCountModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" style="width: 32px; height: 32px; padding:0;" title="นับ/ปรับสต็อก">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light border text-info" onclick="openCreateTransferModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}', ${availableQty})" style="width: 32px; height: 32px; padding:0;" title="โอนย้าย/ส่ง Shipping">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
                             </div>
-                            <button class="btn btn-sm btn-light border text-info" onclick="openCreateTransferModal(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}', ${availableQty})" title="โอนย้าย/ส่ง Shipping">
-                                <i class="fas fa-exchange-alt"></i>
-                            </button>
                         </div>
                         
                         <h6 class="fw-bold text-primary mb-1 mt-1" style="font-size: 1.1rem;">${escapeHTML(row.item_no)}</h6>

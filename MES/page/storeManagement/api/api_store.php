@@ -19,7 +19,7 @@ try {
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
         'update_print_status', 'create_request', 'approve_request', 'reject_request',
-        'bulk_receive_tags'
+        'bulk_receive_tags', 'manual_add_rm'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -75,30 +75,36 @@ try {
                 $params[] = strtoupper($material_type);
             }
 
+            // ย้าย Logic การกรองค่า 0 จาก HAVING มาไว้ใน WHERE แทน (เพราะเรามี Column จาก OUTER APPLY แล้ว)
+            if ($hide_zero === 'true') {
+                $conditions[] = "(ISNULL(Onhand.available_qty, 0) <> 0 OR ISNULL(Pending.pending_qty, 0) > 0)";
+            }
+
             $locFilter = ($location_id !== 'ALL' && $location_id !== '') ? "AND o.location_id = " . (int)$location_id : "";
-            $zeroFilter = ($hide_zero === 'true') ? "HAVING (ISNULL(SUM(o.quantity), 0) <> 0 OR ISNULL(SUM(p.qty_per_pallet), 0) > 0)" : "";
+            
             $whereClause = implode(" AND ", $conditions);
             $whereSQL = !empty($whereClause) ? "WHERE " . $whereClause : "";
+
+            // นับ KPI ด้านบน (ลดโหลด Database ด้วยการไม่ใช้ GROUP BY)
             $countSql = "
                 SELECT 
                     COUNT(*) as total_skus,
-                    SUM(CASE WHEN Sub.available_qty <= 0 THEN 1 ELSE 0 END) as out_of_stock,
-                    SUM(Sub.available_qty) as toolbar_total_pcs,
-                    SUM(Sub.pending_qty) as total_pending_qty,
-                    SUM(Sub.total_value) as total_value
-                FROM (
-                    SELECT 
-                        i.item_id,
-                        ISNULL(SUM(o.quantity), 0) AS available_qty,
-                        ISNULL(SUM(p.qty_per_pallet), 0) AS pending_qty,
-                        (ISNULL(SUM(o.quantity), 0) * ISNULL(i.StandardPrice, 0)) AS total_value
-                    FROM dbo.ITEMS i WITH (NOLOCK)
-                    LEFT JOIN dbo.INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.parameter_id $locFilter
-                    LEFT JOIN dbo.RM_SERIAL_TAGS p WITH (NOLOCK) ON i.item_id = p.item_id AND p.status = 'PENDING'
-                    $whereSQL
-                    GROUP BY i.item_id, i.StandardPrice
-                    $zeroFilter
-                ) as Sub
+                    SUM(CASE WHEN ISNULL(Onhand.available_qty, 0) <= 0 THEN 1 ELSE 0 END) as out_of_stock,
+                    SUM(ISNULL(Onhand.available_qty, 0)) as toolbar_total_pcs,
+                    SUM(ISNULL(Pending.pending_qty, 0)) as total_pending_qty,
+                    SUM(ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)) as total_value
+                FROM dbo.ITEMS i WITH (NOLOCK)
+                OUTER APPLY (
+                    SELECT SUM(o.quantity) AS available_qty 
+                    FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) 
+                    WHERE o.parameter_id = i.item_id $locFilter
+                ) Onhand
+                OUTER APPLY (
+                    SELECT SUM(p.qty_per_pallet) AS pending_qty 
+                    FROM dbo.RM_SERIAL_TAGS p WITH (NOLOCK) 
+                    WHERE p.item_id = i.item_id AND p.status = 'PENDING'
+                ) Pending
+                $whereSQL
             ";
             
             $kpiStmt = $pdo->prepare($countSql);
@@ -109,6 +115,7 @@ try {
                 $kpi = ['total_skus' => 0, 'out_of_stock' => 0, 'total_pending_qty' => 0, 'total_value' => 0, 'toolbar_total_pcs' => 0];
             }
 
+            // ดึงข้อมูลหลัก (Pagination)
             $offsetInt = (int)$offset;
             $limitInt = (int)$limit;
             $sql = "
@@ -117,17 +124,23 @@ try {
                     ISNULL(i.part_no, i.sap_no) AS item_no,
                     i.part_description,
                     ISNULL(i.material_type, 'UNKNOWN') AS material_type,
-                    ISNULL(SUM(o.quantity), 0) AS available_qty,
-                    ISNULL(SUM(p.qty_per_pallet), 0) AS pending_qty,
-                    ISNULL(SUM(o.quantity), 0) + ISNULL(SUM(p.qty_per_pallet), 0) AS total_qty,
+                    ISNULL(Onhand.available_qty, 0) AS available_qty,
+                    ISNULL(Pending.pending_qty, 0) AS pending_qty,
+                    (ISNULL(Onhand.available_qty, 0) + ISNULL(Pending.pending_qty, 0)) AS total_qty,
                     ISNULL(i.StandardPrice, 0) AS unit_price,
-                    (ISNULL(SUM(o.quantity), 0) * ISNULL(i.StandardPrice, 0)) AS total_value
+                    (ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)) AS total_value
                 FROM dbo.ITEMS i WITH (NOLOCK)
-                LEFT JOIN dbo.INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.parameter_id $locFilter
-                LEFT JOIN dbo.RM_SERIAL_TAGS p WITH (NOLOCK) ON i.item_id = p.item_id AND p.status = 'PENDING'
+                OUTER APPLY (
+                    SELECT SUM(o.quantity) AS available_qty 
+                    FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) 
+                    WHERE o.parameter_id = i.item_id $locFilter
+                ) Onhand
+                OUTER APPLY (
+                    SELECT SUM(p.qty_per_pallet) AS pending_qty 
+                    FROM dbo.RM_SERIAL_TAGS p WITH (NOLOCK) 
+                    WHERE p.item_id = i.item_id AND p.status = 'PENDING'
+                ) Pending
                 $whereSQL
-                GROUP BY i.item_id, i.part_no, i.sap_no, i.part_description, i.material_type, i.StandardPrice
-                $zeroFilter
                 ORDER BY available_qty ASC, total_value DESC
                 OFFSET $offsetInt ROWS FETCH NEXT $limitInt ROWS ONLY
             ";
