@@ -6,9 +6,9 @@ requirePermission('view_warehouse');
 $currentUserForJS = $_SESSION['user'] ?? null;
 $canManageRM = hasPermission('manage_rm_receiving');
 
-$pageTitle = "RM Receiving & Tagging";
+$pageTitle = "Stock Receiving & Tagging";
 $pageIcon = "fas fa-pallet"; 
-$pageHeaderTitle = "Raw Material Receiving";
+$pageHeaderTitle = "Stock Receiving";
 $pageHeaderSubtitle = "รับสินค้าเข้าสต็อก และสร้าง Tag สำหรับ FIFO";
 $pageHelpId = ""; 
 ?>
@@ -210,9 +210,9 @@ $pageHelpId = "";
                                         <li><hr class="dropdown-divider"></li>
                                         
                                         <li><h6 class="dropdown-header text-primary fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> RM Inventory (หน้าหลัก)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="rmReceiving.php"><i class="fas fa-pallet fa-fw me-2"></i> RM Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="stockLedger.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Ledger (ประวัติฯ)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="rmReceiving.php"><i class="fas fa-pallet fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
                                     </ul>
                                 </div>
                                 

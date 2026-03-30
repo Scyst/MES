@@ -189,7 +189,6 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
                                         <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-tasks me-1"></i> จัดการระบบคลัง</h6></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openCcHistoryModal()"><i class="fas fa-history text-secondary fa-fw me-2"></i> ประวัติปรับยอดสต็อก</a></li>
                                         <li>
                                             <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openApprovalModal()">
                                                 <span><i class="fas fa-clipboard-check text-warning fa-fw me-2"></i> อนุมัติปรับยอด</span>
@@ -198,17 +197,18 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                         </li>
                                         <li>
                                             <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openConfirmTransferModal()">
-                                                <span><i class="fas fa-truck-loading text-info fa-fw me-2"></i> รอส่ง Shipping</span>
+                                                <span><i class="fas fa-truck-loading text-info fa-fw me-2"></i> รายการรอโอนย้าย</span>
                                                 <span class="badge bg-danger rounded-pill d-none" id="badgeTransferCount">0</span>
                                             </a>
                                         </li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openCcHistoryModal()"><i class="fas fa-history text-secondary fa-fw me-2"></i> ประวัติปรับยอดสต็อก</a></li>
                                         
                                         <li><hr class="dropdown-divider"></li>
                                         
                                         <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-2"></i> RM Inventory (หน้าหลัก)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> RM Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="stockLedger.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Ledger (ประวัติฯ)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
                                     </ul>
                                 </div>
 

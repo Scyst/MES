@@ -1,12 +1,12 @@
 <?php
-// MES/page/storeManagement/stockLedger.php
+// MES/page/storeManagement/stockTransaction.php
 require_once __DIR__ . '/../components/init.php';
 requirePermission('view_warehouse');
 
-$pageTitle = "Stock Ledger (RM)";
+$pageTitle = "Stock Transaction";
 $pageIcon = "fas fa-exchange-alt"; 
-$pageHeaderTitle = "Stock Transaction Ledger";
-$pageHeaderSubtitle = "ตรวจสอบประวัติความเคลื่อนไหวของวัตถุดิบ (IN / OUT / ADJUST)";
+$pageHeaderTitle = "Stock Transaction";
+$pageHeaderSubtitle = "ตรวจสอบประวัติความเคลื่อนไหวของวัตถุดิบ";
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -149,9 +149,9 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                                         <li><hr class="dropdown-divider"></li>
                                         
                                         <li><h6 class="dropdown-header text-dark fw-bold">เมนูนำทาง (Navigation)</h6></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> RM Inventory (หน้าหลัก)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> RM Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10" href="stockLedger.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Ledger (ประวัติความเคลื่อนไหว)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10" href="stockTransaction.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Transaction (ประวัติความเคลื่อนไหว)</a></li>
                                     </ul>
                                 </div>
 
