@@ -115,6 +115,13 @@
                 <span>Scrap & Replacement</span>
             </a>
         </li>
+
+        <li>
+            <a class="dropdown-item-icon" href="../areaAccess/areaAccess.php" title="Area Access Log">
+                <i class="fas fa-user-shield fa-fw"></i>
+                <span>Area Access Log</span>
+            </a>
+        </li>
         
         <li>
             <a class="dropdown-item-icon" href="../QMS/qmsDashboard.php" title="iQMS Dashboard">
