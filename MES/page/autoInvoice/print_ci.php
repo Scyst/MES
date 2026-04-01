@@ -349,7 +349,7 @@ function formatDocDate($dateStr) {
                         </span>
                     </td>
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 2) ?></td>
+                    <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 3) ?></td>
                     <td class="text-right fw-bold" style="border-right: none;"><?= number_format((float)($row['line_total'] ?? 0), 2) ?></td>
                 </tr>
                 <?php 
