@@ -24,6 +24,9 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
+        // =====================================================================
+        // [1] ITEM MASTER DATA
+        // =====================================================================
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
@@ -35,18 +38,19 @@ try {
             $filter_model = $_GET['filter_model'] ?? '';
 
             $params = [];
-            $fromClause = "FROM " . ITEMS_TABLE . " i";
+            $fromClause = "FROM " . ITEMS_TABLE . " i WITH (NOLOCK)";
             $conditions = [];
 
+            // 🛡️ [RESTORED]: Supervisor Line Filtering Logic
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
                 $conditions[] = "
                     i.item_id IN (
-                        SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?
+                        SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?
                         UNION
                         SELECT DISTINCT b.component_item_id
-                        FROM " . BOM_TABLE . " b
-                        WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
+                        FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                        WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)
                     )
                 ";
                 $params[] = $supervisor_line;
@@ -54,7 +58,7 @@ try {
             }
 
             if (!empty($filter_model)) {
-                $fromClause .= " JOIN " . ROUTES_TABLE . " r ON i.item_id = r.item_id";
+                $fromClause .= " JOIN " . ROUTES_TABLE . " r WITH (NOLOCK) ON i.item_id = r.item_id";
                 $conditions[] = "RTRIM(LTRIM(r.model)) LIKE ?";
                 $params[] = '%' . $filter_model . '%';
             }
@@ -62,10 +66,12 @@ try {
             if (!$showInactive) {
                 $conditions[] = "i.is_active = 1";
             }
+            
             if (!empty($searchTerm)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.sku LIKE ? OR i.part_description LIKE ?)";
                 $params = array_merge($params, ['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
             }
+            
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 
             $orderByClause = "ORDER BY i.sap_no DESC";
@@ -73,18 +79,19 @@ try {
                 $orderByClause = "ORDER BY i.is_active ASC, i.sap_no DESC";
             }
 
+            // นับจำนวนทั้งหมด
             $totalSql = "SELECT COUNT(DISTINCT i.item_id) {$fromClause} {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
-            // 🔥 [FIXED] เพิ่มคอลัมน์ที่ขาดหายไปทั้งหมดให้ครบ (Logistics, Costing, Planned Output)
             $costingCols_CTE = "
                 , i.planned_output, i.material_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
                 , i.Cost_RM, i.Cost_PKG, i.Cost_SUB, i.Cost_DL
                 , i.Cost_OH_Machine, i.Cost_OH_Utilities, i.Cost_OH_Indirect, i.Cost_OH_Staff, i.Cost_OH_Accessory, i.Cost_OH_Others
                 , i.Cost_Total, i.StandardPrice, i.StandardGP, i.Price_USD
             ";
+            
             $costingCols_Final = "
                 , planned_output, material_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
                 , Cost_RM, Cost_PKG, Cost_SUB, Cost_DL
@@ -100,7 +107,7 @@ try {
                         {$costingCols_CTE} 
                         ,
                         STUFF((
-                            SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub
+                            SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub WITH (NOLOCK)
                             WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
                         ), 1, 2, '') AS used_in_models,
                         (
@@ -110,7 +117,7 @@ try {
                                     WHEN MIN(r_spd.planned_output) = MAX(r_spd.planned_output) THEN CAST(MIN(r_spd.planned_output) AS VARCHAR(20))
                                     ELSE CAST(MIN(r_spd.planned_output) AS VARCHAR(20)) + ' - ' + CAST(MAX(r_spd.planned_output) AS VARCHAR(20))
                                 END
-                            FROM " . ROUTES_TABLE . " r_spd
+                            FROM " . ROUTES_TABLE . " r_spd WITH (NOLOCK)
                             WHERE r_spd.item_id = i.item_id AND r_spd.planned_output > 0
                         ) AS route_speed_range,
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
@@ -149,7 +156,7 @@ try {
             }
             break;
 
-        case 'restore_item':
+        case 'restore_item': // 🛡️ [RESTORED]
             $id = $input['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
@@ -165,99 +172,6 @@ try {
             }
             break;
 
-        case 'get_lines':
-            $sql = "SELECT DISTINCT RTRIM(LTRIM(line)) as line FROM " . ROUTES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
-            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            echo json_encode(['success' => true, 'data' => $lines]);
-            break;
-
-        case 'get_models':
-            $searchTerm = $_GET['search'] ?? '';
-            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WHERE model IS NOT NULL AND model != ''";
-            $params = [];
-            if (!empty($searchTerm)) {
-                $sql .= " AND model LIKE ?";
-                $params[] = '%' . $searchTerm . '%';
-            }
-            $sql .= " ORDER BY model ASC";
-
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            echo json_encode(['success' => true, 'data' => $models]);
-            break;
-
-        case 'unified_bulk_import':
-            if (!hasRole(['admin', 'creator'])) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Unauthorized to import master data.']);
-                exit;
-            }
-
-            $items = $input;
-            if (empty($items)) throw new Exception("No items to import.");
-            
-            $pdo->beginTransaction();
-            try {
-                $jsonData = json_encode($items, JSON_UNESCAPED_UNICODE);
-                $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch ?, ?");
-                $stmt->bindValue(1, $jsonData, PDO::PARAM_STR);
-                $stmt->bindValue(2, $currentUser['username'], PDO::PARAM_STR);
-                
-                $stmt->execute();
-                
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                $inserted = $result['InsertedCount'] ?? 0;
-                $updated = $result['UpdatedCount'] ?? 0;
-
-                $pdo->commit();
-                echo json_encode([
-                    'success' => true, 
-                    'message' => "Import successful. Inserted: {$inserted}, Updated: {$updated}."
-                ]);
-
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
-        case 'get_item_routes':
-            $item_id = $_GET['item_id'] ?? 0;
-            if (!$item_id) {
-                echo json_encode(['success' => true, 'data' => []]);
-                exit;
-            }
-            $stmt = $pdo->prepare("SELECT * FROM " . ROUTES_TABLE . " WHERE item_id = ? ORDER BY line, model");
-            $stmt->execute([$item_id]);
-            $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $routes]);
-            break;
-
-        case 'save_route':
-            $route_id = $input['route_id'] ?? 0;
-            $item_id = $input['route_item_id'] ?? null;
-            $line = trim($input['route_line'] ?? '');
-            $model = trim($input['route_model'] ?? '');
-            $planned_output = (int)($input['route_planned_output'] ?? 0);
-
-            if (empty($item_id) || empty($line) || empty($model)) throw new Exception("Item ID, Line, and Model are required.");
-
-            if ($route_id > 0) {
-                $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$line, $model, $planned_output, $route_id]);
-                echo json_encode(['success' => true, 'message' => 'Route updated successfully.']);
-            } else {
-                $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$item_id, $line, $model, $planned_output]);
-                echo json_encode(['success' => true, 'message' => 'New route created successfully.']);
-            }
-            break;
-
         case 'save_item_and_routes':
             if (!hasRole(['admin', 'creator'])) {
                 http_response_code(403);
@@ -265,7 +179,6 @@ try {
                 exit;
             }
 
-            // รองรับ Payload รูปแบบเดิมของคุณ (มี item_details และ routes_data)
             $item_details = $input['item_details'] ?? [];
             $routes_data = $input['routes_data'] ?? [];
 
@@ -309,7 +222,6 @@ try {
                 $p_usd = (float)($item_details['Price_USD'] ?? 0);
 
                 if ($item_id > 0) {
-                    // UPDATE
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
                                 sap_no = ?, part_no = ?, sku = ?, part_description = ?, material_type = ?,
                                 min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, is_active = ?,
@@ -330,7 +242,6 @@ try {
                     ]);
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$sap_no}");
                 } else {
-                    // INSERT
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
                                 sap_no, part_no, sku, part_description, material_type, created_at, 
                                 min_stock, max_stock, is_tracking, planned_output, is_active,
@@ -359,7 +270,7 @@ try {
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$sap_no}");
                 }
 
-                // Handle Routes (ยังคงรูปแบบ Array Object ของเดิมไว้)
+                // Handle Routes
                 foreach ($routes_data as $route) {
                     $route_id = (int)($route['route_id'] ?? 0);
                     $status = $route['status'] ?? '';
@@ -389,9 +300,114 @@ try {
                 throw $e;
             }
             break;
+
+        // =====================================================================
+        // [2] ROUTE MANAGEMENT
+        // =====================================================================
+        case 'get_item_routes':
+            $item_id = $_GET['item_id'] ?? 0;
+            if (!$item_id) {
+                echo json_encode(['success' => true, 'data' => []]);
+                exit;
+            }
+            $stmt = $pdo->prepare("SELECT * FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE item_id = ? ORDER BY line, model");
+            $stmt->execute([$item_id]);
+            $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $routes]);
+            break;
+
+        case 'save_route':
+            $route_id = $input['route_id'] ?? 0;
+            $item_id = $input['route_item_id'] ?? null;
+            $line = trim($input['route_line'] ?? '');
+            $model = trim($input['route_model'] ?? '');
+            $planned_output = (int)($input['route_planned_output'] ?? 0);
+
+            if (empty($item_id) || empty($line) || empty($model)) throw new Exception("Item ID, Line, and Model are required.");
+
+            if ($route_id > 0) {
+                $sql = "UPDATE " . ROUTES_TABLE . " SET line = ?, model = ?, planned_output = ?, updated_at = GETDATE() WHERE route_id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$line, $model, $planned_output, $route_id]);
+                echo json_encode(['success' => true, 'message' => 'Route updated successfully.']);
+            } else {
+                $sql = "INSERT INTO " . ROUTES_TABLE . " (item_id, line, model, planned_output) VALUES (?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$item_id, $line, $model, $planned_output]);
+                echo json_encode(['success' => true, 'message' => 'New route created successfully.']);
+            }
+            break;
+
+        // =====================================================================
+        // [3] UTILITIES (DROPDOWNS)
+        // =====================================================================
+        case 'get_lines':
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(line)) as line FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line IS NOT NULL AND line != '' ORDER BY line ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $lines]);
+            break;
+
+        case 'get_models':
+            $searchTerm = $_GET['search'] ?? '';
+            $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE model IS NOT NULL AND model != ''";
+            $params = [];
+            if (!empty($searchTerm)) {
+                $sql .= " AND model LIKE ?";
+                $params[] = '%' . $searchTerm . '%';
+            }
+            $sql .= " ORDER BY model ASC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $models = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $models]);
+            break;
+
+        // =====================================================================
+        // [4] BULK IMPORT
+        // =====================================================================
+        case 'unified_bulk_import':
+            if (!hasRole(['admin', 'creator'])) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized to import master data.']);
+                exit;
+            }
+
+            $items = $input;
+            if (empty($items)) throw new Exception("No items to import.");
             
+            $pdo->beginTransaction();
+            try {
+                $jsonData = json_encode($items, JSON_UNESCAPED_UNICODE);
+                $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch ?, ?");
+                $stmt->bindValue(1, $jsonData, PDO::PARAM_STR);
+                $stmt->bindValue(2, $currentUser['username'], PDO::PARAM_STR);
+                
+                $stmt->execute();
+                
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $inserted = $result['InsertedCount'] ?? 0;
+                $updated = $result['UpdatedCount'] ?? 0;
+
+                $pdo->commit();
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "Import successful. Inserted: {$inserted}, Updated: {$updated}."
+                ]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        // =====================================================================
+        // [5] LINE SCHEDULES
+        // =====================================================================
         case 'read_schedules':
-            $sql = "SELECT id, line, shift_name, CONVERT(VARCHAR(8), start_time, 108) AS start_time, CONVERT(VARCHAR(8), end_time, 108) AS end_time, planned_break_minutes, is_active FROM " . SCHEDULES_TABLE . " ORDER BY line, shift_name";
+            $sql = "SELECT id, line, shift_name, CONVERT(VARCHAR(8), start_time, 108) AS start_time, CONVERT(VARCHAR(8), end_time, 108) AS end_time, planned_break_minutes, is_active FROM " . SCHEDULES_TABLE . " WITH (NOLOCK) ORDER BY line, shift_name";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
@@ -431,8 +447,28 @@ try {
             echo json_encode(['success' => true, 'message' => 'Schedule deleted.']);
             break;
 
+        // =====================================================================
+        // [6] HEALTH CHECK
+        // =====================================================================
         case 'health_check_parameters':
-             $sql = "WITH ProducedItems AS (SELECT DISTINCT t.parameter_id AS item_id FROM " . TRANSACTIONS_TABLE . " t WHERE t.transaction_type LIKE 'PRODUCTION_%'), ItemRoutes AS (SELECT DISTINCT r.item_id FROM " . ROUTES_TABLE . " r WHERE r.planned_output > 0) SELECT i.sap_no, i.part_no, i.part_description, 'N/A' as line, 'N/A' as model FROM ProducedItems p JOIN " . ITEMS_TABLE . " i ON p.item_id = i.item_id WHERE p.item_id NOT IN (SELECT item_id FROM ItemRoutes) AND i.is_active = 1 ORDER BY i.sap_no";
+             $sql = "
+                WITH ProducedItems AS (
+                    SELECT DISTINCT t.parameter_id AS item_id 
+                    FROM " . TRANSACTIONS_TABLE . " t WITH (NOLOCK) 
+                    WHERE t.transaction_type LIKE 'PRODUCTION_%'
+                ), 
+                ItemRoutes AS (
+                    SELECT DISTINCT r.item_id 
+                    FROM " . ROUTES_TABLE . " r WITH (NOLOCK) 
+                    WHERE r.planned_output > 0
+                ) 
+                SELECT i.sap_no, i.part_no, i.part_description, 'N/A' as line, 'N/A' as model 
+                FROM ProducedItems p 
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON p.item_id = i.item_id 
+                WHERE p.item_id NOT IN (SELECT item_id FROM ItemRoutes) 
+                  AND i.is_active = 1 
+                ORDER BY i.sap_no
+             ";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
@@ -447,10 +483,8 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    error_log("Item Master API Error: " . $e->getMessage());
+    ob_clean();
     http_response_code(500);
-    
-    // ⚠️ เอาการซ่อน Error ออกชั่วคราว เพื่อหา Root Cause
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

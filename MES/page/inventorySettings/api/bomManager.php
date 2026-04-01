@@ -1,9 +1,14 @@
 <?php
-
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
+
+if (!hasRole(['admin', 'creator', 'supervisor'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized Access.']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
@@ -19,716 +24,310 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        case 'get_bom_components':
-            $fg_item_id = $_GET['fg_item_id'] ?? 0;
-            if (empty($fg_item_id)) {
-                throw new Exception("FG Item ID is required.");
-            }
-            
-            $sql = "
-                SELECT 
-                    b.bom_id, 
-                    b.quantity_required,
-                    i.part_no as component_part_no,
-                    i.sap_no as component_sap_no,
-                    i.part_description
-                FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " i ON b.component_item_id = i.item_id
-                WHERE b.fg_item_id = ?
-                ORDER BY i.sap_no ASC";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_item_id]);
-            $components = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $components]);
-            break;
-
-        case 'add_bom_component':
-            try {
-                $fg_item_id = $input['fg_item_id'] ?? 0;
-                $component_item_id = $input['component_item_id'] ?? 0;
-                $quantity_required = $input['quantity_required'] ?? 0;
-
-                if (empty($fg_item_id) || empty($component_item_id) || !is_numeric($quantity_required) || $quantity_required <= 0) {
-                    throw new Exception("Missing required fields (FG Item, Component, or valid Quantity).");
-                }
-                if ($fg_item_id == $component_item_id) {
-                    throw new Exception("Finished Good and Component cannot be the same item.");
-                }
-
-                $sql = "INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, GETDATE())";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([(int)$fg_item_id, (int)$component_item_id, $quantity_required, $currentUser['username']]);
-                
-                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', "FG_ID: $fg_item_id", "Comp_ID: $component_item_id");
-                echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
-
-            } catch (PDOException $e) {
-                if ($e->getCode() == '23000') {
-                    http_response_code(409);
-                    echo json_encode(['success' => false, 'message' => 'This component already exists in the BOM.']);
-                } else {
-                    throw $e; 
-                }
-            }
-            break;
-
-        case 'update_bom_component':
-            $bom_id = $input['bom_id'] ?? 0;
-            $quantity_required = $input['quantity_required'] ?? null;
-
-            if (empty($bom_id) || !is_numeric($quantity_required)) {
-                throw new Exception("BOM ID and a numeric Quantity are required.");
-            }
-
-            
-            $sql = "UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$quantity_required, $currentUser['username'], $bom_id]);
-
-            logAction($pdo, $currentUser['username'], 'UPDATE BOM COMPONENT', "BOM_ID: $bom_id", "New Qty: $quantity_required");
-            echo json_encode(['success' => true, 'message' => 'Component quantity updated.']);
-            break;
-
-        case 'delete_bom_component':
-            $bom_id = $input['bom_id'] ?? 0;
-            if (empty($bom_id)) throw new Exception("Missing bom_id.");
-
-            $deleteStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE bom_id = ?");
-            $deleteStmt->execute([$bom_id]);
-
-            if ($deleteStmt->rowCount() > 0) {
-                logAction($pdo, $currentUser['username'], 'DELETE BOM COMPONENT', "BOM_ID: $bom_id");
-                echo json_encode(['success' => true, 'message' => 'Component deleted successfully.']);
-            } else {
-                throw new Exception("Component not found or could not be deleted.");
-            }
-            break;
-
-        case 'bulk_update_bom_components':
-            $componentsToUpdate = $input['components'] ?? [];
-            if (empty($componentsToUpdate)) {
-                throw new Exception("No components data received.");
-            }
-
-            $pdo->beginTransaction();
-            try {
-                $sql = "UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?";
-                $stmt = $pdo->prepare($sql);
-
-                foreach ($componentsToUpdate as $comp) {
-                    $stmt->execute([$comp['quantity_required'], $currentUser['username'], $comp['bom_id']]);
-                }
-
-                $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'BULK UPDATE BOM', count($componentsToUpdate) . ' components updated');
-                echo json_encode(['success' => true, 'message' => 'BOM changes saved successfully.']);
-
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
-        case 'get_bom_export_template':
-            $fg_item_id = $_GET['fg_item_id'] ?? 0;
-            $line = $_GET['line'] ?? '';
-            $model = $_GET['model'] ?? '';
-            enforceLinePermission($line);
-
-            if (empty($fg_item_id) || empty($line) || empty($model)) {
-                throw new Exception("FG Item ID, Line, and Model are required for export.");
-            }
-
-            $sql = "
-                SELECT 
-                    '' AS ACTION,
-                    fg_item.sap_no AS FG_SAP_NO,
-                    b.line AS LINE,
-                    b.model AS MODEL,
-                    comp_item.sap_no AS COMPONENT_SAP_NO,
-                    b.quantity_required AS QUANTITY_REQUIRED,
-                    fg_item.part_no AS FG_PART_NO,
-                    comp_item.part_no AS COMPONENT_PART_NO
-                FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
-                JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
-                WHERE b.fg_item_id = ? AND b.line = ? AND b.model = ?
-                ORDER BY comp_item.sap_no ASC
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$fg_item_id, $line, $model]);
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $data]);
-            break;
-
-        case 'validate_bom_import':
-            $rows = $input['rows'] ?? [];
-            if (empty($rows)) {
-                throw new Exception("No data submitted for validation.");
-            }
-
-            $validationResult = [
-                'summary' => ['add' => 0, 'update' => 0, 'delete' => 0, 'error' => 0],
-                'rows' => [],
-                'isValid' => true
-            ];
-            
-            // 1. Get all relevant SAP Nos in one query for efficiency
-            $sapNosInFile = [];
-            foreach ($rows as $row) {
-                if (!empty($row['FG_SAP_NO'])) $sapNosInFile[] = $row['FG_SAP_NO'];
-                if (!empty($row['COMPONENT_SAP_NO'])) $sapNosInFile[] = $row['COMPONENT_SAP_NO'];
-            }
-            $uniqueSapNos = array_unique($sapNosInFile);
-            $itemMap = [];
-            if (!empty($uniqueSapNos)) {
-                $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
-                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN ({$placeholders})");
-                $stmt->execute($uniqueSapNos);
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $itemMap[$item['sap_no']] = $item['item_id'];
-                }
-            }
-
-            // 2. Process each row
-            foreach ($rows as $index => $row) {
-                $processedRow = $row;
-                $processedRow['row_index'] = $index + 2; // Excel row number
-                $processedRow['errors'] = [];
-                $action = strtoupper(trim($row['ACTION'] ?? ''));
-
-                // Validate required fields
-                if (empty($row['FG_SAP_NO'])) $processedRow['errors'][] = 'FG_SAP_NO is required.';
-                if (empty($row['LINE'])) $processedRow['errors'][] = 'LINE is required.';
-                if (empty($row['MODEL'])) $processedRow['errors'][] = 'MODEL is required.';
-                if (empty($row['COMPONENT_SAP_NO'])) $processedRow['errors'][] = 'COMPONENT_SAP_NO is required.';
-
-                // Validate SAP numbers exist
-                $fgItemId = $itemMap[$row['FG_SAP_NO']] ?? null;
-                $componentItemId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
-                if (!$fgItemId) $processedRow['errors'][] = "FG_SAP_NO '{$row['FG_SAP_NO']}' not found in Item Master.";
-                if (!$componentItemId) $processedRow['errors'][] = "COMPONENT_SAP_NO '{$row['COMPONENT_SAP_NO']}' not found in Item Master.";
-
-                // Validate Quantity for non-delete actions
-                if ($action !== 'DELETE') {
-                    if (!isset($row['QUANTITY_REQUIRED']) || !is_numeric($row['QUANTITY_REQUIRED']) || $row['QUANTITY_REQUIRED'] <= 0) {
-                        $processedRow['errors'][] = 'QUANTITY_REQUIRED must be a number greater than 0.';
-                    }
-                }
-
-                if (empty($processedRow['errors'])) {
-                    $stmt = $pdo->prepare("SELECT bom_id FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND component_item_id = ? AND line = ? AND model = ?");
-                    $stmt->execute([$fgItemId, $componentItemId, $row['LINE'], $row['MODEL']]);
-                    $exists = $stmt->fetchColumn();
-
-                    if ($action === 'DELETE') {
-                        if (!$exists) {
-                            $processedRow['errors'][] = 'Cannot DELETE: This component is not in the BOM.';
-                        } else {
-                            $processedRow['determined_action'] = 'DELETE';
-                            $validationResult['summary']['delete']++;
-                        }
-                    } else {
-                        if ($exists) {
-                            $processedRow['determined_action'] = 'UPDATE';
-                            $validationResult['summary']['update']++;
-                        } else {
-                            $processedRow['determined_action'] = 'ADD';
-                            $validationResult['summary']['add']++;
-                        }
-                    }
-                }
-
-                if (!empty($processedRow['errors'])) {
-                    $validationResult['summary']['error']++;
-                    $validationResult['isValid'] = false;
-                    $processedRow['determined_action'] = 'ERROR';
-                }
-                
-                $validationResult['rows'][] = $processedRow;
-            }
-
-            echo json_encode(['success' => true, 'data' => $validationResult]);
-            break;
-
-        case 'execute_bom_import':
-            $validatedRows = $input['rows'] ?? [];
-            if (empty($validatedRows)) {
-                throw new Exception("No validated data received for execution.");
-            }
-
-            $sapNosInFile = [];
-            foreach ($validatedRows as $row) {
-                $sapNosInFile[] = $row['FG_SAP_NO'];
-                $sapNosInFile[] = $row['COMPONENT_SAP_NO'];
-            }
-            $uniqueSapNos = array_unique($sapNosInFile);
-            $itemMap = [];
-            if (!empty($uniqueSapNos)) {
-                $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
-                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN ({$placeholders})");
-                $stmt->execute($uniqueSapNos);
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $itemMap[$item['sap_no']] = $item['item_id'];
-                }
-            }
-
-            $pdo->beginTransaction();
-            try {
-                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, line, model, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())");
-                $updateStmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE fg_item_id = ? AND component_item_id = ? AND line = ? AND model = ?");
-                $deleteStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND component_item_id = ? AND line = ? AND model = ?");
-
-                $counts = ['added' => 0, 'updated' => 0, 'deleted' => 0];
-                $logDetails = [];
-
-                foreach ($validatedRows as $row) {
-                    $fgItemId = $itemMap[$row['FG_SAP_NO']] ?? null;
-                    $componentItemId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
-                    
-                    if (!$fgItemId || !$componentItemId) continue;
-
-                    enforceLinePermission($row['LINE']);
-
-                    switch ($row['determined_action']) {
-                        case 'ADD':
-                            $insertStmt->execute([$fgItemId, $componentItemId, $row['LINE'], $row['MODEL'], $row['QUANTITY_REQUIRED'], $currentUser['username']]);
-                            $counts['added']++;
-                            $logDetails[] = "ADD {$row['COMPONENT_SAP_NO']} ({$row['QUANTITY_REQUIRED']})";
-                            break;
-                        case 'UPDATE':
-                            $updateStmt->execute([$row['QUANTITY_REQUIRED'], $currentUser['username'], $fgItemId, $componentItemId, $row['LINE'], $row['MODEL']]);
-                            $counts['updated']++;
-                            $logDetails[] = "UPDATE {$row['COMPONENT_SAP_NO']} ({$row['QUANTITY_REQUIRED']})";
-                            break;
-                        case 'DELETE':
-                            $deleteStmt->execute([$fgItemId, $componentItemId, $row['LINE'], $row['MODEL']]);
-                            $counts['deleted']++;
-                            $logDetails[] = "DELETE {$row['COMPONENT_SAP_NO']}";
-                            break;
-                    }
-                }
-
-                $pdo->commit();
-                
-                $targetFG = $validatedRows[0]['FG_SAP_NO'] ?? 'Multiple';
-                $logSummary = "Import for {$targetFG}: Added: {$counts['added']}, Updated: {$counts['updated']}, Deleted: {$counts['deleted']}.";
-                logAction($pdo, $currentUser['username'], 'BOM Import', $targetFG, $logSummary);
-                
-                echo json_encode(['success' => true, 'message' => 'BOM has been successfully updated.', 'summary' => $counts]);
-
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
-        case 'export_all_boms':
-            $sql = "
-                SELECT 
-                    fg_item.sap_no AS FG_SAP_NO,
-                    comp_item.sap_no AS COMPONENT_SAP_NO,
-                    b.quantity_required AS QUANTITY_REQUIRED
-                FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
-                JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
-            ";
-            if ($currentUser['role'] === 'supervisor') {
-                $sql .= " WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$currentUser['line']]);
-            } else {
-                $stmt = $pdo->query($sql);
-            }
-            $all_boms_flat = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-            echo json_encode(['success' => true, 'data' => $all_boms_flat]);
-            break;
-
-        case 'export_selected_boms':
-            $bomsToExport = $input['boms'] ?? [];
-            if (empty($bomsToExport)) {
-                throw new Exception("No BOMs selected for export.");
-            }
-
-            $fgItemIds = array_column($bomsToExport, 'fg_item_id');
-            if (empty($fgItemIds)) {
-                throw new Exception("Invalid BOM selection data.");
-            }
-
-            $placeholders = implode(',', array_fill(0, count($fgItemIds), '?'));
-            $sql = "
-                SELECT
-                    fg_item.sap_no AS FG_SAP_NO,
-                    comp_item.sap_no AS COMPONENT_SAP_NO,
-                    b.quantity_required AS QUANTITY_REQUIRED
-                FROM " . BOM_TABLE . " b
-                JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
-                JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
-                WHERE b.fg_item_id IN ({$placeholders})
-                ORDER BY fg_item.sap_no, comp_item.sap_no
-            ";
-
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($fgItemIds);
-            $selected_boms_flat = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $grouped_boms = [];
-            foreach ($selected_boms_flat as $row) {
-                $grouped_boms[$row['FG_SAP_NO']][] = $row;
-            }
-
-            echo json_encode(['success' => true, 'data' => $grouped_boms]);
-            break;
-
-        case 'validate_bulk_import':
-            $sheets = $input['sheets'] ?? [];
-            if (empty($sheets)) {
-                throw new Exception("No sheets data submitted for validation.");
-            }
-
-            $validationResult = [
-                'summary' => ['create' => 0, 'overwrite' => 0, 'skipped' => 0],
-                'sheets' => [],
-                'isValid' => true
-            ];
-
-            $sapNosInFile = [];
-            foreach ($sheets as $sheetName => $data) {
-                $sapNosInFile[] = $sheetName;
-                foreach ($data['rows'] as $row) {
-                    if (!empty($row['COMPONENT_SAP_NO'])) $sapNosInFile[] = $row['COMPONENT_SAP_NO'];
-                }
-            }
-            $itemMap = [];
-            if (!empty($sapNosInFile)) {
-                $uniqueSapNos = array_unique($sapNosInFile);
-                $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
-                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN ({$placeholders})");
-                $stmt->execute(array_values($uniqueSapNos));
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $itemMap[$item['sap_no']] = $item['item_id'];
-                }
-            }
-
-            $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE);
-            $existingBoms = $existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0);
-            $existingBoms = array_flip($existingBoms);
-
-            foreach ($sheets as $sheetName => $data) {
-                $processedSheet = ['sheet_name' => $sheetName, 'status' => '', 'errors' => [], 'rows' => $data['rows']];
-                $fgSapNo = $sheetName;
-                $fgItemId = $itemMap[$fgSapNo] ?? null;
-
-                if (!$fgItemId) {
-                    $processedSheet['errors'][] = "FG SAP No. '{$fgSapNo}' from sheet name not found in Item Master.";
-                }
-                
-                if (empty($data['rows'])) {
-                    $processedSheet['errors'][] = "Sheet '{$sheetName}' contains no data rows.";
-                } else {
-                    foreach ($data['rows'] as $row) {
-                        if (empty($row['COMPONENT_SAP_NO']) || !isset($row['QUANTITY_REQUIRED'])) {
-                            $processedSheet['errors'][] = "Row for component '{$row['COMPONENT_SAP_NO']}' is missing required data (COMPONENT_SAP_NO, QUANTITY_REQUIRED).";
-                            continue;
-                        }
-                        if (!isset($itemMap[$row['COMPONENT_SAP_NO']])) {
-                            $processedSheet['errors'][] = "Component SAP No. '{$row['COMPONENT_SAP_NO']}' not found in Item Master.";
-                        }
-                        if (!is_numeric($row['QUANTITY_REQUIRED']) || $row['QUANTITY_REQUIRED'] <= 0) {
-                            $processedSheet['errors'][] = "Quantity for component '{$row['COMPONENT_SAP_NO']}' must be a number greater than 0.";
-                        }
-                    }
-                }
-
-                if (empty($processedSheet['errors'])) {
-                    if (isset($existingBoms[$fgItemId])) {
-                        $processedSheet['status'] = 'OVERWRITE';
-                        $validationResult['summary']['overwrite']++;
-                    } else {
-                        $processedSheet['status'] = 'CREATE';
-                        $validationResult['summary']['create']++;
-                    }
-                } else {
-                    $processedSheet['status'] = 'SKIPPED';
-                    $validationResult['summary']['skipped']++;
-                    $validationResult['isValid'] = false;
-                }
-                $validationResult['sheets'][] = $processedSheet;
-            }
-            echo json_encode(['success' => true, 'data' => $validationResult]);
-            break;
-
-        case 'execute_bulk_import':
-            $sheets = $input['sheets'] ?? [];
-            if (empty($sheets)) {
-                throw new Exception("No validated data received for execution.");
-            }
-
-            $sapNosInFile = [];
-            foreach ($sheets as $sheet) {
-                $sapNosInFile[] = $sheet['sheet_name'];
-                foreach($sheet['rows'] as $row) $sapNosInFile[] = $row['COMPONENT_SAP_NO'];
-            }
-            $itemMap = [];
-            if (!empty($sapNosInFile)) {
-                $uniqueSapNos = array_unique($sapNosInFile);
-                $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
-                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN ({$placeholders})");
-                $stmt->execute(array_values($uniqueSapNos));
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $itemMap[$item['sap_no']] = $item['item_id'];
-                }
-            }
-            
-            $pdo->beginTransaction();
-            try {
-                $deleteStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
-                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, GETDATE())");
-                
-                $counts = ['created' => 0, 'overwritten' => 0];
-
-                foreach ($sheets as $sheet) {
-                    if ($sheet['status'] === 'SKIPPED') continue;
-
-                    $fgSapNo = $sheet['sheet_name'];
-                    $fgItemId = $itemMap[$fgSapNo] ?? null;
-                    if (!$fgItemId) continue;
-
-                    $deleteStmt->execute([$fgItemId]);
-
-                    foreach($sheet['rows'] as $row) {
-                        $componentItemId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
-                        if (!$componentItemId) continue;
-                        $insertStmt->execute([$fgItemId, $componentItemId, $row['QUANTITY_REQUIRED'], $currentUser['username']]);
-                    }
-
-                    if ($sheet['status'] === 'CREATE') $counts['created']++;
-                    if ($sheet['status'] === 'OVERWRITE') $counts['overwritten']++;
-                }
-
-                $pdo->commit();
-                
-                logAction($pdo, $currentUser['username'], 'BOM Bulk Import', 'Multiple BOMs', "Created: {$counts['created']}, Overwritten: {$counts['overwritten']}");
-                echo json_encode(['success' => true, 'message' => 'BOMs have been successfully imported.', 'summary' => $counts]);
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
+        // =========================================================================
+        // [1] READ OPERATIONS (NOLOCK)
+        // =========================================================================
         case 'get_all_fgs_with_bom':
             $sql = "
                 WITH LatestBOM AS (
                     SELECT 
-                        fg_item_id, 
-                        updated_by, 
-                        updated_at,
+                        fg_item_id, updated_by, updated_at,
                         ROW_NUMBER() OVER(PARTITION BY fg_item_id ORDER BY updated_at DESC) as rn
-                    FROM " . BOM_TABLE . "
-                    WHERE fg_item_id IS NOT NULL
+                    FROM " . BOM_TABLE . " WITH (NOLOCK)
                 )
                 SELECT 
-                    b.fg_item_id,
-                    i.sap_no AS fg_sap_no,
-                    i.part_no AS fg_part_no,
-                    i.part_description AS fg_part_description,
-                    b.updated_by,
-                    b.updated_at
+                    b.fg_item_id, i.sap_no AS fg_sap_no, i.part_no AS fg_part_no, i.part_description AS fg_part_description,
+                    b.updated_by, FORMAT(b.updated_at, 'yyyy-MM-dd HH:mm') AS updated_at
                 FROM LatestBOM b
-                JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id
-                WHERE b.rn = 1
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.fg_item_id = i.item_id
+                WHERE b.rn = 1 AND i.is_active = 1
             ";
-        
             if ($currentUser['role'] === 'supervisor') {
-                $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)";
-            }
-        
-            $sql .= " ORDER BY i.sap_no DESC";
-        
-            $stmt = $pdo->prepare($sql);
-        
-            if ($currentUser['role'] === 'supervisor') {
+                $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
-                $stmt->execute();
+                $sql .= " ORDER BY i.sap_no ASC";
+                $stmt = $pdo->query($sql);
             }
-        
-            $fgs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $fgs]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
         case 'get_fgs_without_bom':
-            $searchTerm = $_GET['search'] ?? '';
-            if (strlen($searchTerm) < 2) {
+            $search = $_GET['search'] ?? '';
+            if (strlen($search) < 2) {
                 echo json_encode(['success' => true, 'data' => []]);
                 exit;
             }
-
             $sql = "
-                SELECT TOP (10)
-                    i.item_id, i.sap_no, i.part_no, i.part_description
-                FROM " . ITEMS_TABLE . " i
-                WHERE 
-                    i.is_active = 1
-                    AND (i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)
-                    AND NOT EXISTS (
-                        SELECT 1 FROM " . BOM_TABLE . " b WHERE b.fg_item_id = i.item_id
-                    )
-                ORDER BY i.sap_no
+                SELECT TOP 20 item_id, sap_no, part_no, part_description 
+                FROM " . ITEMS_TABLE . " i WITH (NOLOCK) 
+                WHERE is_active = 1 
+                  AND NOT EXISTS (SELECT 1 FROM " . BOM_TABLE . " b WITH (NOLOCK) WHERE b.fg_item_id = i.item_id)
+                  AND (sap_no LIKE ? OR part_no LIKE ? OR part_description LIKE ?)
+                ORDER BY sap_no ASC
             ";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute(['%' . $searchTerm . '%', '%' . $searchTerm . '%', '%' . $searchTerm . '%']);
-            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $items]);
+            $stmt->execute(["%$search%", "%$search%", "%$search%"]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        case 'delete_full_bom':
-            $fg_item_id = $input['fg_item_id'] ?? 0;
-            if (empty($fg_item_id)) {
-                throw new Exception("FG Item ID is required.");
-            }
+        case 'get_bom_components':
+            $fg_id = (int)($_GET['fg_item_id'] ?? 0);
+            if (!$fg_id) throw new Exception("FG Item ID is required.");
             
-            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
-            $stmt->execute([(int)$fg_item_id]);
-            
-            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', "FG_ID: $fg_item_id");
-            echo json_encode(['success' => true, 'message' => 'BOM has been deleted.']);
+            $sql = "
+                SELECT 
+                    b.bom_id, CAST(b.quantity_required AS FLOAT) AS quantity_required,
+                    i.part_no AS component_part_no, i.sap_no AS component_sap_no, i.part_description
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.component_item_id = i.item_id
+                WHERE b.fg_item_id = ?
+                ORDER BY i.sap_no ASC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$fg_id]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        case 'bulk_delete_bom':
-            $bomsToDelete = $input['boms'] ?? [];
-            if (empty($bomsToDelete)) {
-                throw new Exception("No BOMs selected for deletion.");
-            }
-            
+        // =========================================================================
+        // [2] WRITE OPERATIONS (TRANSACTIONS)
+        // =========================================================================
+        case 'add_bom_component':
+            $fg_id = (int)($input['fg_item_id'] ?? 0);
+            $comp_id = (int)($input['component_item_id'] ?? 0);
+            $qty = (float)($input['quantity_required'] ?? 0);
+
+            if ($fg_id <= 0 || $comp_id <= 0 || $qty <= 0) throw new Exception("Invalid input data.");
+            if ($fg_id === $comp_id) throw new Exception("Finished Good cannot be its own component.");
+
             $pdo->beginTransaction();
             try {
-                $stmt = $pdo->prepare(
-                    "DELETE b FROM " . BOM_TABLE . " b 
-                     JOIN " . ITEMS_TABLE . " i ON b.fg_item_id = i.item_id 
-                     WHERE i.sap_no = ? AND b.line = ? AND b.model = ?"
-                );
+                $checkStmt = $pdo->prepare("SELECT 1 FROM " . BOM_TABLE . " WITH (UPDLOCK) WHERE fg_item_id = ? AND component_item_id = ?");
+                $checkStmt->execute([$fg_id, $comp_id]);
+                if ($checkStmt->fetchColumn()) throw new Exception("This component already exists in the BOM.");
 
-                foreach ($bomsToDelete as $bom) {
-                    enforceLinePermission($bom['line']);
-                    $stmt->execute([$bom['fg_sap_no'], $bom['line'], $bom['model']]);
-                }
+                $stmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at) VALUES (?, ?, ?, 'DEFAULT', 'DEFAULT', ?, GETDATE())");
+                $stmt->execute([$fg_id, $comp_id, $qty, $currentUser['username']]);
                 
+                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', $fg_id, "Comp ID: $comp_id, Qty: $qty");
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'BOM Bulk Delete', count($bomsToDelete) . ' BOMs', 'Successfully deleted selected BOMs.');
-                echo json_encode(['success' => true, 'message' => count($bomsToDelete) . ' BOM(s) have been successfully deleted.']);
-
+                echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
             }
             break;
 
-        case 'get_full_bom_export':
-            // รับค่า search จาก GET parameter
-            $searchTerm = $_GET['search'] ?? '';
+        case 'update_bom_component':
+            $bom_id = (int)($input['bom_id'] ?? 0);
+            $qty = (float)($input['quantity_required'] ?? 0);
+            if ($bom_id <= 0 || $qty <= 0) throw new Exception("Invalid BOM ID or quantity.");
 
-            $sql = "
-                SELECT
-                    fg_item.sap_no      AS fg_sap_no,
-                    fg_item.part_no     AS fg_part_no,
-                    b.line,
-                    b.model,
-                    comp_item.sap_no    AS component_sap_no,
-                    comp_item.part_no   AS component_part_no,
-                    b.quantity_required,
-                    b.updated_by,
-                    b.updated_at
-                FROM " . BOM_TABLE . " b
-                LEFT JOIN " . ITEMS_TABLE . " fg_item ON b.fg_item_id = fg_item.item_id
-                LEFT JOIN " . ITEMS_TABLE . " comp_item ON b.component_item_id = comp_item.item_id
-            ";
-            
-            $conditions = [];
-            $params = [];
-
-            // เพิ่มเงื่อนไขการกรองข้อมูลตาม Role ของ Supervisor
-            if ($currentUser['role'] === 'supervisor') {
-                $conditions[] = "b.line = ?";
-                $params[] = $currentUser['line'];
-            }
-
-            // เพิ่มเงื่อนไขการกรองข้อมูลจากช่อง Search
-            if (!empty($searchTerm)) {
-                $conditions[] = "(fg_item.sap_no LIKE ? OR fg_item.part_no LIKE ? OR b.line LIKE ? OR b.model LIKE ?)";
-                $params[] = '%' . $searchTerm . '%';
-                $params[] = '%' . $searchTerm . '%';
-                $params[] = '%' . $searchTerm . '%';
-                $params[] = '%' . $searchTerm . '%';
-            }
-
-            if (!empty($conditions)) {
-                $sql .= " WHERE " . implode(" AND ", $conditions);
-            }
-            
-            $sql .= " ORDER BY b.line, b.model, fg_item.part_no, comp_item.part_no";
-
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $data]);
+            $stmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?");
+            $stmt->execute([$qty, $currentUser['username'], $bom_id]);
+            echo json_encode(['success' => true, 'message' => 'Quantity updated.']);
             break;
 
-        case 'bulk_import_bom':
-            if (!is_array($input) || empty($input)) {
-                throw new Exception("Invalid or empty data received for BOM import.");
-            }
+        case 'delete_bom_component':
+            $bom_id = (int)($input['bom_id'] ?? 0);
+            if ($bom_id <= 0) throw new Exception("Invalid BOM ID.");
+
+            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE bom_id = ?");
+            $stmt->execute([$bom_id]);
+            echo json_encode(['success' => true, 'message' => 'Component deleted.']);
+            break;
+
+        case 'delete_full_bom':
+            $fg_id = (int)($input['fg_item_id'] ?? 0);
+            if ($fg_id <= 0) throw new Exception("Invalid FG ID.");
+
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
+            $stmt->execute([$fg_id]);
+            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', $fg_id, "Deleted all components");
+            $pdo->commit();
             
+            echo json_encode(['success' => true, 'message' => 'Full BOM deleted successfully.']);
+            break;
+
+        case 'bulk_delete_bom':
+            $boms = $input['boms'] ?? [];
+            if (empty($boms)) throw new Exception("No BOMs selected.");
+
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
+            $count = 0;
+            foreach ($boms as $bom) {
+                if (!empty($bom['fg_item_id'])) {
+                    $stmt->execute([(int)$bom['fg_item_id']]);
+                    $count++;
+                }
+            }
+            logAction($pdo, $currentUser['username'], 'BULK DELETE BOM', 0, "Deleted {$count} BOMs");
+            $pdo->commit();
+            
+            echo json_encode(['success' => true, 'message' => "Successfully deleted {$count} BOM(s)."]);
+            break;
+
+        // =========================================================================
+        // [3] EXPORT OPERATIONS (NOLOCK)
+        // =========================================================================
+        case 'export_all_boms':
+            $sql = "
+                SELECT 
+                    ISNULL(b.line, 'DEFAULT') AS LINE, ISNULL(b.model, 'DEFAULT') AS MODEL,
+                    fg.sap_no AS FG_SAP_NO, c.sap_no AS COMPONENT_SAP_NO,
+                    CAST(b.quantity_required AS FLOAT) AS QUANTITY_REQUIRED
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " fg WITH (NOLOCK) ON b.fg_item_id = fg.item_id
+                JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
+            ";
+            if ($currentUser['role'] === 'supervisor') {
+                $sql .= " WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$currentUser['line']]);
+            } else {
+                $sql .= " ORDER BY fg.sap_no ASC";
+                $stmt = $pdo->query($sql);
+            }
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'export_selected_boms':
+            $boms = $input['boms'] ?? [];
+            if (empty($boms)) throw new Exception("No BOMs selected.");
+            $fg_ids = array_filter(array_column($boms, 'fg_item_id'));
+            if (empty($fg_ids)) throw new Exception("Invalid BOM data.");
+
+            $placeholders = implode(',', array_fill(0, count($fg_ids), '?'));
+            $sql = "
+                SELECT 
+                    fg.sap_no AS MAP_KEY, ISNULL(b.line, 'DEFAULT') AS LINE, ISNULL(b.model, 'DEFAULT') AS MODEL,
+                    c.sap_no AS COMPONENT_SAP_NO, CAST(b.quantity_required AS FLOAT) AS QUANTITY_REQUIRED
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " fg WITH (NOLOCK) ON b.fg_item_id = fg.item_id
+                JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
+                WHERE b.fg_item_id IN ($placeholders)
+                ORDER BY fg.sap_no, c.sap_no
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($fg_ids);
+            
+            $groupedData = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $key = $row['MAP_KEY'];
+                unset($row['MAP_KEY']);
+                $groupedData[$key][] = $row;
+            }
+            echo json_encode(['success' => true, 'data' => $groupedData]);
+            break;
+
+        // =========================================================================
+        // [4] IMPORT OPERATIONS (BULK TRANSACTIONS)
+        // =========================================================================
+        case 'validate_bulk_import':
+            $sheets = $input['sheets'] ?? [];
+            if (empty($sheets)) throw new Exception("No data provided.");
+
+            // 1. ดึง ID ของ Items ทั้งหมดในรอบเดียว (Performance)
+            $sapNos = [];
+            foreach ($sheets as $sheetName => $data) {
+                $sapNos[] = $sheetName;
+                foreach ($data['rows'] as $row) {
+                    if (!empty($row['COMPONENT_SAP_NO'])) $sapNos[] = $row['COMPONENT_SAP_NO'];
+                }
+            }
+            $itemMap = [];
+            if (!empty($sapNos)) {
+                $uniqueSapNos = array_unique($sapNos);
+                $placeholders = implode(',', array_fill(0, count($uniqueSapNos), '?'));
+                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN ({$placeholders})");
+                $stmt->execute(array_values($uniqueSapNos));
+                while ($i = $stmt->fetch(PDO::FETCH_ASSOC)) $itemMap[$i['sap_no']] = $i['item_id'];
+            }
+
+            // 2. เช็คว่ามี BOM อยู่แล้วหรือไม่
+            $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE . " WITH (NOLOCK)");
+            $existingBoms = array_flip($existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0));
+
+            $results = [];
+            $summary = ['create' => 0, 'overwrite' => 0, 'skipped' => 0];
+            $isValid = true;
+
+            foreach ($sheets as $sheetName => $data) {
+                $processed = ['sheet_name' => $sheetName, 'errors' => [], 'rows' => $data['rows']];
+                $fgId = $itemMap[$sheetName] ?? null;
+
+                if (!$fgId) $processed['errors'][] = "FG SAP '{$sheetName}' not found.";
+                if (empty($data['rows'])) $processed['errors'][] = "Empty data rows.";
+                
+                foreach ($data['rows'] as $row) {
+                    $compSap = $row['COMPONENT_SAP_NO'] ?? '';
+                    $qty = (float)($row['QUANTITY_REQUIRED'] ?? 0);
+                    if (empty($compSap) || $qty <= 0) $processed['errors'][] = "Invalid Component or Quantity.";
+                    if (!isset($itemMap[$compSap])) $processed['errors'][] = "Component '{$compSap}' not found.";
+                }
+
+                if (empty($processed['errors'])) {
+                    if (isset($existingBoms[$fgId])) {
+                        $processed['status'] = 'OVERWRITE';
+                        $summary['overwrite']++;
+                    } else {
+                        $processed['status'] = 'CREATE';
+                        $summary['create']++;
+                    }
+                } else {
+                    $processed['status'] = 'SKIPPED';
+                    $summary['skipped']++;
+                    $isValid = false;
+                }
+                $results[] = $processed;
+            }
+
+            echo json_encode(['success' => true, 'data' => ['isValid' => $isValid, 'summary' => $summary, 'sheets' => $results]]);
+            break;
+
+        case 'execute_bulk_import':
+            $sheets = $input['sheets'] ?? [];
+            if (empty($sheets)) throw new Exception("No validated data.");
+
+            // เตรียม Map Items
+            $sapNos = [];
+            foreach ($sheets as $s) {
+                $sapNos[] = $s['sheet_name'];
+                foreach ($s['rows'] as $r) $sapNos[] = $r['COMPONENT_SAP_NO'];
+            }
+            $itemMap = [];
+            if (!empty($sapNos)) {
+                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN (" . implode(',', array_fill(0, count(array_unique($sapNos)), '?')) . ")");
+                $stmt->execute(array_values(array_unique($sapNos)));
+                while ($i = $stmt->fetch(PDO::FETCH_ASSOC)) $itemMap[$i['sap_no']] = $i['item_id'];
+            }
+
             $pdo->beginTransaction();
             try {
-                $insertedCount = 0;
-                $updatedCount = 0;
-
-                $checkItemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
-                $checkBomStmt = $pdo->prepare("SELECT bom_id FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND line = ? AND model = ? AND component_item_id = ?");
-                $updateStmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?");
-                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, line, model, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())");
-
-                foreach ($input as $row) {
-                    $fg_sap_no = $row['FG_SAP_NO'] ?? null;
-                    $line = $row['LINE'] ?? null;
-                    $model = $row['MODEL'] ?? null;
-                    $comp_sap_no = $row['COMPONENT_SAP_NO'] ?? null;
-                    $quantity = (int)($row['QUANTITY_REQUIRED'] ?? 0);
-
-                    if (!$fg_sap_no || !$line || !$model || !$comp_sap_no || $quantity <= 0) {
-                        continue; // ข้ามข้อมูลแถวที่ไม่สมบูรณ์
-                    }
-                    
-                    enforceLinePermission($line);
-
-                    $checkItemStmt->execute([$fg_sap_no]);
-                    $fg_item_id = $checkItemStmt->fetchColumn();
-                    $checkItemStmt->execute([$comp_sap_no]);
-                    $comp_item_id = $checkItemStmt->fetchColumn();
-                    
-                    if (!$fg_item_id || !$comp_item_id) {
-                        continue;
-                    }
-                    $checkBomStmt->execute([$fg_item_id, $line, $model, $comp_item_id]);
-                    $existing_bom_id = $checkBomStmt->fetchColumn();
-
-                    if ($existing_bom_id) {
-                        $updateStmt->execute([$quantity, $currentUser['username'], $existing_bom_id]);
-                        $updatedCount++;
-                    } else {
-                        $insertStmt->execute([$fg_item_id, $line, $model, $comp_item_id, $quantity, $currentUser['username']]);
-                        $insertedCount++;
-                    }
-                }
+                $delStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
+                $insStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, line, model, quantity_required, updated_by, updated_at) VALUES (?, ?, 'DEFAULT', 'DEFAULT', ?, ?, GETDATE())");
                 
-                $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', null, "Imported/Updated BOM. Inserted: $insertedCount, Updated: $updatedCount");
-                echo json_encode(['success' => true, 'message' => "BOM import completed. Added: $insertedCount, Updated: $updatedCount."]);
+                $count = 0;
+                foreach ($sheets as $sheet) {
+                    if ($sheet['status'] === 'SKIPPED') continue;
+                    $fgId = $itemMap[$sheet['sheet_name']] ?? null;
+                    if (!$fgId) continue;
 
+                    $delStmt->execute([$fgId]); // ลบของเก่าออก (Overwrite)
+                    foreach ($sheet['rows'] as $row) {
+                        $compId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
+                        if (!$compId) continue;
+                        $insStmt->execute([$fgId, $compId, (float)$row['QUANTITY_REQUIRED'], $currentUser['username']]);
+                    }
+                    $count++;
+                }
+
+                logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', 0, "Processed {$count} BOMs");
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => "Successfully imported {$count} BOM(s)."]);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
@@ -737,152 +336,148 @@ try {
 
         case 'create_initial_boms':
             $rows = $input['rows'] ?? [];
-            if (empty($rows)) {
-                throw new Exception("No data rows received for initial creation.");
-            }
+            if (empty($rows)) throw new Exception("No data provided.");
 
-            // --- 1. ดึงข้อมูล ID ที่จำเป็นทั้งหมดในครั้งเดียว ---
-            $sapNosInFile = [];
-            foreach ($rows as $row) {
-                if (!empty($row['FG_SAP_NO'])) $sapNosInFile[] = $row['FG_SAP_NO'];
-                if (!empty($row['COMPONENT_SAP_NO'])) $sapNosInFile[] = $row['COMPONENT_SAP_NO'];
+            $sapNos = [];
+            foreach ($rows as $r) {
+                if (!empty($r['FG_SAP_NO'])) $sapNos[] = $r['FG_SAP_NO'];
+                if (!empty($r['COMPONENT_SAP_NO'])) $sapNos[] = $r['COMPONENT_SAP_NO'];
             }
             $itemMap = [];
-            if (!empty($sapNosInFile)) {
-                $uniqueSapNos = array_unique($sapNosInFile);
-                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WHERE sap_no IN (" . implode(',', array_fill(0, count($uniqueSapNos), '?')) . ")");
-                $stmt->execute(array_values($uniqueSapNos));
-                while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) { $itemMap[$item['sap_no']] = $item['item_id']; }
+            if (!empty($sapNos)) {
+                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN (" . implode(',', array_fill(0, count(array_unique($sapNos)), '?')) . ")");
+                $stmt->execute(array_values(array_unique($sapNos)));
+                while ($i = $stmt->fetch(PDO::FETCH_ASSOC)) $itemMap[$i['sap_no']] = $i['item_id'];
             }
-            
-            // --- 2. จัดกลุ่มข้อมูลตาม FG และกรอง FG ที่มี BOM อยู่แล้วออก ---
+
             $bomGroups = [];
-            $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE);
-            $existingFgIds = $existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0);
-            $existingFgIds = array_flip($existingFgIds);
+            $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE . " WITH (NOLOCK)");
+            $existingFgIds = array_flip($existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0));
 
             foreach ($rows as $row) {
-                $fgSap = $row['FG_SAP_NO'] ?? null;
-                $fgItemId = $itemMap[$fgSap] ?? null;
-
-                // ข้ามแถวนี้ถ้าหา FG ไม่เจอ หรือ FG นี้มี BOM อยู่แล้ว
-                if (!$fgItemId || isset($existingFgIds[$fgItemId])) {
-                    continue;
-                }
-                $bomGroups[$fgItemId][] = $row;
+                $fgId = $itemMap[$row['FG_SAP_NO']] ?? null;
+                // ข้ามถ้าไม่มี FG ในระบบ หรือ FG นี้มี BOM อยู่แล้ว (ป้องกันการทับ)
+                if (!$fgId || isset($existingFgIds[$fgId])) continue;
+                $bomGroups[$fgId][] = $row;
             }
 
-            // --- 3. บันทึกข้อมูล BOM ใหม่ ---
             $pdo->beginTransaction();
             try {
-                $insertStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, GETDATE())");
-                $createdBomCount = 0;
-
-                foreach ($bomGroups as $fgItemId => $components) {
-                    $processedComponents = [];
-                    foreach ($components as $compRow) {
-                        $compSap = $compRow['COMPONENT_SAP_NO'] ?? null;
-                        $qty = $compRow['QUANTITY_REQUIRED'] ?? null;
-                        $compItemId = $itemMap[$compSap] ?? null;
-
-                        // เพิ่ม Component ถ้าข้อมูลครบและยังไม่ถูกเพิ่มใน Loop นี้
-                        if ($compItemId && $qty && !isset($processedComponents[$compItemId])) {
-                            $insertStmt->execute([$fgItemId, $compItemId, $qty, $currentUser['username']]);
-                            $processedComponents[$compItemId] = true;
+                $insStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, line, model, quantity_required, updated_by, updated_at) VALUES (?, ?, 'DEFAULT', 'DEFAULT', ?, ?, GETDATE())");
+                $created = 0;
+                foreach ($bomGroups as $fgId => $comps) {
+                    $processed = [];
+                    foreach ($comps as $c) {
+                        $compId = $itemMap[$c['COMPONENT_SAP_NO']] ?? null;
+                        $qty = (float)($c['QUANTITY_REQUIRED'] ?? 0);
+                        if ($compId && $qty > 0 && !isset($processed[$compId])) {
+                            $insStmt->execute([$fgId, $compId, $qty, $currentUser['username']]);
+                            $processed[$compId] = true;
                         }
                     }
-                    if (!empty($processedComponents)) {
-                        $createdBomCount++;
-                    }
+                    if (!empty($processed)) $created++;
                 }
 
+                logAction($pdo, $currentUser['username'], 'INITIAL BOM CREATE', 0, "Created {$created} BOMs");
                 $pdo->commit();
-                $message = "Initial BOM creation complete. Created: {$createdBomCount} new BOMs.";
-                logAction($pdo, $currentUser['username'], 'BOM Initial Create', $createdBomCount . ' BOMs', $message);
-                echo json_encode(['success' => true, 'message' => $message]);
-
+                echo json_encode(['success' => true, 'message' => "Created {$created} new BOM(s). Existing ones skipped."]);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
             }
             break;
-            
-        case 'copy_bom':
-            $source_fg_sap_no = $input['source_fg_sap_no'] ?? '';
-            $source_line = $input['source_line'] ?? '';
-            $source_model = $input['source_model'] ?? '';
-            $target_fg_sap_no = $input['target_fg_sap_no'] ?? '';
-            
-            $target_line = $source_line;
-            $target_model = $source_model;
 
-            if (empty($source_fg_sap_no) || empty($source_line) || empty($source_model) || empty($target_fg_sap_no)) {
-                throw new Exception("Missing source or target information for BOM copy.");
-            }
-            if ($source_fg_sap_no === $target_fg_sap_no && $source_line === $target_line && $source_model === $target_model) {
-                throw new Exception("Source and Target BOM cannot be the same.");
+        case 'get_bom_master_list':
+            $sql = "
+                SELECT 
+                    i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.planned_output,
+                    CASE WHEN EXISTS (SELECT 1 FROM " . BOM_TABLE . " b WITH (NOLOCK) WHERE b.fg_item_id = i.item_id) 
+                         THEN 1 ELSE 0 
+                    END AS has_bom
+                FROM " . ITEMS_TABLE . " i WITH (NOLOCK)
+                WHERE i.is_active = 1 
+                  AND i.material_type != 'RM' -- กรอง RM ทิ้งตั้งแต่ DB ลดโหลด Network
+            ";
+            
+            if ($currentUser['role'] === 'supervisor') {
+                $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$currentUser['line']]);
+            } else {
+                $sql .= " ORDER BY i.sap_no ASC";
+                $stmt = $pdo->query($sql);
             }
             
-            enforceLinePermission($source_line);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'copy_bom':
+            $source_sap = trim($input['source_fg_sap_no'] ?? '');
+            $target_sap = trim($input['target_fg_sap_no'] ?? '');
+
+            if (empty($source_sap) || empty($target_sap)) {
+                throw new Exception("Missing source or target SAP No.");
+            }
+            if (strtoupper($source_sap) === strtoupper($target_sap)) {
+                throw new Exception("ไม่สามารถคัดลอกสูตรทับตัวเองได้ (Source และ Target ต้องไม่เหมือนกัน)");
+            }
 
             $pdo->beginTransaction();
             try {
-                $checkItemSql = "SELECT COUNT(*) FROM " . ITEMS_TABLE . " WHERE sap_no = ?";
-                $checkItemStmt = $pdo->prepare($checkItemSql);
-                $checkItemStmt->execute([$target_fg_sap_no]);
-                if ($checkItemStmt->fetchColumn() == 0) {
-                    throw new Exception("Target Finished Good SAP No '{$target_fg_sap_no}' does not exist in Item Master.");
+                $stmt = $pdo->prepare("SELECT item_id, sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN (?, ?)");
+                $stmt->execute([$source_sap, $target_sap]);
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $source_id = null;
+                $target_id = null;
+
+                foreach ($items as $item) {
+                    if (strcasecmp($item['sap_no'], $source_sap) === 0) $source_id = $item['item_id'];
+                    if (strcasecmp($item['sap_no'], $target_sap) === 0) $target_id = $item['item_id'];
                 }
 
-                $deleteStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_sap_no = ? AND line = ? AND model = ?");
-                $deleteStmt->execute([$target_fg_sap_no, $target_line, $target_model]);
+                if (!$source_id) throw new Exception("ไม่พบรหัสสินค้าต้นฉบับ (Source): {$source_sap} ในระบบ");
+                if (!$target_id) throw new Exception("ไม่พบรหัสสินค้าปลายทาง (Target): {$target_sap} ในระบบ (ต้องไปสร้างใน Item Master ก่อน)");
 
-                $sourceComponentsStmt = $pdo->prepare("SELECT component_sap_no, quantity_required FROM " . BOM_TABLE . " WHERE fg_sap_no = ? AND line = ? AND model = ?");
-                $sourceComponentsStmt->execute([$source_fg_sap_no, $source_line, $source_model]);
-                $components = $sourceComponentsStmt->fetchAll(PDO::FETCH_ASSOC);
+                $srcStmt = $pdo->prepare("SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ?");
+                $srcStmt->execute([$source_id]);
+                $components = $srcStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 if (count($components) === 0) {
-                    $pdo->commit();
-                    echo json_encode(['success' => true, 'message' => "Source BOM was empty. Target BOM for '{$target_fg_sap_no}' is now also empty."]);
-                    exit;
+                    throw new Exception("รหัสต้นฉบับ {$source_sap} ยังไม่มีสูตรการผลิต ไม่สามารถคัดลอกได้");
                 }
 
-                $insertSql = "INSERT INTO " . BOM_TABLE . " (fg_sap_no, line, model, component_sap_no, quantity_required, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
-                $insertStmt = $pdo->prepare($insertSql);
+                $delStmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
+                $delStmt->execute([$target_id]);
+                $insStmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at) VALUES (?, ?, ?, 'DEFAULT', 'DEFAULT', ?, GETDATE())");
                 
                 foreach ($components as $comp) {
-                    $insertStmt->execute([
-                        $target_fg_sap_no,
-                        $target_line,
-                        $target_model,
-                        $comp['component_sap_no'],
-                        $comp['quantity_required'],
+                    $insStmt->execute([
+                        $target_id, 
+                        $comp['component_item_id'], 
+                        $comp['quantity_required'], 
                         $currentUser['username']
                     ]);
                 }
 
+                logAction($pdo, $currentUser['username'], 'COPY BOM', $source_sap, "Cloned BOM to Target SAP: {$target_sap}");
                 $pdo->commit();
-
-                $logDetail = "From SAP: {$source_fg_sap_no} To SAP: {$target_fg_sap_no} ({$target_line}/{$target_model})";
-                logAction($pdo, $currentUser['username'], 'COPY BOM', $source_fg_sap_no, $logDetail);
-                echo json_encode(['success' => true, 'message' => "BOM successfully copied to '{$target_fg_sap_no}'."]);
-
+                
+                echo json_encode(['success' => true, 'message' => "คัดลอกสูตรไปยัง '{$target_sap}' สำเร็จแล้ว!"]);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
             }
             break;
-        
+
         default:
             http_response_code(400);
-            throw new Exception("Invalid BOM action.");
+            throw new Exception("Invalid Action.");
     }
 } catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    ob_clean(); // ล้าง buffer ป้องกัน HTML
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    error_log("BOM Manager Error: " . $e->getMessage());
 }
 ?>
