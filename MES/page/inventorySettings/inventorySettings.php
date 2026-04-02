@@ -99,8 +99,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                     </div>
 
                     <div class="col-12 col-md-7 text-md-end d-flex justify-content-end align-items-center gap-2">
-                        <span id="currentModuleLabel" class="fw-bold text-primary me-auto ms-3 d-none d-lg-inline">Item Master</span>
-                        
                         <div class="toolbar-group item-master-pane d-flex gap-2">
                             <button class="btn btn-sm btn-outline-secondary shadow-sm" id="toggleInactiveBtn" title="ซ่อน/แสดง รายการที่ปิดใช้งาน">
                                 <i class="fas fa-eye-slash"></i>
@@ -111,16 +109,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         </div>
 
                         <div class="toolbar-group bom-manager-pane d-flex gap-2 d-none">
-                            <button class="btn btn-sm btn-outline-danger shadow-sm d-none fw-bold" id="deleteSelectedBomBtn">
-                                <i class="fas fa-trash-alt me-1"></i> ลบที่เลือก
-                            </button>
-                            <button class="btn btn-sm btn-outline-primary shadow-sm d-none fw-bold" id="exportSelectedDetailedBtn">
-                                <i class="fas fa-file-export me-1"></i> Export Selected
-                            </button>
-                            
-                            <button class="btn btn-sm btn-success fw-bold shadow-sm" id="createNewBomBtn">
-                                <i class="fas fa-plus me-1"></i> Create BOM
-                            </button>
                         </div>
 
                         <div class="toolbar-group lineSchedulesPane d-flex gap-2 d-none">

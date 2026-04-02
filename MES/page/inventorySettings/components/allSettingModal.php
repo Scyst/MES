@@ -698,3 +698,160 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white py-3">
+                <h5 class="modal-title fw-bold" id="locationModalLabel">
+                    <i class="fas fa-map-marker-alt me-2 text-warning"></i> Add/Edit Location
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="locationForm">
+                <div class="modal-body bg-light p-4">
+                    <input type="hidden" id="location_id" name="location_id" value="0">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Location Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control fw-bold border-primary" id="location_name" name="location_name" required placeholder="เช่น WAREHOUSE-A">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Location Type</label>
+                            <select class="form-select" id="location_type" name="location_type">
+                                <option value="RM">RM (Raw Material)</option>
+                                <option value="WIP">WIP (Work In Process)</option>
+                                <option value="FG">FG (Finished Goods)</option>
+                                <option value="STORE">STORE (คลังอะไหล่)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted mb-1">Production Line (Optional)</label>
+                            <select class="form-select" id="location_production_line" name="production_line">
+                                <option value="">-- Loading Lines... --</option>
+                            </select>
+                            <div class="form-text" style="font-size: 0.7rem;">ผูกจุดจัดเก็บนี้เข้ากับไลน์ผลิต (ใช้เป็นคลังย่อยริมไลน์)</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted mb-1">Description</label>
+                            <textarea class="form-control" id="location_description" name="location_description" rows="2" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="location_is_active" checked>
+                                <label class="form-check-label fw-bold text-success" for="location_is_active">Active (เปิดใช้งาน)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-success fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addScheduleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="fas fa-clock me-2"></i> Add New Schedule</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addScheduleForm">
+                <div class="modal-body bg-light p-4">
+                    <input type="hidden" name="id" value="0">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Production Line <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control fw-bold" name="line" required placeholder="เช่น ASSY-01">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Shift Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="shift_name" required placeholder="เช่น Day Shift">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" name="start_time" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">End Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" name="end_time" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted mb-1">Planned Break (Minutes)</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" name="planned_break_minutes" value="60" min="0" required>
+                                <span class="input-group-text bg-white">นาที</span>
+                            </div>
+                            <div class="form-text" style="font-size: 0.7rem;">เวลาพักเบรกที่จะถูกนำไปหักออกจากเวลาทำงานจริงในการคิด OEE</div>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" checked>
+                                <label class="form-check-label fw-bold text-success">Active (เปิดใช้งานกะนี้)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-success fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> Create Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editScheduleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-warning text-dark py-3">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Schedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editScheduleForm">
+                <div class="modal-body bg-light p-4">
+                    <input type="hidden" name="id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Production Line <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control fw-bold bg-white" name="line" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Shift Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="shift_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" name="start_time" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">End Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" name="end_time" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted mb-1">Planned Break (Minutes)</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" name="planned_break_minutes" min="0" required>
+                                <span class="input-group-text bg-white">นาที</span>
+                            </div>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active">
+                                <label class="form-check-label fw-bold">Active (เปิดใช้งานกะนี้)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> Update Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

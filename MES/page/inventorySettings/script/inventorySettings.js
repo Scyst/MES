@@ -106,8 +106,8 @@ async function loadLocations() {
                 tr.innerHTML = `
                     <td>${escapeHtml(location.location_name)}</td>
                     <td>${escapeHtml(location.location_description || '')}</td>
-                    <td>${location.production_line ? escapeHtml(location.production_line) : '<span class="text-muted">N/A</span>'}</td>
-                    <td>${escapeHtml(location.location_type || 'WIP')}</td> 
+                    <td class="text-center">${location.production_line ? escapeHtml(location.production_line) : '<span class="text-muted">N/A</span>'}</td>
+                    <td class="text-center">${escapeHtml(location.location_type || 'WIP')}</td> 
                     <td class="text-center">
                         <span class="badge ${location.is_active == 1 ? 'bg-success' : 'bg-secondary'}">
                             ${location.is_active == 1 ? 'Active' : 'Inactive'}

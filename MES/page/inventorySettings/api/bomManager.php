@@ -476,7 +476,7 @@ try {
     }
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
-    ob_clean(); // ล้าง buffer ป้องกัน HTML
+    ob_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
