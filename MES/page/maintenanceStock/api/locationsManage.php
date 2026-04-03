@@ -1,5 +1,5 @@
 <?php
-// page/inventorySettings/api/locationsManage.php
+// page/systemSettings/api/locationsManage.php
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';

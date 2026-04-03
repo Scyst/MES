@@ -315,6 +315,16 @@ async function openItemModal(item = null) {
     const deleteBtn = document.getElementById('deleteItemBtn');
     if (deleteBtn) deleteBtn.style.display = 'none';
 
+    const btnWhereUsed = document.getElementById('btnWhereUsed');
+    if (item && item.item_id !== '0') {
+        if (btnWhereUsed) {
+            btnWhereUsed.style.display = 'inline-block';
+            btnWhereUsed.onclick = () => openWhereUsedModal(item.item_id, item.sap_no);
+        }
+    } else {
+        if (btnWhereUsed) btnWhereUsed.style.display = 'none';
+    }
+
     const triggerEl = document.querySelector('#itemFormTabs button[data-bs-target="#basic-pane"]');
     if (triggerEl) {
         const tabInstance = bootstrap.Tab.getInstance(triggerEl) || new bootstrap.Tab(triggerEl);
@@ -630,8 +640,38 @@ async function handleItemMasterImport(e) {
     }
 }
 
+async function openWhereUsedModal(itemId, sapNo) {
+    document.getElementById('wuTargetSap').textContent = sapNo;
+    const tbody = document.getElementById('wuTableBody');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x text-info"></i><br><small class="text-muted mt-2 d-block">กำลังค้นหาข้อมูล...</small></td></tr>';
+    
+    openModal('whereUsedModal'); 
+
+    const result = await fetchAPI(BOM_API_ENDPOINT, 'get_where_used', 'GET', null, { component_item_id: itemId });
+    
+    tbody.innerHTML = '';
+    if (result.success && result.data.length > 0) {
+        result.data.forEach(row => {
+            const tr = document.createElement('tr');
+            let badgeClass = 'bg-secondary';
+            if (row.material_type === 'FG') badgeClass = 'bg-primary';
+            if (row.material_type === 'SEMI') badgeClass = 'bg-warning text-dark';
+
+            tr.innerHTML = `
+                <td class="px-3 py-2 fw-bold text-primary">${escapeHtml(row.fg_sap_no)}</td>
+                <td class="text-truncate" style="max-width: 250px; font-size: 0.8rem;">${escapeHtml(row.part_description || '-')}</td>
+                <td class="text-center"><span class="badge ${badgeClass}" style="font-size: 0.6rem;">${escapeHtml(row.material_type)}</span></td>
+                <td class="text-end px-3 fw-bold bg-warning bg-opacity-10">${parseFloat(row.quantity_required).toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5 text-muted"><i class="fas fa-unlink fa-3x mb-3 d-block opacity-25"></i> ไม่พบการใช้งาน (Not Used) <br><small>วัตถุดิบนี้ยังไม่ถูกนำไปผูกในสูตรการผลิตใดๆ</small></td></tr>';
+    }
+}
+
 // =================================================================
-// SECTION 5: BOM MANAGER (Master-Detail & Catalog Picker)
+// SECTION 5: BOM MANAGER (Master-Detail, Catalog & Versioning)
 // =================================================================
 const BomManagerModule = {
     allFgs: [],
@@ -639,6 +679,10 @@ const BomManagerModule = {
     selectedFg: null,
     debounceTimer: null,
     catalogDebounceTimer: null,
+    
+    // 🌟 ตัวแปรใหม่สำหรับระบบ Versioning
+    currentVersion: 0,
+    currentStatus: '',
 
     cacheDOM() {
         this.masterList = document.getElementById('bomMasterList');
@@ -660,6 +704,17 @@ const BomManagerModule = {
         this.catalogTypeFilter = document.getElementById('catalogTypeFilter');
         this.catalogTbody = document.getElementById('catalogTbody');
         this.catalogTargetFg = document.getElementById('catalogTargetFg');
+
+        // 🌟 Versioning UI Elements
+        this.versionSelect = document.getElementById('bomVersionSelect');
+        this.statusBadge = document.getElementById('bomStatusBadge');
+        this.ecnLabel = document.getElementById('bomEcnLabel');
+        this.ecnText = document.getElementById('bomEcnText');
+        this.btnCreateRevision = document.getElementById('btnCreateRevision');
+        this.btnApproveRevision = document.getElementById('btnApproveRevision');
+        this.btnCloneBom = document.getElementById('btnCloneBom');
+        this.btnRollupCost = document.getElementById('btnRollupCost');
+        this.btnViewHistory = document.getElementById('btnViewHistory');
     },
 
     bindEvents() {
@@ -670,7 +725,6 @@ const BomManagerModule = {
         });
 
         this.btnDeleteAll?.addEventListener('click', () => this.deleteFullBom());
-        
         this.btnOpenCatalog?.addEventListener('click', () => this.openCatalog());
 
         // Inline Edit Quantity (เปลี่ยนปุ๊บ Save ปั๊บ)
@@ -698,8 +752,20 @@ const BomManagerModule = {
             if (this.selectedFg) this.loadBomDetails();
         });
 
-        // ปุ่ม Clone BOM
-        document.getElementById('btnCloneBom')?.addEventListener('click', () => this.cloneBom());
+        // ปุ่ม Action อื่นๆ
+        this.btnCloneBom?.addEventListener('click', () => this.cloneBom());
+        this.btnRollupCost?.addEventListener('click', () => this.rollupCost());
+        this.btnViewHistory?.addEventListener('click', () => this.viewHistory());
+
+        // 🌟 Versioning Events
+        this.versionSelect?.addEventListener('change', (e) => {
+            this.currentVersion = parseInt(e.target.value);
+            this.loadBomDetails(); // โหลดสูตรตามเวอร์ชันที่เลือก
+        });
+
+        this.btnCreateRevision?.addEventListener('click', () => openModal('ecnModal'));
+        document.getElementById('ecnForm')?.addEventListener('submit', (e) => this.createRevision(e));
+        this.btnApproveRevision?.addEventListener('click', () => this.approveRevision());
     },
 
     async init() {
@@ -709,10 +775,9 @@ const BomManagerModule = {
         await this.loadCatalogItems(); // โหลด Item ทั้งหมดมารอไว้เลย
     },
 
+    // --- 1. Master List View ---
     async loadFgs() {
         this.masterList.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-        
-        // 🌟 เปลี่ยนมาใช้ API เฉพาะสำหรับ BOM Master List (เบาและเร็วกว่า get_items มหาศาล)
         const result = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_master_list', 'GET');
         if (result.success) {
             this.allFgs = result.data;
@@ -795,7 +860,86 @@ const BomManagerModule = {
         this.detailActions.classList.remove('d-none');
         this.detailFooter.classList.remove('d-none');
 
-        await this.loadBomDetails();
+        // 🌟 โหลดประวัติ Version ก่อนที่จะโหลดรายละเอียด BOM
+        await this.loadVersions(fg.item_id);
+    },
+
+    // --- 🌟 Versioning Management ---
+    async loadVersions(fg_id) {
+        const res = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_versions', 'GET', null, { fg_item_id: fg_id });
+        if (res.success && res.data.length > 0) {
+            this.versionSelect.classList.remove('d-none');
+            this.statusBadge.classList.remove('d-none');
+            this.versionSelect.innerHTML = '';
+            
+            res.data.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.bom_version;
+                opt.textContent = `Rev ${v.bom_version}.0`;
+                opt.dataset.status = v.bom_status;
+                opt.dataset.ecn = v.ecn_number || '';
+                this.versionSelect.appendChild(opt);
+            });
+
+            // ค่าเริ่มต้นเป็นเวอร์ชันล่าสุด (DRAFT หรือ ACTIVE ล่าสุด)
+            let defaultVer = res.data[0];
+            const draftVer = res.data.find(v => v.bom_status === 'DRAFT');
+            if (draftVer) defaultVer = draftVer;
+
+            this.versionSelect.value = defaultVer.bom_version;
+            this.currentVersion = defaultVer.bom_version;
+            
+            await this.loadBomDetails();
+        } else {
+            // กรณียังไม่เคยมีสูตรเลย
+            this.currentVersion = 1;
+            this.currentStatus = 'DRAFT';
+            this.versionSelect.classList.add('d-none');
+            this.statusBadge.classList.add('d-none');
+            this.ecnLabel.classList.add('d-none');
+            this.loadBomDetails();
+        }
+    },
+
+    updateUIByStatus() {
+        const opt = this.versionSelect.options[this.versionSelect.selectedIndex];
+        this.currentStatus = opt ? opt.dataset.status : 'DRAFT';
+        const ecn = opt ? opt.dataset.ecn : '';
+
+        // อัปเดตสี Badge ตามสถานะ
+        this.statusBadge.className = 'badge ms-2 ' + 
+            (this.currentStatus === 'ACTIVE' ? 'bg-success' : 
+             this.currentStatus === 'DRAFT' ? 'bg-warning text-dark' : 'bg-secondary');
+        this.statusBadge.textContent = this.currentStatus;
+
+        if (ecn) {
+            this.ecnLabel.classList.remove('d-none');
+            this.ecnText.textContent = ecn;
+        } else {
+            this.ecnLabel.classList.add('d-none');
+        }
+
+        // จัดการปุ่มต่างๆ ตามสิทธิ์ (Read-Only)
+        if (this.currentStatus === 'ACTIVE') {
+            this.btnCreateRevision.classList.remove('d-none');
+            this.btnApproveRevision.classList.add('d-none');
+            this.btnOpenCatalog.classList.add('d-none'); // 🔒 ซ่อนปุ่มเลือกวัตถุดิบ
+            this.btnDeleteAll.classList.add('d-none');   // 🔒 ซ่อนปุ่มล้างสูตร
+            this.btnRollupCost.classList.remove('d-none'); 
+        } else if (this.currentStatus === 'DRAFT') {
+            this.btnCreateRevision.classList.add('d-none');
+            this.btnApproveRevision.classList.remove('d-none');
+            this.btnOpenCatalog.classList.remove('d-none'); // เปิดให้แก้สูตรได้
+            this.btnDeleteAll.classList.remove('d-none');
+            this.btnRollupCost.classList.add('d-none');     
+        } else {
+            // OBSOLETE ดูได้อย่างเดียว
+            this.btnCreateRevision.classList.add('d-none');
+            this.btnApproveRevision.classList.add('d-none');
+            this.btnOpenCatalog.classList.add('d-none');
+            this.btnDeleteAll.classList.add('d-none');
+            this.btnRollupCost.classList.add('d-none');
+        }
     },
 
     // --- 2. Detail View (Right Side) ---
@@ -803,7 +947,14 @@ const BomManagerModule = {
         if (!this.selectedFg) return;
         this.detailTbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Loading BOM...</td></tr>';
         
-        const result = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { fg_item_id: this.selectedFg.item_id });
+        this.updateUIByStatus(); // 🌟 อัปเดตการแสดงผลปุ่มก่อน
+
+        // 🌟 ดึงข้อมูลโดยส่ง bom_version ไปด้วย
+        const result = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { 
+            fg_item_id: this.selectedFg.item_id,
+            bom_version: this.currentVersion
+        });
+
         if (result.success) {
             this.renderBomDetails(result.data);
         }
@@ -812,9 +963,10 @@ const BomManagerModule = {
     renderBomDetails(components) {
         this.detailTbody.innerHTML = '';
         let totalCost = 0;
+        const isReadOnly = (this.currentStatus !== 'DRAFT'); // 🔒 เช็คสถานะ ReadOnly
 
         if (components.length === 0) {
-            this.detailTbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-3 d-block opacity-50"></i> ยังไม่ได้กำหนดสูตรการผลิต (BOM ว่างเปล่า)</td></tr>';
+            this.detailTbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-3 d-block opacity-50"></i> ยังไม่ได้กำหนดสูตรการผลิต (BOM ว่างเปล่า) ${isReadOnly ? '' : '<br>คลิกปุ่ม "เลือกวัตถุดิบ" ด้านบนเพื่อเริ่มสร้างสูตร'}</td></tr>`;
             this.totalCostLabel.textContent = '฿0.0000';
             return;
         }
@@ -822,27 +974,34 @@ const BomManagerModule = {
         components.forEach(comp => {
             const tr = document.createElement('tr');
             
-            // ค้นหา Cost_RM จาก Catalog List
-            const catItem = this.catalogItems.find(i => i.item_id === comp.component_item_id);
-            const unitCost = catItem ? (parseFloat(catItem.Cost_RM) || parseFloat(catItem.Cost_Total) || 0) : 0;
-            const estCost = unitCost * parseFloat(comp.quantity_required || 0);
+            // ใช้ต้นทุนจาก API ที่ส่งมา (สมมติว่าเป็น Cost_RM) ถ้าไม่มีค่อยหาจาก Catalog
+            let unitCost = parseFloat(comp.Cost_RM || 0);
+            if (unitCost === 0) {
+                const catItem = this.catalogItems.find(i => i.item_id === comp.component_item_id);
+                unitCost = catItem ? (parseFloat(catItem.Cost_RM) || parseFloat(catItem.Cost_Total) || 0) : 0;
+            }
+
+            const qty = parseFloat(comp.quantity_required || 0);
+            const estCost = unitCost * qty;
             totalCost += estCost;
 
+            // 🔒 ควบคุมกล่อง Input (ถ้า ReadOnly ให้โชว์เป็นตัวอักษรธรรมดา)
+            const qtyHtml = isReadOnly 
+                ? `<span class="fw-bold px-2 py-1 bg-light border rounded text-dark">${qty.toLocaleString(undefined, {maximumFractionDigits:4})}</span>`
+                : `<input type="number" class="form-control form-control-sm text-center fw-bold border-warning text-dark inline-qty-edit mx-auto" 
+                          data-bom-id="${comp.bom_id}" value="${qty}" min="0.000001" step="any" style="background: transparent; width: 100px;">`;
+
+            // 🔒 ควบคุมปุ่มลบ
+            const actionHtml = isReadOnly 
+                ? `<span class="text-muted small"><i class="fas fa-lock"></i> Locked</span>`
+                : `<button class="btn btn-sm btn-outline-danger border-0 btn-delete-comp" data-bom-id="${comp.bom_id}" title="Remove"><i class="fas fa-trash-alt"></i></button>`;
+
             tr.innerHTML = `
-                <td class="px-3 py-2 fw-bold text-primary" style="font-size: 0.85rem;">${escapeHtml(comp.component_sap_no)}</td>
+                <td class="px-3 py-2 fw-bold text-primary" style="font-size: 0.85rem;">${escapeHtml(comp.sap_no || comp.component_sap_no)}</td>
                 <td class="py-2 text-truncate" style="max-width: 200px; font-size: 0.8rem;">${escapeHtml(comp.part_description || '-')}</td>
-                <td class="py-2 bg-warning bg-opacity-10 text-center">
-                    <input type="number" class="form-control form-control-sm text-center fw-bold border-warning text-dark inline-qty-edit mx-auto" 
-                           data-bom-id="${comp.bom_id}" 
-                           value="${parseFloat(comp.quantity_required)}" 
-                           min="0.000001" step="any" style="background: transparent; width: 100px;">
-                </td>
+                <td class="py-2 bg-warning bg-opacity-10 text-center">${qtyHtml}</td>
                 <td class="text-end py-2 px-3 fw-bold" style="font-size: 0.85rem;">฿${formatCurrency(estCost)}</td>
-                <td class="text-center py-2">
-                    <button class="btn btn-sm btn-outline-danger border-0 btn-delete-comp" data-bom-id="${comp.bom_id}" title="Remove">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
+                <td class="text-center py-2">${actionHtml}</td>
             `;
             this.detailTbody.appendChild(tr);
         });
@@ -850,9 +1009,61 @@ const BomManagerModule = {
         this.totalCostLabel.textContent = `฿${formatCurrency(totalCost)}`;
     },
 
+    // --- 🌟 ECN Revision Actions ---
+    async createRevision(e) {
+        e.preventDefault();
+        const ecnNo = e.target.ecn_number.value;
+        const btn = e.target.querySelector('button[type="submit"]');
+        toggleButtonState(btn, true, 'Creating...');
+
+        try {
+            const res = await fetchAPI(BOM_API_ENDPOINT, 'create_bom_revision', 'POST', {
+                fg_item_id: this.selectedFg.item_id,
+                ecn_number: ecnNo
+            });
+            if (res.success) {
+                closeModal('ecnModal');
+                Swal.fire('Success!', res.message, 'success');
+                await this.loadVersions(this.selectedFg.item_id); // อัปเดต Dropdown
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
+        } finally {
+            toggleButtonState(btn, false);
+        }
+    },
+
+    async approveRevision() {
+        const result = await Swal.fire({
+            title: 'Approve & Release?',
+            html: `คุณกำลังจะนำสูตร <b>Rev ${this.currentVersion}.0</b> ขึ้นใช้งานจริง<br><small class="text-danger">*สูตรเก่าทั้งหมดจะถูกปรับเป็น Obsolete (ยกเลิก) อัตโนมัติ</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'ใช่, อนุมัติใช้งาน!'
+        });
+
+        if (result.isConfirmed) {
+            toggleButtonState(this.btnApproveRevision, true, 'Approving...');
+            try {
+                const res = await fetchAPI(BOM_API_ENDPOINT, 'approve_bom_revision', 'POST', {
+                    fg_item_id: this.selectedFg.item_id,
+                    bom_version: this.currentVersion
+                });
+                if (res.success) {
+                    Swal.fire('Approved!', res.message, 'success');
+                    await this.loadVersions(this.selectedFg.item_id);
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } finally {
+                toggleButtonState(this.btnApproveRevision, false);
+            }
+        }
+    },
+
     // --- 3. Catalog Picker Modal ---
     async loadCatalogItems() {
-        // ดึงของทั้งหมดมาเก็บไว้ใช้ใน Catalog
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { page: 1, limit: -1, show_inactive: false });
         if (result.success) {
             this.catalogItems = result.data;
@@ -860,7 +1071,7 @@ const BomManagerModule = {
     },
 
     openCatalog() {
-        if (!this.selectedFg) return;
+        if (!this.selectedFg || this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์ก่อนเปิด
         this.catalogTargetFg.textContent = `For: ${this.selectedFg.sap_no}`;
         this.catalogSearch.value = '';
         this.renderCatalog();
@@ -874,9 +1085,7 @@ const BomManagerModule = {
         tbody.innerHTML = '';
 
         let filtered = this.catalogItems.filter(item => {
-            // ไม่เอาตัวเองมาเป็นส่วนผสมตัวเอง
             if (item.item_id === this.selectedFg.item_id) return false;
-            
             let matchType = filterType === '' ? true : item.material_type === filterType;
             let matchSearch = term === '' ? true : (
                 (item.sap_no || '').toLowerCase().includes(term) ||
@@ -885,7 +1094,6 @@ const BomManagerModule = {
             return matchType && matchSearch;
         });
 
-        // เรียงตัวอักษร
         filtered.sort((a, b) => (a.sap_no || '').localeCompare(b.sap_no || ''));
 
         if (filtered.length === 0) {
@@ -893,14 +1101,13 @@ const BomManagerModule = {
             return;
         }
 
-        // ตัดมาโชว์แค่ 100 รายการ เพื่อไม่ให้ Modal กระตุก
         filtered.slice(0, 100).forEach(item => {
             const tr = document.createElement('tr');
             
             let badgeClass = 'bg-secondary';
             if (item.material_type === 'RM') badgeClass = 'bg-success';
             if (item.material_type === 'PKG') badgeClass = 'bg-info text-dark';
-            if (item.material_type === 'WIP') badgeClass = 'bg-warning text-dark';
+            if (item.material_type === 'WIP' || item.material_type === 'SEMI') badgeClass = 'bg-warning text-dark';
 
             tr.innerHTML = `
                 <td class="px-3 fw-bold text-primary" style="font-size: 0.85rem;">${escapeHtml(item.sap_no)}</td>
@@ -920,7 +1127,6 @@ const BomManagerModule = {
             const input = tr.querySelector('.cat-qty-input');
             
             btn.addEventListener('click', () => this.addFromCatalog(btn, input, item.item_id));
-            // กด Enter ในช่อง Input ก็ให้ทำการกดปุ่ม Add
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.addFromCatalog(btn, input, item.item_id);
             });
@@ -930,6 +1136,8 @@ const BomManagerModule = {
     },
 
     async addFromCatalog(btnElement, inputElement, compId) {
+        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+
         const qty = parseFloat(inputElement.value);
         if (isNaN(qty) || qty <= 0) {
             inputElement.classList.add('is-invalid');
@@ -939,18 +1147,18 @@ const BomManagerModule = {
 
         toggleButtonState(btnElement, true, '');
         try {
+            // 🌟 ส่ง bom_version เข้าไปด้วย
             const res = await fetchAPI(BOM_API_ENDPOINT, 'add_bom_component', 'POST', {
                 fg_item_id: this.selectedFg.item_id,
                 component_item_id: compId,
                 quantity_required: qty,
-                line: 'DEFAULT', model: 'DEFAULT'
+                bom_version: this.currentVersion 
             });
             
             if (res.success) {
-                // UI Feedback: เปลี่ยนปุ่มเป็นสีเขียวบอกว่าเพิ่มแล้ว
                 btnElement.classList.replace('btn-primary', 'btn-success');
                 btnElement.innerHTML = '<i class="fas fa-check"></i>';
-                inputElement.value = ''; // เคลียร์ช่อง
+                inputElement.value = ''; 
                 
                 setTimeout(() => {
                     btnElement.classList.replace('btn-success', 'btn-primary');
@@ -970,6 +1178,8 @@ const BomManagerModule = {
 
     // --- 4. Detail Actions ---
     async updateCompQty(inputEl) {
+        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+
         const bomId = inputEl.dataset.bomId;
         const newQty = parseFloat(inputEl.value);
         if (!bomId || isNaN(newQty) || newQty <= 0) return;
@@ -986,10 +1196,52 @@ const BomManagerModule = {
 
         if (!res.success) {
             showToast(res.message, 'var(--bs-danger)');
-            await this.loadBomDetails(); 
+        }
+        this.loadBomDetails(); // โหลดใหม่เสมอเพื่ออัปเดตราคา
+    },
+
+    async deleteComp(bomId) {
+        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+
+        if (!confirm('ยืนยันการลบวัตถุดิบนี้ออกจากสูตร?')) return;
+        const res = await fetchAPI(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
+        if (res.success) {
+            await this.loadBomDetails();
         } else {
-            // โหลดใหม่เพื่ออัปเดตช่อง Total Cost ด้านล่าง
-            this.loadBomDetails();
+            showToast(res.message, 'var(--bs-danger)');
+        }
+    },
+
+    async deleteFullBom() {
+        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+
+        const result = await Swal.fire({
+            title: '⚠️ ยืนยันการล้างสูตร?',
+            html: `คุณกำลังจะลบส่วนประกอบทั้งหมดของ <b class="text-danger">${this.selectedFg.sap_no} (Rev ${this.currentVersion}.0)</b><br>การกระทำนี้ <b class="text-danger">ไม่สามารถย้อนกลับได้!</b>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ลบทั้งหมด!',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            toggleButtonState(this.btnDeleteAll, true, 'Deleting...');
+            try {
+                const res = await fetchAPI(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { 
+                    fg_item_id: this.selectedFg.item_id,
+                    bom_version: this.currentVersion
+                });
+                if (res.success) {
+                    Swal.fire('Deleted!', 'สูตรการผลิตถูกล้างข้อมูลเรียบร้อยแล้ว', 'success');
+                    await this.loadBomDetails(); 
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } finally {
+                toggleButtonState(this.btnDeleteAll, false);
+            }
         }
     },
 
@@ -1001,7 +1253,7 @@ const BomManagerModule = {
             title: '<i class="fas fa-copy text-info"></i> Clone BOM',
             html: `
                 <div class="text-start mt-2">
-                    <label class="form-label small text-muted mb-1">คัดลอกสูตรของต้นฉบับ:</label>
+                    <label class="form-label small text-muted mb-1">คัดลอกสูตร <span class="badge bg-secondary">Rev ${this.currentVersion}.0</span> ของต้นฉบับ:</label>
                     <input type="text" class="form-control bg-light fw-bold text-primary mb-3" value="${sourceSap}" readonly>
                     <label class="form-label small text-muted mb-1">ไปยังเป้าหมาย (Target SAP No.): <span class="text-danger">*</span></label>
                 </div>
@@ -1024,9 +1276,8 @@ const BomManagerModule = {
             try {
                 const res = await fetchAPI(BOM_API_ENDPOINT, 'copy_bom', 'POST', {
                     source_fg_sap_no: sourceSap,
-                    source_line: 'DEFAULT',
-                    source_model: 'DEFAULT',
-                    target_fg_sap_no: targetSap.trim().toUpperCase()
+                    target_fg_sap_no: targetSap.trim().toUpperCase(),
+                    bom_version: this.currentVersion // 🌟 ส่งเวอร์ชันที่จะก๊อปปี้ไปด้วย
                 });
 
                 if (res.success) {
@@ -1042,36 +1293,70 @@ const BomManagerModule = {
         }
     },
 
-    async deleteComp(bomId) {
-        if (!confirm('ยืนยันการลบวัตถุดิบนี้ออกจากสูตร?')) return;
-        const res = await fetchAPI(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
-        if (res.success) {
-            await this.loadBomDetails();
-        } else {
-            showToast(res.message, 'var(--bs-danger)');
+    async rollupCost() {
+        if (!this.selectedFg || this.currentStatus !== 'ACTIVE') return; // 🔒 Rollup ได้เฉพาะตอนเป็น ACTIVE
+        
+        const totalAmount = this.totalCostLabel.textContent;
+
+        const result = await Swal.fire({
+            title: 'อัปเดตต้นทุนมาตรฐาน?',
+            html: `คุณต้องการนำยอดรวม <b class="text-success">${totalAmount}</b><br>จากสูตร <b>Rev ${this.currentVersion}.0</b> ไปบันทึกลงใน Item Master ใช่หรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ยืนยันอัปเดต'
+        });
+
+        if (result.isConfirmed) {
+            const btn = document.getElementById('btnRollupCost');
+            toggleButtonState(btn, true, 'Updating...');
+            try {
+                const res = await fetchAPI(BOM_API_ENDPOINT, 'rollup_bom_cost', 'POST', {
+                    fg_item_id: this.selectedFg.item_id,
+                    bom_version: this.currentVersion
+                });
+
+                if (res.success) {
+                    Swal.fire('Updated!', res.message, 'success');
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } finally {
+                toggleButtonState(btn, false);
+                btn.innerHTML = '<i class="fas fa-calculator me-1"></i> Update Cost';
+            }
         }
     },
 
-    async deleteFullBom() {
-        if (!confirm(`ยืนยันการล้างสูตร BOM ของ ${this.selectedFg.sap_no} ทั้งหมดหรือไม่?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`)) return;
+    async viewHistory() {
+        if (!this.selectedFg) return;
         
-        toggleButtonState(this.btnDeleteAll, true, 'Deleting...');
-        try {
-            const res = await fetchAPI(BOM_API_ENDPOINT, 'delete_full_bom', 'POST', { fg_item_id: this.selectedFg.item_id });
-            if (res.success) {
-                showToast(res.message, 'var(--bs-success)');
-                this.selectedFg = null;
-                this.detailActions.classList.add('d-none');
-                this.detailFooter.classList.add('d-none');
-                this.detailTitle.innerHTML = '<i class="fas fa-sitemap me-2"></i>เลือก FG จากเมนูด้านซ้าย';
-                this.detailSubtitle.textContent = 'เพื่อจัดการสูตรการผลิต (BOM)';
-                this.detailTbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-2x mb-3 d-block text-success"></i> ลบ BOM เรียบร้อยแล้ว</td></tr>';
-                await this.loadFgs(); 
-            } else {
-                showToast(res.message, 'var(--bs-danger)');
-            }
-        } finally {
-            toggleButtonState(this.btnDeleteAll, false);
+        const tbody = document.getElementById('auditTrailTbody');
+        document.getElementById('auditTargetName').textContent = this.selectedFg.sap_no;
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x text-secondary mb-2"></i><br>กำลังดึงข้อมูลประวัติ...</td></tr>';
+        
+        openModal('auditTrailModal');
+
+        const res = await fetchAPI(BOM_API_ENDPOINT, 'get_audit_trail', 'GET', null, {
+            target_id: this.selectedFg.item_id,
+            target_sap: this.selectedFg.sap_no
+        });
+
+        tbody.innerHTML = '';
+        if (res.success && res.data.length > 0) {
+            res.data.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-nowrap text-muted small px-3 py-2">${escapeHtml(log.log_time)}</td>
+                        <td class="fw-bold text-dark py-2"><i class="fas fa-user-circle text-secondary me-1"></i> ${escapeHtml(log.username)}</td>
+                        <td class="py-2"><span class="badge bg-info bg-opacity-10 text-info border border-info">${escapeHtml(log.action)}</span></td>
+                        <td class="small text-truncate px-3 py-2" style="max-width: 300px;" title="${escapeHtml(log.details)}">${escapeHtml(log.details || '-')}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5 text-muted"><i class="fas fa-history fa-3x mb-3 d-block opacity-25"></i> ไม่มีประวัติการแก้ไข</td></tr>';
         }
     }
 };
@@ -1304,6 +1589,134 @@ async function deleteSchedule(id) {
 }
 
 // =================================================================
+// 📥 EXCEL IMPORT & PREVIEW SYSTEM (SMART VALIDATION)
+// =================================================================
+let parsedImportData = []; 
+
+async function processAndPreviewExcel(file) {
+    Swal.fire({ title: 'Analyzing Data...', text: 'กำลังวิเคราะห์และตรวจสอบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            
+            let rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); 
+
+            if (rawData.length === 0) {
+                Swal.fire('Error', 'ไม่พบข้อมูลในไฟล์ Excel', 'error');
+                return;
+            }
+
+            // กวาดหาชื่อคอลัมน์ที่เป็น SAP No
+            const keys = Object.keys(rawData[0]);
+            const sapColName = keys.find(k => k.toLowerCase().replace(/\s/g, '') === 'sapno') || keys[0]; 
+
+            // ดึง SAP No ทั้งหมดเพื่อส่งไปถาม Database
+            let sapNos = rawData.map(r => String(r[sapColName] || '').trim()).filter(s => s !== '');
+            sapNos = [...new Set(sapNos)]; // ทำให้ไม่ซ้ำ
+
+            // ยิงถาม Database
+            const valRes = await fetchAPI(ITEM_MASTER_API, 'validate_import_saps', 'POST', { sap_nos: sapNos });
+            const existingSaps = valRes.existing_saps ? valRes.existing_saps.map(s => String(s).toLowerCase()) : [];
+
+            // ประมวลผลและติดป้ายสถานะ (Tagging)
+            let seenSapsInFile = new Set();
+            parsedImportData = [];
+            let stats = { new: 0, update: 0, duplicate: 0, invalid: 0 };
+
+            rawData.forEach(row => {
+                let sap = String(row[sapColName] || '').trim();
+                let status = '', statusLabel = '', statusClass = '';
+
+                if (!sap) {
+                    status = 'INVALID'; statusLabel = 'Missing SAP'; statusClass = 'bg-danger'; stats.invalid++;
+                } else if (seenSapsInFile.has(sap.toLowerCase())) {
+                    status = 'DUPLICATE'; statusLabel = 'Duplicate in File'; statusClass = 'bg-secondary'; stats.duplicate++;
+                } else {
+                    seenSapsInFile.add(sap.toLowerCase());
+                    if (existingSaps.includes(sap.toLowerCase())) {
+                        status = 'UPDATE'; statusLabel = 'Update (อัปเดต)'; statusClass = 'bg-info text-dark'; stats.update++;
+                    } else {
+                        status = 'NEW'; statusLabel = 'New (สร้างใหม่)'; statusClass = 'bg-success'; stats.new++;
+                    }
+                }
+
+                // เก็บสถานะซ่อนไว้ใน Object
+                row._status = status; row._statusLabel = statusLabel; row._statusClass = statusClass;
+                parsedImportData.push(row);
+            });
+
+            Swal.close();
+            renderImportPreview(parsedImportData, stats);
+        } catch (err) {
+            Swal.fire('Error', 'เกิดข้อผิดพลาดในการวิเคราะห์ไฟล์', 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function renderImportPreview(data, stats) {
+    const thead = document.getElementById('importPreviewThead');
+    const tbody = document.getElementById('importPreviewTbody');
+    
+    // อัปเดต Summary Badges
+    document.getElementById('importRowCount').textContent = `${data.length} Rows`;
+    const summaryDiv = document.getElementById('importStatsSummary');
+    if(summaryDiv) {
+        summaryDiv.innerHTML = `
+            <span class="badge border border-success text-success bg-success bg-opacity-10 px-3 py-2"><i class="fas fa-plus-circle me-1"></i>สร้างใหม่: ${stats.new}</span>
+            <span class="badge border border-info text-info bg-info bg-opacity-10 px-3 py-2"><i class="fas fa-edit me-1"></i>อัปเดต: ${stats.update}</span>
+            <span class="badge border border-secondary text-secondary bg-secondary bg-opacity-10 px-3 py-2"><i class="fas fa-copy me-1"></i>ซ้ำในไฟล์: ${stats.duplicate}</span>
+            <span class="badge border border-danger text-danger bg-danger bg-opacity-10 px-3 py-2"><i class="fas fa-exclamation-triangle me-1"></i>ไม่มีรหัส: ${stats.invalid}</span>
+        `;
+    }
+
+    // ดึงหัวคอลัมน์ (ข้ามพวก _status ที่เราซ่อนไว้)
+    let columns = [];
+    data.forEach(row => {
+        Object.keys(row).forEach(key => {
+            if (!key.startsWith('_') && !columns.includes(key)) columns.push(key);
+        });
+    });
+
+    let theadHtml = '<tr class="text-secondary"><th class="px-3 py-2 bg-light text-center sticky-col-left">Action Status</th>';
+    columns.forEach(col => { theadHtml += `<th class="px-3 py-2 bg-light">${escapeHtml(col)}</th>`; });
+    theadHtml += '</tr>';
+    thead.innerHTML = theadHtml;
+
+    let tbodyHtml = '';
+    const displayLimit = Math.min(data.length, 100);
+    
+    for (let i = 0; i < displayLimit; i++) {
+        const row = data[i];
+        
+        // ทำให้แถวที่มีปัญหาดูจางลง
+        let trClass = (row._status === 'DUPLICATE' || row._status === 'INVALID') ? 'opacity-50' : '';
+        
+        tbodyHtml += `<tr class="${trClass}">`;
+        // วาดคอลัมน์ Status เป็นอันดับแรก
+        tbodyHtml += `<td class="px-3 py-2 text-center sticky-col-left"><span class="badge ${row._statusClass} w-100">${row._statusLabel}</span></td>`;
+        
+        // วาดข้อมูล Excel
+        columns.forEach(col => {
+            let val = row[col];
+            let extraClass = (col.toLowerCase() === 'sap no' || col.toLowerCase() === 'sap_no') ? 'fw-bold text-primary' : '';
+            tbodyHtml += `<td class="px-3 py-1 text-truncate ${extraClass}" style="max-width: 250px;">${escapeHtml(String(val || ''))}</td>`;
+        });
+        tbodyHtml += '</tr>';
+    }
+
+    if (data.length > 100) tbodyHtml += `<tr><td colspan="${columns.length + 1}" class="text-center text-muted py-4 bg-light fw-bold"><i class="fas fa-ellipsis-h fa-2x mb-2 d-block"></i>... แสดงตัวอย่างเพียง 100 รายการแรก ...</td></tr>`;
+    
+    tbody.innerHTML = tbodyHtml;
+    openModal('importPreviewModal');
+}
+
+// =================================================================
 // SECTION 8: DOMCONTENTLOADED (EVENT BINDINGS)
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -1389,11 +1802,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsMaster);
-    document.getElementById('importItemsBtn')?.addEventListener('click', () => {
+
+    // 🌟 ITEM MASTER IMPORT EVENTS 🌟
+    document.getElementById('importItemsBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
         const fileInput = document.getElementById('itemImportFile');
-        if(fileInput) fileInput.click();
+        fileInput.value = '';
+        fileInput.click(); 
     });
-    document.getElementById('itemImportFile')?.addEventListener('change', handleItemMasterImport);
+
+    document.getElementById('itemImportFile')?.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) processAndPreviewExcel(e.target.files[0]);
+    });
+
+    document.getElementById('btnConfirmImport')?.addEventListener('click', async function() {
+        // กรองเอาเฉพาะ NEW และ UPDATE ทิ้งข้อมูลขยะ
+        const validDataToImport = parsedImportData.filter(r => r._status === 'NEW' || r._status === 'UPDATE');
+        
+        if (validDataToImport.length === 0) {
+            Swal.fire('Warning', 'ไม่มีข้อมูลที่สามารถนำเข้าได้ (อาจเป็นข้อมูลซ้ำหรือไม่มีรหัส SAP)', 'warning');
+            return;
+        }
+
+        const btn = this;
+        toggleButtonState(btn, true, 'Importing...');
+        
+        try {
+            const res = await fetchAPI(ITEM_MASTER_API, 'unified_bulk_import', 'POST', validDataToImport);
+            
+            if (res.success) {
+                Swal.fire('Success!', res.message, 'success').then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('importPreviewModal')).hide();
+                    window.location.reload(); 
+                });
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+        } finally {
+            toggleButtonState(btn, false);
+            btn.innerHTML = '<i class="fas fa-cloud-upload-alt me-1"></i> Confirm Import';
+        }
+    });
 
     // =========================================================
     // BOM MANAGER EVENTS (Global Actions)

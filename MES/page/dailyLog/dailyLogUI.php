@@ -191,7 +191,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php
                         $themeSys = 'text-secondary bg-secondary bg-opacity-10';
 
-                        renderServiceLink('System Settings', 'ตั้งค่าระบบ', '<i class="fas fa-cogs"></i>', '../inventorySettings/inventorySettings.php', 'manage_settings', $themeSys);
+                        renderServiceLink('System Settings', 'ตั้งค่าระบบ', '<i class="fas fa-cogs"></i>', '../systemSettings/systemSettings.php', 'manage_settings', $themeSys);
                         //renderServiceLink('QR Printer', 'พิมพ์ Location Tag', '<i class="fas fa-qrcode"></i>', '../production/print_location_qr.php', 'manage_warehouse', $themeSys);
                         renderServiceLink('MT Stock', 'คลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', 'view_maintenance', $themeSys);
                         renderServiceLink('User Manager', 'จัดการผู้ใช้งาน', '<i class="fas fa-users-cog"></i>', '../userManage/userManageUI.php', 'manage_users', $themeSys);

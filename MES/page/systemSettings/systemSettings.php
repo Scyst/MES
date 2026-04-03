@@ -1,5 +1,5 @@
 <?php 
-// MES/page/inventorySettings/inventorySettings.php
+// MES/page/systemSettings/systemSettings.php
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasRole(['admin', 'creator', 'supervisor'])) {
@@ -24,7 +24,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
         /* Custom Scrollbar เล็กๆ สำหรับแนวนอน */
         .table-scrollable {
             overflow-x: auto;
-            max-height: calc(100vh - 200px);
+            max-height: calc(100vh - 240px);
         }
         .table-scrollable::-webkit-scrollbar { height: 8px; width: 8px; }
         .table-scrollable::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
@@ -186,7 +186,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                 </div>
                 
                 <div class="module-pane" id="bom-manager-pane">
-                    <div class="row g-3" style="height: calc(100vh - 200px);">
+                    <div class="row g-3" style="height: calc(100vh - 180px);">
                         
                         <div class="col-12 col-md-4 col-lg-3 d-flex flex-column h-100">
                             <div class="input-group input-group-sm mb-2 shadow-sm">
@@ -200,22 +200,39 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         <div class="col-12 col-md-8 col-lg-9 d-flex flex-column h-100">
                             <div class="bg-white border rounded-3 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden">
                                 
-                                <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                                <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center" id="bomDetailHeader">
                                     <div>
                                         <h6 class="mb-0 fw-bold text-primary" id="bomDetailTitle">
                                             <i class="fas fa-hand-point-left me-2"></i>เลือก FG จากเมนูด้านซ้าย
                                         </h6>
-                                        <small class="text-muted" id="bomDetailSubtitle">เพื่อจัดการสูตรการผลิต (BOM)</small>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <small class="text-muted" id="bomDetailSubtitle">เพื่อจัดการสูตรการผลิต (BOM)</small>
+                                            
+                                            <select class="form-select form-select-sm d-none fw-bold border-primary text-primary" id="bomVersionSelect" style="width: auto;"></select>
+                                            <span class="badge d-none" id="bomStatusBadge" style="font-size: 0.75rem;"></span>
+                                            <small class="text-secondary fw-bold d-none" id="bomEcnLabel"><i class="fas fa-file-signature me-1"></i><span id="bomEcnText"></span></small>
+                                        </div>
                                     </div>
-                                    <div class="d-flex gap-2 d-none" id="bomDetailActions">
-                                        <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" id="btnDeleteFullBom">
-                                            <i class="fas fa-trash-alt me-1"></i> ล้างสูตรทั้งหมด
+                                    <div class="d-flex gap-2 d-none flex-wrap justify-content-end" id="bomDetailActions">
+                                        <button class="btn btn-sm btn-warning fw-bold shadow-sm d-none" id="btnCreateRevision" title="สร้างสูตรเวอร์ชันใหม่ (ECN)">
+                                            <i class="fas fa-code-branch me-1"></i> สร้าง Revision ใหม่
                                         </button>
-                                        
+                                        <button class="btn btn-sm btn-success fw-bold shadow-sm d-none" id="btnApproveRevision" title="อนุมัติสูตรร่างนี้เพื่อใช้งานจริง">
+                                            <i class="fas fa-check-circle me-1"></i> Approve & Release
+                                        </button>
+
+                                        <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" id="btnDeleteFullBom" title="ล้างสูตรทั้งหมด">
+                                            <i class="fas fa-trash-alt me-1"></i> ล้างสูตร
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success fw-bold shadow-sm" id="btnRollupCost" title="อัปเดตต้นทุนรวมกลับไปที่ Item Master">
+                                            <i class="fas fa-calculator me-1"></i> Update Cost
+                                        </button>
                                         <button class="btn btn-sm btn-outline-info fw-bold shadow-sm" id="btnCloneBom" title="คัดลอกสูตรไปยัง FG อื่น">
                                             <i class="fas fa-copy me-1"></i> Clone
                                         </button>
-
+                                        <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" id="btnViewHistory" title="ดูประวัติการแก้ไข">
+                                            <i class="fas fa-history me-1"></i> History
+                                        </button>
                                         <button class="btn btn-sm btn-primary fw-bold shadow-sm" id="btnOpenCatalog">
                                             <i class="fas fa-list-ul me-1"></i> เลือกวัตถุดิบ (Catalog)
                                         </button>
@@ -310,7 +327,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                     <option value="">ทุกประเภท</option>
                                     <option value="RM" selected>RM (วัตถุดิบ)</option>
                                     <option value="PKG">PKG (แพ็คเกจ)</option>
-                                    <option value="WIP">WIP (กึ่งสำเร็จรูป)</option>
+                                    <option value="SEMI">SEMI (กึ่งสำเร็จรูป)</option> 
                                 </select>
                             </div>
                             <div class="table-responsive bg-white border rounded shadow-sm">
@@ -343,6 +360,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
     </script>
     <script src="../components/js/pagination.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/inventorySettings.js?v=<?php echo filemtime(__DIR__ . '/script/inventorySettings.js'); ?>"></script>
+    <script src="script/systemSettings.js?v=<?php echo filemtime(__DIR__ . '/script/systemSettings.js'); ?>"></script>
 </body>
 </html>

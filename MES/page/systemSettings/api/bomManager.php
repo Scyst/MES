@@ -22,6 +22,28 @@ $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
 
+function checkCircularDependency($pdo, $fg_id, $comp_id) {
+    if ($fg_id == $comp_id) return true;
+    $sql = "
+        WITH CTE AS (
+            SELECT component_item_id 
+            FROM " . BOM_TABLE . " WITH (NOLOCK) 
+            WHERE fg_item_id = ?
+            
+            UNION ALL
+            
+            SELECT b.component_item_id 
+            FROM " . BOM_TABLE . " b WITH (NOLOCK)
+            INNER JOIN CTE c ON b.fg_item_id = c.component_item_id
+        )
+        SELECT TOP 1 1 FROM CTE WHERE component_item_id = ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$comp_id, $fg_id]);
+    return (bool) $stmt->fetchColumn();
+}
+
 try {
     switch ($action) {
         // =========================================================================
@@ -72,21 +94,86 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        case 'get_bom_components':
+        // =========================================================================
+        // [1.7] GET BOM VERSIONS (ดึงประวัติเวอร์ชันทั้งหมดของ FG)
+        // =========================================================================
+        case 'get_bom_versions':
             $fg_id = (int)($_GET['fg_item_id'] ?? 0);
             if (!$fg_id) throw new Exception("FG Item ID is required.");
-            
-            $sql = "
-                SELECT 
-                    b.bom_id, CAST(b.quantity_required AS FLOAT) AS quantity_required,
-                    i.part_no AS component_part_no, i.sap_no AS component_sap_no, i.part_description
-                FROM " . BOM_TABLE . " b WITH (NOLOCK)
-                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.component_item_id = i.item_id
-                WHERE b.fg_item_id = ?
-                ORDER BY i.sap_no ASC
-            ";
+            $sql = "SELECT DISTINCT bom_version, bom_status, ecn_number, FORMAT(effective_date, 'yyyy-MM-dd') AS effective_date 
+                    FROM " . BOM_TABLE . " WITH (NOLOCK) 
+                    WHERE fg_item_id = ? 
+                    ORDER BY bom_version DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$fg_id]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'get_bom_components':
+            $fg_id = (int)($_GET['fg_item_id'] ?? 0);
+            $version = (int)($_GET['bom_version'] ?? 0);
+            if (!$fg_id) throw new Exception("FG Item ID is required.");
+
+            $versionCondition = $version > 0 ? "AND b.bom_version = ?" : "AND b.bom_status = 'ACTIVE'";
+            $params = $version > 0 ? [$fg_id, $version] : [$fg_id];
+
+            $sql = "
+                SELECT 
+                    b.bom_id, b.component_item_id, CAST(b.quantity_required AS FLOAT) AS quantity_required, 
+                    b.line, b.model, b.bom_version, b.bom_status,
+                    i.sap_no, i.part_no, i.part_description, i.material_type, 
+                    CAST(i.Cost_RM AS FLOAT) AS Cost_RM, CAST(i.Cost_PKG AS FLOAT) AS Cost_PKG, CAST(i.Cost_SUB AS FLOAT) AS Cost_SUB
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.component_item_id = i.item_id
+                WHERE b.fg_item_id = ? $versionCondition
+                ORDER BY i.material_type ASC, i.sap_no ASC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'get_where_used':
+            $comp_id = (int)($_GET['component_item_id'] ?? 0);
+            if (!$comp_id) throw new Exception("Component Item ID is required.");
+
+            $sql = "
+                SELECT 
+                    b.fg_item_id, CAST(b.quantity_required AS FLOAT) AS quantity_required,
+                    b.bom_version, b.bom_status, b.ecn_number,
+                    i.sap_no AS fg_sap_no, i.part_description, i.material_type
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.fg_item_id = i.item_id
+                WHERE b.component_item_id = ?
+                ORDER BY b.bom_status ASC, i.sap_no ASC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$comp_id]);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'get_audit_trail':
+            $target_id = $_GET['target_id'] ?? '';
+            $target_sap = $_GET['target_sap'] ?? '';
+
+            if (empty($target_id) && empty($target_sap)) {
+                throw new Exception("Missing target identifier.");
+            }
+
+            $sql = "
+                SELECT TOP 50 
+                    action_by AS username, 
+                    action_type AS action, 
+                    detail AS details, 
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time
+                FROM " . USER_LOGS_TABLE . " WITH (NOLOCK) 
+                WHERE target_user = ? OR target_user = ?
+                ORDER BY created_at DESC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([(string)$target_id, (string)$target_sap]);
+            
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
@@ -97,22 +184,39 @@ try {
             $fg_id = (int)($input['fg_item_id'] ?? 0);
             $comp_id = (int)($input['component_item_id'] ?? 0);
             $qty = (float)($input['quantity_required'] ?? 0);
+            $bom_version = (int)($input['bom_version'] ?? 1); // 🌟 รับเลขเวอร์ชันเป้าหมายมาด้วย
 
             if ($fg_id <= 0 || $comp_id <= 0 || $qty <= 0) throw new Exception("Invalid input data.");
-            if ($fg_id === $comp_id) throw new Exception("Finished Good cannot be its own component.");
+            
+            if (checkCircularDependency($pdo, $fg_id, $comp_id)) {
+                throw new Exception("ไม่สามารถเพิ่มวัตถุดิบนี้ได้! ตรวจพบ 'การอ้างอิงแบบวงกลม (Circular Dependency)'");
+            }
 
             $pdo->beginTransaction();
             try {
-                $checkStmt = $pdo->prepare("SELECT 1 FROM " . BOM_TABLE . " WITH (UPDLOCK) WHERE fg_item_id = ? AND component_item_id = ?");
-                $checkStmt->execute([$fg_id, $comp_id]);
-                if ($checkStmt->fetchColumn()) throw new Exception("This component already exists in the BOM.");
+                // 🔒 เช็คสถานะเวอร์ชันก่อน ว่าอนุญาตให้แก้หรือไม่
+                $statusStmt = $pdo->prepare("SELECT TOP 1 bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_version = ?");
+                $statusStmt->execute([$fg_id, $bom_version]);
+                $currentStatus = $statusStmt->fetchColumn();
 
-                $stmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at) VALUES (?, ?, ?, 'DEFAULT', 'DEFAULT', ?, GETDATE())");
-                $stmt->execute([$fg_id, $comp_id, $qty, $currentUser['username']]);
+                if ($currentStatus === 'ACTIVE' || $currentStatus === 'OBSOLETE') {
+                    throw new Exception("🔒 ไม่สามารถแก้ไขสูตรสถานะ [{$currentStatus}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
+                }
+
+                // ถ้าเป็นสินค้าที่ยังไม่เคยมีสูตรเลย (v1) จะให้เป็น ACTIVE เลย, แต่ถ้าเป็นเวอร์ชัน > 1 ต้องเป็น DRAFT เสมอ
+                $bom_status = $currentStatus ? $currentStatus : ($bom_version > 1 ? 'DRAFT' : 'ACTIVE');
+
+                $checkStmt = $pdo->prepare("SELECT 1 FROM " . BOM_TABLE . " WITH (UPDLOCK) WHERE fg_item_id = ? AND component_item_id = ? AND bom_version = ?");
+                $checkStmt->execute([$fg_id, $comp_id, $bom_version]);
+                if ($checkStmt->fetchColumn()) throw new Exception("วัตถุดิบนี้ถูกเพิ่มไปแล้วในสูตรเวอร์ชัน {$bom_version}");
+
+                // 🌟 แทรกคอลัมน์ bom_version และ bom_status เข้าไป
+                $stmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at, bom_version, bom_status) VALUES (?, ?, ?, 'DEFAULT', 'DEFAULT', ?, GETDATE(), ?, ?)");
+                $stmt->execute([$fg_id, $comp_id, $qty, $currentUser['username'], $bom_version, $bom_status]);
                 
-                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', $fg_id, "Comp ID: $comp_id, Qty: $qty");
+                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', $fg_id, "Comp ID: {$comp_id}, Qty: {$qty}, Ver: v{$bom_version}");
                 $pdo->commit();
-                echo json_encode(['success' => true, 'message' => 'Component added successfully.']);
+                echo json_encode(['success' => true, 'message' => 'เพิ่มส่วนประกอบสำเร็จ']);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
@@ -124,31 +228,56 @@ try {
             $qty = (float)($input['quantity_required'] ?? 0);
             if ($bom_id <= 0 || $qty <= 0) throw new Exception("Invalid BOM ID or quantity.");
 
+            $checkStatus = $pdo->prepare("SELECT bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE bom_id = ?");
+            $checkStatus->execute([$bom_id]);
+            $status = $checkStatus->fetchColumn();
+
+            if ($status === 'ACTIVE' || $status === 'OBSOLETE') {
+                throw new Exception("🔒 ไม่สามารถแก้ไขสูตรสถานะ [{$status}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
+            }
+
             $stmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?");
             $stmt->execute([$qty, $currentUser['username'], $bom_id]);
-            echo json_encode(['success' => true, 'message' => 'Quantity updated.']);
+            echo json_encode(['success' => true, 'message' => 'อัปเดตปริมาณเรียบร้อย']);
             break;
 
         case 'delete_bom_component':
             $bom_id = (int)($input['bom_id'] ?? 0);
             if ($bom_id <= 0) throw new Exception("Invalid BOM ID.");
 
+            $checkStatus = $pdo->prepare("SELECT bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE bom_id = ?");
+            $checkStatus->execute([$bom_id]);
+            $status = $checkStatus->fetchColumn();
+
+            if ($status === 'ACTIVE' || $status === 'OBSOLETE') {
+                throw new Exception("🔒 ไม่สามารถลบวัตถุดิบออกจากสูตรสถานะ [{$status}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
+            }
+
             $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE bom_id = ?");
             $stmt->execute([$bom_id]);
-            echo json_encode(['success' => true, 'message' => 'Component deleted.']);
+            echo json_encode(['success' => true, 'message' => 'ลบส่วนผสมเรียบร้อย']);
             break;
 
         case 'delete_full_bom':
             $fg_id = (int)($input['fg_item_id'] ?? 0);
-            if ($fg_id <= 0) throw new Exception("Invalid FG ID.");
+            $bom_version = (int)($input['bom_version'] ?? 0);
+            if ($fg_id <= 0 || $bom_version <= 0) throw new Exception("Invalid FG ID or Version.");
+
+            $checkStatus = $pdo->prepare("SELECT TOP 1 bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_version = ?");
+            $checkStatus->execute([$fg_id, $bom_version]);
+            $status = $checkStatus->fetchColumn();
+
+            if ($status === 'ACTIVE' || $status === 'OBSOLETE') {
+                throw new Exception("🔒 ไม่สามารถล้างสูตรสถานะ [{$status}] ได้!");
+            }
 
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ?");
-            $stmt->execute([$fg_id]);
-            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', $fg_id, "Deleted all components");
+            $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND bom_version = ?");
+            $stmt->execute([$fg_id, $bom_version]);
+            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', $fg_id, "Deleted all components for Version: v{$bom_version}");
             $pdo->commit();
             
-            echo json_encode(['success' => true, 'message' => 'Full BOM deleted successfully.']);
+            echo json_encode(['success' => true, 'message' => "ล้างข้อมูลสูตรร่างเวอร์ชัน v{$bom_version} เรียบร้อยแล้ว"]);
             break;
 
         case 'bulk_delete_bom':
@@ -168,6 +297,115 @@ try {
             $pdo->commit();
             
             echo json_encode(['success' => true, 'message' => "Successfully deleted {$count} BOM(s)."]);
+            break;
+
+        case 'rollup_bom_cost':
+            $fg_id = (int)($input['fg_item_id'] ?? 0);  
+            $bom_version = (int)($input['bom_version'] ?? 0);
+            if ($fg_id <= 0 || $bom_version <= 0) throw new Exception("Invalid FG ID or Version.");
+
+            $pdo->beginTransaction();
+            try {
+                // 🌟 ดึงต้นทุนมารวมเฉพาะเวอร์ชันที่เลือกคำนวณเท่านั้น
+                $sql = "
+                    SELECT 
+                        ISNULL(SUM(c.Cost_RM * b.quantity_required), 0) AS sum_rm,
+                        ISNULL(SUM(c.Cost_PKG * b.quantity_required), 0) AS sum_pkg,
+                        ISNULL(SUM(c.Cost_SUB * b.quantity_required), 0) AS sum_sub
+                    FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                    JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
+                    WHERE b.fg_item_id = ? AND b.bom_version = ?
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$fg_id, $bom_version]);
+                $costs = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$costs) {
+                    throw new Exception("ไม่สามารถคำนวณต้นทุนได้ (อาจไม่มีสูตรการผลิต)");
+                }
+
+                $updateSql = "
+                    UPDATE " . ITEMS_TABLE . "
+                    SET Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, updated_at = GETDATE()
+                    WHERE item_id = ?
+                ";
+                $updateStmt = $pdo->prepare($updateSql);
+                $updateStmt->execute([
+                    $costs['sum_rm'], 
+                    $costs['sum_pkg'], 
+                    $costs['sum_sub'], 
+                    $fg_id
+                ]);
+
+                $logMsg = "Updated Cost RM: " . number_format($costs['sum_rm'], 4) . " from Ver: v{$bom_version}";
+                logAction($pdo, $currentUser['username'], 'COST ROLL-UP', $fg_id, $logMsg);
+                
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'อัปเดตต้นทุนมาตรฐานจากสูตรเวอร์ชัน v'.$bom_version.' สำเร็จแล้ว!']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'create_bom_revision':
+            $fg_id = (int)($input['fg_item_id'] ?? 0);
+            $ecn_no = trim($input['ecn_number'] ?? '');
+            if ($fg_id <= 0 || empty($ecn_no)) throw new Exception("FG ID และ ECN Number เป็นข้อมูลบังคับ");
+
+            $pdo->beginTransaction();
+            try {
+                $checkDraft = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'DRAFT'");
+                $checkDraft->execute([$fg_id]);
+                if ($checkDraft->fetchColumn()) {
+                    throw new Exception("ไม่สามารถสร้างได้! มีสูตรเวอร์ชัน DRAFT ค้างรออนุมัติอยู่ กรุณาจัดการของเดิมให้เสร็จก่อน");
+                }
+
+                $getActive = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'ACTIVE' ORDER BY bom_version DESC");
+                $getActive->execute([$fg_id]);
+                $activeVer = (int)$getActive->fetchColumn();
+                $newVer = $activeVer + 1;
+
+                if ($activeVer > 0) {
+                    $sql = "INSERT INTO " . BOM_TABLE . " 
+                            (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at, bom_version, bom_status, ecn_number)
+                            SELECT fg_item_id, component_item_id, quantity_required, line, model, ?, GETDATE(), ?, 'DRAFT', ?
+                            FROM " . BOM_TABLE . " WITH (NOLOCK)
+                            WHERE fg_item_id = ? AND bom_version = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$currentUser['username'], $newVer, $ecn_no, $fg_id, $activeVer]);
+                } else {
+                    // กรณี FG นี้ยังไม่เคยมีสูตรเลย จะปล่อยผ่านเพื่อให้ User ไปเพิ่ม Component เองในหน้า UI
+                }
+
+                logAction($pdo, $currentUser['username'], 'CREATE BOM REVISION', $fg_id, "Created Version: v{$newVer}, ECN: {$ecn_no}");
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => "เปิดเอกสาร ECN และสร้างสูตรร่าง (Draft v{$newVer}) สำเร็จ!", 'new_version' => $newVer]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'approve_bom_revision':
+            $fg_id = (int)($input['fg_item_id'] ?? 0);
+            $version = (int)($input['bom_version'] ?? 0);
+            if ($fg_id <= 0 || $version <= 0) throw new Exception("ข้อมูลไม่ครบถ้วน");
+
+            $pdo->beginTransaction();
+            try {
+                $stmtObs = $pdo->prepare("UPDATE " . BOM_TABLE . " SET bom_status = 'OBSOLETE' WHERE fg_item_id = ? AND bom_status = 'ACTIVE'");
+                $stmtObs->execute([$fg_id]);
+                $stmtAct = $pdo->prepare("UPDATE " . BOM_TABLE . " SET bom_status = 'ACTIVE', effective_date = GETDATE() WHERE fg_item_id = ? AND bom_version = ? AND bom_status = 'DRAFT'");
+                $stmtAct->execute([$fg_id, $version]);
+
+                logAction($pdo, $currentUser['username'], 'APPROVE BOM REVISION', $fg_id, "Approved Version: v{$version} to ACTIVE");
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => "อนุมัติสูตร v{$version} ขึ้นเป็น ACTIVE สำเร็จ! สูตรเดิมถูกปรับเป็น Obsolete แล้ว"]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         // =========================================================================

@@ -161,7 +161,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
 
             <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
                 <li class="list-group-item list-group-item-action disabled">
-                    <a class="text-decoration-none text-body d-block" href="../inventorySettings/inventorySettings.php" tabindex="-1" aria-disabled="true">
+                    <a class="text-decoration-none text-body d-block" href="../systemSettings/systemSettings.php" tabindex="-1" aria-disabled="true">
                         <i class="fas fa-cogs fa-fw me-3"></i>
                         <span style="text-decoration: line-through;">System Settings <small>(ยังไม่รองรับ)</small></span>
                     </a>

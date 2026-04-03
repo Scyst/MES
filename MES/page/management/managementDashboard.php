@@ -279,7 +279,7 @@ $pageHelpId = "helpModal";
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
         const FILTERS_API = '../OEE_Dashboard/api/get_dashboard_filters.php';
         const PLAN_API = 'api/planManage.php';
-        const ITEM_SEARCH_API = '../inventorySettings/api/itemMasterManage.php';
+        const ITEM_SEARCH_API = '../systemSettings/api/itemMasterManage.php';
     </script>
     
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>

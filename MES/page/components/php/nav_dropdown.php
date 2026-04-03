@@ -154,7 +154,7 @@
 
         <?php if ($userRole && in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
             <li>
-                <a class="dropdown-item-icon" href="../inventorySettings/inventorySettings.php" title="Inventory Settings">
+                <a class="dropdown-item-icon" href="../systemSettings/systemSettings.php" title="Inventory Settings">
                     <i class="fas fa-cogs fa-fw"></i>
                     <span>System Settings</span>
                 </a>

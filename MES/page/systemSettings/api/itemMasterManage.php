@@ -366,7 +366,7 @@ try {
             break;
 
         // =====================================================================
-        // [4] BULK IMPORT
+        // [4] BULK IMPORT 
         // =====================================================================
         case 'unified_bulk_import':
             if (!hasRole(['admin', 'creator'])) {
@@ -378,9 +378,90 @@ try {
             $items = $input;
             if (empty($items)) throw new Exception("No items to import.");
             
+            // 1. กวาดหารหัส SAP ทั้งหมดเพื่อไปดึงข้อมูลเก่ามาเทียบ
+            $sapNos = [];
+            foreach ($items as $item) {
+                $sap = $item['sap_no'] ?? $item['SAP No'] ?? $item['SAP_NO'] ?? '';
+                if (!empty($sap)) $sapNos[] = $sap;
+            }
+            $sapNos = array_unique($sapNos);
+
+            // 2. ดึงข้อมูลเก่าจาก DB มาใส่ Memory รอไว้
+            $existingDataMap = [];
+            if (!empty($sapNos)) {
+                $placeholders = implode(',', array_fill(0, count($sapNos), '?'));
+                $stmtExisting = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN ($placeholders)");
+                $stmtExisting->execute(array_values($sapNos));
+                while ($row = $stmtExisting->fetch(PDO::FETCH_ASSOC)) {
+                    $existingDataMap[strtolower(trim($row['sap_no']))] = $row;
+                }
+            }
+
+            // 3. เริ่มทำการ Map ชื่อคอลัมน์ Excel ให้ตรงกับ DB (พร้อมซ่อมแซมช่องโหว่)
+            $mappedItems = [];
+            foreach ($items as $item) {
+                $sap = trim($item['sap_no'] ?? $item['SAP No'] ?? $item['SAP_NO'] ?? '');
+                if (empty($sap)) continue;
+                
+                $sapKey = strtolower($sap);
+                $oldRow = $existingDataMap[$sapKey] ?? [];
+
+                // 📌 Helper Function: ถ้า Excel ว่างเปล่า ให้เอาข้อมูลเก่าใน DB มาใช้แทน!
+                $getValue = function($excelKeys, $dbKey, $default) use ($item, $oldRow) {
+                    foreach ($excelKeys as $k) {
+                        if (isset($item[$k]) && $item[$k] !== '') {
+                            return $item[$k];
+                        }
+                    }
+                    if (!empty($oldRow) && isset($oldRow[$dbKey])) {
+                        return $oldRow[$dbKey];
+                    }
+                    return $default;
+                };
+
+                // 🪄 แปลงโครงสร้างให้ตรงกับที่ Stored Procedure ต้องการ 100%
+                $mapped = [
+                    'sap_no' => $sap,
+                    'part_no' => $getValue(['part_no', 'Part No'], 'part_no', ''),
+                    'sku' => $getValue(['sku', 'Customer SKU'], 'sku', ''),
+                    'part_description' => $getValue(['part_description', 'Description'], 'part_description', ''),
+                    'material_type' => $getValue(['material_type', 'Material Type'], 'material_type', 'FG'),
+                    'planned_output' => (int)$getValue(['planned_output', 'Planned Output'], 'planned_output', 0),
+                    'min_stock' => (float)$getValue(['min_stock', 'Min Stock'], 'min_stock', 0),
+                    'max_stock' => (float)$getValue(['max_stock', 'Max Stock'], 'max_stock', 0),
+                    'is_active' => (int)$getValue(['is_active', 'Is Active'], 'is_active', 1),
+                    
+                    'CTN' => (int)$getValue(['CTN'], 'CTN', 0),
+                    'net_weight' => (float)$getValue(['net_weight', 'Net Weight'], 'net_weight', 0),
+                    'gross_weight' => (float)$getValue(['gross_weight', 'Gross Weight'], 'gross_weight', 0),
+                    'cbm' => (float)$getValue(['cbm', 'CBM'], 'cbm', 0),
+                    
+                    'invoice_product_type' => $getValue(['invoice_product_type', 'Invoice Product Type'], 'invoice_product_type', ''),
+                    'invoice_description' => $getValue(['invoice_description', 'Invoice Description'], 'invoice_description', ''),
+                    
+                    'StandardPrice' => (float)$getValue(['StandardPrice', 'Standard Price'], 'StandardPrice', 0),
+                    'Price_USD' => (float)$getValue(['Price_USD', 'Price USD'], 'Price_USD', 0),
+                    
+                    'Cost_RM' => (float)$getValue(['Cost_RM', 'Cost RM'], 'Cost_RM', 0),
+                    'Cost_PKG' => (float)$getValue(['Cost_PKG', 'Cost PKG'], 'Cost_PKG', 0),
+                    'Cost_SUB' => (float)$getValue(['Cost_SUB', 'Cost SUB'], 'Cost_SUB', 0),
+                    'Cost_DL' => (float)$getValue(['Cost_DL', 'Cost DL'], 'Cost_DL', 0),
+                    
+                    'Cost_OH_Machine' => (float)$getValue(['Cost_OH_Machine', 'OH Machine'], 'Cost_OH_Machine', 0),
+                    'Cost_OH_Utilities' => (float)$getValue(['Cost_OH_Utilities', 'OH Utilities'], 'Cost_OH_Utilities', 0),
+                    'Cost_OH_Indirect' => (float)$getValue(['Cost_OH_Indirect', 'OH Indirect'], 'Cost_OH_Indirect', 0),
+                    'Cost_OH_Staff' => (float)$getValue(['Cost_OH_Staff', 'OH Staff'], 'Cost_OH_Staff', 0),
+                    'Cost_OH_Accessory' => (float)$getValue(['Cost_OH_Accessory', 'OH Accessory'], 'Cost_OH_Accessory', 0),
+                    'Cost_OH_Others' => (float)$getValue(['Cost_OH_Others', 'OH Others'], 'Cost_OH_Others', 0),
+                ];
+                
+                $mappedItems[] = $mapped;
+            }
+            
             $pdo->beginTransaction();
             try {
-                $jsonData = json_encode($items, JSON_UNESCAPED_UNICODE);
+                // 4. ส่งข้อมูลที่แปลงเสร็จแล้วให้ Stored Procedure จัดการ
+                $jsonData = json_encode($mappedItems, JSON_UNESCAPED_UNICODE);
                 $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch ?, ?");
                 $stmt->bindValue(1, $jsonData, PDO::PARAM_STR);
                 $stmt->bindValue(2, $currentUser['username'], PDO::PARAM_STR);
@@ -401,6 +482,23 @@ try {
                 $pdo->rollBack();
                 throw $e;
             }
+            break;
+
+        case 'validate_import_saps':
+            $sapNos = $input['sap_nos'] ?? [];
+            if (empty($sapNos)) {
+                echo json_encode(['success' => true, 'existing_saps' => []]);
+                break;
+            }
+
+            // ค้นหาว่าในบรรดา SAP No ที่ส่งมา มีตัวไหนอยู่ในระบบแล้วบ้าง
+            $placeholders = implode(',', array_fill(0, count($sapNos), '?'));
+            $stmt = $pdo->prepare("SELECT sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN ($placeholders)");
+            $stmt->execute($sapNos);
+            
+            // ส่งเฉพาะรหัสที่มีอยู่แล้วกลับไปให้หน้าเว็บ
+            $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'existing_saps' => $existing]);
             break;
 
         // =====================================================================

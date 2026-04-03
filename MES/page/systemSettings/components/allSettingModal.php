@@ -169,15 +169,15 @@
                 </form>
             </div>
             
-            <div class="modal-footer bg-light border-top justify-content-between">
-                <button type="button" class="btn btn-sm btn-outline-danger fw-bold" id="deleteItemBtn" style="display: none;">
-                    <i class="fas fa-trash-alt me-1"></i> Delete Item
+            <div class="modal-footer bg-white border-top d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-info fw-bold px-3 shadow-sm" id="btnWhereUsed" style="display: none;">
+                    <i class="fas fa-search-location me-1"></i> Where-Used
                 </button>
-                <div class="ms-auto">
+                
+                <div>
+                    <button type="button" class="btn btn-sm btn-danger fw-bold px-3 me-2" id="deleteItemBtn" style="display:none;"><i class="fas fa-trash-alt"></i> Deactivate</button>
                     <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="itemAndRoutesForm" class="btn btn-sm btn-success fw-bold px-4 shadow-sm" id="btnSaveItem">
-                        <i class="fas fa-save me-1"></i> Save Changes
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm" id="btnSaveItem"><i class="fas fa-save me-1"></i> Save Item</button>
                 </div>
             </div>
         </div>
@@ -850,6 +850,130 @@
                 <div class="modal-footer bg-white border-top">
                     <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> Update Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="whereUsedModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-info text-dark py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-search-location me-2"></i> Where-Used Analysis
+                    <span class="badge bg-white text-info ms-2 border" id="wuTargetSap"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-0">
+                <div class="table-responsive bg-white m-3 border rounded shadow-sm">
+                    <table class="table table-sm table-hover align-middle mb-0 text-nowrap table-settings">
+                        <thead class="table-light sticky-top">
+                            <tr class="text-secondary">
+                                <th class="px-3 py-2">นำไปใช้ใน (Parent SAP No.)</th>
+                                <th class="py-2">Description</th>
+                                <th class="py-2 text-center">Type</th>
+                                <th class="py-2 text-end px-3" style="width: 120px;">ปริมาณที่ใช้ (Qty)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wuTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="auditTrailModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-secondary text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-history me-2"></i> Audit Trail (ประวัติการแก้ไข)
+                    <span class="badge bg-light text-secondary ms-2 border" id="auditTargetName"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-0">
+                <div class="table-responsive bg-white m-3 border rounded shadow-sm hide-scrollbar" style="max-height: 400px;">
+                    <table class="table table-sm table-hover align-middle mb-0 text-nowrap table-settings">
+                        <thead class="table-light sticky-top">
+                            <tr class="text-secondary">
+                                <th class="px-3 py-2" style="width: 140px;">วัน-เวลา (Date/Time)</th>
+                                <th class="py-2" style="width: 120px;">ผู้ใช้งาน (User)</th>
+                                <th class="py-2">การกระทำ (Action)</th>
+                                <th class="py-2 px-3">รายละเอียด (Details)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTrailTbody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importPreviewModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" style="z-index: 1060;">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-file-excel me-2"></i> Preview Import Data
+                    <span class="badge bg-light text-primary ms-2" id="importRowCount">0 Rows</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-3">
+                <div class="alert alert-info border-info small mb-3 shadow-sm">
+                    <i class="fas fa-info-circle me-1"></i> ระบบจะทำการ <b>Smart Update</b>: ข้อมูลที่มีอยู่แล้วจะถูกอัปเดต และข้อมูลใหม่จะถูกสร้างขึ้น <u class="fw-bold">โดยช่องที่เว้นว่างใน Excel จะไม่ไปลบข้อมูลเดิมในระบบ</u>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-2 mb-3" id="importStatsSummary">
+                    </div>
+
+                <div class="table-responsive bg-white border rounded shadow-sm hide-scrollbar">
+                    <table class="table table-sm table-hover align-middle mb-0 text-nowrap table-settings">
+                        <thead class="table-light sticky-top" id="importPreviewThead">
+                            </thead>
+                        <tbody id="importPreviewTbody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top">
+                <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-success fw-bold px-4 shadow-sm" id="btnConfirmImport">
+                    <i class="fas fa-cloud-upload-alt me-1"></i> Confirm Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="ecnModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark py-3">
+                <h5 class="modal-title fw-bold"><i class="fas fa-code-branch me-2"></i>Create New Revision (ECN)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="ecnForm">
+                <div class="modal-body bg-light p-4">
+                    <div class="alert alert-warning small mb-4 border-warning">
+                        <i class="fas fa-info-circle me-1"></i> ระบบจะทำการ <b>คัดลอกสูตรปัจจุบัน</b> ไปสร้างเป็นเวอร์ชันใหม่ (สถานะ <b>DRAFT</b>) เพื่อให้คุณแก้ไขได้อย่างปลอดภัย โดยไม่กระทบการผลิตจริง
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ECN Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control border-warning" name="ecn_number" required placeholder="ระบุเลขที่เอกสารแจ้งเปลี่ยนแปลง (เช่น ECN-2026-001)">
+                        <div class="form-text">ใช้สำหรับอ้างอิงเอกสาร Engineering Change Notice</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> Create Draft</button>
                 </div>
             </form>
         </div>
