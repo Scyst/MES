@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
-<title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'MES TOOLBOX'; ?></title>
+<title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'TOOLBOX OS'; ?></title>
 
 <script>
     (function() {

@@ -10,7 +10,7 @@ if (!hasRole(['admin', 'creator', 'supervisor'])) {
 $canManage = hasRole(['admin', 'creator', 'supervisor']);
 $currentUser = $_SESSION['user'];
 
-$pageTitle = "System Settings | MES TOOLBOX";
+$pageTitle = "System Settings | TOOLBOX OS";
 $pageIcon = "fas fa-cogs";
 $pageHeaderTitle = "System Settings";
 $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configurations";

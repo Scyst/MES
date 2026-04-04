@@ -6,7 +6,7 @@ $isLoggedIn = isset($_SESSION['user']);
 $user = $isLoggedIn ? $_SESSION['user'] : null;
 $userRole = $isLoggedIn ? $user['role'] : 'guest';
 $fullName = $isLoggedIn ? ($user['fullname'] ?? $user['username']) : 'ผู้เยี่ยมชม (Guest)';
-$pageTitle = "MES TOOLBOX";
+$pageTitle = "TOOLBOX OS";
 
 function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $iconColorClass = '') {
     $hasPermission = empty($requiredPermission) ? isset($_SESSION['user']) : hasPermission($requiredPermission);
@@ -56,7 +56,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                 <div class="border-start border-secondary mx-2 d-none d-md-block" style="height: 35px; opacity: 0.2;"></div>
 
                 <div class="d-flex flex-column justify-content-center" style="line-height: 1.2;">
-                    <span class="fw-bold" style="font-size: 1.25rem; letter-spacing: 0.5px;">MES TOOLBOX</span>
+                    <span class="fw-bold" style="font-size: 1.25rem; letter-spacing: 0.5px;">TOOLBOX OS</span>
                     <span class="text-muted" style="font-size: 0.75rem;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)</span>
                 </div>
             </div>
@@ -156,7 +156,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', 'view_production', $themeOps);
                         renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeOps);
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_warehouse', $themeOps);
-                        renderServiceLink('RM Receiving', 'รับสินค้าเข้าและพิมพ์ Tag', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeOps);
+                        renderServiceLink('Store Management', 'จัดการคลังสินค้า', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeOps);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_warehouse', $themeOps);
                         renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeOps);
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeOps);

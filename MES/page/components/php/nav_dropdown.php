@@ -13,7 +13,7 @@
     <ul class="custom-dropdown">
         <li>
             <a class="dropdown-item-icon" href="../dailyLog/dailyLogUI.php" title="SNC ONE WAY (Home)">
-                <i class="fas fa-home fa-fw"></i><span>MES TOOLBOX</span>
+                <i class="fas fa-home fa-fw"></i><span>TOOLBOX OS</span>
             </a>
         </li>
 

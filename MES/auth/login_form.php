@@ -26,7 +26,7 @@ if (isset($_SESSION['user'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MES Toolbox</title>
+    <title>Login - TOOLBOX OS</title>
     
     <link rel="stylesheet" href="../utils/libs/bootstrap.min.css">
     <script src="../page/components/js/theme-switcher.js"></script>

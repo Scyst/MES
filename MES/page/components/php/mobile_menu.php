@@ -20,7 +20,7 @@ $userRole = $_SESSION['user']['role'] ?? null;
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../dailyLog/dailyLogUI.php">
                     <i class="fas fa-home fa-fw me-3"></i>
-                    <span>MES TOOLBOX (Home)</span>
+                    <span>TOOLBOX OS (Home)</span>
                 </a>
             </li>
 

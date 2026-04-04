@@ -61,6 +61,10 @@
             overflow: hidden;
         }
 
+        .tag-card:last-child {
+            page-break-after: auto;
+        }
+        
         .tag-details {
             width: 75%;
             padding-right: 4px;
