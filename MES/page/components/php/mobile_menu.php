@@ -101,6 +101,13 @@ $userRole = $_SESSION['user']['role'] ?? null;
                 </a>
             </li>
 
+            <li>
+            <a class="dropdown-item-icon" href="../fleetLog/fleetLog.php" title="Fleet & Logistics Log">
+                <i class="fas fa-truck-moving fa-fw"></i>
+                <span>Transport & Logistics</span>
+            </a>
+        </li>
+
             <li class="list-group-item list-group-item-action">
                 <a class="text-decoration-none text-body d-block" href="../loadingReport/loading_report.php">
                     <i class="fas fa-truck-loading fa-fw me-3"></i>

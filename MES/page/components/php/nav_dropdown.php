@@ -86,6 +86,13 @@
             </a>
         </li>
 
+        <li>
+            <a class="dropdown-item-icon" href="../fleetLog/fleetLog.php" title="Fleet & Logistics Log">
+                <i class="fas fa-truck-moving fa-fw"></i>
+                <span>Transport & Logistics</span>
+            </a>
+        </li>
+
         <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
         <li>
             <a class="dropdown-item-icon" href="../autoInvoice/finance_dashboard.php" title="Invoice Management">

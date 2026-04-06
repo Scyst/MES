@@ -287,26 +287,45 @@ try {
         // 7. จบงาน (Finish Inspection)
         case 'finish_report':
             $report_id = $_POST['report_id'];
-            
-            // ตรวจสอบก่อนว่ามี Report นี้จริงไหม
             $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
             $check->execute([$report_id]);
             if (!$check->fetch()) {
                 throw new Exception("Report not found.");
             }
 
-            // สังเกตว่าเราเรียก writeLog() ก่อนทำการ UPDATE เพื่อเก็บหลักฐาน
             writeLog($pdo, 'FINISH', 'LOADING', $report_id, 
-                ['status' => 'DRAFT'],       // ค่าเก่า (สมมติว่าเป็น Draft)
-                ['status' => 'COMPLETED'],   // ค่าใหม่
-                'Inspection Completed'       // Remark
+                ['status' => 'DRAFT'],       
+                ['status' => 'COMPLETED'],   
+                'Inspection Completed'       
             );
 
-            // อัปเดตสถานะเป็น COMPLETED
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
                     SET status = 'COMPLETED', updated_at = GETDATE() 
                     WHERE id = ?";
             $pdo->prepare($sql)->execute([$report_id]);
+
+            $checkFleet = $pdo->prepare("SELECT log_id FROM dbo.LOGISTICS_FLEET_LOGS WHERE loading_report_id = ?");
+            $checkFleet->execute([$report_id]);
+            
+            if (!$checkFleet->fetch()) {
+                $stmtLoad = $pdo->prepare("SELECT r.*, s.po_number FROM " . LOADING_REPORTS_TABLE . " r LEFT JOIN " . SALES_ORDERS_TABLE . " s ON r.sales_order_id = s.id WHERE r.id = ?");
+                $stmtLoad->execute([$report_id]);
+                $rData = $stmtLoad->fetch(PDO::FETCH_ASSOC);
+
+                if ($rData) {
+                    $log_time = $rData['loading_end_time'] ?: date('Y-m-d H:i:s');
+                    $vehicle_type = $rData['container_type'] ?: 'UNKNOWN';
+                    $ref_doc = $rData['po_number'] ?: 'C-TPAT ID: ' . $report_id;
+                    $user_id = $_SESSION['user']['id'] ?? 0;
+
+                    $insFleet = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
+                        (log_timestamp, trans_type, provider_type, vehicle_type, car_license, container_no, seal_no, ref_document, loading_report_id, created_by_user_id)
+                        VALUES (?, 'OUTBOUND', 'VENDOR', ?, ?, ?, ?, ?, ?, ?)";
+                    $pdo->prepare($insFleet)->execute([
+                        $log_time, $vehicle_type, $rData['car_license'], $rData['container_no'], $rData['seal_no'], $ref_doc, $report_id, $user_id
+                    ]);
+                }
+            }
 
             echo json_encode(['success' => true]);
             break;
@@ -319,7 +338,6 @@ try {
                  throw new Exception("Permission Denied: Manage production right is required to reopen reports.");
             }
 
-            // ตรวจสอบว่ามีงานอยู่จริง
             $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
             $check->execute([$report_id]);
             if (!$check->fetch()) throw new Exception("Report not found.");
@@ -330,11 +348,11 @@ try {
                 'Supervisor Re-opened Report'
             );
 
-            // ถอยสถานะกลับเป็น DRAFT
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " 
                     SET status = 'DRAFT', updated_at = GETDATE() 
                     WHERE id = ?";
             $pdo->prepare($sql)->execute([$report_id]);
+            $pdo->prepare("DELETE FROM dbo.LOGISTICS_FLEET_LOGS WHERE loading_report_id = ?")->execute([$report_id]);
 
             echo json_encode(['success' => true]);
             break;

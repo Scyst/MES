@@ -177,6 +177,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะประจำวัน', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeMon);
                         renderServiceLink('Manpower', 'จัดการกำลังคน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeMon);
                         renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeMon);
+                        renderServiceLink('Transport & Logistics', 'บัญชีเที่ยวรถและค่าขนส่ง', '<i class="fas fa-truck-moving"></i>', '../fleetLog/fleetLog.php', 'view_sales', $themeMon);
                         renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeMon);
                         renderServiceLink('Forklift Booking', 'จองรถโฟร์คลิฟ และติดตามสถานะ', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', '', $themeMon);
                         renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', 'view_mood', $themeMon);
