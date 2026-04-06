@@ -2,266 +2,65 @@
 
 const API_URL = 'api/manage_loading.php'; 
 let saveTimer;
+window.currentErrors = []; // 🟢 ตัวแปรเก็บรายการที่ยังกรอกไม่ครบ
 
 $(document).ready(function() {
     loadJobList();
-    
-    // เรียกเช็ค Scroll ทันทีเผื่อหน้าจอมันสั้นจนไม่ต้องเลื่อน
-    checkScrollPosition(); 
 
-    // Prevent file input click propagation
-    $(document).on('click', 'input[type="file"]', function(e) {
-        e.stopPropagation();
-    });
+    $(document).on('click', 'input[type="file"]', function(e) { e.stopPropagation(); });
 
-    // Auto-save trigger
     const inputSelectors = '#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_container_type_other, #input_driver, #input_inspector, #input_supervisor';
-    
     $(inputSelectors).on('change keyup', function() {
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveHeader, 1000); 
-        validateCompletion(); // เช็คปุ่ม Finish ทุกครั้งที่พิมพ์
+        validateCompletion(); 
     });
 
     $('#filter_search').on('keypress', function(e) {
         if(e.which == 13) loadJobList();
     });
 
-    // Event Scroll สำหรับ Policy
-    $(window).on('scroll', function() {
-        checkScrollPosition();
-    });
-
-    const $footer = $('.sticky-footer');
-    $('input[type="text"], input[type="number"], textarea').on('focus', function() {
-        if ($(window).width() < 768) { // ทำเฉพาะบนมือถือ
-            $footer.slideUp(200); // ซ่อน Footer
-        }
-    }).on('blur', function() {
-        if ($(window).width() < 768) {
-            $footer.slideDown(200); // โชว์ Footer กลับมา
-        }
-    });
-
-    // [ADD] ดักจับปุ่ม Back ของ Browser
     window.onpopstate = function(event) {
-        // ถ้า URL ไม่มี #report (คือย้อนกลับมาหน้าแรกแล้ว) หรือ State ว่างเปล่า
         if (!location.hash || location.hash !== '#report') {
-            // ถ้าหน้า Form เปิดอยู่ ให้สลับกลับไปหน้า List
-            if ($('#view-report-form').is(':visible')) {
+            if (window.innerWidth < 992 && !$('#left-pane').hasClass('d-flex')) {
                 switchView('list');
             }
         }
     };
 });
 
-// ==========================================
-// 1. SCROLL POLICY LOGIC
-// ==========================================
-function checkScrollPosition() {
-    if ($('#btn_finish').length === 0) return;
-    if ($(window).scrollTop() + $(window).height() >= $(document).height() - 50) {
-        $('#confirm_all_pass').prop('disabled', false);
-        $('#scroll_hint').fadeOut();
-    }
-}
-
-// ==========================================
-// 2. CHECKLIST LOGIC (Core)
-// ==========================================
-function saveSubItem(topicId, topicName, itemIndex, itemName) {
-    const reportId = $('#current_report_id').val();
-    const itemKey = topicId + '_' + itemIndex;
-    const result = $(`input[name="res_${itemKey}"]:checked`).val();
-    const remark = $(`#remark_${itemKey}`).val();
-
-    if (!reportId || !result) return;
-
-    $.post(API_URL, {
-        action: 'save_checklist_item',
-        report_id: reportId,
-        topic_id: topicId,
-        topic_name: topicName,
-        item_index: itemIndex,
-        item_name: itemName,
-        result: result,
-        remark: remark
-    }, function(res) {
-        if(res.success) {
-            recalcTopicStatus(topicId);
-        }
-    }, 'json');
+function loadJobList() {
+    $('#jobListContainer').html('<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>');
     
-    setTimeout(validateCompletion, 100); 
-}
-
-function validateCompletion() {
-    const btn = $('#btn_finish');
-    const switchBtn = $('#confirm_all_pass');
-    const errors = [];
-
-    // 1. Check Mandatory Inputs
-    const requiredInputs = {
-        '#input_container': 'Container No.',
-        '#input_seal': 'Seal No.',
-        '#input_car_license': 'License Plate',
-        '#input_driver': 'Driver Name',
-        '#input_inspector': 'Inspector',
-        '#input_supervisor': 'Supervisor',
-        '#input_location': 'Location'
-        // Container Size เช็คแยก เพราะมี Logic Others
+    const payload = {
+        action: 'get_jobs',
+        start_date: $('#filter_start').val(),
+        end_date: $('#filter_end').val(),
+        status: $('#filter_status').val(),
+        search: $('#filter_search').val()
     };
 
-    let infoComplete = true;
-    for (const [id, label] of Object.entries(requiredInputs)) {
-        if (!$(id).val() || $(id).val().trim() === '') {
-            infoComplete = false; break;
-        }
-    }
-    
-    // Check Container Size (Dropdown or Text)
-    const ctnType = $('#input_container_type').val();
-    if (!ctnType || (ctnType === 'OTHER' && !$('#input_container_type_other').val())) {
-        infoComplete = false;
-    }
-
-    if (!infoComplete) errors.push('Info');
-
-    // 2. Check Photos
-    const totalPhotos = 12; 
-    const currentPhotos = $('.camera-box.has-image').length;
-    if (currentPhotos < totalPhotos) errors.push('Photos');
-
-    // 3. Check Checklist
-    const totalItems = $('.sub-item-row').length;
-    let checkedCount = 0;
-    let passCount = 0;
-    const checkedGroups = {};
-
-    $('input[type=radio]:checked').each(function() {
-        const name = $(this).attr('name');
-        if (!checkedGroups[name]) {
-            checkedGroups[name] = true;
-            checkedCount++;
-            if ($(this).val() === 'PASS') passCount++;
-        }
-    });
-
-    const isChecklistComplete = (checkedCount >= totalItems && totalItems > 0);
-    if (!isChecklistComplete) errors.push('Checklist');
-
-    // Logic 1: Switch Behavior
-    const isAllPass = (passCount === totalItems && totalItems > 0);
-    if (isAllPass) {
-        if (!switchBtn.prop('disabled') && !switchBtn.prop('checked')) switchBtn.prop('checked', true);
-    } else {
-        if (switchBtn.prop('checked')) switchBtn.prop('checked', false);
-    }
-
-    // Logic 2: Button Behavior
-    if (errors.length === 0) {
-        btn.prop('disabled', false);
-        btn.removeClass('btn-secondary').addClass('btn-success');
-        btn.html('<i class="fas fa-save me-1"></i> Finish');
-    } else {
-        btn.prop('disabled', true);
-        btn.removeClass('btn-success').addClass('btn-secondary');
-        btn.html(`<i class="fas fa-lock me-1"></i> Missing: ${errors.join(', ')}`);
-    }
-}
-
-function toggleFinishButton(checkbox) {
-    if (checkbox.checked) {
-        $('input[value="PASS"]').each(function() {
-            const groupName = $(this).attr('name');
-            if (!$(`input[name="${groupName}"]:checked`).length) {
-                $(this).prop('checked', true);
-                $(this).trigger('change'); 
-            }
-        });
-        $('.collapse').collapse('show');
-    }
-    setTimeout(validateCompletion, 200);
-}
-
-function recalcTopicStatus(topicId) {
-    const $inputs = $(`input[name^="res_${topicId}_"]:checked`);
-    let hasFail = false;
-    let allPass = true;
-    let checkedCount = $inputs.length;
-
-    $inputs.each(function() {
-        if ($(this).val() === 'FAIL') hasFail = true;
-        if ($(this).val() !== 'PASS') allPass = false;
-    });
-
-    const $icon = $(`#topic_icon_${topicId}`);
-    $icon.removeClass('text-white-50 text-success text-warning text-white');
-    
-    if (hasFail) {
-        $icon.addClass('text-warning');
-    } else if (checkedCount > 0 && allPass) {
-        $icon.addClass('text-success');
-    } else {
-        $icon.addClass('text-white-50');
-    }
-}
-
-function toggleAccordion(elementId) {
-    $('#' + elementId).collapse('toggle');
-}
-
-// ==========================================
-// 3. GENERAL FUNCTIONS
-// ==========================================
-
-function resetInspectionForm() {
-    $('input[type="radio"]').prop('checked', false);
-    $('textarea, input[type="text"], input[type="datetime-local"], select').val(''); // Clear all inputs
-    $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
-    $('.camera-box').removeClass('has-image');
-    $('.preview-img').remove();
-    $('.camera-box i, .camera-box .camera-label').show();
-    $('.collapse').removeClass('show');
-    
-    // Reset Logic Fields
-    $('#input_container_type_other').addClass('d-none');
-    
-    // Reset Footer
-    $('#confirm_all_pass').prop('checked', false).prop('disabled', true);
-    $('#scroll_hint').show();
-    $('#btn_finish').prop('disabled', true).removeClass('btn-success').addClass('btn-secondary');
-}
-
-function loadJobList() {
-    $('#jobListContainer').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>');
-    $.getJSON(API_URL, { action: 'get_jobs', date: $('#filter_date').val(), search: $('#filter_search').val() }, function(res) {
+    $.getJSON(API_URL, payload, function(res) {
         if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
         let html = '';
         if (res.data.length === 0) {
-            html = `<div class="col-12 text-center text-muted py-5">No jobs found</div>`;
+            html = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>No jobs found</div>`;
         } else {
             res.data.forEach(job => {
                 let statusClass = job.report_status === 'COMPLETED' ? 'job-card done' : 'job-card draft';
                 let badge = job.report_status === 'COMPLETED' ? '<span class="badge bg-success">Completed</span>' : '<span class="badge bg-warning text-dark">In Progress</span>';
-                let printBtn = job.report_status === 'COMPLETED' ? `<a href="print_report.php?report_id=${job.report_id}" target="_blank" class="btn btn-sm btn-outline-secondary ms-2" onclick="event.stopPropagation();"><i class="fas fa-print"></i></a>` : '';
+                let printBtn = job.report_status === 'COMPLETED' ? `<a href="print_report.php?report_id=${job.report_id}" target="_blank" class="btn btn-sm btn-light border ms-2 text-secondary" onclick="event.stopPropagation();"><i class="fas fa-print"></i></a>` : '';
                 
+                const isActive = ($('#current_so_id').val() == job.so_id) ? 'active' : '';
+
                 html += `
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card shadow-sm h-100 ${statusClass}" onclick="openReport(${job.so_id})">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="fw-bold text-primary mb-0">${job.po_number}</h5>
-                                <div>${badge}${printBtn}</div>
-                            </div>
-                            
-                            <div class="small text-muted text-truncate"><i class="fas fa-file-invoice me-2 text-secondary" style="width:16px;"></i>Inv: <span class="text-dark fw-bold">${job.snc_ci_no || '-'}</span></div>
-                            <div class="small text-muted text-truncate"><i class="fas fa-ticket-alt me-2 text-secondary" style="width:16px;"></i>Booking: <span class="text-dark">${job.booking_no || '-'}</span></div>
-                            
-                            <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
-                            <div class="small text-muted"><i class="fas fa-box me-2 text-secondary" style="width:16px;"></i>Qty: ${Number(job.quantity).toLocaleString()}</div>
-                        </div>
+                <div class="${statusClass} ${isActive} w-100 p-2 p-md-3" id="job-card-${job.so_id}" onclick="openReport(${job.so_id})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="fw-bold text-primary mb-0">${job.po_number}</h6>
+                        <div>${badge}${printBtn}</div>
                     </div>
+                    <div class="small text-muted"><i class="fas fa-calendar-day me-2 text-secondary" style="width:16px;"></i>Load Date: <span class="text-dark">${job.loading_date || '-'}</span></div>
+                    <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
                 </div>`;
             });
         }
@@ -271,6 +70,7 @@ function loadJobList() {
 
 function resetSearch() {
     $('#filter_search').val('');
+    $('#filter_status').val('ALL');
     loadJobList();
 }
 
@@ -278,6 +78,9 @@ async function openReport(soId) {
     resetInspectionForm();
     $('#loadingOverlay').css('display', 'flex');
     
+    $('.job-card').removeClass('active');
+    $(`#job-card-${soId}`).addClass('active');
+
     try {
         const res = await $.post(API_URL, { action: 'get_report_detail', so_id: soId }, null, 'json');
         if (!res.success) throw new Error(res.message);
@@ -285,14 +88,10 @@ async function openReport(soId) {
         const h = res.header;
         $('#current_so_id').val(h.so_id);
 
-        // Map Data
         $('#disp_po_head').text(h.po_number || '-');
-        
-        // [UPDATE] แสดง SNC Invoice
         $('#disp_invoice').text(h.snc_ci_no || '-'); 
-
+        $('#disp_invoice_badge').removeClass('d-none');
         $('#disp_po_nav').text('PO: ' + (h.po_number || '-'));
-        $('#disp_sku').text(h.sku || '-');    
         $('#disp_qty').text(Number(h.quantity).toLocaleString());
         $('#disp_booking').text(h.booking_no || '-');
         $('#disp_container_plan').text(h.master_container || '-');
@@ -312,23 +111,17 @@ async function openReport(soId) {
         if (h.loading_start_time) $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
         if (h.loading_end_time) $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
 
-        // [UPDATE] Logic โหลดข้อมูล Container Type (รองรับ Others)
         const dbCtnType = h.ctn_size || h.container_type || '';
-        
-        // เช็คว่าค่าใน DB มีอยู่ใน Dropdown ไหม?
         if ($(`#input_container_type option[value='${dbCtnType}']`).length > 0) {
             $('#input_container_type').val(dbCtnType);
             $('#input_container_type_other').addClass('d-none');
         } else if (dbCtnType !== '') {
-            // ไม่มีใน Dropdown -> เลือก Others แล้วใส่ค่าจริง
             $('#input_container_type').val('OTHER');
             $('#input_container_type_other').val(dbCtnType).removeClass('d-none');
-        } else {
-            $('#input_container_type').val('');
-            $('#input_container_type_other').addClass('d-none');
         }
 
-        // Photos & ID
+        $('#info-tab').tab('show');
+
         if (h.report_id) {
             $('#current_report_id').val(h.report_id);
             if (res.photos) {
@@ -338,71 +131,84 @@ async function openReport(soId) {
         } else {
             const saveRes = await saveHeaderPromise(); 
             if(saveRes.success && saveRes.report_id) $('#current_report_id').val(saveRes.report_id);
+            validateCompletion(); 
         }
 
-        // Handle Status
         const currentStatus = (h.status || h.report_status || '').toString().toUpperCase().trim();
         if (currentStatus === 'COMPLETED') {
-            $('#view-report-form input, #view-report-form select, #view-report-form textarea').prop('disabled', true);
+            $('#form-content input, #form-content select, #form-content textarea').prop('disabled', true);
             $('.camera-box').css('pointer-events', 'none').css('opacity', '0.7');
-            $('.sticky-footer').html(`
-                <div class="text-danger fw-bold mb-2 text-center"><i class="fas fa-lock"></i> COMPLETED</div>
-                <button class="btn btn-outline-warning w-100 shadow-sm" onclick="reopenReport()"><i class="fas fa-unlock-alt me-2"></i> Re-open</button>
+            $('#btn_pass_all').prop('disabled', true);
+            
+            $('#form-action-bar').removeClass('d-none').html(`
+                <div class="d-flex align-items-center justify-content-center gap-3 w-100">
+                    <div class="text-danger fw-bold fs-5"><i class="fas fa-lock me-2"></i> COMPLETED</div>
+                    <button class="btn btn-outline-warning shadow-sm rounded-pill px-4 fw-bold" onclick="reopenReport()"><i class="fas fa-unlock-alt me-2"></i> Re-open</button>
+                </div>
             `);
         } else {
-            $('#view-report-form input, #view-report-form select, #view-report-form textarea').prop('disabled', false);
+            $('#form-content input, #form-content select, #form-content textarea').prop('disabled', false);
             $('.camera-box').css('pointer-events', 'auto').css('opacity', '1');
-            $('#input_container_readonly, #input_seal_readonly').prop('readonly', true);
-            $('#input_location').prop('readonly', false);
+            $('#btn_pass_all').prop('disabled', false);
             
-            // Render Footer with Checkbox (Slim Version)
-            $('.sticky-footer').html(`
-                <div class="d-flex align-items-center justify-content-between gap-2">
-                    <div class="form-check form-switch mb-0 d-flex align-items-center" style="padding-left: 2.5em;">
-                        <input class="form-check-input border-secondary" type="checkbox" role="switch" 
-                               id="confirm_all_pass" 
-                               style="width: 2.5em; height: 1.25em; margin-left: -2.5em; cursor: pointer;" 
-                               onchange="toggleFinishButton(this)" disabled>
-                        <label class="form-check-label fw-bold text-dark small ms-2 lh-1" for="confirm_all_pass" style="font-size: 0.85rem; cursor: pointer;">
-                            Confirm<br>Pass All
-                        </label>
-                    </div>
-                    <button id="btn_finish" class="btn btn-secondary shadow-sm py-2 px-3 flex-grow-1" 
-                            style="max-width: 200px; border-radius: 8px;" 
-                            onclick="finishInspection()" disabled>
-                        <i class="fas fa-lock me-1"></i> Finish
+            // 🟢 Render ปุ่ม Finish เสมอ และไม่แสดงข้อความ Error (เดี๋ยวใช้ Popup แทน) 🟢
+            $('#form-action-bar').removeClass('d-none').html(`
+                <div class="d-flex align-items-center justify-content-center w-100">
+                    <button id="btn_finish" class="btn btn-success shadow-sm py-2 px-5 rounded-pill fw-bold w-100 w-md-auto" style="max-width:280px;" onclick="finishInspection()">
+                        <i class="fas fa-check-circle me-2"></i> Finish Inspection
                     </button>
                 </div>
-                <div id="scroll_hint" class="position-absolute top-0 start-50 translate-middle-x text-center w-100" style="margin-top: -20px; pointer-events: none;">
-                    <span class="badge bg-dark opacity-75 shadow-sm" style="font-size: 0.7rem;"><i class="fas fa-arrow-down animate-bounce"></i> Scroll</span>
-                </div>
             `);
-            
-            setTimeout(checkScrollPosition, 500);
         }
         
-        // [ADD] สร้างประวัติการเข้าชม (History State)
         history.pushState({page: 'report'}, 'Report View', '#report');
-        
         switchView('form'); 
     } catch (err) {
-        Swal.fire('Error', 'Failed to load report: ' + err.message, 'error');
+        Swal.fire('Error', 'Failed to load report', 'error');
     } finally {
         $('#loadingOverlay').hide();
     }
 }
 
 function switchView(view) {
-    if (view === 'list') {
-        $('#view-job-list').fadeIn();
-        $('#view-report-form').hide();
-        loadJobList(); 
+    if (window.innerWidth < 992) { 
+        if (view === 'list') {
+            $('#left-pane').removeClass('d-none').addClass('d-flex');
+            $('#right-pane').removeClass('d-flex').addClass('d-none');
+            $('.job-card').removeClass('active'); 
+            $('#current_so_id').val('');
+        } else {
+            $('#left-pane').removeClass('d-flex').addClass('d-none');
+            $('#right-pane').removeClass('d-none').addClass('d-flex');
+            window.scrollTo(0,0);
+        }
+    } else { 
+        $('#left-pane').removeClass('d-none').addClass('d-flex');
+        $('#right-pane').removeClass('d-none').addClass('d-flex');
+    }
+
+    if (view === 'form' || $('#current_so_id').val() !== '') {
+        $('#empty-state').addClass('d-none').removeClass('d-flex');
+        $('#form-content').removeClass('d-none').addClass('d-flex');
     } else {
-        $('#view-job-list').hide();
-        $('#view-report-form').fadeIn();
-        window.scrollTo(0,0);
+        $('#empty-state').removeClass('d-none').addClass('d-flex');
+        $('#form-content').addClass('d-none').removeClass('d-flex');
+        $('#disp_invoice_badge').addClass('d-none');
     }
 }
+
+$(window).resize(function() {
+    if (window.innerWidth >= 992) {
+        $('#left-pane').removeClass('d-none').addClass('d-flex');
+        $('#right-pane').removeClass('d-none').addClass('d-flex');
+    } else {
+        if ($('#current_so_id').val() !== '') {
+            $('#left-pane').removeClass('d-flex').addClass('d-none');
+        } else {
+            $('#right-pane').removeClass('d-flex').addClass('d-none');
+        }
+    }
+});
 
 function loadChecklistData() {
     const reportId = $('#current_report_id').val();
@@ -414,10 +220,7 @@ function loadChecklistData() {
                 for (const [itemIndex, row] of Object.entries(items)) {
                     const itemKey = topicId + '_' + itemIndex;
                     $(`input[name="res_${itemKey}"][value="${row.result}"]`).prop('checked', true);
-                    if (row.remark) {
-                        $(`#remark_${itemKey}`).val(row.remark);
-                        $(`#collapse_remark_${itemKey}`).addClass('show'); 
-                    }
+                    if (row.remark) $(`#remark_${itemKey}`).val(row.remark);
                 }
                 recalcTopicStatus(topicId);
             }
@@ -433,11 +236,8 @@ function saveHeaderPromise() {
 }
 
 function saveHeader() {
-    // [UPDATE] Logic เลือกค่าที่จะบันทึก (Container Type)
     let finalCtnType = $('#input_container_type').val();
-    if (finalCtnType === 'OTHER') {
-        finalCtnType = $('#input_container_type_other').val();
-    }
+    if (finalCtnType === 'OTHER') finalCtnType = $('#input_container_type_other').val();
 
     const data = {
         action: 'save_header',
@@ -448,7 +248,7 @@ function saveHeader() {
         seal_no: $('#input_seal').val(),
         cable_seal: $('#input_cable_seal').val(),
         container_no: $('#input_container').val(),
-        container_type: finalCtnType, // ใช้ค่าที่คำนวณใหม่
+        container_type: finalCtnType, 
         car_license: $('#input_car_license').val(),
         driver_name: $('#input_driver').val(),
         inspector_name: $('#input_inspector').val(),
@@ -459,27 +259,144 @@ function saveHeader() {
     }, 'json');
 }
 
-function finishInspection() {
-    clearTimeout(saveTimer);
-    if (!$('#input_seal').val()) { Swal.fire('Missing Data', 'Please enter Seal No.', 'warning'); return; }
+function saveSubItem(topicId, topicName, itemIndex, itemName) {
+    const reportId = $('#current_report_id').val();
+    const itemKey = topicId + '_' + itemIndex;
+    const result = $(`input[name="res_${itemKey}"]:checked`).val();
+    const remark = $(`#remark_${itemKey}`).val();
+
+    if (!reportId || !result) return;
+
+    $.post(API_URL, {
+        action: 'save_checklist_item', report_id: reportId, topic_id: topicId,
+        topic_name: topicName, item_index: itemIndex, item_name: itemName,
+        result: result, remark: remark
+    }, function(res) {
+        if(res.success) recalcTopicStatus(topicId);
+    }, 'json');
     
+    setTimeout(validateCompletion, 100); 
+}
+
+function validateCompletion() {
+    const errors = [];
+
+    const requiredInputs = {
+        '#input_container': 'Container No.', '#input_seal': 'Seal No.',
+        '#input_car_license': 'License Plate', '#input_driver': 'Driver Name',
+        '#input_inspector': 'Inspector', '#input_supervisor': 'Supervisor'
+    };
+    let infoComplete = true;
+    for (const id in requiredInputs) {
+        if (!$(id).val() || $(id).val().trim() === '') { infoComplete = false; break; }
+    }
+    const ctnType = $('#input_container_type').val();
+    if (!ctnType || (ctnType === 'OTHER' && !$('#input_container_type_other').val())) infoComplete = false;
+    if (!infoComplete) errors.push('Info');
+
+    const totalPhotos = 12; 
+    const currentPhotos = $('.camera-box.has-image').length;
+    $('#badge-photo').text(`${currentPhotos}/${totalPhotos}`);
+    if (currentPhotos === totalPhotos) $('#badge-photo').removeClass('bg-light text-dark').addClass('bg-success text-white border-success');
+    else $('#badge-photo').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
+    if (currentPhotos < totalPhotos) errors.push('Photos');
+
+    const totalItems = $('.sub-item-row').length;
+    let checkedCount = 0;
+
+    $('input[type=radio]:checked').each(function() {
+        checkedCount++;
+    });
+    
+    $('#badge-check').text(`${checkedCount}/${totalItems}`);
+    if (checkedCount === totalItems && totalItems > 0) $('#badge-check').removeClass('bg-light text-dark').addClass('bg-success text-white border-success');
+    else $('#badge-check').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
+
+    if (checkedCount < totalItems || totalItems === 0) errors.push('Checklist');
+
+    // 🟢 เก็บใส่ตัวแปร Global รอแจ้งเตือนตอนกด Finish
+    window.currentErrors = errors;
+}
+
+function triggerPassAll() {
     Swal.fire({
-        title: 'Confirm Finish?', text: "This will lock the report.", icon: 'warning',
-        showCancelButton: true, confirmButtonText: 'Yes, Finish!', confirmButtonColor: '#198754'
+        title: 'Pass All Items?',
+        text: "ยืนยันให้ผ่านทุกข้อ (ระบบจะติ๊กเฉพาะข้อที่ยังไม่ได้เลือก)",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: 'Yes, Pass All!'
     }).then((result) => {
         if (result.isConfirmed) {
-            $('#loadingOverlay').css('display', 'flex'); 
-            saveHeader().then(() => {
+            $('#loadingOverlay').css('display', 'flex');
+            const reportId = $('#current_report_id').val();
+            
+            $('input[value="PASS"]').prop('checked', true);
+            $('[id^="topic_icon_"]').removeClass('text-white-50 text-warning text-white').addClass('text-success');
+            
+            $.post(API_URL, { action: 'save_all_pass', report_id: reportId }, function(res) {
+                $('#loadingOverlay').hide();
+                if (res.success) validateCompletion();
+                else Swal.fire('Error', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+            }, 'json');
+        }
+    });
+}
+
+function recalcTopicStatus(topicId) {
+    const $inputs = $(`input[name^="res_${topicId}_"]:checked`);
+    let hasFail = false, allPass = true;
+    $inputs.each(function() {
+        if ($(this).val() === 'FAIL') hasFail = true;
+        if ($(this).val() !== 'PASS') allPass = false;
+    });
+
+    const $icon = $(`#topic_icon_${topicId}`);
+    $icon.removeClass('text-white-50 text-success text-warning text-white');
+    if (hasFail) $icon.addClass('text-warning');
+    else if ($inputs.length > 0 && allPass) $icon.addClass('text-success');
+    else $icon.addClass('text-white-50');
+}
+
+function finishInspection() {
+    clearTimeout(saveTimer);
+    
+    // Save Header first to ensure latest input is checked
+    saveHeader().then(() => {
+        if (!$('#input_seal').val()) { Swal.fire('Missing Data', 'กรุณาระบุ Seal No.', 'warning'); return; }
+        
+        // 🟢 แสดงแจ้งเตือน (Popup) ถ้าข้อมูลไม่ครบ 🟢
+        if (window.currentErrors && window.currentErrors.length > 0) {
+            let errorHtml = '<div class="text-start mt-3"><ul class="mb-0">';
+            if (window.currentErrors.includes('Info')) errorHtml += '<li><b class="text-danger">Shipment Info:</b> กรอกข้อมูลสำคัญให้ครบถ้วน</li>';
+            if (window.currentErrors.includes('Photos')) errorHtml += '<li><b class="text-danger">Photos:</b> ถ่ายภาพให้ครบ 12 จุด</li>';
+            if (window.currentErrors.includes('Checklist')) errorHtml += '<li><b class="text-danger">Checklist:</b> ตรวจสอบรายการให้ครบ 10 ข้อ</li>';
+            errorHtml += '</ul></div>';
+
+            Swal.fire({
+                title: 'ข้อมูลยังไม่ครบถ้วน!',
+                html: 'ระบบตรวจพบว่าคุณยังทำรายการต่อไปนี้ไม่เสร็จ:' + errorHtml,
+                icon: 'warning',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#0d6efd'
+            });
+            return;
+        }
+
+        // 🟢 ผ่านเงื่อนไขหมด -> ถาายืนยันจบงาน
+        Swal.fire({
+            title: 'Confirm Finish?', text: "ยืนยันการจบงาน (ระบบจะล็อคข้อมูลทันที)", icon: 'warning',
+            showCancelButton: true, confirmButtonText: 'Yes, Finish!', confirmButtonColor: '#198754'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#loadingOverlay').css('display', 'flex'); 
                 $.post(API_URL, { action: 'finish_report', report_id: $('#current_report_id').val() }, function(res) {
                     $('#loadingOverlay').hide();
-                    if (res.success) {
-                        Swal.fire('Success', 'Completed!', 'success').then(() => { switchView('list'); });
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                    }
+                    if (res.success) Swal.fire('Success', 'Completed!', 'success').then(() => { loadJobList(); switchView('list'); });
+                    else Swal.fire('Error', res.message, 'error');
                 }, 'json');
-            });
-        }
+            }
+        });
     });
 }
 
@@ -489,20 +406,15 @@ function reopenReport() {
     }).then((result) => {
         if (result.isConfirmed) {
             $.post(API_URL, { action: 'reopen_report', report_id: $('#current_report_id').val() }, function(res) {
-                if (res.success) {
-                    Swal.fire('Unlocked', '', 'success').then(() => { openReport($('#current_so_id').val()); });
-                } else {
-                    Swal.fire('Error', res.message, 'error');
-                }
+                if (res.success) Swal.fire('Unlocked', '', 'success').then(() => { openReport($('#current_so_id').val()); });
+                else Swal.fire('Error', res.message, 'error');
             }, 'json');
         }
     });
 }
 
 function triggerCamera(type) {
-    if ($(`#box_${type}`).hasClass('has-image')) {
-        if (!confirm('Replace photo?')) return;
-    }
+    if ($(`#box_${type}`).hasClass('has-image')) { if (!confirm('Replace photo?')) return; }
     $(`#file_${type}`).click();
 }
 
@@ -512,7 +424,7 @@ function handleFileSelect(input, type) {
 
 function uploadPhoto(file, type) {
     const reportId = $('#current_report_id').val();
-    if (!reportId) { Swal.fire('Error', 'Report ID missing', 'error'); return; }
+    if (!reportId) return;
 
     const $box = $(`#box_${type}`);
     const originalContent = $box.html(); 
@@ -528,10 +440,10 @@ function uploadPhoto(file, type) {
         $.ajax({
             url: API_URL, type: 'POST', data: fd, contentType: false, processData: false,
             success: function(res) {
-            if (res.success) {
-                showPreview(type, res.path);
-                setTimeout(validateCompletion, 200); 
-            } else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
+                if (res.success) {
+                    showPreview(type, res.path);
+                    setTimeout(validateCompletion, 200); 
+                } else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
             },
             error: function() { Swal.fire('Error', 'Connection failed', 'error'); $box.html(originalContent); }
         });
@@ -562,15 +474,26 @@ function showPreview(type, path) {
     $box.addClass('has-image');
 }
 
-function goBackToList() {
-    history.back();
-}
+function goBackToList() { switchView('list'); }
 
 function toggleContainerOther() {
     const val = $('#input_container_type').val();
-    if (val === 'OTHER') {
-        $('#input_container_type_other').removeClass('d-none').focus();
-    } else {
-        $('#input_container_type_other').addClass('d-none');
-    }
+    if (val === 'OTHER') $('#input_container_type_other').removeClass('d-none').focus();
+    else $('#input_container_type_other').addClass('d-none');
+}
+
+function resetInspectionForm() {
+    $('input[type="radio"]').prop('checked', false);
+    $('input[type="text"], input[type="datetime-local"], select').val(''); 
+    $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
+    $('.camera-box').removeClass('has-image');
+    $('.preview-img').remove();
+    $('.camera-box i, .camera-box .camera-label').show();
+    
+    $('#input_container_type_other').addClass('d-none');
+    $('#btn_pass_all').prop('disabled', false);
+    
+    $('#badge-photo').text('0/12').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
+    $('#badge-check').text('0/0').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
+    window.currentErrors = ['Info', 'Photos', 'Checklist'];
 }
