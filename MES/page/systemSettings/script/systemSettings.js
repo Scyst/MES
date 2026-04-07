@@ -450,13 +450,25 @@ function addRouteRow(route = {}) {
 async function handleItemFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
+    
+    // 🌟 เพิ่มเช็คค่าว่างตรงนี้ก่อน (Manual Validation)
+    const sapNo = form.querySelector('#sap_no').value.trim();
+    if (!sapNo) {
+        Swal.fire('Warning', 'กรุณาระบุรหัส SAP No.', 'warning');
+        // บังคับสลับกลับไปที่แท็บแรกที่มีช่อง SAP No. อยู่
+        const triggerEl = document.querySelector('#itemFormTabs button[data-bs-target="#basic-pane"]');
+        if (triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+        form.querySelector('#sap_no').focus();
+        return;
+    }
+
     const btnSave = document.getElementById('btnSaveItem');
     toggleButtonState(btnSave, true, 'Saving...');
     
     try {
         const itemDetails = {
             item_id: form.querySelector('#item_id').value,
-            sap_no: form.querySelector('#sap_no').value,
+            sap_no: sapNo,
             part_no: form.querySelector('#part_no').value,
             sku: form.querySelector('#sku').value,
             material_type: form.querySelector('#material_type').value,
