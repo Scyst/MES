@@ -11,313 +11,279 @@ $canManage = hasPermission('manage_production');
 $canAdd = hasPermission('add_production') || hasPermission('manage_production');
 $currentUserForJS = $_SESSION['user'] ?? null;
 
+$pageTitle = "Shop Floor & Inventory | MES TOOLBOX";
+$pageIcon = "fas fa-industry";
+$pageHeaderTitle = "Shop Floor & Inventory";
+$pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผลิตและคลังสินค้า";
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-    <title>Production & Inventory</title>
+    <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* FAB Button (Mobile Only) - Copy from storeRequest.php */
-        @media (max-width: 991.98px) {
-            .fab-container {
-                position: fixed; bottom: 25px; right: 25px; z-index: 1060;
-            }
-            .fab-btn {
-                width: 60px; height: 60px; font-size: 1.5rem;
-                border: none; border-radius: 50%;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                display: flex; align-items: center; justify-content: center;
-                color: white; cursor: pointer;
-                background-color: #198754; /* Green */
-                transition: transform 0.2s;
-            }
-            .fab-btn:active { transform: scale(0.9); }
+        /* 🌟 Custom Scrollbar & Table Settings (Enterprise Theme) */
+        .table-scrollable {
+            overflow-x: auto;
+            max-height: calc(100vh - 280px);
         }
+        .table-scrollable::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-scrollable::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .table-scrollable::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        .table-scrollable::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        .sticky-col-left {
+            position: sticky; left: 0; background-color: #fff; z-index: 1;
+            border-right: 2px solid var(--bs-border-color) !important;
+        }
+        thead .sticky-col-left { z-index: 3; background-color: var(--bs-light); }
+
+        .table-settings th { font-size: 0.75rem; letter-spacing: 0.5px; vertical-align: middle; text-transform: uppercase; }
+        .table-settings td { font-size: 0.8rem; vertical-align: middle; }
+        
+        /* Custom Nav Pills */
+        .nav-pills.custom-pills .nav-link {
+            color: #6c757d; font-weight: 600; font-size: 0.85rem; border-radius: 50rem; padding: 0.4rem 1rem; margin-right: 0.5rem;
+        }
+        .nav-pills.custom-pills .nav-link.active {
+            background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; border: 1px solid #0d6efd;
+        }
+
+        /* FAB Button (Mobile Only) */
+        @media (max-width: 991.98px) {
+            .fab-container { position: fixed; bottom: 80px; right: 25px; z-index: 1060; }
+            .fab-btn {
+                width: 60px; height: 60px; font-size: 1.5rem; border: none; border-radius: 50%;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;
+                color: white; cursor: pointer; transition: transform 0.2s;
+            }
+            .fab-btn:active { transform: scale(0.95); }
+        }
+        @media (min-width: 992px) { .fab-container { display: none !important; } }
     </style>
 </head>
 
-<body class="page-with-table">
-    <button class="btn btn-outline-secondary mobile-hamburger-btn" type="button" 
-            data-bs-toggle="offcanvas" 
-            data-bs-target="#globalMobileMenu" 
-            aria-controls="globalMobileMenu">
-        <i class="fas fa-bars"></i>
-    </button>
-    
+<body class="layout-top-header bg-body-tertiary">
+    <?php include_once('../components/php/top_header.php'); ?>
+    <?php include_once('../components/php/nav_dropdown.php'); ?>
+
     <div class="page-container">
-        <?php include_once('../components/php/nav_dropdown.php'); ?>
-
-        <main id="main-content">
+        <main id="main-content" class="px-3 pt-3">
             <?php include_once('../components/php/spinner.php'); ?>
-
-            <div class="container-fluid pt-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="mb-0">Production & Inventory</h2>
-                    
-                    <button class="btn btn-outline-secondary d-lg-none rounded-circle shadow-sm" 
-                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
-                            type="button" 
-                            id="mobile-filter-toggle-btn"> <i class="fas fa-filter"></i>
-                    </button>
-                </div>
-
-                <ul class="nav nav-tabs" id="mainTab" role="tablist">
+            
+            <div class="bg-white border rounded-3 shadow-sm p-3 mb-3">
+                
+                <ul class="nav nav-pills custom-pills mb-3 flex-nowrap overflow-auto hide-scrollbar pb-2 border-bottom" id="mainTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab">ประวัติของเข้า (IN)</button>
+                        <button class="nav-link active" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab"><i class="fas fa-industry me-1"></i> Production (OUT)</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab">ประวัติของออก (OUT)</button>
+                        <button class="nav-link" id="entry-history-tab" data-bs-toggle="tab" data-bs-target="#entry-history-pane" type="button" role="tab"><i class="fas fa-box-open me-1"></i> Receipts (IN)</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab">ผลต่าง (Variance)</button>
+                        <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab"><i class="fas fa-pallet me-1"></i> WIP On-Hand</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab">ผลต่าง (ตามล็อต)</button>
+                        <button class="nav-link" id="wip-by-lot-tab" data-bs-toggle="tab" data-bs-target="#wip-by-lot-pane" type="button" role="tab"><i class="fas fa-layer-group me-1"></i> WIP by Lot</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="wip-onhand-tab" data-bs-toggle="tab" data-bs-target="#wip-onhand-pane" type="button" role="tab">สต็อก (แบ่งตามพื้นที่)</button>
+                        <button class="nav-link" id="production-variance-tab" data-bs-toggle="tab" data-bs-target="#production-variance-pane" type="button" role="tab"><i class="fas fa-balance-scale me-1"></i> Variance</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab">สต็อก (ทั้งหมด)</button>
+                        <button class="nav-link" id="stock-count-tab" data-bs-toggle="tab" data-bs-target="#stock-count-pane" type="button" role="tab"><i class="fas fa-boxes me-1"></i> All Stock</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="transaction-log-tab" data-bs-toggle="tab" data-bs-target="#transaction-log-pane" type="button" role="tab">Transaction Log</button>
+                        <button class="nav-link" id="transaction-log-tab" data-bs-toggle="tab" data-bs-target="#transaction-log-pane" type="button" role="tab"><i class="fas fa-history me-1"></i> All Txn Log</button>
                     </li>
                 </ul>
-            </div>
-            
-            <div class="sticky-bar">
-                
-                <div class="container-fluid">
 
-                    <div class="all-filters-container">
-                        <div class="row my-3 align-items-center">
-                            
-                            <div class="col-lg-6">
-                                <div class="filter-controls-wrapper" id="main-filters">
-                                    
-                                    <input type="search" id="filterSearch" class="form-control" placeholder="Search...">
+                <div class="row g-2 align-items-center mb-3">
+                    <div class="col-12 col-xl-8 d-flex flex-wrap align-items-center gap-2">
+                        <div class="input-group input-group-sm shadow-sm" style="max-width: 300px;">
+                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" id="filterSearch" placeholder="Search SAP, Part No..." autocomplete="off">
+                        </div>
+                        
+                        <select class="form-select form-select-sm w-auto shadow-sm fw-bold text-primary border-primary" id="filterCountType" style="display:none;">
+                            <option value="">All Types</option>
+                            <option value="FG">FG (ดี)</option>
+                            <option value="HOLD">HOLD (รอตรวจสอบ)</option>
+                            <option value="SCRAP">SCRAP (ของเสีย)</option>
+                        </select>
 
-                                    <select id="filterCountType" class="form-select" style="display: none;">
-                                        <option value="">All Types</option>
-                                        <option value="FG">FG</option>
-                                        <option value="HOLD">HOLD</option>
-                                        <option value="SCRAP">SCRAP</option>
-                                    </select>
-
-                                    <div id="date-range-filter" style="display: none; contents: inherit;">
-                                        <input type="date" id="filterStartDate" class="form-control">
-                                        <span>-</span>
-                                        <input type="date" id="filterEndDate" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-lg-6">
-                                <div id="dynamic-button-group" class="d-flex justify-content-end gap-2 mt-2">
-                                    </div>
-                            </div>
-                            
-                            <div class="col-12 mt-3" style="display: none;" id="summaryRow">
-                                <div id="dynamic-summary-container" class="summary-grand-total"></div>
-                            </div>
+                        <div class="input-group input-group-sm w-auto shadow-sm" id="date-range-filter" style="display:none;">
+                            <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
+                            <input type="date" class="form-control fw-bold" id="filterStartDate">
+                            <span class="input-group-text bg-light text-muted">to</span>
+                            <input type="date" class="form-control fw-bold" id="filterEndDate">
                         </div>
                     </div>
+
+                    <div class="col-12 col-xl-4 text-xl-end d-flex justify-content-xl-end gap-2 flex-wrap" id="dynamic-button-group">
+                        </div>
                 </div>
-            </div>
 
-            <div class="content-wrapper">
+                <div id="dynamic-summary-container" class="mb-3"></div>
+
                 <div class="tab-content" id="mainTabContent">
-                    <div class="tab-pane fade" id="production-variance-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 8%;">Location</th>
-                                        <th class="text-center" style="width: 10%;">SAP No.</th>
-                                        <th class="text-center" style="width: 10%;">Part No.</th>
-                                        <th class="text-center" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 27%; padding-left: 1rem;">Part Description</th>
-                                        <th class="text-end" style="width: 10%;">Total IN</th>
-                                        <th class="text-end" style="width: 10%;">Total OUT</th>
-                                        <th class="text-end" style="width: 15%;">Variance (OUT - IN)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productionVarianceTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 10%;">SAP No.</th>
-                                        <th class="text-start" style="width: 10%;">Part Number</th>
-                                        <th class="text-start" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 25%; padding-left: 1rem;">Part Description</th>
-                                        <th class="text-center" style="width: 10%;">Lot Number</th>
-                                        <th class="text-end" style="width: 10%;">Total IN</th>
-                                        <th class="text-end" style="width: 10%;">Total OUT</th>
-                                        <th class="text-end" style="width: 15%;">Variance (OUT - IN)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="wipByLotTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
                     
-                    <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 10%;">Date</th>
-                                        <th class="text-start" style="width: 10%;">Time</th>
-                                        <th class="text-center" style="width: 10%;">From</th>
-                                        <th class="text-center" style="width: 10%;">To</th>
-                                        <th class="text-center" style="width: 10%;">SAP No.</th>
-                                        <th class="text-center" style="width: 15%;">Part No.</th>
-                                        <th class="text-center" style="width: 10%;">Lot. / Ref.</th>
-                                        <th class="text-center" style="width: 10%;">Quantity</th>
-                                        <th class="text-center" style="width: 15%;">Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="entryHistoryTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
                     <div class="tab-pane fade show active" id="production-history-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table id="partTable" class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 8%;">Date</th>
-                                        <th class="text-start" style="width: 8%;">Time</th>
-                                        <th class="text-center" style="width: 10%;">SAP No.</th>
-                                        <th class="text-center" style="width: 10%;">Part No.</th>
-                                        <th class="text-center" style="width: 8%;">Model</th>
-                                        <th class="text-center" style="width: 10%;">Lot / Ref.</th>
-                                        <th class="text-center" style="width: 10%;">Location</th>
-                                        <th class="text-center" style="width: 8%;">Quantity</th>
-                                        <th class="text-center" style="width: 8%;">Type</th>
-                                        <th class="text-center" style="width: 20%;">Notes</th>
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Date</th>
+                                        <th class="py-2">Time</th>
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Model</th>
+                                        <th class="py-2">Lot / Ref.</th>
+                                        <th class="py-2">Location</th>
+                                        <th class="py-2 text-end px-3">Quantity</th>
+                                        <th class="py-2">Type</th>
+                                        <th class="py-2">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="partTableBody"></tbody>
                             </table>
                         </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="paginationControls"></ul>
+                    </div>
+
+                    <div class="tab-pane fade" id="entry-history-pane" role="tabpanel">
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Date</th>
+                                        <th class="py-2">Time</th>
+                                        <th class="py-2">From (Source)</th>
+                                        <th class="py-2">To (Dest)</th>
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Lot / Ref.</th>
+                                        <th class="py-2 text-end px-3">Quantity</th>
+                                        <th class="py-2">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="entryHistoryTableBody"></tbody>
+                            </table>
+                        </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="entryHistoryPagination"></ul>
                     </div>
 
                     <div class="tab-pane fade" id="wip-onhand-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 10%;">Location</th>
-                                        <th class="text-center" style="width: 10%;">SAP No.</th>
-                                        <th class="text-center" style="width: 10%;">Part No.</th>
-                                        <th class="text-center" style="width: 10%;">Model</th>
-                                        <th class="text-start" style="width: 45%; padding-left: 1rem;">Part Description</th>
-                                        <th class="text-end" style="width: 15%;">On-Hand Quantity (WIP)</th>
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Location</th>
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Model</th>
+                                        <th class="py-2">Part Description</th>
+                                        <th class="py-2 text-end px-3 bg-info bg-opacity-10 text-dark">On-Hand Quantity (WIP)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wipOnHandTableBody"></tbody>
                             </table>
                         </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="wipOnHandPagination"></ul>
+                    </div>
+
+                    <div class="tab-pane fade" id="wip-by-lot-pane" role="tabpanel">
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Model</th>
+                                        <th class="py-2">Part Description</th>
+                                        <th class="py-2">Lot Number</th>
+                                        <th class="py-2 text-end px-3 bg-success bg-opacity-10 text-success">Total IN</th>
+                                        <th class="py-2 text-end px-3 bg-danger bg-opacity-10 text-danger">Total OUT</th>
+                                        <th class="py-2 text-end px-3 bg-warning bg-opacity-10 text-dark">Variance (On-Hand)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wipByLotTableBody"></tbody>
+                            </table>
+                        </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="wipByLotPagination"></ul>
+                    </div>
+
+                    <div class="tab-pane fade" id="production-variance-pane" role="tabpanel">
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Location</th>
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Model</th>
+                                        <th class="py-2">Part Description</th>
+                                        <th class="py-2 text-end px-3 bg-success bg-opacity-10 text-success">Total IN</th>
+                                        <th class="py-2 text-end px-3 bg-danger bg-opacity-10 text-danger">Total OUT</th>
+                                        <th class="py-2 text-end px-3 bg-warning bg-opacity-10 text-dark">Variance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productionVarianceTableBody"></tbody>
+                            </table>
+                        </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="productionVariancePagination"></ul>
                     </div>
 
                     <div class="tab-pane fade" id="stock-count-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 10%;">SAP No.</th>
-                                        <th class="text-start" style="width: 10%;">Part No.</th>
-                                        <th class="text-start" style="width: 10%;">Models</th>
-                                        <th class="text-start" style="width: 55%; padding-left: 1rem;">Part Description</th>
-                                        <th class="text-end" style="width: 15%;">Total On-Hand</th>
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">SAP No.</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Models</th>
+                                        <th class="py-2">Description</th>
+                                        <th class="py-2 text-end px-3 bg-primary bg-opacity-10 text-dark">Total On-Hand (All Loc)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stockCountTableBody"></tbody>
                             </table>
                         </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="stockCountPagination"></ul>
                     </div>
-                    
+
                     <div class="tab-pane fade" id="transaction-log-pane" role="tabpanel">
-                            <div class="table-responsive mt-2">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th class="text-start" style="width: 12%;">Date & Time</th>
-                                        <th class="text-start" style="width: 10%;">From</th>
-                                        <th class="text-start" style="width: 10%;">To</th>
-                                        <th class="text-start" style="width: 8%;">Part No.</th>
-                                        <th class="text-start" style="width: 8%;">Model</th>
-                                        <th class="text-center" style="width: 12%;">Lot / Ref.</th>
-                                        <th class="text-center" style="width: 8%;">Change</th>
-                                        <th class="text-center" style="width: 10%;">Type</th>
-                                        <th class="text-center" style="width: 10%;">User</th>
-                                        <th class="text-center" style="width: 12%;">Notes</th>
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Date & Time</th>
+                                        <th class="py-2">From</th>
+                                        <th class="py-2">To</th>
+                                        <th class="py-2">Part No.</th>
+                                        <th class="py-2">Model</th>
+                                        <th class="py-2">Lot / Ref.</th>
+                                        <th class="py-2 text-end px-3">Change (Qty)</th>
+                                        <th class="py-2">Type</th>
+                                        <th class="py-2">User</th>
+                                        <th class="py-2">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="transactionLogTableBody"></tbody>
                             </table>
                         </div>
+                        <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="transactionLogPagination"></ul>
                     </div>
-                </div>
-            </div>
 
-            <nav class="pagination-footer" data-tab-target="#production-variance-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="productionVariancePagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#wip-by-lot-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="wipByLotPagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#entry-history-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="entryHistoryPagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#production-history-pane">
-                <ul class="pagination justify-content-center" id="paginationControls"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#wip-onhand-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="wipOnHandPagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#stock-count-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="stockCountPagination"></ul>
-            </nav>
-            <nav class="pagination-footer" data-tab-target="#transaction-log-pane" style="display: none;">
-                <ul class="pagination justify-content-center" id="transactionLogPagination"></ul>
-            </nav>
-            
-            <div id="toast"></div>
+                </div> </div>
 
-            <div class="fab-container d-lg-none" id="mobileFabContainer" style="display: none;">
-                <button class="fab-btn" id="mobileFabBtn">
+            <div class="fab-container" id="mobileFabContainer" style="display: none;">
+                <button class="bg-success fab-btn" id="mobileFabBtn" aria-label="Add New Entry">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>
 
-            <?php
-                if ($canAdd) { 
-                    include('components/addPartModal.php'); 
-                    include('components/addEntryModal.php');
-                }
-                if ($canManage) {
-                    include('components/editEntryModal.php');
-                    include('components/editProductionModal.php');
-                    include('components/adjustStockModal.php');
-                }
-                include('components/stockDetailModal.php');
-                include('components/varianceDetailModal.php');
-                include('components/summaryModal.php');
-                include('components/historySummaryModal.php');
-                include('components/hourlyProductionModal.php');
-            ?>
+            <?php include('components/allProductionModals.php'); ?>
         </main>    
     </div>
 
@@ -331,7 +297,6 @@ $currentUserForJS = $_SESSION['user'] ?? null;
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
-    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
-    
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
 </body>
 </html>

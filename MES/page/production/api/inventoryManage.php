@@ -112,11 +112,9 @@ try {
             $params = [];
             $conditions = [];
 
-            // (Logic การกรอง Role ที่เราทำไว้)
             if ($action === 'get_receipt_history' || $action === 'get_production_history') {
                 $user_filter_username = $_GET['user_filter'] ?? null;
                 if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                    // Admin/Creator: No conditions
                 } else if ($currentUser['role'] === 'supervisor') {
                     $supervisorConditions = [];
                     $supervisorConditions[] = "loc.production_line = ?";
@@ -143,7 +141,6 @@ try {
                 }
             }
             
-            // (เงื่อนไข Type)
             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED', 'INTERNAL_TRANSFER', 'REVERSAL_TRANSFER')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
             
@@ -180,7 +177,6 @@ try {
                 $params[] = $_GET['endDate'];
             }
 
-            // --- ส่วนการดึงข้อมูล (เหมือนเดิม) ---
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             $baseSql = "
                 FROM " . TRANSACTIONS_TABLE . " t
@@ -348,7 +344,7 @@ try {
                     $term_conditions[] = "i.sap_no LIKE ?";
                     $term_conditions[] = "i.part_no LIKE ?";
                     $term_conditions[] = "l.location_name LIKE ?";
-                    $term_conditions[] = "l.production_line LIKE ?"; // (เพิ่ม)
+                    $term_conditions[] = "l.production_line LIKE ?";
                     $term_conditions[] = "(SELECT TOP 1 r.model FROM ". ROUTES_TABLE ." r WHERE r.item_id = i.item_id AND r.line = l.production_line) LIKE ?";
                     
                     array_push($params, $search_like, $search_like, $search_like, $search_like, $search_like);
@@ -579,53 +575,172 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
+        // =========================================================================
+        // [2] 🌟 ระบบบันทึกยอดผลิต & ตัดสต็อกอัตโนมัติ (BACKFLUSHING) 🌟
+        // =========================================================================
         case 'execute_production':
-            $item_id = $input['item_id'] ?? 0;
-            $location_id = $input['location_id'] ?? 0;
-            $quantity = $input['quantity'] ?? 0;
-            $count_type = $input['count_type'] ?? '';
+            $fg_item_id = (int)($input['item_id'] ?? 0);
+            $location_id = (int)($input['location_id'] ?? 0);
+            $quantity = (float)($input['quantity'] ?? 0);
+            $count_type = strtoupper($input['count_type'] ?? 'FG');
             $lot_no = $input['lot_no'] ?? null;
-            $notes = $input['notes'] ?? null;
-            $log_date = $input['log_date'] ?? null;
-            $start_time = $input['start_time'] ?? null;
-            $end_time = $input['end_time'] ?? null;
+            $notes = trim($input['notes'] ?? '');
+            $log_date = $input['log_date'] ?? date('Y-m-d');
+            $start_time = $input['start_time'] ?? date('H:i:s');
+            $end_time = $input['end_time'] ?? date('H:i:s');
 
-            if (empty($log_date)) {
-                throw new Exception("Log Date is required.");
-            }
-
+            if (empty($log_date)) throw new Exception("Log Date is required.");
             $time_to_use = $end_time ?: date('H:i:s');
             $timestamp = $log_date . ' ' . $time_to_use;
 
-            if (empty($item_id) || empty($location_id) || !is_numeric($quantity) || $quantity <= 0 || empty($count_type) || empty($log_date)) {
-                 throw new Exception("Invalid data provided for production logging. (Item, Location, Qty, Type, and Date are required)");
+            if ($fg_item_id <= 0 || $location_id <= 0 || $quantity <= 0) {
+                 throw new Exception("Invalid data provided for production logging.");
             }
+
+            $pdo->beginTransaction();
             try {
-                $sql = "EXEC dbo." . SP_EXECUTE_PRODUCTION . " 
-                            @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
-                            @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
-                            @user_id = ?, @username = ?";
+                // 1. ดึงข้อมูล FG และต้นทุนมาตรฐาน
+                $fgStmt = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE item_id = ? AND is_active = 1");
+                $fgStmt->execute([$fg_item_id]);
+                $fg = $fgStmt->fetch(PDO::FETCH_ASSOC);
                 
-                $stmt = $pdo->prepare($sql);
+                if (!$fg) throw new Exception("ไม่พบข้อมูลสินค้า FG หรือสินค้าถูกปิดการใช้งาน");
+
+                // 2. ดึงสูตรการผลิต (BOM) ที่กำลัง "ACTIVE" เท่านั้น
+                $bomStmt = $pdo->prepare("
+                    SELECT b.component_item_id, b.quantity_required, c.sap_no, c.part_description,
+                           c.Cost_Total, c.Cost_RM, c.Cost_DL, c.Cost_OH_Machine, c.Cost_OH_Utilities, 
+                           c.Cost_OH_Indirect, c.Cost_OH_Staff, c.Cost_OH_Accessory, c.Cost_OH_Others
+                    FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                    JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
+                    WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'
+                ");
+                $bomStmt->execute([$fg_item_id]);
+                $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (count($components) === 0 && in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
+                    throw new Exception("ไม่สามารถผลิตได้! สินค้า [{$fg['sap_no']}] ไม่มีสูตรการผลิต (BOM) ที่อยู่ในสถานะ ACTIVE");
+                }
+
+                // 3. Pre-flight Check Shortage
+                $shortages = [];
+                $rmToDeduct = [];
                 
-                $stmt->execute([
-                    $item_id,
-                    $location_id,
-                    $quantity,
-                    $count_type,
-                    $lot_no,
-                    $notes,
-                    $timestamp,
-                    $start_time,
-                    $end_time,
-                    $currentUser['id'],
-                    $currentUser['username']
+                if (in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
+                    foreach ($components as $comp) {
+                        $req_qty = bcmul($comp['quantity_required'], $quantity, 6);
+                        
+                        $stockStmt = $pdo->prepare("SELECT quantity FROM ".ONHAND_TABLE." WITH (UPDLOCK) WHERE parameter_id = ? AND location_id = ?");
+                        $stockStmt->execute([$comp['component_item_id'], $location_id]);
+                        $current_stock = (float)$stockStmt->fetchColumn();
+
+                        if ($current_stock < $req_qty) {
+                            $shortages[] = "[{$comp['sap_no']}] ต้องการ " . number_format((float)$req_qty, 2) . " แต่มีแค่ " . number_format($current_stock, 2);
+                        } else {
+                            $rmToDeduct[] = [
+                                'item' => $comp,
+                                'req_qty' => $req_qty
+                            ];
+                        }
+                    }
+
+                    if (count($shortages) > 0) {
+                        throw new Exception("วัตถุดิบในจุดจัดเก็บ (หน้าไลน์) ไม่เพียงพอ:\n" . implode("\n", $shortages));
+                    }
+                }
+
+                // เตรียมข้อมูลการเพิ่ม FG
+                $trans_type = 'PRODUCTION_' . $count_type;
+                $fg_oh_total = (float)$fg['Cost_OH_Machine'] + (float)$fg['Cost_OH_Utilities'] + (float)$fg['Cost_OH_Indirect'] + 
+                               (float)$fg['Cost_OH_Staff'] + (float)$fg['Cost_OH_Accessory'] + (float)$fg['Cost_OH_Others'];
+                
+                $fg_total_cost = (float)$fg['Cost_Total'] * $quantity;
+                $fg_total_sales = (float)$fg['StandardPrice'] * $quantity;
+
+                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot
+                $insertFgLogStmt = $pdo->prepare("
+                    INSERT INTO " . TRANSACTIONS_TABLE . " (
+                        parameter_id, quantity, transaction_type, transaction_timestamp, 
+                        to_location_id, reference_id, created_by_user_id, notes, 
+                        start_time, end_time, ProductionDate,
+                        std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
+                        std_cost_oh_snapshot, total_sales_value, total_cost_value,
+                        std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
+                        std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot,
+                        std_price_usd_snapshot
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    )
+                ");
+
+                $insertFgLogStmt->execute([
+                    $fg_item_id, $quantity, $trans_type, $timestamp, $location_id, $lot_no, $currentUser['id'], $notes,
+                    $start_time, $end_time, $log_date,
+                    $fg['StandardPrice'], $fg['Cost_RM'], $fg['Cost_DL'], 
+                    $fg_oh_total, $fg_total_sales, $fg_total_cost,
+                    $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'],
+                    $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
+                    $fg['Price_USD']
                 ]);
-                echo json_encode(['success' => true, 'message' => 'Production logged successfully.']);
-            
+                
+                $transaction_id = $pdo->lastInsertId();
+
+                // 5. เพิ่มสต็อก FG
+                $updateStockStmt = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $updateStockStmt->execute([$fg_item_id, $location_id, $quantity]);
+
+                // 6. บันทึกตัดสต็อก RM (CONSUMPTION) อัตโนมัติ + Cost Snapshot
+                if (!empty($rmToDeduct)) {
+                    $insertLogStmt = $pdo->prepare("
+                        INSERT INTO " . TRANSACTIONS_TABLE . " (
+                            parameter_id, quantity, transaction_type, transaction_timestamp, 
+                            from_location_id, reference_id, created_by_user_id, notes, 
+                            start_time, end_time, ProductionDate,
+                            std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
+                            std_cost_oh_snapshot, total_cost_value,
+                            std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
+                            std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot
+                        ) VALUES (
+                            ?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?, ?,
+                            0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        )
+                    ");
+                    
+                    // ⭐️ กำหนด Note พิเศษเพื่อให้ update_transaction รู้ว่านี่คือวัตถุดิบที่แถมมากับ FG
+                    $consume_note = "Auto-consumed for production ID: {$transaction_id}";
+
+                    foreach ($rmToDeduct as $rm) {
+                        // 6.1 อัปเดตสต็อก RM
+                        $updateStockStmt->execute([$rm['item']['component_item_id'], $location_id, -$rm['req_qty']]);
+                        
+                        $oh_total = (float)$rm['item']['Cost_OH_Machine'] + (float)$rm['item']['Cost_OH_Utilities'] + (float)$rm['item']['Cost_OH_Indirect'] + 
+                                    (float)$rm['item']['Cost_OH_Staff'] + (float)$rm['item']['Cost_OH_Accessory'] + (float)$rm['item']['Cost_OH_Others'];
+                        
+                        $line_cost = (float)$rm['item']['Cost_Total'] * $rm['req_qty'];
+
+                        // 6.2 บันทึกประวัติ RM
+                        $insertLogStmt->execute([
+                            $rm['item']['component_item_id'], -abs($rm['req_qty']), $timestamp, $location_id, $lot_no, $currentUser['id'], $consume_note,
+                            $start_time, $end_time, $log_date,
+                            $rm['item']['Cost_RM'], $rm['item']['Cost_DL'], $oh_total, -$line_cost,
+                            $rm['item']['Cost_OH_Machine'], $rm['item']['Cost_OH_Utilities'], $rm['item']['Cost_OH_Indirect'],
+                            $rm['item']['Cost_OH_Staff'], $rm['item']['Cost_OH_Accessory'], $rm['item']['Cost_OH_Others']
+                        ]);
+                    }
+                }
+
+                logAction($pdo, $currentUser['username'], 'PRODUCTION BACKFLUSH', $fg_item_id, "Produced {$quantity} units. TxnID: {$transaction_id}");
+                $pdo->commit();
+
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "บันทึกการผลิตและตัดสต็อกวัตถุดิบสำเร็จ (Txn ID: {$transaction_id})"
+                ]);
+
             } catch (Exception $e) {
-                http_response_code(500);
-                throw new Exception("Database Transaction Failed: " . $e->getMessage());
+                $pdo->rollBack();
+                throw $e;
             }
             break;
 
@@ -721,7 +836,7 @@ try {
                     $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
 
                     if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
-                        $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ?";
+                        $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND bom_status = 'ACTIVE'";
                         $bomStmt = $pdo->prepare($bomSql);
                         $bomStmt->execute([$old_transaction['parameter_id']]);
                         $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -886,7 +1001,7 @@ try {
                 JOIN " . LOCATIONS_TABLE . " l ON h.location_id = l.location_id
                 WHERE h.parameter_id = ?
                   AND h.quantity <> 0
-                  AND (l.location_type IS NULL OR l.location_type != 'SHIPPING') -- เงื่อนไขนี้ถูกต้องแล้ว
+                  AND (l.location_type IS NULL OR l.location_type != 'SHIPPING') 
                 ORDER BY l.location_name
             ";
 
@@ -963,27 +1078,23 @@ try {
                     throw new Exception("Item, Location, and a valid Physical Count are required.");
                 }
 
-                // (ดึงยอดปัจจุบัน)
                 $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
                 $onhandStmt->execute([$item_id, $location_id]);
                 $current_quantity = ($onhandStmt->fetchColumn() ?: '0');
 
-                // (คำนวณยอดต่าง)
                 $variance = $physical_count - $current_quantity;
 
                 if ($variance == 0) {
                     echo json_encode(['success' => true, 'message' => 'No adjustment needed as quantity is already correct.']);
-                    $pdo->commit(); // (ต้อง Commit แม้ไม่ทำอะไร)
+                    $pdo->commit(); 
                     exit;
                 }
 
                 $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
                 $spStock->execute([$item_id, $location_id, $variance]);
 
-                // (Insert Transaction Log เหมือนเดิม)
                 $transSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, notes) VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?)";
                 $transStmt = $pdo->prepare($transSql);
-                // (ข้อควรระวัง: เราบันทึก 'variance' (ยอดต่าง) ไม่ใช่ 'physical_count')
                 $transStmt->execute([$item_id, $variance, $location_id, $currentUser['id'], $notes]);
 
                 $pdo->commit();
@@ -1013,7 +1124,7 @@ try {
 
         case 'get_receipt_history_summary':
              $params = [];
-             $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')"]; // [แก้ไข] เพิ่ม Type ให้ครบ
+             $conditions = ["t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED')"]; 
 
             if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
                 $search_terms = $_GET['search_terms'];
@@ -1044,7 +1155,6 @@ try {
                 $params[] = $_GET['endDate'];
             }
             
-            // (เพิ่มการกรอง Role เข้ามาใน Summary ด้วย)
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "loc.production_line = ?";
                 $params[] = $currentUser['line'];
@@ -1052,7 +1162,6 @@ try {
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            // [แก้ไข] เปลี่ยน Logic การ JOIN ให้เหมือนตารางหลัก (get_receipt_history)
             $baseFromJoin = "
                 FROM " . TRANSACTIONS_TABLE . " t
                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
@@ -1061,7 +1170,6 @@ try {
                 {$whereClause}
             ";
 
-            // Query for Summary
             $summarySql = "
                 SELECT
                     i.sap_no, i.part_no, t.transaction_type,
@@ -1074,7 +1182,6 @@ try {
             $summaryStmt->execute($params);
             $summary = $summaryStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Query for Grand Total
             $grandTotalSql = "
                 SELECT
                     SUM(t.quantity) as total_quantity
@@ -1126,7 +1233,6 @@ try {
                 $params[] = $_GET['endDate'];
             }
             
-            // (เพิ่มการกรอง Role เข้ามาใน Summary ด้วย)
             if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "loc.production_line = ?";
                 $params[] = $currentUser['line'];
@@ -1134,7 +1240,6 @@ try {
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
-            // [แก้ไข] เปลี่ยน Logic การ JOIN ให้เหมือนตารางหลัก (get_production_history)
             $baseFromJoin = "
                 FROM " . TRANSACTIONS_TABLE . " t
                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
@@ -1143,7 +1248,6 @@ try {
                 {$whereClause}
             ";
 
-            // Query for Summary
             $summarySql = "
                 SELECT
                     i.sap_no, i.part_no, 
@@ -1157,7 +1261,6 @@ try {
             $summaryStmt->execute($params);
             $summary = $summaryStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Query for Grand Total
             $grandTotalSql = "
                 SELECT
                     REPLACE(t.transaction_type, 'PRODUCTION_', '') as count_type,
@@ -1218,7 +1321,7 @@ try {
                 LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                 {$whereClause}
-                ORDER BY t.transaction_timestamp ASC -- เรียงตามเก่าไปใหม่ เพื่อให้ Confirm ตามลำดับ
+                ORDER BY t.transaction_timestamp ASC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
             $dataStmt = $pdo->prepare($dataSql);
@@ -1239,7 +1342,7 @@ try {
                 exit;
             }
 
-            $transaction_ids = $input['transaction_ids'] ?? []; // รับเป็น Array เผื่อ Confirm หลายรายการ
+            $transaction_ids = $input['transaction_ids'] ?? []; 
             if (empty($transaction_ids) || !is_array($transaction_ids)) {
                 throw new Exception("No valid Transaction IDs provided for confirmation.");
             }
@@ -1247,23 +1350,17 @@ try {
             $pdo->beginTransaction();
             try {
                 $confirmed_count = 0;
-                // (Optional) เพิ่ม Field สำหรับเก็บข้อมูลการ Confirm
-                // ALTER TABLE STOCK_TRANSACTIONS[_TEST] ADD confirmed_by_user_id INT NULL, confirmed_at DATETIME NULL;
-
                 $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
                             SET transaction_type = 'SHIPPED'
-                            -- , confirmed_by_user_id = ?, confirmed_at = GETDATE() -- uncomment ถ้ามี fields นี้
                             WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
                 $updateStmt = $pdo->prepare($updateSql);
 
                 foreach ($transaction_ids as $tid) {
                     $updateParams = [ $tid ];
-                    // if (isset($currentUser['id'])) { array_unshift($updateParams, $currentUser['id']); } // uncomment ถ้ามี field confirmed_by_user_id
                     $updateStmt->execute($updateParams);
 
                     if ($updateStmt->rowCount() > 0) {
                         $confirmed_count++;
-                        // Log การ Confirm แต่ละรายการ
                         logAction($pdo, $currentUser['username'], 'CONFIRM SHIPMENT', $tid);
                     } else {
                         error_log("Failed to confirm shipment for transaction ID: " . $tid . " - Status might not be PENDING or ID invalid.");
@@ -1288,10 +1385,9 @@ try {
 
             case 'check_lot_status':
             $lot_no = $_GET['lot_no'] ?? '';
-            $sap_no = $_GET['sap_no'] ?? ''; // (อันนี้อาจจะไม่ต้องการแล้ว แต่เผื่อไว้)
-            $scan_id = $_GET['scan_id'] ?? null; // ⭐️ (ใหม่) รับ scan_id มาด้วย
+            $sap_no = $_GET['sap_no'] ?? ''; 
+            $scan_id = $_GET['scan_id'] ?? null; 
 
-            // --- Logic ใหม่: ตรวจสอบจาก Scan ID ก่อน (ถ้ามี) ---
             if (!empty($scan_id)) {
                 $sql = "SELECT is_used, job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
                 $stmt = $pdo->prepare($sql);
@@ -1299,10 +1395,8 @@ try {
                 $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($job && $job['is_used'] == 1) {
-                    // ⭐️ 1. เจอ Job และ "ถูกใช้ไปแล้ว"
-                    // เราต้องไปหาว่าใครใช้ จากตาราง TRANSACTIONS
                     $job_data = json_decode($job['job_data'], true);
-                    $lot_to_find = $job_data['lot'] ?? $lot_no; // ใช้ Lot จาก job_data เพื่อความแม่นยำ
+                    $lot_to_find = $job_data['lot'] ?? $lot_no; 
 
                     $transSql = "SELECT TOP 1 t.transaction_timestamp, u.username 
                                  FROM " . TRANSACTIONS_TABLE . " t
@@ -1316,19 +1410,16 @@ try {
                     
                     echo json_encode([
                         'success' => true, 
-                        'status' => 'received', // ⭐️ ส่งสถานะ "รับแล้ว"
-                        'details' => $transaction // ส่งข้อมูลคนที่บันทึกไป
+                        'status' => 'received', 
+                        'details' => $transaction 
                     ]);
                     exit;
                 } else if ($job && $job['is_used'] == 0) {
-                    // ⭐️ 2. เจอ Job และ "ยังไม่ถูกใช้"
-                    echo json_encode(['success' => true, 'status' => 'new']); // ⭐️ ส่งสถานะ "ใหม่"
+                    echo json_encode(['success' => true, 'status' => 'new']); 
                     exit;
                 }
-                // (ถ้าไม่เจอ Job ID เลย -> ปล่อยให้ไปเช็คแบบเดิมด้านล่าง)
             }
 
-            // --- Logic เดิม (Fallback กรณีไม่มี Scan ID) ---
             if (empty($lot_no) || empty($sap_no)) {
                 throw new Exception("Lot No and SAP No are required for status check.");
             }
@@ -1360,18 +1451,15 @@ try {
             break;
 
         case 'get_locations_for_qr':
-            // ตรวจสอบสิทธิ์ (เฉพาะ Admin/Creator)
             if (!hasPermission('print_qr')) {
                  http_response_code(403);
                  echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
                  exit;
             }
             
-            // ดึงข้อมูล Location จากฐานข้อมูล
             $stmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // ส่งข้อมูลกลับเป็น JSON
             echo json_encode(['success' => true, 'locations' => $locations]);
             break;
 
@@ -1409,7 +1497,6 @@ try {
             break;
 
         case 'create_scan_job':
-            // 1. รับข้อมูลจาก label_printer.js
             $jobData = [
                 'sap_no' => $input['sap_no'] ?? null,
                 'lot' => $input['lot'] ?? null,
@@ -1421,31 +1508,27 @@ try {
                 throw new Exception("Incomplete job data provided (SAP, Lot, Qty required).");
             }
 
-            // 2. สร้างรหัสสั้นๆ ที่ไม่ซ้ำ (ลอง 5 ครั้ง)
             $scan_id = '';
             $max_tries = 5;
             for ($i = 0; $i < $max_tries; $i++) {
-                $scan_id = generateShortUUID(8); // สร้างรหัส 8 ตัว
+                $scan_id = generateShortUUID(8); 
                 $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?");
                 $checkStmt->execute([$scan_id]);
                 if ($checkStmt->fetchColumn() == 0) {
-                    break; // ไม่ซ้ำ ใช้ได้
+                    break; 
                 }
                 if ($i === $max_tries - 1) {
                     throw new Exception("Failed to generate a unique Scan ID.");
                 }
             }
 
-            // 3. บันทึกข้อมูล (ในรูปแบบ JSON)
             $sql = "INSERT INTO " . SCAN_JOBS_TABLE . " (scan_id, job_data, created_at, is_used) VALUES (?, ?, GETDATE(), 0)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$scan_id, json_encode($jobData)]);
 
-            // 4. ส่งรหัสสั้นๆ กลับไป
             echo json_encode(['success' => true, 'scan_id' => $scan_id]);
             break;
 
-        // ⭐️ CASE 2: ดึงข้อมูล Job (เมื่อสแกน) ⭐️
         case 'get_scan_job_data':
             $scan_id = $_GET['scan_id'] ?? '';
             if (empty($scan_id)) {
@@ -1458,11 +1541,6 @@ try {
             $job_data_json = $stmt->fetchColumn();
 
             if ($job_data_json) {
-                // (ทางเลือก) อัปเดตว่าใช้แล้ว
-                // $updateStmt = $pdo->prepare("UPDATE " . SCAN_JOBS_TABLE . " SET is_used = 1 WHERE scan_id = ?");
-                // $updateStmt->execute([$scan_id]);
-
-                // ส่งข้อมูล JSON กลับไปตรงๆ
                 echo json_encode(['success' => true, 'data' => json_decode($job_data_json)]);
             } else {
                 throw new Exception("Scan ID not found or already used.");
@@ -1471,15 +1549,11 @@ try {
 
         case 'get_production_hourly_summary':
             try {
-                // 1. ดึง SP name จาก config
-                $sp_name = SP_CALC_OEE_HOURLY; // (มาจาก config.php)
-
-                // 2. ดึง Filters (SP นี้ใช้ endDate เป็น 'TargetDate')
+                $sp_name = SP_CALC_OEE_HOURLY; 
                 $target_date = $_GET['endDate'] ?? date('Y-m-d');
-                $line_filter = $_GET['line'] ?? null; // (เผื่ออนาคต)
-                $model_filter = $_GET['model'] ?? null; // (เผื่ออนาคต)
+                $line_filter = $_GET['line'] ?? null; 
+                $model_filter = $_GET['model'] ?? null; 
 
-                // 3. เตรียมและเรียก Stored Procedure
                 $stmt = $pdo->prepare("EXEC {$sp_name} @TargetDate = ?, @Line = ?, @Model = ?");
                 $stmt->bindParam(1, $target_date, PDO::PARAM_STR);
                 $stmt->bindParam(2, $line_filter, PDO::PARAM_STR);

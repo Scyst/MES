@@ -5,8 +5,8 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../components/php/logger.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
 require_once __DIR__ . '/../loading_config.php';
 
 if (!isset($_SESSION['user']) || !hasPermission('view_production')) {
@@ -29,7 +29,6 @@ try {
     }
 
     switch ($action) {
-        // 1. ดึงรายการงาน (รองรับ Date Range, Status, Keyword)
         case 'get_jobs':
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-d');
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
@@ -45,19 +44,16 @@ try {
             $params = [];
             $whereClauses = [];
 
-            // ค้นหาข้อความ (ถ้ามีข้อความ จะค้นหาโดยไม่สนวันที่)
             if (!empty($keyword)) {
                 $whereClauses[] = "(s.po_number LIKE ? OR s.booking_no LIKE ? OR s.container_no LIKE ? OR s.snc_ci_no LIKE ?)";
                 $searchTerm = "%$keyword%";
                 $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
             } else {
-                // กรองตามช่วงวันที่
                 $whereClauses[] = "(s.loading_date >= ? AND s.loading_date <= ?)";
                 $params[] = $startDate;
                 $params[] = $endDate;
             }
 
-            // กรองสถานะ
             if ($status === 'COMPLETED') {
                 $whereClauses[] = "r.status = 'COMPLETED'";
             } else if ($status === 'DRAFT') {
@@ -174,7 +170,6 @@ try {
             $targetPath = $baseUploadDir . $newFilename;
             $webPath = "../../uploads/loading_reports/" . $newFilename; 
             
-            // 🟢 ลดภาระ Server: บันทึกไฟล์โดยตรง เพราะ JS ทำการบีบอัดและหมุนภาพมาให้เสร็จแล้ว
             if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
                 throw new Exception("Failed to save uploaded file.");
             }
@@ -227,7 +222,6 @@ try {
             echo json_encode(['success' => true]);
             break;
             
-        // 🟢 เพิ่มฟังก์ชันเซฟ Pass ทั้งหมดใน 1 ครั้ง (Bulk Save) 🟢
         case 'save_all_pass':
             $report_id = $_POST['report_id'];
             $pdo->beginTransaction();
@@ -265,7 +259,9 @@ try {
                 throw new Exception("Report not found.");
             }
 
-            writeLog($pdo, 'FINISH', 'LOADING', $report_id, ['status' => 'DRAFT'], ['status' => 'COMPLETED'], 'Inspection Completed');
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'FINISH', 'LOADING', $report_id, ['status' => 'DRAFT'], ['status' => 'COMPLETED'], 'Inspection Completed');
+            }
 
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'COMPLETED', updated_at = GETDATE() WHERE id = ?";
             $pdo->prepare($sql)->execute([$report_id]);
@@ -303,7 +299,9 @@ try {
             $check->execute([$report_id]);
             if (!$check->fetch()) throw new Exception("Report not found.");
 
-            writeLog($pdo, 'UNLOCK', 'LOADING', $report_id, ['status' => 'COMPLETED'], ['status' => 'DRAFT'], 'Supervisor Re-opened Report');
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'UNLOCK', 'LOADING', $report_id, ['status' => 'COMPLETED'], ['status' => 'DRAFT'], 'Supervisor Re-opened Report');
+            }
 
             $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'DRAFT', updated_at = GETDATE() WHERE id = ?";
             $pdo->prepare($sql)->execute([$report_id]);
@@ -316,8 +314,8 @@ try {
             echo json_encode(['success' => false, 'message' => 'Invalid Action']);
     }
 
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage() . " on line " . $e->getLine()]);
 }
 ?>

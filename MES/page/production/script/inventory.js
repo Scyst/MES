@@ -179,30 +179,32 @@ function updateControls(activeTabId) {
     switch (activeTabId) {
         case 'production-history-tab':
             buttonGroup.innerHTML = `
-                <button class="btn btn-primary" onclick="exportProductionHistoryToExcel()">Export</button>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-chart-pie me-2"></i> Summaries
+                <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="exportProductionHistoryToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-info fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-chart-pie me-1"></i> Summaries
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#" onclick="openSummaryModal(this); return false;">Summary by Part</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="openHourlyProductionModal(); return false;">Hourly Summary</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                        <li><a class="dropdown-item fw-bold text-secondary" href="#" onclick="openSummaryModal(this); return false;"><i class="fas fa-list me-2"></i> Summary by Part</a></li>
+                        <li><a class="dropdown-item fw-bold text-secondary" href="#" onclick="openHourlyProductionModal(); return false;"><i class="fas fa-clock me-2"></i> Hourly Summary</a></li>
                     </ul>
                 </div>
-                ${canAdd ? '<button class="btn btn-success" onclick="openAddPartModal(this)">Add (OUT)</button>' : ''}
+                ${canAdd ? '<button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="openAddPartModal(this)"><i class="fas fa-plus me-1"></i> Add (OUT)</button>' : ''}
             `;
-
             summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
             break;
+            
         case 'entry-history-tab':
             buttonGroup.innerHTML = `
-                <button class="btn btn-primary" onclick="exportHistoryToExcel()">Export</button>
-                <button class="btn btn-info" onclick="openHistorySummaryModal()">Summary</button>
-                ${canAdd ? '<button class="btn btn-success" onclick="openAddEntryModal(this)">Add (IN)</button>' : ''}
+                <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                <button class="btn btn-sm btn-info fw-bold shadow-sm" onclick="openHistorySummaryModal()"><i class="fas fa-chart-bar me-1"></i> Summary</button>
+                ${canAdd ? '<button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="openAddEntryModal(this)"><i class="fas fa-plus me-1"></i> Add (IN)</button>' : ''}
             `;
             break;
-        case 'wip-report-tab':
-            buttonGroup.innerHTML = `<button class="btn btn-primary" onclick="exportWipReportToExcel()">Export</button>`;
+            
+        case 'wip-onhand-tab':
+        case 'wip-by-lot-tab':
+            buttonGroup.innerHTML = `<button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="exportWipReportToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>`;
             break;
     }
 }
@@ -1302,8 +1304,15 @@ async function handleFormSubmit(event) {
                 const res = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', trans);
                 if (!res.success) { allSuccess = false; throw new Error(res.message); }
             }
+            
             if (allSuccess) { 
-                showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+                Swal.fire({
+                    title: 'บันทึกการผลิตสำเร็จ!',
+                    text: 'ระบบได้ตัดสต็อกวัตถุดิบตามสูตรเรียบร้อยแล้ว',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
                 
                 const searchInputValue = document.getElementById('out_item_search').value;
                 let lastEntryData = {
@@ -1391,8 +1400,33 @@ async function handleFormSubmit(event) {
 
         } else if (errorMessage === 'SCAN_ALREADY_USED') {
             showToast("Scan ID นี้ถูกใช้งานไปแล้ว", 'var(--bs-warning)');
+            
+        } else if (errorMessage.includes('วัตถุดิบในจุดจัดเก็บ')) {
+            // 🚨 จัดรูปแบบ Error "วัตถุดิบไม่พอ" ให้อ่านง่ายๆ บนหน้าจอ PC
+            const errorHtml = errorMessage.replace(/\n/g, '<br>');
+            Swal.fire({
+                title: '<i class="fas fa-exclamation-triangle text-warning"></i> วัตถุดิบไม่พอผลิต!',
+                html: `
+                    <div class="text-start alert alert-warning border-warning mt-3" style="font-size: 0.95rem; max-height: 250px; overflow-y: auto;">
+                        ${errorHtml}
+                    </div>
+                    <div class="small text-muted mt-2">
+                        <i class="fas fa-info-circle"></i> กรุณาเบิกของเข้าไลน์ให้ครบก่อนทำการบันทึก
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'รับทราบ',
+                allowOutsideClick: false
+            });
         } else {
-            showToast(errorMessage, 'var(--bs-danger)');
+            // 🚨 Error ทั่วไปอื่นๆ (ใช้ Swal ป้องกัน Admin พลาดมองไม่เห็น Toast)
+            Swal.fire({
+                title: 'เกิดข้อผิดพลาด',
+                text: errorMessage,
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
         }
     }
 }

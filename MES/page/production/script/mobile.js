@@ -14,6 +14,30 @@ let g_CurrentTransferOrder = null;
 // =================================================================
 // SECTION: HELPER FUNCTIONS
 // =================================================================
+function playBeep(type = 'error') {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        if (type === 'success') {
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        } else {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+        }
+    } catch (e) { console.log("Audio not supported"); }
+}
+
 async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
@@ -99,22 +123,16 @@ function initEntryPage() {
 
 function handleManualScanLoad() {
     const inputElement = document.getElementById('manual_scan_id_input');
-    const transferId = inputElement.value.trim(); // ⭐️ (เปลี่ยนชื่อตัวแปร)
+    const transferId = inputElement.value.trim().toUpperCase();
 
     if (!transferId) {
         showToast("กรุณากรอก Transfer ID", 'var(--bs-warning)');
         inputElement.focus();
         return;
     }
-
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('transfer_id', transferId); // ⭐️ (ใช้ 'transfer_id')
     
-    currentUrl.searchParams.set('type', 'receipt');
-    ['scan', 'sap_no', 'lot', 'qty', 'from_loc_id'].forEach(p => currentUrl.searchParams.delete(p));
-
-    showSpinner();
-    window.location.href = currentUrl.toString();
+    autoFillFromTransferOrder(transferId);
+    inputElement.value = '';
 }
 
 function initializeDateTimeFields() {
@@ -295,31 +313,33 @@ async function handleFileScan(file) {
 }
 
 function initQrScanner() {
-    const cameraTab = document.getElementById('scan-camera-tab');
-    const manualTab = document.getElementById('scan-manual-tab');
     const fileInput = document.getElementById('scan-image-file');
-
-    if (cameraTab) {
-        cameraTab.addEventListener('shown.bs.tab', () => {
-            startScanning();
-        });
-    }
-
-    if (manualTab) {
-        manualTab.addEventListener('shown.bs.tab', () => {
-            stopScanning();
-        });
-    }
+    const manualBtn = document.getElementById('manual_scan_id_btn');
+    const manualInput = document.getElementById('manual_scan_id_input');
 
     fileInput?.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            handleFileScan(file);
+            handleFileScan(e.target.files[0]);
             e.target.value = null; 
         }
     });
 
-    if (cameraTab && cameraTab.classList.contains('active')) {
+    if (manualBtn) {
+        manualBtn.replaceWith(manualBtn.cloneNode(true));
+        document.getElementById('manual_scan_id_btn').addEventListener('click', handleManualScanLoad);
+    }
+
+    if (manualInput) {
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleManualScanLoad();
+            }
+        });
+    }
+
+    const sectionIn = document.getElementById('section-in');
+    if (sectionIn && sectionIn.classList.contains('active')) {
         startScanning();
     }
 }
@@ -727,6 +747,9 @@ function renderReviewCards(data, type) {
 // =================================================================
 // SECTION: FORM SUBMISSION HANDLER
 // =================================================================
+// =================================================================
+// SECTION: FORM SUBMISSION HANDLER
+// =================================================================
 async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -744,6 +767,7 @@ async function handleFormSubmit(event) {
             const data = Object.fromEntries(formData.entries());
 
             if (action === 'addPart') {
+                // 🌟 โหมดผลิต (PRODUCTION)
                 if (!locationId) throw new Error("กรุณาเลือก Location");
                 data.location_id = locationId;
 
@@ -779,7 +803,15 @@ async function handleFormSubmit(event) {
                 }
                 
                 if (allSuccess) { 
-                    showToast("บันทึกสำเร็จ", 'var(--bs-success)');
+                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
+                    
+                    Swal.fire({
+                        title: 'บันทึกการผลิตสำเร็จ!',
+                        text: 'ระบบได้ตัดสต็อกวัตถุดิบตามสูตรเรียบร้อยแล้ว',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     
                     const searchInputValue = document.getElementById('out_item_search').value;
                     let lastEntryData = {
@@ -797,6 +829,7 @@ async function handleFormSubmit(event) {
                 }
 
             } else {
+                // 🌟 โหมดรับเข้า (RECEIPT)
                 const transferUuid = data.transfer_uuid;
 
                 if (transferUuid) {
@@ -818,6 +851,7 @@ async function handleFormSubmit(event) {
                     const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
                     if (!res.success) throw new Error(res.message);
 
+                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
                     showToast("ยืนยันการรับของสำเร็จ!", 'var(--bs-success)');
                     
                     form.reset();
@@ -852,6 +886,7 @@ async function handleFormSubmit(event) {
                     const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                     if (!res.success) throw new Error(res.message);
 
+                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
                     showToast("บันทึกสำเร็จ", 'var(--bs-success)');
 
                     const searchInputValue = document.getElementById('entry_item_search').value;
@@ -878,6 +913,7 @@ async function handleFormSubmit(event) {
             const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
             if (!res.success) throw new Error(res.message);
 
+            playBeep('success'); // 🔊 เสียงสแกนผ่าน!
             showToast("แก้ไขสำเร็จ", 'var(--bs-success)');
             bootstrap.Modal.getInstance(form.closest('.modal'))?.hide();
             fetchReviewData(currentReviewPage);
@@ -885,6 +921,8 @@ async function handleFormSubmit(event) {
         hideSpinner();
     } catch (error) {
         hideSpinner();
+        playBeep('error'); // 🔊 เสียง Error (ตื๊ดดด!)
+        
         const errorMessage = error.message || 'An unexpected error occurred.';
         
         if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage === 'SCAN_ALREADY_USED') {
@@ -899,8 +937,38 @@ async function handleFormSubmit(event) {
                     autoFillForm_OLD(g_AutoFillData_OLD);
                 }
             }
+        } else if (errorMessage.includes('วัตถุดิบในจุดจัดเก็บ')) {
+            
+            // 🚨 จัดรูปแบบป๊อปอัปแจ้งเตือน กรณี "วัตถุดิบไม่พอ"
+            const errorHtml = errorMessage.replace(/\n/g, '<br>');
+            Swal.fire({
+                title: '<i class="fas fa-exclamation-triangle text-warning"></i> วัตถุดิบไม่พอผลิต!',
+                html: `
+                    <div class="text-start alert alert-warning border-warning mt-3" style="font-size: 0.9rem; max-height: 200px; overflow-y: auto;">
+                        ${errorHtml}
+                    </div>
+                    <div class="small text-muted mt-2">
+                        <i class="fas fa-info-circle"></i> กรุณาเบิกของเข้าไลน์ให้ครบก่อนกดผลิต
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'รับทราบ',
+                allowOutsideClick: false
+            }).then(() => {
+                // Focus กลับไปที่ช่อง FG เผื่อพนักงานพิมพ์เลขผิด
+                const qtyInput = document.querySelector('input[name="quantity_fg"]');
+                if(qtyInput) qtyInput.select();
+            });
+
         } else {
-            showToast(errorMessage, 'var(--bs-danger)');
+            // 🚨 Error ทั่วไปอื่นๆ (เปลี่ยนจาก Toast เล็กๆ เป็น Popup ใหญ่ให้พนักงานสังเกตเห็น)
+            Swal.fire({
+                title: 'ข้อผิดพลาด',
+                text: errorMessage,
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
         }
     }
 }
@@ -916,7 +984,7 @@ async function editTransaction(transactionId, type) {
 
         if (type === 'receipt') {
             modalId = 'editEntryModal';
-            modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(modalId));
             
             deleteBtn = document.getElementById('deleteEntryFromModalBtn');
             saveBtn = modal._element.querySelector('button[type="submit"]');
@@ -938,7 +1006,7 @@ async function editTransaction(transactionId, type) {
 
         } else if (type === 'production') {
             modalId = 'editProductionModal';
-            modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(modalId));
             deleteBtn = document.getElementById('deleteProductionFromModalBtn');
             saveBtn = modal._element.querySelector('button[type="submit"]');
             
@@ -1086,21 +1154,21 @@ async function deleteTransaction(transactionId, successCallback) {
 }
 
 // =================================================================
-// SECTION: INITIALIZATION
+// SECTION: INITIALIZATION (SPA Update)
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('review-container')) {
-        initReviewPage();
-        // ผูก Event สำหรับ Modal แก้ไข/ลบ ในหน้า Review (ถ้ามี)
-        document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
-        document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
-        document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
-        document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
-    } else if (document.getElementById('entry-container')) {
-        initEntryPage();
-    }
+    // 🌟 โหลดทั้งสองฟังก์ชันพร้อมกัน เพราะตอนนี้อยู่หน้าเดียวกันหมดแล้ว
+    initEntryPage();
+    initReviewPage();
+
+    // ผูก Event ให้ Modal
+    document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
+    document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
 
     document.getElementById('close-overlay-btn')?.addEventListener('click', () => {
-        document.getElementById('status-overlay').style.display = 'none';
+        const overlay = document.getElementById('status-overlay');
+        if(overlay) overlay.style.display = 'none';
     });
 });
