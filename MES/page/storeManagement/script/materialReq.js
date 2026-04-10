@@ -6,63 +6,111 @@ let historyModal, trackingModal;
 
 // 🟢 ตัวแปรสำหรับจัดการ Infinite Scroll 🟢
 let currentPage = 1;
-const itemLimit = 40; // โหลดครั้งละ 40 ชิ้น
+const itemLimit = 40; 
 let isLoading = false;
 let hasMoreItems = true;
+let searchTimeout;
 
-$(document).ready(function() {
+// 🟢 เพิ่มตัวแปรสำหรับจัดการ Abort API Request 🟢
+let currentSearchController = null;
+
+// ========================================================
+// 🟢 Custom Fetch Wrapper สำหรับหน้านี้โดยเฉพาะ 🟢
+// ========================================================
+async function fetchMaterialAPI(params, method = 'GET', signal = null) {
+    let url = API_URL;
+    const options = { method: method, signal: signal };
+
+    if (method === 'GET') {
+        const qs = new URLSearchParams(params).toString();
+        url += `?${qs}`;
+    } else if (method === 'POST') {
+        let formData;
+        if (params instanceof FormData) {
+            formData = params;
+        } else {
+            formData = new FormData();
+            for (const key in params) {
+                formData.append(key, params[key]);
+            }
+        }
+        
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            if (!formData.has('csrf_token')) {
+                formData.append('csrf_token', csrfMeta.getAttribute('content'));
+            }
+        }
+        options.body = formData;
+    }
+
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+    }
+    return await response.json();
+}
+
+function handleFetchError(error, defaultMsg = "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์") {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    isLoading = false;
+    Swal.fire('Error', error.message || defaultMsg, 'error');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     loadCatalog('ALL');
 
-    $('#searchItem').on('keyup', function() {
-        clearTimeout(window.searchTimeout);
-        window.searchTimeout = setTimeout(() => { 
-            // รีเซ็ตเพื่อโหลดหน้า 1 ใหม่เมื่อพิมพ์ค้นหา
-            loadCatalog(null, false); 
-        }, 500);
-    });
+    const searchInput = document.getElementById('searchItem');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => { 
+                loadCatalog(null, false); 
+            }, 500);
+        });
+    }
 
-    // Initialize Modals
-    historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
-    trackingModal = new bootstrap.Modal(document.getElementById('trackingModal'));
+    const histEl = document.getElementById('historyModal');
+    const trackEl = document.getElementById('trackingModal');
+    if (histEl) historyModal = new bootstrap.Modal(histEl);
+    if (trackEl) trackingModal = new bootstrap.Modal(trackEl);
 
-    // 🟢 ดักจับการเลื่อนหน้าจอ (Infinite Scroll) 🟢
-    $(window).on('scroll', function() {
-        // ถ้าเลื่อนมาจนเหลือระยะอีก 300px จะถึงขอบล่างสุด และยังมีของให้โหลดต่อ
-        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 300) {
+    window.addEventListener('scroll', () => {
+        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+        if (scrollTop + clientHeight >= scrollHeight - 300) {
             if (!isLoading && hasMoreItems) {
-                loadCatalog(null, true); // โหลดเพิ่ม (isLoadMore = true)
+                loadCatalog(null, true);
             }
         }
     });
 
-    // 🟢 ตรวจสอบแบบ Real-time เมื่อเปลี่ยนประเภทคำขอ (STOCK / K2) 🟢
-    $('input[name="reqType"]').on('change', function() {
-        renderCartUI();
+    document.querySelectorAll('input[name="reqType"]').forEach(radio => {
+        radio.addEventListener('change', renderCartUI);
     });
 });
 
-function handleAjaxError(xhr, defaultMsg = "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์") {
-    $('#loadingOverlay').hide(); isLoading = false;
-    let errorMsg = defaultMsg;
-    try { const res = JSON.parse(xhr.responseText); if (res.message) errorMsg = res.message; } catch (e) {}
-    Swal.fire('Error', errorMsg, 'error');
-}
-
 window.toggleImages = function() {
-    $('body').toggleClass('hide-images');
-    const isHidden = $('body').hasClass('hide-images');
-    const btn = $('#toggleImageBtn');
+    // 1. สลับคลาสที่ body เพื่อซ่อน/แสดงรูปภาพ
+    document.body.classList.toggle('hide-images');
     
-    if (isHidden) {
-        btn.html('<i class="fas fa-image text-primary"></i> <span class="ms-1 text-primary">แสดงรูป</span>');
-        btn.removeClass('btn-light text-secondary border').addClass('btn-primary bg-opacity-10 border-primary text-primary');
-    } else {
-        btn.html('<i class="fas fa-image-slash"></i> <span class="ms-1">ซ่อนรูป</span>');
-        btn.removeClass('btn-primary bg-opacity-10 border-primary text-primary').addClass('btn-light text-secondary border');
+    // 2. เช็คสถานะว่าตอนนี้ซ่อนอยู่หรือไม่
+    const isHidden = document.body.classList.contains('hide-images');
+    const btn = document.getElementById('toggleImageBtn');
+    
+    if (btn) {
+        if (isHidden) {
+            // โหมด: ซ่อนรูป (ปุ่มสีขาว/เทา)
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="fas fa-image-slash text-secondary"></i> <span class="d-none d-sm-inline">ซ่อนรูป</span>';
+        } else {
+            // โหมด: แสดงรูป (ปุ่มสีฟ้า Active)
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="fas fa-image"></i> <span class="d-none d-sm-inline">แสดงรูป</span>';
+        }
     }
 };
 
-function getPlaceholderHTML(category, sapNo) {
+function getPlaceholderHTML(category, sapNo, idAttr = '') {
     let icon = 'fa-box'; let color = '#6c757d'; 
     const cat = category ? category.toUpperCase() : '';
     if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
@@ -71,7 +119,7 @@ function getPlaceholderHTML(category, sapNo) {
     else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
 
     return `
-        <div class="placeholder-img d-flex flex-column align-items-center justify-content-center" 
+        <div ${idAttr ? `id="${idAttr}"` : ''} class="placeholder-img d-flex flex-column align-items-center justify-content-center" 
              style="background: radial-gradient(circle, #ffffff 0%, #f0f3f8 100%);">
             <i class="fas ${icon} fa-4x mb-3" style="color: ${color}; opacity: 0.3;"></i>
             <span class="small fw-bold px-2 w-100 text-center text-truncate" 
@@ -82,9 +130,8 @@ function getPlaceholderHTML(category, sapNo) {
     `;
 }
 
-// 🟢 ฟังก์ชันช่วยเหลือเมื่อรูปภาพโหลดไม่ขึ้น (ป้องกันเครื่องหมายคำพูดตีกัน) 🟢
 window.handleImageError = function(imgElement, category, sapNo) {
-    $(imgElement).replaceWith(getPlaceholderHTML(category, sapNo));
+    imgElement.outerHTML = getPlaceholderHTML(category, sapNo);
 };
 
 function getIconPlaceholder(category) {
@@ -97,68 +144,92 @@ function getIconPlaceholder(category) {
     return `<div class="ph-mini d-flex align-items-center justify-content-center bg-light border rounded" style="width: 45px; height: 45px;"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.2rem;"></i></div>`;
 }
 
-// 🟢 โหลดข้อมูลแคตตาล็อก (รองรับการแบ่งหน้า) 🟢
-window.loadCatalog = function(category = null, isLoadMore = false) {
-    if (isLoading) return;
+window.loadCatalog = async function(category = null, isLoadMore = false) {
+    if (!isLoadMore) {
+        if (currentSearchController) currentSearchController.abort();
+        currentSearchController = new AbortController();
+    } else {
+        if (isLoading) return;
+    }
     
-    if (!category) category = $('.category-chip.active').data('category') || 'ALL';
+    const activeCategory = document.querySelector('.category-chip.active');
+    if (!category) category = activeCategory ? activeCategory.dataset.category : 'ALL';
 
-    const search = $('#searchItem').val().trim();
-    const sort = $('#sortItem').val() || 'DEFAULT'; 
+    const searchInput = document.getElementById('searchItem');
+    const sortInput = document.getElementById('sortItem');
+    const search = searchInput ? searchInput.value.trim() : '';
+    const sort = sortInput ? sortInput.value : 'DEFAULT'; 
+    const catalogGrid = document.getElementById('catalogGrid');
 
     if (!isLoadMore) {
-        // กรณีโหลดใหม่ (หน้า 1)
         currentPage = 1;
         hasMoreItems = true;
-        $('#catalogGrid').html('<div class="col-12 text-center py-5 mt-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>');
+        catalogGrid.innerHTML = '<div class="col-12 text-center py-5 mt-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>';
     } else {
-        // กรณีเลื่อนจอเพื่อโหลดเพิ่ม ให้โชว์ Spinner เล็กๆ ต่อท้าย
-        $('#catalogGrid').append('<div id="loadMoreSpinner" class="col-12 text-center py-4"><div class="spinner-border text-secondary spinner-border-sm"></div></div>');
+        catalogGrid.insertAdjacentHTML('beforeend', '<div id="loadMoreSpinner" class="col-12 text-center py-4"><div class="spinner-border text-secondary spinner-border-sm"></div></div>');
     }
 
     isLoading = true;
 
-    $.getJSON(API_URL, { action: 'get_catalog', category: category, search: search, sort: sort, page: currentPage, limit: itemLimit }, function(res) {
+    try {
+        const res = await fetchMaterialAPI({
+            action: 'get_catalog',
+            category: category,
+            search: search,
+            sort: sort,
+            page: currentPage,
+            limit: itemLimit
+        }, 'GET', isLoadMore ? null : currentSearchController.signal);
+
         isLoading = false;
-        $('#loadMoreSpinner').remove();
+        const spinner = document.getElementById('loadMoreSpinner');
+        if (spinner) spinner.remove();
 
         if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
-        
-        // เช็คว่ายังมีของให้โหลดต่อไหม (ถ้าได้มาน้อยกว่าลิมิต แปลว่าหมดแล้ว)
-        if (res.data.length < itemLimit) {
-            hasMoreItems = false;
-        }
+        if (res.data.length < itemLimit) hasMoreItems = false;
         
         let html = '';
         if (res.data.length === 0 && !isLoadMore) {
             html = `<div class="col-12 text-center text-muted py-5 mt-5">
                         <i class="fas fa-search fa-4x mb-3 opacity-25"></i>
                         <h4 class="fw-bold">ไม่พบรายการสินค้า</h4>
-                        <p>ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่ด้านบนใหม่</p>
                     </div>`;
-            $('#catalogGrid').html(html);
+            catalogGrid.innerHTML = html;
         } else {
             res.data.forEach(item => {
                 const onHand = parseFloat(item.onhand_qty);
                 const isOutOfStock = onHand <= 0;
                 const safeDesc = item.description ? item.description.replace(/'/g, "\\'") : 'N/A';
                 
+                // 1. เพิ่ม ID เข้าไปที่ img หรือ placeholder เพื่อให้ชี้เป้าแก้รูปได้ถูกตัว
                 const imgHtml = item.image_path 
-                    ? `<img src="../../uploads/items/${item.image_path}" class="product-img" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
-                    : getPlaceholderHTML(item.item_category, item.item_code);
+                        ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" id="img_element_${item.item_code}" class="product-img" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
+                        : getPlaceholderHTML(item.item_category, item.item_code, `img_element_${item.item_code}`);
 
                 const badgeHtml = isOutOfStock 
                     ? `<span class="badge bg-danger stock-badge px-2 py-1"><i class="fas fa-times-circle me-1"></i> สินค้าหมด</span>`
                     : `<span class="badge bg-success stock-badge px-2 py-1"><i class="fas fa-check-circle me-1"></i> สต๊อก: ${onHand.toLocaleString()}</span>`;
 
+                // 2. ถ้าเป็นสิทธิ์ Admin ให้แสดงปุ่มแก้รูป
+                const editBtnHtml = CAN_MANAGE_IMAGE 
+                    ? `<div class="position-absolute top-0 end-0 p-2 z-3">
+                           <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="triggerImageUpload('${item.item_code}')" title="เปลี่ยน/อัปโหลดรูปภาพ">
+                               <i class="fas fa-camera"></i>
+                           </button>
+                       </div>`
+                    : '';
+
                 const cardOpacity = isOutOfStock ? 'opacity: 0.85;' : '';
                 const currentCartQty = cart[item.item_code] ? cart[item.item_code].qty : 1;
 
-                // 🟢 ปลดล็อค input แม้ของจะหมด เพื่อให้ขอซื้อ K2 ได้ 🟢
                 html += `
                 <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2 col-xxl-2">
                     <div class="product-card" style="${cardOpacity}">
-                        <div class="product-img-wrapper">${badgeHtml}${imgHtml}</div>
+                        <div class="product-img-wrapper" id="img_wrapper_${item.item_code}">
+                            ${badgeHtml}
+                            ${editBtnHtml}
+                            ${imgHtml}
+                        </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
 
                         <div class="card-body-flex pt-2">
@@ -178,64 +249,83 @@ window.loadCatalog = function(category = null, isLoadMore = false) {
                 </div>`;
             });
             
-            if (!isLoadMore) {
-                $('#catalogGrid').html(html);
-            } else {
-                $('#catalogGrid').append(html);
-            }
+            if (!isLoadMore) catalogGrid.innerHTML = html;
+            else catalogGrid.insertAdjacentHTML('beforeend', html);
 
-            // ถ้าไม่มีของให้โหลดแล้ว ให้ขึ้นข้อความบอกเบาๆ
             if (!hasMoreItems && res.data.length > 0) {
-                $('#catalogGrid').append('<div class="col-12 text-center text-muted py-4 small">--- แสดงรายการทั้งหมดแล้ว ---</div>');
+                catalogGrid.insertAdjacentHTML('beforeend', '<div class="col-12 text-center text-muted py-4 small">--- แสดงรายการทั้งหมดแล้ว ---</div>');
             }
-
             currentPage++; 
         }
-    }).fail(handleAjaxError);
+    } catch (error) {
+        if (error.name === 'AbortError') return; 
+        handleFetchError(error);
+    }
 };
 
 window.updateInputQty = function(itemCode, change) {
-    let input = $(`#input_qty_${itemCode}`);
-    let current = parseInt(input.val()) || 1;
+    const input = document.getElementById(`input_qty_${itemCode}`);
+    if (!input) return;
+    let current = parseInt(input.value) || 1;
     let newVal = current + change;
-    if(newVal >= 1) input.val(newVal); 
+    if(newVal >= 1) input.value = newVal; 
 };
 
 window.addToCart = function(itemCode, description, onHandQty) {
-    let inputQty = parseInt($(`#input_qty_${itemCode}`).val()) || 1;
-    // เก็บ onHandQty ไว้ใน maxQty เพื่อเอาไว้เช็คตอนจบ
+    const input = document.getElementById(`input_qty_${itemCode}`);
+    let inputQty = parseInt(input ? input.value : 1) || 1;
+    
     cart[itemCode] = { description: description, qty: inputQty, maxQty: onHandQty };
     
-    $('.cart-fab').css('transform', 'scale(1.2)');
-    setTimeout(() => $('.cart-fab').css('transform', 'scale(1)'), 200);
+    const fab = document.querySelector('.cart-fab');
+    if (fab) {
+        fab.style.transform = 'scale(1.2)';
+        setTimeout(() => fab.style.transform = 'scale(1)', 200);
+    }
+    
     Swal.fire({ toast: true, position: 'bottom-start', icon: 'success', title: 'หยิบใส่ตะกร้าแล้ว', showConfirmButton: false, timer: 1200 });
     renderCartUI();
 };
 
-window.removeFromCart = function(itemCode) { delete cart[itemCode]; renderCartUI(); };
+window.removeFromCart = function(itemCode) { 
+    delete cart[itemCode]; 
+    
+    // [FIX 3] เคลียร์ค่า input ในแคตตาล็อกกลับไปเป็น 1 เสมอเมื่อถูกลบ
+    const inputEl = document.getElementById(`input_qty_${itemCode}`);
+    if (inputEl) inputEl.value = 1;
+
+    renderCartUI(); 
+};
 
 function renderCartUI() {
     const itemCodes = Object.keys(cart);
     const totalItems = itemCodes.length;
-    $('#cartItemCount').text(totalItems);
-    if(totalItems > 0) {
-        $('#cartItemCount').addClass('animate__animated animate__bounceIn');
-        setTimeout(() => $('#cartItemCount').removeClass('animate__animated animate__bounceIn'), 1000);
+    
+    const badge = document.getElementById('cartItemCount');
+    if (badge) {
+        badge.innerText = totalItems;
+        if(totalItems > 0) {
+            badge.classList.add('animate__animated', 'animate__bounceIn');
+            setTimeout(() => badge.classList.remove('animate__animated', 'animate__bounceIn'), 1000);
+        }
     }
 
+    const container = document.getElementById('cartItemsContainer');
+    const btnCheckout = document.getElementById('btnCheckout');
+
     if (totalItems === 0) {
-        $('#cartItemsContainer').html(`<div class="text-center text-muted py-5 mt-5"><i class="fas fa-box-open fa-4x mb-3 opacity-25"></i><h6>ตะกร้าว่างเปล่า</h6></div>`);
-        $('#btnCheckout').prop('disabled', true);
+        container.innerHTML = `<div class="text-center text-muted py-5 mt-5"><i class="fas fa-box-open fa-4x mb-3 opacity-25"></i><h6>ตะกร้าว่างเปล่า</h6></div>`;
+        if (btnCheckout) btnCheckout.disabled = true;
         return;
     }
 
-    const reqType = $('input[name="reqType"]:checked').val(); // ดึงค่าประเภทคำขอปัจจุบัน
+    const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
+    const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     let html = '';
     
     itemCodes.forEach(code => {
         let item = cart[code];
         
-        // 🟢 แสดงแจ้งเตือนในตะกร้า ถ้าเลือก "เบิกของ" แต่จำนวนเกินสต๊อก 🟢
         let warningHtml = '';
         if (reqType === 'STOCK' && item.qty > item.maxQty) {
             warningHtml = `<div class="small text-danger fw-bold mt-1"><i class="fas fa-exclamation-triangle"></i> สต๊อกมีแค่ ${item.maxQty} ชิ้น (ต้องเปิด K2)</div>`;
@@ -256,26 +346,32 @@ function renderCartUI() {
             </div>
         </div>`;
     });
-    $('#cartItemsContainer').html(html);
-    $('#btnCheckout').prop('disabled', false);
+    
+    container.innerHTML = html;
+    if (btnCheckout) btnCheckout.disabled = false;
 }
 
 window.filterCategory = function(category, element) {
-    $('.category-chip').removeClass('active');
-    $(element).addClass('active').data('category', category); 
-    $('#searchItem').val(''); 
+    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    element.dataset.category = category;
+    
+    const searchInput = document.getElementById('searchItem');
+    if (searchInput) searchInput.value = ''; 
+    
     loadCatalog(category, false); 
 };
 
-// 🟢 ด่านตรวจ Validation ตอนกด Submit 🟢
 window.submitRequisition = function() {
-    const remark = $('#reqRemark').val().trim();
-    const reqType = $('input[name="reqType"]:checked').val();
+    const remarkEl = document.getElementById('reqRemark');
+    const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
+    
+    const remark = remarkEl ? remarkEl.value.trim() : '';
+    const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     const itemCodes = Object.keys(cart);
     
     if (itemCodes.length === 0) return;
 
-    // ตรวจสอบสต๊อก หากเป็นการ "เบิกจากคลัง (STOCK)"
     if (reqType === 'STOCK') {
         for (let code of itemCodes) {
             let item = cart[code];
@@ -286,7 +382,7 @@ window.submitRequisition = function() {
                     icon: 'warning',
                     confirmButtonText: 'เข้าใจแล้ว'
                 });
-                return; // หยุดการทำงาน ไม่ให้ไปต่อ
+                return; 
             }
         }
     }
@@ -300,55 +396,83 @@ window.submitRequisition = function() {
         showCancelButton: true, 
         confirmButtonColor: reqType === 'K2' ? '#ffc107' : '#198754', 
         confirmButtonText: 'Yes, Submit!'
-    }).then((result) => {
+    }).then(async (result) => {
         if (result.isConfirmed) {
-            $('#loadingOverlay').css('display', 'flex');
-            const payloadCart = itemCodes.map(code => { return { itemCode: code, qty: cart[code].qty }; });
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            // [FIX 4] เปลี่ยนคีย์ itemCode เป็น item_code ตาม Database Schema
+            const payloadCart = itemCodes.map(code => ({ item_code: code, qty: cart[code].qty }));
 
-            $.post(API_URL, { 
-                action: 'submit_requisition', 
-                cart: JSON.stringify(payloadCart), 
-                remark: remark,
-                request_type: reqType
-            }, function(res) {
-                $('#loadingOverlay').hide();
+            try {
+                const res = await fetchMaterialAPI({
+                    action: 'submit_requisition',
+                    cart: JSON.stringify(payloadCart),
+                    remark: remark,
+                    request_type: reqType
+                }, 'POST');
+
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
                 if (res.success) {
                     Swal.fire({ 
                         title: 'Success!', 
                         html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${res.req_number}</b>`, 
                         icon: 'success' 
                     }).then(() => {
-                        cart = {}; $('#reqRemark').val(''); renderCartUI();
-                        bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas'))?.hide();
+                        cart = {}; 
+                        if (remarkEl) remarkEl.value = ''; 
+                        renderCartUI();
+                        
+                        const offcanvasEl = document.getElementById('cartOffcanvas');
+                        if (offcanvasEl) {
+                            const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                            if (offcanvas) offcanvas.hide();
+                        }
+                        
                         loadCatalog(null, false); 
                     });
-                } else { Swal.fire('Error', res.message, 'error'); }
-            }, 'json').fail(handleAjaxError);
+                } else { 
+                    Swal.fire('Error', res.message, 'error'); 
+                }
+            } catch (error) {
+                handleFetchError(error);
+            }
         }
     });
 };
 
-// ========================================================
-// 🟢 ส่วนควบคุม Modal ประวัติการเบิก (History & Tracking)
-// ========================================================
-window.openHistoryModal = function() {
-    if (!$('#histStartDate').val()) {
+window.openHistoryModal = async function() {
+    const startEl = document.getElementById('histStartDate');
+    const endEl = document.getElementById('histEndDate');
+
+    if (startEl && !startEl.value) {
         let d = new Date();
         d.setDate(d.getDate() - 30);
-        $('#histStartDate').val(d.toISOString().split('T')[0]);
+        startEl.value = d.toISOString().split('T')[0];
     }
-    if (!$('#histEndDate').val()) {
-        $('#histEndDate').val(new Date().toISOString().split('T')[0]);
+    if (endEl && !endEl.value) {
+        endEl.value = new Date().toISOString().split('T')[0];
     }
 
-    const startDate = $('#histStartDate').val();
-    const endDate = $('#histEndDate').val();
+    const startDate = startEl ? startEl.value : '';
+    const endDate = endEl ? endEl.value : '';
 
-    $('#orderHistoryList').html('<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>');
-    historyModal.show();
+    const listContainer = document.getElementById('orderHistoryList');
+    if (listContainer) {
+        listContainer.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
+    }
+    
+    if (historyModal) historyModal.show();
 
-    $.getJSON(API_URL, { action: 'get_my_orders', start_date: startDate, end_date: endDate }, function(res) {
+    try {
+        const res = await fetchMaterialAPI({
+            action: 'get_my_orders',
+            start_date: startDate,
+            end_date: endDate
+        }, 'GET');
+
         if (!res.success) return;
+        
         let html = '';
         if (res.data.length === 0) {
             html = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-history fa-3x mb-3 opacity-25"></i><br><h6>ไม่มีประวัติการเบิกในช่วงเวลานี้</h6></div>`;
@@ -376,78 +500,258 @@ window.openHistoryModal = function() {
                 </div>`;
             });
         }
-        $('#orderHistoryList').html(html);
-    }).fail(handleAjaxError);
+        if (listContainer) listContainer.innerHTML = html;
+
+    } catch (error) {
+        handleFetchError(error);
+    }
 };
 
-window.viewOrderDetails = function(reqId) {
-    historyModal.hide(); 
-    trackingModal.show(); 
-    $('#modalItemsList').html('<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>');
+window.viewOrderDetails = async function(reqId) {
+    if (historyModal) historyModal.hide(); 
     
-    $.getJSON(API_URL, { action: 'get_my_order_details', req_id: reqId }, function(res) {
-        if (!res.success) { trackingModal.hide(); Swal.fire('Error', res.message, 'error'); return; }
-
-        const h = res.header;
-        $('#modalReqNo').text(h.req_number);
-        $('#modalReqTime').html(`<i class="far fa-clock"></i> สั่งเบิก: ${h.req_time}`);
-
-        let step1 = 'completed', step2 = '', step3 = '';
-        let step3Icon = 'fa-check', step3Label = 'เสร็จสิ้น';
+    // [FIX 2] หน่วงเวลาให้ modal ปิดสนิทก่อนเรียกตัวใหม่ ป้องกันจอดำค้าง
+    setTimeout(async () => {
+        if (trackingModal) trackingModal.show(); 
         
-        if (h.status === 'NEW ORDER') step1 = 'active'; 
-        else if (h.status === 'PREPARING') step2 = 'active';
-        else if (h.status === 'COMPLETED') { step2 = 'completed'; step3 = 'completed'; } 
-        else if (h.status === 'REJECTED') { step2 = 'rejected'; step3 = 'rejected'; step3Icon = 'fa-times'; step3Label = 'ถูกปฏิเสธ'; }
+        const itemsList = document.getElementById('modalItemsList');
+        if (itemsList) {
+            itemsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
+        }
+        
+        try {
+            const res = await fetchMaterialAPI({
+                action: 'get_my_order_details',
+                req_id: reqId
+            }, 'GET');
 
-        $('#trackingTimeline').html(`
-            <div class="tracking-step ${step1}"><div class="step-icon"><i class="fas fa-clipboard-list"></i></div><div class="step-label">ส่งคำสั่ง</div><div class="step-time">${h.req_time}</div></div>
-            <div class="tracking-step ${step2}"><div class="step-icon"><i class="fas fa-box-open"></i></div><div class="step-label">กำลังจัดของ</div><div class="step-time"></div></div>
-            <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${step3Label}</div><div class="step-time">${h.issue_time || ''}</div></div>
-        `);
+            if (!res.success) { 
+                if (trackingModal) trackingModal.hide(); 
+                Swal.fire('Error', res.message, 'error'); 
+                return; 
+            }
 
-        if (h.status === 'REJECTED') {
-            $('#rejectAlert').removeClass('d-none');
-            const match = (h.remark || '').match(/\[Reject:\s(.*?)\]/);
-            $('#rejectReason').text(match ? match[1] : 'ไม่ระบุเหตุผล');
-        } else { $('#rejectAlert').addClass('d-none'); }
+            const h = res.header;
+            document.getElementById('modalReqNo').innerText = h.req_number;
+            document.getElementById('modalReqTime').innerHTML = `<i class="far fa-clock"></i> สั่งเบิก: ${h.req_time}`;
 
-        let itemsHtml = '';
-        res.items.forEach(item => {
-            const reqQty = parseFloat(item.qty_requested);
-            const issueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : '-';
-            let issueClass = (issueQty !== '-' && issueQty < reqQty) ? 'text-warning text-dark' : 'text-success';
-            if (issueQty === 0) issueClass = 'text-danger';
+            let step1 = 'completed', step2 = '', step3 = '';
+            let step3Icon = 'fa-check', step3Label = 'เสร็จสิ้น';
+            
+            if (h.status === 'NEW ORDER') step1 = 'active'; 
+            else if (h.status === 'PREPARING') step2 = 'active';
+            else if (h.status === 'COMPLETED') { step2 = 'completed'; step3 = 'completed'; } 
+            else if (h.status === 'REJECTED') { step2 = 'rejected'; step3 = 'rejected'; step3Icon = 'fa-times'; step3Label = 'ถูกปฏิเสธ'; }
 
-            const imgHtml = item.image_path 
-                ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="this.outerHTML='${getIconPlaceholder(item.item_category)}'">'` 
-                : getIconPlaceholder(item.item_category);
+            document.getElementById('trackingTimeline').innerHTML = `
+                <div class="tracking-step ${step1}"><div class="step-icon"><i class="fas fa-clipboard-list"></i></div><div class="step-label">ส่งคำสั่ง</div><div class="step-time">${h.req_time}</div></div>
+                <div class="tracking-step ${step2}"><div class="step-icon"><i class="fas fa-box-open"></i></div><div class="step-label">กำลังจัดของ</div><div class="step-time"></div></div>
+                <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${step3Label}</div><div class="step-time">${h.issue_time || ''}</div></div>
+            `;
 
-            itemsHtml += `
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <div class="d-flex align-items-center gap-2">
-                    ${imgHtml}
-                    <div>
-                        <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;">${item.description}</div>
-                        <small class="text-primary">SAP: ${item.item_code}</small>
+            const rejectAlert = document.getElementById('rejectAlert');
+            if (h.status === 'REJECTED') {
+                if (rejectAlert) rejectAlert.classList.remove('d-none');
+                const match = (h.remark || '').match(/\[Reject:\s(.*?)\]/);
+                document.getElementById('rejectReason').innerText = match ? match[1] : 'ไม่ระบุเหตุผล';
+            } else { 
+                if (rejectAlert) rejectAlert.classList.add('d-none'); 
+            }
+
+            let itemsHtml = '';
+            res.items.forEach(item => {
+                const reqQty = parseFloat(item.qty_requested);
+                const issueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : '-';
+                let issueClass = (issueQty !== '-' && issueQty < reqQty) ? 'text-warning text-dark' : 'text-success';
+                if (issueQty === 0) issueClass = 'text-danger';
+
+                const imgHtml = item.image_path 
+                    ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
+                    : getIconPlaceholder(item.item_category);
+
+                itemsHtml += `
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <div class="d-flex align-items-center gap-2">
+                        ${imgHtml}
+                        <div>
+                            <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;">${item.description}</div>
+                            <small class="text-primary">SAP: ${item.item_code}</small>
+                        </div>
                     </div>
-                </div>
-                <div class="text-end">
-                    <div class="small text-muted mb-1">ขอเบิก: <b>${reqQty}</b></div>
-                    <div class="small fw-bold ${issueClass}">จ่ายจริง: ${issueQty}</div>
-                </div>
-            </div>`;
-        });
-        $('#modalItemsList').html(itemsHtml);
+                    <div class="text-end">
+                        <div class="small text-muted mb-1">ขอเบิก: <b>${reqQty}</b></div>
+                        <div class="small fw-bold ${issueClass}">จ่ายจริง: ${issueQty}</div>
+                    </div>
+                </div>`;
+            });
+            
+            if (itemsList) itemsList.innerHTML = itemsHtml;
 
-        if (h.status === 'COMPLETED' && h.issuer_name) {
-            $('#modalIssuerName').text(h.issuer_name); $('#modalIssueTime').text(h.issue_time); $('#issuerInfo').removeClass('d-none');
-        } else { $('#issuerInfo').addClass('d-none'); }
+            const issuerInfo = document.getElementById('issuerInfo');
+            if (h.status === 'COMPLETED' && h.issuer_name) {
+                document.getElementById('modalIssuerName').innerText = h.issuer_name; 
+                document.getElementById('modalIssueTime').innerText = h.issue_time; 
+                if (issuerInfo) issuerInfo.classList.remove('d-none');
+            } else { 
+                if (issuerInfo) issuerInfo.classList.add('d-none'); 
+            }
 
-    }).fail(handleAjaxError);
+        } catch (error) {
+            handleFetchError(error);
+        }
+    }, 300);
 };
 
 window.backToHistory = function() {
-    trackingModal.hide();
-    historyModal.show();
+    if (trackingModal) trackingModal.hide();
+    
+    // [FIX 2] หน่วงเวลาให้ modal ปิดสนิทก่อนเรียกตัวใหม่ ป้องกันจอดำค้าง
+    setTimeout(() => {
+        if (historyModal) historyModal.show();
+    }, 300);
 };
+
+// ========================================================
+// 🟢 ฟังก์ชันอัปโหลดภาพ (Image Upload Logic) 🟢
+// ========================================================
+window.triggerImageUpload = function(itemCode) {
+    document.getElementById('uploadTargetItemCode').value = itemCode;
+    
+    Swal.fire({
+        title: 'เปลี่ยนรูปภาพสินค้า',
+        html: `คุณต้องการอัปเดตรูปภาพสำหรับ <b class="text-primary">${itemCode}</b> ด้วยวิธีใด?`,
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '<i class="fas fa-camera fa-lg mb-1 d-block"></i> ถ่ายรูป',
+        denyButtonText: '<i class="fas fa-image fa-lg mb-1 d-block"></i> คลังภาพ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#0d6efd', // Blue
+        denyButtonColor: '#198754',  // Green
+        customClass: {
+            actions: 'd-flex gap-2 w-100 justify-content-center mt-3',
+            confirmButton: 'btn btn-primary flex-fill py-2',
+            denyButton: 'btn btn-success flex-fill py-2',
+            cancelButton: 'btn btn-light border text-dark flex-fill py-2'
+        }
+    }).then((result) => {
+        const inputEl = document.getElementById('globalImageUpload');
+        if (!inputEl) return;
+
+        if (result.isConfirmed) {
+            // 📸 โหมดถ่ายรูป: บังคับเปิดกล้องหลังมือถือทันที
+            inputEl.setAttribute('capture', 'environment');
+            inputEl.click();
+        } else if (result.isDenied) {
+            // 📁 โหมดคลังภาพ: เปิด File Explorer / อัลบั้มรูป
+            inputEl.removeAttribute('capture');
+            inputEl.click();
+        }
+    });
+};
+
+// ========================================================
+// 🟢 ฟังก์ชันบีบอัดภาพด้วย HTML5 Canvas (Vanilla JS) 🟢
+// ========================================================
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // คำนวณสัดส่วนให้พอดีกับ Max Width/Height
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            // สร้าง Canvas เพื่อวาดรูปใหม่ที่เล็กลง
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // วาดรูปลง Canvas
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // แปลง Canvas กลับเป็นไฟล์ Blob (บีบอัดเป็น JPEG)
+            canvas.toBlob((blob) => {
+                // สร้าง File Object ใหม่เพื่อส่งไป Backend
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+                resolve(compressedFile);
+            }, 'image/jpeg', quality);
+        };
+        
+        img.onerror = (error) => reject(error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const globalUploadInput = document.getElementById('globalImageUpload');
+    if (globalUploadInput) {
+        globalUploadInput.addEventListener('change', async function() {
+            if (!this.files || this.files.length === 0) return;
+            
+            const originalFile = this.files[0];
+            const itemCode = document.getElementById('uploadTargetItemCode').value;
+            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                const compressedFile = await compressImage(originalFile, 800, 800, 0.8);
+
+                if (compressedFile.size > 5 * 1024 * 1024) {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    Swal.fire('ไฟล์ใหญ่เกินไป!', 'ระบบไม่สามารถบีบอัดภาพให้อยู่ในขนาดที่กำหนดได้', 'warning');
+                    this.value = ''; return;
+                }
+
+                let formData = new FormData();
+                formData.append('action', 'upload_image');
+                formData.append('item_code', itemCode);
+                formData.append('image', compressedFile);
+
+                const res = await fetchMaterialAPI(formData, 'POST');
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                if (res.success) {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
+                    
+                    const wrapper = document.getElementById(`img_wrapper_${itemCode}`);
+                    if (wrapper) {
+                        const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
+                        const existingImg = document.getElementById(`img_element_${itemCode}`);
+                        
+                        if (existingImg && existingImg.tagName === 'IMG') {
+                            existingImg.src = newImgUrl;
+                        } else {
+                            const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
+                            if (existingImg) existingImg.remove(); 
+                            wrapper.insertAdjacentHTML('beforeend', newImgHtml);
+                        }
+                    }
+                } else { 
+                    Swal.fire('Error', res.message, 'error'); 
+                }
+            } catch (error) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                Swal.fire('Error', 'เกิดข้อผิดพลาดในการจัดการไฟล์ภาพ', 'error');
+            } finally {
+                this.value = ''; 
+            }
+        });
+    }
+});
