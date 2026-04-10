@@ -58,10 +58,11 @@ $pageIcon = "fas fa-store";
     </div>
 
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
+    <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
-    <div class="page-container">
+    <div class="page-container d-flex flex-column h-100">
         
-        <main id="main-content">
+        <main id="main-content" class="d-flex flex-column flex-grow-1 overflow-hidden">
             
             <div class="bg-white border-bottom px-2 px-lg-4 d-flex gap-1 gap-md-4 overflow-auto hide-scrollbar shadow-sm flex-shrink-0" style="z-index: 1020;">
                 <button class="mode-tab active" id="tab-stock" onclick="switchDashboardMode('STOCK')">
@@ -73,14 +74,11 @@ $pageIcon = "fas fa-store";
                 <button class="mode-tab text-info" id="tab-analytics" onclick="switchDashboardMode('ANALYTICS')">
                     <i class="fas fa-chart-bar me-1"></i> สถิติ
                 </button>
-                <button class="mode-tab text-secondary" id="tab-image" onclick="switchDashboardMode('IMAGE')">
-                    <i class="fas fa-images me-1"></i> <span class="d-none d-sm-inline">จัดการรูปภาพ</span><span class="d-sm-none">รูปภาพ</span>
-                </button>
             </div>
 
             <div class="p-2 p-lg-3 flex-grow-1 mobile-flex-grow d-flex flex-column overflow-hidden">
                 
-                <div class="row g-3 h-100" id="order-layout">
+                <div class="row g-3 h-100 flex-grow-1" id="order-layout">
                     
                     <div class="col-12 col-lg-4 col-xl-3 d-flex flex-column h-100" id="left-pane">
                         <div class="bg-white border rounded-3 shadow-sm p-2 mb-2 flex-shrink-0">
@@ -189,7 +187,7 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <div class="row g-3 d-none h-100 overflow-auto pb-4 hide-scrollbar" id="analytics-layout">
-                    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center bg-white p-3 rounded-3 shadow-sm border gap-2">
+                    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center bg-white p-3 rounded-3 shadow-sm border gap-2 flex-shrink-0">
                         <div class="d-flex align-items-center gap-2">
                             <input type="date" id="analytic_start" class="form-control fw-bold text-primary">
                             <span class="fw-bold text-muted">ถึง</span>
@@ -199,21 +197,21 @@ $pageIcon = "fas fa-store";
                         <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-2"></i>Export Data</button>
                     </div>
 
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-4 flex-shrink-0">
                         <div class="card bg-primary text-white border-0 shadow-sm h-100">
                             <div class="card-body text-center py-4">
                                 <h6 class="fw-bold opacity-75 mb-1">บิลเบิกจ่ายสำเร็จ</h6><h2 class="fw-bold mb-0" id="stat_total_reqs">0</h2>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-4 flex-shrink-0">
                         <div class="card bg-success text-white border-0 shadow-sm h-100">
                             <div class="card-body text-center py-4">
                                 <h6 class="fw-bold opacity-75 mb-1">จำนวนชิ้นที่จ่ายออก</h6><h2 class="fw-bold mb-0" id="stat_total_issued">0</h2>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-4 flex-shrink-0">
                         <div class="card bg-warning text-dark border-0 shadow-sm h-100">
                             <div class="card-body text-center py-4">
                                 <h6 class="fw-bold opacity-75 mb-1">รายการรอเปิด K2</h6><h2 class="fw-bold mb-0" id="stat_waiting_k2">0</h2>
@@ -221,42 +219,17 @@ $pageIcon = "fas fa-store";
                         </div>
                     </div>
 
-                    <div class="col-12 col-lg-6">
+                    <div class="col-12 col-lg-6 flex-shrink-0">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-primary"></i>5 อันดับวัสดุเบิกเยอะสุด (จำนวนชิ้น)</h6></div>
                             <div class="card-body"><canvas id="chartTopItems" height="250"></canvas></div>
                         </div>
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="col-12 col-lg-6 flex-shrink-0">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-user-chart me-2 text-info"></i>5 อันดับผู้เบิกบ่อยสุด (จำนวนบิล)</h6></div>
                             <div class="card-body"><canvas id="chartTopUsers" height="250"></canvas></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row g-3 d-none h-100 overflow-auto pb-4 hide-scrollbar" id="image-layout">
-                    <div class="col-12 flex-shrink-0">
-                        <div class="bg-white rounded-3 shadow-sm p-3 border d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
-                                    <i class="fas fa-images fa-2x"></i>
-                                </div>
-                                <div>
-                                    <h5 class="fw-bold text-dark mb-0">จัดการรูปภาพสินค้า (Master Data)</h5>
-                                    <small class="text-muted"><i class="fas fa-info-circle text-primary me-1"></i> คลิกที่รูปเพื่อเปลี่ยน (สัดส่วน 1:1, ไม่เกิน 5MB)</small>
-                                </div>
-                            </div>
-                            
-                            <div class="input-group shadow-sm" style="max-width: 400px;">
-                                <span class="input-group-text bg-light text-primary border-end-0"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchImgItem" class="form-control border-start-0" placeholder="ค้นหารหัส SAP, ชื่อ..." autocomplete="off">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-12 flex-grow-1">
-                        <div class="row g-2 g-md-3" id="itemsImgGrid"></div>
                     </div>
                 </div>
 

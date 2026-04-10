@@ -14,7 +14,6 @@ async function fetchDashboardAPI(params, method = 'GET') {
         const qs = new URLSearchParams(params).toString();
         url += `?${qs}`;
     } else if (method === 'POST') {
-        // รองรับทั้ง FormData (อัปโหลดรูป) และ Object ธรรมดา
         if (params instanceof FormData) {
             options.body = params;
         } else {
@@ -25,7 +24,6 @@ async function fetchDashboardAPI(params, method = 'GET') {
             options.body = formData;
         }
         
-        // แนบ CSRF Token
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         if (csrfMeta && options.body instanceof FormData) {
             options.body.append('csrf_token', csrfMeta.getAttribute('content'));
@@ -56,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadActiveQueue();
     
-    // Auto Refresh 
     setInterval(() => { 
         const filterStatus = document.getElementById('filter_status');
         if (filterStatus && (filterStatus.value === 'ACTIVE' || filterStatus.value === 'WAITING')) {
@@ -543,148 +540,6 @@ function switchView(view) {
 }
 
 // ==========================================
-// 🟢 โหมด: จัดการรูปภาพสินค้า (IMAGE MANAGEMENT) 🟢
-// ==========================================
-let imgModal;
-let imgPage = 1;
-const imgLimit = 40;
-let imgLoading = false;
-let imgHasMore = true;
-let searchImgTimeout;
-
-document.addEventListener('DOMContentLoaded', () => {
-    // ผูก Event Search
-    const searchImgInput = document.getElementById('searchImgItem');
-    if (searchImgInput) {
-        searchImgInput.addEventListener('input', () => {
-            clearTimeout(searchImgTimeout);
-            searchImgTimeout = setTimeout(() => { loadItemsForImage(true); }, 500);
-        });
-    }
-
-    // ผูก Event Scroll ให้ Workspace
-    const workspace = document.getElementById('image-layout');
-    if (workspace) {
-        workspace.addEventListener('scroll', function() {
-            if (this.scrollHeight - this.scrollTop <= this.clientHeight + 300) {
-                if (!imgLoading && imgHasMore) loadItemsForImage(false);
-            }
-        });
-    }
-});
-
-window.openImageManager = function() {
-    const searchImgInput = document.getElementById('searchImgItem');
-    if (searchImgInput) searchImgInput.value = '';
-    if (imgModal) imgModal.show();
-    loadItemsForImage(true);
-};
-
-window.loadItemsForImage = async function(reset = false) {
-    if (imgLoading) return;
-    const search = document.getElementById('searchImgItem').value.trim();
-    const grid = document.getElementById('itemsImgGrid');
-
-    if (reset) {
-        imgPage = 1; imgHasMore = true;
-        grid.innerHTML = '<div class="col-12 text-center py-5 mt-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>';
-    } else {
-        grid.insertAdjacentHTML('beforeend', '<div id="imgLoadMore" class="col-12 text-center py-4"><div class="spinner-border text-secondary spinner-border-sm"></div></div>');
-    }
-
-    imgLoading = true;
-
-    try {
-        const res = await fetchDashboardAPI({ action: 'get_items', search: search, page: imgPage, limit: imgLimit }, 'GET');
-        
-        imgLoading = false; 
-        const loadMoreIndicator = document.getElementById('imgLoadMore');
-        if (loadMoreIndicator) loadMoreIndicator.remove();
-        
-        if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
-        
-        if (res.data.length < imgLimit) imgHasMore = false;
-        
-        let html = '';
-        if (res.data.length === 0 && reset) {
-            html = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-search fa-4x mb-3 opacity-25"></i><h5 class="fw-bold">ไม่พบรายการสินค้า</h5></div>`;
-            grid.innerHTML = html;
-        } else {
-            res.data.forEach(item => {
-                const imgHtml = item.image_path 
-                    ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" class="product-img" id="img_tgt_${item.sap_no}" loading="lazy" onerror="this.outerHTML='${getPlaceholderHTML(item.item_category, item.sap_no)}'">` 
-                    : getPlaceholderHTML(item.item_category, item.sap_no);
-
-                html += `
-                <div class="col-6 col-sm-4 col-md-3 col-xl-2">
-                    <div class="card border border-light shadow-sm h-100">
-                        
-                        <div class="position-relative w-100 bg-light border-bottom" style="padding-top:100%; cursor:pointer;" onclick="document.getElementById('file_${item.sap_no}').click()">
-                            <div id="img_container_${item.sap_no}">${imgHtml}</div>
-                            <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 text-white d-flex flex-column align-items-center justify-content-center opacity-0 transition-opacity" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
-                                <i class="fas fa-camera fa-2x mb-1"></i><small class="fw-bold">อัปโหลดรูป</small>
-                            </div>
-                        </div>
-
-                        <input type="file" id="file_${item.sap_no}" class="d-none" accept="image/jpeg, image/png, image/webp" onchange="uploadImage('${item.sap_no}', this)">
-
-                        <div class="card-body p-2 d-flex flex-column">
-                            <div class="small text-primary fw-bold mb-1 text-truncate">SAP: ${item.sap_no}</div>
-                            <div class="fw-bold text-dark" style="font-size:0.8rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${item.part_description || '-'}</div>
-                        </div>
-
-                    </div>
-                </div>`;
-            });
-            
-            if (reset) grid.innerHTML = html; 
-            else grid.insertAdjacentHTML('beforeend', html);
-            
-            imgPage++; 
-        }
-    } catch (error) {
-        imgLoading = false; 
-        const loadMoreIndicator = document.getElementById('imgLoadMore');
-        if (loadMoreIndicator) loadMoreIndicator.remove();
-    }
-};
-
-window.uploadImage = async function(sapNo, inputElement) {
-    if (!inputElement.files || inputElement.files.length === 0) return;
-    const file = inputElement.files[0];
-    
-    if (file.size > 5 * 1024 * 1024) {
-        Swal.fire('ไฟล์ใหญ่เกินไป!', 'กรุณาเลือกรูปขนาดไม่เกิน 5MB', 'warning');
-        inputElement.value = ''; return;
-    }
-
-    let formData = new FormData();
-    formData.append('action', 'upload_image');
-    formData.append('sap_no', sapNo);
-    formData.append('image', file);
-
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
-    try {
-        const res = await fetchDashboardAPI(formData, 'POST');
-        document.getElementById('loadingOverlay').style.display = 'none';
-        
-        if (res.success) {
-            const newImg = `<img src="../../uploads/items/${res.image_path}?v=${new Date().getTime()}" class="product-img" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">`;
-            document.getElementById(`img_container_${sapNo}`).innerHTML = newImg;
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
-        } else { 
-            Swal.fire('Error', res.message, 'error'); 
-        }
-    } catch (error) {
-        document.getElementById('loadingOverlay').style.display = 'none';
-        Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
-    } finally {
-        inputElement.value = ''; 
-    }
-};
-
-// ==========================================
 // 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
 // ==========================================
 let chartItemsInst = null;
@@ -700,29 +555,30 @@ window.switchDashboardMode = function(mode) {
     
     const layoutOrder = document.getElementById('order-layout');
     const layoutAnalytics = document.getElementById('analytics-layout');
-    const layoutImage = document.getElementById('image-layout');
 
-    // ซ่อนทั้งหมดก่อน
     if(layoutOrder) layoutOrder.classList.add('d-none');
     if(layoutAnalytics) layoutAnalytics.classList.add('d-none');
-    if(layoutImage) layoutImage.classList.add('d-none');
 
     if (mode === 'STOCK') {
         document.getElementById('tab-stock').classList.add('active');
         if(layoutOrder) layoutOrder.classList.remove('d-none');
+        
         document.querySelectorAll('.opt-k2').forEach(el => el.classList.add('d-none')); 
         document.querySelectorAll('.opt-stock').forEach(el => el.classList.remove('d-none'));
         const filterStatus = document.getElementById('filter_status');
         if (filterStatus) filterStatus.value = 'ACTIVE'; 
+        
         toggleDateFilter(); switchView('list'); loadActiveQueue();
     } 
     else if (mode === 'K2') {
         document.getElementById('tab-k2').classList.add('active');
         if(layoutOrder) layoutOrder.classList.remove('d-none');
+        
         document.querySelectorAll('.opt-stock').forEach(el => el.classList.add('d-none')); 
         document.querySelectorAll('.opt-k2').forEach(el => el.classList.remove('d-none'));
         const filterStatus = document.getElementById('filter_status');
         if (filterStatus) filterStatus.value = 'WAITING';
+        
         toggleDateFilter(); switchView('list'); loadActiveQueue();
     }
     else if (mode === 'ANALYTICS') {
@@ -734,14 +590,8 @@ window.switchDashboardMode = function(mode) {
         const endInput = document.getElementById('analytic_end');
         if (startInput) startInput.value = new Date(d.getFullYear(), d.getMonth(), 2).toISOString().split('T')[0];
         if (endInput) endInput.value = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split('T')[0];
+        
         loadAnalytics();
-    }
-    else if (mode === 'IMAGE') {
-        document.getElementById('tab-image').classList.add('active');
-        if(layoutImage) layoutImage.classList.remove('d-none');
-        const searchImgInput = document.getElementById('searchImgItem');
-        if (searchImgInput) searchImgInput.value = '';
-        loadItemsForImage(true);
     }
 };
 
