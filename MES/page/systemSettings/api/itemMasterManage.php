@@ -419,6 +419,18 @@ try {
                     return $default;
                 };
 
+                // 🌟 เพิ่ม Logic แปลงคำว่า Yes/No, True/False ให้เป็น 1/0
+                $raw_active = $getValue(['is_active', 'Is Active', 'Is_Active'], 'is_active', 1);
+                $is_active_val = 1; // Default เป็น 1
+                if (is_string($raw_active)) {
+                    $chk = strtolower(trim($raw_active));
+                    if ($chk === 'no' || $chk === '0' || $chk === 'false') {
+                        $is_active_val = 0;
+                    }
+                } elseif ($raw_active === 0 || $raw_active === false) {
+                    $is_active_val = 0;
+                }
+
                 // 🪄 แปลงโครงสร้างให้ตรงกับที่ Stored Procedure ต้องการ 100%
                 $mapped = [
                     'sap_no' => $sap,
@@ -429,7 +441,8 @@ try {
                     'planned_output' => (int)$getValue(['planned_output', 'Planned Output'], 'planned_output', 0),
                     'min_stock' => (float)$getValue(['min_stock', 'Min Stock'], 'min_stock', 0),
                     'max_stock' => (float)$getValue(['max_stock', 'Max Stock'], 'max_stock', 0),
-                    'is_active' => (int)$getValue(['is_active', 'Is Active'], 'is_active', 1),
+                    
+                    'is_active' => $is_active_val, // 🌟 ใช้ตัวแปรที่แปลงแล้ว
                     
                     'CTN' => (int)$getValue(['CTN'], 'CTN', 0),
                     'net_weight' => (float)$getValue(['net_weight', 'Net Weight'], 'net_weight', 0),

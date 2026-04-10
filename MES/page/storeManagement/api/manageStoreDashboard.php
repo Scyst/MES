@@ -183,6 +183,133 @@ try {
             echo json_encode(['success' => true, 'message' => 'บันทึกรหัส K2 PR สำเร็จ']);
             break;
 
+        // ==========================================
+        // 🟢 โหมด: จัดการรูปภาพสินค้า (IMAGE MANAGEMENT) 🟢
+        // ==========================================
+        case 'get_items':
+            $search = $_REQUEST['search'] ?? '';
+            $page = isset($_REQUEST['page']) ? (int)$_REQUEST['page'] : 1;
+            $limit = isset($_REQUEST['limit']) ? (int)$_REQUEST['limit'] : 40;
+            $offset = ($page - 1) * $limit;
+
+            $sql = "SELECT sap_no, part_description, item_category, image_path 
+                    FROM dbo.ITEMS WITH (NOLOCK) 
+                    WHERE is_active = 1 ";
+            
+            $params = [];
+            if (!empty($search)) {
+                $sql .= " AND (sap_no LIKE ? OR part_no LIKE ? OR part_description LIKE ?) ";
+                $searchTerm = "%$search%";
+                array_push($params, $searchTerm, $searchTerm, $searchTerm);
+            }
+
+            $sql .= " ORDER BY CASE WHEN image_path IS NULL OR image_path = '' THEN 0 ELSE 1 END ASC, sap_no ASC ";
+            $sql .= " OFFSET " . (int)$offset . " ROWS FETCH NEXT " . (int)$limit . " ROWS ONLY ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'upload_image':
+            $sap_no = $_POST['sap_no'] ?? '';
+            if (empty($sap_no) || !isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+                throw new Exception("ข้อมูลไม่ครบ หรือไฟล์มีปัญหา");
+            }
+
+            $file = $_FILES['image'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) { throw new Exception("รองรับเฉพาะ JPG, PNG, WEBP"); }
+            if ($file['size'] > 5 * 1024 * 1024) { throw new Exception("ไฟล์ต้องไม่เกิน 5MB"); }
+
+            $uploadDir = __DIR__ . '/../../../uploads/items/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+
+            $newFileName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sap_no) . '_' . time() . '.' . $ext;
+            
+            if (move_uploaded_file($file['tmp_name'], $uploadDir . $newFileName)) {
+                $stmtCheck = $pdo->prepare("SELECT image_path FROM dbo.ITEMS WHERE sap_no = ?");
+                $stmtCheck->execute([$sap_no]);
+                $oldImage = $stmtCheck->fetchColumn();
+                
+                if ($oldImage && file_exists($uploadDir . $oldImage)) unlink($uploadDir . $oldImage);
+
+                $pdo->prepare("UPDATE dbo.ITEMS SET image_path = ? WHERE sap_no = ?")->execute([$newFileName, $sap_no]);
+                echo json_encode(['success' => true, 'image_path' => $newFileName]);
+            } else {
+                throw new Exception("บันทึกไฟล์ไม่สำเร็จ เช็ค Permission โฟลเดอร์");
+            }
+            break;
+
+        // ==========================================
+        // 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
+        // ==========================================
+        case 'get_analytics':
+            $startDate = $_REQUEST['start_date'] ?? date('Y-m-01'); // เริ่มต้นที่ต้นเดือน
+            $endDate = $_REQUEST['end_date'] ?? date('Y-m-t');      // สิ้นเดือน
+            
+            // 1. สรุปภาพรวม (Summary Cards)
+            $stmtSum = $pdo->prepare("
+                SELECT 
+                    COUNT(DISTINCT r.id) as total_reqs,
+                    ISNULL(SUM(ri.qty_issued), 0) as total_issued_qty,
+                    (SELECT COUNT(*) FROM dbo.STORE_K2_REQUESTS WHERE k2_status = 'WAITING') as waiting_k2
+                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
+                LEFT JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
+                WHERE CAST(r.created_at AS DATE) BETWEEN ? AND ? AND r.status = 'COMPLETED'
+            ");
+            $stmtSum->execute([$startDate, $endDate]);
+            $summary = $stmtSum->fetch(PDO::FETCH_ASSOC);
+
+            // 2. กราฟ 5 อันดับของที่เบิกเยอะสุด (Top 5 Items)
+            $stmtTopItems = $pdo->prepare("
+                SELECT TOP 5 i.part_description, SUM(ri.qty_issued) as total_qty
+                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
+                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
+                WHERE CAST(r.created_at AS DATE) BETWEEN ? AND ? AND r.status = 'COMPLETED' AND ri.qty_issued > 0
+                GROUP BY i.part_description
+                ORDER BY total_qty DESC
+            ");
+            $stmtTopItems->execute([$startDate, $endDate]);
+            $topItems = $stmtTopItems->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. กราฟคนเบิกเยอะสุด (Top Requestors)
+            $stmtTopUsers = $pdo->prepare("
+                SELECT TOP 5 u.fullname, COUNT(DISTINCT r.id) as req_count
+                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
+                JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
+                WHERE CAST(r.created_at AS DATE) BETWEEN ? AND ?
+                GROUP BY u.fullname
+                ORDER BY req_count DESC
+            ");
+            $stmtTopUsers->execute([$startDate, $endDate]);
+            $topUsers = $stmtTopUsers->fetchAll(PDO::FETCH_ASSOC);
+
+            // 4. ดึงข้อมูลดิบสำหรับ Export Excel (Raw Data)
+            $stmtExport = $pdo->prepare("
+                SELECT r.req_number, FORMAT(r.created_at, 'yyyy-MM-dd HH:mm') as date_req, 
+                       u.fullname as requester, i.sap_no, i.part_description, 
+                       ri.qty_requested, ri.qty_issued, ri.request_type, r.status
+                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
+                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
+                JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
+                WHERE CAST(r.created_at AS DATE) BETWEEN ? AND ?
+                ORDER BY r.created_at DESC
+            ");
+            $stmtExport->execute([$startDate, $endDate]);
+            $exportData = $stmtExport->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'summary' => $summary, 
+                'topItems' => $topItems, 
+                'topUsers' => $topUsers,
+                'exportData' => $exportData
+            ]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid Action']);
     }

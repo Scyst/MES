@@ -247,10 +247,7 @@ try {
                 $sql .= " ORDER BY CASE WHEN ISNULL(SUM(inv.quantity), 0) > 0 THEN 0 ELSE 1 END ASC, i.sap_no ASC ";
             }
 
-            // 🟢 เทคนิค Pagination สำหรับ SQL Server 2012+ 🟢
-            $sql .= " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY ";
-            $params[] = $offset;
-            $params[] = $limit;
+            $sql .= " OFFSET " . (int)$offset . " ROWS FETCH NEXT " . (int)$limit . " ROWS ONLY ";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);

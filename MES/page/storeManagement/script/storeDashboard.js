@@ -35,7 +35,25 @@ function getIconPlaceholder(category) {
     return `<div class="ph-small"><i class="fas ${icon}" style="color:${color}; opacity:0.5;"></i></div>`;
 }
 
-// 🟢 สลับโหมดการทำงานของ Dashboard 🟢
+// 🟢 ฟังก์ชันสำหรับสร้างรูปภาพ Placeholder เมื่อสินค้ายังไม่มีรูปภาพ 🟢
+function getPlaceholderHTML(category, sapNo) {
+    let icon = 'fa-box'; let color = '#6c757d'; 
+    const cat = category ? category.toUpperCase() : '';
+    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
+    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
+    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
+    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
+
+    return `
+        <div class="d-flex flex-column align-items-center justify-content-center" style="background: radial-gradient(circle, #ffffff 0%, #f0f3f8 100%); position:absolute; top:0; left:0; width:100%; height:100%;">
+            <i class="fas ${icon} fa-3x mb-2" style="color: ${color}; opacity: 0.3;"></i>
+            <span class="small fw-bold px-2 w-100 text-center text-truncate" style="color: ${color}; opacity: 0.4; letter-spacing: 1px;">
+                ${sapNo}
+            </span>
+        </div>
+    `;
+}
+
 window.switchDashboardMode = function(mode) {
     $('#current_dashboard_mode').val(mode);
     $('#current_req_id').val(''); // เคลียร์ของเก่า
@@ -371,3 +389,235 @@ function switchView(view) {
 }
 
 $(window).resize(function() { switchView($('#current_req_id').val() !== '' ? 'form' : 'list'); });
+
+// ==========================================
+// 🟢 โหมด: จัดการรูปภาพสินค้า (IMAGE MANAGEMENT) 🟢
+// ==========================================
+let imgModal;
+let imgPage = 1;
+const imgLimit = 40;
+let imgLoading = false;
+let imgHasMore = true;
+
+$(document).ready(function() {
+    imgModal = new bootstrap.Modal(document.getElementById('imageManageModal'));
+
+    $('#searchImgItem').on('keyup', function() {
+        clearTimeout(window.searchImgTimeout);
+        window.searchImgTimeout = setTimeout(() => { loadItemsForImage(true); }, 500);
+    });
+
+    // ดักการ Scroll เฉพาะใน Modal
+    $('#imageModalBody').on('scroll', function() {
+        const div = $(this);
+        if (div[0].scrollHeight - div.scrollTop() <= div.outerHeight() + 300) {
+            if (!imgLoading && imgHasMore) loadItemsForImage(false);
+        }
+    });
+});
+
+window.openImageManager = function() {
+    $('#searchImgItem').val('');
+    imgModal.show();
+    loadItemsForImage(true);
+};
+
+window.loadItemsForImage = function(reset = false) {
+    if (imgLoading) return;
+    const search = $('#searchImgItem').val().trim();
+
+    if (reset) {
+        imgPage = 1; imgHasMore = true;
+        $('#itemsImgGrid').html('<div class="col-12 text-center py-5 mt-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>');
+    } else {
+        $('#itemsImgGrid').append('<div id="imgLoadMore" class="col-12 text-center py-4"><div class="spinner-border text-secondary spinner-border-sm"></div></div>');
+    }
+
+    imgLoading = true;
+
+    $.getJSON(API_URL, { action: 'get_items', search: search, page: imgPage, limit: imgLimit }, function(res) {
+        imgLoading = false; $('#imgLoadMore').remove();
+        if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
+        
+        if (res.data.length < imgLimit) imgHasMore = false;
+        
+        let html = '';
+        if (res.data.length === 0 && reset) {
+            html = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-search fa-4x mb-3 opacity-25"></i><h5 class="fw-bold">ไม่พบรายการสินค้า</h5></div>`;
+            $('#itemsImgGrid').html(html);
+        } else {
+            res.data.forEach(item => {
+                const imgHtml = item.image_path 
+                    ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" class="product-img" id="img_tgt_${item.sap_no}" loading="lazy" onerror="this.outerHTML='${getPlaceholderHTML(item.item_category, item.sap_no)}'">` 
+                    : getPlaceholderHTML(item.item_category, item.sap_no);
+
+                html += `
+                <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+                    <div class="card border border-light shadow-sm h-100">
+                        
+                        <div class="position-relative w-100 bg-light border-bottom" style="padding-top:100%; cursor:pointer;" onclick="$('#file_${item.sap_no}').click()">
+                            <div id="img_container_${item.sap_no}">${imgHtml}</div>
+                            <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 text-white d-flex flex-column align-items-center justify-content-center opacity-0 transition-opacity" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
+                                <i class="fas fa-camera fa-2x mb-1"></i><small class="fw-bold">อัปโหลดรูป</small>
+                            </div>
+                        </div>
+
+                        <input type="file" id="file_${item.sap_no}" class="d-none" accept="image/jpeg, image/png, image/webp" onchange="uploadImage('${item.sap_no}', this)">
+
+                        <div class="card-body p-2 d-flex flex-column">
+                            <div class="small text-primary fw-bold mb-1 text-truncate">SAP: ${item.sap_no}</div>
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${item.part_description || '-'}</div>
+                        </div>
+
+                    </div>
+                </div>`;
+            });
+            
+            if (reset) $('#itemsImgGrid').html(html); else $('#itemsImgGrid').append(html);
+            imgPage++; 
+        }
+    }).fail(() => { imgLoading = false; $('#imgLoadMore').remove(); });
+};
+
+window.uploadImage = function(sapNo, inputElement) {
+    if (!inputElement.files || inputElement.files.length === 0) return;
+    const file = inputElement.files[0];
+    
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire('ไฟล์ใหญ่เกินไป!', 'กรุณาเลือกรูปขนาดไม่เกิน 5MB', 'warning');
+        inputElement.value = ''; return;
+    }
+
+    let formData = new FormData();
+    formData.append('action', 'upload_image');
+    formData.append('sap_no', sapNo);
+    formData.append('image', file);
+
+    $('#loadingOverlay').css('display', 'flex');
+
+    $.ajax({
+        url: API_URL, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
+        success: function(res) {
+            $('#loadingOverlay').hide();
+            if (res.success) {
+                const newImg = `<img src="../../uploads/items/${res.image_path}?v=${new Date().getTime()}" class="product-img" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">`;
+                $(`#img_container_${sapNo}`).html(newImg);
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
+            } else { Swal.fire('Error', res.message, 'error'); }
+            inputElement.value = ''; 
+        },
+        error: function() { $('#loadingOverlay').hide(); inputElement.value = ''; Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error'); }
+    });
+};
+
+// ==========================================
+// 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
+// ==========================================
+let chartItemsInst = null;
+let chartUsersInst = null;
+let rawExportData = [];
+
+// แทรกโค้ดนี้ลงในฟังก์ชัน switchDashboardMode เดิมของคุณ
+window.switchDashboardMode = function(mode) {
+    $('#current_dashboard_mode').val(mode);
+    $('#current_req_id').val(''); 
+
+    // ซ่อน/แสดง Layout หลัก
+    if (mode === 'ANALYTICS') {
+        $('.split-layout-height').addClass('d-none');
+        $('#analytics-layout').removeClass('d-none');
+        
+        // เซ็ตวันที่เริ่มเป็นต้นเดือนปัจจุบัน
+        let d = new Date();
+        $('#analytic_start').val(new Date(d.getFullYear(), d.getMonth(), 2).toISOString().split('T')[0]);
+        $('#analytic_end').val(new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split('T')[0]);
+        
+        loadAnalytics();
+        return; // ออกเลย ไม่ต้องรันโค้ดข้างล่าง
+    } else {
+        $('.split-layout-height').removeClass('d-none');
+        $('#analytics-layout').addClass('d-none');
+    }
+
+    if (mode === 'STOCK') {
+        $('.opt-k2').addClass('d-none'); $('.opt-stock').removeClass('d-none');
+        $('#filter_status').val('ACTIVE'); 
+    } else {
+        $('.opt-stock').addClass('d-none'); $('.opt-k2').removeClass('d-none');
+        $('#filter_status').val('WAITING');
+    }
+    toggleDateFilter(); switchView('list'); loadActiveQueue();
+};
+
+window.loadAnalytics = function() {
+    $('#loadingOverlay').css('display', 'flex');
+    
+    $.getJSON(API_URL, { 
+        action: 'get_analytics', 
+        start_date: $('#analytic_start').val(), 
+        end_date: $('#analytic_end').val() 
+    }, function(res) {
+        $('#loadingOverlay').hide();
+        if(!res.success) { Swal.fire('Error', res.message, 'error'); return; }
+
+        // อัปเดต Summary
+        $('#stat_total_reqs').text(res.summary.total_reqs);
+        $('#stat_total_issued').text(res.summary.total_issued_qty.toLocaleString());
+        $('#stat_waiting_k2').text(res.summary.waiting_k2);
+
+        rawExportData = res.exportData;
+
+        // วาดกราฟ Top 5 Items
+        if(chartItemsInst) chartItemsInst.destroy();
+        const ctxItems = document.getElementById('chartTopItems').getContext('2d');
+        chartItemsInst = new Chart(ctxItems, {
+            type: 'bar',
+            data: {
+                labels: res.topItems.map(i => i.part_description.substring(0, 20) + '...'),
+                datasets: [{ label: 'จำนวนชิ้นที่เบิก', data: res.topItems.map(i => i.total_qty), backgroundColor: '#0d6efd', borderRadius: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // วาดกราฟ Top 5 Users
+        if(chartUsersInst) chartUsersInst.destroy();
+        const ctxUsers = document.getElementById('chartTopUsers').getContext('2d');
+        chartUsersInst = new Chart(ctxUsers, {
+            type: 'doughnut',
+            data: {
+                labels: res.topUsers.map(u => u.fullname),
+                datasets: [{ data: res.topUsers.map(u => u.req_count), backgroundColor: ['#198754', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+    }).fail(handleAjaxError);
+};
+
+// ฟังก์ชันแปลง JSON เป็นไฟล์ CSV และดาวน์โหลด
+window.exportToCSV = function() {
+    if (rawExportData.length === 0) {
+        Swal.fire('ไม่มีข้อมูล', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'info'); return;
+    }
+
+    // หัวตาราง (Header)
+    let csvContent = "\uFEFF"; // ป้องกันภาษาไทยเพี้ยนใน Excel (UTF-8 BOM)
+    csvContent += "วันที่เบิก,เลขที่บิล,ผู้เบิก,รหัส SAP,ชื่อวัสดุ,จำนวนขอเบิก,จำนวนจ่ายจริง,ประเภทคำขอ,สถานะ\n";
+
+    // ข้อมูลแต่ละแถว
+    rawExportData.forEach(row => {
+        let cleanDesc = row.part_description ? row.part_description.replace(/,/g, " ") : "-";
+        let rowData = [row.date_req, row.req_number, row.requester, row.sap_no, cleanDesc, row.qty_requested, row.qty_issued || 0, row.request_type, row.status];
+        csvContent += rowData.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Store_Export_${$('#analytic_start').val()}_to_${$('#analytic_end').val()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};

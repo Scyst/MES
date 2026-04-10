@@ -44,6 +44,7 @@ $pageIcon = "fas fa-store";
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
         .pulse-alert { animation: pulse-red 2s infinite; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="layout-top-header">
 
@@ -62,12 +63,10 @@ $pageIcon = "fas fa-store";
                 <div class="col-12 col-lg-4 col-xl-3 d-flex flex-column h-100" id="left-pane">
                     
                     <ul class="nav nav-pills nav-fill bg-white p-1 rounded-3 shadow-sm border mb-2 flex-shrink-0" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active fw-bold" id="tab-stock" data-bs-toggle="pill" onclick="switchDashboardMode('STOCK')">📦 จ่ายของ (Stock)</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold" id="tab-k2" data-bs-toggle="pill" onclick="switchDashboardMode('K2')">🛒 สั่งซื้อ (K2)</button>
-                        </li>
+                        <li class="nav-item"><button class="nav-link active fw-bold px-1" id="tab-stock" data-bs-toggle="pill" onclick="switchDashboardMode('STOCK')">📦 จ่ายของ</button></li>
+                        <li class="nav-item"><button class="nav-link fw-bold px-1" id="tab-k2" data-bs-toggle="pill" onclick="switchDashboardMode('K2')">🛒 K2</button></li>
+                        <li class="nav-item"><button class="nav-link fw-bold px-1 text-info" id="tab-analytics" data-bs-toggle="pill" onclick="switchDashboardMode('ANALYTICS')"><i class="fas fa-chart-bar"></i> สถิติ</button></li>
+                        <li class="nav-item"><button class="nav-link fw-bold px-1 text-secondary" onclick="openImageManager()"><i class="fas fa-image"></i></button></li>
                     </ul>
 
                     <div class="bg-white border rounded-3 shadow-sm p-2 mb-2 flex-shrink-0">
@@ -176,7 +175,81 @@ $pageIcon = "fas fa-store";
                 </div> 
 
             </div>
+            <div class="row g-3 d-none" id="analytics-layout">
+                
+                <div class="col-12 d-flex flex-wrap justify-content-between align-items-center bg-white p-3 rounded-3 shadow-sm border gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="date" id="analytic_start" class="form-control fw-bold text-primary">
+                        <span class="fw-bold text-muted">ถึง</span>
+                        <input type="date" id="analytic_end" class="form-control fw-bold text-primary">
+                        <button class="btn btn-primary fw-bold px-3" onclick="loadAnalytics()"><i class="fas fa-search"></i></button>
+                    </div>
+                    <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-2"></i>Export Data</button>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="card bg-primary text-white border-0 shadow-sm h-100">
+                        <div class="card-body text-center py-4">
+                            <h6 class="fw-bold opacity-75 mb-1">บิลเบิกจ่ายสำเร็จ</h6><h2 class="fw-bold mb-0" id="stat_total_reqs">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card bg-success text-white border-0 shadow-sm h-100">
+                        <div class="card-body text-center py-4">
+                            <h6 class="fw-bold opacity-75 mb-1">จำนวนชิ้นที่จ่ายออก</h6><h2 class="fw-bold mb-0" id="stat_total_issued">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card bg-warning text-dark border-0 shadow-sm h-100">
+                        <div class="card-body text-center py-4">
+                            <h6 class="fw-bold opacity-75 mb-1">รายการรอเปิด K2</h6><h2 class="fw-bold mb-0" id="stat_waiting_k2">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-primary"></i>5 อันดับวัสดุเบิกเยอะสุด (จำนวนชิ้น)</h6></div>
+                        <div class="card-body"><canvas id="chartTopItems" height="250"></canvas></div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-user-chart me-2 text-info"></i>5 อันดับผู้เบิกบ่อยสุด (จำนวนบิล)</h6></div>
+                        <div class="card-body"><canvas id="chartTopUsers" height="250"></canvas></div>
+                    </div>
+                </div>
+
+            </div>
         </main>
+    </div>
+
+    <div class="modal fade" id="imageManageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content bg-light">
+                <div class="modal-header bg-white border-bottom shadow-sm z-1 py-2">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-images me-2 text-primary"></i>จัดการรูปภาพสินค้า (Master Data)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3 p-md-4 overflow-auto hide-scrollbar" id="imageModalBody">
+                    
+                    <div class="bg-white rounded-3 shadow-sm p-2 mb-3 border d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="input-group shadow-sm" style="max-width: 400px;">
+                            <span class="input-group-text bg-light text-primary border-end-0"><i class="fas fa-search"></i></span>
+                            <input type="text" id="searchImgItem" class="form-control border-start-0" placeholder="ค้นหารหัส SAP, ชื่อ..." autocomplete="off">
+                        </div>
+                        <div class="text-muted small fw-bold">
+                            <i class="fas fa-info-circle text-primary me-1"></i> คลิกที่รูปเพื่อเปลี่ยน (สัดส่วน 1:1, ไม่เกิน 5MB)
+                        </div>
+                    </div>
+
+                    <div class="row g-2 g-md-3" id="itemsImgGrid"></div>
+
+                </div>
+            </div>
+        </div>
     </div>
 
     <input type="hidden" id="current_req_id">

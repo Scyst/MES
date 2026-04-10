@@ -378,7 +378,20 @@ async function openItemModal(item = null) {
         setInputValue('StandardPrice', item.StandardPrice);
         setInputValue('Price_USD', item.Price_USD);
 
-        if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            if (item.is_active == 0) {
+                // ถ้าไอเท็มถูกลบไปแล้ว ให้เปลี่ยนปุ่มเป็นสีเขียวและใช้คำว่า Restore
+                deleteBtn.innerHTML = '<i class="fas fa-trash-restore me-1"></i> Restore';
+                deleteBtn.className = 'btn btn-sm btn-success fw-bold px-3 me-2';
+                deleteBtn.onclick = restoreItem; // เปลี่ยนไปเรียกฟังก์ชันกู้คืน
+            } else {
+                // ถ้าไอเท็มยังใช้งานได้ ให้เป็นปุ่ม Delete สีแดงเหมือนเดิม
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Deactivate';
+                deleteBtn.className = 'btn btn-sm btn-danger fw-bold px-3 me-2';
+                deleteBtn.onclick = deleteItem;
+            }
+        }
 
         const result = await fetchAPI(ITEM_MASTER_API, 'get_item_routes', 'GET', null, { item_id: item.item_id });
         const routes = result.success ? result.data : [];
@@ -401,6 +414,29 @@ async function openItemModal(item = null) {
         if (routesTbody) renderRoutesInModal([]);
     }
     openModal('itemModal');
+}
+
+// 🌟 ฟังก์ชันใหม่สำหรับปลุกชีพข้อมูล (Restore)
+async function restoreItem() {
+    const itemId = document.getElementById('item_id').value;
+    const sapNo = document.getElementById('sap_no').value;
+    
+    if (confirm(`คุณต้องการกู้คืน (Restore) สินค้ารหัส SAP: ${sapNo} ใช่หรือไม่?`)) {
+        const btnSave = document.getElementById('btnSaveItem');
+        toggleButtonState(btnSave, true, 'Restoring...');
+        try {
+            const result = await fetchAPI(ITEM_MASTER_API, 'restore_item', 'POST', { item_id: itemId });
+            if (result.success) {
+                closeModal('itemModal');
+                await fetchItems(currentPage);
+                showToast(result.message, 'var(--bs-success)');
+            } else {
+                showToast(result.message, 'var(--bs-danger)');
+            }
+        } finally {
+            toggleButtonState(btnSave, false);
+        }
+    }
 }
 
 function renderRoutesInModal(routes) {
@@ -1803,7 +1839,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ITEM MASTER & ROUTES EVENTS
     // =========================================================
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
-    document.getElementById('deleteItemBtn')?.addEventListener('click', deleteItem);
     document.getElementById('itemAndRoutesForm')?.addEventListener('submit', handleItemFormSubmit);
     
     document.getElementById('modalAddNewRouteBtn')?.addEventListener('click', () => addRouteRow());

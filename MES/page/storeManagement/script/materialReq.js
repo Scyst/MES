@@ -82,6 +82,11 @@ function getPlaceholderHTML(category, sapNo) {
     `;
 }
 
+// 🟢 ฟังก์ชันช่วยเหลือเมื่อรูปภาพโหลดไม่ขึ้น (ป้องกันเครื่องหมายคำพูดตีกัน) 🟢
+window.handleImageError = function(imgElement, category, sapNo) {
+    $(imgElement).replaceWith(getPlaceholderHTML(category, sapNo));
+};
+
 function getIconPlaceholder(category) {
     let icon = 'fa-box'; let color = '#6c757d'; 
     const cat = category ? category.toUpperCase() : '';
@@ -139,7 +144,7 @@ window.loadCatalog = function(category = null, isLoadMore = false) {
                 const safeDesc = item.description ? item.description.replace(/'/g, "\\'") : 'N/A';
                 
                 const imgHtml = item.image_path 
-                    ? `<img src="../../uploads/items/${item.image_path}" class="product-img" loading="lazy" onerror="this.outerHTML='${getPlaceholderHTML(item.item_category, item.item_code)}'">` 
+                    ? `<img src="../../uploads/items/${item.image_path}" class="product-img" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
                     : getPlaceholderHTML(item.item_category, item.item_code);
 
                 const badgeHtml = isOutOfStock 
