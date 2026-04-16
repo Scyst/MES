@@ -50,11 +50,16 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Material Type</label>
-                                    <select class="form-select form-select-sm" id="material_type">
+                                    <select class="form-select form-select-sm fw-bold text-primary" id="material_type">
                                         <option value="FG">FG (Finished Good)</option>
-                                        <option value="RM">RM (Raw Material)</option>
+                                        <option value="SEMI">SEMI (Semi-Finished)</option>
                                         <option value="WIP">WIP (Work in Process)</option>
-                                        <option value="PKG">PKG (Packaging)</option>
+                                        <option value="RM">RM (Raw Material)</option>
+                                        <option value="PKG">PKG (Packaging - บรรจุภัณฑ์)</option>
+                                        <option value="CON">CON (Consumable - สิ้นเปลือง)</option>
+                                        <option value="SP">SP (Spare Part - อะไหล่)</option>
+                                        <option value="TOOL">TOOL (Tools - อุปกรณ์)</option>
+                                        <option value="OTHER">OTHER (อื่นๆ)</option>
                                     </select>
                                 </div>
                                 <div class="col-12">

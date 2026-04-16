@@ -37,9 +37,17 @@ try {
             $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] === 'true';
             $filter_model = $_GET['filter_model'] ?? '';
 
+            $filter_material = $_GET['filter_material'] ?? ''; 
+
             $params = [];
             $fromClause = "FROM " . ITEMS_TABLE . " i WITH (NOLOCK)";
             $conditions = [];
+
+            // 🌟 เพิ่ม Logic ถ้ามีการเลือกประเภท
+            if (!empty($filter_material)) {
+                $conditions[] = "i.material_type = ?";
+                $params[] = $filter_material;
+            }
 
             // 🛡️ [RESTORED]: Supervisor Line Filtering Logic
             if ($currentUser['role'] === 'supervisor') {

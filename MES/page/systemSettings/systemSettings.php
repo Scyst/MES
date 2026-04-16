@@ -79,7 +79,21 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
                                 <input type="text" class="form-control border-start-0" id="itemMasterSearch" placeholder="ค้นหา SAP No., Part No..." autocomplete="off">
                             </div>
-                            <select id="modelFilterValue" class="form-select form-select-sm w-auto shadow-sm">
+                            
+                            <select id="materialTypeFilter" class="form-select form-select-sm w-auto shadow-sm fw-bold text-primary border-primary">
+                                <option value="">-- ทุกประเภท (All Types) --</option>
+                                <option value="FG">FG (Finished Good)</option>
+                                <option value="SEMI">SEMI (Semi-Finished)</option>
+                                <option value="WIP">WIP (Work in Process)</option>
+                                <option value="RM">RM (Raw Material)</option>
+                                <option value="PKG">PKG (Packaging)</option>
+                                <option value="CON">CON (Consumable)</option>
+                                <option value="SP">SP (Spare Part)</option>
+                                <option value="TOOL">TOOL (Tools)</option>
+                                <option value="OTHER">OTHER (อื่นๆ)</option>
+                            </select>
+
+                            <select id="modelFilterValue" class="form-select form-select-sm w-auto shadow-sm d-none">
                                 <option value="">-- All Models --</option>
                             </select>
                         </div>

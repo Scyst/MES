@@ -187,6 +187,7 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <div class="row g-3 d-none h-100 overflow-auto pb-4 hide-scrollbar" id="analytics-layout">
+                    
                     <div class="col-12 d-flex flex-wrap justify-content-between align-items-center bg-white p-3 rounded-3 shadow-sm border gap-2 flex-shrink-0">
                         <div class="d-flex align-items-center gap-2">
                             <input type="date" id="analytic_start" class="form-control fw-bold text-primary">
@@ -194,40 +195,66 @@ $pageIcon = "fas fa-store";
                             <input type="date" id="analytic_end" class="form-control fw-bold text-primary">
                             <button class="btn btn-primary fw-bold px-3" onclick="loadAnalytics()"><i class="fas fa-search"></i></button>
                         </div>
-                        <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-2"></i>Export Data</button>
+                        <button class="btn btn-success fw-bold px-4 shadow-sm" onclick="exportToCSV()"><i class="fas fa-file-excel me-2"></i>Export CSV</button>
                     </div>
 
-                    <div class="col-12 col-md-4 flex-shrink-0">
-                        <div class="card bg-primary text-white border-0 shadow-sm h-100">
-                            <div class="card-body text-center py-4">
-                                <h6 class="fw-bold opacity-75 mb-1">บิลเบิกจ่ายสำเร็จ</h6><h2 class="fw-bold mb-0" id="stat_total_reqs">0</h2>
+                    <div class="col-6 col-lg-3 flex-shrink-0">
+                        <div class="card bg-white border-0 shadow-sm h-100 border-start border-primary border-4">
+                            <div class="card-body py-3">
+                                <h6 class="fw-bold text-muted mb-1 small"><i class="fas fa-check-circle text-primary me-1"></i> บิลเบิกสำเร็จ</h6>
+                                <h3 class="fw-bold text-dark mb-0" id="stat_total_reqs">0</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4 flex-shrink-0">
-                        <div class="card bg-success text-white border-0 shadow-sm h-100">
-                            <div class="card-body text-center py-4">
-                                <h6 class="fw-bold opacity-75 mb-1">จำนวนชิ้นที่จ่ายออก</h6><h2 class="fw-bold mb-0" id="stat_total_issued">0</h2>
+                    <div class="col-6 col-lg-3 flex-shrink-0">
+                        <div class="card bg-white border-0 shadow-sm h-100 border-start border-success border-4">
+                            <div class="card-body py-3">
+                                <h6 class="fw-bold text-muted mb-1 small"><i class="fas fa-box-open text-success me-1"></i> จำนวนชิ้นที่จ่ายออก</h6>
+                                <h3 class="fw-bold text-dark mb-0" id="stat_total_issued">0</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4 flex-shrink-0">
-                        <div class="card bg-warning text-dark border-0 shadow-sm h-100">
-                            <div class="card-body text-center py-4">
-                                <h6 class="fw-bold opacity-75 mb-1">รายการรอเปิด K2</h6><h2 class="fw-bold mb-0" id="stat_waiting_k2">0</h2>
+                    <div class="col-6 col-lg-3 flex-shrink-0">
+                        <div class="card bg-white border-0 shadow-sm h-100 border-start border-warning border-4">
+                            <div class="card-body py-3">
+                                <h6 class="fw-bold text-muted mb-1 small"><i class="fas fa-shopping-cart text-warning me-1"></i> รอเปิด K2</h6>
+                                <h3 class="fw-bold text-dark mb-0" id="stat_waiting_k2">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3 flex-shrink-0">
+                        <div class="card bg-white border-0 shadow-sm h-100 border-start border-danger border-4">
+                            <div class="card-body py-3">
+                                <h6 class="fw-bold text-muted mb-1 small"><i class="fas fa-times-circle text-danger me-1"></i> บิลที่ถูกปฏิเสธ</h6>
+                                <h3 class="fw-bold text-dark mb-0" id="stat_total_rejects">0</h3>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-12 col-lg-6 flex-shrink-0">
+                    <div class="col-12 flex-shrink-0">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-primary"></i>5 อันดับวัสดุเบิกเยอะสุด (จำนวนชิ้น)</h6></div>
+                            <div class="card-header bg-white border-bottom pt-3 pb-2">
+                                <h6 class="fw-bold text-dark"><i class="fas fa-chart-line me-2 text-primary"></i>แนวโน้มการเบิกจ่ายรายวัน (Daily Trends)</h6>
+                            </div>
+                            <div class="card-body" style="height: 300px;"><canvas id="chartTrend"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4 flex-shrink-0">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-success"></i>สัดส่วนตามหมวดหมู่</h6></div>
+                            <div class="card-body"><canvas id="chartCategory" height="250"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4 flex-shrink-0">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-chart-bar me-2 text-warning"></i>5 อันดับวัสดุเบิกเยอะสุด</h6></div>
                             <div class="card-body"><canvas id="chartTopItems" height="250"></canvas></div>
                         </div>
                     </div>
-                    <div class="col-12 col-lg-6 flex-shrink-0">
+                    <div class="col-12 col-lg-4 flex-shrink-0">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-user-chart me-2 text-info"></i>5 อันดับผู้เบิกบ่อยสุด (จำนวนบิล)</h6></div>
+                            <div class="card-header bg-white border-bottom pt-3 pb-2"><h6 class="fw-bold text-dark"><i class="fas fa-user-chart me-2 text-info"></i>5 อันดับผู้เบิกบ่อยสุด</h6></div>
                             <div class="card-body"><canvas id="chartTopUsers" height="250"></canvas></div>
                         </div>
                     </div>

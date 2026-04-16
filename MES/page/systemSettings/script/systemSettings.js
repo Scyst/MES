@@ -193,28 +193,38 @@ async function handleLocationFormSubmit(event) {
 // =================================================================
 async function fetchItems(page = 1) {
     currentPage = page;
+    
+    // 1. ดึง Elements มาจากหน้าจอ (ป้องกัน Error กรณีหา Element ไม่เจอ)
     const searchInput = document.getElementById('itemMasterSearch');
     const toggleInactiveBtn = document.getElementById('toggleInactiveBtn');
     const modelFilterValue = document.getElementById('modelFilterValue');
+    const materialTypeFilter = document.getElementById('materialTypeFilter'); // 🌟 เพิ่มตัวแปรนี้
     
+    // 2. สกัดค่า (Value) ออกมาเตรียมส่งให้ API
     const searchTerm = searchInput ? searchInput.value : '';
     const showInactive = toggleInactiveBtn ? toggleInactiveBtn.classList.contains('active') : false;
     const selectedModel = modelFilterValue ? modelFilterValue.value : '';
+    const selectedMaterial = materialTypeFilter ? materialTypeFilter.value : ''; // 🌟 ดึงค่าประเภทสินค้า
     
     try {
+        // 3. ส่งข้อมูลไปให้ Backend
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { 
-            page, 
+            page: page, 
             search: searchTerm, 
             show_inactive: showInactive,
-            filter_model: selectedModel
+            filter_model: selectedModel,
+            filter_material: selectedMaterial // 🌟 แนบประเภทสินค้าไปกับ API ตรงนี้!
         });
+
         if (result.success) {
             renderItemsTable(result.data, result.total, page);
         } else {
             const tbody = document.getElementById('itemsTableBody');
             if (tbody) tbody.innerHTML = `<tr><td colspan="22" class="text-center text-danger">${escapeHtml(result.message)}</td></tr>`;
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Error fetching items:", e);
+    }
 }
 
 function setupItemMasterAutocomplete() {
@@ -1840,7 +1850,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     document.getElementById('addNewItemBtn')?.addEventListener('click', () => openItemModal());
     document.getElementById('itemAndRoutesForm')?.addEventListener('submit', handleItemFormSubmit);
-    
+    document.getElementById('materialTypeFilter')?.addEventListener('change', () => fetchItems(1));
     document.getElementById('modalAddNewRouteBtn')?.addEventListener('click', () => addRouteRow());
     
     document.getElementById('toggleInactiveBtn')?.addEventListener('click', (event) => {

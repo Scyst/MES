@@ -258,51 +258,61 @@ try {
             }
             break;
 
-        // ==========================================
-        // 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
-        // ==========================================
         case 'get_analytics':
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-01');
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-t'); 
-            
-            // [FIX 3] SARGable Query ป้องกันค้าง (แก้ไขส่วน Analytics ทั้งหมด)
             $stmtSum = $pdo->prepare("
                 SELECT 
-                    COUNT(DISTINCT r.id) as total_reqs,
-                    ISNULL(SUM(ri.qty_issued), 0) as total_issued_qty,
-                    (SELECT COUNT(*) FROM dbo.STORE_K2_REQUESTS WHERE k2_status = 'WAITING') as waiting_k2
+                    COUNT(DISTINCT CASE WHEN r.status = 'COMPLETED' THEN r.id END) as total_reqs,
+                    ISNULL(SUM(CASE WHEN r.status = 'COMPLETED' THEN ri.qty_issued ELSE 0 END), 0) as total_issued_qty,
+                    (SELECT COUNT(*) FROM dbo.STORE_K2_REQUESTS WHERE k2_status = 'WAITING') as waiting_k2,
+                    COUNT(DISTINCT CASE WHEN r.status = 'REJECTED' THEN r.id END) as total_rejects
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                 LEFT JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) 
-                  AND r.status = 'COMPLETED'
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
             ");
             $stmtSum->execute([$startDate, $endDate]);
             $summary = $stmtSum->fetch(PDO::FETCH_ASSOC);
-
+            $stmtTrend = $pdo->prepare("
+                SELECT CAST(r.created_at AS DATE) as req_date, COUNT(DISTINCT r.id) as req_count
+                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED'
+                GROUP BY CAST(r.created_at AS DATE)
+                ORDER BY req_date ASC
+            ");
+            $stmtTrend->execute([$startDate, $endDate]);
+            $trendData = $stmtTrend->fetchAll(PDO::FETCH_ASSOC);
+            $stmtCat = $pdo->prepare("
+                SELECT ISNULL(i.item_category, 'OTHER') as category, SUM(ri.qty_issued) as total_qty
+                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
+                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0
+                GROUP BY i.item_category
+            ");
+            $stmtCat->execute([$startDate, $endDate]);
+            $categoryData = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
             $stmtTopItems = $pdo->prepare("
                 SELECT TOP 5 i.part_description, SUM(ri.qty_issued) as total_qty
                 FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                 JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) 
-                  AND r.status = 'COMPLETED' AND ri.qty_issued > 0
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0
                 GROUP BY i.part_description
                 ORDER BY total_qty DESC
             ");
             $stmtTopItems->execute([$startDate, $endDate]);
             $topItems = $stmtTopItems->fetchAll(PDO::FETCH_ASSOC);
-
             $stmtTopUsers = $pdo->prepare("
                 SELECT TOP 5 u.fullname, COUNT(DISTINCT r.id) as req_count
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                 JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED'
                 GROUP BY u.fullname
                 ORDER BY req_count DESC
             ");
             $stmtTopUsers->execute([$startDate, $endDate]);
             $topUsers = $stmtTopUsers->fetchAll(PDO::FETCH_ASSOC);
-
             $stmtExport = $pdo->prepare("
                 SELECT r.req_number, FORMAT(r.created_at, 'yyyy-MM-dd HH:mm') as date_req, 
                        u.fullname as requester, i.sap_no, i.part_description, 
@@ -320,6 +330,8 @@ try {
             echo json_encode([
                 'success' => true, 
                 'summary' => $summary, 
+                'trendData' => $trendData,
+                'categoryData' => $categoryData,
                 'topItems' => $topItems, 
                 'topUsers' => $topUsers,
                 'exportData' => $exportData

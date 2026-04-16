@@ -542,6 +542,8 @@ function switchView(view) {
 // ==========================================
 // 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
 // ==========================================
+let chartTrendInst = null;
+let chartCatInst = null;
 let chartItemsInst = null;
 let chartUsersInst = null;
 let rawExportData = [];
@@ -608,30 +610,89 @@ window.loadAnalytics = async function() {
         document.getElementById('loadingOverlay').style.display = 'none';
         if(!res.success) { Swal.fire('Error', res.message, 'error'); return; }
 
+        // Update KPIs
         document.getElementById('stat_total_reqs').innerText = res.summary.total_reqs;
-        document.getElementById('stat_total_issued').innerText = res.summary.total_issued_qty.toLocaleString();
+        document.getElementById('stat_total_issued').innerText = parseFloat(res.summary.total_issued_qty).toLocaleString();
         document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
+        document.getElementById('stat_total_rejects').innerText = res.summary.total_rejects;
 
         rawExportData = res.exportData;
 
+        // 1. กราฟเส้นแนวโน้มรายวัน (Line Chart)
+        if(chartTrendInst) chartTrendInst.destroy();
+        const ctxTrend = document.getElementById('chartTrend').getContext('2d');
+        chartTrendInst = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: res.trendData.map(d => d.req_date),
+                datasets: [{
+                    label: 'จำนวนบิลเบิกสำเร็จ',
+                    data: res.trendData.map(d => d.req_count),
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#0d6efd',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.3 // ทำให้เส้นโค้งสมูท
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+
+        // 2. กราฟสัดส่วนหมวดหมู่ (Doughnut Chart)
+        if(chartCatInst) chartCatInst.destroy();
+        const ctxCat = document.getElementById('chartCategory').getContext('2d');
+        chartCatInst = new Chart(ctxCat, {
+            type: 'doughnut',
+            data: {
+                labels: res.categoryData.map(c => c.category),
+                datasets: [{ 
+                    data: res.categoryData.map(c => c.total_qty), 
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%' }
+        });
+
+        // 3. กราฟแท่ง Top 5 Items
         if(chartItemsInst) chartItemsInst.destroy();
         const ctxItems = document.getElementById('chartTopItems').getContext('2d');
         chartItemsInst = new Chart(ctxItems, {
             type: 'bar',
             data: {
-                labels: res.topItems.map(i => (i.part_description || '').substring(0, 20) + '...'),
-                datasets: [{ label: 'จำนวนชิ้นที่เบิก', data: res.topItems.map(i => i.total_qty), backgroundColor: '#0d6efd', borderRadius: 4 }]
+                labels: res.topItems.map(i => (i.part_description || '').substring(0, 15) + '...'),
+                datasets: [{ 
+                    label: 'จำนวนชิ้นที่จ่าย', 
+                    data: res.topItems.map(i => i.total_qty), 
+                    backgroundColor: '#ffc107', 
+                    borderRadius: 4 
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false } } // ซ่อนแกน x ให้ดูคลีน
+            }
         });
 
+        // 4. กราฟเรดาร์/พาย Top 5 Users
         if(chartUsersInst) chartUsersInst.destroy();
         const ctxUsers = document.getElementById('chartTopUsers').getContext('2d');
         chartUsersInst = new Chart(ctxUsers, {
-            type: 'doughnut',
+            type: 'pie',
             data: {
-                labels: res.topUsers.map(u => u.fullname),
-                datasets: [{ data: res.topUsers.map(u => u.req_count), backgroundColor: ['#198754', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d'] }]
+                labels: res.topUsers.map(u => u.fullname.split(' ')[0]), // เอาแค่ชื่อหน้า
+                datasets: [{ 
+                    data: res.topUsers.map(u => u.req_count), 
+                    backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'],
+                    borderWidth: 0
+                }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
