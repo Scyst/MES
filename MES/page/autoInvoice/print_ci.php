@@ -25,7 +25,11 @@ try {
     $stmtDetails->execute([$invoice_id]);
     $details = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
     
-    $display_po = !empty($details) ? ($details[0]['po_number'] ?? '-') : '-';
+    $all_pos = array_column($details, 'po_number');
+    $unique_pos = array_filter(array_unique($all_pos), function($val) {
+        return !empty(trim($val)) && trim($val) !== '-';
+    });
+    $display_po = !empty($unique_pos) ? implode(', ', $unique_pos) : '-';
     $display_marks = !empty($details) ? ($details[0]['shipping_marks'] ?? '-') : '-';
 
 } catch (Exception $e) {
