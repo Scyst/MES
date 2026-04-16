@@ -1,21 +1,22 @@
 "use strict";
 
+// ========================================================
+// 🟢 1. GLOBAL VARIABLES & CONFIG 🟢
+// ========================================================
 const API_URL = 'api/manageMaterial.php';
 let cart = {}; 
-let historyModal, trackingModal; 
+let historyModal, trackingModal, editItemModalInst; 
 
-// 🟢 ตัวแปรสำหรับจัดการ Infinite Scroll 🟢
+// Pagination & Fetch Control
 let currentPage = 1;
 const itemLimit = 40; 
 let isLoading = false;
 let hasMoreItems = true;
 let searchTimeout;
-
-// 🟢 เพิ่มตัวแปรสำหรับจัดการ Abort API Request 🟢
 let currentSearchController = null;
 
 // ========================================================
-// 🟢 Custom Fetch Wrapper สำหรับหน้านี้โดยเฉพาะ 🟢
+// 🟢 2. CUSTOM FETCH WRAPPER 🟢
 // ========================================================
 async function fetchMaterialAPI(params, method = 'GET', signal = null) {
     let url = API_URL;
@@ -36,18 +37,14 @@ async function fetchMaterialAPI(params, method = 'GET', signal = null) {
         }
         
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta) {
-            if (!formData.has('csrf_token')) {
-                formData.append('csrf_token', csrfMeta.getAttribute('content'));
-            }
+        if (csrfMeta && !formData.has('csrf_token')) {
+            formData.append('csrf_token', csrfMeta.getAttribute('content'));
         }
         options.body = formData;
     }
 
     const response = await fetch(url, options);
-    if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
     return await response.json();
 }
 
@@ -57,92 +54,86 @@ function handleFetchError(error, defaultMsg = "เกิดข้อผิดพ
     Swal.fire('Error', error.message || defaultMsg, 'error');
 }
 
+// ========================================================
+// 🟢 3. INITIALIZATION & EVENT LISTENERS 🟢
+// ========================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // 3.1 Load Initial Data
     loadCatalog('ALL');
 
+    // 3.2 Search Debounce
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => { 
-                loadCatalog(null, false); 
-            }, 500);
+            searchTimeout = setTimeout(() => { loadCatalog(null, false); }, 500);
         });
     }
 
+    // 3.3 Initialize Modals
     const histEl = document.getElementById('historyModal');
     const trackEl = document.getElementById('trackingModal');
     if (histEl) historyModal = new bootstrap.Modal(histEl);
     if (trackEl) trackingModal = new bootstrap.Modal(trackEl);
 
-    window.addEventListener('scroll', () => {
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        if (scrollTop + clientHeight >= scrollHeight - 300) {
-            if (!isLoading && hasMoreItems) {
-                loadCatalog(null, true);
+    // 3.4 Infinite Scroll (แก้ไขให้ตรวจจับที่ main-content แทน body)
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.addEventListener('scroll', () => {
+            if (mainContent.scrollTop + mainContent.clientHeight >= mainContent.scrollHeight - 300) {
+                if (!isLoading && hasMoreItems) loadCatalog(null, true);
             }
-        }
-    });
+        });
+    } else {
+        window.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            if (scrollTop + clientHeight >= scrollHeight - 300) {
+                if (!isLoading && hasMoreItems) loadCatalog(null, true);
+            }
+        });
+    }
 
+    // 3.5 Radio Buttons
     document.querySelectorAll('input[name="reqType"]').forEach(radio => {
         radio.addEventListener('change', renderCartUI);
     });
+
+    // 3.6 Global Image Upload Listener
+    const globalUploadInput = document.getElementById('globalImageUpload');
+    if (globalUploadInput) {
+        globalUploadInput.addEventListener('change', handleImageUploadEvent);
+    }
 });
 
+// ========================================================
+// 🟢 4. CATALOG & UI RENDERING 🟢
+// ========================================================
 window.toggleImages = function() {
-    // 1. สลับคลาสที่ body เพื่อซ่อน/แสดงรูปภาพ
     document.body.classList.toggle('hide-images');
-    
-    // 2. เช็คสถานะว่าตอนนี้ซ่อนอยู่หรือไม่
     const isHidden = document.body.classList.contains('hide-images');
     const btn = document.getElementById('toggleImageBtn');
     
     if (btn) {
         if (isHidden) {
-            // โหมด: ซ่อนรูป (ปุ่มสีขาว/เทา)
             btn.classList.remove('active');
             btn.innerHTML = '<i class="fas fa-image-slash text-secondary"></i> <span class="d-none d-sm-inline">ซ่อนรูป</span>';
         } else {
-            // โหมด: แสดงรูป (ปุ่มสีฟ้า Active)
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-image"></i> <span class="d-none d-sm-inline">แสดงรูป</span>';
         }
     }
 };
 
-function getPlaceholderHTML(category, sapNo, idAttr = '') {
-    let icon = 'fa-box'; let color = '#6c757d'; 
-    const cat = category ? category.toUpperCase() : '';
-    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
-    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
-    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
-    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
-
-    return `
-        <div ${idAttr ? `id="${idAttr}"` : ''} class="placeholder-img d-flex flex-column align-items-center justify-content-center" 
-             style="background: radial-gradient(circle, #ffffff 0%, #f0f3f8 100%);">
-            <i class="fas ${icon} fa-4x mb-3" style="color: ${color}; opacity: 0.3;"></i>
-            <span class="small fw-bold px-2 w-100 text-center text-truncate" 
-                  style="color: ${color}; opacity: 0.4; letter-spacing: 1px;">
-                ${sapNo}
-            </span>
-        </div>
-    `;
-}
-
-window.handleImageError = function(imgElement, category, sapNo) {
-    imgElement.outerHTML = getPlaceholderHTML(category, sapNo);
+window.filterCategory = function(category, element) {
+    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    element.dataset.category = category;
+    
+    const searchInput = document.getElementById('searchItem');
+    if (searchInput) searchInput.value = ''; 
+    
+    loadCatalog(category, false); 
 };
-
-function getIconPlaceholder(category) {
-    let icon = 'fa-box'; let color = '#6c757d'; 
-    const cat = category ? category.toUpperCase() : '';
-    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
-    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
-    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
-    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
-    return `<div class="ph-mini d-flex align-items-center justify-content-center bg-light border rounded" style="width: 45px; height: 45px;"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.2rem;"></i></div>`;
-}
 
 window.loadCatalog = async function(category = null, isLoadMore = false) {
     if (!isLoadMore) {
@@ -152,8 +143,19 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
         if (isLoading) return;
     }
     
-    const activeCategory = document.querySelector('.category-chip.active');
-    if (!category) category = activeCategory ? activeCategory.dataset.category : 'ALL';
+    // 🟢 [FIX] จัดการเรื่อง Default Category ให้รัดกุม 100% ป้องกันค่า 'undefined'
+    if (!category) {
+        const activeCategory = document.querySelector('.category-chip.active');
+        // ใช้ getAttribute เพื่อความชัวร์ในการดึงค่าจาก HTML
+        category = (activeCategory && activeCategory.getAttribute('data-category')) 
+            ? activeCategory.getAttribute('data-category') 
+            : 'ALL';
+    }
+    
+    // ดักจับอีกชั้น เผื่อค่ากลายเป็นข้อความ 'undefined' หรือค่าว่าง
+    if (category === 'undefined' || category === 'null' || !category) {
+        category = 'ALL';
+    }
 
     const searchInput = document.getElementById('searchItem');
     const sortInput = document.getElementById('sortItem');
@@ -200,24 +202,21 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
                 const onHand = parseFloat(item.onhand_qty);
                 const isOutOfStock = onHand <= 0;
                 const safeDesc = item.description ? item.description.replace(/'/g, "\\'") : 'N/A';
+                const safeCategory = item.item_category || 'OTHER'; 
                 
-                // 1. เพิ่ม ID เข้าไปที่ img หรือ placeholder เพื่อให้ชี้เป้าแก้รูปได้ถูกตัว
                 const imgHtml = item.image_path 
-                        ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" id="img_element_${item.item_code}" class="product-img" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
-                        : getPlaceholderHTML(item.item_category, item.item_code, `img_element_${item.item_code}`);
+                        ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" id="img_element_${item.item_code}" class="product-img" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${item.item_code}')">` 
+                        : getPlaceholderHTML(safeCategory, item.item_code, `img_element_${item.item_code}`);
 
                 const badgeHtml = isOutOfStock 
                     ? `<span class="badge bg-danger stock-badge px-2 py-1"><i class="fas fa-times-circle me-1"></i> สินค้าหมด</span>`
                     : `<span class="badge bg-success stock-badge px-2 py-1"><i class="fas fa-check-circle me-1"></i> สต๊อก: ${onHand.toLocaleString()}</span>`;
 
-                // 2. ถ้าเป็นสิทธิ์ Admin ให้แสดงปุ่มแก้รูป
-                const editBtnHtml = CAN_MANAGE_IMAGE 
-                    ? `<div class="position-absolute top-0 end-0 p-2 z-3">
-                           <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="triggerImageUpload('${item.item_code}')" title="เปลี่ยน/อัปโหลดรูปภาพ">
-                               <i class="fas fa-camera"></i>
-                           </button>
-                       </div>`
-                    : '';
+                const editBtnHtml = typeof CAN_MANAGE_IMAGE !== 'undefined' && CAN_MANAGE_IMAGE 
+                    ? `<div class="position-absolute top-0 end-0 p-2 z-3 d-flex gap-1">
+                           <button class="btn btn-sm btn-light border shadow-sm text-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="openEditItemModal('${item.item_code}')" title="ตั้งค่าข้อมูลสินค้า"><i class="fas fa-cog"></i></button>
+                           <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="triggerImageUpload('${item.item_code}')" title="เปลี่ยน/อัปโหลดรูปภาพ"><i class="fas fa-camera"></i></button>
+                       </div>` : '';
 
                 const cardOpacity = isOutOfStock ? 'opacity: 0.85;' : '';
                 const currentCartQty = cart[item.item_code] ? cart[item.item_code].qty : 1;
@@ -226,9 +225,7 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
                 <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2 col-xxl-2">
                     <div class="product-card" style="${cardOpacity}">
                         <div class="product-img-wrapper" id="img_wrapper_${item.item_code}">
-                            ${badgeHtml}
-                            ${editBtnHtml}
-                            ${imgHtml}
+                            ${badgeHtml}${editBtnHtml}${imgHtml}
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
 
@@ -263,6 +260,9 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
     }
 };
 
+// ========================================================
+// 🟢 5. CART & CHECKOUT OPERATIONS 🟢
+// ========================================================
 window.updateInputQty = function(itemCode, change) {
     const input = document.getElementById(`input_qty_${itemCode}`);
     if (!input) return;
@@ -289,19 +289,16 @@ window.addToCart = function(itemCode, description, onHandQty) {
 
 window.removeFromCart = function(itemCode) { 
     delete cart[itemCode]; 
-    
-    // [FIX 3] เคลียร์ค่า input ในแคตตาล็อกกลับไปเป็น 1 เสมอเมื่อถูกลบ
     const inputEl = document.getElementById(`input_qty_${itemCode}`);
     if (inputEl) inputEl.value = 1;
-
     renderCartUI(); 
 };
 
 function renderCartUI() {
     const itemCodes = Object.keys(cart);
     const totalItems = itemCodes.length;
-    
     const badge = document.getElementById('cartItemCount');
+    
     if (badge) {
         badge.innerText = totalItems;
         if(totalItems > 0) {
@@ -325,11 +322,8 @@ function renderCartUI() {
     
     itemCodes.forEach(code => {
         let item = cart[code];
-        
-        let warningHtml = '';
-        if (reqType === 'STOCK' && item.qty > item.maxQty) {
-            warningHtml = `<div class="small text-danger fw-bold mt-1"><i class="fas fa-exclamation-triangle"></i> สต๊อกมีแค่ ${item.maxQty} ชิ้น (ต้องเปิด K2)</div>`;
-        }
+        let warningHtml = (reqType === 'STOCK' && item.qty > item.maxQty) 
+            ? `<div class="small text-danger fw-bold mt-1"><i class="fas fa-exclamation-triangle"></i> สต๊อกมีแค่ ${item.maxQty} ชิ้น (ต้องเปิด K2)</div>` : '';
 
         html += `
         <div class="card shadow-sm border-0 mb-2">
@@ -351,21 +345,9 @@ function renderCartUI() {
     if (btnCheckout) btnCheckout.disabled = false;
 }
 
-window.filterCategory = function(category, element) {
-    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    element.dataset.category = category;
-    
-    const searchInput = document.getElementById('searchItem');
-    if (searchInput) searchInput.value = ''; 
-    
-    loadCatalog(category, false); 
-};
-
 window.submitRequisition = function() {
     const remarkEl = document.getElementById('reqRemark');
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
-    
     const remark = remarkEl ? remarkEl.value.trim() : '';
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     const itemCodes = Object.keys(cart);
@@ -379,8 +361,7 @@ window.submitRequisition = function() {
                 Swal.fire({
                     title: 'สต๊อกไม่เพียงพอ!',
                     html: `คุณกำลังขอเบิก <b>"${item.description}"</b> จำนวน ${item.qty} ชิ้น<br>แต่ในคลังมีเพียง <b class="text-danger">${item.maxQty}</b> ชิ้น<br><br><span class="text-muted small">หากต้องการสั่งซื้อ กรุณาเปลี่ยนประเภทคำขอเป็น "ขอสั่งซื้อ (K2)" ด้านล่างครับ</span>`,
-                    icon: 'warning',
-                    confirmButtonText: 'เข้าใจแล้ว'
+                    icon: 'warning', confirmButtonText: 'เข้าใจแล้ว'
                 });
                 return; 
             }
@@ -392,23 +373,17 @@ window.submitRequisition = function() {
     Swal.fire({
         title: 'ยืนยันการส่งคำขอ?', 
         text: `คุณต้องการส่งคำขอประเภท "${typeName}" จำนวน ${itemCodes.length} รายการ ใช่หรือไม่?`, 
-        icon: 'question',
-        showCancelButton: true, 
+        icon: 'question', showCancelButton: true, 
         confirmButtonColor: reqType === 'K2' ? '#ffc107' : '#198754', 
         confirmButtonText: 'Yes, Submit!'
     }).then(async (result) => {
         if (result.isConfirmed) {
             document.getElementById('loadingOverlay').style.display = 'flex';
-            
-            // [FIX 4] เปลี่ยนคีย์ itemCode เป็น item_code ตาม Database Schema
             const payloadCart = itemCodes.map(code => ({ item_code: code, qty: cart[code].qty }));
 
             try {
                 const res = await fetchMaterialAPI({
-                    action: 'submit_requisition',
-                    cart: JSON.stringify(payloadCart),
-                    remark: remark,
-                    request_type: reqType
+                    action: 'submit_requisition', cart: JSON.stringify(payloadCart), remark: remark, request_type: reqType
                 }, 'POST');
 
                 document.getElementById('loadingOverlay').style.display = 'none';
@@ -424,10 +399,7 @@ window.submitRequisition = function() {
                         renderCartUI();
                         
                         const offcanvasEl = document.getElementById('cartOffcanvas');
-                        if (offcanvasEl) {
-                            const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                            if (offcanvas) offcanvas.hide();
-                        }
+                        if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
                         
                         loadCatalog(null, false); 
                     });
@@ -441,36 +413,25 @@ window.submitRequisition = function() {
     });
 };
 
+// ========================================================
+// 🟢 6. ORDER HISTORY & TRACKING 🟢
+// ========================================================
 window.openHistoryModal = async function() {
     const startEl = document.getElementById('histStartDate');
     const endEl = document.getElementById('histEndDate');
 
     if (startEl && !startEl.value) {
-        let d = new Date();
-        d.setDate(d.getDate() - 30);
+        let d = new Date(); d.setDate(d.getDate() - 30);
         startEl.value = d.toISOString().split('T')[0];
     }
-    if (endEl && !endEl.value) {
-        endEl.value = new Date().toISOString().split('T')[0];
-    }
-
-    const startDate = startEl ? startEl.value : '';
-    const endDate = endEl ? endEl.value : '';
+    if (endEl && !endEl.value) endEl.value = new Date().toISOString().split('T')[0];
 
     const listContainer = document.getElementById('orderHistoryList');
-    if (listContainer) {
-        listContainer.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
-    }
-    
+    if (listContainer) listContainer.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
     if (historyModal) historyModal.show();
 
     try {
-        const res = await fetchMaterialAPI({
-            action: 'get_my_orders',
-            start_date: startDate,
-            end_date: endDate
-        }, 'GET');
-
+        const res = await fetchMaterialAPI({ action: 'get_my_orders', start_date: startEl.value, end_date: endEl.value }, 'GET');
         if (!res.success) return;
         
         let html = '';
@@ -501,7 +462,6 @@ window.openHistoryModal = async function() {
             });
         }
         if (listContainer) listContainer.innerHTML = html;
-
     } catch (error) {
         handleFetchError(error);
     }
@@ -510,25 +470,16 @@ window.openHistoryModal = async function() {
 window.viewOrderDetails = async function(reqId) {
     if (historyModal) historyModal.hide(); 
     
-    // [FIX 2] หน่วงเวลาให้ modal ปิดสนิทก่อนเรียกตัวใหม่ ป้องกันจอดำค้าง
     setTimeout(async () => {
         if (trackingModal) trackingModal.show(); 
-        
         const itemsList = document.getElementById('modalItemsList');
-        if (itemsList) {
-            itemsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
-        }
+        if (itemsList) itemsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
         
         try {
-            const res = await fetchMaterialAPI({
-                action: 'get_my_order_details',
-                req_id: reqId
-            }, 'GET');
-
+            const res = await fetchMaterialAPI({ action: 'get_my_order_details', req_id: reqId }, 'GET');
             if (!res.success) { 
                 if (trackingModal) trackingModal.hide(); 
-                Swal.fire('Error', res.message, 'error'); 
-                return; 
+                Swal.fire('Error', res.message, 'error'); return; 
             }
 
             const h = res.header;
@@ -565,9 +516,10 @@ window.viewOrderDetails = async function(reqId) {
                 let issueClass = (issueQty !== '-' && issueQty < reqQty) ? 'text-warning text-dark' : 'text-success';
                 if (issueQty === 0) issueClass = 'text-danger';
 
+                const safeCategory = item.item_category || 'OTHER';
                 const imgHtml = item.image_path 
-                    ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${item.item_category}', '${item.item_code}')">` 
-                    : getIconPlaceholder(item.item_category);
+                    ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${item.item_code}')">` 
+                    : getIconPlaceholder(safeCategory);
 
                 itemsHtml += `
                 <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
@@ -595,7 +547,6 @@ window.viewOrderDetails = async function(reqId) {
             } else { 
                 if (issuerInfo) issuerInfo.classList.add('d-none'); 
             }
-
         } catch (error) {
             handleFetchError(error);
         }
@@ -604,15 +555,63 @@ window.viewOrderDetails = async function(reqId) {
 
 window.backToHistory = function() {
     if (trackingModal) trackingModal.hide();
-    
-    // [FIX 2] หน่วงเวลาให้ modal ปิดสนิทก่อนเรียกตัวใหม่ ป้องกันจอดำค้าง
-    setTimeout(() => {
-        if (historyModal) historyModal.show();
-    }, 300);
+    setTimeout(() => { if (historyModal) historyModal.show(); }, 300);
 };
 
 // ========================================================
-// 🟢 ฟังก์ชันอัปโหลดภาพ (Image Upload Logic) 🟢
+// 🟢 7. QUICK EDIT MASTER DATA 🟢
+// ========================================================
+window.openEditItemModal = async function(itemCode) {
+    if (!editItemModalInst) editItemModalInst = new bootstrap.Modal(document.getElementById('editItemModal'));
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    try {
+        const res = await fetchMaterialAPI({ action: 'get_item_info', item_code: itemCode }, 'GET');
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+        if (res.success && res.data) {
+            document.getElementById('edit_sap_no').value = res.data.sap_no;
+            document.getElementById('edit_description').value = res.data.part_description || '';
+            document.getElementById('edit_material_type').value = res.data.item_category || 'OTHER';
+            document.getElementById('edit_std_price').value = res.data.StandardPrice ? parseFloat(res.data.StandardPrice).toFixed(2) : '0.00';
+            editItemModalInst.show();
+        } else {
+            Swal.fire('Error', 'ไม่พบข้อมูลสินค้าในระบบ', 'error');
+        }
+    } catch (error) {
+        handleFetchError(error);
+    }
+};
+
+window.saveItemConfig = async function() {
+    const itemCode = document.getElementById('edit_sap_no').value;
+    const desc = document.getElementById('edit_description').value.trim();
+    const category = document.getElementById('edit_material_type').value;
+    const price = document.getElementById('edit_std_price').value;
+
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    try {
+        const res = await fetchMaterialAPI({ 
+            action: 'update_item_info', item_code: itemCode, description: desc, item_category: category, std_price: price
+        }, 'POST');
+
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+        if (res.success) {
+            editItemModalInst.hide();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
+            loadCatalog(null, false); 
+        } else {
+            Swal.fire('Error', res.message, 'error');
+        }
+    } catch (error) {
+        handleFetchError(error);
+    }
+};
+
+// ========================================================
+// 🟢 8. IMAGE UPLOAD & COMPRESSION 🟢
 // ========================================================
 window.triggerImageUpload = function(itemCode) {
     document.getElementById('uploadTargetItemCode').value = itemCode;
@@ -621,13 +620,11 @@ window.triggerImageUpload = function(itemCode) {
         title: 'เปลี่ยนรูปภาพสินค้า',
         html: `คุณต้องการอัปเดตรูปภาพสำหรับ <b class="text-primary">${itemCode}</b> ด้วยวิธีใด?`,
         icon: 'question',
-        showCancelButton: true,
-        showDenyButton: true,
+        showCancelButton: true, showDenyButton: true,
         confirmButtonText: '<i class="fas fa-camera fa-lg mb-1 d-block"></i> ถ่ายรูป',
         denyButtonText: '<i class="fas fa-image fa-lg mb-1 d-block"></i> คลังภาพ',
         cancelButtonText: 'ยกเลิก',
-        confirmButtonColor: '#0d6efd', // Blue
-        denyButtonColor: '#198754',  // Green
+        confirmButtonColor: '#0d6efd', denyButtonColor: '#198754',
         customClass: {
             actions: 'd-flex gap-2 w-100 justify-content-center mt-3',
             confirmButton: 'btn btn-primary flex-fill py-2',
@@ -637,22 +634,16 @@ window.triggerImageUpload = function(itemCode) {
     }).then((result) => {
         const inputEl = document.getElementById('globalImageUpload');
         if (!inputEl) return;
-
         if (result.isConfirmed) {
-            // 📸 โหมดถ่ายรูป: บังคับเปิดกล้องหลังมือถือทันที
             inputEl.setAttribute('capture', 'environment');
             inputEl.click();
         } else if (result.isDenied) {
-            // 📁 โหมดคลังภาพ: เปิด File Explorer / อัลบั้มรูป
             inputEl.removeAttribute('capture');
             inputEl.click();
         }
     });
 };
 
-// ========================================================
-// 🟢 ฟังก์ชันบีบอัดภาพด้วย HTML5 Canvas (Vanilla JS) 🟢
-// ========================================================
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -662,96 +653,108 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
             let width = img.width;
             let height = img.height;
 
-            // คำนวณสัดส่วนให้พอดีกับ Max Width/Height
             if (width > height) {
-                if (width > maxWidth) {
-                    height = Math.round((height * maxWidth) / width);
-                    width = maxWidth;
-                }
+                if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
             } else {
-                if (height > maxHeight) {
-                    width = Math.round((width * maxHeight) / height);
-                    height = maxHeight;
-                }
+                if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
             }
 
-            // สร้าง Canvas เพื่อวาดรูปใหม่ที่เล็กลง
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
-            
-            // วาดรูปลง Canvas
             ctx.drawImage(img, 0, 0, width, height);
 
-            // แปลง Canvas กลับเป็นไฟล์ Blob (บีบอัดเป็น JPEG)
             canvas.toBlob((blob) => {
-                // สร้าง File Object ใหม่เพื่อส่งไป Backend
-                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg', lastModified: Date.now() });
                 resolve(compressedFile);
             }, 'image/jpeg', quality);
         };
-        
         img.onerror = (error) => reject(error);
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const globalUploadInput = document.getElementById('globalImageUpload');
-    if (globalUploadInput) {
-        globalUploadInput.addEventListener('change', async function() {
-            if (!this.files || this.files.length === 0) return;
+async function handleImageUploadEvent() {
+    if (!this.files || this.files.length === 0) return;
+    
+    const originalFile = this.files[0];
+    const itemCode = document.getElementById('uploadTargetItemCode').value;
+    
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    try {
+        const compressedFile = await compressImage(originalFile, 800, 800, 0.8);
+
+        if (compressedFile.size > 5 * 1024 * 1024) {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            Swal.fire('ไฟล์ใหญ่เกินไป!', 'ระบบไม่สามารถบีบอัดภาพให้อยู่ในขนาดที่กำหนดได้', 'warning');
+            this.value = ''; return;
+        }
+
+        let formData = new FormData();
+        formData.append('action', 'upload_image');
+        formData.append('item_code', itemCode);
+        formData.append('image', compressedFile);
+
+        const res = await fetchMaterialAPI(formData, 'POST');
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        if (res.success) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
             
-            const originalFile = this.files[0];
-            const itemCode = document.getElementById('uploadTargetItemCode').value;
-            
-            document.getElementById('loadingOverlay').style.display = 'flex';
-
-            try {
-                const compressedFile = await compressImage(originalFile, 800, 800, 0.8);
-
-                if (compressedFile.size > 5 * 1024 * 1024) {
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                    Swal.fire('ไฟล์ใหญ่เกินไป!', 'ระบบไม่สามารถบีบอัดภาพให้อยู่ในขนาดที่กำหนดได้', 'warning');
-                    this.value = ''; return;
-                }
-
-                let formData = new FormData();
-                formData.append('action', 'upload_image');
-                formData.append('item_code', itemCode);
-                formData.append('image', compressedFile);
-
-                const res = await fetchMaterialAPI(formData, 'POST');
-                document.getElementById('loadingOverlay').style.display = 'none';
+            const wrapper = document.getElementById(`img_wrapper_${itemCode}`);
+            if (wrapper) {
+                const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
+                const existingImg = document.getElementById(`img_element_${itemCode}`);
                 
-                if (res.success) {
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
-                    
-                    const wrapper = document.getElementById(`img_wrapper_${itemCode}`);
-                    if (wrapper) {
-                        const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
-                        const existingImg = document.getElementById(`img_element_${itemCode}`);
-                        
-                        if (existingImg && existingImg.tagName === 'IMG') {
-                            existingImg.src = newImgUrl;
-                        } else {
-                            const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
-                            if (existingImg) existingImg.remove(); 
-                            wrapper.insertAdjacentHTML('beforeend', newImgHtml);
-                        }
-                    }
-                } else { 
-                    Swal.fire('Error', res.message, 'error'); 
+                if (existingImg && existingImg.tagName === 'IMG') {
+                    existingImg.src = newImgUrl;
+                } else {
+                    const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
+                    if (existingImg) existingImg.remove(); 
+                    wrapper.insertAdjacentHTML('beforeend', newImgHtml);
                 }
-            } catch (error) {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                Swal.fire('Error', 'เกิดข้อผิดพลาดในการจัดการไฟล์ภาพ', 'error');
-            } finally {
-                this.value = ''; 
             }
-        });
+        } else { 
+            Swal.fire('Error', res.message, 'error'); 
+        }
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        Swal.fire('Error', 'เกิดข้อผิดพลาดในการจัดการไฟล์ภาพ', 'error');
+    } finally {
+        this.value = ''; 
     }
-});
+}
+
+function getPlaceholderHTML(category, sapNo, idAttr = '') {
+    let icon = 'fa-box'; let color = '#6c757d'; 
+    const cat = category ? category.toUpperCase() : '';
+    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
+    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
+    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
+    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
+
+    return `
+        <div ${idAttr ? `id="${idAttr}"` : ''} class="placeholder-img d-flex flex-column align-items-center justify-content-center" 
+             style="background: radial-gradient(circle, #ffffff 0%, #f0f3f8 100%);">
+            <i class="fas ${icon} fa-4x mb-3" style="color: ${color}; opacity: 0.3;"></i>
+            <span class="small fw-bold px-2 w-100 text-center text-truncate" 
+                  style="color: ${color}; opacity: 0.4; letter-spacing: 1px;">
+                ${sapNo}
+            </span>
+        </div>
+    `;
+}
+
+window.handleImageError = function(imgElement, category, sapNo) {
+    imgElement.outerHTML = getPlaceholderHTML(category, sapNo, `img_element_${sapNo}`);
+};
+
+function getIconPlaceholder(category) {
+    let icon = 'fa-box'; let color = '#6c757d'; 
+    const cat = category ? category.toUpperCase() : '';
+    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
+    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
+    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
+    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
+    return `<div class="ph-mini d-flex align-items-center justify-content-center bg-light border rounded" style="width: 45px; height: 45px;"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.2rem;"></i></div>`;
+}

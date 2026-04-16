@@ -74,16 +74,17 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         .tracking-step.rejected .step-label { color: #dc3545; }
         .item-img-mini { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
 
-        /* เพิ่ม CSS สำหรับ Sticky Toolbar */
         .sticky-toolbar {
             position: sticky;
-            top: 0; /* ปรับให้ชิดขอบบนของ Container พอดี */
+            top: 0; 
             z-index: 1020;
-            background-color: var(--bg-light-gray);
-            /* ดึงกล่องให้ชิดขอบซ้าย ขวา */
-            margin: -1rem -1rem 1rem -1rem; 
-            padding: 0 1rem 5px 1rem; /* ปรับ Padding Top เป็น 0 ตาม Requirement */
+            background-color: rgba(244, 246, 249, 0.9);
+            /*backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);*/
+            margin: -1rem -1rem -0.5rem -1rem; 
+            padding: 0 1rem 5px 1rem; 
             box-shadow: 0 10px 15px -10px rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
         }
         
         .category-chip { 
@@ -154,12 +155,13 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     </div>
                 </div>
 
-                <div class="d-flex gap-2 overflow-auto hide-scrollbar pb-2 px-1" style="scroll-snap-type: x mandatory;">
+                <div class="d-flex gap-2 overflow-auto hide-scrollbar pb-2 px-1" style="scroll-snap-type: x mandatory; margin-top: 0.6rem;">
                     <div class="category-chip active" data-category="ALL" onclick="filterCategory('ALL', this)" style="scroll-snap-align: start;">All Items</div>
                     <div class="category-chip" data-category="RM" onclick="filterCategory('RM', this)" style="scroll-snap-align: start;"><i class="fas fa-cubes text-primary"></i> RM</div>
-                    <div class="category-chip" data-category="CONSUMABLE" onclick="filterCategory('CONSUMABLE', this)" style="scroll-snap-align: start;"><i class="fas fa-pump-soap text-success"></i> Consumables</div>
-                    <div class="category-chip" data-category="SPARE" onclick="filterCategory('SPARE', this)" style="scroll-snap-align: start;"><i class="fas fa-cogs text-danger"></i> Spare</div>
                     <div class="category-chip" data-category="PKG" onclick="filterCategory('PKG', this)" style="scroll-snap-align: start;"><i class="fas fa-box text-warning"></i> PKG</div>
+                    <div class="category-chip" data-category="CON" onclick="filterCategory('CON', this)" style="scroll-snap-align: start;"><i class="fas fa-pump-soap text-success"></i> CON (สิ้นเปลือง)</div>
+                    <div class="category-chip" data-category="SP" onclick="filterCategory('SP', this)" style="scroll-snap-align: start;"><i class="fas fa-cogs text-danger"></i> SP (อะไหล่)</div>
+                    <div class="category-chip" data-category="TOOL" onclick="filterCategory('TOOL', this)" style="scroll-snap-align: start;"><i class="fas fa-wrench text-info"></i> TOOL</div>
                 </div>
 
             </div>
@@ -272,13 +274,62 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         </div>
     </div>
 
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+                <div class="modal-header bg-dark text-white py-3 border-0" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-cog text-info me-2"></i>แก้ไขข้อมูลสินค้า (Quick Edit)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <form id="quickEditForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted mb-1">รหัส SAP No.</label>
+                            <input type="text" class="form-control fw-bold text-primary bg-white" id="edit_sap_no" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted mb-1">ชื่อวัสดุ (Description)</label>
+                            <textarea class="form-control" id="edit_description" rows="2"></textarea>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-muted mb-1">หมวดหมู่ (Material Type)</label>
+                                <select class="form-select fw-bold text-dark" id="edit_material_type">
+                                    <option value="FG">FG (Finished Good)</option>
+                                    <option value="SEMI">SEMI (Semi-Finished)</option>
+                                    <option value="WIP">WIP (Work in Process)</option>
+                                    <option value="RM">RM (Raw Material)</option>
+                                    <option value="PKG">PKG (Packaging)</option>
+                                    <option value="CON">CON (Consumable)</option>
+                                    <option value="SP">SP (Spare Part)</option>
+                                    <option value="TOOL">TOOL (Tools)</option>
+                                    <option value="OTHER">OTHER (อื่นๆ)</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-muted mb-1">ราคามาตรฐาน (Standard Price)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-success">฿</span>
+                                    <input type="number" class="form-control fw-bold text-success" id="edit_std_price" min="0" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-top bg-white d-flex justify-content-end" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                    <button type="button" class="btn btn-light fw-bold border" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" onclick="saveItemConfig()">บันทึกข้อมูล</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="globalImageUpload" class="d-none" accept="image/jpeg, image/png, image/webp">
     <input type="hidden" id="uploadTargetItemCode">
 
     <script>
         const CAN_MANAGE_IMAGE = <?php echo json_encode($canManageImage); ?>;
     </script>
-    <script src="../../utils/libs/bootstrap.bundle.min.js"></script>
     <script src="script/materialReq.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

@@ -37,11 +37,10 @@ try {
             $limit = isset($_REQUEST['limit']) ? (int)$_REQUEST['limit'] : 40; 
             $offset = ($page - 1) * $limit;
 
-            // [FIX 1] แก้ไข Subquery INVENTORY_ONHAND ให้ดึงเฉพาะ Location ที่เป็น STORE ป้องกันยอดรวมมั่ว
             $sql = "SELECT 
                         i.sap_no AS item_code, 
                         i.part_description AS description, 
-                        i.item_category, 
+                        i.material_type AS item_category,
                         i.image_path,
                         ISNULL(inv.qty, 0) AS onhand_qty
                     FROM dbo.ITEMS i WITH (NOLOCK)
@@ -57,7 +56,7 @@ try {
             $params = [];
 
             if ($category !== 'ALL') {
-                $sql .= " AND i.item_category = ? ";
+                $sql .= " AND i.material_type = ? ";
                 $params[] = $category;
             }
 
@@ -67,7 +66,6 @@ try {
                 array_push($params, $searchTerm, $searchTerm, $searchTerm);
             }
 
-            // Logic การจัดเรียง (Sorting)
             if ($sort === 'SAP_ASC') {
                 $sql .= " ORDER BY i.sap_no ASC ";
             } else if ($sort === 'SAP_DESC') {
@@ -75,7 +73,6 @@ try {
             } else if ($sort === 'STOCK_DESC') {
                 $sql .= " ORDER BY ISNULL(inv.qty, 0) DESC, i.sap_no ASC ";
             } else {
-                // DEFAULT: มีของอยู่บน (0), ของหมดอยู่ล่าง (1) -> แล้วเรียงตาม SAP
                 $sql .= " ORDER BY CASE WHEN ISNULL(inv.qty, 0) > 0 THEN 0 ELSE 1 END ASC, i.sap_no ASC ";
             }
 
@@ -251,6 +248,42 @@ try {
             } else {
                 throw new Exception("บันทึกไฟล์ไม่สำเร็จ เช็ค Permission โฟลเดอร์");
             }
+            break;
+
+        // ========================================================
+        // 🟢 โหมด: ดึงและแก้ไข Master Data (Quick Edit) 🟢
+        // ========================================================
+        case 'get_item_info':
+            $item_code = $_REQUEST['item_code'] ?? '';
+            $stmt = $pdo->prepare("SELECT sap_no, part_description, material_type AS item_category, StandardPrice FROM dbo.ITEMS WITH (NOLOCK) WHERE sap_no = ?");
+            $stmt->execute([$item_code]);
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($data) {
+                echo json_encode(['success' => true, 'data' => $data]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Not found']);
+            }
+            break;
+
+        case 'update_item_info':
+            $userRole = $_SESSION['user']['role'] ?? '';
+            if (!in_array($userRole, ['admin', 'creator', 'store'])) {
+                throw new Exception("คุณไม่มีสิทธิ์แก้ไขข้อมูลสินค้า");
+            }
+
+            $item_code = $_POST['item_code'];
+            $desc = $_POST['description'];
+            $category = $_POST['item_category'];
+            $price = empty($_POST['std_price']) ? 0 : (float)$_POST['std_price'];
+
+            $sql = "UPDATE dbo.ITEMS 
+                    SET part_description = ?, material_type = ?, StandardPrice = ?
+                    WHERE sap_no = ?";
+            
+            $pdo->prepare($sql)->execute([$desc, $category, $price, $item_code]);
+            
+            echo json_encode(['success' => true]);
             break;
 
         default:

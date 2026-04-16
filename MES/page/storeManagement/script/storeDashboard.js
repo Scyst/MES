@@ -67,33 +67,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// ========================================================
+// 🟢 IMAGE & PLACEHOLDER HANDLER 🟢
+// ========================================================
 function getIconPlaceholder(category) {
     let icon = 'fa-box'; let color = '#6c757d'; 
     const cat = category ? category.toUpperCase() : '';
     if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
-    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
-    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
+    else if (cat.includes('CONSUMABLE') || cat.includes('CON')) { icon = 'fa-pump-soap'; color = '#198754'; } 
+    else if (cat.includes('SPARE') || cat.includes('SP')) { icon = 'fa-cogs'; color = '#dc3545'; } 
     else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
-    return `<div class="ph-small"><i class="fas ${icon}" style="color:${color}; opacity:0.5;"></i></div>`;
+    else if (cat.includes('TOOL')) { icon = 'fa-wrench'; color = '#0dcaf0'; }
+    return `<div class="ph-small"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.5rem;"></i></div>`;
 }
 
-function getPlaceholderHTML(category, sapNo) {
-    let icon = 'fa-box'; let color = '#6c757d'; 
-    const cat = category ? category.toUpperCase() : '';
-    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
-    else if (cat.includes('CONSUMABLE')) { icon = 'fa-pump-soap'; color = '#198754'; } 
-    else if (cat.includes('SPARE')) { icon = 'fa-cogs'; color = '#dc3545'; } 
-    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
-
-    return `
-        <div class="d-flex flex-column align-items-center justify-content-center" style="background: radial-gradient(circle, #ffffff 0%, #f0f3f8 100%); position:absolute; top:0; left:0; width:100%; height:100%;">
-            <i class="fas ${icon} fa-3x mb-2" style="color: ${color}; opacity: 0.3;"></i>
-            <span class="small fw-bold px-2 w-100 text-center text-truncate" style="color: ${color}; opacity: 0.4; letter-spacing: 1px;">
-                ${sapNo}
-            </span>
-        </div>
-    `;
-}
+// [FIX] ฟังก์ชันรับจบกรณีโหลดรูปไม่ขึ้น ป้องกันปัญหา HTML Quote ชนกัน
+window.handleDashboardImageError = function(imgElement, category) {
+    imgElement.outerHTML = getIconPlaceholder(category);
+};
 
 window.toggleDateFilter = function() {
     const val = document.getElementById('filter_status').value;
@@ -215,28 +206,59 @@ window.openStockOrder = async function(reqId) {
             if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
 
-            const imgHtml = item.image_path ? `<img src="../../uploads/items/${item.image_path}" class="item-img-small" onerror="this.outerHTML='${getIconPlaceholder(item.item_category)}'">'` : getIconPlaceholder(item.item_category);
+            const safeCategory = item.item_category || 'OTHER';
+            
+            const imgHtml = item.image_path 
+                ? `<img src="../../uploads/items/${item.image_path}" class="rounded shadow-sm border" style="width: 80px; height: 80px; min-width: 80px; object-fit: cover;" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
+                : `<div class="rounded shadow-sm border" style="width: 80px; height: 80px; min-width: 80px; display: flex; align-items: center; justify-content: center; background: #f0f3f8;"><i class="fas fa-box fa-2x" style="color:#6c757d; opacity:0.5;"></i></div>`;
 
             itemsHtml += `
-            <div class="card border border-light shadow-sm">
-                <div class="card-body p-2 p-md-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
-                    <div class="d-flex align-items-center gap-3 flex-grow-1">
-                        ${imgHtml}
-                        <div><div class="fw-bold text-dark" style="font-size:0.9rem;">${item.description}</div>
-                        <div class="small text-muted">SAP: ${item.item_code} ${isEditable ? `| <span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลัง: ${onHand}</span>` : ''}</div></div>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-3 flex-shrink-0" style="min-width: 250px;">
-                        <div class="text-center bg-light rounded px-3 py-1 border"><small class="text-muted d-block" style="font-size:0.7rem;">ขอเบิก</small><span class="fw-bold text-primary fs-5">${reqQty}</span></div>
-                        <i class="fas fa-arrow-right text-muted d-none d-md-inline"></i>
-                        <div class="text-center w-100 w-md-auto"><small class="text-muted d-block mb-1" style="font-size:0.7rem;">จ่ายจริง</small>
-                            <div class="input-group input-group-sm w-100">
-                                <input type="number" class="form-control text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input" data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${item.item_code}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''}>
+            <div class="card border border-light shadow-sm mb-2">
+                <div class="card-body p-2 p-md-3 d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3">
+                    
+                    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 0; width: 100%;">
+                        <div class="flex-shrink-0">${imgHtml}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="fw-bold text-dark text-truncate mb-1" style="font-size:1rem; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${item.description}">
+                                ${item.description}
+                            </div>
+                            <div class="small text-muted">
+                                SAP: ${item.item_code} 
+                                ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลัง: ${onHand}</span>` : ''}
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="d-flex align-items-stretch justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0" style="width: auto; min-width: 180px;">
+                        
+                        <div class="bg-light border rounded px-1 py-1 d-flex flex-column justify-content-center align-items-center" style="width: 70px;">
+                            <small class="text-muted fw-bold d-block" style="font-size:0.65rem; white-space: nowrap;">ขอเบิก</small>
+                            <span class="fw-bold text-primary fs-5 lh-1">${reqQty}</span>
+                        </div>
+                        
+                        <div class="text-muted opacity-50 d-flex align-items-center">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        
+                        <div class="border rounded px-1 py-1 d-flex flex-column justify-content-center align-items-center position-relative ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 85px;">
+                            <small class="text-muted fw-bold d-block" style="font-size:0.65rem; white-space: nowrap; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</small>
+                            <input type="number" 
+                                class="form-control form-control-sm text-center fw-bold ${isEditable ? 'text-success border-0 bg-transparent p-0' : issueClass + ' border-0 bg-transparent p-0'} issue-qty-input shadow-none" 
+                                data-rowid="${item.row_id}" 
+                                data-itemid="${item.item_id}" 
+                                data-itemcode="${item.item_code}" 
+                                value="${defaultIssueQty}" 
+                                min="0" max="${onHand}" 
+                                ${!isEditable ? 'disabled' : ''} 
+                                style="font-size: 1.25rem; height: auto; box-shadow: none; padding: 0;">
+                        </div>
+
+                    </div>
+                    
                 </div>
             </div>`;
         });
+        
         document.getElementById('itemsContainer').innerHTML = itemsHtml;
 
         const issuerContainer = document.getElementById('issuerContainer');
@@ -386,8 +408,10 @@ async function loadK2Summary(isSilent) {
                             ? `<span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> รอสโตร์เปิด K2</span>`
                             : `<span class="badge bg-success"><i class="fas fa-check"></i> ${item.k2_ref}</span>`;
 
+                const safeCategory = item.item_category || 'OTHER';
+
                 html += `
-                <div class="order-card ${isActive} ${isPulse} w-100 p-3" id="k2-card-${item.item_code}" onclick="openK2Detail('${item.item_code}', '${item.description.replace(/'/g, "\\'")}', '${item.item_category}', '${item.image_path}')">
+                <div class="order-card ${isActive} ${isPulse} w-100 p-3" id="k2-card-${item.item_code}" onclick="openK2Detail('${item.item_code}', '${item.description.replace(/'/g, "\\'")}', '${safeCategory}', '${item.image_path}')">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div class="pe-2 text-truncate" style="max-width: 70%;"><h6 class="fw-bold text-dark mb-0 text-truncate">${item.description}</h6></div>
                         <div>${badge}</div>
@@ -417,8 +441,11 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
     }
     document.getElementById('current_req_id').value = itemCode;
 
-    // Render Header
-    const imgHtml = imgPath && imgPath !== 'null' ? `<img src="../../uploads/items/${imgPath}" class="item-img-small">` : getIconPlaceholder(category);
+    const safeCategory = category || 'OTHER';
+    const imgHtml = imgPath && imgPath !== 'null' 
+        ? `<img src="../../uploads/items/${imgPath}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
+        : getIconPlaceholder(safeCategory);
+        
     document.getElementById('k2_disp_img').innerHTML = imgHtml;
     document.getElementById('k2_disp_desc').innerText = description;
     document.getElementById('k2_disp_sap').innerText = itemCode;
