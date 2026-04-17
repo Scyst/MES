@@ -59,19 +59,19 @@ try {
                            (SELECT COUNT(*) FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) WHERE ri.req_id = r.id AND ri.request_type = 'STOCK') as total_items
                     FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
-                    WHERE EXISTS (SELECT 1 FROM dbo.STORE_REQUISITION_ITEMS ri2 WHERE ri2.req_id = r.id AND ri2.request_type = 'STOCK') ";
+                    WHERE EXISTS (SELECT 1 FROM dbo.STORE_REQUISITION_ITEMS ri2 WHERE ri2.req_id = r.id AND ri2.request_type = 'STOCK') 
+                      AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) ";
             
-            $params = [];
+            // 💡 ให้มันใช้วันที่กรองข้อมูลเสมอ ไม่ว่าจะเป็นสถานะไหน
+            $params = [$startDate, $endDate];
+            
             if ($status === 'ACTIVE') {
                 $sql .= " AND r.status IN ('NEW ORDER', 'PREPARING') ";
-            } else {
-                $sql .= " AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) ";
-                array_push($params, $startDate, $endDate);
-                if ($status !== 'ALL') {
-                    $sql .= " AND r.status = ? ";
-                    $params[] = $status;
-                }
+            } elseif ($status !== 'ALL') {
+                $sql .= " AND r.status = ? ";
+                $params[] = $status;
             }
+            
             $sql .= " ORDER BY CASE WHEN r.status = 'NEW ORDER' THEN 1 WHEN r.status = 'PREPARING' THEN 2 ELSE 3 END ASC, r.created_at DESC";
 
             $stmt = $pdo->prepare($sql);
@@ -157,31 +157,42 @@ try {
 
         case 'get_k2_summary':
             $status = $_REQUEST['status'] ?? 'WAITING'; 
+            $startDate = $_REQUEST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
+
             $sql = "SELECT ri.item_code, i.part_description as description, i.image_path, i.item_category,
                            SUM(ri.qty_requested) as total_qty, COUNT(k.id) as request_count, MAX(k.k2_reference_no) as k2_ref, MAX(k.updated_at) as last_update
                     FROM dbo.STORE_K2_REQUESTS k WITH (NOLOCK)
                     JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON k.req_item_id = ri.id
+                    JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
                     JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                    WHERE k.k2_status = ?
+                    WHERE k.k2_status = ? 
+                      AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
                     GROUP BY ri.item_code, i.part_description, i.image_path, i.item_category
                     ORDER BY total_qty DESC";
+            
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$status]);
+            $stmt->execute([$status, $startDate, $endDate]);
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
             break;
 
         case 'get_k2_item_details':
             $item_code = $_REQUEST['item_code'];
             $status = $_REQUEST['status'] ?? 'WAITING';
+            $startDate = $_REQUEST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
+
             $sql = "SELECT k.id as k2_id, ri.qty_requested, r.req_number, u.fullname, FORMAT(r.created_at, 'dd/MM/yyyy') as req_date, r.remark
                     FROM dbo.STORE_K2_REQUESTS k WITH (NOLOCK)
                     JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON k.req_item_id = ri.id
                     JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
                     WHERE k.k2_status = ? AND ri.item_code = ?
+                      AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
                     ORDER BY r.created_at ASC";
+            
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$status, $item_code]);
+            $stmt->execute([$status, $item_code, $startDate, $endDate]);
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
             break;
 
@@ -202,76 +213,75 @@ try {
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-01');
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-t'); 
             
-            $stmtSum = $pdo->prepare("
-                SELECT 
-                    COUNT(DISTINCT CASE WHEN r.status = 'COMPLETED' THEN r.id END) as total_reqs,
-                    ISNULL(SUM(CASE WHEN r.status = 'COMPLETED' THEN ri.qty_issued ELSE 0 END), 0) as total_issued_qty,
-                    (SELECT COUNT(*) FROM dbo.STORE_K2_REQUESTS WHERE k2_status = 'WAITING') as waiting_k2,
-                    COUNT(DISTINCT CASE WHEN r.status = 'REJECTED' THEN r.id END) as total_rejects
-                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
-                LEFT JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
-            ");
-            $stmtSum->execute([$startDate, $endDate]);
-            $summary = $stmtSum->fetch(PDO::FETCH_ASSOC);
+            // 🚀 Optimized Batch Query without SQL Comments
+            $sqlKpi = "
+                SET NOCOUNT ON;
+                DECLARE @Start DATE = ?;
+                DECLARE @End DATETIME = DATEADD(DAY, 1, CAST(? AS DATE));
 
-            $stmtTrend = $pdo->prepare("
-                SELECT CAST(r.created_at AS DATE) as req_date, COUNT(DISTINCT r.id) as req_count
-                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED'
-                GROUP BY CAST(r.created_at AS DATE)
-                ORDER BY req_date ASC
-            ");
-            $stmtTrend->execute([$startDate, $endDate]);
+                DECLARE @TotalReqs INT = (SELECT COUNT(DISTINCT CASE WHEN status = 'COMPLETED' THEN id END) FROM dbo.STORE_REQUISITIONS WITH (NOLOCK) WHERE created_at >= @Start AND created_at < @End);
+                DECLARE @TotalIssued DECIMAL(18,4) = (SELECT ISNULL(SUM(ri.qty_issued), 0) FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON r.id = ri.req_id WHERE r.status = 'COMPLETED' AND r.created_at >= @Start AND r.created_at < @End);
+                DECLARE @WaitK2 INT = (SELECT COUNT(*) FROM dbo.STORE_K2_REQUESTS WITH (NOLOCK) WHERE k2_status = 'WAITING');
+                DECLARE @TotalRej INT = (SELECT COUNT(DISTINCT CASE WHEN status = 'REJECTED' THEN id END) FROM dbo.STORE_REQUISITIONS WITH (NOLOCK) WHERE created_at >= @Start AND created_at < @End);
+
+                DECLARE @AvgSla INT = (SELECT ISNULL(AVG(DATEDIFF(MINUTE, r.created_at, r.issued_at)), 0) FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK) WHERE r.status = 'COMPLETED' AND r.issued_at >= @Start AND r.issued_at < @End);
+                DECLARE @FillRate FLOAT = (SELECT ISNULL((SUM(ri.qty_issued) / NULLIF(SUM(ri.qty_requested), 0)) * 100, 0) FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON r.id = ri.req_id WHERE r.status = 'COMPLETED' AND r.issued_at >= @Start AND r.issued_at < @End);
+
+                DECLARE @DeadStock FLOAT = (
+                    SELECT ISNULL(SUM(inv.quantity * i.StandardPrice), 0)
+                    FROM dbo.INVENTORY_ONHAND inv WITH (NOLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON inv.parameter_id = i.item_id
+                    LEFT JOIN (
+                        SELECT DISTINCT parameter_id 
+                        FROM dbo.STOCK_TRANSACTIONS WITH (NOLOCK) 
+                        WHERE transaction_timestamp >= DATEADD(DAY, -90, GETDATE())
+                    ) act ON inv.parameter_id = act.parameter_id
+                    WHERE inv.quantity > 0 AND act.parameter_id IS NULL
+                );
+
+                DECLARE @Ira FLOAT = (SELECT ISNULL((CAST(SUM(CASE WHEN diff_qty = 0 THEN 1 ELSE 0 END) AS FLOAT) / NULLIF(COUNT(*), 0)) * 100, 100) FROM dbo.INVENTORY_CYCLE_COUNTS WITH (NOLOCK) WHERE status = 'APPROVED' AND approved_at >= @Start AND approved_at < @End);
+
+                DECLARE @Cogs FLOAT = (
+                    SELECT ISNULL(SUM(st.quantity * i.StandardPrice), 0) 
+                    FROM dbo.STOCK_TRANSACTIONS st WITH (NOLOCK) 
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON st.parameter_id = i.item_id 
+                    WHERE st.transaction_type IN ('ISSUE_STORE', 'ISSUE_RM') AND st.transaction_timestamp >= @Start AND st.transaction_timestamp < @End
+                );
+                
+                DECLARE @InvVal FLOAT = (
+                    SELECT ISNULL(SUM(inv.quantity * i.StandardPrice), 0) 
+                    FROM dbo.INVENTORY_ONHAND inv WITH (NOLOCK) 
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON inv.parameter_id = i.item_id 
+                    WHERE inv.quantity > 0
+                );
+                
+                DECLARE @Turnover FLOAT = CASE WHEN @InvVal > 0 THEN (@Cogs / @InvVal) ELSE 0 END;
+
+                SELECT 
+                    @TotalReqs as total_reqs, @TotalIssued as total_issued_qty, @WaitK2 as waiting_k2, @TotalRej as total_rejects,
+                    @AvgSla as avg_sla_minutes, @FillRate as fill_rate_percent, @DeadStock as dead_stock_value,
+                    @Ira as ira_percent, @Turnover as turnover_ratio;
+            ";
+
+            $stmtKpi = $pdo->prepare($sqlKpi);
+            $stmtKpi->execute([$startDate, $endDate]);
+            $summary = $stmtKpi->fetch(PDO::FETCH_ASSOC);
+
+            $stmtTrend = $pdo->prepare("SELECT CAST(r.created_at AS DATE) as req_date, COUNT(DISTINCT r.id) as req_count FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK) WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' GROUP BY CAST(r.created_at AS DATE) ORDER BY req_date ASC");
+            $stmtTrend->execute([$startDate, $endDate]); 
             $trendData = $stmtTrend->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmtCat = $pdo->prepare("
-                SELECT ISNULL(i.item_category, 'OTHER') as category, SUM(ri.qty_issued) as total_qty
-                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
-                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
-                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0
-                GROUP BY i.item_category
-            ");
-            $stmtCat->execute([$startDate, $endDate]);
+            $stmtCat = $pdo->prepare("SELECT ISNULL(i.item_category, 'OTHER') as category, SUM(ri.qty_issued) as total_qty FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0 GROUP BY i.item_category");
+            $stmtCat->execute([$startDate, $endDate]); 
             $categoryData = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmtTopItems = $pdo->prepare("
-                SELECT TOP 5 i.part_description, SUM(ri.qty_issued) as total_qty
-                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
-                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
-                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0
-                GROUP BY i.part_description
-                ORDER BY total_qty DESC
-            ");
-            $stmtTopItems->execute([$startDate, $endDate]);
+            $stmtTopItems = $pdo->prepare("SELECT TOP 5 i.part_description, SUM(ri.qty_issued) as total_qty FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0 GROUP BY i.part_description ORDER BY total_qty DESC");
+            $stmtTopItems->execute([$startDate, $endDate]); 
             $topItems = $stmtTopItems->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmtTopUsers = $pdo->prepare("
-                SELECT TOP 5 u.fullname, COUNT(DISTINCT r.id) as req_count
-                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
-                JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED'
-                GROUP BY u.fullname
-                ORDER BY req_count DESC
-            ");
-            $stmtTopUsers->execute([$startDate, $endDate]);
+            $stmtTopUsers = $pdo->prepare("SELECT TOP 5 u.fullname, COUNT(DISTINCT r.id) as req_count FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK) JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' GROUP BY u.fullname ORDER BY req_count DESC");
+            $stmtTopUsers->execute([$startDate, $endDate]); 
             $topUsers = $stmtTopUsers->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmtExport = $pdo->prepare("
-                SELECT r.req_number, FORMAT(r.created_at, 'yyyy-MM-dd HH:mm') as date_req, 
-                       u.fullname as requester, i.sap_no, i.part_description, 
-                       ri.qty_requested, ri.qty_issued, ri.request_type, r.status
-                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
-                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id
-                JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id
-                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
-                ORDER BY r.created_at DESC
-            ");
-            $stmtExport->execute([$startDate, $endDate]);
-            $exportData = $stmtExport->fetchAll(PDO::FETCH_ASSOC);
 
             $response = [
                 'success' => true, 
@@ -279,11 +289,30 @@ try {
                 'trendData' => $trendData,
                 'categoryData' => $categoryData,
                 'topItems' => $topItems, 
-                'topUsers' => $topUsers,
-                'exportData' => $exportData
+                'topUsers' => $topUsers
             ];
             break;
 
+        case 'export_analytics':
+            $startDate = $_REQUEST['start_date'] ?? date('Y-m-01');
+            $endDate = $_REQUEST['end_date'] ?? date('Y-m-t'); 
+            
+            $stmtExport = $pdo->prepare("
+                SELECT r.req_number, FORMAT(r.created_at, 'yyyy-MM-dd HH:mm') as date_req, 
+                       u.fullname as requester, i.sap_no, i.part_description, 
+                       ri.qty_requested, ri.qty_issued, ri.request_type, r.status 
+                FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) 
+                JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id 
+                JOIN dbo.USERS u WITH (NOLOCK) ON r.requester_id = u.id 
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no 
+                WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) 
+                ORDER BY r.created_at DESC
+            ");
+            $stmtExport->execute([$startDate, $endDate]); 
+            $exportData = $stmtExport->fetchAll(PDO::FETCH_ASSOC);
+            
+            $response = ['success' => true, 'exportData' => $exportData];
+            break;
 
         // ==========================================
         // 🟢 2. MATERIAL REQUISITION (ผู้ขอเบิก) 🟢
@@ -781,7 +810,7 @@ try {
 
         case 'bulk_process_transfer_request':
             $transfer_ids = json_decode($_POST['transfer_ids'], true);
-            $action_status = $_POST['action_status'] ?? ''; // 'COMPLETED' or 'CANCELLED'
+            $action_status = $_POST['action_status'] ?? '';
 
             if (empty($transfer_ids) || !is_array($transfer_ids) || !in_array($action_status, ['COMPLETED', 'CANCELLED'])) {
                 throw new Exception("ข้อมูลไม่ถูกต้อง");
@@ -1422,40 +1451,6 @@ try {
 
             $pdo->commit();
             $response = ['success' => true, 'message' => "ยืนยันรับเข้าสต็อกสำเร็จจำนวน $successCount พาเลท/กล่อง"];
-            break;
-
-        case 'get_master_pallet_details':
-            $masterPalletNo = $_GET['master_pallet_no'] ?? '';
-            if (empty($masterPalletNo)) {
-                throw new Exception("Master Pallet Number is required");
-            }
-            $sql = "
-                SELECT 
-                    t.master_pallet_no,
-                    MAX(i.part_no) as part_no,
-                    MAX(i.part_description) as part_description,
-                    MAX(t.po_number) as po_number,
-                    MAX(t.warehouse_no) as warehouse_no,
-                    MAX(t.received_date) as received_date,
-                    SUM(t.current_qty) as total_qty,
-                    COUNT(t.tag_id) as total_tags,
-                    MAX(t.week_no) as week_no,
-                    MAX(t.remark) as remark
-                FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
-                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-                WHERE t.master_pallet_no = :master_pallet_no
-                GROUP BY t.master_pallet_no
-            ";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(['master_pallet_no' => $masterPalletNo]);
-            $data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$data) {
-                throw new Exception("ไม่พบข้อมูลพาเลทหมายเลข: $masterPalletNo");
-            }
-
-            $response = ['success' => true, 'data' => $data];
             break;
 
         // ==========================================

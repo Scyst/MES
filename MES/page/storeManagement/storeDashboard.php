@@ -20,107 +20,63 @@ $pageIcon = "fas fa-store";
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Navigation Tabs with Glassmorphism */
-        .mode-tab-container {
+        /* 🟢 Global Toolbar (Tabs + Date Filter) */
+        .global-toolbar {
             position: sticky; top: 0; z-index: 1020;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--bs-border-color);
-            display: flex; gap: 4px; padding: 0 1rem;
+            padding: 0.5rem 1rem;
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
         }
-        .mode-tab { 
-            border: none; background: transparent; color: #6c757d; 
-            font-weight: 600; padding: 0.6rem 1rem; 
-            border-bottom: 3px solid transparent; transition: all 0.15s; 
-            white-space: nowrap; font-size: 0.85rem; 
-        }
+
+        .mode-tab { border: none; background: transparent; color: #6c757d; font-weight: 600; padding: 0.4rem 0.8rem; border-bottom: 3px solid transparent; transition: all 0.15s; white-space: nowrap; font-size: 0.9rem; }
         .mode-tab:hover { color: var(--bs-primary); }
         .mode-tab.active { color: var(--bs-primary); border-bottom-color: var(--bs-primary); }
 
         /* Order Cards Styling */
-        .order-card { 
-            border: 1px solid var(--bs-border-color); 
-            background: #fff; transition: all 0.15s; 
-            border-left: 4px solid transparent; cursor: pointer; 
-        }
+        .order-card { border: 1px solid var(--bs-border-color); background: #fff; transition: all 0.15s; border-left: 4px solid transparent; cursor: pointer; }
         .order-card:hover { border-color: var(--bs-primary); background-color: #f8f9fa; }
         .order-card.active { background-color: #eef6ff; border-color: var(--bs-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        
         .status-new { border-left-color: var(--bs-danger); } 
         .status-prep { border-left-color: var(--bs-warning); } 
         .status-comp { border-left-color: var(--bs-success); opacity: 0.8; }
         .status-rej { border-left-color: var(--bs-secondary); opacity: 0.7; }
-
         .item-img-small { width: 45px; height: 45px; object-fit: cover; border: 1px solid var(--bs-border-color); border-radius: 4px; }
         .ph-small { width: 45px; height: 45px; background: #f0f3f8; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
 
         @media (max-width: 991.98px) {
             body { overflow: auto; } 
-            #left-pane, #right-pane { min-height: calc(100vh - 160px); padding-bottom: 70px; }
+            #left-pane, #right-pane { min-height: calc(100vh - 180px); padding-bottom: 70px; }
             #action-bar-mobile { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1050; border-top: 1px solid var(--bs-border-color); background: white; padding: 10px; }
+            .global-toolbar { flex-direction: column; align-items: stretch; }
+            .date-filter-group { width: 100%; justify-content: space-between; }
         }
         
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3); } 70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
         .pulse-alert { animation: pulse-red 2s infinite; border-color: var(--bs-danger); }
-
         .issue-qty-input { font-size: 1.1rem !important; padding: 2px !important; }
-        .transition-hover { transition: transform 0.15s; }
-        .transition-hover:hover { transform: translateY(-2px); }
 
         /* --- Analytics Enhanced Styling --- */
-        .stat-card {
-            border: none;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.2s ease;
-            background: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        .stat-card { border: 1px solid var(--bs-border-color); border-radius: 8px; overflow: hidden; transition: all 0.2s ease; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .stat-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .stat-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: #2c3e50; }
+        
+        /* Advanced KPI Boxes (Vertical Stack) */
+        .adv-kpi-box { 
+            background: #f8f9fa; border: 1px solid var(--bs-border-color); 
+            border-radius: 6px; padding: 0.5rem 0.75rem; 
+            display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+            height: 100%;
         }
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin-bottom: 0.75rem;
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6c757d;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            line-height: 1;
-            color: #2c3e50;
-        }
-        .chart-container-card {
-            border: 1px solid var(--bs-border-color);
-            background: #fff;
-            border-radius: 8px;
-        }
-        .chart-header {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid var(--bs-border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .chart-title {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #495057;
-            margin-bottom: 0;
-        }
+        .adv-kpi-label { font-size: 0.7rem; font-weight: bold; color: #6c757d; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .adv-kpi-val { font-size: 1.1rem; font-weight: 800; line-height: 1.2; }
+
+        .chart-container-card { border: 1px solid var(--bs-border-color); background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .chart-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--bs-border-color); display: flex; justify-content: space-between; align-items: center; }
+        .chart-title { font-size: 0.9rem; font-weight: 700; color: #495057; margin-bottom: 0; }
     </style>
 </head>
 <body class="layout-top-header">
@@ -134,19 +90,31 @@ $pageIcon = "fas fa-store";
     <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
     <div class="page-container d-flex flex-column h-100">
-        
         <main id="main-content" class="d-flex flex-column flex-grow-1 overflow-hidden">
             
-            <div class="mode-tab-container flex-shrink-0">
-                <button class="mode-tab active" id="tab-stock" onclick="switchDashboardMode('STOCK')">
-                    <i class="fas fa-box me-1"></i> คิวจ่าย (Stock)
-                </button>
-                <button class="mode-tab" id="tab-k2" onclick="switchDashboardMode('K2')">
-                    <i class="fas fa-shopping-cart me-1"></i> รอเปิด K2
-                </button>
-                <button class="mode-tab" id="tab-analytics" onclick="switchDashboardMode('ANALYTICS')">
-                    <i class="fas fa-chart-bar me-1"></i> Analytics
-                </button>
+            <div class="global-toolbar flex-shrink-0">
+                <div class="d-flex gap-1 overflow-auto hide-scrollbar">
+                    <button class="mode-tab active" id="tab-stock" onclick="switchDashboardMode('STOCK')">
+                        <i class="fas fa-box me-1"></i> คิวจ่าย (Stock)
+                    </button>
+                    <button class="mode-tab" id="tab-k2" onclick="switchDashboardMode('K2')">
+                        <i class="fas fa-shopping-cart me-1"></i> รอเปิด K2
+                    </button>
+                    <button class="mode-tab" id="tab-analytics" onclick="switchDashboardMode('ANALYTICS')">
+                        <i class="fas fa-chart-line me-1"></i> วิเคราะห์ (Analytics)
+                    </button>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 date-filter-group" id="global-date-filter">
+                    <div class="input-group input-group-sm w-auto">
+                        <span class="input-group-text bg-light text-muted fw-bold d-none d-md-block"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" id="global_start" class="form-control fw-bold text-primary" onchange="triggerGlobalReload()">
+                        <span class="input-group-text bg-light text-muted border-start-0 border-end-0">-</span>
+                        <input type="date" id="global_end" class="form-control fw-bold text-primary" onchange="triggerGlobalReload()">
+                    </div>
+                    <button class="btn btn-sm btn-primary px-2" onclick="triggerGlobalReload()" title="โหลดข้อมูลใหม่"><i class="fas fa-sync-alt"></i></button>
+                    <button id="btnExportCSV" class="btn btn-sm btn-success px-3 fw-bold d-none" onclick="exportToCSV()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                </div>
             </div>
 
             <div class="p-2 p-lg-3 flex-grow-1 d-flex flex-column overflow-hidden">
@@ -154,27 +122,15 @@ $pageIcon = "fas fa-store";
                 <div class="row g-2 h-100 flex-grow-1" id="order-layout">
                     
                     <div class="col-12 col-lg-4 col-xl-3 d-flex flex-column h-100" id="left-pane">
-                        <div class="bg-white border rounded shadow-sm p-2 mb-2">
-                            <div class="d-flex gap-1">
-                                <select id="filter_status" class="form-select form-select-sm fw-bold border-secondary-subtle" onchange="toggleDateFilter(); loadActiveQueue();">
-                                    <option value="ACTIVE" class="opt-stock">⚡ คิวงาน (Active)</option>
-                                    <option value="ALL" class="opt-stock">📦 ประวัติ (History)</option>
-                                    <option value="WAITING" class="opt-k2 d-none">⏳ รอเปิด K2</option>
-                                    <option value="K2_OPENED" class="opt-k2 d-none">✅ เปิดแล้ว (History)</option>
-                                </select>
-                                <button class="btn btn-sm btn-primary px-2" onclick="loadActiveQueue()"><i class="fas fa-sync-alt"></i></button>
-                            </div>
-                            
-                            <div id="date_filter_container" class="row g-1 mt-2 pt-2 border-top d-none">
-                                <div class="col-6">
-                                    <input type="date" id="filter_start" class="form-control form-control-sm text-center fw-bold" onchange="loadActiveQueue()">
-                                </div>
-                                <div class="col-6">
-                                    <input type="date" id="filter_end" class="form-control form-control-sm text-center fw-bold" onchange="loadActiveQueue()">
-                                </div>
-                            </div>
+                        <div class="bg-white border rounded shadow-sm p-2 mb-2 flex-shrink-0">
+                            <label class="form-label small fw-bold text-secondary mb-1">กรองสถานะรายการ</label>
+                            <select id="filter_status" class="form-select form-select-sm fw-bold border-secondary-subtle" onchange="triggerGlobalReload();">
+                                <option value="ACTIVE" class="opt-stock">⚡ คิวงาน (Active)</option>
+                                <option value="ALL" class="opt-stock">📦 ประวัติ (History)</option>
+                                <option value="WAITING" class="opt-k2 d-none">⏳ รอเปิด K2</option>
+                                <option value="K2_OPENED" class="opt-k2 d-none">✅ เปิดแล้ว (History)</option>
+                            </select>
                         </div>
-
                         <div class="list-group list-group-flush border rounded shadow-sm flex-grow-1 overflow-auto hide-scrollbar bg-white p-1 gap-1" id="orderListContainer"></div>
                     </div>
 
@@ -202,15 +158,11 @@ $pageIcon = "fas fa-store";
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="flex-grow-1 overflow-auto hide-scrollbar px-2 pb-2 w-100">
                                     <small class="fw-bold text-secondary d-block mb-2 ms-1">รายการวัสดุ (Pick List)</small>
                                     <div id="itemsContainer" class="d-flex flex-column gap-1 mb-2"></div>
-                                    <div id="issuerContainer" class="alert alert-success d-none py-2 px-3 small border-0 shadow-sm">
-                                        <i class="fas fa-check-circle me-1"></i> จ่ายโดย: <span id="disp_issuer" class="fw-bold"></span> (<span id="disp_issue_time"></span>)
-                                    </div>
+                                    <div id="issuerContainer" class="alert alert-success d-none py-2 px-3 small border-0 shadow-sm"><i class="fas fa-check-circle me-1"></i> จ่ายโดย: <span id="disp_issuer" class="fw-bold"></span> (<span id="disp_issue_time"></span>)</div>
                                 </div>
-
                                 <div id="action-bar-mobile" class="bg-white border-top p-2 flex-shrink-0 d-flex justify-content-end gap-2 shadow-sm"></div>
                             </div>
 
@@ -249,89 +201,60 @@ $pageIcon = "fas fa-store";
                     </div> 
                 </div>
 
-                <div class="row g-3 d-none h-100 overflow-auto pb-4 hide-scrollbar" id="analytics-layout">
-                    <div class="col-12">
-                        <div class="bg-white p-2 rounded shadow-sm border d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="input-group input-group-sm w-auto" style="min-width: 320px;">
-                                <span class="input-group-text bg-light fw-bold small">ช่วงเวลา</span>
-                                <input type="date" id="analytic_start" class="form-control fw-bold text-primary">
-                                <span class="input-group-text bg-light text-muted"><i class="fas fa-arrow-right"></i></span>
-                                <input type="date" id="analytic_end" class="form-control fw-bold text-primary">
-                                <button class="btn btn-primary px-3" onclick="loadAnalytics()"><i class="fas fa-sync-alt"></i></button>
-                            </div>
-                            <button class="btn btn-sm btn-success fw-bold px-3" onclick="exportToCSV()">
-                                <i class="fas fa-file-excel me-1"></i> Export Data
-                            </button>
-                        </div>
-                    </div>
+                <div class="row g-2 d-none h-100 overflow-auto pb-3 hide-scrollbar" id="analytics-layout">
+                    
+                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-primary border-4"><div class="stat-label">บิลสำเร็จ</div><div class="stat-value" id="stat_total_reqs">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-success border-4"><div class="stat-label">จ่ายออก (ชิ้น)</div><div class="stat-value" id="stat_total_issued">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-warning border-4"><div class="stat-label">รอ K2 (ใบ)</div><div class="stat-value" id="stat_waiting_k2">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-danger border-4"><div class="stat-label">ถูกปฏิเสธ</div><div class="stat-value" id="stat_total_rejects">0</div></div></div>
 
-                    <div class="col-6 col-lg-3">
-                        <div class="stat-card p-3 border-bottom border-primary border-4">
-                            <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-file-invoice"></i></div>
-                            <div class="stat-label">บิลเบิกที่สำเร็จ</div>
-                            <div class="stat-value" id="stat_total_reqs">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="stat-card p-3 border-bottom border-success border-4">
-                            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="fas fa-boxes"></i></div>
-                            <div class="stat-label">จำนวนจ่ายออกรวม</div>
-                            <div class="stat-value" id="stat_total_issued">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="stat-card p-3 border-bottom border-warning border-4">
-                            <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-clock"></i></div>
-                            <div class="stat-label">รายการค้างเปิด K2</div>
-                            <div class="stat-value" id="stat_waiting_k2">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="stat-card p-3 border-bottom border-danger border-4">
-                            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-ban"></i></div>
-                            <div class="stat-label">บิลที่ถูกปฏิเสธ</div>
-                            <div class="stat-value" id="stat_total_rejects">0</div>
+                    <div class="col-12">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3 col-xl">
+                                <div class="adv-kpi-box"><div class="adv-kpi-label">SLA (เวลาจัดของ)</div><div class="adv-kpi-val" id="adv_sla">0 นาที</div></div>
+                            </div>
+                            <div class="col-6 col-md-3 col-xl">
+                                <div class="adv-kpi-box"><div class="adv-kpi-label">Fill Rate</div><div class="adv-kpi-val text-success" id="adv_fill_rate">0%</div></div>
+                            </div>
+                            <div class="col-6 col-md-3 col-xl">
+                                <div class="adv-kpi-box"><div class="adv-kpi-label">IRA (สต็อกตรง)</div><div class="adv-kpi-val text-info" id="adv_ira">0%</div></div>
+                            </div>
+                            <div class="col-6 col-md-3 col-xl">
+                                <div class="adv-kpi-box" title="Dead Stock 90 วัน"><div class="adv-kpi-label">Dead Stock (90D)</div><div class="adv-kpi-val text-danger" id="adv_dead_stock">฿0</div></div>
+                            </div>
+                            <div class="col-12 col-md-12 col-xl">
+                                <div class="adv-kpi-box"><div class="adv-kpi-label">Turnover Ratio</div><div class="adv-kpi-val text-warning" id="adv_turnover">0.00</div></div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-xl-8">
                         <div class="chart-container-card h-100">
-                            <div class="chart-header">
-                                <h6 class="chart-title"><i class="fas fa-chart-line me-2 text-primary"></i>แนวโน้มการเบิกจ่ายรายวัน</h6>
-                                <small class="text-muted">จำนวนบิล/วัน</small>
-                            </div>
-                            <div class="p-3" style="height: 350px;"><canvas id="chartTrend"></canvas></div>
+                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-chart-line me-2 text-primary"></i>แนวโน้มการเบิกจ่ายรายวัน</h6></div>
+                            <div class="p-2" style="height: 280px;"><canvas id="chartTrend"></canvas></div>
                         </div>
                     </div>
-
                     <div class="col-12 col-xl-4">
                         <div class="chart-container-card h-100">
-                            <div class="chart-header">
-                                <h6 class="chart-title"><i class="fas fa-chart-pie me-2 text-success"></i>สัดส่วนตามหมวดหมู่</h6>
-                            </div>
-                            <div class="p-3 d-flex align-items-center justify-content-center" style="height: 350px;">
-                                <canvas id="chartCategory"></canvas>
-                            </div>
+                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-chart-pie me-2 text-success"></i>สัดส่วนหมวดหมู่</h6></div>
+                            <div class="p-2" style="height: 280px;"><canvas id="chartCategory"></canvas></div>
                         </div>
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card">
-                            <div class="chart-header">
-                                <h6 class="chart-title"><i class="fas fa-award me-2 text-warning"></i>5 อันดับวัสดุเบิกสูงสุด (Qty)</h6>
-                            </div>
-                            <div class="p-3" style="height: 300px;"><canvas id="chartTopItems"></canvas></div>
+                        <div class="chart-container-card h-100">
+                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-award me-2 text-warning"></i>Top 5 วัสดุเบิกสูงสุด</h6></div>
+                            <div class="p-2" style="height: 250px;"><canvas id="chartTopItems"></canvas></div>
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card">
-                            <div class="chart-header">
-                                <h6 class="chart-title"><i class="fas fa-user-tag me-2 text-info"></i>5 อันดับผู้เบิกสูงสุด (บิล)</h6>
-                            </div>
-                            <div class="p-3" style="height: 300px;"><canvas id="chartTopUsers"></canvas></div>
+                        <div class="chart-container-card h-100">
+                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-user-tag me-2 text-info"></i>Top 5 ผู้เบิกบ่อยสุด</h6></div>
+                            <div class="p-2" style="height: 250px;"><canvas id="chartTopUsers"></canvas></div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
