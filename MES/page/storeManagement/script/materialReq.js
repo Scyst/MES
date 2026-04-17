@@ -1,67 +1,16 @@
 "use strict";
 
-// ========================================================
-// 🟢 1. GLOBAL VARIABLES & CONFIG 🟢
-// ========================================================
-const API_URL = 'api/manageMaterial.php';
 let cart = {}; 
 let historyModal, trackingModal, editItemModalInst; 
-
-// Pagination & Fetch Control
 let currentPage = 1;
 const itemLimit = 40; 
 let isLoading = false;
 let hasMoreItems = true;
 let searchTimeout;
-let currentSearchController = null;
 
-// ========================================================
-// 🟢 2. CUSTOM FETCH WRAPPER 🟢
-// ========================================================
-async function fetchMaterialAPI(params, method = 'GET', signal = null) {
-    let url = API_URL;
-    const options = { method: method, signal: signal };
-
-    if (method === 'GET') {
-        const qs = new URLSearchParams(params).toString();
-        url += `?${qs}`;
-    } else if (method === 'POST') {
-        let formData;
-        if (params instanceof FormData) {
-            formData = params;
-        } else {
-            formData = new FormData();
-            for (const key in params) {
-                formData.append(key, params[key]);
-            }
-        }
-        
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta && !formData.has('csrf_token')) {
-            formData.append('csrf_token', csrfMeta.getAttribute('content'));
-        }
-        options.body = formData;
-    }
-
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-    return await response.json();
-}
-
-function handleFetchError(error, defaultMsg = "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์") {
-    document.getElementById('loadingOverlay').style.display = 'none';
-    isLoading = false;
-    Swal.fire('Error', error.message || defaultMsg, 'error');
-}
-
-// ========================================================
-// 🟢 3. INITIALIZATION & EVENT LISTENERS 🟢
-// ========================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 3.1 Load Initial Data
     loadCatalog('ALL');
 
-    // 3.2 Search Debounce
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
@@ -70,44 +19,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3.3 Initialize Modals
     const histEl = document.getElementById('historyModal');
     const trackEl = document.getElementById('trackingModal');
     if (histEl) historyModal = new bootstrap.Modal(histEl);
     if (trackEl) trackingModal = new bootstrap.Modal(trackEl);
 
-    // 3.4 Infinite Scroll (แก้ไขให้ตรวจจับที่ main-content แทน body)
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
-        mainContent.addEventListener('scroll', () => {
-            if (mainContent.scrollTop + mainContent.clientHeight >= mainContent.scrollHeight - 300) {
-                if (!isLoading && hasMoreItems) loadCatalog(null, true);
+        const loadMoreTrigger = document.createElement('div');
+        loadMoreTrigger.id = 'infinite-scroll-trigger';
+        loadMoreTrigger.style.height = '20px';
+        document.getElementById('catalogGrid').after(loadMoreTrigger);
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoading && hasMoreItems) {
+                loadCatalog(null, true);
             }
-        });
-    } else {
-        window.addEventListener('scroll', () => {
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            if (scrollTop + clientHeight >= scrollHeight - 300) {
-                if (!isLoading && hasMoreItems) loadCatalog(null, true);
-            }
-        });
+        }, { rootMargin: "200px" });
+
+        observer.observe(loadMoreTrigger);
     }
 
-    // 3.5 Radio Buttons
     document.querySelectorAll('input[name="reqType"]').forEach(radio => {
         radio.addEventListener('change', renderCartUI);
     });
 
-    // 3.6 Global Image Upload Listener
     const globalUploadInput = document.getElementById('globalImageUpload');
     if (globalUploadInput) {
         globalUploadInput.addEventListener('change', handleImageUploadEvent);
     }
 });
 
-// ========================================================
-// 🟢 4. CATALOG & UI RENDERING 🟢
-// ========================================================
 window.toggleImages = function() {
     document.body.classList.toggle('hide-images');
     const isHidden = document.body.classList.contains('hide-images');
@@ -131,36 +73,20 @@ window.filterCategory = function(category, element) {
     
     const searchInput = document.getElementById('searchItem');
     if (searchInput) searchInput.value = ''; 
-    
     loadCatalog(category, false); 
 };
 
 window.loadCatalog = async function(category = null, isLoadMore = false) {
-    if (!isLoadMore) {
-        if (currentSearchController) currentSearchController.abort();
-        currentSearchController = new AbortController();
-    } else {
-        if (isLoading) return;
-    }
-    
-    // 🟢 [FIX] จัดการเรื่อง Default Category ให้รัดกุม 100% ป้องกันค่า 'undefined'
+    if (isLoading) return;
+
     if (!category) {
         const activeCategory = document.querySelector('.category-chip.active');
-        // ใช้ getAttribute เพื่อความชัวร์ในการดึงค่าจาก HTML
-        category = (activeCategory && activeCategory.getAttribute('data-category')) 
-            ? activeCategory.getAttribute('data-category') 
-            : 'ALL';
+        category = activeCategory ? activeCategory.getAttribute('data-category') : 'ALL';
     }
-    
-    // ดักจับอีกชั้น เผื่อค่ากลายเป็นข้อความ 'undefined' หรือค่าว่าง
-    if (category === 'undefined' || category === 'null' || !category) {
-        category = 'ALL';
-    }
+    if (category === 'undefined' || category === 'null' || !category) category = 'ALL';
 
-    const searchInput = document.getElementById('searchItem');
-    const sortInput = document.getElementById('sortItem');
-    const search = searchInput ? searchInput.value.trim() : '';
-    const sort = sortInput ? sortInput.value : 'DEFAULT'; 
+    const search = document.getElementById('searchItem')?.value.trim() || '';
+    const sort = document.getElementById('sortItem')?.value || 'DEFAULT';
     const catalogGrid = document.getElementById('catalogGrid');
 
     if (!isLoadMore) {
@@ -174,20 +100,12 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
     isLoading = true;
 
     try {
-        const res = await fetchMaterialAPI({
-            action: 'get_catalog',
-            category: category,
-            search: search,
-            sort: sort,
-            page: currentPage,
-            limit: itemLimit
-        }, 'GET', isLoadMore ? null : currentSearchController.signal);
-
+        const actionUrl = `get_catalog&category=${encodeURIComponent(category)}&search=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page=${currentPage}&limit=${itemLimit}`;
+        const res = await fetchAPI(actionUrl, 'GET');
+        
         isLoading = false;
-        const spinner = document.getElementById('loadMoreSpinner');
-        if (spinner) spinner.remove();
+        document.getElementById('loadMoreSpinner')?.remove();
 
-        if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
         if (res.data.length < itemLimit) hasMoreItems = false;
         
         let html = '';
@@ -199,7 +117,7 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
             catalogGrid.innerHTML = html;
         } else {
             res.data.forEach(item => {
-                const onHand = parseFloat(item.onhand_qty);
+                const onHand = parseFloat(item.onhand_qty || 0);
                 const isOutOfStock = onHand <= 0;
                 const safeDesc = item.description ? item.description.replace(/'/g, "\\'") : 'N/A';
                 const safeCategory = item.item_category || 'OTHER'; 
@@ -228,11 +146,9 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
                             ${badgeHtml}${editBtnHtml}${imgHtml}
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
-
                         <div class="card-body-flex pt-2">
                             <div class="small text-primary fw-bold mb-1">SAP: ${item.item_code}</div>
                             <div class="product-title" title="${item.description}">${item.description || '-'}</div>
-                            
                             <div class="mt-auto pt-3 border-top">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <button class="btn btn-light border px-2 text-secondary fw-bold" type="button" onclick="updateInputQty('${item.item_code}', -1)"><i class="fas fa-minus"></i></button>
@@ -255,14 +171,12 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
             currentPage++; 
         }
     } catch (error) {
-        if (error.name === 'AbortError') return; 
-        handleFetchError(error);
+        isLoading = false;
+        document.getElementById('loadMoreSpinner')?.remove();
+        // ข้อผิดพลาดจัดการใน fetchAPI แล้ว ไม่ต้อง Swal ซ้ำ
     }
 };
 
-// ========================================================
-// 🟢 5. CART & CHECKOUT OPERATIONS 🟢
-// ========================================================
 window.updateInputQty = function(itemCode, change) {
     const input = document.getElementById(`input_qty_${itemCode}`);
     if (!input) return;
@@ -378,44 +292,37 @@ window.submitRequisition = function() {
         confirmButtonText: 'Yes, Submit!'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
             const payloadCart = itemCodes.map(code => ({ item_code: code, qty: cart[code].qty }));
 
             try {
-                const res = await fetchMaterialAPI({
-                    action: 'submit_requisition', cart: JSON.stringify(payloadCart), remark: remark, request_type: reqType
-                }, 'POST');
+                // 🛡️ ป้องกัน Double Submit โดยส่ง ID ปุ่ม btnCheckout เข้าไปที่ fetchAPI
+                const res = await fetchAPI('submit_requisition', 'POST', { 
+                    cart: JSON.stringify(payloadCart), 
+                    remark: remark, 
+                    request_type: reqType 
+                }, 'btnCheckout');
 
-                document.getElementById('loadingOverlay').style.display = 'none';
-                
-                if (res.success) {
-                    Swal.fire({ 
-                        title: 'Success!', 
-                        html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${res.req_number}</b>`, 
-                        icon: 'success' 
-                    }).then(() => {
-                        cart = {}; 
-                        if (remarkEl) remarkEl.value = ''; 
-                        renderCartUI();
-                        
-                        const offcanvasEl = document.getElementById('cartOffcanvas');
-                        if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
-                        
-                        loadCatalog(null, false); 
-                    });
-                } else { 
-                    Swal.fire('Error', res.message, 'error'); 
-                }
+                Swal.fire({ 
+                    title: 'Success!', 
+                    html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${res.req_number}</b>`, 
+                    icon: 'success' 
+                }).then(() => {
+                    cart = {}; 
+                    if (remarkEl) remarkEl.value = ''; 
+                    renderCartUI();
+                    
+                    const offcanvasEl = document.getElementById('cartOffcanvas');
+                    if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
+                    
+                    loadCatalog(null, false); 
+                });
             } catch (error) {
-                handleFetchError(error);
+                // Error ถูกจัดการโดย fetchAPI อัตโนมัติ
             }
         }
     });
 };
 
-// ========================================================
-// 🟢 6. ORDER HISTORY & TRACKING 🟢
-// ========================================================
 window.openHistoryModal = async function() {
     const startEl = document.getElementById('histStartDate');
     const endEl = document.getElementById('histEndDate');
@@ -431,8 +338,8 @@ window.openHistoryModal = async function() {
     if (historyModal) historyModal.show();
 
     try {
-        const res = await fetchMaterialAPI({ action: 'get_my_orders', start_date: startEl.value, end_date: endEl.value }, 'GET');
-        if (!res.success) return;
+        const actionUrl = `get_my_orders&start_date=${startEl.value}&end_date=${endEl.value}`;
+        const res = await fetchAPI(actionUrl, 'GET');
         
         let html = '';
         if (res.data.length === 0) {
@@ -463,7 +370,7 @@ window.openHistoryModal = async function() {
         }
         if (listContainer) listContainer.innerHTML = html;
     } catch (error) {
-        handleFetchError(error);
+        if (listContainer) listContainer.innerHTML = '<div class="col-12 text-center text-danger py-5">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     }
 };
 
@@ -476,11 +383,7 @@ window.viewOrderDetails = async function(reqId) {
         if (itemsList) itemsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
         
         try {
-            const res = await fetchMaterialAPI({ action: 'get_my_order_details', req_id: reqId }, 'GET');
-            if (!res.success) { 
-                if (trackingModal) trackingModal.hide(); 
-                Swal.fire('Error', res.message, 'error'); return; 
-            }
+            const res = await fetchAPI(`get_my_order_details&req_id=${reqId}`, 'GET');
 
             const h = res.header;
             document.getElementById('modalReqNo').innerText = h.req_number;
@@ -548,7 +451,7 @@ window.viewOrderDetails = async function(reqId) {
                 if (issuerInfo) issuerInfo.classList.add('d-none'); 
             }
         } catch (error) {
-            handleFetchError(error);
+            if (itemsList) itemsList.innerHTML = '<div class="text-center text-danger py-4">ดึงข้อมูลไม่สำเร็จ</div>';
         }
     }, 300);
 };
@@ -558,28 +461,18 @@ window.backToHistory = function() {
     setTimeout(() => { if (historyModal) historyModal.show(); }, 300);
 };
 
-// ========================================================
-// 🟢 7. QUICK EDIT MASTER DATA 🟢
-// ========================================================
 window.openEditItemModal = async function(itemCode) {
     if (!editItemModalInst) editItemModalInst = new bootstrap.Modal(document.getElementById('editItemModal'));
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
+    
     try {
-        const res = await fetchMaterialAPI({ action: 'get_item_info', item_code: itemCode }, 'GET');
-        document.getElementById('loadingOverlay').style.display = 'none';
-
-        if (res.success && res.data) {
-            document.getElementById('edit_sap_no').value = res.data.sap_no;
-            document.getElementById('edit_description').value = res.data.part_description || '';
-            document.getElementById('edit_material_type').value = res.data.item_category || 'OTHER';
-            document.getElementById('edit_std_price').value = res.data.StandardPrice ? parseFloat(res.data.StandardPrice).toFixed(2) : '0.00';
-            editItemModalInst.show();
-        } else {
-            Swal.fire('Error', 'ไม่พบข้อมูลสินค้าในระบบ', 'error');
-        }
+        const res = await fetchAPI(`get_item_info&item_code=${itemCode}`, 'GET');
+        document.getElementById('edit_sap_no').value = res.data.sap_no;
+        document.getElementById('edit_description').value = res.data.part_description || '';
+        document.getElementById('edit_material_type').value = res.data.item_category || 'OTHER';
+        document.getElementById('edit_std_price').value = res.data.StandardPrice ? parseFloat(res.data.StandardPrice).toFixed(2) : '0.00';
+        editItemModalInst.show();
     } catch (error) {
-        handleFetchError(error);
+        // error managed by fetchAPI
     }
 };
 
@@ -589,30 +482,22 @@ window.saveItemConfig = async function() {
     const category = document.getElementById('edit_material_type').value;
     const price = document.getElementById('edit_std_price').value;
 
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
     try {
-        const res = await fetchMaterialAPI({ 
-            action: 'update_item_info', item_code: itemCode, description: desc, item_category: category, std_price: price
-        }, 'POST');
+        await fetchAPI('update_item_info', 'POST', { 
+            item_code: itemCode, 
+            description: desc, 
+            item_category: category, 
+            std_price: price 
+        });
 
-        document.getElementById('loadingOverlay').style.display = 'none';
-
-        if (res.success) {
-            editItemModalInst.hide();
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
-            loadCatalog(null, false); 
-        } else {
-            Swal.fire('Error', res.message, 'error');
-        }
+        editItemModalInst.hide();
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
+        loadCatalog(null, false); 
     } catch (error) {
-        handleFetchError(error);
+        // error managed by fetchAPI
     }
 };
 
-// ========================================================
-// 🟢 8. IMAGE UPLOAD & COMPRESSION 🟢
-// ========================================================
 window.triggerImageUpload = function(itemCode) {
     document.getElementById('uploadTargetItemCode').value = itemCode;
     
@@ -678,47 +563,43 @@ async function handleImageUploadEvent() {
     
     const originalFile = this.files[0];
     const itemCode = document.getElementById('uploadTargetItemCode').value;
+    const loadingOverlay = document.getElementById('loadingOverlay');
     
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    if(loadingOverlay) loadingOverlay.style.display = 'flex';
 
     try {
         const compressedFile = await compressImage(originalFile, 800, 800, 0.8);
 
         if (compressedFile.size > 5 * 1024 * 1024) {
-            document.getElementById('loadingOverlay').style.display = 'none';
+            if(loadingOverlay) loadingOverlay.style.display = 'none';
             Swal.fire('ไฟล์ใหญ่เกินไป!', 'ระบบไม่สามารถบีบอัดภาพให้อยู่ในขนาดที่กำหนดได้', 'warning');
             this.value = ''; return;
         }
 
         let formData = new FormData();
-        formData.append('action', 'upload_image');
         formData.append('item_code', itemCode);
         formData.append('image', compressedFile);
 
-        const res = await fetchMaterialAPI(formData, 'POST');
-        document.getElementById('loadingOverlay').style.display = 'none';
+        const res = await fetchAPI('upload_image', 'POST', formData);
+        if(loadingOverlay) loadingOverlay.style.display = 'none';
         
-        if (res.success) {
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดสำเร็จ', showConfirmButton: false, timer: 1500 });
+        
+        const wrapper = document.getElementById(`img_wrapper_${itemCode}`);
+        if (wrapper) {
+            const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
+            const existingImg = document.getElementById(`img_element_${itemCode}`);
             
-            const wrapper = document.getElementById(`img_wrapper_${itemCode}`);
-            if (wrapper) {
-                const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
-                const existingImg = document.getElementById(`img_element_${itemCode}`);
-                
-                if (existingImg && existingImg.tagName === 'IMG') {
-                    existingImg.src = newImgUrl;
-                } else {
-                    const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
-                    if (existingImg) existingImg.remove(); 
-                    wrapper.insertAdjacentHTML('beforeend', newImgHtml);
-                }
+            if (existingImg && existingImg.tagName === 'IMG') {
+                existingImg.src = newImgUrl;
+            } else {
+                const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
+                if (existingImg) existingImg.remove(); 
+                wrapper.insertAdjacentHTML('beforeend', newImgHtml);
             }
-        } else { 
-            Swal.fire('Error', res.message, 'error'); 
         }
     } catch (error) {
-        document.getElementById('loadingOverlay').style.display = 'none';
+        if(loadingOverlay) loadingOverlay.style.display = 'none';
         Swal.fire('Error', 'เกิดข้อผิดพลาดในการจัดการไฟล์ภาพ', 'error');
     } finally {
         this.value = ''; 

@@ -312,6 +312,6 @@ $pageIcon = "fas fa-store";
     <input type="hidden" id="current_dashboard_mode" value="STOCK"> 
     
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
-    <script src="script/storedashboard.js?v=<?php echo time(); ?>"></script>
+    <script src="script/storeDashboard.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

@@ -7,7 +7,6 @@ $pageHeaderTitle = "Material Requisition";
 $pageHeaderSubtitle = "ระบบเบิกวัตถุดิบและวัสดุสิ้นเปลืองออนไลน์";
 $pageIcon = "fas fa-shopping-cart";
 
-// เช็คสิทธิ์ว่า User มีสิทธิ์อัปเดตรูปไหม (สมมติว่าเป็น admin, creator, หรือ store)
 $userRole = $_SESSION['user']['role'] ?? '';
 $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
 ?>
@@ -23,7 +22,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Product Card Styles */
         .product-card {
             border: 1px solid #eef2f6; border-radius: 12px; background: #fff;
             transition: all 0.2s ease-in-out; overflow: hidden; display: flex;
@@ -36,13 +34,11 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         .product-title { font-size: 0.9rem; font-weight: 700; color: #2c3e50; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; margin-bottom: 0.5rem; }
         .card-body-flex { flex: 1 1 auto; display: flex; flex-direction: column; padding: 1rem; }
         
-        /* Data-Only Mode */
         body.hide-images .product-img-wrapper { display: none !important; }
         body.hide-images .product-card { height: auto !important; min-height: 160px; }
         body.hide-images .badge-alt-container { display: block !important; }
         .stock-badge-alt { font-size: 0.75rem; font-weight: bold; }
 
-        /* Floating Cart Button */
         .cart-fab {
             position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px;
             background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); color: white; border-radius: 50%;
@@ -52,12 +48,11 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         .cart-fab:hover { transform: scale(1.05); color: white; }
         .cart-badge { position: absolute; top: -2px; right: -2px; background-color: #dc3545; font-size: 0.8rem; font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid white; }
 
-        /* Category Chips */
-        .category-chip { padding: 6px 16px; border-radius: 20px; border: 1px solid #dee2e6; background: #fff; color: #495057; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); height: 38px; display: flex; align-items: center; }
+        .category-chip { padding: 8px 18px; border-radius: 25px; border: 1px solid #dee2e6; background: #fff; color: #495057; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 6px; }
         .category-chip:hover { background: #f8f9fa; border-color: #cbd5e0; }
         .category-chip.active { background: #0d6efd; color: #fff; border-color: #0d6efd; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2); }
+        .category-chip.active i { color: #fff !important; }
 
-        /* 🟢 Order History & Tracking Styles (สำหรับ Modal) 🟢 */
         .order-card-hist { background: #fff; border-radius: 12px; border: 1px solid #dee2e6; transition: transform 0.2s; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .order-card-hist:hover { transform: translateY(-2px); border-color: #0d6efd; box-shadow: 0 4px 10px rgba(13,110,253,0.1); }
         .tracking-timeline { display: flex; justify-content: space-between; position: relative; margin: 1.5rem 0; padding: 0 1rem; }
@@ -75,37 +70,10 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         .item-img-mini { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
 
         .sticky-toolbar {
-            position: sticky;
-            top: 0; 
-            z-index: 1020;
-            background-color: rgba(244, 246, 249, 0.9);
-            /*backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);*/
-            margin: -1rem -1rem -0.5rem -1rem; 
-            padding: 0 1rem 5px 1rem; 
-            box-shadow: 0 10px 15px -10px rgba(0,0,0,0.05);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+            position: sticky; top: 0; z-index: 1020; background-color: rgba(244, 246, 249, 0.9);
+            margin: -1rem -1rem -0.5rem -1rem; padding: 0 1rem 5px 1rem; 
+            box-shadow: 0 10px 15px -10px rgba(0,0,0,0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.5);
         }
-        
-        .category-chip { 
-            padding: 8px 18px; 
-            border-radius: 25px; 
-            border: 1px solid #dee2e6; 
-            background: #fff; 
-            color: #495057; 
-            font-size: 0.9rem; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-            white-space: nowrap; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
-            display: flex; 
-            align-items: center; 
-            gap: 6px;
-        }
-        .category-chip:hover { background: #f8f9fa; border-color: #cbd5e0; }
-        .category-chip.active { background: #0d6efd; color: #fff; border-color: #0d6efd; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2); }
-        .category-chip.active i { color: #fff !important; }
     </style>
 </head>
 <body class="layout-top-header">
@@ -122,10 +90,8 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         <main id="main-content" class="container-fluid px-3 px-lg-4 pt-3 pb-5">
             
             <div class="sticky-toolbar">
-                
                 <div class="bg-white rounded-3 shadow-sm p-2 mb-2 border">
                     <div class="row g-2 align-items-center">
-                        
                         <div class="col-12 col-md-6 col-lg-5">
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text bg-light text-primary border-end-0"><i class="fas fa-search"></i></span>
@@ -134,7 +100,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                         </div>
                         
                         <div class="col-12 col-md-6 col-lg-7 d-flex gap-2 align-items-center justify-content-md-end">
-                            
                             <select id="sortItem" class="form-select shadow-sm fw-bold border-secondary-subtle text-dark flex-grow-1 flex-md-grow-0" style="min-width: 130px; max-width: 200px; font-size: 0.85rem;" onchange="loadCatalog()">
                                 <option value="DEFAULT">✅ พร้อมเบิก</option>
                                 <option value="SAP_ASC">🔤 SAP (A-Z)</option>
@@ -149,9 +114,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                             <button class="btn btn-outline-primary shadow-sm fw-bold rounded-pill flex-shrink-0 px-3" onclick="openHistoryModal()" title="ประวัติการเบิกของฉัน">
                                 <i class="fas fa-history"></i> <span class="d-none d-sm-inline ms-1">ประวัติ</span>
                             </button>
-                            
                         </div>
-
                     </div>
                 </div>
 
@@ -163,11 +126,9 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     <div class="category-chip" data-category="SP" onclick="filterCategory('SP', this)" style="scroll-snap-align: start;"><i class="fas fa-cogs text-danger"></i> SP (อะไหล่)</div>
                     <div class="category-chip" data-category="TOOL" onclick="filterCategory('TOOL', this)" style="scroll-snap-align: start;"><i class="fas fa-wrench text-info"></i> TOOL</div>
                 </div>
-
             </div>
 
             <div class="row g-2 g-md-3 g-lg-4 mt-1" id="catalogGrid"></div>
-
         </main>
     </div>
 
@@ -184,7 +145,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
         <div class="offcanvas-body p-0 d-flex flex-column bg-light">
             <div class="flex-grow-1 overflow-auto p-3" id="cartItemsContainer"></div>
             <div class="bg-white border-top p-3 p-md-4 shadow-lg">
-                
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-dark mb-2"><i class="fas fa-tags me-1 text-primary"></i> เลือกประเภทคำขอ</label>
                     <div class="btn-group w-100 shadow-sm" role="group">
@@ -195,12 +155,10 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                         <label class="btn btn-outline-warning fw-bold text-dark" for="reqTypeK2"><i class="fas fa-shopping-cart me-1"></i> ขอสั่งซื้อ (K2)</label>
                     </div>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-dark mb-2"><i class="fas fa-comment-dots me-1 text-primary"></i> หมายเหตุ / จุดประสงค์</label>
                     <textarea id="reqRemark" class="form-control bg-light" rows="2" placeholder="เช่น นำไปใช้ซ่อมเครื่องจักร..."></textarea>
                 </div>
-                
                 <button class="btn btn-success w-100 py-3 fw-bold rounded-3 shadow-sm fs-5" onclick="submitRequisition()" disabled id="btnCheckout">
                     <i class="fas fa-paper-plane me-2"></i> ยืนยันส่งคำขอ
                 </button>
@@ -216,7 +174,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body bg-light p-3 p-md-4">
-                    
                     <div class="row g-2 mb-3 bg-white p-2 rounded shadow-sm border">
                         <div class="col-5">
                             <small class="text-muted fw-bold" style="font-size: 0.7rem;">ตั้งแต่ (Start)</small>
@@ -230,9 +187,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                             <button class="btn btn-primary btn-sm w-100 fw-bold shadow-sm" onclick="openHistoryModal()"><i class="fas fa-search"></i></button>
                         </div>
                     </div>
-
-                    <div class="row g-2" id="orderHistoryList">
-                        </div>
+                    <div class="row g-2" id="orderHistoryList"></div>
                 </div>
             </div>
         </div>
@@ -253,7 +208,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-
                 <div class="modal-body p-0">
                     <div class="bg-light px-3 pt-3 pb-3 border-bottom">
                         <div class="tracking-timeline" id="trackingTimeline"></div>
@@ -293,7 +247,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                         </div>
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label fw-bold small text-muted mb-1">หมวดหมู่ (Material Type)</label>
+                                <label class="form-label fw-bold small text-muted mb-1">หมวดหมู่ (Type)</label>
                                 <select class="form-select fw-bold text-dark" id="edit_material_type">
                                     <option value="FG">FG (Finished Good)</option>
                                     <option value="SEMI">SEMI (Semi-Finished)</option>
@@ -330,6 +284,8 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
     <script>
         const CAN_MANAGE_IMAGE = <?php echo json_encode($canManageImage); ?>;
     </script>
+    
+    <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/materialReq.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

@@ -1,48 +1,12 @@
 "use strict";
 
-const API_URL = 'api/manageStoreDashboard.php';
 let currentItems = [];
+let chartTrendInst = null;
+let chartCatInst = null;
+let chartItemsInst = null;
+let chartUsersInst = null;
+let rawExportData = [];
 
-// ========================================================
-// 🟢 Custom Fetch Wrapper สำหรับ storeDashboard 🟢
-// ========================================================
-async function fetchDashboardAPI(params, method = 'GET') {
-    let url = API_URL;
-    const options = { method: method };
-
-    if (method === 'GET') {
-        const qs = new URLSearchParams(params).toString();
-        url += `?${qs}`;
-    } else if (method === 'POST') {
-        if (params instanceof FormData) {
-            options.body = params;
-        } else {
-            const formData = new FormData();
-            for (const key in params) {
-                formData.append(key, params[key]);
-            }
-            options.body = formData;
-        }
-        
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta && options.body instanceof FormData) {
-            options.body.append('csrf_token', csrfMeta.getAttribute('content'));
-        }
-    }
-
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-    return await response.json();
-}
-
-function handleFetchError(error, defaultMsg = "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์") {
-    document.getElementById('loadingOverlay').style.display = 'none';
-    Swal.fire('Error', error.message || defaultMsg, 'error');
-}
-
-// ========================================================
-// 🟢 INIT & EVENT LISTENERS 🟢
-// ========================================================
 document.addEventListener('DOMContentLoaded', () => {
     let d = new Date(); d.setDate(d.getDate() - 30);
     
@@ -67,9 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ========================================================
-// 🟢 IMAGE & PLACEHOLDER HANDLER 🟢
-// ========================================================
 function getIconPlaceholder(category) {
     let icon = 'fa-box'; let color = '#6c757d'; 
     const cat = category ? category.toUpperCase() : '';
@@ -81,7 +42,6 @@ function getIconPlaceholder(category) {
     return `<div class="ph-small"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.5rem;"></i></div>`;
 }
 
-// [FIX] ฟังก์ชันรับจบกรณีโหลดรูปไม่ขึ้น ป้องกันปัญหา HTML Quote ชนกัน
 window.handleDashboardImageError = function(imgElement, category) {
     imgElement.outerHTML = getIconPlaceholder(category);
 };
@@ -102,24 +62,20 @@ window.loadActiveQueue = function(isSilent = false) {
     else loadK2Summary(isSilent);
 };
 
-// ==========================================
-// 🟢 ฟังก์ชันฝั่ง STOCK (จ่ายของปกติ) 🟢
-// ==========================================
 async function loadStockOrders(isSilent) {
     const container = document.getElementById('orderListContainer');
     if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
     
     try {
-        const res = await fetchDashboardAPI({
-            action: 'get_orders',
+        const qs = new URLSearchParams({
             status: document.getElementById('filter_status').value,
             start_date: document.getElementById('filter_start').value,
             end_date: document.getElementById('filter_end').value
-        }, 'GET');
+        }).toString();
 
-        if (!res.success) return;
-
+        const res = await fetchAPI(`get_orders&${qs}`, 'GET');
         let html = '';
+        
         if (res.data.length === 0) {
             let emptyText = document.getElementById('filter_status').value === 'ACTIVE' ? 'ไม่มีออเดอร์ค้างจัด' : 'ไม่มีประวัติการเบิกในช่วงนี้';
             html = `<div class="text-center text-muted py-5 mt-4"><i class="fas fa-clipboard-check fa-4x mb-3 opacity-25"></i><br>${emptyText}</div>`;
@@ -149,14 +105,14 @@ async function loadStockOrders(isSilent) {
         }
         container.innerHTML = html;
     } catch (error) {
-        if (!isSilent) handleFetchError(error);
+        if (!isSilent) container.innerHTML = '<div class="text-center py-5 text-danger">ดึงข้อมูลไม่สำเร็จ</div>';
     }
 }
 
 window.openStockOrder = async function(reqId) {
     document.getElementById('loadingOverlay').style.display = 'flex';
-    
     document.querySelectorAll('.order-card').forEach(el => el.classList.remove('active'));
+    
     const activeCard = document.getElementById(`order-card-${reqId}`);
     if (activeCard) {
         activeCard.classList.add('active');
@@ -165,11 +121,9 @@ window.openStockOrder = async function(reqId) {
     document.getElementById('current_req_id').value = reqId;
 
     try {
-        const res = await fetchDashboardAPI({ action: 'get_order_details', req_id: reqId }, 'GET');
+        const res = await fetchAPI(`get_order_details&req_id=${reqId}`, 'GET');
         document.getElementById('loadingOverlay').style.display = 'none';
         
-        if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
-
         const h = res.header; 
         currentItems = res.items;
 
@@ -207,7 +161,6 @@ window.openStockOrder = async function(reqId) {
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
 
             const safeCategory = item.item_category || 'OTHER';
-            
             const imgHtml = item.image_path 
                 ? `<img src="../../uploads/items/${item.image_path}" class="rounded shadow-sm border" style="width: 80px; height: 80px; min-width: 80px; object-fit: cover;" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
                 : `<div class="rounded shadow-sm border" style="width: 80px; height: 80px; min-width: 80px; display: flex; align-items: center; justify-content: center; background: #f0f3f8;"><i class="fas fa-box fa-2x" style="color:#6c757d; opacity:0.5;"></i></div>`;
@@ -215,7 +168,6 @@ window.openStockOrder = async function(reqId) {
             itemsHtml += `
             <div class="card border border-light shadow-sm mb-2">
                 <div class="card-body p-2 p-md-3 d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3">
-                    
                     <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 0; width: 100%;">
                         <div class="flex-shrink-0">${imgHtml}</div>
                         <div class="min-w-0 flex-grow-1">
@@ -228,18 +180,12 @@ window.openStockOrder = async function(reqId) {
                             </div>
                         </div>
                     </div>
-                    
                     <div class="d-flex align-items-stretch justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0" style="width: auto; min-width: 180px;">
-                        
                         <div class="bg-light border rounded px-1 py-1 d-flex flex-column justify-content-center align-items-center" style="width: 70px;">
                             <small class="text-muted fw-bold d-block" style="font-size:0.65rem; white-space: nowrap;">ขอเบิก</small>
                             <span class="fw-bold text-primary fs-5 lh-1">${reqQty}</span>
                         </div>
-                        
-                        <div class="text-muted opacity-50 d-flex align-items-center">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        
+                        <div class="text-muted opacity-50 d-flex align-items-center"><i class="fas fa-chevron-right"></i></div>
                         <div class="border rounded px-1 py-1 d-flex flex-column justify-content-center align-items-center position-relative ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 85px;">
                             <small class="text-muted fw-bold d-block" style="font-size:0.65rem; white-space: nowrap; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</small>
                             <input type="number" 
@@ -252,9 +198,7 @@ window.openStockOrder = async function(reqId) {
                                 ${!isEditable ? 'disabled' : ''} 
                                 style="font-size: 1.25rem; height: auto; box-shadow: none; padding: 0;">
                         </div>
-
                     </div>
-                    
                 </div>
             </div>`;
         });
@@ -287,24 +231,19 @@ window.openStockOrder = async function(reqId) {
 
         switchView('form-stock');
     } catch (error) {
-        handleFetchError(error);
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 };
 
 window.acceptOrder = async function(reqId) {
     document.getElementById('loadingOverlay').style.display = 'flex';
     try {
-        const res = await fetchDashboardAPI({ action: 'accept_order', req_id: reqId }, 'POST');
-        if (res.success) { 
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'รับออเดอร์แล้ว!', showConfirmButton: false, timer: 1500 }); 
-            loadActiveQueue(true); 
-            openStockOrder(reqId); 
-        } else { 
-            document.getElementById('loadingOverlay').style.display = 'none'; 
-            Swal.fire('Error', res.message, 'error'); 
-        }
+        await fetchAPI('accept_order', 'POST', { req_id: reqId });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'รับออเดอร์แล้ว!', showConfirmButton: false, timer: 1500 }); 
+        loadActiveQueue(true); 
+        openStockOrder(reqId); 
     } catch (error) {
-        handleFetchError(error);
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 };
 
@@ -314,17 +253,13 @@ window.rejectOrder = function(reqId) {
         if (result.isConfirmed) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const res = await fetchDashboardAPI({ action: 'reject_order', req_id: reqId, reason: result.value }, 'POST');
+                await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: result.value });
                 document.getElementById('loadingOverlay').style.display = 'none';
-                if (res.success) { 
-                    Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success'); 
-                    loadActiveQueue(true); 
-                    openStockOrder(reqId); 
-                } else { 
-                    Swal.fire('Error', res.message, 'error'); 
-                }
+                Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success'); 
+                loadActiveQueue(true); 
+                openStockOrder(reqId); 
             } catch (error) {
-                handleFetchError(error);
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
     });
@@ -359,39 +294,31 @@ window.confirmIssue = async function(reqId) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const reqNumber = document.getElementById('disp_req_no').innerText;
-                const res = await fetchDashboardAPI({ 
-                    action: 'confirm_issue', 
+                await fetchAPI('confirm_issue', 'POST', { 
                     req_id: reqId, 
                     req_number: reqNumber, 
                     items: JSON.stringify(issueData) 
-                }, 'POST');
+                });
 
                 document.getElementById('loadingOverlay').style.display = 'none';
-                if (res.success) { 
-                    Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { 
-                        loadActiveQueue(true); 
-                        switchView('list'); 
-                    }); 
-                } else { 
-                    Swal.fire('Error', res.message, 'error'); 
-                }
+                Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { 
+                    loadActiveQueue(true); 
+                    switchView('list'); 
+                }); 
             } catch (error) {
-                handleFetchError(error);
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
     });
 };
 
-// ==========================================
-// 🟢 ฟังก์ชันฝั่ง K2 (รวบรวมเปิด K2) 🟢
-// ==========================================
 async function loadK2Summary(isSilent) {
     const container = document.getElementById('orderListContainer');
     if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning"></div></div>';
     
     try {
-        const res = await fetchDashboardAPI({ action: 'get_k2_summary', status: document.getElementById('filter_status').value }, 'GET');
-        if (!res.success) return;
+        const status = document.getElementById('filter_status').value;
+        const res = await fetchAPI(`get_k2_summary&status=${status}`, 'GET');
         
         let html = '';
         if (res.data.length === 0) {
@@ -426,7 +353,7 @@ async function loadK2Summary(isSilent) {
         }
         container.innerHTML = html;
     } catch (error) {
-        if (!isSilent) handleFetchError(error);
+        if (!isSilent) container.innerHTML = '<div class="text-center py-5 text-danger">ดึงข้อมูลไม่สำเร็จ</div>';
     }
 }
 
@@ -452,14 +379,10 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
     document.getElementById('input_k2_pr').value = '';
 
     try {
-        const res = await fetchDashboardAPI({ 
-            action: 'get_k2_item_details', 
-            item_code: itemCode, 
-            status: document.getElementById('filter_status').value 
-        }, 'GET');
+        const status = document.getElementById('filter_status').value;
+        const res = await fetchAPI(`get_k2_item_details&item_code=${itemCode}&status=${status}`, 'GET');
 
         document.getElementById('loadingOverlay').style.display = 'none';
-        if (!res.success) { Swal.fire('Error', res.message, 'error'); return; }
 
         let html = ''; let totalQty = 0;
         res.data.forEach(u => {
@@ -484,7 +407,7 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
 
         switchView('form-k2');
     } catch (error) {
-        handleFetchError(error);
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 };
 
@@ -501,27 +424,20 @@ window.submitK2Batch = function() {
         if (result.isConfirmed) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const res = await fetchDashboardAPI({ action: 'submit_k2_pr', item_code: itemCode, k2_pr_no: prNumber }, 'POST');
+                await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber });
                 document.getElementById('loadingOverlay').style.display = 'none';
                 
-                if (res.success) {
-                    Swal.fire('Success', 'อัปเดตสถานะสำเร็จ ฝ่ายผลิตจะเห็นเลข PR ของคุณแล้ว', 'success').then(() => {
-                        loadActiveQueue(true); 
-                        switchView('list');
-                    });
-                } else { 
-                    Swal.fire('Error', res.message, 'error'); 
-                }
+                Swal.fire('Success', 'อัปเดตสถานะสำเร็จ ฝ่ายผลิตจะเห็นเลข PR ของคุณแล้ว', 'success').then(() => {
+                    loadActiveQueue(true); 
+                    switchView('list');
+                });
             } catch (error) {
-                handleFetchError(error);
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
     });
 };
 
-// ==========================================
-// 🟢 View Switcher 🟢
-// ==========================================
 function switchView(view) {
     const mode = document.getElementById('current_dashboard_mode').value;
     const targetFormSelector = mode === 'STOCK' ? '#form-stock' : '#form-k2';
@@ -566,20 +482,10 @@ function switchView(view) {
     }
 }
 
-// ==========================================
-// 🟢 โหมด: สถิติวิเคราะห์ข้อมูล (DATA ANALYTICS) 🟢
-// ==========================================
-let chartTrendInst = null;
-let chartCatInst = null;
-let chartItemsInst = null;
-let chartUsersInst = null;
-let rawExportData = [];
-
 window.switchDashboardMode = function(mode) {
     document.getElementById('current_dashboard_mode').value = mode;
     document.getElementById('current_req_id').value = ''; 
 
-    // Reset Tabs
     document.querySelectorAll('.mode-tab').forEach(tab => tab.classList.remove('active'));
     
     const layoutOrder = document.getElementById('order-layout');
@@ -628,16 +534,12 @@ window.loadAnalytics = async function() {
     document.getElementById('loadingOverlay').style.display = 'flex';
     
     try {
-        const res = await fetchDashboardAPI({ 
-            action: 'get_analytics', 
-            start_date: document.getElementById('analytic_start').value, 
-            end_date: document.getElementById('analytic_end').value 
-        }, 'GET');
+        const start = document.getElementById('analytic_start').value;
+        const end = document.getElementById('analytic_end').value;
+        const res = await fetchAPI(`get_analytics&start_date=${start}&end_date=${end}`, 'GET');
 
         document.getElementById('loadingOverlay').style.display = 'none';
-        if(!res.success) { Swal.fire('Error', res.message, 'error'); return; }
 
-        // Update KPIs
         document.getElementById('stat_total_reqs').innerText = res.summary.total_reqs;
         document.getElementById('stat_total_issued').innerText = parseFloat(res.summary.total_issued_qty).toLocaleString();
         document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
@@ -645,7 +547,6 @@ window.loadAnalytics = async function() {
 
         rawExportData = res.exportData;
 
-        // 1. กราฟเส้นแนวโน้มรายวัน (Line Chart)
         if(chartTrendInst) chartTrendInst.destroy();
         const ctxTrend = document.getElementById('chartTrend').getContext('2d');
         chartTrendInst = new Chart(ctxTrend, {
@@ -661,7 +562,7 @@ window.loadAnalytics = async function() {
                     pointBackgroundColor: '#0d6efd',
                     pointRadius: 4,
                     fill: true,
-                    tension: 0.3 // ทำให้เส้นโค้งสมูท
+                    tension: 0.3 
                 }]
             },
             options: { 
@@ -671,7 +572,6 @@ window.loadAnalytics = async function() {
             }
         });
 
-        // 2. กราฟสัดส่วนหมวดหมู่ (Doughnut Chart)
         if(chartCatInst) chartCatInst.destroy();
         const ctxCat = document.getElementById('chartCategory').getContext('2d');
         chartCatInst = new Chart(ctxCat, {
@@ -687,7 +587,6 @@ window.loadAnalytics = async function() {
             options: { responsive: true, maintainAspectRatio: false, cutout: '65%' }
         });
 
-        // 3. กราฟแท่ง Top 5 Items
         if(chartItemsInst) chartItemsInst.destroy();
         const ctxItems = document.getElementById('chartTopItems').getContext('2d');
         chartItemsInst = new Chart(ctxItems, {
@@ -704,17 +603,16 @@ window.loadAnalytics = async function() {
             options: { 
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
-                scales: { x: { display: false } } // ซ่อนแกน x ให้ดูคลีน
+                scales: { x: { display: false } } 
             }
         });
 
-        // 4. กราฟเรดาร์/พาย Top 5 Users
         if(chartUsersInst) chartUsersInst.destroy();
         const ctxUsers = document.getElementById('chartTopUsers').getContext('2d');
         chartUsersInst = new Chart(ctxUsers, {
             type: 'pie',
             data: {
-                labels: res.topUsers.map(u => u.fullname.split(' ')[0]), // เอาแค่ชื่อหน้า
+                labels: res.topUsers.map(u => u.fullname.split(' ')[0]),
                 datasets: [{ 
                     data: res.topUsers.map(u => u.req_count), 
                     backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'],
@@ -725,7 +623,7 @@ window.loadAnalytics = async function() {
         });
 
     } catch (error) {
-        handleFetchError(error);
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 };
 
