@@ -67,8 +67,13 @@ window.toggleImages = function() {
 };
 
 window.filterCategory = function(category, element) {
-    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
+    document.querySelectorAll('.category-chip').forEach(el => {
+        el.classList.remove('active', 'btn-primary');
+        el.classList.add('btn-outline-primary');
+    });
+    
+    element.classList.add('active', 'btn-primary');
+    element.classList.remove('btn-outline-primary');
     element.dataset.category = category;
     
     const searchInput = document.getElementById('searchItem');
@@ -147,7 +152,7 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
                         <div class="card-body-flex pt-2">
-                            <div class="small text-primary fw-bold mb-1">SAP: ${item.item_code}</div>
+                            <div class="small text-primary fw-bold mb-1">${item.item_code}</div>
                             <div class="product-title" title="${item.description}">${item.description || '-'}</div>
                             <div class="mt-auto pt-3 border-top">
                                 <div class="input-group input-group-sm shadow-sm">
@@ -244,7 +249,7 @@ function renderCartUI() {
             <div class="card-body p-2 d-flex justify-content-between align-items-center">
                 <div class="pe-2" style="width: 70%;">
                     <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;">${item.description}</div>
-                    <small class="text-primary fw-bold">SAP: ${code}</small>
+                    <small class="text-primary fw-bold">${code}</small>
                     ${warningHtml}
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
@@ -430,7 +435,7 @@ window.viewOrderDetails = async function(reqId) {
                         ${imgHtml}
                         <div>
                             <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;">${item.description}</div>
-                            <small class="text-primary">SAP: ${item.item_code}</small>
+                            <small class="text-primary">${item.item_code}</small>
                         </div>
                     </div>
                     <div class="text-end">

@@ -540,6 +540,7 @@ window.loadAnalytics = async function() {
 
         document.getElementById('loadingOverlay').style.display = 'none';
 
+        // 1. อัปเดตตัวเลข KPI
         document.getElementById('stat_total_reqs').innerText = res.summary.total_reqs;
         document.getElementById('stat_total_issued').innerText = parseFloat(res.summary.total_issued_qty).toLocaleString();
         document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
@@ -547,6 +548,7 @@ window.loadAnalytics = async function() {
 
         rawExportData = res.exportData;
 
+        // 🎨 2. กราฟเส้นแนวโน้ม (Line Chart)
         if(chartTrendInst) chartTrendInst.destroy();
         const ctxTrend = document.getElementById('chartTrend').getContext('2d');
         chartTrendInst = new Chart(ctxTrend, {
@@ -557,21 +559,39 @@ window.loadAnalytics = async function() {
                     label: 'จำนวนบิลเบิกสำเร็จ',
                     data: res.trendData.map(d => d.req_count),
                     borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.15)', // สีพื้นหลังโปร่งแสง
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#ffffff', // จุดสีขาว
+                    pointBorderColor: '#0d6efd',     // ขอบจุดสีน้ำเงิน
+                    pointBorderWidth: 2,
                     pointRadius: 4,
+                    pointHoverRadius: 6,
                     fill: true,
                     tension: 0.3 
                 }]
             },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: { padding: 10 }
+                },
+                interaction: { mode: 'index', intersect: false }, // Hover แล้วขึ้น Tooltip ง่ายขึ้น
+                scales: { 
+                    x: { 
+                        grid: { display: false }, // ซ่อนเส้นแนวตั้ง
+                        ticks: { font: { size: 11 }, color: '#6c757d' } 
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false }, // เส้นแนวนอนจางๆ
+                        ticks: { precision: 0, font: { size: 11 }, color: '#6c757d' } 
+                    }
+                }
             }
         });
 
+        // 🎨 3. กราฟสัดส่วนหมวดหมู่ (Doughnut Chart)
         if(chartCatInst) chartCatInst.destroy();
         const ctxCat = document.getElementById('chartCategory').getContext('2d');
         chartCatInst = new Chart(ctxCat, {
@@ -580,33 +600,51 @@ window.loadAnalytics = async function() {
                 labels: res.categoryData.map(c => c.category),
                 datasets: [{ 
                     data: res.categoryData.map(c => c.total_qty), 
-                    backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d'],
-                    borderWidth: 0
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff' // เพิ่มขอบขาวแยกแต่ละชิ้นให้ดู Clean
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '65%' }
+            options: { 
+                responsive: true, maintainAspectRatio: false, cutout: '70%',
+                plugins: {
+                    legend: { 
+                        position: 'right', // ย้าย Legend ไปด้านขวา
+                        labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } 
+                    }
+                }
+            }
         });
 
+        // 🎨 4. กราฟแท่ง Top 5 วัสดุ (เปลี่ยนเป็น Horizontal Bar)
         if(chartItemsInst) chartItemsInst.destroy();
         const ctxItems = document.getElementById('chartTopItems').getContext('2d');
         chartItemsInst = new Chart(ctxItems, {
             type: 'bar',
             data: {
-                labels: res.topItems.map(i => (i.part_description || '').substring(0, 15) + '...'),
+                // ขยายข้อความให้ยาวขึ้นได้เพราะเป็นแนวนอน
+                labels: res.topItems.map(i => (i.part_description || '').substring(0, 25) + '...'),
                 datasets: [{ 
                     label: 'จำนวนชิ้นที่จ่าย', 
                     data: res.topItems.map(i => i.total_qty), 
-                    backgroundColor: '#ffc107', 
+                    backgroundColor: 'rgba(255, 193, 7, 0.85)', 
+                    borderColor: '#ffc107',
+                    borderWidth: 1,
                     borderRadius: 4 
                 }]
             },
             options: { 
+                indexAxis: 'y', // ⭐️ เปลี่ยนกราฟเป็นแนวนอน
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
-                scales: { x: { display: false } } 
+                scales: { 
+                    x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+                    y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                }
             }
         });
 
+        // 🎨 5. กราฟพาย Top 5 ผู้เบิก (Pie Chart)
         if(chartUsersInst) chartUsersInst.destroy();
         const ctxUsers = document.getElementById('chartTopUsers').getContext('2d');
         chartUsersInst = new Chart(ctxUsers, {
@@ -616,14 +654,24 @@ window.loadAnalytics = async function() {
                 datasets: [{ 
                     data: res.topUsers.map(u => u.req_count), 
                     backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'],
-                    borderWidth: 0
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } 
+                    }
+                }
+            }
         });
 
     } catch (error) {
         document.getElementById('loadingOverlay').style.display = 'none';
+        // Error จัดการไปแล้วใน fetchAPI
     }
 };
 
