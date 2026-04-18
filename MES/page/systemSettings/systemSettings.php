@@ -21,7 +21,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* Custom Scrollbar เล็กๆ สำหรับแนวนอน */
         .table-scrollable {
             overflow-x: auto;
             max-height: calc(100vh - 240px);
@@ -31,7 +30,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
         .table-scrollable::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         .table-scrollable::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-        /* ตรึงคอลัมน์แรกซ้ายสุด */
         .sticky-col-left {
             position: sticky;
             left: 0;
@@ -54,7 +52,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
             vertical-align: middle;
         }
         
-        /* ซ่อน Pane ที่ไม่ได้ Active */
         .module-pane { display: none; }
         .module-pane.active { display: block; }
     </style>
@@ -156,6 +153,8 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" id="importItemsBtn"><i class="fas fa-file-import me-2 w-15px text-info"></i> Import Excel</a></li>
                                 <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" id="exportItemsBtn"><i class="fas fa-file-export me-2 w-15px text-primary"></i> Export Excel</a></li>
                                 
+                                <li><hr class="dropdown-divider toolbar-group item-master-pane"></li>
+                                <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" onclick="showMaterialDict()"><i class="fas fa-book me-2 w-15px text-secondary"></i> คู่มือประเภทสินค้า (Data Dict.)</a></li>
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="importCreateBomsBtn"><i class="fas fa-file-import me-2 w-15px text-success"></i> Import BOM (New)</a></li>
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="importUpdateBomsBtn"><i class="fas fa-edit me-2 w-15px text-warning"></i> Import BOM (Update)</a></li>
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="exportAllConsolidatedBtn"><i class="fas fa-file-export me-2 w-15px text-primary"></i> Export All BOMs</a></li>
@@ -342,6 +341,8 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                     <option value="RM" selected>RM (วัตถุดิบ)</option>
                                     <option value="PKG">PKG (แพ็คเกจ)</option>
                                     <option value="SEMI">SEMI (กึ่งสำเร็จรูป)</option> 
+                                    <option value="CON">CON (สิ้นเปลือง)</option>
+                                    <option value="SP">SP (อะไหล่)</option>
                                 </select>
                             </div>
                             <div class="table-responsive bg-white border rounded shadow-sm">

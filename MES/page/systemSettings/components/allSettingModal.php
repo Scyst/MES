@@ -38,33 +38,40 @@
                             <div class="row g-3">
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">SAP No. <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm fw-bold text-primary" id="sap_no" required>
+                                    <input type="text" class="form-control form-control-sm fw-bold text-primary" id="sap_no" required placeholder="เช่น 4001552">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Part No.</label>
                                     <input type="text" class="form-control form-control-sm" id="part_no">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label fw-bold small text-muted mb-1">Customer SKU</label>
-                                    <input type="text" class="form-control form-control-sm" id="sku">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-bold small text-muted mb-1">Material Type</label>
+                                    <label class="form-label fw-bold small text-muted mb-1">Type (หมวดหลัก)</label>
                                     <select class="form-select form-select-sm fw-bold text-primary" id="material_type">
                                         <option value="FG">FG (Finished Good)</option>
                                         <option value="SEMI">SEMI (Semi-Finished)</option>
                                         <option value="WIP">WIP (Work in Process)</option>
                                         <option value="RM">RM (Raw Material)</option>
-                                        <option value="PKG">PKG (Packaging - บรรจุภัณฑ์)</option>
-                                        <option value="CON">CON (Consumable - สิ้นเปลือง)</option>
-                                        <option value="SP">SP (Spare Part - อะไหล่)</option>
-                                        <option value="TOOL">TOOL (Tools - อุปกรณ์)</option>
+                                        <option value="PKG">PKG (Packaging)</option>
+                                        <option value="CON">CON (Consumable)</option>
+                                        <option value="SP">SP (Spare Part)</option>
+                                        <option value="TOOL">TOOL (Tools)</option>
                                         <option value="OTHER">OTHER (อื่นๆ)</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-info mb-1">Sub-Type (กลุ่มย่อย)</label>
+                                    <select class="form-select form-select-sm border-info fw-bold" id="material_sub_type">
+                                        <option value="">-- เลือกกลุ่มย่อย --</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted mb-1">Customer SKU</label>
+                                    <input type="text" class="form-control form-control-sm" id="sku">
+                                </div>
+                                <div class="col-md-9">
                                     <label class="form-label fw-bold small text-muted mb-1">Description</label>
-                                    <textarea class="form-control form-control-sm" id="part_description" rows="2"></textarea>
+                                    <input type="text" class="form-control form-control-sm" id="part_description">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small text-muted mb-1">Standard UPH (Default)</label>

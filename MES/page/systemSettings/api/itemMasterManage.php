@@ -43,13 +43,11 @@ try {
             $fromClause = "FROM " . ITEMS_TABLE . " i WITH (NOLOCK)";
             $conditions = [];
 
-            // 🌟 เพิ่ม Logic ถ้ามีการเลือกประเภท
             if (!empty($filter_material)) {
                 $conditions[] = "i.material_type = ?";
                 $params[] = $filter_material;
             }
 
-            // 🛡️ [RESTORED]: Supervisor Line Filtering Logic
             if ($currentUser['role'] === 'supervisor') {
                 $supervisor_line = $currentUser['line'];
                 $conditions[] = "
@@ -87,21 +85,20 @@ try {
                 $orderByClause = "ORDER BY i.is_active ASC, i.sap_no DESC";
             }
 
-            // นับจำนวนทั้งหมด
             $totalSql = "SELECT COUNT(DISTINCT i.item_id) {$fromClause} {$whereClause}";
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
 
             $costingCols_CTE = "
-                , i.planned_output, i.material_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
+                , i.planned_output, i.material_type, i.material_sub_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
                 , i.Cost_RM, i.Cost_PKG, i.Cost_SUB, i.Cost_DL
                 , i.Cost_OH_Machine, i.Cost_OH_Utilities, i.Cost_OH_Indirect, i.Cost_OH_Staff, i.Cost_OH_Accessory, i.Cost_OH_Others
                 , i.Cost_Total, i.StandardPrice, i.StandardGP, i.Price_USD
             ";
             
             $costingCols_Final = "
-                , planned_output, material_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
+                , planned_output, material_type, material_sub_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
                 , Cost_RM, Cost_PKG, Cost_SUB, Cost_DL
                 , Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others
                 , Cost_Total, StandardPrice, StandardGP, Price_USD
@@ -164,7 +161,7 @@ try {
             }
             break;
 
-        case 'restore_item': // 🛡️ [RESTORED]
+        case 'restore_item':
             $id = $input['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
@@ -202,6 +199,7 @@ try {
                 $sku = trim($item_details['sku'] ?? '');
                 $desc = trim($item_details['part_description'] ?? '');
                 $mat_type = trim($item_details['material_type'] ?? 'FG');
+                $mat_sub_type = trim($item_details['material_sub_type'] ?? '');
                 
                 $planned_output = (int)($item_details['planned_output'] ?? 0);
                 $min_stock = (float)($item_details['min_stock'] ?? 0);
@@ -231,7 +229,7 @@ try {
 
                 if ($item_id > 0) {
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, material_type = ?,
+                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, material_type = ?, material_sub_type = ?,
                                 min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, is_active = ?,
                                 CTN = ?, net_weight = ?, gross_weight = ?, cbm = ?, invoice_product_type = ?, invoice_description = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
@@ -240,7 +238,7 @@ try {
                             WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $sap_no, $part_no, $sku, $desc, $mat_type,
+                        $sap_no, $part_no, $sku, $desc, $mat_type, $mat_sub_type,
                         $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
@@ -251,14 +249,14 @@ try {
                     logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$sap_no}");
                 } else {
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, sku, part_description, material_type, created_at, 
+                                sap_no, part_no, sku, part_description, material_type, material_sub_type, created_at, 
                                 min_stock, max_stock, is_tracking, planned_output, is_active,
                                 CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 StandardPrice, Price_USD
                             ) VALUES (
-                                ?, ?, ?, ?, ?, GETDATE(), 
+                                ?, ?, ?, ?, ?, ?, GETDATE(), 
                                 ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, 
@@ -267,7 +265,7 @@ try {
                             )";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $sap_no, $part_no, $sku, $desc, $mat_type,
+                        $sap_no, $part_no, $sku, $desc, $mat_type, $mat_sub_type,
                         $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
@@ -278,7 +276,6 @@ try {
                     logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$sap_no}");
                 }
 
-                // Handle Routes
                 foreach ($routes_data as $route) {
                     $route_id = (int)($route['route_id'] ?? 0);
                     $status = $route['status'] ?? '';
@@ -427,9 +424,35 @@ try {
                     return $default;
                 };
 
-                // 🌟 เพิ่ม Logic แปลงคำว่า Yes/No, True/False ให้เป็น 1/0
+                $mat_type = strtoupper(trim($getValue(['material_type', 'Material Type'], 'material_type', 'FG')));
+                $raw_sub_type = strtoupper(trim($getValue(['material_sub_type', 'Sub Type', 'Group', 'Material Sub Type'], 'material_sub_type', '')));
+                $validSubTypes = [
+                    'RM' => ['STEEL', 'PLASTIC', 'CHEMICAL', 'OTHER'],
+                    'PKG' => ['BOX', 'PALLET', 'LABEL', 'OTHER'],
+                    'CON' => ['ACC', '5S', 'PROD', 'OFFICE', 'PPE'],
+                    'SP' => ['MECHANICAL', 'ELECTRICAL', 'OTHER'],
+                    'TOOL' => ['HANDTOOL', 'MACHINE'],
+                    'FG' => ['STANDARD'],
+                    'SEMI' => ['STANDARD'],
+                    'WIP' => ['STANDARD']
+                ];
+
+                $final_sub_type = 'OTHER';
+                
+                if (isset($validSubTypes[$mat_type])) {
+                    if (in_array($raw_sub_type, $validSubTypes[$mat_type])) {
+                        $final_sub_type = $raw_sub_type;
+                    } else {
+                        if (in_array($mat_type, ['FG', 'SEMI', 'WIP'])) {
+                            $final_sub_type = 'STANDARD';
+                        } else {
+                            $final_sub_type = 'OTHER';
+                        }
+                    }
+                }
+
                 $raw_active = $getValue(['is_active', 'Is Active', 'Is_Active'], 'is_active', 1);
-                $is_active_val = 1; // Default เป็น 1
+                $is_active_val = 1;
                 if (is_string($raw_active)) {
                     $chk = strtolower(trim($raw_active));
                     if ($chk === 'no' || $chk === '0' || $chk === 'false') {
@@ -439,18 +462,20 @@ try {
                     $is_active_val = 0;
                 }
 
-                // 🪄 แปลงโครงสร้างให้ตรงกับที่ Stored Procedure ต้องการ 100%
                 $mapped = [
                     'sap_no' => $sap,
                     'part_no' => $getValue(['part_no', 'Part No'], 'part_no', ''),
                     'sku' => $getValue(['sku', 'Customer SKU'], 'sku', ''),
                     'part_description' => $getValue(['part_description', 'Description'], 'part_description', ''),
-                    'material_type' => $getValue(['material_type', 'Material Type'], 'material_type', 'FG'),
+                    
+                    'material_type' => $mat_type,
+                    'material_sub_type' => $final_sub_type,
+                    
                     'planned_output' => (int)$getValue(['planned_output', 'Planned Output'], 'planned_output', 0),
                     'min_stock' => (float)$getValue(['min_stock', 'Min Stock'], 'min_stock', 0),
                     'max_stock' => (float)$getValue(['max_stock', 'Max Stock'], 'max_stock', 0),
                     
-                    'is_active' => $is_active_val, // 🌟 ใช้ตัวแปรที่แปลงแล้ว
+                    'is_active' => $is_active_val,
                     
                     'CTN' => (int)$getValue(['CTN'], 'CTN', 0),
                     'net_weight' => (float)$getValue(['net_weight', 'Net Weight'], 'net_weight', 0),
@@ -481,7 +506,6 @@ try {
             
             $pdo->beginTransaction();
             try {
-                // 4. ส่งข้อมูลที่แปลงเสร็จแล้วให้ Stored Procedure จัดการ
                 $jsonData = json_encode($mappedItems, JSON_UNESCAPED_UNICODE);
                 $stmt = $pdo->prepare("EXEC dbo.sp_ImportMasterAndCosting_Batch ?, ?");
                 $stmt->bindValue(1, $jsonData, PDO::PARAM_STR);
@@ -512,12 +536,9 @@ try {
                 break;
             }
 
-            // ค้นหาว่าในบรรดา SAP No ที่ส่งมา มีตัวไหนอยู่ในระบบแล้วบ้าง
             $placeholders = implode(',', array_fill(0, count($sapNos), '?'));
             $stmt = $pdo->prepare("SELECT sap_no FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE sap_no IN ($placeholders)");
             $stmt->execute($sapNos);
-            
-            // ส่งเฉพาะรหัสที่มีอยู่แล้วกลับไปให้หน้าเว็บ
             $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['success' => true, 'existing_saps' => $existing]);
             break;

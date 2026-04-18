@@ -13,7 +13,7 @@ const ROWS_PER_PAGE = 50;
 let selectedItemId = null;
 
 let allSchedules = [];
-let validatedBulkBomImportData = []; // สำหรับเก็บข้อมูลก่อนกดยืนยัน Import BOM
+let validatedBulkBomImportData = [];
 
 // =================================================================
 // SECTION 2: CORE & SHARED FUNCTIONS
@@ -87,6 +87,34 @@ function closeModal(modalId) {
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) modal.hide();
     }
+}
+
+const materialSubTypes = {
+    'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
+    'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'TOOL': [{val: 'HANDTOOL', text: 'HANDTOOL (เครื่องมือช่าง)'}, {val: 'MACHINE', text: 'MACHINE (เครื่องจักร)'}],
+    'FG': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'SEMI': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'WIP': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}]
+};
+
+function updateSubTypeOptions(selectedType, defaultVal = '') {
+    const subTypeSelect = document.getElementById('material_sub_type');
+    if (!subTypeSelect) return;
+    subTypeSelect.innerHTML = '<option value="">-- เลือกกลุ่มย่อย --</option>';
+    
+    if (materialSubTypes[selectedType]) {
+        materialSubTypes[selectedType].forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub.val;
+            opt.textContent = sub.text;
+            subTypeSelect.appendChild(opt);
+        });
+    }
+    if (defaultVal) subTypeSelect.value = defaultVal;
 }
 
 // =================================================================
@@ -194,26 +222,22 @@ async function handleLocationFormSubmit(event) {
 async function fetchItems(page = 1) {
     currentPage = page;
     
-    // 1. ดึง Elements มาจากหน้าจอ (ป้องกัน Error กรณีหา Element ไม่เจอ)
     const searchInput = document.getElementById('itemMasterSearch');
     const toggleInactiveBtn = document.getElementById('toggleInactiveBtn');
     const modelFilterValue = document.getElementById('modelFilterValue');
-    const materialTypeFilter = document.getElementById('materialTypeFilter'); // 🌟 เพิ่มตัวแปรนี้
-    
-    // 2. สกัดค่า (Value) ออกมาเตรียมส่งให้ API
+    const materialTypeFilter = document.getElementById('materialTypeFilter');
     const searchTerm = searchInput ? searchInput.value : '';
     const showInactive = toggleInactiveBtn ? toggleInactiveBtn.classList.contains('active') : false;
     const selectedModel = modelFilterValue ? modelFilterValue.value : '';
-    const selectedMaterial = materialTypeFilter ? materialTypeFilter.value : ''; // 🌟 ดึงค่าประเภทสินค้า
+    const selectedMaterial = materialTypeFilter ? materialTypeFilter.value : '';
     
     try {
-        // 3. ส่งข้อมูลไปให้ Backend
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { 
             page: page, 
             search: searchTerm, 
             show_inactive: showInactive,
             filter_model: selectedModel,
-            filter_material: selectedMaterial // 🌟 แนบประเภทสินค้าไปกับ API ตรงนี้!
+            filter_material: selectedMaterial
         });
 
         if (result.success) {
@@ -270,13 +294,26 @@ function renderItemsTable(items, totalItems, page) {
         const fQty = (val) => parseFloat(val || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
         const fPlan = (val) => parseInt(val || 0).toLocaleString();
 
+        let typeBadgeClass = 'bg-secondary';
+        if (item.material_type === 'FG') typeBadgeClass = 'bg-primary';
+        else if (item.material_type === 'RM') typeBadgeClass = 'bg-success';
+        else if (item.material_type === 'PKG') typeBadgeClass = 'bg-info text-dark';
+        else if (item.material_type === 'WIP' || item.material_type === 'SEMI') typeBadgeClass = 'bg-warning text-dark';
+        else if (item.material_type === 'CON') typeBadgeClass = 'bg-danger';
+        else if (item.material_type === 'SP') typeBadgeClass = 'bg-dark text-white';
+        else if (item.material_type === 'TOOL') typeBadgeClass = 'bg-primary bg-opacity-50 text-dark';
+
+        const subTypeBadge = item.material_sub_type 
+            ? `<span class="badge border border-secondary text-secondary bg-white" style="font-size: 0.6rem;">${escapeHtml(item.material_sub_type)}</span>` 
+            : '';
+
         tr.innerHTML = `
             <td class="sticky-col-left px-3 py-1">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-primary" style="font-size: 0.85rem;">${escapeHtml(item.sap_no)}</span>
-                    <span class="badge bg-secondary" style="font-size: 0.6rem;">${escapeHtml(item.material_type || 'FG')}</span>
-                </div>
-                <div class="text-muted" style="font-size: 0.7rem;">${escapeHtml(item.part_no || '-')}</div>
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <span class="fw-bold text-primary me-1" style="font-size: 0.85rem;">${escapeHtml(item.sap_no)}</span>
+                    <span class="badge ${typeBadgeClass}" style="font-size: 0.6rem;">${escapeHtml(item.material_type || 'FG')}</span>
+                    ${subTypeBadge} </div>
+                <div class="text-muted text-truncate" style="font-size: 0.7rem; max-width: 150px;">${escapeHtml(item.part_no || '-')}</div>
             </td>
             <td>
                 <div class="text-truncate text-dark" style="max-width: 200px;" title="${escapeHtml(item.part_description)}">
@@ -361,6 +398,7 @@ async function openItemModal(item = null) {
         document.getElementById('part_no').value = item.part_no || '';
         document.getElementById('sku').value = item.sku || '';
         document.getElementById('material_type').value = item.material_type || 'FG';
+        updateSubTypeOptions(item.material_type || 'FG', item.material_sub_type || '');
         document.getElementById('part_description').value = item.part_description || '';
         
         setInputValue('planned_output', item.planned_output);
@@ -391,12 +429,10 @@ async function openItemModal(item = null) {
         if (deleteBtn) {
             deleteBtn.style.display = 'inline-block';
             if (item.is_active == 0) {
-                // ถ้าไอเท็มถูกลบไปแล้ว ให้เปลี่ยนปุ่มเป็นสีเขียวและใช้คำว่า Restore
                 deleteBtn.innerHTML = '<i class="fas fa-trash-restore me-1"></i> Restore';
                 deleteBtn.className = 'btn btn-sm btn-success fw-bold px-3 me-2';
-                deleteBtn.onclick = restoreItem; // เปลี่ยนไปเรียกฟังก์ชันกู้คืน
+                deleteBtn.onclick = restoreItem;
             } else {
-                // ถ้าไอเท็มยังใช้งานได้ ให้เป็นปุ่ม Delete สีแดงเหมือนเดิม
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Deactivate';
                 deleteBtn.className = 'btn btn-sm btn-danger fw-bold px-3 me-2';
                 deleteBtn.onclick = deleteItem;
@@ -426,7 +462,6 @@ async function openItemModal(item = null) {
     openModal('itemModal');
 }
 
-// 🌟 ฟังก์ชันใหม่สำหรับปลุกชีพข้อมูล (Restore)
 async function restoreItem() {
     const itemId = document.getElementById('item_id').value;
     const sapNo = document.getElementById('sap_no').value;
@@ -496,12 +531,9 @@ function addRouteRow(route = {}) {
 async function handleItemFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    
-    // 🌟 เพิ่มเช็คค่าว่างตรงนี้ก่อน (Manual Validation)
     const sapNo = form.querySelector('#sap_no').value.trim();
     if (!sapNo) {
         Swal.fire('Warning', 'กรุณาระบุรหัส SAP No.', 'warning');
-        // บังคับสลับกลับไปที่แท็บแรกที่มีช่อง SAP No. อยู่
         const triggerEl = document.querySelector('#itemFormTabs button[data-bs-target="#basic-pane"]');
         if (triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show();
         form.querySelector('#sap_no').focus();
@@ -518,6 +550,7 @@ async function handleItemFormSubmit(event) {
             part_no: form.querySelector('#part_no').value,
             sku: form.querySelector('#sku').value,
             material_type: form.querySelector('#material_type').value,
+            material_sub_type: form.querySelector('#material_sub_type').value,
             part_description: form.querySelector('#part_description').value,
             planned_output: form.querySelector('#planned_output').value,
             min_stock: form.querySelector('#min_stock').value,
@@ -599,14 +632,15 @@ async function deleteItem() {
     }
 }
 
-// === Item Master Import/Export ===
 async function exportItemsMaster() {
     Swal.fire({ title: 'Exporting...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { page: 1, limit: -1 });
         if (result.success) {
             const wsData = [[
-                "SAP No", "Part No", "Customer SKU", "Material Type", "Description", "Planned Output", "Min Stock", "Max Stock", "Is Active",
+                "SAP No", "Part No", "Customer SKU", "Material Type", 
+                "Sub Type",
+                "Description", "Planned Output", "Min Stock", "Max Stock", "Is Active",
                 "CTN", "Net Weight", "Gross Weight", "CBM", "Invoice Product Type", "Invoice Description",
                 "Standard Price", "Price USD", "Cost RM", "Cost PKG", "Cost SUB", "Cost DL",
                 "OH Machine", "OH Utilities", "OH Indirect", "OH Staff", "OH Accessory", "OH Others"
@@ -614,7 +648,9 @@ async function exportItemsMaster() {
 
             result.data.forEach(item => {
                 wsData.push([
-                    item.sap_no || '', item.part_no || '', item.sku || '', item.material_type || 'FG', item.part_description || '', item.planned_output || 0, item.min_stock || 0, item.max_stock || 0, item.is_active == 1 ? 'Yes' : 'No',
+                    item.sap_no || '', item.part_no || '', item.sku || '', item.material_type || 'FG', 
+                    item.material_sub_type || '',
+                    item.part_description || '', item.planned_output || 0, item.min_stock || 0, item.max_stock || 0, item.is_active == 1 ? 'Yes' : 'No',
                     item.CTN || 0, item.net_weight || 0, item.gross_weight || 0, item.cbm || 0, item.invoice_product_type || '', item.invoice_description || '',
                     item.StandardPrice || 0, item.Price_USD || 0, item.Cost_RM || 0, item.Cost_PKG || 0, item.Cost_SUB || 0, item.Cost_DL || 0,
                     item.Cost_OH_Machine || 0, item.Cost_OH_Utilities || 0, item.Cost_OH_Indirect || 0, item.Cost_OH_Staff || 0, item.Cost_OH_Accessory || 0, item.Cost_OH_Others || 0
@@ -622,8 +658,40 @@ async function exportItemsMaster() {
             });
 
             const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const refData = [
+                ["คู่มือการระบุประเภทสินค้า (Material Type & Sub Type)"],
+                ["* กรุณาพิมพ์ตัวอักษรให้ตรงกับคอลัมน์ A และ B ด้านล่างนี้"],
+                [],
+                ["Material Type (หมวดหลัก)", "Sub Type (หมวดย่อย)", "ความหมาย / คำอธิบาย"],
+                ["RM", "STEEL", "เหล็ก"],
+                ["RM", "PLASTIC", "พลาสติก"],
+                ["RM", "CHEMICAL", "เคมีภัณฑ์"],
+                ["RM", "OTHER", "อื่นๆ"],
+                ["PKG", "BOX", "กล่องกระดาษ"],
+                ["PKG", "PALLET", "พาเลท"],
+                ["PKG", "LABEL", "สติ๊กเกอร์/ฉลาก"],
+                ["PKG", "OTHER", "อื่นๆ"],
+                ["CON", "ACC", "Accessory/อุปกรณ์ประกอบ"],
+                ["CON", "5S", "อุปกรณ์ 5ส."],
+                ["CON", "PROD", "สิ้นเปลืองไลน์ผลิต"],
+                ["CON", "OFFICE", "เครื่องเขียน"],
+                ["CON", "PPE", "อุปกรณ์เซฟตี้"],
+                ["SP", "MECHANICAL", "อะไหล่เครื่องกล"],
+                ["SP", "ELECTRICAL", "อะไหล่ไฟฟ้า"],
+                ["SP", "OTHER", "อื่นๆ"],
+                ["TOOL", "HANDTOOL", "เครื่องมือช่าง"],
+                ["TOOL", "MACHINE", "เครื่องจักร"],
+                ["FG", "STANDARD", "สินค้าสำเร็จรูปมาตรฐาน"],
+                ["SEMI", "STANDARD", "สินค้าระหว่างผลิตมาตรฐาน"]
+            ];
+            const wsRef = XLSX.utils.aoa_to_sheet(refData);
+            
+            wsRef['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 40 }];
+
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "ItemMaster");
+            XLSX.utils.book_append_sheet(wb, wsRef, "Data_Dictionary");
+            
             XLSX.writeFile(wb, `ItemMaster_${new Date().toISOString().split('T')[0]}.xlsx`);
             Swal.close();
         } else {
@@ -632,6 +700,35 @@ async function exportItemsMaster() {
     } catch (e) {
         Swal.fire('Error', e.message || 'Export failed', 'error');
     }
+}
+
+function showMaterialDict() {
+    let dictHtml = `
+        <div class="table-responsive text-start">
+            <table class="table table-sm table-bordered table-hover" style="font-size: 0.85rem;">
+                <thead class="table-light">
+                    <tr><th>หมวดหลัก (Type)</th><th>หมวดย่อย (Sub Type)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="fw-bold text-primary">FG : 40</td><td>STANDARD</td></tr>
+                    <tr><td class="fw-bold text-success">RM : 30</td><td>STEEL, PLASTIC, CHEMICAL, OTHER</td></tr>
+                    <tr><td class="fw-bold text-info">PKG : 20</td><td>BOX, PALLET, LABEL, OTHER</td></tr>
+                    <tr><td class="fw-bold text-danger">CON : 70</td><td>ACC, 5S, PROD, OFFICE, PPE</td></tr>
+                    <tr><td class="fw-bold text-dark">SP</td><td>MECHANICAL, ELECTRICAL, OTHER</td></tr>
+                    <tr><td class="fw-bold text-primary">TOOL</td><td>HANDTOOL, MACHINE</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <small class="text-danger">* โปรดระบุคำศัพท์เหล่านี้ลงในไฟล์ Excel ให้ถูกต้อง</small>
+    `;
+
+    Swal.fire({
+        title: '<i class="fas fa-book text-secondary me-2"></i>คู่มือการระบุประเภท',
+        html: dictHtml,
+        width: 600,
+        confirmButtonText: 'รับทราบ',
+        confirmButtonColor: '#0d6efd'
+    });
 }
 
 async function handleItemMasterImport(e) {
@@ -654,6 +751,7 @@ async function handleItemMasterImport(e) {
             part_no: row["Part No"] || '',
             sku: row["Customer SKU"] || '',
             material_type: row["Material Type"] || 'FG',
+            material_sub_type: row["Sub Type"] || row["Group"] || '',
             part_description: row["Description"] || '',
             planned_output: parseInt(row["Planned Output"]) || 0,
             min_stock: parseFloat(row["Min Stock"]) || 0,
@@ -711,9 +809,15 @@ async function openWhereUsedModal(itemId, sapNo) {
     if (result.success && result.data.length > 0) {
         result.data.forEach(row => {
             const tr = document.createElement('tr');
+            
             let badgeClass = 'bg-secondary';
             if (row.material_type === 'FG') badgeClass = 'bg-primary';
-            if (row.material_type === 'SEMI') badgeClass = 'bg-warning text-dark';
+            if (row.material_type === 'RM') badgeClass = 'bg-success';
+            if (row.material_type === 'PKG') badgeClass = 'bg-info text-dark';
+            if (row.material_type === 'WIP' || row.material_type === 'SEMI') badgeClass = 'bg-warning text-dark';
+            if (row.material_type === 'CON') badgeClass = 'bg-danger';
+            if (row.material_type === 'SP') badgeClass = 'bg-dark text-white';
+            if (row.material_type === 'TOOL') badgeClass = 'bg-primary bg-opacity-50 text-dark';
 
             tr.innerHTML = `
                 <td class="px-3 py-2 fw-bold text-primary">${escapeHtml(row.fg_sap_no)}</td>
@@ -737,8 +841,6 @@ const BomManagerModule = {
     selectedFg: null,
     debounceTimer: null,
     catalogDebounceTimer: null,
-    
-    // 🌟 ตัวแปรใหม่สำหรับระบบ Versioning
     currentVersion: 0,
     currentStatus: '',
 
@@ -763,7 +865,7 @@ const BomManagerModule = {
         this.catalogTbody = document.getElementById('catalogTbody');
         this.catalogTargetFg = document.getElementById('catalogTargetFg');
 
-        // 🌟 Versioning UI Elements
+        // Versioning UI Elements
         this.versionSelect = document.getElementById('bomVersionSelect');
         this.statusBadge = document.getElementById('bomStatusBadge');
         this.ecnLabel = document.getElementById('bomEcnLabel');
@@ -785,7 +887,7 @@ const BomManagerModule = {
         this.btnDeleteAll?.addEventListener('click', () => this.deleteFullBom());
         this.btnOpenCatalog?.addEventListener('click', () => this.openCatalog());
 
-        // Inline Edit Quantity (เปลี่ยนปุ๊บ Save ปั๊บ)
+        // Inline Edit Quantity
         this.detailTbody?.addEventListener('change', (e) => {
             if (e.target.classList.contains('inline-qty-edit')) {
                 this.updateCompQty(e.target);
@@ -815,10 +917,10 @@ const BomManagerModule = {
         this.btnRollupCost?.addEventListener('click', () => this.rollupCost());
         this.btnViewHistory?.addEventListener('click', () => this.viewHistory());
 
-        // 🌟 Versioning Events
+        // Versioning Events
         this.versionSelect?.addEventListener('change', (e) => {
             this.currentVersion = parseInt(e.target.value);
-            this.loadBomDetails(); // โหลดสูตรตามเวอร์ชันที่เลือก
+            this.loadBomDetails();
         });
 
         this.btnCreateRevision?.addEventListener('click', () => openModal('ecnModal'));
@@ -830,10 +932,9 @@ const BomManagerModule = {
         this.cacheDOM();
         this.bindEvents();
         await this.loadFgs();
-        await this.loadCatalogItems(); // โหลด Item ทั้งหมดมารอไว้เลย
+        await this.loadCatalogItems();
     },
 
-    // --- 1. Master List View ---
     async loadFgs() {
         this.masterList.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
         const result = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_master_list', 'GET');
@@ -918,11 +1019,9 @@ const BomManagerModule = {
         this.detailActions.classList.remove('d-none');
         this.detailFooter.classList.remove('d-none');
 
-        // 🌟 โหลดประวัติ Version ก่อนที่จะโหลดรายละเอียด BOM
         await this.loadVersions(fg.item_id);
     },
 
-    // --- 🌟 Versioning Management ---
     async loadVersions(fg_id) {
         const res = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_versions', 'GET', null, { fg_item_id: fg_id });
         if (res.success && res.data.length > 0) {
@@ -939,7 +1038,6 @@ const BomManagerModule = {
                 this.versionSelect.appendChild(opt);
             });
 
-            // ค่าเริ่มต้นเป็นเวอร์ชันล่าสุด (DRAFT หรือ ACTIVE ล่าสุด)
             let defaultVer = res.data[0];
             const draftVer = res.data.find(v => v.bom_status === 'DRAFT');
             if (draftVer) defaultVer = draftVer;
@@ -949,7 +1047,6 @@ const BomManagerModule = {
             
             await this.loadBomDetails();
         } else {
-            // กรณียังไม่เคยมีสูตรเลย
             this.currentVersion = 1;
             this.currentStatus = 'DRAFT';
             this.versionSelect.classList.add('d-none');
@@ -964,7 +1061,6 @@ const BomManagerModule = {
         this.currentStatus = opt ? opt.dataset.status : 'DRAFT';
         const ecn = opt ? opt.dataset.ecn : '';
 
-        // อัปเดตสี Badge ตามสถานะ
         this.statusBadge.className = 'badge ms-2 ' + 
             (this.currentStatus === 'ACTIVE' ? 'bg-success' : 
              this.currentStatus === 'DRAFT' ? 'bg-warning text-dark' : 'bg-secondary');
@@ -977,21 +1073,19 @@ const BomManagerModule = {
             this.ecnLabel.classList.add('d-none');
         }
 
-        // จัดการปุ่มต่างๆ ตามสิทธิ์ (Read-Only)
         if (this.currentStatus === 'ACTIVE') {
             this.btnCreateRevision.classList.remove('d-none');
             this.btnApproveRevision.classList.add('d-none');
-            this.btnOpenCatalog.classList.add('d-none'); // 🔒 ซ่อนปุ่มเลือกวัตถุดิบ
-            this.btnDeleteAll.classList.add('d-none');   // 🔒 ซ่อนปุ่มล้างสูตร
+            this.btnOpenCatalog.classList.add('d-none');
+            this.btnDeleteAll.classList.add('d-none');
             this.btnRollupCost.classList.remove('d-none'); 
         } else if (this.currentStatus === 'DRAFT') {
             this.btnCreateRevision.classList.add('d-none');
             this.btnApproveRevision.classList.remove('d-none');
-            this.btnOpenCatalog.classList.remove('d-none'); // เปิดให้แก้สูตรได้
+            this.btnOpenCatalog.classList.remove('d-none');
             this.btnDeleteAll.classList.remove('d-none');
             this.btnRollupCost.classList.add('d-none');     
         } else {
-            // OBSOLETE ดูได้อย่างเดียว
             this.btnCreateRevision.classList.add('d-none');
             this.btnApproveRevision.classList.add('d-none');
             this.btnOpenCatalog.classList.add('d-none');
@@ -1000,14 +1094,10 @@ const BomManagerModule = {
         }
     },
 
-    // --- 2. Detail View (Right Side) ---
     async loadBomDetails() {
         if (!this.selectedFg) return;
         this.detailTbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Loading BOM...</td></tr>';
-        
-        this.updateUIByStatus(); // 🌟 อัปเดตการแสดงผลปุ่มก่อน
-
-        // 🌟 ดึงข้อมูลโดยส่ง bom_version ไปด้วย
+        this.updateUIByStatus();
         const result = await fetchAPI(BOM_API_ENDPOINT, 'get_bom_components', 'GET', null, { 
             fg_item_id: this.selectedFg.item_id,
             bom_version: this.currentVersion
@@ -1021,7 +1111,7 @@ const BomManagerModule = {
     renderBomDetails(components) {
         this.detailTbody.innerHTML = '';
         let totalCost = 0;
-        const isReadOnly = (this.currentStatus !== 'DRAFT'); // 🔒 เช็คสถานะ ReadOnly
+        const isReadOnly = (this.currentStatus !== 'DRAFT');
 
         if (components.length === 0) {
             this.detailTbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-3 d-block opacity-50"></i> ยังไม่ได้กำหนดสูตรการผลิต (BOM ว่างเปล่า) ${isReadOnly ? '' : '<br>คลิกปุ่ม "เลือกวัตถุดิบ" ด้านบนเพื่อเริ่มสร้างสูตร'}</td></tr>`;
@@ -1031,8 +1121,6 @@ const BomManagerModule = {
 
         components.forEach(comp => {
             const tr = document.createElement('tr');
-            
-            // ใช้ต้นทุนจาก API ที่ส่งมา (สมมติว่าเป็น Cost_RM) ถ้าไม่มีค่อยหาจาก Catalog
             let unitCost = parseFloat(comp.Cost_RM || 0);
             if (unitCost === 0) {
                 const catItem = this.catalogItems.find(i => i.item_id === comp.component_item_id);
@@ -1043,13 +1131,11 @@ const BomManagerModule = {
             const estCost = unitCost * qty;
             totalCost += estCost;
 
-            // 🔒 ควบคุมกล่อง Input (ถ้า ReadOnly ให้โชว์เป็นตัวอักษรธรรมดา)
             const qtyHtml = isReadOnly 
                 ? `<span class="fw-bold px-2 py-1 bg-light border rounded text-dark">${qty.toLocaleString(undefined, {maximumFractionDigits:4})}</span>`
                 : `<input type="number" class="form-control form-control-sm text-center fw-bold border-warning text-dark inline-qty-edit mx-auto" 
                           data-bom-id="${comp.bom_id}" value="${qty}" min="0.000001" step="any" style="background: transparent; width: 100px;">`;
 
-            // 🔒 ควบคุมปุ่มลบ
             const actionHtml = isReadOnly 
                 ? `<span class="text-muted small"><i class="fas fa-lock"></i> Locked</span>`
                 : `<button class="btn btn-sm btn-outline-danger border-0 btn-delete-comp" data-bom-id="${comp.bom_id}" title="Remove"><i class="fas fa-trash-alt"></i></button>`;
@@ -1067,7 +1153,6 @@ const BomManagerModule = {
         this.totalCostLabel.textContent = `฿${formatCurrency(totalCost)}`;
     },
 
-    // --- 🌟 ECN Revision Actions ---
     async createRevision(e) {
         e.preventDefault();
         const ecnNo = e.target.ecn_number.value;
@@ -1082,7 +1167,7 @@ const BomManagerModule = {
             if (res.success) {
                 closeModal('ecnModal');
                 Swal.fire('Success!', res.message, 'success');
-                await this.loadVersions(this.selectedFg.item_id); // อัปเดต Dropdown
+                await this.loadVersions(this.selectedFg.item_id);
             } else {
                 Swal.fire('Error', res.message, 'error');
             }
@@ -1120,7 +1205,6 @@ const BomManagerModule = {
         }
     },
 
-    // --- 3. Catalog Picker Modal ---
     async loadCatalogItems() {
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { page: 1, limit: -1, show_inactive: false });
         if (result.success) {
@@ -1129,7 +1213,7 @@ const BomManagerModule = {
     },
 
     openCatalog() {
-        if (!this.selectedFg || this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์ก่อนเปิด
+        if (!this.selectedFg || this.currentStatus !== 'DRAFT') return;
         this.catalogTargetFg.textContent = `For: ${this.selectedFg.sap_no}`;
         this.catalogSearch.value = '';
         this.renderCatalog();
@@ -1163,9 +1247,13 @@ const BomManagerModule = {
             const tr = document.createElement('tr');
             
             let badgeClass = 'bg-secondary';
+            if (item.material_type === 'FG') badgeClass = 'bg-primary';
             if (item.material_type === 'RM') badgeClass = 'bg-success';
             if (item.material_type === 'PKG') badgeClass = 'bg-info text-dark';
             if (item.material_type === 'WIP' || item.material_type === 'SEMI') badgeClass = 'bg-warning text-dark';
+            if (item.material_type === 'CON') badgeClass = 'bg-danger';
+            if (item.material_type === 'SP') badgeClass = 'bg-dark text-white';
+            if (item.material_type === 'TOOL') badgeClass = 'bg-primary bg-opacity-50 text-dark';
 
             tr.innerHTML = `
                 <td class="px-3 fw-bold text-primary" style="font-size: 0.85rem;">${escapeHtml(item.sap_no)}</td>
@@ -1194,7 +1282,7 @@ const BomManagerModule = {
     },
 
     async addFromCatalog(btnElement, inputElement, compId) {
-        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+        if (this.currentStatus !== 'DRAFT') return;
 
         const qty = parseFloat(inputElement.value);
         if (isNaN(qty) || qty <= 0) {
@@ -1205,7 +1293,6 @@ const BomManagerModule = {
 
         toggleButtonState(btnElement, true, '');
         try {
-            // 🌟 ส่ง bom_version เข้าไปด้วย
             const res = await fetchAPI(BOM_API_ENDPOINT, 'add_bom_component', 'POST', {
                 fg_item_id: this.selectedFg.item_id,
                 component_item_id: compId,
@@ -1234,9 +1321,8 @@ const BomManagerModule = {
         }
     },
 
-    // --- 4. Detail Actions ---
     async updateCompQty(inputEl) {
-        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+        if (this.currentStatus !== 'DRAFT') return;
 
         const bomId = inputEl.dataset.bomId;
         const newQty = parseFloat(inputEl.value);
@@ -1255,11 +1341,11 @@ const BomManagerModule = {
         if (!res.success) {
             showToast(res.message, 'var(--bs-danger)');
         }
-        this.loadBomDetails(); // โหลดใหม่เสมอเพื่ออัปเดตราคา
+        this.loadBomDetails();
     },
 
     async deleteComp(bomId) {
-        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+        if (this.currentStatus !== 'DRAFT') return;
 
         if (!confirm('ยืนยันการลบวัตถุดิบนี้ออกจากสูตร?')) return;
         const res = await fetchAPI(BOM_API_ENDPOINT, 'delete_bom_component', 'POST', { bom_id: bomId });
@@ -1271,7 +1357,7 @@ const BomManagerModule = {
     },
 
     async deleteFullBom() {
-        if (this.currentStatus !== 'DRAFT') return; // 🔒 เช็คสิทธิ์
+        if (this.currentStatus !== 'DRAFT') return;
 
         const result = await Swal.fire({
             title: '⚠️ ยืนยันการล้างสูตร?',
@@ -1335,7 +1421,7 @@ const BomManagerModule = {
                 const res = await fetchAPI(BOM_API_ENDPOINT, 'copy_bom', 'POST', {
                     source_fg_sap_no: sourceSap,
                     target_fg_sap_no: targetSap.trim().toUpperCase(),
-                    bom_version: this.currentVersion // 🌟 ส่งเวอร์ชันที่จะก๊อปปี้ไปด้วย
+                    bom_version: this.currentVersion 
                 });
 
                 if (res.success) {
@@ -1352,7 +1438,7 @@ const BomManagerModule = {
     },
 
     async rollupCost() {
-        if (!this.selectedFg || this.currentStatus !== 'ACTIVE') return; // 🔒 Rollup ได้เฉพาะตอนเป็น ACTIVE
+        if (!this.selectedFg || this.currentStatus !== 'ACTIVE') return;
         
         const totalAmount = this.totalCostLabel.textContent;
 
@@ -1647,7 +1733,7 @@ async function deleteSchedule(id) {
 }
 
 // =================================================================
-// 📥 EXCEL IMPORT & PREVIEW SYSTEM (SMART VALIDATION)
+// EXCEL IMPORT & PREVIEW SYSTEM (SMART VALIDATION)
 // =================================================================
 let parsedImportData = []; 
 
@@ -1721,7 +1807,6 @@ function renderImportPreview(data, stats) {
     const thead = document.getElementById('importPreviewThead');
     const tbody = document.getElementById('importPreviewTbody');
     
-    // อัปเดต Summary Badges
     document.getElementById('importRowCount').textContent = `${data.length} Rows`;
     const summaryDiv = document.getElementById('importStatsSummary');
     if(summaryDiv) {
@@ -1733,7 +1818,6 @@ function renderImportPreview(data, stats) {
         `;
     }
 
-    // ดึงหัวคอลัมน์ (ข้ามพวก _status ที่เราซ่อนไว้)
     let columns = [];
     data.forEach(row => {
         Object.keys(row).forEach(key => {
@@ -1751,15 +1835,11 @@ function renderImportPreview(data, stats) {
     
     for (let i = 0; i < displayLimit; i++) {
         const row = data[i];
-        
-        // ทำให้แถวที่มีปัญหาดูจางลง
         let trClass = (row._status === 'DUPLICATE' || row._status === 'INVALID') ? 'opacity-50' : '';
         
         tbodyHtml += `<tr class="${trClass}">`;
-        // วาดคอลัมน์ Status เป็นอันดับแรก
         tbodyHtml += `<td class="px-3 py-2 text-center sticky-col-left"><span class="badge ${row._statusClass} w-100">${row._statusLabel}</span></td>`;
         
-        // วาดข้อมูล Excel
         columns.forEach(col => {
             let val = row[col];
             let extraClass = (col.toLowerCase() === 'sap no' || col.toLowerCase() === 'sap_no') ? 'fw-bold text-primary' : '';
@@ -1859,8 +1939,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('exportItemsBtn')?.addEventListener('click', exportItemsMaster);
-
-    // 🌟 ITEM MASTER IMPORT EVENTS 🌟
     document.getElementById('importItemsBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         const fileInput = document.getElementById('itemImportFile');
@@ -1873,7 +1951,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btnConfirmImport')?.addEventListener('click', async function() {
-        // กรองเอาเฉพาะ NEW และ UPDATE ทิ้งข้อมูลขยะ
         const validDataToImport = parsedImportData.filter(r => r._status === 'NEW' || r._status === 'UPDATE');
         
         if (validDataToImport.length === 0) {
@@ -1900,6 +1977,34 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             toggleButtonState(btn, false);
             btn.innerHTML = '<i class="fas fa-cloud-upload-alt me-1"></i> Confirm Import';
+        }
+    });
+
+    document.getElementById('material_type')?.addEventListener('change', function() {
+        updateSubTypeOptions(this.value);
+    });
+
+    document.getElementById('sap_no')?.addEventListener('input', function() {
+        const val = this.value.trim();
+        if (val.length >= 2) {
+            const prefix = val.substring(0, 2);
+            let autoType = '';
+            
+            if (prefix === '10') autoType = 'RM';
+            else if (prefix === '20') autoType = 'PKG';
+            else if (prefix === '30') autoType = 'SEMI';
+            else if (prefix === '40') autoType = 'FG';
+            else if (prefix === '70') autoType = 'CON';
+            
+            if (autoType) {
+                const typeSelect = document.getElementById('material_type');
+                if (typeSelect.value !== autoType) {
+                    typeSelect.value = autoType;
+                    updateSubTypeOptions(autoType);
+                    typeSelect.classList.add('bg-success', 'bg-opacity-10', 'text-success');
+                    setTimeout(() => typeSelect.classList.remove('bg-success', 'bg-opacity-10', 'text-success'), 1500);
+                }
+            }
         }
     });
 
