@@ -622,30 +622,17 @@ try {
                     throw new Exception("ไม่สามารถผลิตได้! สินค้า [{$fg['sap_no']}] ไม่มีสูตรการผลิต (BOM) ที่อยู่ในสถานะ ACTIVE");
                 }
 
-                // 3. Pre-flight Check Shortage
-                $shortages = [];
+                // 3. เตรียมรายการวัตถุดิบที่จะตัด (อนุญาตให้ติดลบได้ ไม่เช็ค Onhand Quantity)
                 $rmToDeduct = [];
                 
                 if (in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
                     foreach ($components as $comp) {
                         $req_qty = bcmul($comp['quantity_required'], $quantity, 6);
                         
-                        $stockStmt = $pdo->prepare("SELECT quantity FROM ".ONHAND_TABLE." WITH (UPDLOCK) WHERE parameter_id = ? AND location_id = ?");
-                        $stockStmt->execute([$comp['component_item_id'], $location_id]);
-                        $current_stock = (float)$stockStmt->fetchColumn();
-
-                        if ($current_stock < $req_qty) {
-                            $shortages[] = "[{$comp['sap_no']}] ต้องการ " . number_format((float)$req_qty, 2) . " แต่มีแค่ " . number_format($current_stock, 2);
-                        } else {
-                            $rmToDeduct[] = [
-                                'item' => $comp,
-                                'req_qty' => $req_qty
-                            ];
-                        }
-                    }
-
-                    if (count($shortages) > 0) {
-                        throw new Exception("วัตถุดิบในจุดจัดเก็บ (หน้าไลน์) ไม่เพียงพอ:\n" . implode("\n", $shortages));
+                        $rmToDeduct[] = [
+                            'item' => $comp,
+                            'req_qty' => $req_qty
+                        ];
                     }
                 }
 
@@ -653,32 +640,29 @@ try {
                 $trans_type = 'PRODUCTION_' . $count_type;
                 $fg_oh_total = (float)$fg['Cost_OH_Machine'] + (float)$fg['Cost_OH_Utilities'] + (float)$fg['Cost_OH_Indirect'] + 
                                (float)$fg['Cost_OH_Staff'] + (float)$fg['Cost_OH_Accessory'] + (float)$fg['Cost_OH_Others'];
-                
-                $fg_total_cost = (float)$fg['Cost_Total'] * $quantity;
-                $fg_total_sales = (float)$fg['StandardPrice'] * $quantity;
 
-                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot
+                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot (ไม่มี Computed Columns)
                 $insertFgLogStmt = $pdo->prepare("
                     INSERT INTO " . TRANSACTIONS_TABLE . " (
                         parameter_id, quantity, transaction_type, transaction_timestamp, 
                         to_location_id, reference_id, created_by_user_id, notes, 
-                        start_time, end_time, ProductionDate,
+                        start_time, end_time, 
                         std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
-                        std_cost_oh_snapshot, total_sales_value, total_cost_value,
+                        std_cost_oh_snapshot, 
                         std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
                         std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot,
                         std_price_usd_snapshot
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )
                 ");
 
                 $insertFgLogStmt->execute([
                     $fg_item_id, $quantity, $trans_type, $timestamp, $location_id, $lot_no, $currentUser['id'], $notes,
-                    $start_time, $end_time, $log_date,
+                    $start_time, $end_time, 
                     $fg['StandardPrice'], $fg['Cost_RM'], $fg['Cost_DL'], 
-                    $fg_oh_total, $fg_total_sales, $fg_total_cost,
+                    $fg_oh_total, 
                     $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'],
                     $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
                     $fg['Price_USD']
@@ -696,34 +680,31 @@ try {
                         INSERT INTO " . TRANSACTIONS_TABLE . " (
                             parameter_id, quantity, transaction_type, transaction_timestamp, 
                             from_location_id, reference_id, created_by_user_id, notes, 
-                            start_time, end_time, ProductionDate,
+                            start_time, end_time, 
                             std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
-                            std_cost_oh_snapshot, total_cost_value,
+                            std_cost_oh_snapshot, 
                             std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
                             std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot
                         ) VALUES (
-                            ?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?, ?,
-                            0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                            ?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?,
+                            0, ?, ?, ?, ?, ?, ?, ?, ?, ?
                         )
                     ");
                     
-                    // ⭐️ กำหนด Note พิเศษเพื่อให้ update_transaction รู้ว่านี่คือวัตถุดิบที่แถมมากับ FG
                     $consume_note = "Auto-consumed for production ID: {$transaction_id}";
 
                     foreach ($rmToDeduct as $rm) {
-                        // 6.1 อัปเดตสต็อก RM
+                        // 6.1 อัปเดตสต็อก RM (ยอมให้ตัดจนติดลบได้)
                         $updateStockStmt->execute([$rm['item']['component_item_id'], $location_id, -$rm['req_qty']]);
                         
                         $oh_total = (float)$rm['item']['Cost_OH_Machine'] + (float)$rm['item']['Cost_OH_Utilities'] + (float)$rm['item']['Cost_OH_Indirect'] + 
                                     (float)$rm['item']['Cost_OH_Staff'] + (float)$rm['item']['Cost_OH_Accessory'] + (float)$rm['item']['Cost_OH_Others'];
-                        
-                        $line_cost = (float)$rm['item']['Cost_Total'] * $rm['req_qty'];
 
                         // 6.2 บันทึกประวัติ RM
                         $insertLogStmt->execute([
                             $rm['item']['component_item_id'], -abs($rm['req_qty']), $timestamp, $location_id, $lot_no, $currentUser['id'], $consume_note,
-                            $start_time, $end_time, $log_date,
-                            $rm['item']['Cost_RM'], $rm['item']['Cost_DL'], $oh_total, -$line_cost,
+                            $start_time, $end_time, 
+                            $rm['item']['Cost_RM'], $rm['item']['Cost_DL'], $oh_total, 
                             $rm['item']['Cost_OH_Machine'], $rm['item']['Cost_OH_Utilities'], $rm['item']['Cost_OH_Indirect'],
                             $rm['item']['Cost_OH_Staff'], $rm['item']['Cost_OH_Accessory'], $rm['item']['Cost_OH_Others']
                         ]);

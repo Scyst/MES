@@ -89,7 +89,11 @@ function initEntryPage() {
     const timeInputs = document.querySelectorAll('input[name="log_time"]');
     timeInputs.forEach(input => input.addEventListener('input', applyTimeMask));
 
-    if (g_EntryType === 'production') {
+    // 🛡️ ป้องกัน ReferenceError จากตัวแปร Global ที่ไม่ได้ถูกส่งมาจาก PHP
+    const entryType = typeof g_EntryType !== 'undefined' ? g_EntryType : 'receipt';
+    const transferIdNew = typeof g_TransferId_NEW !== 'undefined' ? g_TransferId_NEW : null;
+
+    if (entryType === 'production') {
         setupAutocomplete('out_item_search', 'out_item_id');
         document.getElementById('mobileProductionForm')?.addEventListener('submit', handleFormSubmit);
     } else {
@@ -97,7 +101,7 @@ function initEntryPage() {
         setupAutocomplete('entry_item_search', 'entry_item_id');
         document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit);
         
-        if (!g_TransferId_NEW) {
+        if (!transferIdNew) {
             initQrScanner(); 
         }
         
@@ -117,6 +121,82 @@ function initEntryPage() {
                     handleManualScanLoad();
                 }
             });
+        }
+    }
+}
+
+async function populateInitialData() {
+    const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
+    
+    if (result.success) {
+        allItems = result.items || [];
+        allLocations = result.locations || [];
+        
+        // 🛡️ ดึงค่า Global ตัวแปรอย่างปลอดภัย
+        const entryType = typeof g_EntryType !== 'undefined' ? g_EntryType : 'receipt';
+        const locId = typeof g_LocationId !== 'undefined' ? g_LocationId : 0;
+        const transferIdNew = typeof g_TransferId_NEW !== 'undefined' ? g_TransferId_NEW : null;
+        const autoFillDataOld = typeof g_AutoFillData_OLD !== 'undefined' ? g_AutoFillData_OLD : null;
+
+        // Setup Dropdown Locations
+        const locationDisplay = document.getElementById('location_display');
+        if (locationDisplay) {
+            const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+            if (locId > 0) {
+                const foundLocation = allLocations.find(loc => loc.location_id == locId);
+                locationDisplay.innerHTML = `<option value="${locId}">${foundLocation ? foundLocation.location_name : 'Unknown Location'}</option>`;
+            } else {
+                locationDisplay.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
+            }
+        }
+
+        if (entryType === 'receipt') {
+            const fromLocationSelect = document.getElementById('entry_from_location_id');
+            if (fromLocationSelect) {
+                const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+                fromLocationSelect.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
+                fromLocationSelect.addEventListener('change', updateAvailableStockDisplay);
+            }
+        }
+
+        // 🛡️ เช็ค Element ก่อน Assign ค่าป้องกัน TypeError
+        if (entryType === 'production') {
+            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
+            if (lastData && lastData.item_id) {
+                const searchEl = document.getElementById('out_item_search');
+                const idEl = document.getElementById('out_item_id');
+                
+                if (searchEl) searchEl.value = lastData.item_display_text || '';
+                if (idEl) idEl.value = lastData.item_id;
+                
+                if (locId <= 0 && lastData.location_id && locationDisplay) {
+                    locationDisplay.value = lastData.location_id;
+                }
+                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
+            }
+        } else { // receipt
+            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
+            if (lastData && lastData.item_id) {
+                const searchEl = document.getElementById('entry_item_search');
+                const idEl = document.getElementById('entry_item_id');
+                const fromLocEl = document.getElementById('entry_from_location_id');
+
+                if (searchEl) searchEl.value = lastData.item_display_text || '';
+                if (idEl) idEl.value = lastData.item_id;
+                if (fromLocEl) fromLocEl.value = lastData.from_location_id || '';
+                
+                if (locId <= 0 && lastData.to_location_id && locationDisplay) {
+                    locationDisplay.value = lastData.to_location_id;
+                }
+                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
+                updateAvailableStockDisplay();
+            }
+        }
+
+        if (transferIdNew) {
+            await autoFillFromTransferOrder(transferIdNew);
+        } else if (autoFillDataOld && autoFillDataOld.sap_no) {
+            await autoFillForm_OLD(autoFillDataOld);
         }
     }
 }
@@ -154,67 +234,6 @@ function initializeDateTimeFields() {
     if (inLogDate) inLogDate.value = dateStr;
     const inLogTime = document.getElementById('entry_log_time');
     if (inLogTime) inLogTime.value = timeStr;
-}
-
-async function populateInitialData() {
-    const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
-    
-    if (result.success) {
-        allItems = result.items || [];
-        allLocations = result.locations || [];
-        
-        // Setup Dropdown Locations
-        const locationDisplay = document.getElementById('location_display');
-        if (locationDisplay) {
-            const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
-            if (g_LocationId > 0) {
-                const foundLocation = allLocations.find(loc => loc.location_id == g_LocationId);
-                locationDisplay.innerHTML = `<option value="${g_LocationId}">${foundLocation ? foundLocation.location_name : 'Unknown Location'}</option>`;
-            } else {
-                locationDisplay.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
-            }
-        }
-        if (g_EntryType === 'receipt') {
-            const fromLocationSelect = document.getElementById('entry_from_location_id');
-            if (fromLocationSelect) {
-                const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
-                fromLocationSelect.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
-                fromLocationSelect.addEventListener('change', updateAvailableStockDisplay);
-            }
-        }
-
-        if (g_EntryType === 'production') {
-            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
-            if (lastData && lastData.item_id) {
-                document.getElementById('out_item_search').value = lastData.item_display_text || '';
-                document.getElementById('out_item_id').value = lastData.item_id;
-                if (g_LocationId <= 0 && lastData.location_id) {
-                    document.getElementById('location_display').value = lastData.location_id;
-                }
-                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
-            }
-        } else { // (g_EntryType === 'receipt')
-            const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
-            if (lastData && lastData.item_id) {
-                document.getElementById('entry_item_search').value = lastData.item_display_text || '';
-                document.getElementById('entry_item_id').value = lastData.item_id;
-                document.getElementById('entry_from_location_id').value = lastData.from_location_id || '';
-                if (g_LocationId <= 0 && lastData.to_location_id) {
-                    document.getElementById('location_display').value = lastData.to_location_id;
-                }
-                selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
-                updateAvailableStockDisplay();
-            }
-        }
-        console.log("Autofill Data (New):", g_TransferId_NEW);
-        console.log("Autofill Data (Old):", g_AutoFillData_OLD);
-
-        if (g_TransferId_NEW) {
-            await autoFillFromTransferOrder(g_TransferId_NEW);
-        } else if (g_AutoFillData_OLD && g_AutoFillData_OLD.sap_no) {
-            await autoFillForm_OLD(g_AutoFillData_OLD);
-        }
-    }
 }
 
 function stopScanning() {
@@ -593,6 +612,9 @@ function setupAutocomplete(inputId, hiddenId) {
 // =================================================================
 
 async function initReviewPage() {
+    const container = document.getElementById('review-list-container');
+    if (!container) return; 
+
     await populateReviewModals();
     const reviewOutTab = document.getElementById('review-out-tab');
     const reviewInTab = document.getElementById('review-in-tab');
@@ -607,7 +629,7 @@ async function initReviewPage() {
         fetchReviewData();
     });
 
-    document.getElementById('review-list-container')?.addEventListener('click', (event) => {
+    container.addEventListener('click', (event) => {
         const card = event.target.closest('.review-card');
         if (card && card.dataset.transactionId) {
             editTransaction(card.dataset.transactionId, card.dataset.type);
@@ -648,6 +670,11 @@ async function populateReviewModals() {
 
 async function fetchReviewData(page = 1) {
     currentReviewPage = page;
+    
+    // 🛡️ เช็คก่อนแสดง Spinner เพื่อไม่ให้ Spinner ค้างถ้าหา Element ไม่เจอ
+    const container = document.getElementById('review-list-container');
+    if (!container) return;
+
     showSpinner();
     
     const action = (currentReviewType === 'production') ? 'get_production_history' : 'get_receipt_history';
@@ -658,7 +685,6 @@ async function fetchReviewData(page = 1) {
     };
 
     const result = await sendRequest(INVENTORY_API_URL, action, 'GET', null, params);
-    const container = document.getElementById('review-list-container');
     
     if (result.success && result.data && result.data.length > 0) {
         renderReviewCards(result.data, currentReviewType);
@@ -670,6 +696,8 @@ async function fetchReviewData(page = 1) {
 
 function renderReviewCards(data, type) {
     const container = document.getElementById('review-list-container');
+    if (!container) return; // 🛡️ ป้องกัน Error
+
     container.innerHTML = ''; // ล้างของเก่า
     
     data.forEach(row => {
