@@ -157,6 +157,8 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeOps);
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_warehouse', $themeOps);
                         renderServiceLink('Store Management', 'จัดการคลังสินค้า', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeOps);
+                        renderServiceLink('Material Request', 'ระบบขอเบิกพัสดุ/อุปกรณ์', '<i class="fas fa-cart-plus"></i>', '../storeManagement/materialReq.php', '', $themeOps);
+                        renderServiceLink('Store Dashboard', 'ศูนย์ควบคุมและคิวจ่ายสโตร์', '<i class="fas fa-store"></i>', '../storeManagement/storeDashboard.php', 'view_warehouse', $themeOps);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_warehouse', $themeOps);
                         renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeOps);
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeOps);
