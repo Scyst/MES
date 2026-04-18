@@ -389,15 +389,14 @@ try {
 
         case 'get_catalog':
             $category = $_REQUEST['category'] ?? 'ALL';
+            $subCategory = $_REQUEST['sub_category'] ?? 'ALL';
             $search = $_REQUEST['search'] ?? '';
             $sort = $_REQUEST['sort'] ?? 'DEFAULT'; 
             $page = isset($_REQUEST['page']) ? (int)$_REQUEST['page'] : 1;
             $limit = 40; 
             $offset = ($page - 1) * $limit;
-            
-            $stmt = $pdo->prepare("EXEC sp_Store_GetCatalog @Category=?, @Search=?, @Sort=?, @Offset=?, @Limit=?");
-            $stmt->execute([$category, $search, $sort, $offset, $limit]);
-            
+            $stmt = $pdo->prepare("EXEC sp_Store_GetCatalog @Category=?, @SubType=?, @Search=?, @Sort=?, @Offset=?, @Limit=?");
+            $stmt->execute([$category, $subCategory, $search, $sort, $offset, $limit]); 
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
             break;
 

@@ -104,24 +104,25 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
             
             <div class="sticky-toolbar pb-1 mb-1">
                 <div class="bg-white rounded shadow-sm p-2 mb-2 border">
-                    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                    
+                    <div class="d-flex flex-column flex-md-row gap-2 justify-content-between">
                         
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                            <div class="input-group input-group-sm" style="width: 350px; flex-grow: 1; max-width: 100%;">
+                        <div class="d-flex gap-2 align-items-center flex-grow-1">
+                            <div class="input-group input-group-sm flex-grow-1" style="max-width: 400px;">
                                 <span class="input-group-text bg-light text-secondary"><i class="fas fa-search"></i></span>
                                 <input type="text" id="searchItem" class="form-control" placeholder="ค้นหารหัส SAP, ชื่อวัสดุ..." autocomplete="off">
                             </div>
                             
-                            <select id="sortItem" class="form-select form-select-sm fw-bold border-secondary-subtle w-auto" onchange="loadCatalog()">
+                            <select id="sortItem" class="form-select form-select-sm fw-bold border-secondary-subtle w-auto flex-shrink-0 text-dark" style="max-width: 140px;" onchange="loadCatalog()">
                                 <option value="DEFAULT">✅ พร้อมเบิก</option>
-                                <option value="SAP_ASC">🔤 SAP (A-Z)</option>
-                                <option value="SAP_DESC">🔤 SAP (Z-A)</option>
-                                <option value="STOCK_DESC">📦 สต๊อกมากสุด</option>
+                                <option value="SAP_ASC">🔤 (A-Z)</option>
+                                <option value="SAP_DESC">🔤 (Z-A)</option>
+                                <option value="STOCK_DESC">📦 มากสุด</option>
                             </select>
                         </div>
                         
-                        <div class="d-flex gap-2 align-items-center">
-                            <button id="toggleImageBtn" class="btn btn-sm btn-outline-secondary active" onclick="toggleImages()" title="ซ่อน/แสดงรูปภาพ">
+                        <div class="d-flex gap-2 align-items-center justify-content-end flex-shrink-0">
+                            <button id="toggleImageBtn" class="btn btn-sm btn-outline-secondary active" onclick="toggleImages()" title="ซ่อน/แสดงรูปภาพ" style="border-radius: 6px;">
                                 <i class="fas fa-image"></i> <span class="d-none d-sm-inline">รูปภาพ</span>
                             </button>
                             
@@ -141,6 +142,8 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     <button type="button" class="btn btn-sm btn-outline-primary category-chip text-nowrap" data-category="SP" onclick="filterCategory('SP', this)" style="scroll-snap-align: start;"><i class="fas fa-cogs"></i> SP</button>
                     <button type="button" class="btn btn-sm btn-outline-primary category-chip text-nowrap" data-category="TOOL" onclick="filterCategory('TOOL', this)" style="scroll-snap-align: start;"><i class="fas fa-wrench"></i> TOOL</button>
                 </div>
+
+                <div id="subCategoryContainer" class="d-none gap-1 overflow-auto hide-scrollbar pb-1 mt-1" style="scroll-snap-type: x mandatory;"></div>
             </div>
 
             <div class="row g-2 mt-3" id="catalogGrid"></div>

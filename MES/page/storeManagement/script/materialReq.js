@@ -66,6 +66,42 @@ window.toggleImages = function() {
     }
 };
 
+const subCategories = {
+    'RM': [
+        { id: 'STEEL', name: 'เหล็ก' },
+        { id: 'PLASTIC', name: 'พลาสติก' },
+        { id: 'CHEMICAL', name: 'เคมีภัณฑ์' },
+        { id: 'OTHER', name: 'อื่นๆ' }
+    ],
+    'PKG': [
+        { id: 'BOX', name: 'กล่องกระดาษ' },
+        { id: 'PALLET', name: 'พาเลท' },
+        { id: 'LABEL', name: 'สติ๊กเกอร์/ฉลาก' },
+        { id: 'OTHER', name: 'อื่นๆ' }
+    ],
+    'CON': [
+        { id: 'ACC', name: 'อุปกรณ์ประกอบ' },
+        { id: '5S', name: 'อุปกรณ์ 5ส.' },
+        { id: 'PROD', name: 'สิ้นเปลืองไลน์ผลิต' },
+        { id: 'OFFICE', name: 'เครื่องเขียน' },
+        { id: 'PPE', name: 'อุปกรณ์เซฟตี้' }
+    ],
+    'SP': [
+        { id: 'MECHANICAL', name: 'อะไหล่เครื่องกล' },
+        { id: 'ELECTRICAL', name: 'อะไหล่ไฟฟ้า' },
+        { id: 'OTHER', name: 'อื่นๆ' }
+    ],
+    'TOOL': [
+        { id: 'HANDTOOL', name: 'เครื่องมือช่าง' },
+        { id: 'MACHINE', name: 'เครื่องจักร' }
+    ],
+    'FG': [ { id: 'STANDARD', name: 'สินค้าสำเร็จรูปมาตรฐาน' } ],
+    'SEMI': [ { id: 'STANDARD', name: 'สินค้าระหว่างผลิต' } ]
+};
+
+let currentMainCategory = 'ALL';
+let currentSubCategory = 'ALL';
+
 window.filterCategory = function(category, element) {
     document.querySelectorAll('.category-chip').forEach(el => {
         el.classList.remove('active', 'btn-primary');
@@ -74,21 +110,54 @@ window.filterCategory = function(category, element) {
     
     element.classList.add('active', 'btn-primary');
     element.classList.remove('btn-outline-primary');
-    element.dataset.category = category;
+    
+    currentMainCategory = category;
+    currentSubCategory = 'ALL';
+    
+    renderSubCategories(category);
     
     const searchInput = document.getElementById('searchItem');
     if (searchInput) searchInput.value = ''; 
-    loadCatalog(category, false); 
+    loadCatalog(false); 
 };
 
-window.loadCatalog = async function(category = null, isLoadMore = false) {
-    if (isLoading) return;
-
-    if (!category) {
-        const activeCategory = document.querySelector('.category-chip.active');
-        category = activeCategory ? activeCategory.getAttribute('data-category') : 'ALL';
+function renderSubCategories(mainCat) {
+    const container = document.getElementById('subCategoryContainer');
+    
+    if (mainCat === 'ALL' || !subCategories[mainCat] || subCategories[mainCat].length === 0) {
+        container.classList.add('d-none');
+        container.classList.remove('d-flex');
+        container.innerHTML = '';
+        return;
     }
-    if (category === 'undefined' || category === 'null' || !category) category = 'ALL';
+
+    container.classList.remove('d-none');
+    container.classList.add('d-flex');
+    
+    let html = `<button type="button" class="btn btn-sm btn-info text-white sub-category-chip active text-nowrap" style="border-radius: 20px;" data-sub="ALL" onclick="filterSubCategory('ALL', this)">รวมทั้งหมด</button>`;
+    
+    subCategories[mainCat].forEach(sub => {
+        html += `<button type="button" class="btn btn-sm btn-outline-info sub-category-chip text-nowrap" style="border-radius: 20px;" data-sub="${sub.id}" onclick="filterSubCategory('${sub.id}', this)">${sub.name}</button>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+window.filterSubCategory = function(subCategory, element) {
+    document.querySelectorAll('.sub-category-chip').forEach(el => {
+        el.classList.remove('active', 'btn-info', 'text-white');
+        el.classList.add('btn-outline-info');
+    });
+    
+    element.classList.add('active', 'btn-info', 'text-white');
+    element.classList.remove('btn-outline-info');
+    
+    currentSubCategory = subCategory;
+    loadCatalog(false);
+};
+
+window.loadCatalog = async function(isLoadMore = false) {
+    if (isLoading) return;
 
     const search = document.getElementById('searchItem')?.value.trim() || '';
     const sort = document.getElementById('sortItem')?.value || 'DEFAULT';
@@ -105,7 +174,7 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
     isLoading = true;
 
     try {
-        const actionUrl = `get_catalog&category=${encodeURIComponent(category)}&search=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page=${currentPage}&limit=${itemLimit}`;
+        const actionUrl = `get_catalog&category=${encodeURIComponent(currentMainCategory)}&sub_category=${encodeURIComponent(currentSubCategory)}&search=${encodeURIComponent(search)}&sort=${encodeURIComponent(sort)}&page=${currentPage}&limit=${itemLimit}`;
         const res = await fetchAPI(actionUrl, 'GET');
         
         isLoading = false;
@@ -152,7 +221,7 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
                         <div class="card-body-flex pt-2">
-                            <div class="small text-primary fw-bold mb-1">${item.item_code}</div>
+                            <div class="small text-primary fw-bold mb-1">SAP: ${item.item_code}</div>
                             <div class="product-title" title="${item.description}">${item.description || '-'}</div>
                             <div class="mt-auto pt-3 border-top">
                                 <div class="input-group input-group-sm shadow-sm">
@@ -178,7 +247,6 @@ window.loadCatalog = async function(category = null, isLoadMore = false) {
     } catch (error) {
         isLoading = false;
         document.getElementById('loadMoreSpinner')?.remove();
-        // ข้อผิดพลาดจัดการใน fetchAPI แล้ว ไม่ต้อง Swal ซ้ำ
     }
 };
 

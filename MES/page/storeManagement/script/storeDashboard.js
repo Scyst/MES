@@ -54,7 +54,6 @@ window.triggerGlobalReload = function() {
 };
 
 window.toggleDateFilter = function() {
-    // 💡 ปลดล็อค Date Filter ให้กดได้ตลอดเวลา ไม่ต้องทำเทาทึบแล้ว
     const dp = document.getElementById('global-date-filter');
     dp.style.opacity = '1'; 
     dp.style.pointerEvents = 'auto';
@@ -74,7 +73,6 @@ window.switchDashboardMode = function(mode) {
     layoutAnalytics.classList.add('d-none');
     btnExport.classList.add('d-none');
 
-    // มั่นใจว่า Date Picker ใช้งานได้เสมอ
     dp.style.opacity = '1'; 
     dp.style.pointerEvents = 'auto';
 
@@ -215,19 +213,23 @@ window.openStockOrder = async function(reqId) {
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex align-items-stretch justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0 w-auto">
+                    <div class="d-flex align-items-center justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0 w-auto">
                         
-                        <div class="bg-light border rounded p-1 d-flex flex-column justify-content-center align-items-center" style="min-width: 75px;">
-                            <small class="text-muted fw-bold d-block lh-1 mb-1" style="font-size:0.65rem;">ขอเบิก</small>
-                            <span class="fw-bold text-primary lh-1 m-0" style="font-size: 1.15rem;">${reqQty}</span>
+                        <div class="bg-light border rounded d-flex flex-column align-items-center justify-content-center" style="width: 70px; height: 60px;">
+                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1;">ขอเบิก</span>
+                            <div class="fw-bold text-primary d-flex align-items-center justify-content-center w-100" style="font-size: 1.25rem; height: 26px; line-height: 1;">
+                                ${reqQty}
+                            </div>
                         </div>
                         
-                        <div class="border rounded p-1 d-flex flex-column justify-content-center align-items-center ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="min-width: 75px;">
-                            <small class="text-muted fw-bold d-block lh-1 mb-1" style="font-size:0.65rem; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</small>
-                            <input type="number" 
-                                class="form-control text-center fw-bold ${isEditable ? 'text-success border-0 bg-transparent p-0' : issueClass + ' border-0 bg-transparent p-0'} issue-qty-input shadow-none m-0" 
-                                data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${item.item_code}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
-                                style="height: auto; min-height: 0; line-height: 1; font-size: 1.15rem !important; padding: 0;">
+                        <div class="border rounded d-flex flex-column align-items-center justify-content-center ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 70px; height: 60px;">
+                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</span>
+                            <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
+                                <input type="number" 
+                                    class="text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${item.item_code}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
+                                    style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
+                            </div>
                         </div>
 
                     </div>
@@ -443,7 +445,7 @@ function switchView(view) {
 }
 
 // ==========================================
-// 🟢 Analytics 🟢
+// 🟢 Analytics (Optimized Design) 🟢
 // ==========================================
 window.loadAnalytics = async function() {
     document.getElementById('loadingOverlay').style.display = 'flex';
@@ -468,45 +470,102 @@ window.loadAnalytics = async function() {
         document.getElementById('adv_dead_stock').innerText = '฿' + parseFloat(res.summary.dead_stock_value || 0).toLocaleString();
         document.getElementById('adv_turnover').innerText = parseFloat(res.summary.turnover_ratio || 0).toFixed(2);
 
-        // 3. Charts
+        // 🎨 3. Charts (Industrial UI styling with cleaned grids & tooltips)
+        
+        // Trend Chart
         if(chartTrendInst) chartTrendInst.destroy();
         chartTrendInst = new Chart(document.getElementById('chartTrend').getContext('2d'), {
             type: 'line',
             data: {
                 labels: res.trendData.map(d => d.req_date),
-                datasets: [{ label: 'บิลสำเร็จ', data: res.trendData.map(d => d.req_count), borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', borderWidth: 2, fill: true, tension: 0.3 }]
+                datasets: [{ 
+                    label: 'จำนวนบิลเบิกสำเร็จ', 
+                    data: res.trendData.map(d => d.req_count), 
+                    borderColor: '#0d6efd', 
+                    backgroundColor: 'rgba(13, 110, 253, 0.15)', 
+                    borderWidth: 2.5, 
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#0d6efd',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true, 
+                    tension: 0.3 
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false }, tooltip: { padding: 10 } }, 
+                interaction: { mode: 'index', intersect: false },
+                scales: { 
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#6c757d' } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false }, ticks: { precision: 0, font: { size: 11 }, color: '#6c757d' } } 
+                } 
+            }
         });
 
+        // Category Doughnut Chart
         if(chartCatInst) chartCatInst.destroy();
         chartCatInst = new Chart(document.getElementById('chartCategory').getContext('2d'), {
             type: 'doughnut',
             data: {
                 labels: res.categoryData.map(c => c.category),
-                datasets: [{ data: res.categoryData.map(c => c.total_qty), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d'], borderWidth: 2, borderColor: '#fff' }]
+                datasets: [{ 
+                    data: res.categoryData.map(c => c.total_qty), 
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], 
+                    borderWidth: 2, 
+                    borderColor: '#ffffff' 
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8 } } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, cutout: '70%', 
+                plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } 
+            }
         });
 
+        // Top Items Horizontal Bar Chart
         if(chartItemsInst) chartItemsInst.destroy();
         chartItemsInst = new Chart(document.getElementById('chartTopItems').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: res.topItems.map(i => (i.part_description || '').substring(0, 20) + '...'),
-                datasets: [{ label: 'จ่าย (ชิ้น)', data: res.topItems.map(i => i.total_qty), backgroundColor: 'rgba(255, 193, 7, 0.85)', borderColor: '#ffc107', borderWidth: 1, borderRadius: 4 }]
+                labels: res.topItems.map(i => (i.part_description || '').substring(0, 25) + '...'),
+                datasets: [{ 
+                    label: 'จำนวนชิ้นที่จ่าย', 
+                    data: res.topItems.map(i => i.total_qty), 
+                    backgroundColor: 'rgba(255, 193, 7, 0.85)', 
+                    borderColor: '#ffc107', 
+                    borderWidth: 1, 
+                    borderRadius: 4 
+                }]
             },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } }
+            options: { 
+                indexAxis: 'y', // แนวนอน
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } }, 
+                    y: { grid: { display: false }, ticks: { font: { size: 11 } } } 
+                } 
+            }
         });
 
+        // Top Users Pie Chart
         if(chartUsersInst) chartUsersInst.destroy();
         chartUsersInst = new Chart(document.getElementById('chartTopUsers').getContext('2d'), {
             type: 'pie',
             data: {
                 labels: res.topUsers.map(u => u.fullname.split(' ')[0]),
-                datasets: [{ data: res.topUsers.map(u => u.req_count), backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], borderWidth: 2, borderColor: '#fff' }]
+                datasets: [{ 
+                    data: res.topUsers.map(u => u.req_count), 
+                    backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], 
+                    borderWidth: 2, 
+                    borderColor: '#ffffff' 
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8 } } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } 
+            }
         });
 
     } catch (error) {}
@@ -517,13 +576,11 @@ window.exportToCSV = async function() {
     const start = document.getElementById('global_start').value;
     const end = document.getElementById('global_end').value;
 
-    // เปลี่ยนปุ่มเป็นสถานะโหลด เพื่อให้ผู้ใช้รู้ว่าระบบกำลังทำงาน
     const originalHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังโหลด...';
     btn.disabled = true;
 
     try {
-        // 🚀 ยิงไปดึงข้อมูลเฉพาะตอนที่จะ Export จริงๆ เท่านั้น
         const res = await fetchAPI(`export_analytics&start_date=${start}&end_date=${end}`, 'GET');
         
         if (!res.success || !res.exportData || res.exportData.length === 0) { 
@@ -544,7 +601,6 @@ window.exportToCSV = async function() {
     } catch (error) {
         Swal.fire('Error', 'เกิดข้อผิดพลาดในการดึงข้อมูลส่งออก', 'error');
     } finally {
-        // คืนค่าปุ่มกลับเป็นปกติ
         btn.innerHTML = originalHtml;
         btn.disabled = false;
     }

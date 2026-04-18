@@ -56,6 +56,16 @@ $pageIcon = "fas fa-store";
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3); } 70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
         .pulse-alert { animation: pulse-red 2s infinite; border-color: var(--bs-danger); }
         .issue-qty-input { font-size: 1.1rem !important; padding: 2px !important; }
+        .issue-qty-input::-webkit-outer-spin-button,
+        .issue-qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .issue-qty-input {
+            -moz-appearance: textfield; /* สำหรับ Firefox */
+            text-align: center !important;
+            padding: 0 !important;
+        }
 
         /* --- Analytics Enhanced Styling --- */
         .stat-card { border: 1px solid var(--bs-border-color); border-radius: 8px; overflow: hidden; transition: all 0.2s ease; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
