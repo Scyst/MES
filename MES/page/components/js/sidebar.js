@@ -65,3 +65,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ============================================================
+// 6. ระบบ LIVE MENU SEARCH (กรองเมนูแบบ Real-time)
+// ============================================================
+const initMenuSearch = (inputId, itemSelector) => {
+    const searchInput = document.getElementById(inputId);
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase().trim();
+        const menuItems = document.querySelectorAll(itemSelector);
+
+        menuItems.forEach(item => {
+            // ข้ามการซ่อนช่องค้นหาตัวเอง และเส้นแบ่ง (Divider)
+            if (item.querySelector('input') || item.tagName === 'HR' || item.classList.contains('dropdown-divider')) {
+                return;
+            }
+
+            // ค้นหาจาก text ภายในเมนู
+            const text = item.textContent.toLowerCase();
+            
+            // ถ้ายกเลิกการค้นหา (ว่างเปล่า) หรือ ค้นหาเจอ ให้แสดงผล
+            if (term === '' || text.includes(term)) {
+                item.style.display = '';
+                item.classList.remove('d-none'); // เผื่อมีการใช้ class ของ bootstrap
+            } else {
+                // ถ้าค้นหาไม่เจอ ให้ซ่อน
+                item.style.display = 'none';
+                item.classList.add('d-none');
+            }
+        });
+    });
+};
+
+// เปิดใช้งานทั้ง 2 จุด
+initMenuSearch('desktopMenuSearch', '.custom-dropdown li');
+initMenuSearch('mobileMenuSearch', '#globalMobileMenu .list-group-item');

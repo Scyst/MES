@@ -145,96 +145,78 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
 
             <div class="portal-col">
                 <div class="section-header">เว็บไซต์บริการ (Service Modules)</div>
+
+                <div class="service-group">
+                    <div class="service-group-title fw-bold text-dark border-bottom pb-1 mb-3">COMMON SERVICES (บริการส่วนกลาง & แจ้งเรื่อง)</div>
+                    <div class="service-grid">
+                        <?php 
+                        $themeCommon = 'text-dark bg-light border';
+                        // ทุกคนเข้าถึงได้ หรือใช้สิทธิ์พื้นฐาน
+                        renderServiceLink('OEE Dashboard', 'ดูประสิทธิภาพ (ภาพรวม)', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', '', $themeCommon);
+                        renderServiceLink('Material Request', 'ระบบขอเบิกพัสดุ/อุปกรณ์', '<i class="fas fa-cart-plus"></i>', '../storeManagement/materialReq.php', '', $themeCommon);
+                        renderServiceLink('Forklift Booking', 'จองรถและติดตามสถานะโฟร์คลิฟต์', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', '', $themeCommon);
+                        renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', 'view_documents', $themeCommon);
+                        // ถ้ามีระบบแจ้งซ่อม (MT Request) ในอนาคต ให้เอามาใส่ตรงนี้
+                        ?>
+                    </div>
+                </div>
                 
                 <div class="service-group">
-                    <div class="service-group-title fw-bold">PRODUCTION MANAGEMENT (การจัดการการผลิต)</div>
+                    <div class="service-group-title fw-bold text-primary">PRODUCTION (ปฏิบัติการผลิต)</div>
                     <div class="service-grid">
                         <?php 
                         $themeProd = 'text-primary bg-primary bg-opacity-10';
                         renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', 'view_production', $themeProd);
-                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (QR)', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', 'view_production', $themeProd);
-                        renderServiceLink('Stop Causes', 'บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeProd);
+                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', 'view_production', $themeProd);
+                        renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeProd);
                         ?>
                     </div>
                 </div>
 
                 <div class="service-group">
-                    <div class="service-group-title fw-bold">MATERIALS & LOGISTICS (คลังสินค้าและโลจิสติกส์)</div>
+                    <div class="service-group-title fw-bold text-warning">WAREHOUSE & LOGISTICS (คลังสินค้าและจัดส่ง)</div>
                     <div class="service-grid">
                         <?php 
                         $themeWh = 'text-warning bg-warning bg-opacity-10';
-                        renderServiceLink('Store Management', 'จัดการคลังสินค้า', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Store Dashboard', 'ศูนย์ควบคุมและคิวจ่ายสโตร์', '<i class="fas fa-store"></i>', '../storeManagement/storeDashboard.php', 'view_warehouse', $themeWh);
-                        renderServiceLink('Material Request', 'ระบบขอเบิกพัสดุ/อุปกรณ์', '<i class="fas fa-cart-plus"></i>', '../storeManagement/materialReq.php', '', $themeWh);
+                        renderServiceLink('RM Receiving', 'รับวัตถุดิบเข้าคลัง', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_warehouse', $themeWh);
-                        renderServiceLink('Forklift Booking', 'จองรถและติดตามสถานะโฟร์คลิฟต์', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', '', $themeWh);
                         renderServiceLink('Transport & Logistics', 'บัญชีเที่ยวรถและค่าขนส่ง', '<i class="fas fa-truck-moving"></i>', '../fleetLog/fleetLog.php', 'view_sales', $themeWh);
+                        renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeWh);
                         ?>
                     </div>
                 </div>
 
                 <div class="service-group">
-                    <div class="service-group-title fw-bold">QUALITY MANAGEMENT (การจัดการคุณภาพ)</div>
+                    <div class="service-group-title fw-bold text-danger">QUALITY & MAINTENANCE (คุณภาพและซ่อมบำรุง)</div>
                     <div class="service-grid">
                         <?php 
                         $themeQa = 'text-danger bg-danger bg-opacity-10';
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeQa);
+                        renderServiceLink('MT Stock', 'จัดการคลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', 'view_maintenance', $themeQa);
                         ?>
                     </div>
                 </div>
 
                 <div class="service-group">
-                    <div class="service-group-title fw-bold">PLANT MAINTENANCE (การบำรุงรักษาเครื่องจักร)</div>
-                    <div class="service-grid">
-                        <?php 
-                        $themePm = 'text-secondary bg-secondary bg-opacity-10';
-                        renderServiceLink('MT Stock', 'คลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenanceStock/maintenanceStockUI.php', 'view_maintenance', $themePm);
-                        ?>
-                    </div>
-                </div>
-
-                <div class="service-group">
-                    <div class="service-group-title fw-bold">HUMAN RESOURCES & ADMIN (ทรัพยากรบุคคลและธุรการ)</div>
-                    <div class="service-grid">
-                        <?php 
-                        $themeHr = 'text-info bg-info bg-opacity-10';
-                        renderServiceLink('Manpower', 'จัดการกำลังคนประจำวัน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeHr);
-                        renderServiceLink('Mood Insight', 'รายงานสุขภาพใจทีมงาน', '<i class="fas fa-heartbeat"></i>', 'moodReport.php', 'view_mood', $themeHr);
-                        renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeHr);
-                        renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', 'view_documents', $themeHr);
-                        ?>
-                    </div>
-                </div>
-
-                <div class="service-group">
-                    <div class="service-group-title fw-bold">SALES & FINANCE (ฝ่ายขายและการเงิน)</div>
+                    <div class="service-group-title fw-bold text-success">EXECUTIVE & MANAGEMENT (บริหารจัดการ)</div>
                     <div class="service-grid">
                         <?php
-                        $themeSales = 'text-success bg-success bg-opacity-10';
-                        renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO และการโหลดตู้', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeSales);
-                        renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeSales);
-                        renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeSales);
-                        ?>
-                    </div>
-                </div>
-
-                <div class="service-group">
-                    <div class="service-group-title fw-bold">ANALYTICS & BI (ระบบวิเคราะห์ข้อมูลผู้บริหาร)</div>
-                    <div class="service-grid">
-                        <?php
-                        // ใช้สีม่วง/น้ำเงินเข้มเพื่อแยกความแตกต่างว่าเป็น Dashboard ของผู้บริหาร
-                        $themeExec = 'text-dark bg-secondary bg-opacity-10'; 
+                        $themeExec = 'text-success bg-success bg-opacity-10';
                         renderServiceLink('Management Dashboard', 'แดชบอร์ดผู้บริหารระดับสูง', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_executive', $themeExec);
-                        renderServiceLink('OEE Dashboard', 'ประสิทธิภาพเครื่องจักร', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', '', $themeExec);
-                        renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะประจำวัน', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeExec);
-                        renderServiceLink('Utility & Energy', 'ติดตามการใช้พลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_executive', $themeExec);
+                        renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะ', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeExec);
+                        renderServiceLink('Manpower', 'จัดการกำลังคนประจำวัน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeExec);
+                        renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeExec);
+                        renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeExec);
+                        renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeExec);
+                        renderServiceLink('Utility & Energy', 'ติดตามพลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_executive', $themeExec);
                         ?>
                     </div>
                 </div>
 
                 <div class="service-group">
-                    <div class="service-group-title fw-bold">SYSTEM ADMINISTRATION (จัดการระบบ)</div>
+                    <div class="service-group-title fw-bold text-secondary">SYSTEM ADMINISTRATION (จัดการระบบ)</div>
                     <div class="service-grid">
                         <?php
                         $themeSys = 'text-secondary bg-secondary bg-opacity-10';
