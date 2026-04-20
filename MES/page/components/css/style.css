@@ -1,12 +1,11 @@
-/* style.css (Final Merged & Organized Version) */
 html {
     scroll-behavior: smooth;
 }
 
 /* =================================================================== */
-/* 1. THEME & COLOR VARIABLES (ระบบธีมสี) */
+/* 1. THEME & COLOR VARIABLES */
 /* =================================================================== */
-:root { /* Light Theme */
+:root {
     --bs-body-bg: #f8f9fa;
     --bs-body-color: #001f3f;
     --bs-secondary-bg: #ffffff;
@@ -21,30 +20,27 @@ html {
     --mes-color-warning: #ffc107;
     --mes-color-danger:  #dc3545;
 
-    /* --- ✨ NEW: Manpower Soft Palette (เพิ่มส่วนนี้) --- */
     --mp-primary: #4e73df;
     --mp-success: #1cc88a;
     --mp-info:    #36b9cc;
     --mp-warning: #f6c23e;
     --mp-danger:  #e74a3b;
 
-    /* --- ✨ NEW: Soft Backgrounds (เพิ่มส่วนนี้) --- */
     --bg-soft-success: #d1f2eb;
     --text-soft-success: #0e6b4b;
-    
     --bg-soft-warning: #fff3cd;
     --text-soft-warning: #856404;
-    
     --bg-soft-danger:  #f8d7da;
     --text-soft-danger: #721c24;
-    
     --bg-soft-info:    #d1ecf1;
     --text-soft-info:  #0c5460;
-    
     --bg-soft-primary: #e8f0fe;
     --text-soft-primary: #1a73e8;
+
+    --header-height: 70px;
 }
-[data-bs-theme="dark"] { /* Dark Theme */
+
+[data-bs-theme="dark"] {
     --bs-body-bg: #1a1a1a;
     --bs-body-color: #dee2e6;
     --bs-secondary-bg: #2c3034;
@@ -61,14 +57,13 @@ html {
 }
 
 /* =================================================================== */
-/* 2. MAIN LAYOUT & SIDEBAR (ฉบับแก้ไขที่สมบูรณ์) */
+/* 2. MAIN LAYOUT & GLOBAL STYLES */
 /* =================================================================== */
-
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
-    font-family: 'Prompt', 'Sarabun', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Prompt', 'Sarabun', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 .mobile-nav {
@@ -109,6 +104,64 @@ body {
     flex-direction: column;
 }
 
+/* =================================================================== */
+/* 3. TOP HEADER (GLASSMORPHISM) */
+/* =================================================================== */
+.portal-top-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--header-height);
+    z-index: 1055;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease;
+}
+
+[data-bs-theme="dark"] .portal-top-header {
+    background: rgba(33, 37, 41, 0.95);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.header-logo-box {
+    width: 45px; 
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+body.layout-top-header .sidebar {
+    top: var(--header-height) !important;
+    height: calc(100vh - var(--header-height)) !important;
+    z-index: 1050;
+}
+
+body.layout-top-header #main-content {
+    margin-top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.layout-top-header > .mobile-hamburger-btn {
+    display: none !important;
+}
+
+/* =================================================================== */
+/* 4. MINIMALIST SIDEBAR (V4 - Jitter & Alignment Fix) */
+/* =================================================================== */
 .sidebar {
     position: fixed;
     top: 0; left: 0; height: 100vh;
@@ -117,287 +170,179 @@ body {
     z-index: 1045;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-x: hidden;
 }
 
 .sidebar-header {
-    height: 60px;
-    display: flex;
-    align-items: center;
-    padding: 0 0 0 18px;
-    flex-shrink: 0;
-}
-#sidebar-toggle-btn {
-    background-color: transparent; border: none; padding: 0px;
-    border-radius: 50%; display: flex;
-    transition: background-color 0.2s;
-}
-#sidebar-toggle-btn:hover { background-color: var(--bs-tertiary-bg); }
-#sidebar-toggle-btn img {
-    width: 24px; height: 24px; filter: var(--bs-icon-filter);
-    transition: filter 0.3s ease-in-out;
+    height: 60px; display: flex; align-items: center; padding: 0 0 0 18px; flex-shrink: 0;
 }
 
 .sidebar .custom-dropdown {
-    background: transparent; border: none; padding: 0;
-    min-width: 100%; overflow-y: auto; flex-grow: 1;
+    background: transparent; border: none; padding: 0; min-width: 100%; overflow-y: auto; flex-grow: 1;
 }
+
 .sidebar .custom-dropdown li { list-style: none; padding: 0; margin: 0; }
-.sidebar .dropdown-divider {
-    border-top: 1px solid var(--bs-border-color); margin: 8px 16px;
-    transition: border-color 0.3s ease-in-out;
+.sidebar .dropdown-divider { border-top: 1px solid var(--bs-border-color); margin: 8px 16px; }
+
+/* --- Search Box --- */
+.sidebar .input-group-text, 
+.sidebar .form-control {
+    background-color: transparent !important;
+    border-bottom: 1px solid var(--bs-border-color) !important;
+    border-radius: 0;
+    height: 40px;
 }
+.sidebar .form-control:focus { box-shadow: none; border-color: var(--bs-primary) !important; }
+
+/* --- Menu Items Base --- */
 .sidebar .dropdown-username,
 .sidebar .dropdown-item-icon {
-    height: 50px;
+    height: 40px; /* เอา !important ออก ให้ยืดหยุ่นตาม Bootstrap */
     display: flex;
     align-items: center;
     text-decoration: none;
     color: var(--bs-body-color);
-    padding-left: 20px !important;
-    transition: background-color 0.2s, color 0.3s ease-in-out;
-}
-.sidebar .dropdown-username {
-    border-bottom: 1px solid var(--bs-border-color);
-    transition: border-color 0.3s ease-in-out, color 0.3s ease-in-out;
-}
-.sidebar .dropdown-item-icon:hover {
-    background-color: var(--bs-tertiary-bg);
-}
-.sidebar .dropdown-username img,
-.sidebar .dropdown-item-icon img {
-    width: 24px; height: 24px;
-    flex-shrink: 0;
-    filter: var(--bs-icon-filter);
-    margin-right: 24px;
-    transition: filter 0.3s ease-in-out;
-}
-.sidebar .dropdown-item-icon span,
-.sidebar .dropdown-username div {
-    white-space: nowrap;
-    overflow: hidden;
-    opacity: 0;
-    max-width: 0;
-    transition: max-width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+    border-radius: 6px;
+    margin: 4px 10px;
+    padding: 0 12px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s, color 0.2s;
 }
 
 .sidebar .dropdown-item-icon i,
 .sidebar .dropdown-username i {
-    width: 24px;
-    height: 24px;
-    margin-right: 24px !important; /* บังคับระยะห่าง */
-    text-align: center;
-    font-size: 18px;
-    line-height: 24px;
-    flex-shrink: 0; /* ★ สำคัญ: ห้ามโดนบีบจนเบี้ยว */
-    display: inline-block;
+    width: 24px; text-align: center; font-size: 18px; flex-shrink: 0;
+    color: #1f2124 !important; margin-right: 16px; transition: color 0.2s;
 }
 
-.sidebar[data-state="collapsed"] { width: 70px; }
-.sidebar[data-state="collapsed"]:not(:hover) .custom-dropdown::-webkit-scrollbar {
-    width: 0px;
-    display: none;
+.sidebar .dropdown-item-icon span,
+.sidebar .dropdown-username div {
+    white-space: nowrap; overflow: hidden; opacity: 0; max-width: 0; transition: opacity 0.2s ease;
 }
+
+/* --- Hover & Active --- */
+.sidebar .dropdown-item-icon:hover { background-color: var(--bs-tertiary-bg); }
+.sidebar .dropdown-item-icon:hover i { color: var(--bs-body-color) !important; }
+
+.sidebar .dropdown-item-icon.active {
+    background-color: rgba(13, 110, 253, 0.12) !important;
+    color: var(--bs-primary) !important; font-weight: 600; position: relative;
+}
+.sidebar .dropdown-item-icon.active span,
+.sidebar .dropdown-item-icon.active i { color: var(--bs-primary) !important; }
+.sidebar .dropdown-item-icon.active::before {
+    content: ''; position: absolute; left: -10px; top: 20%; height: 60%; width: 4px;
+    background-color: var(--bs-primary); border-radius: 0 4px 4px 0;
+}
+
+/* --- Accordion Config --- */
+.sidebar .custom-dropdown [data-bs-toggle="collapse"] {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 700; color: #6c757d; margin-top: 10px;
+}
+
+.sidebar .collapse ul,
+.sidebar .collapsing ul {
+    margin: 0 0 0 22px !important;
+    padding: 4px 0 !important; /* ใช้ Padding คุมระยะบน-ล่างให้ปลอดภัย */
+    border-left: 1px solid var(--bs-border-color) !important;
+}
+
+.sidebar .collapse ul a,
+.sidebar .collapsing ul a {
+    margin: 0 10px 0 0 !important; /* ลบ Margin บน-ล่างทิ้ง 100% ไม่ให้กวนระบบคำนวณของ Bootstrap */
+    padding-left: 14px !important;
+    height: 38px !important; /* ล็อกความสูงเป๊ะๆ */
+}
+
+/* --- Collapsed / Expanded States --- */
+.sidebar[data-state="collapsed"] { width: 70px; }
 .sidebar[data-state="expanded"] { width: 280px; }
 .sidebar[data-state="expanded"] + #main-content { margin-left: 280px; }
-.sidebar[data-state="expanded"] + #main-content .pagination-footer {
-    left: 280px;
-    width: calc(100% - 280px);
-}
+
 .sidebar[data-state="expanded"] .dropdown-item-icon span,
 .sidebar[data-state="expanded"] .dropdown-username div,
 .sidebar[data-state="collapsed"]:hover .dropdown-item-icon span,
 .sidebar[data-state="collapsed"]:hover .dropdown-username div {
-    opacity: 1;
-    max-width: 200px;
-    transition-delay: 0.1s;
+    opacity: 1; max-width: 200px; transition-delay: 0.1s;
 }
-.sidebar[data-state="collapsed"]:hover {
-    width: 280px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+.sidebar[data-state="collapsed"]:hover { width: 280px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+
+/* --- 🟢 FIX 2: จัดระเบียบตอน Sidebar หุบ --- */
+.sidebar[data-state="collapsed"]:not(:hover) #desktopMenuSearch,
+.sidebar[data-state="collapsed"]:not(:hover) .fa-chevron-down { 
+    display: none !important; 
 }
 
-.command-center-container {
-    position: fixed;
-    top: 10px;
-    right: 15px;
-    z-index: 1050;
+.sidebar[data-state="collapsed"]:not(:hover) .input-group-text {
+    width: 100%; justify-content: center; border-radius: 6px !important;
+    background-color: var(--bs-tertiary-bg) !important; border: none !important;
 }
 
-.command-center-btn {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    color: var(--bs-body-color);;
-    border: none;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
+/* ล้างระยะขอบซ้าย (22px) ออก เพื่อให้รายการย่อยกลับมาอยู่ตรงกลาง */
+.sidebar[data-state="collapsed"]:not(:hover) .collapse ul,
+.sidebar[data-state="collapsed"]:not(:hover) .collapsing ul {
+    margin-left: 0 !important;
+    border-left: none !important;
+}
+
+/* จัดไอคอนย่อยให้อยู่กึ่งกลางเป๊ะเหมือนไอคอนแม่ */
+.sidebar[data-state="collapsed"]:not(:hover) .collapse ul a,
+.sidebar[data-state="collapsed"]:not(:hover) .collapsing ul a {
+    margin: 0 10px !important; /* ลบ Margin แนวตั้งออกที่นี่ด้วย */
+    padding: 0 !important;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease;
 }
 
-.command-center-btn:hover {
-    transform: scale(1.1);
-}
-
-.command-center-btn .badge-number {
-    position: absolute;
-    font-size: 0.7rem;
-    padding: 0.5em 0.7em;
-    top: 0;
-    right: 0;
-    animation: pop-in 0.3s ease-out;
-}
-
-.command-center-dropdown .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.command-center-dropdown .badge {
-    margin-left: auto;
-}
-
-.command-center-btn i {
-    transition: transform 0.3s ease-in-out;
-    color: inherit;
-}
-
-@keyframes pop-in {
-    0% {
-        opacity: 0;
-        transform: scale(0.5);
-    }
-    70% {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-.docking-sidebar {
-    position: fixed;
-    top: 0;
-    right: -400px;
-    width: 400px;
-    height: 100vh;
-    background-color: var(--bs-secondary-bg);
-    border-left: 1px solid var(--bs-border-color);
-    z-index: 1040;
-    transition: right 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    padding-top: 65px;
-}
-
-.docking-sidebar.open {
-    right: 0;
-}
-
-.docking-panel {
-    border-bottom: 1px solid var(--bs-border-color);
-    display: flex;
-    flex-direction: column;
-    transition: flex-basis 0.3s ease-in-out;
-    overflow: hidden;
-}
-
-.docking-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--sidebar-header-bg);
-    flex-shrink: 0;
-}
-
-.docking-panel-title {
-    font-weight: bold;
-}
-
-.docking-panel-close-btn {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    font-size: 1.5rem;
-    opacity: 0.6;
-    cursor: pointer;
-}
-
-.docking-panel-close-btn:hover {
-    opacity: 1;
-}
-
-.docking-panel-body {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 0.5rem;
-}
-
-.docking-panel {
-    border-bottom: 1px solid var(--bs-border-color);
-    display: flex;
-    flex-direction: column;
-    transition: flex-basis 0.35s ease-in-out,
-                opacity 0.3s ease-in-out,
-                padding 0.3s ease-in-out,
-                margin 0.3s ease-in-out;
-    overflow: hidden;
-}
-
-.docking-panel.is-closing {
-    flex-basis: 0 !important;
-    opacity: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: -1px;
-    border-bottom-width: 0;
-    overflow: hidden;
-}
-
-.alert-item {
-    display: flex;
-    align-items: flex-start;
-    padding: 12px 10px;
-    border-bottom: 1px solid var(--bs-border-color);
-    text-decoration: none;
-    color: inherit;
-    transition: background-color 0.2s ease;
-}
-
-.alert-item:hover {
-    background-color: var(--bs-tertiary-bg);
-}
-
-.alert-icon {
-    font-size: 1.5rem;
-    margin: auto 10px auto 5px;
-}
-
-.alert-content .alert-title {
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.alert-content .alert-subtitle {
-    font-size: 0.8rem;
-    color: #888;
-    margin-bottom: 4px;
-}
-
-.alert-content .alert-details {
-    font-size: 0.85rem;
+/* ล้างระยะห่างระหว่างไอคอนกับตัวหนังสือทิ้ง (เพราะตัวหนังสือมองไม่เห็นแล้ว) */
+.sidebar[data-state="collapsed"]:not(:hover) .dropdown-item-icon i {
+    margin-right: 0 !important;
 }
 
 /* =================================================================== */
-/* 3. SHARED COMPONENTS (ส่วนประกอบที่ใช้ร่วมกัน) */
+/* 5. SCROLLBARS */
 /* =================================================================== */
+::-webkit-scrollbar,
+.sidebar .custom-dropdown::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track,
+.sidebar .custom-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb,
+.sidebar .custom-dropdown::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+    transition: background-color 0.3s;
+}
+:hover::-webkit-scrollbar-thumb,
+.sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+[data-bs-theme="dark"] .sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* =================================================================== */
+/* 6. SHARED COMPONENTS & UTILITIES */
+/* =================================================================== */
+.offcanvas {
+    border-right: none !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+    z-index: 1060 !important;
+}
+
+.offcanvas-backdrop {
+    z-index: 1059 !important;
+}
+
+.offcanvas-header {
+    background: var(--bs-body-bg) !important;
+}
+
 .dashboard-header-sticky, .sticky-bar {
     position: sticky;
     top: 0;
@@ -406,22 +351,10 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     z-index: 1030;
     border-bottom: 1px solid var(--bs-border-color);
-    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     flex-shrink: 0;
 }
-.dashboard-header-sticky {
-    top: 0;
-    padding: 1rem 2rem;
-}
-
-.sticky-bar {
-    top: 0;
-    padding: 0.1rem 0rem;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 1030;
-}
+.dashboard-header-sticky { padding: 1rem 2rem; }
+.sticky-bar { padding: 0.1rem 0rem; }
 
 .pagination-footer {
     position: fixed;
@@ -433,7 +366,7 @@ body {
     padding-top: 1rem;
     border-top: 1px solid var(--bs-border-color);
     z-index: 1020;
-    transition: left 0.3s ease-in-out, width 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    transition: left 0.3s, width 0.3s;
 }
 
 #toast {
@@ -446,371 +379,16 @@ body {
     z-index: 9999; transform: translateY(20px);
     border: 1px solid var(--bs-border-color);
 }
+
 .form-control-readonly {
     background-color: var(--bs-tertiary-bg);
     opacity: 1; cursor: not-allowed;
 }
-.autocomplete-results {
-    position: absolute; width: 100%; max-height: 200px;
-    overflow-y: auto; z-index: 1060;
-    background-color: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
-    border-top: none; border-radius: 0 0 .25rem .25rem;
-}
-.autocomplete-item { padding: 0.5rem 0.75rem; cursor: pointer; }
-.autocomplete-item:hover { background-color: var(--bs-tertiary-bg); }
-.autocomplete-item small { color: #6c757d; }
-[data-bs-theme="dark"] .autocomplete-item small { color: #adb5bd; }
 
-/* =================================================================== */
-/* 4. PAGE-SPECIFIC STYLES (สไตล์เฉพาะหน้า) */
-/* =================================================================== */
-
-/* --- OEE Dashboard --- */
-.dashboard-container {
-    flex-grow: 1;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    position: relative;
-}
-.dashboard-section {
-    height: 100%;
-    width: 100%;
-    scroll-snap-align: start;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-}
-
-.chart-card {
-    background-color: var(--bs-secondary-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
-    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-}
-.chart-card h4 {
-    display: flex; align-items: center; gap: 0.75rem;
-    font-weight: 600; color: var(--bs-body-color);
-    transition: color 0.3s ease-in-out;
-}
-
-.chart-card h4 i {
-    color: #6c757d;
-    transition: color 0.3s ease-in-out;
-}
-
-.progress-bar-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background-color: transparent;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.progress-bar-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    background-color: var(--mes-chart-color-1);
-    transform: translateX(-100%);
-}
-
-.chart-card.is-loading .progress-bar-wrapper {
-    opacity: 1;
-}
-
-.chart-card.is-loading .progress-bar-indicator {
-    animation: loading-bar-animation 1.5s infinite ease-in-out;
-}
-
-@keyframes loading-bar-animation {
-    0% {
-        transform: translateX(-100%);
-    }
-    50% {
-        transform: translateX(0%);
-    }
-    100% {
-        transform: translateX(100%);
-    }
-}
-
-.pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
-.pie-chart-card .pie-chart-details { flex-grow: 1; flex-basis: 0; min-width: 150px; display: flex; flex-direction: column; justify-content: center; }
-.pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 160px; position: relative; }
-
-.pie-chart-card .chart-info {
-    font-size: 1rem;
-    margin-top: 1rem;
-}
-.pie-chart-card .info-grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.25rem 1rem;
-    align-items: center;
-}
-.pie-chart-card .info-label {
-    text-align: left;
-    font-weight: 300;
-    opacity: 0.8;
-}
-.pie-chart-card .info-value {
-    text-align: right;
-    font-weight: 600;
-}
-
-.info-summary-card {
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: stretch;
-    padding: 1rem;
-}
-.info-summary-card .info-group {
-    flex-grow: 1;
-    padding: 0 1.5rem;
-    border-right: 1px solid var(--bs-border-color);
-    transition: border-color 0.3s ease-in-out;
-}
-.info-summary-card .info-group:last-child {
-    border-right: none;
-}
-.info-summary-card .info-grid {
-    gap: 0.1rem 1rem;
-}
-
-#kpi-section .kpi-chart-card .chart-wrapper {
-    width: 180px;
-    height: 180px;
-}
-
-#kpi-section .row {
-    height: 100%;
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    margin-right: 0;
-    margin-left: 0;
-}
-
-.kpi-chart-card {
-    min-height: 250px;
-    align-items: center;
-    text-align: center;
-}
-.kpi-chart-card h4 {
-    margin-bottom: 1rem;
-}
-.kpi-chart-card .chart-wrapper {
-    width: 160px;
-    height: 160px;
-}
-
-#kpi-section {
-    height: 100%;
-    min-height: 650px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 1.5rem 0.8rem;
-    gap: 1.5rem;
-}
-
-.cost-summary-card .value {
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: var(--bs-primary);
-    display: block;
-    margin-top: 0.25rem;
-}
-.cost-summary-card .percentage {
-    font-size: 0.9rem;
-    color: var(--bs-secondary);
-    display: block;
-    margin-top: -0.1rem;
-}
-.cost-summary-card h6 {
-        margin-bottom: 0.5rem;
-        color: var(--bs-body-color);
-        font-weight: bold;
-}
-.cost-summary-card .col-md-4 {
-        border-right: 1px solid var(--bs-border-color);
-}
-.cost-summary-card .col-md-4:last-child {
-        border-right: none;
-}
-.cost-summary-card .loading-indicator {
-    color: var(--bs-secondary);
-    font-style: italic;
-}
-
-#linechart-section {
-    height: calc(100vh - 80px);
-    min-height: 650px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-#barchart-section {
-    height: calc(100vh - 80px);
-    min-height: 650px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-#kpi-section .col-xl-3,
-#kpi-section .col-md-6,
-#kpi-section .col-12 {
-    display: flex;
-    align-items: stretch;
-}
-
-.kpi-scorecard {
-    height: 100%;
-    width: 100%;
-    min-height: 500px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.kpi-scorecard .pie-chart-wrapper {
-    flex-shrink: 0;
-    width: 200px;
-    height: 200px;
-    position: relative;
-    margin: 1rem auto;
-}
-
-.kpi-scorecard .chart-info {
-    font-size: 1rem;
-    margin-top: 1rem;
-    width: 100%;
-}
-
-.kpi-scorecard .chart-info .info-grid {
-    display: grid !important;
-    grid-template-columns: auto 1fr;
-    gap: 0.25rem 1rem;
-    align-items: center;
-}
-
-.kpi-scorecard .chart-info .info-grid .info-label {
-    text-align: left;
-    font-weight: 400;
-    opacity: 0.8;
-}
-
-.kpi-scorecard .chart-info .info-grid .info-value {
-    text-align: right;
-    font-weight: 600;
-}
-
-.scorecard-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--bs-border-color);
-    transition: border-color 0.3s ease-in-out;
-    flex-shrink: 0;
-}
-.scorecard-header h4 {
-    margin-bottom: 1rem;
-}
-
-.pie-chart-wrapper {
-    flex-grow: 1;
-    width: 100%;
-    max-width: 220px;
-    margin: 0 auto;
-}
-
-.scorecard-body {
-    padding-top: 1rem;
-    flex-shrink: 0;
-}
-.sparkline-wrapper {
-    height: 80px;
-    margin-bottom: 1rem;
-}
-
-#charts-section {
-    display: flex;
-    flex-direction: column;
-    /*gap: 1.5rem;*/
-}
-
-#charts-section > .row {
-    flex: 1;
-    min-height: 0;
-}
-
-#charts-section .chart-card {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-}
-
-#charts-section .chart-wrapper {
-    position: relative;
-    flex-grow: 1;
-    min-height: 0;
-}
-
-#charts-section .chart-wrapper > canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.line-chart-card,
-.bar-chart-card {
-    height: 100%;
-}
-
-.line-chart-card .chart-error,
-.bar-chart-card .stopCauseBarError,
-.bar-chart-card .scrapBarError {
-    display: none; position: absolute; top: 45%; left: 50%;
-    transform: translate(-50%, -50%); color: red;
-    font-size: 20px; font-weight: bold; z-index: 10;
-}
-
-/* --- Inventory UI --- */
-.filter-controls-wrapper { display: flex; gap: 0.5rem; align-items: center; }
-.table th, .table td { vertical-align: middle; }
-.stock-input.is-changed { background-color: #193a52; border-color: #0d6efd; }
-:root .stock-input.is-changed { background-color: #cfe2ff; border-color: #0d6efd; }
-
-/* ========================================================== */
-/* ★★★ UPGRADED Styles for No-Data & Error States ★★★ */
-/* ========================================================== */
-
-.no-data-message,.error-message {
+.no-data-message, .error-message {
     display: none;
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     z-index: 5;
     flex-direction: column;
@@ -819,441 +397,117 @@ body {
     text-align: center;
     pointer-events: none;
 }
-
 #cost-summary-section .no-data-message,
 #cost-summary-section .error-message {
     top: 75%;
 }
+.no-data-message { color: var(--bs-secondary-color); }
+.no-data-message i { font-size: 2.5rem; opacity: 0.5; }
+.no-data-message span { font-size: 1rem; font-weight: 500; opacity: 0.7; }
 
-.no-data-message {
-    color: var(--bs-secondary-color);
-}
-.no-data-message i {
-    font-size: 2.5rem;
-    opacity: 0.5;
-}
-.no-data-message span {
-    font-size: 1rem;
-    font-weight: 500;
-    opacity: 0.7;
-}
+.error-message { color: var(--bs-danger); z-index: 6; }
+.error-message i { font-size: 2.5rem; opacity: 0.6; }
+.error-message span { font-size: 1rem; font-weight: 500; opacity: 0.8; }
 
-.error-message {
-    color: var(--bs-danger);
-    z-index: 6;
-}
-.error-message i {
-    font-size: 2.5rem;
-    opacity: 0.6;
-}
-.error-message span {
-    font-size: 1rem;
-    font-weight: 500;
-    opacity: 0.8;
-}
+.chart-wrapper.has-no-data .no-data-message,
+.chart-wrapper.has-error .error-message { display: flex; }
+.chart-wrapper.has-no-data canvas,
+.chart-wrapper.has-error canvas { opacity: 0.7; }
+.chart-wrapper.has-error .no-data-message { display: none !important; }
 
-.chart-wrapper.has-no-data .no-data-message {
-    display: flex;
-}
-.chart-wrapper.has-no-data canvas {
-    opacity: 0.7;
-}
-
-.chart-wrapper.has-error .error-message {
-    display: flex;
-}
-.chart-wrapper.has-error canvas {
-    opacity: 0.7;
-}
-.chart-wrapper.has-error .no-data-message {
-    display: none !important;
-}
-
-/*-- BOM Manager --*/
-#modalBomTableBody .bom-quantity-input::-webkit-inner-spin-button,
-#modalBomTableBody .bom-quantity-input::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-#modalBomTableBody .bom-quantity-input {
-    text-align: center;
-}
-
-/* --- Styles for Drag & Drop Upload --- */
-.drop-zone-area {
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    padding: 30px;
-    text-align: center;
-    font-family: Arial, sans-serif;
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.drop-zone-area:hover {
-    border-color: #0d6efd;
-    background-color: #f8f9fa;
-}
-
-.drop-zone-area.drag-over {
-    border-color: #0d6efd;
-    background-color: #e9ecef;
-    transform: scale(1.02);
-}
-
-.drop-zone-text i {
-    color: #adb5bd;
-}
-
-.drop-zone-text p {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.drop-zone-or {
-    font-size: 0.8rem;
-    color: #adb5bd;
-    margin: 10px 0 !important;
-}
-
-/* --- Styles for File Preview List --- */
-.file-preview-list {
-    max-height: 150px;
-    overflow-y: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 10px;
-    background-color: #f8f9fa;
-}
-
-.file-preview-item {
-    display: flex;
-    align-items: center;
-    padding: 5px;
-    font-size: 0.9rem;
-    border-bottom: 1px solid #e9ecef;
-}
-.file-preview-item:last-child {
-    border-bottom: none;
-}
-
-.file-preview-item i {
-    margin-right: 8px;
-}
-
-.main-content-flex {
-    display: block;
-}
-
-.documents-table-container {
+/* =================================================================== */
+/* 7. MODULES & PAGE-SPECIFIC STYLES */
+/* =================================================================== */
+.dashboard-container {
     flex-grow: 1;
-    overflow-y: auto;
-    min-height: 0;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    position: relative;
 }
-
-/* --- Styles สำหรับ Dropdown/Drilldown Picker --- */
-.category-picker-dropdown .dropdown-menu {
-    min-width: 300px;
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
-    padding: 0;
-    z-index: 1050;
+.dashboard-section {
+    height: 100%; width: 100%;
+    scroll-snap-align: start;
+    display: flex; flex-direction: column;
+    padding: 1.5rem;
 }
-.category-picker-dropdown .dropdown-header {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--bs-dropdown-divider-bg);
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.category-picker-dropdown .dropdown-header button {
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: 1rem;
-    color: var(--bs-secondary);
-}
-.category-picker-dropdown .dropdown-header button:hover {
-    color: var(--bs-primary);
-}
-.category-picker-dropdown .dropdown-item {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-bottom: 1px solid var(--bs-dropdown-divider-bg);
-}
-.category-picker-dropdown .dropdown-item:last-child {
-    border-bottom: none;
-}
-.category-picker-dropdown .dropdown-item.active,
-.category-picker-dropdown .dropdown-item:hover {
-    background-color: var(--bs-primary);
-    color: white;
-}
-.category-picker-dropdown .dropdown-item i {
-    margin-right: 0.75rem;
-    width: 1.25rem;
-    text-align: center;
-}
-.category-picker-dropdown .dropdown-item .folder-arrow {
-    margin-left: auto;
-}
-
-/* =================================================================== */
-/* 6. PLANNING DASHBOARD STYLES (เพิ่มส่วนนี้)                          */
-/* =================================================================== */
-
-/* ใช้ .planning-dashboard เพื่อ scope สไตล์เหล่านี้ */
-.planning-dashboard #main-content {
-    overflow: hidden;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.planning-dashboard .planning-header {
-    position: sticky; top: 0; z-index: 1030;
+.chart-card {
     background-color: var(--bs-secondary-bg);
-    padding: 0.75rem 1.5rem;
-    border-bottom: 1px solid var(--bs-border-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    flex-shrink: 0;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    display: flex; flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    width: 100%; position: relative; overflow: hidden;
 }
+.chart-card h4 {
+    display: flex; align-items: center; gap: 0.75rem;
+    font-weight: 600; color: var(--bs-body-color);
+}
+.chart-card h4 i { color: #6c757d; }
 
-.planning-dashboard .planning-view-content {
-    flex-grow: 1;
-    overflow: hidden; /* Important: Prevents this level from scrolling */
-    display: flex;
-    min-height: 0; /* Allows shrinking */
-    padding: 1rem;
-}
+.pie-chart-card { flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; min-height: 250px; }
+.pie-chart-card .pie-chart-details { flex-grow: 1; flex-basis: 0; min-width: 150px; display: flex; flex-direction: column; justify-content: center; }
+.pie-chart-card .chart-wrapper { flex-shrink: 0; width: 160px; height: 160px; position: relative; }
+.pie-chart-card .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; align-items: center; }
+.pie-chart-card .info-label { text-align: left; font-weight: 300; opacity: 0.8; }
+.pie-chart-card .info-value { text-align: right; font-weight: 600; }
 
-.planning-dashboard .view-pane {
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden; /* <-- เพิ่มบรรทัดนี้ */
-}
+.info-summary-card { flex-direction: row; justify-content: space-around; align-items: stretch; padding: 1rem; }
+.info-summary-card .info-group { flex-grow: 1; padding: 0 1.5rem; border-right: 1px solid var(--bs-border-color); }
+.info-summary-card .info-group:last-child { border-right: none; }
 
-.planning-dashboard .view-pane.active {
-    display: flex;
-}
+#kpi-section { height: 100%; min-height: 650px; display: flex; flex-direction: column; justify-content: center; padding: 1.5rem 0.8rem; gap: 1.5rem; }
+.kpi-scorecard { height: 100%; width: 100%; min-height: 500px; display: flex; flex-direction: column; flex: 1; }
+.kpi-scorecard .pie-chart-wrapper { flex-shrink: 0; width: 200px; height: 200px; position: relative; margin: 1rem auto; }
+.kpi-scorecard .chart-info { font-size: 1rem; margin-top: 1rem; width: 100%; }
 
-.planning-dashboard #table-view-pane .table-chart-row {
-    flex-shrink: 0;
-    margin-bottom: 1rem;
-}
-.planning-dashboard #table-view-pane .table-wrapper {
-    flex-grow: 1;
-    overflow-y: auto;
-    min-height: 0;
-    position: relative;
-}
+#charts-section { display: flex; flex-direction: column; }
+#charts-section > .row { flex: 1; min-height: 0; }
+#charts-section .chart-card { display: flex; flex-direction: column; width: 100%; height: 100%; }
+#charts-section .chart-wrapper { position: relative; flex-grow: 1; min-height: 0; }
+#charts-section .chart-wrapper > canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
-.planning-dashboard #table-view-pane .table {
-    margin-bottom: 0; /* Remove default margin if it pushes content */
-}
+.table th, .table td { vertical-align: middle; }
+.stock-input.is-changed { background-color: #cfe2ff; border-color: #0d6efd; }
+[data-bs-theme="dark"] .stock-input.is-changed { background-color: #193a52; }
 
-.planning-dashboard #table-view-pane .table thead {
-     position: sticky; top: 0; z-index: 1;
-     background-color: var(--bs-tertiary-bg);
-}
-[data-bs-theme="dark"] .planning-dashboard #table-view-pane .table thead {
-     background-color: var(--bs-secondary-bg); /* Adjust for dark theme */
-}
-
-.planning-dashboard #table-view-pane .chart-card-plan {
-    height: 400px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.planning-dashboard #table-view-pane .chart-card-plan .card-body {
-    position: relative;
-    flex-grow: 1;
-    padding: 0.5rem;
-    min-height: 0;
-}
-
-.planning-dashboard #table-view-pane #dlot-entry-card {
-    display: flex;
-    flex-direction: column;
-    min-height: 0; /* Allow card to shrink within its column space */
-    flex-grow: 1; /* Allow card to grow if cost summary is small */
-}
-
-.planning-dashboard #table-view-pane #dlot-entry-card .card-body {
-     overflow-y: auto; /* Enable scroll if form content is long */
-     flex-grow: 1; /* Allow body to take space */
-     min-height: 0; /* Allow body to shrink */
-}
-
-/* Styles specific to editable fields in planning */
-.planning-dashboard .editable-note,
-.planning-dashboard .editable-plan {
-    cursor: pointer;
-    min-width: 80px;
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-}
-.planning-dashboard .editable-note:hover,
-.planning-dashboard .editable-plan:hover {
-    background-color: var(--bs-tertiary-bg);
-    outline: 1px dashed var(--bs-secondary);
-}
-.planning-dashboard .editable-note:focus,
-.planning-dashboard .editable-plan:focus {
-    background-color: var(--bs-light);
-    outline: 1px solid var(--bs-primary);
-    cursor: text;
-}
-[data-bs-theme="dark"] .planning-dashboard .editable-note:focus,
-[data-bs-theme="dark"] .planning-dashboard .editable-plan:focus {
-    background-color: var(--bs-gray-700);
-}
-.planning-dashboard .editable-plan {
-    text-align: right;
-}
-
-/* Styles for table column widths in planning */
-.planning-dashboard #productionPlanTable th:nth-child(4),
-.planning-dashboard #productionPlanTable td:nth-child(4) { min-width: 200px; } /* Item */
-.planning-dashboard #productionPlanTable th:nth-child(9),
-.planning-dashboard #productionPlanTable td:nth-child(9) { min-width: 150px; } /* Note */
-.planning-dashboard #productionPlanTable th:last-child,
-.planning-dashboard #productionPlanTable td:last-child { width: 120px; text-align: center; } /* Actions */
-
-/* Styles for stat cards in planning (if reused) */
-.planning-dashboard .stat-card-header { font-size: 0.8rem; font-weight: 500; padding: 0.5rem 1rem; opacity: 0.9; }
-.planning-dashboard .stat-card-body h4 { font-size: 1.75rem; font-weight: 700; }
-.planning-dashboard .stat-card-body small { font-size: 0.9rem; font-weight: 500; }
-
-.planning-dashboard .pagination-footer { display: none; } /* Hide old pagination */
-
-.form-select.form-control-readonly:disabled,
-.form-select[disabled].form-control-readonly {
-    background-color: var(--bs-tertiary-bg);
-}
-
-.chart-scroll-container {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-}
-
-#planVsActualChartInnerWrapper {
-    height: 100%;
-    position: relative;
-}
-
-.chart-scroll-container::-webkit-scrollbar {
-    height: 8px;
-}
-.chart-scroll-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-.chart-scroll-container::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-.chart-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
+.drop-zone-area { border: 2px dashed #ccc; border-radius: 8px; padding: 30px; text-align: center; color: #888; cursor: pointer; transition: all 0.2s ease-in-out; }
+.drop-zone-area:hover { border-color: #0d6efd; background-color: #f8f9fa; }
+.drop-zone-area.drag-over { border-color: #0d6efd; background-color: #e9ecef; transform: scale(1.02); }
 
 /* =================================================================== */
-/* 7. GLOBAL LAYOUT: TOP HEADER (PORTAL STYLE)                         */
+/* 8. PLANNING DASHBOARD */
 /* =================================================================== */
+.planning-dashboard #main-content { overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+.planning-dashboard .planning-header { position: sticky; top: 0; z-index: 1030; background-color: var(--bs-secondary-bg); padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--bs-border-color); flex-shrink: 0; }
+.planning-dashboard .planning-view-content { flex-grow: 1; overflow: hidden; display: flex; min-height: 0; padding: 1rem; }
+.planning-dashboard .view-pane { width: 100%; height: 100%; display: none; flex-direction: column; min-height: 0; overflow: hidden; }
+.planning-dashboard .view-pane.active { display: flex; }
+.planning-dashboard #table-view-pane .table-wrapper { flex-grow: 1; overflow-y: auto; min-height: 0; position: relative; }
+.planning-dashboard #table-view-pane .table thead { position: sticky; top: 0; z-index: 1; background-color: var(--bs-tertiary-bg); }
+[data-bs-theme="dark"] .planning-dashboard #table-view-pane .table thead { background-color: var(--bs-secondary-bg); }
 
-:root {
-    --header-height: 70px; /* ความสูงมาตรฐานของ Header */
-}
+.planning-dashboard .editable-note, .planning-dashboard .editable-plan { cursor: pointer; min-width: 80px; display: inline-block; padding: 0.25rem 0.5rem; }
+.planning-dashboard .editable-note:hover, .planning-dashboard .editable-plan:hover { background-color: var(--bs-tertiary-bg); outline: 1px dashed var(--bs-secondary); }
+.planning-dashboard .editable-note:focus, .planning-dashboard .editable-plan:focus { background-color: var(--bs-light); outline: 1px solid var(--bs-primary); cursor: text; }
+[data-bs-theme="dark"] .planning-dashboard .editable-note:focus, [data-bs-theme="dark"] .planning-dashboard .editable-plan:focus { background-color: var(--bs-gray-700); }
 
-/* Header Style (ย้ายมาไว้ตรงกลาง เพื่อใช้ร่วมกันได้) */
-.portal-top-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: var(--header-height);
-    z-index: 1055; /* สูงกว่า Sidebar */
-    background-color: var(--bs-secondary-bg);
-    border-bottom: 1px solid var(--bs-border-color);
-    padding: 0 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: background-color 0.3s ease;
-}
+/* =================================================================== */
+/* 9. COMMAND CENTER DOCKING PANEL */
+/* =================================================================== */
+.command-center-container { position: fixed; top: 10px; right: 15px; z-index: 1050; }
+.command-center-btn { width: 45px; height: 45px; border-radius: 50%; color: var(--bs-body-color); border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 0.2s ease; }
+.command-center-btn:hover { transform: scale(1.1); }
+.command-center-btn .badge-number { position: absolute; font-size: 0.7rem; padding: 0.5em 0.7em; top: 0; right: 0; animation: pop-in 0.3s ease-out; }
 
-/* Layout Logic: เมื่อ Body มี class "layout-top-header" */
+.docking-sidebar { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background-color: var(--bs-secondary-bg); border-left: 1px solid var(--bs-border-color); z-index: 1040; transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding-top: 65px; }
+.docking-sidebar.open { right: 0; }
+.docking-panel { border-bottom: 1px solid var(--bs-border-color); display: flex; flex-direction: column; overflow: hidden; }
+.docking-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background-color: var(--bs-tertiary-bg); flex-shrink: 0; }
+.docking-panel-body { flex-grow: 1; overflow-y: auto; padding: 0.5rem; }
 
-/* 1. ดัน Sidebar ลงมาเริ่มใต้ Header */
-body.layout-top-header .sidebar {
-    top: var(--header-height) !important;
-    height: calc(100vh - var(--header-height)) !important;
-    z-index: 1050;
-}
-
-/* 2. ดัน Main Content ลงมาเริ่มใต้ Header */
-body.layout-top-header #main-content {
-    margin-top: var(--header-height);
-    height: calc(100vh - var(--header-height));
-    overflow-y: auto;
-    overflow-x: hidden;
-    
-    display: flex;
-    flex-direction: column;
-}
-
-/* 3. ซ่อนปุ่ม Mobile Toggle เดิม (เพราะย้ายไปบน Header แล้ว) */
-body.layout-top-header > .mobile-hamburger-btn {
-    display: none !important;
-}
-
-/* Utility Class สำหรับ Logo Box บน Header */
-.header-logo-box {
-    width: 45px; 
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-}
-
-/* --- Sidebar Scrollbar Styling --- */
-
-/* 1. กำหนดโครงสร้าง Scrollbar */
-.sidebar .custom-dropdown::-webkit-scrollbar {
-    width: 6px; /* กำหนดความกว้างไว้เลย เนื้อหาจะได้ไม่ขยับ */
-}
-
-.sidebar .custom-dropdown::-webkit-scrollbar-track {
-    background: transparent; /* พื้นหลังรางเลื่อนโปร่งใส */
-}
-
-/* 2. สถานะปกติ: ซ่อนตัวเลื่อน (ให้สีใส) */
-.sidebar .custom-dropdown::-webkit-scrollbar-thumb {
-    background-color: transparent; 
-    border-radius: 10px;
-    transition: background-color 0.3s; /* เพิ่ม Transition ให้นุ่มนวล */
-}
-
-/* 3. สถานะ Hover: แสดงตัวเลื่อน */
-.sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2); /* สีเทาจางๆ */
-}
-
-/* 4. รองรับ Dark Theme (ถ้ามี) */
-[data-bs-theme="dark"] .sidebar:hover .custom-dropdown::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2); /* สีขาวจางๆ */
+@keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.5); }
+    70% { opacity: 1; transform: scale(1.1); }
+    100% { transform: scale(1); }
 }

@@ -31,7 +31,6 @@ $defaultEnd = date('Y-m-d');
     </div>
 
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
-    <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
     <div class="page-container">
         <main id="main-content" class="px-2 px-lg-3 pt-3">

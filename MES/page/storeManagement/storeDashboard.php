@@ -97,7 +97,6 @@ $pageIcon = "fas fa-store";
     </div>
 
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
-    <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
     <div class="page-container d-flex flex-column h-100">
         <main id="main-content" class="d-flex flex-column flex-grow-1 overflow-hidden">

@@ -66,7 +66,6 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
 
 <body class="layout-top-header bg-body-tertiary">
     <?php include_once('../components/php/top_header.php'); ?>
-    <?php include_once('../components/php/nav_dropdown.php'); ?>
 
     <div class="page-container">
         <main id="main-content" class="px-3 pt-3">
@@ -286,8 +285,6 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
             <?php include('components/allProductionModals.php'); ?>
         </main>    
     </div>
-
-    <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;

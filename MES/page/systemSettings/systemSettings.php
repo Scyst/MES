@@ -59,7 +59,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
 
 <body class="layout-top-header bg-body-tertiary">
     <?php include_once('../components/php/top_header.php'); ?>
-    <?php include_once('../components/php/nav_dropdown.php'); ?>
 
     <div class="page-container">
         <main id="main-content" class="px-3 pt-3">

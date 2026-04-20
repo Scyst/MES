@@ -275,7 +275,6 @@
         if ($canManage) {
             include('components/allProductionModals.php');
         }
-        include_once('../components/php/mobile_menu.php'); 
     ?>
 
     <script>

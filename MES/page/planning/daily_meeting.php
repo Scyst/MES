@@ -153,7 +153,7 @@ $pageHelpId = "helpModal";
         </div>
     </div>
 
-    <?php include_once('../components/php/mobile_menu.php'); ?>
+    
     <?php include_once('components/allDailyModal.php'); ?>
     <?php include_once('components/helpModal.php'); ?>
     <script src="script/daily_meeting.js?v=<?php echo filemtime(__DIR__ . '/script/daily_meeting.js'); ?>" defer></script>

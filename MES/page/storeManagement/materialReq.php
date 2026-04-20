@@ -97,7 +97,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
     </div>
 
     <?php include __DIR__ . '/../components/php/top_header.php'; ?>
-    <?php include __DIR__ . '/../components/php/mobile_menu.php'; ?>
 
     <div class="page-container">
         <main id="main-content" class="container-fluid px-3 pt-3 pb-5">

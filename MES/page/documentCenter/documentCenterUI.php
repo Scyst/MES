@@ -119,8 +119,6 @@ $currentUser = $_SESSION['user'];
 
         </main>
     </div>
-    
-    <?php include_once('../components/php/mobile_menu.php'); ?>
 
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;

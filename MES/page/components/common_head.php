@@ -31,9 +31,8 @@
 <link rel="stylesheet" href="../components/css/mobile.css?v=<?php echo filemtime(__DIR__ . '/../components/css/mobile.css'); ?>">
 <link rel="stylesheet" href="../components/css/fonts.css?v=<?php echo filemtime(__DIR__ . '/../components/css/fonts.css'); ?>">
 
-<script src="../components/js/sidebar.js?v=<?php echo filemtime(__DIR__ . '/js/sidebar.js'); ?>" defer></script>
+<script src="../components/js/appCore.js?v=<?php echo filemtime(__DIR__ . '/js/appCore.js'); ?>" defer></script>
 <script src="../components/js/theme-switcher.js?v=<?php echo filemtime(__DIR__ . '/js/theme-switcher.js'); ?>" defer></script>
-<script src="../components/js/mobile_init.js?v=<?php echo filemtime(__DIR__ . '/js/mobile_init.js'); ?>" defer></script>
 <script src="../components/js/spinner.js?v=<?php echo filemtime(__DIR__ . '/js/spinner.js'); ?>"></script>
 <script src="../components/js/datetime.js?v=<?php echo filemtime(__DIR__ . '/js/datetime.js'); ?>"></script>
 <script src="../components/js/toast.js?v=<?php echo filemtime(__DIR__ . '/js/toast.js'); ?>"></script>
