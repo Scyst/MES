@@ -18,7 +18,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
     <?php include_once __DIR__ . '/../components/common_head.php'; ?> 
     <style>
         :root { --bg-light-gray: #f4f6f9; }
-        body { background-color: var(--bg-light-gray); overflow: hidden; }
+        body { background-color: var(--bg-light-gray); overflow-x: hidden; } 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

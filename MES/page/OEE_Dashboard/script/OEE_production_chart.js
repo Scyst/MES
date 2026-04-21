@@ -106,12 +106,24 @@ async function fetchAndRenderDailyProductionChart() {
     const endDate = document.getElementById("endDate")?.value || '';
     const line = document.getElementById("lineFilter")?.value || '';
     const model = document.getElementById("modelFilter")?.value || '';
-    const params = new URLSearchParams({ startDate, endDate, line, model });
+    
+    // ✅ แก้ไข: ระบุ Action ชี้ไปที่ Unified API
+    const params = new URLSearchParams({ 
+        action: 'getDailyProduction', 
+        startDate, 
+        endDate, 
+        line, 
+        model 
+    });
 
     try {
-        const response = await fetch(`api/get_daily_production.php?${params.toString()}`);
+        // ✅ แก้ไข: เปลี่ยน URL
+        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const result = await response.json();
+
+        // แจ้งเตือน Error กรณี API ส่ง success เป็น false
+        if (!result.success) throw new Error(result.message || "API Error");
 
         const hasData = result.success && result.data && result.data.length > 0;
         toggleNoDataMessage_ProdChart(canvasId, !hasData);
@@ -208,7 +220,6 @@ async function fetchAndRenderDailyProductionChart() {
             }
         };
 
-
         if (dailyProductionChartInstance && typeof dailyProductionChartInstance.destroy === 'function' && dailyProductionChartInstance.ctx === null) {
              console.warn(`Chart instance for ${canvasId} was destroyed. Recreating.`);
              dailyProductionChartInstance = null;
@@ -216,6 +227,7 @@ async function fetchAndRenderDailyProductionChart() {
 
         if (!dailyProductionChartInstance) {
             console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Creating NEW chart.`);
+            // Assuming ChartDataLabels plugin is loaded globally
             dailyProductionChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: chartData,

@@ -164,7 +164,9 @@ async function fetchAndRenderBarCharts() {
         const activeToggle = document.querySelector('#stopCauseToggle .btn.active');
         const stopCauseGroupBy = activeToggle ? activeToggle.dataset.group : 'cause';
 
+        // ✅ แก้ไข: เพิ่ม action: 'getBarCharts' ลงใน params
         const params = new URLSearchParams({
+            action: 'getBarCharts',
             startDate: document.getElementById("startDate")?.value || '',
             endDate: document.getElementById("endDate")?.value || '',
             line: document.getElementById("lineFilter")?.value || '',
@@ -172,9 +174,12 @@ async function fetchAndRenderBarCharts() {
             stopCauseGroupBy: stopCauseGroupBy
         });
         
-        const response = await fetch(`api/get_oee_barchart.php?${params.toString()}`);
+        // ✅ แก้ไข: เปลี่ยน Endpoint ชี้ไปที่ Unified API
+        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
         const responseData = await response.json();
-        if (!responseData.success) throw new Error(responseData.error || "Barchart API: Failed to fetch bar chart data.");
+        
+        // ✅ แก้ไข: ใช้ responseData.message แทน responseData.error เพื่อให้ตรงกับมาตรฐาน
+        if (!responseData.success) throw new Error(responseData.message || "Barchart API: Failed to fetch bar chart data.");
 
         const partResults = responseData.data?.partResults;
         const hasPartsData = partResults && partResults.length > 0;

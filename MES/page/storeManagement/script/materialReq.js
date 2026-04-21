@@ -9,13 +9,14 @@ let hasMoreItems = true;
 let searchTimeout;
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCatalog('ALL');
+    loadCatalog('ALL'); // ตอนโหลดครั้งแรก อาจจะส่ง string ไปแต่ฟังก์ชันรับ Boolean ไว้ ควรรันแค่ loadCatalog(false) เพื่อความชัวร์ แต่แบบนี้ JS ประเมินเป็น true (โหลดข้อมูล) ก็ไม่เป็นไร
 
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => { loadCatalog(null, false); }, 500);
+            // แก้ไข: ส่งพารามิเตอร์เดียว (isLoadMore = false)
+            searchTimeout = setTimeout(() => { loadCatalog(false); }, 500);
         });
     }
 
@@ -33,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && !isLoading && hasMoreItems) {
-                loadCatalog(null, true);
+                // แก้ไข: ส่งพารามิเตอร์เดียว (isLoadMore = true)
+                loadCatalog(true);
             }
         }, { rootMargin: "200px" });
 
@@ -375,19 +377,20 @@ window.submitRequisition = function() {
                     request_type: reqType 
                 }, 'btnCheckout');
 
+                // แก้ไข: เคลียร์ค่า UI ทันที ก่อนให้ Swal.fire เด้ง เพื่อบล็อกการกดย้ำ
+                cart = {}; 
+                if (remarkEl) remarkEl.value = ''; 
+                renderCartUI();
+                
+                const offcanvasEl = document.getElementById('cartOffcanvas');
+                if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
+                
+                loadCatalog(false); // แก้ไข: ลบ null ออก
+
                 Swal.fire({ 
                     title: 'Success!', 
                     html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${res.req_number}</b>`, 
                     icon: 'success' 
-                }).then(() => {
-                    cart = {}; 
-                    if (remarkEl) remarkEl.value = ''; 
-                    renderCartUI();
-                    
-                    const offcanvasEl = document.getElementById('cartOffcanvas');
-                    if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
-                    
-                    loadCatalog(null, false); 
                 });
             } catch (error) {
                 // Error ถูกจัดการโดย fetchAPI อัตโนมัติ
@@ -565,7 +568,8 @@ window.saveItemConfig = async function() {
 
         editItemModalInst.hide();
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
-        loadCatalog(null, false); 
+        // แก้ไข: ลบ null ออก
+        loadCatalog(false); 
     } catch (error) {
         // error managed by fetchAPI
     }

@@ -1,4 +1,3 @@
-// script/ OEE_OEEchart.js
 "use strict";
 
 // =================================================================
@@ -8,7 +7,6 @@ const OEE_MAIN_TARGET = 85.0;
 let oeeLineChart;
 
 function getLineChartThemeColors() {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
     if (theme === 'dark') {
         return {
@@ -32,7 +30,6 @@ function getLineChartThemeColors() {
 }
 
 function initializeLineChart(labels, data, themeColors) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
     if (!ctx) return;
 
@@ -128,7 +125,7 @@ function initializeLineChart(labels, data, themeColors) {
 }
 
 /**
- * [แก้ไข] ฟังก์ชันสำหรับดึงข้อมูล Line Chart 30 วัน (ลบ Sparkline ออก)
+ * ฟังก์ชันสำหรับดึงข้อมูล Line Chart 30 วัน
  */
 async function fetchAndRenderLineCharts() {
     toggleLoadingState("oeeLineChart", true); 
@@ -149,8 +146,9 @@ async function fetchAndRenderLineCharts() {
     const apiStartDate = userStartDate < minLineStartDate ? userStartDate : minLineStartDate;
     const apiStartDateStr = apiStartDate.toISOString().split('T')[0];
 
-    // 3. เรียก API (api/get_oee_linechart.php)
+    // 3. เรียก API ใหม่ (api/oeeDashboardApi.php)
     const params = new URLSearchParams({
+        action: 'getLineChart', // ✅ เพิ่ม action
         startDate: apiStartDateStr,
         endDate: userEndDateStr,    
         line: line,
@@ -158,13 +156,13 @@ async function fetchAndRenderLineCharts() {
     });
 
     try {
-        const response = await fetch(`api/get_oee_linechart.php?${params.toString()}`);
+        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
         if (!response.ok) throw new Error(`Linechart API: Network response was not ok`);
         const result = await response.json();
         
         if (!result.success) throw new Error(result.message || "Linechart API: API error");
 
-        const records = result.records || [];
+        const records = result.data || []; // ✅ เปลี่ยนเป็น result.data
         const hasLineData = records.length > 0;
         
         toggleNoDataMessage("oeeLineChart", !hasLineData);
@@ -188,7 +186,6 @@ async function fetchAndRenderLineCharts() {
                 const key = Object.keys(chartData)[index];
                 dataset.data = chartData[key] || [];
             });
-            // (อัปเดต Theme Colors... ส่วนนี้เหมือนเดิม)
             oeeLineChart.options.plugins.legend.labels.color = lineThemeColors.legendColor;
             oeeLineChart.options.scales.x.ticks.color = lineThemeColors.ticksColor;
             oeeLineChart.options.scales.y.ticks.color = lineThemeColors.ticksColor;
@@ -200,11 +197,6 @@ async function fetchAndRenderLineCharts() {
             }
             oeeLineChart.update();
         }
-
-        // --- [ลบออก] ---
-        // 6. ลบส่วน Filter ข้อมูล Sparklines 7 วัน
-        // 7. ลบส่วน Render Sparklines 7 วัน
-
     } catch (err) {
         console.error("Line chart (30d) update failed:", err);
         toggleErrorMessage("oeeLineChart", true);
@@ -222,29 +214,30 @@ async function fetchAndRenderLineCharts() {
 
 
 // =================================================================
-// ส่วนที่ 3: Sparklines (Hourly Trend 24 ชั่วโมง) [เพิ่มใหม่]
+// ส่วนที่ 3: Sparklines (Hourly Trend 24 ชั่วโมง)
 // =================================================================
 async function fetchAndRenderHourlySparklines() {
-    // 1. อ่านค่า Filter (ใช้ endDate เป็น @TargetDate)
+    // 1. อ่านค่า Filter
     const targetDate = document.getElementById("endDate")?.value || '';
     const line = document.getElementById("lineFilter")?.value || '';
     const model = document.getElementById("modelFilter")?.value || '';
 
-    // 2. เรียก API ใหม่ (api/get_oee_hourly_sparklines.php)
+    // 2. เรียก API ใหม่
     const params = new URLSearchParams({
-        endDate: targetDate, // SP จะใช้ค่านี้เป็น @TargetDate
+        action: 'getHourlySparklines', // ✅ เพิ่ม action
+        endDate: targetDate, 
         line: line,
         model: model
     });
 
-    let records = []; // Default to empty array
+    let records = [];
     try {
-        const response = await fetch(`api/get_oee_hourly_sparklines.php?${params.toString()}&t=${new Date().getTime()}`);
+        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}&t=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Hourly Sparkline API: Network response was not ok`);
         
         const result = await response.json();
-        if (result.success && result.records) {
-            records = result.records;
+        if (result.success && result.data) { // ✅ เปลี่ยนเป็น result.data
+            records = result.data;
         } else {
             console.error("Hourly Sparkline API Failed:", result.message || "No records returned");
         }
@@ -253,9 +246,7 @@ async function fetchAndRenderHourlySparklines() {
         console.error("Hourly Sparkline fetch failed:", err);
     }
 
-    // 3. Render Sparklines (แม้ว่าข้อมูลจะว่างเปล่า)
-    // renderSparkline คาดหวัง data ที่มี { date: ..., value: ... }
-    // เราจะส่ง { date: r.hour, value: r.oee }
+    // 3. Render Sparklines
     renderSparkline('oeeSparklineChart', records.map(r => ({date: r.hour, value: r.oee})), getCssVar('--mes-chart-color-1'));
     renderSparkline('qualitySparklineChart', records.map(r => ({date: r.hour, value: r.quality})), getCssVar('--mes-chart-color-2'));
     renderSparkline('performanceSparklineChart', records.map(r => ({date: r.hour, value: r.performance})), getCssVar('--mes-chart-color-3'));
@@ -264,11 +255,9 @@ async function fetchAndRenderHourlySparklines() {
 
 
 // =================================================================
-// ส่วนที่ 2: กราฟวงกลม (Pie Charts / Scorecards)
-// (เปลี่ยนชื่อเป็น ส่วนที่ 4)
+// ส่วนที่ 4: กราฟวงกลม (Pie Charts / Scorecards)
 // =================================================================
 const OEE_TARGETS = {
-    // ... (ส่วนนี้เหมือนเดิมทุกประการ) ...
     oee: 85.0,
     quality: 99.0,
     performance: 90.0,
@@ -278,7 +267,6 @@ const OEE_TARGETS = {
 const charts = { oee: null, quality: null, performance: null, availability: null };
 
 function toggleLoadingState(elementId, isLoading) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const element = document.getElementById(elementId);
     const card = element ? element.closest('.chart-card') : null;
     if (card) {
@@ -287,7 +275,6 @@ function toggleLoadingState(elementId, isLoading) {
 }
 
 function toggleNoDataMessage(canvasId, show) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const canvas = document.getElementById(canvasId);
     const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
     if (wrapper) {
@@ -297,7 +284,6 @@ function toggleNoDataMessage(canvasId, show) {
 }
 
 function toggleErrorMessage(canvasId, show) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const canvas = document.getElementById(canvasId);
     const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
     if (wrapper) {
@@ -307,12 +293,10 @@ function toggleErrorMessage(canvasId, show) {
 }
 
 function getCssVar(varName) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 
 function getChartThemeColors() {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
     if (theme === 'dark') {
         return {
@@ -330,7 +314,6 @@ function getChartThemeColors() {
 }
 
 function formatMinutes(totalMinutes) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     if (isNaN(totalMinutes) || totalMinutes < 0) return '0h 0m';
     const h = Math.floor(totalMinutes / 60);
     const m = Math.round(totalMinutes % 60);
@@ -338,7 +321,6 @@ function formatMinutes(totalMinutes) {
 }
 
 function updateInfoBox(infoId, lines, targetValue) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const infoBox = document.getElementById(infoId);
     if (!infoBox) return;
     const gridHtml = lines.map(line => {
@@ -354,7 +336,6 @@ function updateInfoBox(infoId, lines, targetValue) {
 }
 
 function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '', hasData = true) {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     if (!ctx) return;
     const themeColors = getChartThemeColors();
     const value = data[0];
@@ -417,11 +398,9 @@ function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue,
 }
 
 /**
- * [ฟังก์ชันเดิม] (fetchAndRenderCharts)
- * ทำหน้าที่ดึงข้อมูล Pie Charts เท่านั้น
+ * ดึงข้อมูล Pie Charts ด้วย Unified API
  */
 async function fetchAndRenderPieCharts() {
-    // ... (ฟังก์ชันนี้เหมือนเดิมทุกประการ) ...
     const chartIds = ["oeePieChart", "qualityPieChart", "performancePieChart", "availabilityPieChart"];
     chartIds.forEach(id => {
         toggleLoadingState(id, true);
@@ -436,18 +415,21 @@ async function fetchAndRenderPieCharts() {
     try {
         console.log(`Pie Charts: Fetching data from ${filterStartDateStr} to ${filterEndDateStr}`);
         const pieParams = new URLSearchParams({
+            action: 'getPieChart', // ✅ เพิ่ม action
             startDate: filterStartDateStr,
             endDate: filterEndDateStr,
             line: filterLine,
             model: filterModel
         });
         
-        const response = await fetch(`api/get_oee_piechart.php?${pieParams.toString()}&_=${new Date().getTime()}`);
+        const response = await fetch(`api/oeeDashboardApi.php?${pieParams.toString()}&_=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
 
-        const data = await response.json(); 
-        if (!data.success) throw new Error(data.error || "Piechart API: API error");
+        const result = await response.json(); 
+        if (!result.success) throw new Error(result.message || "Piechart API: API error");
         
+        const data = result.data; // ✅ แกะเอา data ออกมาจาก JSON ก้อนใหญ่
+
         const themeColors = getChartThemeColors();
         const lossColor = themeColors.lossBgColor;
         const totalLoss = Math.max(0, 100 - (data.oee || 0));
@@ -521,18 +503,16 @@ async function fetchAndRenderPieCharts() {
 }
 
 // =================================================================
-// ส่วนที่ 5: Theme Change Listener (แก้ไข)
+// ส่วนที่ 5: Theme Change Listener
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Theme change listener
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
                 console.log("Theme changed, re-rendering ALL charts...");
-                // [แก้ไข] เรียกฟังก์ชันที่แยกกัน + ฟังก์ชันใหม่
                 fetchAndRenderPieCharts?.(); 
                 fetchAndRenderLineCharts?.();
-                fetchAndRenderHourlySparklines?.(); // <-- ✅ เรียกฟังก์ชัน Sparkline 24 ชม.
+                fetchAndRenderHourlySparklines?.();
                 fetchAndRenderBarCharts?.();
                 fetchAndRenderDailyProductionChart?.();
             }

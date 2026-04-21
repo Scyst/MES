@@ -17,11 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadActiveQueue();
     
     setInterval(() => { 
-        const filterStatus = document.getElementById('filter_status');
-        if (filterStatus && (filterStatus.value === 'ACTIVE' || filterStatus.value === 'WAITING')) {
-            loadActiveQueue(true); 
+        if (!document.hidden) {
+            const filterStatus = document.getElementById('filter_status')?.value;
+            if (filterStatus === 'ACTIVE' || filterStatus === 'WAITING') {
+                loadActiveQueue(true); 
+            }
         }
-    }, 30000);
+    }, 60000);
 
     window.addEventListener('resize', () => {
         const reqId = document.getElementById('current_req_id')?.value;
@@ -44,9 +46,6 @@ window.handleDashboardImageError = function(imgElement, category) {
     imgElement.outerHTML = getIconPlaceholder(category);
 };
 
-// ==========================================
-// 🟢 Global Controls 🟢
-// ==========================================
 window.triggerGlobalReload = function() {
     const mode = document.getElementById('current_dashboard_mode').value;
     if (mode === 'ANALYTICS') loadAnalytics();
@@ -106,9 +105,6 @@ window.loadActiveQueue = function(isSilent = false) {
     else loadK2Summary(isSilent);
 };
 
-// ==========================================
-// 🟢 Stock Methods 🟢
-// ==========================================
 async function loadStockOrders(isSilent) {
     const container = document.getElementById('orderListContainer');
     if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
@@ -246,11 +242,12 @@ window.openStockOrder = async function(reqId) {
         const actionBar = document.getElementById('action-bar-mobile');
         let btnHtml = '';
         if (h.status === 'NEW ORDER') {
-            btnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> Reject</button>
-                       <button class="btn btn-sm btn-warning text-dark fw-bold px-4" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>`;
+            // 🛡️ ใส่ ID ให้ปุ่มเพื่อให้ fetchAPI ไปปิดการทำงานกัน User กดย้ำ
+            btnHtml = `<button id="btnRejectOrder" class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> Reject</button>
+                       <button id="btnAcceptOrder" class="btn btn-sm btn-warning text-dark fw-bold px-4" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>`;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
         } else if (h.status === 'PREPARING') {
-            btnHtml = `<button class="btn btn-success fw-bold px-4 w-100 w-md-auto" onclick="confirmIssue(${reqId})"><i class="fas fa-check-double me-1"></i> ยืนยันจ่ายของ</button>`;
+            btnHtml = `<button id="btnConfirmIssue" class="btn btn-success fw-bold px-4 w-100 w-md-auto" onclick="confirmIssue(${reqId})"><i class="fas fa-check-double me-1"></i> ยืนยันจ่ายของ</button>`;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
         } else { actionBar.classList.add('d-none'); }
         switchView('form-stock');
@@ -258,24 +255,21 @@ window.openStockOrder = async function(reqId) {
 };
 
 window.acceptOrder = async function(reqId) {
-    document.getElementById('loadingOverlay').style.display = 'flex';
     try {
-        await fetchAPI('accept_order', 'POST', { req_id: reqId });
+        await fetchAPI('accept_order', 'POST', { req_id: reqId }, 'btnAcceptOrder');
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'รับออเดอร์แล้ว!', showConfirmButton: false, timer: 1500 }); 
         loadActiveQueue(true); openStockOrder(reqId); 
-    } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+    } catch (error) {}
 };
 
 window.rejectOrder = function(reqId) {
     Swal.fire({ title: 'ปฏิเสธคำขอเบิก?', input: 'text', inputPlaceholder: 'ระบุเหตุผล...', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ยืนยัน Reject'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: result.value });
-                document.getElementById('loadingOverlay').style.display = 'none';
+                await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: result.value }, 'btnRejectOrder');
                 Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success'); loadActiveQueue(true); openStockOrder(reqId); 
-            } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+            } catch (error) {}
         }
     });
 };
@@ -294,13 +288,11 @@ window.confirmIssue = async function(reqId) {
     Swal.fire({ title: 'ยืนยันการจ่ายของ?', text: 'ระบบจะทำการหักสต๊อกทันที', icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', confirmButtonText: 'Yes, Confirm!'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const reqNumber = document.getElementById('disp_req_no').innerText;
-                await fetchAPI('confirm_issue', 'POST', { req_id: reqId, req_number: reqNumber, items: JSON.stringify(issueData) });
-                document.getElementById('loadingOverlay').style.display = 'none';
+                await fetchAPI('confirm_issue', 'POST', { req_id: reqId, req_number: reqNumber, items: JSON.stringify(issueData) }, 'btnConfirmIssue');
                 Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
-            } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+            } catch (error) {}
         }
     });
 };
@@ -400,12 +392,10 @@ window.submitK2Batch = function() {
         icon: 'question', showCancelButton: true, confirmButtonColor: '#ffc107', confirmButtonText: 'อัปเดตเลย!'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber });
-                document.getElementById('loadingOverlay').style.display = 'none';
+                await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber }, 'btnSubmitK2');
                 Swal.fire('Success', 'อัปเดตสถานะสำเร็จ', 'success').then(() => { loadActiveQueue(true); switchView('list'); });
-            } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+            } catch (error) {}
         }
     });
 };
@@ -445,7 +435,7 @@ function switchView(view) {
 }
 
 // ==========================================
-// 🟢 Analytics (Optimized Design) 🟢
+// 🟢 Analytics 🟢
 // ==========================================
 window.loadAnalytics = async function() {
     document.getElementById('loadingOverlay').style.display = 'flex';
@@ -457,118 +447,62 @@ window.loadAnalytics = async function() {
 
         document.getElementById('loadingOverlay').style.display = 'none';
 
-        // 1. Basic Operational KPIs
         document.getElementById('stat_total_reqs').innerText = res.summary.total_reqs;
         document.getElementById('stat_total_issued').innerText = parseFloat(res.summary.total_issued_qty).toLocaleString();
         document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
         document.getElementById('stat_total_rejects').innerText = res.summary.total_rejects;
 
-        // 2. Advanced KPIs (SLA, Fill Rate, IRA, Dead Stock, Turnover)
         document.getElementById('adv_sla').innerText = parseFloat(res.summary.avg_sla_minutes || 0).toFixed(0) + ' นาที';
         document.getElementById('adv_fill_rate').innerText = parseFloat(res.summary.fill_rate_percent || 0).toFixed(1) + '%';
         document.getElementById('adv_ira').innerText = parseFloat(res.summary.ira_percent || 100).toFixed(1) + '%';
         document.getElementById('adv_dead_stock').innerText = '฿' + parseFloat(res.summary.dead_stock_value || 0).toLocaleString();
         document.getElementById('adv_turnover').innerText = parseFloat(res.summary.turnover_ratio || 0).toFixed(2);
-
-        // 🎨 3. Charts (Industrial UI styling with cleaned grids & tooltips)
         
-        // Trend Chart
         if(chartTrendInst) chartTrendInst.destroy();
         chartTrendInst = new Chart(document.getElementById('chartTrend').getContext('2d'), {
             type: 'line',
             data: {
                 labels: res.trendData.map(d => d.req_date),
                 datasets: [{ 
-                    label: 'จำนวนบิลเบิกสำเร็จ', 
-                    data: res.trendData.map(d => d.req_count), 
-                    borderColor: '#0d6efd', 
-                    backgroundColor: 'rgba(13, 110, 253, 0.15)', 
-                    borderWidth: 2.5, 
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#0d6efd',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    fill: true, 
-                    tension: 0.3 
+                    label: 'จำนวนบิลเบิกสำเร็จ', data: res.trendData.map(d => d.req_count), 
+                    borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.15)', borderWidth: 2.5, 
+                    pointBackgroundColor: '#ffffff', pointBorderColor: '#0d6efd', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.3 
                 }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false }, tooltip: { padding: 10 } }, 
-                interaction: { mode: 'index', intersect: false },
-                scales: { 
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#6c757d' } },
-                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false }, ticks: { precision: 0, font: { size: 11 }, color: '#6c757d' } } 
-                } 
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }
         });
 
-        // Category Doughnut Chart
         if(chartCatInst) chartCatInst.destroy();
         chartCatInst = new Chart(document.getElementById('chartCategory').getContext('2d'), {
             type: 'doughnut',
             data: {
                 labels: res.categoryData.map(c => c.category),
-                datasets: [{ 
-                    data: res.categoryData.map(c => c.total_qty), 
-                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], 
-                    borderWidth: 2, 
-                    borderColor: '#ffffff' 
-                }]
+                datasets: [{ data: res.categoryData.map(c => c.total_qty), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], borderWidth: 2, borderColor: '#ffffff' }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, cutout: '70%', 
-                plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } 
-            }
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
         });
 
-        // Top Items Horizontal Bar Chart
         if(chartItemsInst) chartItemsInst.destroy();
         chartItemsInst = new Chart(document.getElementById('chartTopItems').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: res.topItems.map(i => (i.part_description || '').substring(0, 25) + '...'),
-                datasets: [{ 
-                    label: 'จำนวนชิ้นที่จ่าย', 
-                    data: res.topItems.map(i => i.total_qty), 
-                    backgroundColor: 'rgba(255, 193, 7, 0.85)', 
-                    borderColor: '#ffc107', 
-                    borderWidth: 1, 
-                    borderRadius: 4 
-                }]
+                datasets: [{ label: 'จำนวนชิ้นที่จ่าย', data: res.topItems.map(i => i.total_qty), backgroundColor: 'rgba(255, 193, 7, 0.85)', borderColor: '#ffc107', borderWidth: 1, borderRadius: 4 }]
             },
-            options: { 
-                indexAxis: 'y', // แนวนอน
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } }, 
-                    y: { grid: { display: false }, ticks: { font: { size: 11 } } } 
-                } 
-            }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } }
         });
 
-        // Top Users Pie Chart
         if(chartUsersInst) chartUsersInst.destroy();
         chartUsersInst = new Chart(document.getElementById('chartTopUsers').getContext('2d'), {
             type: 'pie',
             data: {
                 labels: res.topUsers.map(u => u.fullname.split(' ')[0]),
-                datasets: [{ 
-                    data: res.topUsers.map(u => u.req_count), 
-                    backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], 
-                    borderWidth: 2, 
-                    borderColor: '#ffffff' 
-                }]
+                datasets: [{ data: res.topUsers.map(u => u.req_count), backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], borderWidth: 2, borderColor: '#ffffff' }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } 
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
         });
 
-    } catch (error) {}
+    } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
 };
 
 window.exportToCSV = async function() {
@@ -599,7 +533,6 @@ window.exportToCSV = async function() {
         link.click();
         
     } catch (error) {
-        Swal.fire('Error', 'เกิดข้อผิดพลาดในการดึงข้อมูลส่งออก', 'error');
     } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;

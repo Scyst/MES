@@ -202,7 +202,7 @@ $pageIcon = "fas fa-store";
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light">K2 PR</span>
                                         <input type="text" id="input_k2_pr" class="form-control fw-bold" placeholder="เช่น PR-2404-0015">
-                                        <button class="btn btn-warning fw-bold px-3" onclick="submitK2Batch()">อัปเดต</button>
+                                        <button id="btnSubmitK2" class="btn btn-warning fw-bold px-3" onclick="submitK2Batch()">อัปเดต</button>
                                     </div>
                                 </div>
                             </div>

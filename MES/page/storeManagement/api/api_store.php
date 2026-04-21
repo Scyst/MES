@@ -13,6 +13,13 @@ try {
         throw new Exception('Unauthorized Access');
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $jsonPayload = json_decode(file_get_contents('php://input'), true);
+        if (is_array($jsonPayload)) {
+            $_POST = array_merge($_POST, $jsonPayload);
+        }
+    }
+
     $currentUser = $_SESSION['user'];
     $action = $_REQUEST['action'] ?? '';
     $storeLocationId = 1008; // กำหนด Location ID ของ Store
@@ -110,9 +117,20 @@ try {
         case 'confirm_issue':
             $req_id = $_POST['req_id'];
             $issuer_id = $currentUser['id'];
-            $itemsData = json_decode($_POST['items'], true); 
-
+            $itemsData = is_string($_POST['items']) ? json_decode($_POST['items'], true) : $_POST['items']; 
             $pdo->beginTransaction();
+            $stmtCheckStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = ?");
+            foreach ($itemsData as $item) {
+                $qty_issued = (float)$item['qty_issued'];
+                if ($qty_issued > 0) {
+                    $stmtCheckStock->execute([$item['item_id'], $storeLocationId]);
+                    $currentStock = (float)$stmtCheckStock->fetchColumn();
+                    if ($qty_issued > $currentStock) {
+                        throw new Exception("สต๊อกของ SAP: " . $item['item_code'] . " มีไม่เพียงพอจ่าย (คงเหลือจริง: " . $currentStock . " ชิ้น)");
+                    }
+                }
+            }
+
             $stmtUpdateItem = $pdo->prepare("UPDATE dbo.STORE_REQUISITION_ITEMS SET qty_issued = ? WHERE id = ?");
             
             $sqlLog = "INSERT INTO dbo.STOCK_TRANSACTIONS (
@@ -318,17 +336,38 @@ try {
         // 🟢 2. MATERIAL REQUISITION (ผู้ขอเบิก) 🟢
         // ==========================================
         case 'submit_requisition':
-            $cart = json_decode($_POST['cart'], true);
-            $remark = trim($_POST['remark'] ?? '');
-            $reqType = $_POST['request_type'] ?? 'STOCK';
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $cartRaw = $_POST['cart'] ?? $input['cart'] ?? '';
+            $cart = is_string($cartRaw) ? json_decode($cartRaw, true) : $cartRaw;
+            if (is_string($cart)) { 
+                $cart = json_decode($cart, true); 
+            }
+
+            $remark = trim($_POST['remark'] ?? $input['remark'] ?? '');
+            $reqType = $_POST['request_type'] ?? $input['request_type'] ?? 'STOCK';
             $userId = $currentUser['id'];
 
-            if (empty($cart)) throw new Exception("ไม่มีรายการสินค้า");
+            if (empty($cart) || !is_array($cart)) {
+                throw new Exception("ไม่มีรายการสินค้า");
+            }
+
+            // [SECURITY FIX 1] ตรวจสอบ Stock จาก Database โดยตรงเพื่อป้องกัน Race Condition หากมีการยิงเบิกของพร้อมกัน
+            if ($reqType === 'STOCK') {
+                $stmtCheckStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = (SELECT item_id FROM dbo.ITEMS WHERE sap_no = ?) AND location_id = ?");
+                foreach($cart as $c) {
+                    $stmtCheckStock->execute([$c['item_code'], $storeLocationId]);
+                    $currentStock = (float)$stmtCheckStock->fetchColumn();
+                    if ($c['qty'] > $currentStock) {
+                        throw new Exception("สต๊อกของ " . $c['item_code'] . " มีไม่เพียงพอ (คงเหลือ: " . $currentStock . " ชิ้น)");
+                    }
+                }
+            }
 
             $pdo->beginTransaction();
             
             $prefix = 'REQ-' . date('ym') . '-';
-            $stmtLast = $pdo->query("SELECT TOP 1 req_number FROM dbo.STORE_REQUISITIONS WITH (UPDLOCK) WHERE req_number LIKE '$prefix%' ORDER BY req_number DESC");
+            // [SECURITY FIX 2] เพิ่ม HOLDLOCK คู่กับ UPDLOCK ป้องกัน Phantom Read ในช่วงรันเลข Sequence ต้นเดือน
+            $stmtLast = $pdo->query("SELECT TOP 1 req_number FROM dbo.STORE_REQUISITIONS WITH (UPDLOCK, HOLDLOCK) WHERE req_number LIKE '$prefix%' ORDER BY req_number DESC");
             $lastNo = $stmtLast->fetchColumn();
             $nextSeq = $lastNo ? ((int)substr($lastNo, -4)) + 1 : 1;
             $req_number = $prefix . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
