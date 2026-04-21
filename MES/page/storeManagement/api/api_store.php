@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
 header('Content-Type: application/json; charset=utf-8');
-ini_set('display_errors', 0); // บังคับปิด Error ออกหน้าจอ ป้องกัน JSON พัง
+ini_set('display_errors', 0);
 
 try {
     if (!isset($_SESSION['user'])) {
@@ -22,9 +22,7 @@ try {
 
     $currentUser = $_SESSION['user'];
     $action = $_REQUEST['action'] ?? '';
-    $storeLocationId = 1008; // กำหนด Location ID ของ Store
-    
-    // 🛡️ กำหนด Action ที่มีการเขียนข้อมูล (POST) เพื่อตรวจสอบ CSRF
+    $storeLocationId = 1008;
     $writeActions = [
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
@@ -51,10 +49,6 @@ try {
     $response = ['success' => false, 'message' => 'Action not executed'];
 
     switch ($action) {
-        
-        // ==========================================
-        // 🟢 1. STORE DASHBOARD & K2 QUEUE 🟢
-        // ==========================================
         case 'get_orders':
             $status = $_REQUEST['status'] ?? 'ACTIVE';
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
@@ -69,7 +63,6 @@ try {
                     WHERE EXISTS (SELECT 1 FROM dbo.STORE_REQUISITION_ITEMS ri2 WHERE ri2.req_id = r.id AND ri2.request_type = 'STOCK') 
                       AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) ";
             
-            // 💡 ให้มันใช้วันที่กรองข้อมูลเสมอ ไม่ว่าจะเป็นสถานะไหน
             $params = [$startDate, $endDate];
             
             if ($status === 'ACTIVE') {
@@ -116,54 +109,14 @@ try {
 
         case 'confirm_issue':
             $req_id = $_POST['req_id'];
+            $req_number = $_POST['req_number'];
             $issuer_id = $currentUser['id'];
-            $itemsData = is_string($_POST['items']) ? json_decode($_POST['items'], true) : $_POST['items']; 
-            $pdo->beginTransaction();
-            $stmtCheckStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = ?");
-            foreach ($itemsData as $item) {
-                $qty_issued = (float)$item['qty_issued'];
-                if ($qty_issued > 0) {
-                    $stmtCheckStock->execute([$item['item_id'], $storeLocationId]);
-                    $currentStock = (float)$stmtCheckStock->fetchColumn();
-                    if ($qty_issued > $currentStock) {
-                        throw new Exception("สต๊อกของ SAP: " . $item['item_code'] . " มีไม่เพียงพอจ่าย (คงเหลือจริง: " . $currentStock . " ชิ้น)");
-                    }
-                }
-            }
-
-            $stmtUpdateItem = $pdo->prepare("UPDATE dbo.STORE_REQUISITION_ITEMS SET qty_issued = ? WHERE id = ?");
+            $itemsJsonStr = is_string($_POST['items']) ? $_POST['items'] : json_encode($_POST['items']);
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
+                                    @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
+                                    @StoreLocationId = ?, @ItemsJson = ?");
+            $stmt->execute([$req_id, $req_number, $issuer_id, $storeLocationId, $itemsJsonStr]);
             
-            $sqlLog = "INSERT INTO dbo.STOCK_TRANSACTIONS (
-                           parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, 
-                           notes, reference_id, transaction_timestamp,
-                           std_price_snapshot, std_price_usd_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot,
-                           std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot
-                       ) 
-                       SELECT 
-                           item_id, ?, 'ISSUE_STORE', ?, ?, 
-                           'Issued via Material Req', ?, GETDATE(),
-                           ISNULL(StandardPrice, 0), ISNULL(Price_USD, 0), 
-                           (ISNULL(Cost_RM, 0) + ISNULL(Cost_PKG, 0) + ISNULL(Cost_SUB, 0)), 
-                           ISNULL(Cost_DL, 0),
-                           (ISNULL(Cost_OH_Machine, 0) + ISNULL(Cost_OH_Utilities, 0) + ISNULL(Cost_OH_Indirect, 0) + ISNULL(Cost_OH_Staff, 0) + ISNULL(Cost_OH_Accessory, 0) + ISNULL(Cost_OH_Others, 0)),
-                           ISNULL(Cost_OH_Machine, 0), ISNULL(Cost_OH_Utilities, 0), ISNULL(Cost_OH_Indirect, 0), ISNULL(Cost_OH_Staff, 0), ISNULL(Cost_OH_Accessory, 0), ISNULL(Cost_OH_Others, 0)
-                       FROM dbo.ITEMS WITH (NOLOCK) WHERE item_id = ?";
-            
-            $stmtLog = $pdo->prepare($sqlLog);
-
-            foreach ($itemsData as $item) {
-                $qty_issued = (float)$item['qty_issued'];
-                $stmtUpdateItem->execute([$qty_issued, $item['row_id']]);
-
-                if ($qty_issued > 0) {
-                    $stmtLog->execute([$qty_issued, $storeLocationId, $issuer_id, $_POST['req_number'], $item['item_id']]);
-                    $stmtSp = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-                    $stmtSp->execute([$item['item_id'], $storeLocationId, ($qty_issued * -1)]);
-                }
-            }
-
-            $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET status = 'COMPLETED', issuer_id = ?, issued_at = GETDATE() WHERE id = ?")->execute([$issuer_id, $req_id]);
-            $pdo->commit();
             $response = ['success' => true];
             break;
 
@@ -218,20 +171,59 @@ try {
             $item_code = $_POST['item_code'];
             $k2_pr_no = $_POST['k2_pr_no'];
             $userId = $currentUser['id'];
-            $sql = "UPDATE k
+            
+            $pdo->beginTransaction();
+            $sqlK2 = "UPDATE k
                     SET k.k2_status = 'K2_OPENED', k.k2_reference_no = ?, k.updated_at = GETDATE(), k.updated_by = ?
                     FROM dbo.STORE_K2_REQUESTS k
                     JOIN dbo.STORE_REQUISITION_ITEMS ri ON k.req_item_id = ri.id
                     WHERE k.k2_status = 'WAITING' AND ri.item_code = ?";
-            $pdo->prepare($sql)->execute([$k2_pr_no, $userId, $item_code]);
+            $pdo->prepare($sqlK2)->execute([$k2_pr_no, $userId, $item_code]);
+            $sqlPrep = "UPDATE r
+                        SET r.status = 'PREPARING'
+                        FROM dbo.STORE_REQUISITIONS r
+                        WHERE r.status = 'NEW ORDER' 
+                          AND r.id IN (SELECT req_id FROM dbo.STORE_REQUISITION_ITEMS WHERE item_code = ?)";
+            $pdo->prepare($sqlPrep)->execute([$item_code]);
+            $sqlFindReq = "SELECT DISTINCT req_id FROM dbo.STORE_REQUISITION_ITEMS WHERE item_code = ?";
+            $stmtFind = $pdo->prepare($sqlFindReq);
+            $stmtFind->execute([$item_code]);
+            $reqIds = $stmtFind->fetchAll(PDO::FETCH_COLUMN);
+
+            if (!empty($reqIds)) {
+                $placeholders = implode(',', array_fill(0, count($reqIds), '?'));
+                $sqlCheck = "SELECT DISTINCT ri.req_id 
+                             FROM dbo.STORE_REQUISITION_ITEMS ri 
+                             LEFT JOIN dbo.STORE_K2_REQUESTS k2 ON ri.id = k2.req_item_id
+                             WHERE ri.req_id IN ($placeholders)
+                               AND (
+                                   (ri.request_type = 'K2' AND ISNULL(k2.k2_status, 'WAITING') = 'WAITING')
+                                   OR 
+                                   (ri.request_type = 'STOCK' AND ri.qty_issued IS NULL)
+                               )";
+                $stmtCheck = $pdo->prepare($sqlCheck);
+                $stmtCheck->execute($reqIds);
+                $incompleteReqs = $stmtCheck->fetchAll(PDO::FETCH_COLUMN);
+
+                $completedReqs = array_diff($reqIds, $incompleteReqs);
+
+                if (!empty($completedReqs)) {
+                    $compPlaceholders = implode(',', array_fill(0, count($completedReqs), '?'));
+                    $sqlComplete = "UPDATE dbo.STORE_REQUISITIONS 
+                                    SET status = 'COMPLETED', issuer_id = ?, issued_at = GETDATE() 
+                                    WHERE id IN ($compPlaceholders) AND status != 'COMPLETED'";
+                    $params = array_merge([$userId], $completedReqs);
+                    $pdo->prepare($sqlComplete)->execute($params);
+                }
+            }
+
+            $pdo->commit();
             $response = ['success' => true, 'message' => 'บันทึกรหัส K2 PR สำเร็จ'];
             break;
 
         case 'get_analytics':
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-01');
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-t'); 
-            
-            // 🚀 Optimized Batch Query without SQL Comments
             $sqlKpi = "
                 SET NOCOUNT ON;
                 DECLARE @Start DATE = ?;
@@ -332,71 +324,44 @@ try {
             $response = ['success' => true, 'exportData' => $exportData];
             break;
 
-        // ==========================================
-        // 🟢 2. MATERIAL REQUISITION (ผู้ขอเบิก) 🟢
-        // ==========================================
         case 'submit_requisition':
             $input = json_decode(file_get_contents('php://input'), true) ?? [];
             $cartRaw = $_POST['cart'] ?? $input['cart'] ?? '';
-            $cart = is_string($cartRaw) ? json_decode($cartRaw, true) : $cartRaw;
-            if (is_string($cart)) { 
-                $cart = json_decode($cart, true); 
-            }
+            $cartJsonStr = is_string($cartRaw) ? $cartRaw : json_encode($cartRaw);
 
             $remark = trim($_POST['remark'] ?? $input['remark'] ?? '');
             $reqType = $_POST['request_type'] ?? $input['request_type'] ?? 'STOCK';
             $userId = $currentUser['id'];
 
-            if (empty($cart) || !is_array($cart)) {
+            if (empty($cartJsonStr) || $cartJsonStr === '[]') {
                 throw new Exception("ไม่มีรายการสินค้า");
             }
 
-            // [SECURITY FIX 1] ตรวจสอบ Stock จาก Database โดยตรงเพื่อป้องกัน Race Condition หากมีการยิงเบิกของพร้อมกัน
-            if ($reqType === 'STOCK') {
-                $stmtCheckStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = (SELECT item_id FROM dbo.ITEMS WHERE sap_no = ?) AND location_id = ?");
-                foreach($cart as $c) {
-                    $stmtCheckStock->execute([$c['item_code'], $storeLocationId]);
-                    $currentStock = (float)$stmtCheckStock->fetchColumn();
-                    if ($c['qty'] > $currentStock) {
-                        throw new Exception("สต๊อกของ " . $c['item_code'] . " มีไม่เพียงพอ (คงเหลือ: " . $currentStock . " ชิ้น)");
-                    }
-                }
-            }
-
-            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_SubmitRequisition 
+                                    @UserId = ?, @Remark = ?, @RequestType = ?, 
+                                    @CartJson = ?, @StoreLocationId = ?, 
+                                    @NewReqNumber = ? OUTPUT");
             
-            $prefix = 'REQ-' . date('ym') . '-';
-            // [SECURITY FIX 2] เพิ่ม HOLDLOCK คู่กับ UPDLOCK ป้องกัน Phantom Read ในช่วงรันเลข Sequence ต้นเดือน
-            $stmtLast = $pdo->query("SELECT TOP 1 req_number FROM dbo.STORE_REQUISITIONS WITH (UPDLOCK, HOLDLOCK) WHERE req_number LIKE '$prefix%' ORDER BY req_number DESC");
-            $lastNo = $stmtLast->fetchColumn();
-            $nextSeq = $lastNo ? ((int)substr($lastNo, -4)) + 1 : 1;
-            $req_number = $prefix . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
+            $stmt->bindParam(1, $userId, PDO::PARAM_INT);
+            $stmt->bindParam(2, $remark, PDO::PARAM_STR);
+            $stmt->bindParam(3, $reqType, PDO::PARAM_STR);
+            $stmt->bindParam(4, $cartJsonStr, PDO::PARAM_STR);
+            $stmt->bindParam(5, $storeLocationId, PDO::PARAM_INT);
+            
+            $reqNumber = '';
+            $stmt->bindParam(6, $reqNumber, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 50);
+            $stmt->execute();
 
-            $pdo->prepare("INSERT INTO dbo.STORE_REQUISITIONS (req_number, requester_id, status, remark, created_at) VALUES (?, ?, 'NEW ORDER', ?, GETDATE())")
-                ->execute([$req_number, $userId, $remark]);
-            $req_id = $pdo->lastInsertId();
-
-            $stmtItem = $pdo->prepare("INSERT INTO dbo.STORE_REQUISITION_ITEMS (req_id, item_code, qty_requested, request_type) VALUES (?, ?, ?, ?)");
-            $stmtK2 = $pdo->prepare("INSERT INTO dbo.STORE_K2_REQUESTS (req_item_id, k2_status, updated_at) VALUES (?, 'WAITING', GETDATE())");
-
-            foreach($cart as $c) {
-                $stmtItem->execute([$req_id, $c['item_code'], $c['qty'], $reqType]);
-                $req_item_id = $pdo->lastInsertId();
-                if($reqType === 'K2') {
-                    $stmtK2->execute([$req_item_id]);
-                }
-            }
-            $pdo->commit();
-            $response = ['success' => true, 'req_number' => $req_number];
+            $response = ['success' => true, 'req_number' => $reqNumber];
             break;
 
         case 'get_my_orders':
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
             $userId = $currentUser['id'];
-            
             $sql = "SELECT r.id, r.req_number, r.status, r.remark, FORMAT(r.created_at, 'dd/MM/yyyy HH:mm') as req_time,
-                           (SELECT COUNT(*) FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) WHERE ri.req_id = r.id) as total_items
+                           (SELECT COUNT(*) FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) WHERE ri.req_id = r.id) as total_items,
+                           (SELECT TOP 1 request_type FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) WHERE ri.req_id = r.id) as req_type
                     FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                     WHERE r.requester_id = ? AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
                     ORDER BY r.created_at DESC";
@@ -416,9 +381,11 @@ try {
             $header = $stmtH->fetch(PDO::FETCH_ASSOC);
             if(!$header) throw new Exception("ไม่พบรายการ หรือไม่มีสิทธิ์เข้าถึง");
 
-            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, i.part_description as description, i.image_path, i.item_category
+            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, i.part_description as description, i.image_path, i.item_category,
+                                k.k2_reference_no, k.k2_status, ri.request_type
                          FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                          JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
+                         LEFT JOIN dbo.STORE_K2_REQUESTS k WITH (NOLOCK) ON ri.id = k.req_item_id
                          WHERE ri.req_id = ?";
             $stmtI = $pdo->prepare($sqlItems);
             $stmtI->execute([$req_id]);
@@ -493,10 +460,6 @@ try {
             }
             break;
 
-
-        // ==========================================
-        // 🟢 3. INVENTORY & STOCK TRANSACTIONS 🟢
-        // ==========================================
         case 'get_master_data':
             $locStmt = $pdo->query("SELECT location_id, location_name, location_type, production_line FROM dbo.LOCATIONS WITH (NOLOCK) WHERE is_active = 1 ORDER BY location_name");
             $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM dbo.ITEMS WITH (NOLOCK) WHERE is_active = 1 ORDER BY sap_no");
@@ -717,10 +680,6 @@ try {
             ];
             break;
 
-
-        // ==========================================
-        // 🟢 4. STOCK TRANSFERS & REPLACEMENT 🟢
-        // ==========================================
         case 'create_transfer_request':
             $item_id = (int)($_POST['item_id'] ?? 0);
             $from_loc_id = (int)($_POST['from_loc_id'] ?? 0);
@@ -814,84 +773,31 @@ try {
                 throw new Exception("คำสั่งไม่ถูกต้อง");
             }
 
-            $pdo->beginTransaction();
-
-            $sqlGet = "SELECT * FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?";
-            $stmtGet = $pdo->prepare($sqlGet);
-            $stmtGet->execute([$transfer_id]);
-            $req = $stmtGet->fetch(PDO::FETCH_ASSOC);
-
-            if (!$req) throw new Exception("ไม่พบรายการนี้");
-            if ($req['status'] !== 'PENDING') throw new Exception("รายการนี้ถูกจัดการไปแล้ว");
-
-            if ($action_status === 'COMPLETED') {
-                $qty = (float)$req['quantity'];
-                $spStock = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-                $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
-                $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
-                $transSql = "INSERT INTO dbo.STOCK_TRANSACTIONS 
-                             (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, notes) 
-                             VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?)";
-                $pdo->prepare($transSql)->execute([
-                    $req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], 
-                    $currentUser['id'], $req['transfer_uuid'], $req['notes']
-                ]);
-            }
-
-            $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = ?, confirmed_by_user_id = ?, confirmed_at = GETDATE() WHERE transfer_id = ?")
-                ->execute([$action_status, $currentUser['id'], $transfer_id]);
-
-            $pdo->commit();
+            $transferIdsJson = json_encode([$transfer_id]);
+            
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ProcessTransferBatch @TransferIdsJson = ?, @ActionStatus = ?, @UserId = ?");
+            $stmt->execute([$transferIdsJson, $action_status, $currentUser['id']]);
+            
             $msg = $action_status === 'COMPLETED' ? "โอนย้ายสต็อกสำเร็จ!" : "ยกเลิกรายการสำเร็จ!";
             $response = ['success' => true, 'message' => $msg];
             break;
 
         case 'bulk_process_transfer_request':
-            $transfer_ids = json_decode($_POST['transfer_ids'], true);
+            $transferIdsJson = is_string($_POST['transfer_ids']) ? $_POST['transfer_ids'] : json_encode($_POST['transfer_ids']);
             $action_status = $_POST['action_status'] ?? '';
 
-            if (empty($transfer_ids) || !is_array($transfer_ids) || !in_array($action_status, ['COMPLETED', 'CANCELLED'])) {
+            if (empty($transferIdsJson) || $transferIdsJson === '[]' || !in_array($action_status, ['COMPLETED', 'CANCELLED'])) {
                 throw new Exception("ข้อมูลไม่ถูกต้อง");
             }
 
-            $pdo->beginTransaction();
-            $successCount = 0;
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ProcessTransferBatch @TransferIdsJson = ?, @ActionStatus = ?, @UserId = ?");
+            $stmt->execute([$transferIdsJson, $action_status, $currentUser['id']]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $successCount = $result['affected_rows'] ?? 0;
 
-            $spStock = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-            $transStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, notes) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?)");
-            $updStmt = $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = ?, confirmed_by_user_id = ?, confirmed_at = GETDATE() WHERE transfer_id = ?");
-
-            $sqlGet = "SELECT * FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?";
-            $stmtGet = $pdo->prepare($sqlGet);
-
-            foreach ($transfer_ids as $tid) {
-                $stmtGet->execute([$tid]);
-                $req = $stmtGet->fetch(PDO::FETCH_ASSOC);
-
-                if ($req && $req['status'] === 'PENDING') {
-                    if ($action_status === 'COMPLETED') {
-                        $qty = (float)$req['quantity'];
-                        $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
-                        $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
-                        
-                        $transStmt->execute([
-                            $req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], 
-                            $currentUser['id'], $req['transfer_uuid'], $req['notes']
-                        ]);
-                    }
-                    $updStmt->execute([$action_status, $currentUser['id'], $tid]);
-                    $successCount++;
-                }
-            }
-
-            $pdo->commit();
             $response = ['success' => true, 'message' => "ดำเนินการเสร็จสิ้นจำนวน $successCount รายการ"];
             break;
 
-
-        // ==========================================
-        // 🟢 5. DEFECT, SCRAP & REPLACEMENT 🟢
-        // ==========================================
         case 'create_request':
             $input = json_decode(file_get_contents("php://input"), true);
             if (empty($input['item_id']) || empty($input['store_location_id'])) throw new Exception("ข้อมูลไม่ครบถ้วน (Item หรือ Store)");
@@ -1041,10 +947,6 @@ try {
             ];
             break;
 
-
-        // ==========================================
-        // 🟢 6. CYCLE COUNT (ปรับยอดสต็อก) 🟢
-        // ==========================================
         case 'submit_cycle_count':
             $item_id = (int)($_POST['item_id'] ?? 0);
             $location_id = (int)($_POST['location_id'] ?? 0);
@@ -1131,10 +1033,6 @@ try {
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
             break;
 
-
-        // ==========================================
-        // 🟢 7. TAGS, PALLETS & RAW MATERIALS (RECEIVING) 🟢
-        // ==========================================
         case 'issue_selected_tags':
             $serials = $_POST['serials'] ?? '';
             $to_location = (int)($_POST['to_location'] ?? 0);
@@ -1491,15 +1389,10 @@ try {
             $response = ['success' => true, 'message' => "ยืนยันรับเข้าสต็อกสำเร็จจำนวน $successCount พาเลท/กล่อง"];
             break;
 
-        // ==========================================
-        // 🟢 8. UNMATCHED CASES (Catch All) 🟢
-        // ==========================================
         default:
             http_response_code(400);
             throw new Exception("Invalid API Action Request: " . htmlspecialchars($action));
     }
-
-    // 🎯 Single Point of Return สำหรับฝั่ง Success
     echo json_encode($response);
 
 } catch (Exception $e) {
@@ -1523,7 +1416,6 @@ try {
         http_response_code(500);
     }
     
-    // 🎯 Single Point of Return สำหรับฝั่ง Error
     echo json_encode(['success' => false, 'message' => $errorMessage]);
 }
 ?>

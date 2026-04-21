@@ -193,8 +193,6 @@ window.loadCatalog = async function(isLoadMore = false) {
             res.data.forEach(item => {
                 const onHand = parseFloat(item.onhand_qty || 0);
                 const isOutOfStock = onHand <= 0;
-                
-                // 🛡️ ป้องกัน XSS & การหลุด Quote ของ JS Function Call
                 const displayDesc = escapeHTML(item.description || '-');
                 const displayCode = escapeHTML(item.item_code);
                 const safeCategory = escapeHTML(item.item_category || 'OTHER');
@@ -426,10 +424,28 @@ window.openHistoryModal = async function() {
         } else {
             res.data.forEach(order => {
                 let badgeClass = 'bg-secondary', icon = 'fa-clock', statusTH = '';
-                if (order.status === 'NEW ORDER') { badgeClass = 'bg-warning text-dark'; icon = 'fa-hourglass-half'; statusTH = 'รอรับออเดอร์'; }
-                else if (order.status === 'PREPARING') { badgeClass = 'bg-primary'; icon = 'fa-box-open'; statusTH = 'กำลังจัดของ'; }
-                else if (order.status === 'COMPLETED') { badgeClass = 'bg-success'; icon = 'fa-check-circle'; statusTH = 'จัดเสร็จแล้ว'; }
-                else if (order.status === 'REJECTED') { badgeClass = 'bg-danger'; icon = 'fa-times-circle'; statusTH = 'ถูกปฏิเสธ'; }
+                let isK2 = (order.req_type === 'K2'); 
+
+                if (order.status === 'NEW ORDER') { 
+                    badgeClass = 'bg-warning text-dark'; 
+                    icon = isK2 ? 'fa-file-signature' : 'fa-hourglass-half'; 
+                    statusTH = isK2 ? 'รอเปิด K2' : 'รอรับออเดอร์'; 
+                }
+                else if (order.status === 'PREPARING') { 
+                    badgeClass = 'bg-primary'; 
+                    icon = isK2 ? 'fa-spinner fa-spin' : 'fa-box-open'; 
+                    statusTH = isK2 ? 'ทยอยเปิด PR' : 'กำลังจัดของ'; 
+                }
+                else if (order.status === 'COMPLETED') { 
+                    badgeClass = 'bg-success'; 
+                    icon = isK2 ? 'fa-check-double' : 'fa-check-circle'; 
+                    statusTH = isK2 ? 'เปิด PR ครบแล้ว' : 'จัดเสร็จแล้ว'; 
+                }
+                else if (order.status === 'REJECTED') { 
+                    badgeClass = 'bg-danger'; 
+                    icon = 'fa-times-circle'; 
+                    statusTH = 'ถูกปฏิเสธ'; 
+                }
 
                 html += `
                 <div class="col-12 col-md-6">
@@ -465,28 +481,48 @@ window.viewOrderDetails = async function(reqId) {
             const res = await fetchAPI(`get_my_order_details&req_id=${reqId}`, 'GET');
 
             const h = res.header;
-            document.getElementById('modalReqNo').innerText = h.req_number; // innerText is safe
+            document.getElementById('modalReqNo').innerText = h.req_number;
             document.getElementById('modalReqTime').innerHTML = `<i class="far fa-clock"></i> สั่งเบิก: ${escapeHTML(h.req_time)}`;
 
+            const isK2Order = res.items.some(item => item.request_type === 'K2');
+            const k2Refs = [...new Set(res.items.map(i => i.k2_reference_no).filter(Boolean))];
+
             let step1 = 'completed', step2 = '', step3 = '';
-            let step3Icon = 'fa-check', step3Label = 'เสร็จสิ้น';
+            let step2Label = isK2Order ? 'รอเปิด PR' : 'กำลังจัดของ';
+            let step2Icon = isK2Order ? 'fa-hourglass-half' : 'fa-box-open';
+            let step3Icon = isK2Order ? 'fa-file-invoice' : 'fa-check'; 
+            let step3Label = isK2Order ? 'เปิด K2 แล้ว' : 'เสร็จสิ้น';
             
-            if (h.status === 'NEW ORDER') step1 = 'active'; 
-            else if (h.status === 'PREPARING') step2 = 'active';
-            else if (h.status === 'COMPLETED') { step2 = 'completed'; step3 = 'completed'; } 
-            else if (h.status === 'REJECTED') { step2 = 'rejected'; step3 = 'rejected'; step3Icon = 'fa-times'; step3Label = 'ถูกปฏิเสธ'; }
+            if (h.status === 'NEW ORDER') {
+                step1 = 'completed';
+                step2 = 'active';
+            } 
+            else if (h.status === 'PREPARING') {
+                step1 = 'completed'; 
+                step2 = 'active';
+                if (isK2Order) step2Label = 'ทยอยเปิด PR';
+            }
+            else if (h.status === 'COMPLETED') { 
+                step2 = 'completed'; step3 = 'completed'; 
+                if (isK2Order && k2Refs.length > 0) {
+                    step3Label = 'PR: ' + k2Refs.join(', ');
+                }
+            } 
+            else if (h.status === 'REJECTED') { 
+                step2 = 'rejected'; step3 = 'rejected'; step3Icon = 'fa-times'; step3Label = 'ถูกปฏิเสธ'; 
+            }
 
             document.getElementById('trackingTimeline').innerHTML = `
                 <div class="tracking-step ${step1}"><div class="step-icon"><i class="fas fa-clipboard-list"></i></div><div class="step-label">ส่งคำสั่ง</div><div class="step-time">${escapeHTML(h.req_time)}</div></div>
-                <div class="tracking-step ${step2}"><div class="step-icon"><i class="fas fa-box-open"></i></div><div class="step-label">กำลังจัดของ</div><div class="step-time"></div></div>
-                <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${step3Label}</div><div class="step-time">${escapeHTML(h.issue_time || '')}</div></div>
+                <div class="tracking-step ${step2}"><div class="step-icon"><i class="fas ${step2Icon}"></i></div><div class="step-label">${escapeHTML(step2Label)}</div><div class="step-time"></div></div>
+                <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${escapeHTML(step3Label)}</div><div class="step-time">${escapeHTML(h.issue_time || '')}</div></div>
             `;
 
             const rejectAlert = document.getElementById('rejectAlert');
             if (h.status === 'REJECTED') {
                 if (rejectAlert) rejectAlert.classList.remove('d-none');
                 const match = (h.remark || '').match(/\[Reject:\s(.*?)\]/);
-                document.getElementById('rejectReason').innerText = match ? match[1] : 'ไม่ระบุเหตุผล'; // innerText is safe
+                document.getElementById('rejectReason').innerText = match ? match[1] : 'ไม่ระบุเหตุผล'; 
             } else { 
                 if (rejectAlert) rejectAlert.classList.add('d-none'); 
             }
@@ -495,6 +531,7 @@ window.viewOrderDetails = async function(reqId) {
             res.items.forEach(item => {
                 const reqQty = parseFloat(item.qty_requested);
                 const issueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : '-';
+                
                 let issueClass = (issueQty !== '-' && issueQty < reqQty) ? 'text-warning text-dark' : 'text-success';
                 if (issueQty === 0) issueClass = 'text-danger';
 
@@ -506,6 +543,15 @@ window.viewOrderDetails = async function(reqId) {
                     ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${displayCode}')">` 
                     : getIconPlaceholder(safeCategory);
 
+                let k2BadgeHtml = '';
+                if (item.request_type === 'K2') {
+                    if (item.k2_reference_no) {
+                        k2BadgeHtml = `<div class="small fw-bold text-success mt-1"><i class="fas fa-file-invoice"></i> PR No: ${escapeHTML(item.k2_reference_no)}</div>`;
+                    } else {
+                        k2BadgeHtml = `<div class="small fw-bold text-warning text-dark mt-1"><i class="fas fa-hourglass-half"></i> กำลังรอเปิด PR</div>`;
+                    }
+                }
+
                 itemsHtml += `
                 <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
                     <div class="d-flex align-items-center gap-2">
@@ -513,11 +559,12 @@ window.viewOrderDetails = async function(reqId) {
                         <div>
                             <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;" title="${displayDesc}">${displayDesc}</div>
                             <small class="text-primary">${displayCode}</small>
+                            ${k2BadgeHtml}
                         </div>
                     </div>
                     <div class="text-end">
                         <div class="small text-muted mb-1">ขอเบิก: <b>${reqQty}</b></div>
-                        <div class="small fw-bold ${issueClass}">จ่ายจริง: ${issueQty}</div>
+                        ${item.request_type !== 'K2' ? `<div class="small fw-bold ${issueClass}">จ่ายจริง: ${issueQty}</div>` : ''}
                     </div>
                 </div>`;
             });

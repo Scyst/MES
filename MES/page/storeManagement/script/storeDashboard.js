@@ -1,3 +1,4 @@
+//MES/page/storeManagement/script/storeDashboard.js
 "use strict";
 
 let currentItems = [];
@@ -132,7 +133,6 @@ async function loadStockOrders(isSilent) {
                 else { sClass = 'status-rej'; sBadge = '<span class="badge bg-secondary">REJECTED</span>'; }
                 const isActive = (currentReqId == order.id) ? 'active' : '';
 
-                // 🛡️ XSS Protection
                 const safeReqNumber = escapeHTML(order.req_number);
                 const safeRequester = escapeHTML(order.requester_name || 'Unknown');
                 const safeReqTime = escapeHTML(order.req_time);
@@ -199,7 +199,6 @@ window.openStockOrder = async function(reqId) {
             if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
             
-            // 🛡️ XSS Protection
             const safeCategory = escapeHTML(item.item_category || 'OTHER');
             const safeDesc = escapeHTML(item.description || '-');
             const safeItemCode = escapeHTML(item.item_code);
@@ -307,9 +306,6 @@ window.confirmIssue = async function(reqId) {
     });
 };
 
-// ==========================================
-// 🟢 K2 Methods 🟢
-// ==========================================
 async function loadK2Summary(isSilent) {
     const container = document.getElementById('orderListContainer');
     if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning spinner-border-sm"></div></div>';
@@ -330,11 +326,9 @@ async function loadK2Summary(isSilent) {
             res.data.forEach(item => {
                 const isActive = (currentReqId === item.item_code) ? 'active' : '';
                 const isPulse = (filterStatus === 'WAITING') ? 'pulse-alert border-warning' : '';
-                
-                // 🛡️ XSS Protection
                 const safeK2Ref = escapeHTML(item.k2_ref || '');
                 const safeDesc = escapeHTML(item.description || '-');
-                const safeDescJS = safeDesc.replace(/&#39;/g, "\\'"); // กัน error ใน onclick JS param
+                const safeDescJS = safeDesc.replace(/&#39;/g, "\\'");
                 const safeItemCode = escapeHTML(item.item_code);
                 const safeCategory = escapeHTML(item.item_category || 'OTHER');
                 const safeReqCount = escapeHTML(item.request_count);
@@ -375,7 +369,7 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
         : getIconPlaceholder(safeCategory);
         
     document.getElementById('k2_disp_img').innerHTML = imgHtml;
-    document.getElementById('k2_disp_desc').innerText = description; // innerText is safe
+    document.getElementById('k2_disp_desc').innerText = description;
     document.getElementById('k2_disp_sap').innerText = itemCode;
     document.getElementById('input_k2_pr').value = '';
 
@@ -456,9 +450,6 @@ function switchView(view) {
     }
 }
 
-// ==========================================
-// 🟢 Analytics 🟢
-// ==========================================
 window.loadAnalytics = async function() {
     document.getElementById('loadingOverlay').style.display = 'flex';
     

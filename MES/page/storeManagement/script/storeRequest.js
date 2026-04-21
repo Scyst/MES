@@ -97,7 +97,7 @@ async function initData() {
                     if (loc.location_type === 'STORE' || loc.location_type === 'WAREHOUSE') {
                         const btn = document.createElement('div');
                         btn.className = 'btn-custom-select'; 
-                        btn.innerText = loc.location_name; // innerText is safe
+                        btn.innerText = loc.location_name;
                         
                         btn.onclick = () => {
                             storeInput.value = loc.location_id;
@@ -146,8 +146,7 @@ if (searchInp && listDiv) {
 
         matches.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'autocomplete-item'; 
-            // 🛡️ XSS Protection for Autocomplete
+            div.className = 'autocomplete-item';
             const safeSap = escapeHTML(item.sap_no);
             const safePartNo = escapeHTML(item.part_no);
             const safeDesc = escapeHTML(item.part_description || '-');
@@ -277,8 +276,6 @@ function renderTableHTML(data) {
             const requesterName = escapeHTML(row.requester || '-');
             const unitCost = parseFloat(row.unit_cost || 0);
             const totalCost = parseFloat(row.quantity) * unitCost;
-
-            // 🛡️ XSS Protection for Table Data
             const safeSap = escapeHTML(row.sap_no);
             const safePartNo = escapeHTML(row.part_no);
             const safeDesc = escapeHTML(row.part_description || '-');
@@ -490,7 +487,7 @@ function showToast(msg, color) {
     const t = document.getElementById('liveToast');
     const tb = document.getElementById('toastMessage');
     if (t && tb) {
-        tb.innerText = msg; // innerText is safe
+        tb.innerText = msg;
         t.className = `toast align-items-center text-white border-0 ${color.replace('var(--bs-','bg-')}`;
         new bootstrap.Toast(t).show();
     }

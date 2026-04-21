@@ -452,7 +452,6 @@ function toggleMobileCards() {
     }
 }
 
-// --- ระบบโอนย้าย (Stock Transfer) ---
 let createTransferModalInst;
 let confirmTransferModalInst;
 
@@ -464,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(cfModalEl) confirmTransferModalInst = new bootstrap.Modal(cfModalEl);
 
     checkPendingTransfers();
-    setInterval(checkPendingTransfers, 30000); // เช็คยอดรอส่งทุก 30 วิ
+    setInterval(checkPendingTransfers, 30000);
 });
 
 function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
@@ -474,7 +473,6 @@ function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
     document.getElementById('transItemDesc').innerText = itemDesc || '-';
     document.getElementById('transAvailQty').innerText = parseFloat(availQty).toLocaleString();
     
-    // โหลด Location ใส่ Dropdown
     const filterSelect = document.getElementById('locationFilter');
     const fromLoc = document.getElementById('transFromLoc');
     const toLoc = document.getElementById('transToLoc');
@@ -487,7 +485,6 @@ function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
             fromLoc.add(new Option(opt.text, opt.value));
             toLoc.add(new Option(opt.text, opt.value));
             
-            // ตั้งค่า Default ปลายทางเป็น Shipping ถ้ามีคำว่า Shipping
             if(opt.text.toUpperCase().includes('SHIPPING')) {
                 toLoc.value = opt.value;
             }
@@ -514,7 +511,7 @@ async function submitTransferRequest(e) {
         showToast(res.message, 'var(--bs-success)');
         createTransferModalInst.hide();
         checkPendingTransfers();
-        loadDashboardData(); // อัปเดตยอด Pending ทันที
+        loadDashboardData();
     }
 }
 
@@ -535,30 +532,26 @@ async function checkPendingTransfers() {
     } catch (e) { console.error(e); }
 }
 
-// หน่วงเวลาพิมพ์ค้นหาใน Modal 0.5 วิ
 let pendingSearchTimer;
 document.getElementById('pendingSearch')?.addEventListener('input', () => {
     clearTimeout(pendingSearchTimer);
     pendingSearchTimer = setTimeout(() => { loadPendingTransfers(); }, 500);
 });
 
-// เพิ่มตัวแปรสำหรับคุม Pagination ของ Modal
 let pendingCurrentPage = 1;
 let pendingRowsPerPage = 100;
 let pendingTotalPages = 1;
 
-// อัปเดตฟังก์ชัน open ให้รีเซ็ตหน้ากลับไปหน้า 1 เสมอ
 function openConfirmTransferModal() {
     document.getElementById('pendingTypeFilter').value = 'ALL'; 
     document.getElementById('pendingSearch').value = ''; 
     document.getElementById('selectAllTransfers').checked = false;
-    pendingCurrentPage = 1; // รีเซ็ตหน้า
+    pendingCurrentPage = 1;
     updateBulkButton();
     confirmTransferModalInst.show();
     loadPendingTransfers();
 }
 
-// อัปเดตฟังก์ชันโหลดข้อมูล ให้ส่ง page และ limit ไปด้วย
 async function loadPendingTransfers() {
     const tbody = document.getElementById('pendingTransferTbody');
     const typeFilter = document.getElementById('pendingTypeFilter').value;
@@ -569,7 +562,6 @@ async function loadPendingTransfers() {
     updateBulkButton();
 
     try {
-        // ส่งตัวแปร page และ limit ไปที่ API
         const res = await fetchAPI(`get_pending_transfers&type=${typeFilter}&search=${searchStr}&page=${pendingCurrentPage}&limit=${pendingRowsPerPage}`, 'GET');
         tbody.innerHTML = '';
         
@@ -610,7 +602,6 @@ async function loadPendingTransfers() {
             tbody.innerHTML += tr;
         });
 
-        // วาด Pagination
         if (res.pagination) {
             pendingTotalPages = res.pagination.total_pages || 1;
             renderPendingPagination(res.pagination.total_records);
@@ -621,7 +612,6 @@ async function loadPendingTransfers() {
     }
 }
 
-// ฟังก์ชันวาดปุ่ม Pagination
 function renderPendingPagination(totalRecords) {
     const start = totalRecords === 0 ? 0 : ((pendingCurrentPage - 1) * pendingRowsPerPage) + 1;
     const end = Math.min(pendingCurrentPage * pendingRowsPerPage, totalRecords);
@@ -650,14 +640,12 @@ function changePendingPage(page, event) {
     loadPendingTransfers();
 }
 
-// ฟังก์ชัน Select All
 function toggleSelectAllTransfers(checkbox) {
     const checkboxes = document.querySelectorAll('.transfer-checkbox');
     checkboxes.forEach(cb => cb.checked = checkbox.checked);
     updateBulkButton();
 }
 
-// อัปเดตจำนวนและแสดงปุ่ม Bulk
 function updateBulkButton() {
     const checkedCount = document.querySelectorAll('.transfer-checkbox:checked').length;
     const btnApprove = document.getElementById('btnBulkApprove');
@@ -671,7 +659,6 @@ function updateBulkButton() {
     }
 }
 
-// ยิง API Bulk Approve
 async function bulkProcessTransfer(status) {
     const checkboxes = document.querySelectorAll('.transfer-checkbox:checked');
     const transferIds = Array.from(checkboxes).map(cb => cb.value);

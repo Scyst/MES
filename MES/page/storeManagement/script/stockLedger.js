@@ -10,13 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLocations();
     loadLedgerData();
 
-    // Event Listeners สำหรับตัวกรองทั้งหมด
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadLedgerData(); });
     document.getElementById('typeFilter')?.addEventListener('change', () => { currentPage = 1; loadLedgerData(); });
     document.getElementById('filterStartDate')?.addEventListener('change', () => { currentPage = 1; loadLedgerData(); });
     document.getElementById('filterEndDate')?.addEventListener('change', () => { currentPage = 1; loadLedgerData(); });
-    
-    // หน่วงเวลาพิมพ์ค้นหา 0.5 วิ (Debounce)
     document.getElementById('filterSearch')?.addEventListener('input', () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
@@ -55,14 +52,12 @@ async function loadLedgerData() {
         const queryParams = `get_stock_ledger&start_date=${startDate}&end_date=${endDate}&location_id=${locId}&type_filter=${typeFilter}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
 
-        // อัปเดตกรอบ KPI ด้านบน
         if (result.kpi) {
             document.getElementById('kpiTotalTrans').innerText = parseFloat(result.kpi.total_trans || 0).toLocaleString();
             document.getElementById('kpiTotalIn').innerText = parseFloat(result.kpi.total_in || 0).toLocaleString();
             document.getElementById('kpiTotalOut').innerText = parseFloat(result.kpi.total_out || 0).toLocaleString();
         }
 
-        // กรณีไม่พบข้อมูล
         if (!result.data || result.data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i><br>ไม่พบประวัติความเคลื่อนไหวในช่วงเวลานี้</td></tr>';
             document.getElementById('paginationControls').innerHTML = '';
@@ -75,15 +70,13 @@ async function loadLedgerData() {
         result.data.forEach((row, index) => {
             const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
             const qty = parseFloat(row.quantity);
-            const timeStr = escapeHTML(row.transaction_timestamp.substring(0, 16)); // ตัดเอาแค่วันและเวลา
+            const timeStr = escapeHTML(row.transaction_timestamp.substring(0, 16));
             
-            // จัดการแสดงผล IN / OUT
             let inQty = '-';
             let outQty = '-';
             if (qty > 0) inQty = `<span class="text-in">+${qty.toLocaleString()}</span>`;
             if (qty < 0) outQty = `<span class="text-out">${qty.toLocaleString()}</span>`;
 
-            // จัดการแสดงผล Location (ถ้าเป็นการโอนย้าย ให้แสดง ต้นทาง -> ปลายทาง)
             let locDisplay = '-';
             if (row.from_loc && row.to_loc) {
                 locDisplay = `${escapeHTML(row.from_loc)} <i class="fas fa-arrow-right text-muted mx-1"></i> ${escapeHTML(row.to_loc)}`;
@@ -93,7 +86,6 @@ async function loadLedgerData() {
                 locDisplay = `<i class="fas fa-arrow-up text-danger me-1"></i> ${escapeHTML(row.from_loc)}`;
             }
 
-            // จัดการสี Badge ของ Type
             let typeBadge = 'bg-secondary';
             if (row.transaction_type.includes('RECEIPT')) typeBadge = 'bg-success';
             if (row.transaction_type.includes('CONSUMPTION') || row.transaction_type.includes('SCRAP')) typeBadge = 'bg-danger';
