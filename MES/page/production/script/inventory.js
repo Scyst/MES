@@ -41,11 +41,17 @@ function initializeFilters() {
     const dateStr = now.toISOString().split('T')[0];
 
     if (savedFilters) {
-        const filters = JSON.parse(savedFilters);
-        document.getElementById('filterSearch').value = filters.search_term || '';
-        document.getElementById('filterCountType').value = filters.count_type || '';
-        document.getElementById('filterStartDate').value = filters.startDate || dateStr;
-        document.getElementById('filterEndDate').value = filters.endDate || dateStr;
+        try {
+            const filters = JSON.parse(savedFilters);
+            document.getElementById('filterSearch').value = filters.search_term || '';
+            document.getElementById('filterCountType').value = filters.count_type || '';
+            document.getElementById('filterStartDate').value = filters.startDate || dateStr;
+            document.getElementById('filterEndDate').value = filters.endDate || dateStr;
+        } catch(e) {
+            // ดัก Error กรณี Cache พัง
+            document.getElementById("filterStartDate").value = dateStr;
+            document.getElementById("filterEndDate").value = dateStr;
+        }
     } else {
         document.getElementById("filterStartDate").value = dateStr;
         document.getElementById("filterEndDate").value = dateStr;
@@ -57,29 +63,14 @@ function handleFilterChange() {
     const activeTabId = document.querySelector('#mainTab .nav-link.active')?.id;
     if (!activeTabId) return;
 
-    // Reset page to 1 on any filter change
     switch (activeTabId) {
-        case 'production-variance-tab':
-            fetchProductionVarianceReport(1);
-            break;
-        case 'wip-by-lot-tab':
-            fetchWipReportByLot(1);
-            break;
-        case 'entry-history-tab':
-            fetchReceiptHistory(1);
-            break;
-        case 'production-history-tab':
-            fetchProductionHistory(1);
-            break;
-        case 'wip-onhand-tab':
-            fetchWipOnHandReport(1);
-            break;
-        case 'stock-count-tab':
-            fetchStockInventoryReport(1);
-            break;
-        case 'transaction-log-tab':
-            fetchAllTransactions(1);
-            break;
+        case 'production-variance-tab': fetchProductionVarianceReport(1); break;
+        case 'wip-by-lot-tab': fetchWipReportByLot(1); break;
+        case 'entry-history-tab': fetchReceiptHistory(1); break;
+        case 'production-history-tab': fetchProductionHistory(1); break;
+        case 'wip-onhand-tab': fetchWipOnHandReport(1); break;
+        case 'stock-count-tab': fetchStockInventoryReport(1); break;
+        case 'transaction-log-tab': fetchAllTransactions(1); break;
     }
 }
 
@@ -87,9 +78,7 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
     try {
         let url = `${endpoint}?action=${action}`;
         if (params) {
-            const encodeParam = (key, value) => {
-                return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-            };
+            const encodeParam = (key, value) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
             const paramStrings = Object.entries(params).flatMap(([key, value]) => {
                 if (Array.isArray(value)) {
                     return value.map(item => encodeParam(key, item));
@@ -97,9 +86,7 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
                     return [encodeParam(key, value)];
                 }
             });
-            if (paramStrings.length > 0) {
-                 url += `&${paramStrings.join('&')}`;
-            }
+            if (paramStrings.length > 0) url += `&${paramStrings.join('&')}`;
         }
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -109,7 +96,6 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
         }
         if (body) {
             options.headers['Content-Type'] = 'application/json;charset=UTF-8';
-            
             options.body = JSON.stringify(body);
         }
         
@@ -132,11 +118,9 @@ function updateFilterVisibility(activeTabId) {
     const typeEl = document.getElementById('filterCountType');
     const dateRangeEl = document.getElementById('date-range-filter');
 
-    // Default state: hide everything then show what's needed
     searchEl.style.display = 'none';
     typeEl.style.display = 'none';
     dateRangeEl.style.display = 'none';
-    
     searchEl.placeholder = 'Search...'; 
 
     switch (activeTabId) {
@@ -213,20 +197,14 @@ function applyTimeMask(event) {
     const input = event.target;
     let value = input.value.replace(/\D/g, ''); 
 
-    if (value.length > 2) {
-        value = value.substring(0, 2) + ':' + value.substring(2);
-    }
-    if (value.length > 5) {
-        value = value.substring(0, 5) + ':' + value.substring(5);
-    }
+    if (value.length > 2) value = value.substring(0, 2) + ':' + value.substring(2);
+    if (value.length > 5) value = value.substring(0, 5) + ':' + value.substring(5);
     input.value = value.substring(0, 8);
 }
 
 // =================================================================
 // SECTION: NEW INVENTORY SYSTEM FUNCTIONS
 // =================================================================
-
-// --- Functions for Entry History Tab (IN) ---
 
 function setupEntryAutocomplete() {
     const searchInput = document.getElementById('entry_item_search');
@@ -240,7 +218,6 @@ function setupEntryAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedInItem = null;
-        //document.getElementById('entry_item_id').value = '';
 
         if (value.length < 2) return;
 
@@ -258,7 +235,7 @@ function setupEntryAutocomplete() {
                 searchInput.value = `${item.sap_no} | ${item.part_no}`;
                 selectedInItem = item;
                 document.getElementById('entry_item_id').value = item.item_id;
-                updateAvailableStockDisplay(); // <-- เพิ่มบรรทัดนี้
+                updateAvailableStockDisplay();
                 resultsWrapper.innerHTML = '';
             });
             resultsWrapper.appendChild(resultItem);
@@ -267,13 +244,10 @@ function setupEntryAutocomplete() {
     });
 
     document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) {
-            resultsWrapper.style.display = 'none';
-        }
+        if (e.target !== searchInput) resultsWrapper.style.display = 'none';
     });
 }
 
-// --- Functions for Production History Tab (OUT) ---
 function setupProductionAutocomplete() {
     const searchInput = document.getElementById('out_item_search');
     if (!searchInput) return;
@@ -286,7 +260,6 @@ function setupProductionAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedOutItem = null;
-        //document.getElementById('out_item_id').value = '';
 
         if (value.length < 2) return;
 
@@ -310,17 +283,16 @@ function setupProductionAutocomplete() {
         });
         resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
     });
-     document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) {
-            resultsWrapper.style.display = 'none';
-        }
+    
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) resultsWrapper.style.display = 'none';
     });
 }
 
 // =================================================================
 // SECTION: REPORTING FUNCTIONS
 // =================================================================
-// --- Functions for Production Variance Tab ---
+
 async function fetchProductionVarianceReport(page = 1) {
     varianceCurrentPage = page;
     showSpinner();
@@ -363,13 +335,9 @@ function renderProductionVarianceTable(data) {
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
 
-        if (variance < 0) {
-            textColorClass = 'text-danger'; 
-        } else if (variance === 0) {
-            textColorClass = 'text-success';
-        } else {
-            textColorClass = 'text-warning';
-        }
+        if (variance < 0) textColorClass = 'text-danger'; 
+        else if (variance === 0) textColorClass = 'text-success';
+        else textColorClass = 'text-warning';
 
         tr.innerHTML = `
             <td class="text-start" data-label="Location">${row.location_name}</td>
@@ -421,13 +389,9 @@ function renderWipReportByLotTable(data) {
         const variance = parseFloat(row.variance) || 0;
         let textColorClass = '';
 
-        if (variance < 0) {
-            textColorClass = 'text-danger'; 
-        } else if (variance === 0) {
-            textColorClass = 'text-success';
-        } else {
-            textColorClass = 'text-warning';
-        }
+        if (variance < 0) textColorClass = 'text-danger'; 
+        else if (variance === 0) textColorClass = 'text-success';
+        else textColorClass = 'text-warning';
         
         tr.innerHTML = `
             <td class="text-start" data-label="SAP No.">${row.sap_no}</td>
@@ -746,15 +710,12 @@ async function populateModalDatalists() {
             outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
         
-        // 🔽🔽🔽 [เพิ่ม 2 บล็อกนี้] 🔽🔽🔽
-        // (เติม Location ลงใน Edit Modal)
         if (editInFromLocationSelect) {
             editInFromLocationSelect.innerHTML = '<option value="">-- Select Source --</option>' + optionsHtml;
         }
         if (editInToLocationSelect) {
             editInToLocationSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
         }
-        // 🔼🔼🔼 [จบส่วนเพิ่ม] 🔼🔼🔼
         
         if (editOutLocationSelect) {
             editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
@@ -776,17 +737,19 @@ function openAddPartModal() {
     const searchInput = document.getElementById('out_item_search');
     searchInput.value = '';
 
-    // 🛑 [แก้ไข] อ่านจาก Key "_OUT"
-    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT')); 
-    if (lastData) {
-        const locationSelect = document.getElementById('out_location_id');
-        if (locationSelect) locationSelect.value = lastData.location_id || ''; // (แก้ชื่อ key ให้ตรง)
-        searchInput.value = lastData.item_display_text || '';
-        document.getElementById('out_item_id').value = lastData.item_id || '';
-        if (lastData.item_id) {
-            selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+    try {
+        const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT')); 
+        if (lastData) {
+            const locationSelect = document.getElementById('out_location_id');
+            if (locationSelect) locationSelect.value = lastData.location_id || '';
+            searchInput.value = lastData.item_display_text || '';
+            document.getElementById('out_item_id').value = lastData.item_id || '';
+            if (lastData.item_id) {
+                selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+            }
         }
-    }
+    } catch(e) {}
+    
     const now = new Date();
     document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
     new bootstrap.Modal(document.getElementById('addPartModal')).show();
@@ -811,32 +774,33 @@ function openAddEntryModal() {
     const now = new Date();
     document.getElementById('entry_log_date').value = now.toISOString().split('T')[0];
     document.getElementById('entry_log_time').value = now.toTimeString().substring(0, 8);
-    const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
-    if (lastData) {
-        document.getElementById('entry_item_search').value = lastData.item_display_text || '';
-        document.getElementById('entry_item_id').value = lastData.item_id || '';
-        if (lastData.item_id) {
-            selectedInItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+    
+    try {
+        const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
+        if (lastData) {
+            document.getElementById('entry_item_search').value = lastData.item_display_text || '';
+            document.getElementById('entry_item_id').value = lastData.item_id || '';
+            if (lastData.item_id) {
+                selectedInItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+            }
+            if (lastData.from_location_id) {
+                document.getElementById('entry_from_location_id').value = lastData.from_location_id;
+            }
+            if (lastData.to_location_id) {
+                document.getElementById('entry_to_location_id').value = lastData.to_location_id;
+            }
         }
-        if (lastData.from_location_id) {
-            document.getElementById('entry_from_location_id').value = lastData.from_location_id;
-        }
-        if (lastData.to_location_id) {
-            document.getElementById('entry_to_location_id').value = lastData.to_location_id;
-        }
-    }
+    } catch(e) {}
     
     updateAvailableStockDisplay();
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
 }
 
 function lockEntryForm() {
-    // (Input)
     document.getElementById('entry_item_search').readOnly = true;
     document.getElementById('entry_item_search').classList.add('form-control-readonly');
     document.getElementById('entry_lot_no').readOnly = true;
     document.getElementById('entry_lot_no').classList.add('form-control-readonly');
-    // (Select)
     document.getElementById('entry_from_location_id').disabled = true;
     document.getElementById('entry_from_location_id').classList.add('form-control-readonly');
     document.getElementById('entry_to_location_id').disabled = true;
@@ -844,12 +808,10 @@ function lockEntryForm() {
 }
 
 function unlockEntryForm() {
-    // (Input)
     document.getElementById('entry_item_search').readOnly = false;
     document.getElementById('entry_item_search').classList.remove('form-control-readonly');
     document.getElementById('entry_lot_no').readOnly = false;
     document.getElementById('entry_lot_no').classList.remove('form-control-readonly');
-    // (Select)
     document.getElementById('entry_from_location_id').disabled = false;
     document.getElementById('entry_from_location_id').classList.remove('form-control-readonly');
     document.getElementById('entry_to_location_id').disabled = false;
@@ -875,7 +837,6 @@ async function autoFillFromTransferOrder_PC() {
             throw new Error(`This transfer is already ${order.status}.`);
         }
 
-        // --- กรอกข้อมูลลงฟอร์ม ---
         selectedInItem = { 
             item_id: order.item_id, 
             sap_no: order.sap_no, 
@@ -892,7 +853,6 @@ async function autoFillFromTransferOrder_PC() {
         document.getElementById('entry_notes').value = order.notes || '';
         document.getElementById('entry_transfer_uuid').value = order.transfer_uuid;
 
-        // --- ล็อกฟอร์ม ---
         lockEntryForm();
         
         await updateAvailableStockDisplay();
@@ -1022,7 +982,7 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value
     };
-    if (lotNo) params.lot_no = lotNo; // (ยังไม่ได้ใช้ใน backend แต่เผื่อไว้)
+    if (lotNo) params.lot_no = lotNo;
 
     const result = await sendRequest(INVENTORY_API_URL, 'get_variance_details', 'GET', null, params);
 
@@ -1071,17 +1031,13 @@ function openAdjustStockModal(itemData) {
     const modal = document.getElementById('adjustStockModal');
     if (!modal) return;
 
-    // Populate hidden fields
     modal.querySelector('#adjust_item_id').value = itemData.item_id;
-    // location_id อาจมาจากคนละ field name ขึ้นอยู่กับตาราง
     modal.querySelector('#adjust_location_id').value = itemData.location_id || itemData.onhand_location_id; 
 
-    // Populate display fields
     modal.querySelector('#adjust_item_display').value = `${itemData.sap_no} | ${itemData.part_no}`;
     modal.querySelector('#adjust_location_display').value = itemData.location_name;
     modal.querySelector('#adjust_current_onhand').value = parseFloat(itemData.quantity || itemData.total_onhand).toLocaleString();
 
-    // Reset interactive fields
     modal.querySelector('#adjust_physical_count').value = '';
     modal.querySelector('#adjust_notes').value = '';
 
@@ -1091,10 +1047,7 @@ function openAdjustStockModal(itemData) {
 
 async function openSummaryModal() {
     const modalBody = document.getElementById('summaryTableBody');
-    if (!modalBody) {
-        console.error('Summary modal body not found!');
-        return;
-    }
+    if (!modalBody) return;
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
 
     const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
@@ -1109,14 +1062,11 @@ async function openSummaryModal() {
         endDate: document.getElementById('filterEndDate').value,
     };
 
-    // 2. [แก้ไข] เรียก API ใหม่ (get_production_summary)
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_summary', 'GET', null, params);
 
-    // 3. [แก้ไข] ตรวจสอบ result.summary
     if (result.success && result.summary && result.summary.length > 0) {
         modalBody.innerHTML = '';
         
-        // 4. [แก้ไข] วนลูป summary ที่ได้จาก API (ไม่ต้องคำนวณเอง)
         result.summary.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1128,10 +1078,8 @@ async function openSummaryModal() {
             modalBody.appendChild(tr);
         });
 
-        // 5. [แก้ไข] สร้าง Grand Total จาก result.grand_total (ที่ API คำนวณมาให้)
         let overallGrandTotal = 0;
         
-        // (เพิ่มแถวสำหรับแต่ละ Type)
         result.grand_total.forEach(row => {
             const quantity = parseFloat(row.total_quantity) || 0;
             overallGrandTotal += quantity;
@@ -1144,8 +1092,7 @@ async function openSummaryModal() {
             modalBody.appendChild(tr);
         });
 
-        // (เพิ่มแถวสำหรับยอดรวมทั้งหมด)
-        if (result.grand_total.length > 1) { // แสดงยอดรวมก็ต่อเมื่อมีมากกว่า 1 Type
+        if (result.grand_total.length > 1) { 
             const tr = document.createElement('tr');
             tr.className = 'table-dark fw-bold';
             tr.innerHTML = `
@@ -1154,7 +1101,6 @@ async function openSummaryModal() {
             `;
             modalBody.appendChild(tr);
         }
-
     } else {
         modalBody.innerHTML = '<tr><td colspan="4" class="text-center">No summary data available.</td></tr>';
     }
@@ -1162,10 +1108,7 @@ async function openSummaryModal() {
 
 async function openHistorySummaryModal() {
     const modalBody = document.getElementById('historySummaryTableBody');
-    if (!modalBody) {
-        console.error('History Summary modal body not found!');
-        return;
-    }
+    if (!modalBody) return;
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
     
     const summaryModal = new bootstrap.Modal(document.getElementById('historySummaryModal'));
@@ -1214,20 +1157,23 @@ async function openHistorySummaryModal() {
 async function handleAdjustStockSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const data = Object.fromEntries(new FormData(form).entries());
-
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true; // 🛡️ Prevent Double Submit
     showSpinner();
+    
     try {
+        const data = Object.fromEntries(new FormData(form).entries());
         const result = await sendRequest(INVENTORY_API_URL, 'adjust_single_stock', 'POST', data);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
 
         if (result.success) {
             bootstrap.Modal.getInstance(document.getElementById('adjustStockModal')).hide();
-            // Refresh the currently active tab's data
             handleFilterChange();
         }
     } finally {
         hideSpinner();
+        submitBtn.disabled = false; // ปลดล็อกปุ่ม
     }
 }
 
@@ -1237,9 +1183,7 @@ async function updateAvailableStockDisplay() {
 
     display.textContent = '--';
     display.classList.remove('text-danger');
-    if (!selectedInItem || !fromLocationId) {
-        return;
-    }
+    if (!selectedInItem || !fromLocationId) return;
 
     display.textContent = 'Loading...';
     const result = await sendRequest(INVENTORY_API_URL, 'get_stock_onhand', 'GET', null, { 
@@ -1263,8 +1207,11 @@ async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const action = form.dataset.action;
+    const submitBtn = form.querySelector('button[type="submit"]');
     
+    submitBtn.disabled = true; // 🛡️ Prevent Double Submit
     showSpinner();
+    
     try {
         if (action === 'addPart') {
             const formData = new FormData(form);
@@ -1288,7 +1235,6 @@ async function handleFormSubmit(event) {
             };
             
             const transactions = [];
-            
             const qtyFg = parseFloat(data.quantity_fg) || 0;
             const qtyHold = parseFloat(data.quantity_hold) || 0;
             const qtyScrap = parseFloat(data.quantity_scrap) || 0;
@@ -1329,7 +1275,6 @@ async function handleFormSubmit(event) {
         } else if (action === 'addEntry') {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-            
             const transferUuid = data.transfer_uuid; 
 
             if (transferUuid) {
@@ -1385,9 +1330,7 @@ async function handleFormSubmit(event) {
             if (action === 'editEntry') await fetchReceiptHistory(receiptHistoryCurrentPage);
             if (action === 'editProduction') await fetchProductionHistory(productionHistoryCurrentPage);
         }
-        hideSpinner();
     } catch (error) {
-        hideSpinner();
         const errorMessage = error.message || 'An unexpected error occurred.';
         
         if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage.includes("ไม่พบใบโอนย้ายนี้")) {
@@ -1398,11 +1341,7 @@ async function handleFormSubmit(event) {
             g_CurrentPCTransferOrder = null;
             selectedInItem = null; 
 
-        } else if (errorMessage === 'SCAN_ALREADY_USED') {
-            showToast("Scan ID นี้ถูกใช้งานไปแล้ว", 'var(--bs-warning)');
-            
         } else if (errorMessage.includes('วัตถุดิบในจุดจัดเก็บ')) {
-            // 🚨 จัดรูปแบบ Error "วัตถุดิบไม่พอ" ให้อ่านง่ายๆ บนหน้าจอ PC
             const errorHtml = errorMessage.replace(/\n/g, '<br>');
             Swal.fire({
                 title: '<i class="fas fa-exclamation-triangle text-warning"></i> วัตถุดิบไม่พอผลิต!',
@@ -1420,7 +1359,6 @@ async function handleFormSubmit(event) {
                 allowOutsideClick: false
             });
         } else {
-            // 🚨 Error ทั่วไปอื่นๆ (ใช้ Swal ป้องกัน Admin พลาดมองไม่เห็น Toast)
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
                 text: errorMessage,
@@ -1428,28 +1366,10 @@ async function handleFormSubmit(event) {
                 confirmButtonColor: '#d33'
             });
         }
-    }
-}
-
-async function deleteTransaction(transactionId, type) {
-    if (!confirm('Are you sure you want to delete this transaction record? This action cannot be undone.')) {
-        return;
-    }
-    showSpinner();
-    try {
-        const result = await sendRequest(INVENTORY_API_URL, 'delete_transaction', 'POST', { transaction_id: transactionId });
-        showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        if (result.success) {
-            if (type === 'entry') {
-                fetchReceiptHistory(receiptHistoryCurrentPage);
-            } else if (type === 'production') {
-                fetchProductionHistory(productionHistoryCurrentPage);
-            }
-        }
     } finally {
         hideSpinner();
+        submitBtn.disabled = false; // ปลดล็อกปุ่มให้กดใหม่ได้เมื่อ Error หรือเสร็จสิ้น
     }
-    console.warn("deleteTransaction is deprecated. Use deleteOrReverseTransaction via handleDeleteFromModal.");
 }
 
 function setEntryModalReadOnly(isReadOnly) {
@@ -1569,49 +1489,6 @@ async function editTransaction(transactionId, type) {
     }
 }
 
-async function openHourlySummaryModal() {
-    const modalBody = document.getElementById('hourlySummaryTableBody');
-    if (!modalBody) {
-        console.error('Hourly Summary modal body not found!');
-        return;
-    }
-    modalBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading hourly data...</td></tr>';
-
-    const summaryModal = new bootstrap.Modal(document.getElementById('hourlySummaryModal'));
-    summaryModal.show();
-
-    // 1. รวบรวมฟิลเตอร์
-    // (สำคัญ: SP ตัวนี้ใช้แค่ 'endDate' เป็นหลัก)
-    const params = {
-        endDate: document.getElementById('filterEndDate').value,
-        // (เราสามารถส่งฟิลเตอร์อื่นไปได้ ถ้า SP รองรับ)
-        // search_term: document.getElementById('filterSearch').value, 
-    };
-
-    // 2. เรียก API ใหม่
-    const result = await sendRequest(INVENTORY_API_URL, 'get_production_hourly_summary', 'GET', null, params);
-
-    // 3. แสดงผลข้อมูล
-    if (result.success && result.data && result.data.length > 0) {
-        modalBody.innerHTML = '';
-        
-        result.data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="text-center">${row.hour}</td>
-                <td class="text-end">${parseFloat(row.availability).toFixed(1)}%</td>
-                <td class="text-end">${parseFloat(row.performance).toFixed(1)}%</td>
-                <td class="text-end">${parseFloat(row.quality).toFixed(1)}%</td>
-                <td class="text-end fw-bold">${parseFloat(row.oee).toFixed(1)}%</td>
-            `;
-            modalBody.appendChild(tr);
-        });
-
-    } else {
-        modalBody.innerHTML = '<tr><td colspan="5" class="text-center">No hourly data available for this date.</td></tr>';
-    }
-}
-
 async function openHourlyProductionModal() {
     const tableHead = document.getElementById('hourly-production-thead');
     const tableBody = document.getElementById('hourly-production-tbody');
@@ -1642,7 +1519,7 @@ async function openHourlyProductionModal() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_hourly_counts', 'GET', null, params);
 
     if (!result.success || !result.data || result.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No hourly data available for this date/filter.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No production data found for this period.</td></tr>';
         return;
     }
 
@@ -1762,7 +1639,6 @@ async function openHourlyProductionModal() {
     }
 }
 
-// --- Mobile FAB Logic ---
 function updateMobileFab(activeTabId) {
     const fabContainer = document.getElementById('mobileFabContainer');
     const fabBtn = document.getElementById('mobileFabBtn');
@@ -1812,13 +1688,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
+    
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (event) => {
             const activeTabId = event.target.id;
             updateFilterVisibility(activeTabId);
             handleFilterChange();
             updateControls(activeTabId);
-            
             updateMobileFab(activeTabId);
         });
     });
@@ -1829,7 +1705,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilterVisibility(activeTabId);
         handleFilterChange();
         updateControls(activeTabId);
-        
         updateMobileFab(activeTabId);
     }
 

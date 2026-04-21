@@ -184,10 +184,9 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                 </div>
 
                 <div class="collapse mb-3" id="advancedFilters">
-                    <div class="card card-body bg-light border-0 p-3 shadow-sm">
+                    <div class="card card-body bg-light border-0 p-0 shadow-sm">
                         <div class="row g-2 align-items-start">
                             <div class="col-12 col-md-auto">
-                                <label class="form-label small text-muted mb-1">ประเภทรายการ</label>
                                 <select class="form-select form-select-sm shadow-sm fw-bold text-primary border-primary" id="filterCountType">
                                     <option value="">All Types</option>
                                     <option value="FG">FG (ดี)</option>
@@ -197,7 +196,6 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                             </div>
                             
                             <div class="col-12 col-md-auto" id="date-range-filter">
-                                <label class="form-label small text-muted mb-1">ช่วงวันที่</label>
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
                                     <input type="date" class="form-control fw-bold" id="filterStartDate">

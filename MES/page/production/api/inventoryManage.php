@@ -1,4 +1,5 @@
 <?php
+// MES/page/production/api/inventoryManage.php
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
@@ -203,8 +204,8 @@ try {
                     ) AS model,
                     REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
                     loc.location_name, t.reference_id as lot_no, u.username AS created_by, t.notes,
-                    FORMAT(t.start_time, N'hh\\:mm\\:ss') as start_time,
-                    FORMAT(t.end_time, N'hh\\:mm\\:ss') as end_time,
+                    FORMAT(t.start_time, N'hh\:mm\:ss') as start_time,
+                    FORMAT(t.end_time, N'hh\:mm\:ss') as end_time,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.from_location_id) as source_location,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location
                 " . $baseSql . "
@@ -622,7 +623,7 @@ try {
                     throw new Exception("ไม่สามารถผลิตได้! สินค้า [{$fg['sap_no']}] ไม่มีสูตรการผลิต (BOM) ที่อยู่ในสถานะ ACTIVE");
                 }
 
-                // 3. เตรียมรายการวัตถุดิบที่จะตัด (อนุญาตให้ติดลบได้ ไม่เช็ค Onhand Quantity)
+                // 3. เตรียมรายการวัตถุดิบที่จะตัด
                 $rmToDeduct = [];
                 
                 if (in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
@@ -638,10 +639,14 @@ try {
 
                 // เตรียมข้อมูลการเพิ่ม FG
                 $trans_type = 'PRODUCTION_' . $count_type;
+                
+                // [🔥 แก้ไข] รวมค่า RM + PKG + SUB ให้ครบถ้วน
+                $fg_mat_total = (float)($fg['Cost_RM'] ?? 0) + (float)($fg['Cost_PKG'] ?? 0) + (float)($fg['Cost_SUB'] ?? 0);
+                
                 $fg_oh_total = (float)$fg['Cost_OH_Machine'] + (float)$fg['Cost_OH_Utilities'] + (float)$fg['Cost_OH_Indirect'] + 
                                (float)$fg['Cost_OH_Staff'] + (float)$fg['Cost_OH_Accessory'] + (float)$fg['Cost_OH_Others'];
 
-                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot (ไม่มี Computed Columns)
+                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot
                 $insertFgLogStmt = $pdo->prepare("
                     INSERT INTO " . TRANSACTIONS_TABLE . " (
                         parameter_id, quantity, transaction_type, transaction_timestamp, 
@@ -661,7 +666,7 @@ try {
                 $insertFgLogStmt->execute([
                     $fg_item_id, $quantity, $trans_type, $timestamp, $location_id, $lot_no, $currentUser['id'], $notes,
                     $start_time, $end_time, 
-                    $fg['StandardPrice'], $fg['Cost_RM'], $fg['Cost_DL'], 
+                    $fg['StandardPrice'], $fg_mat_total, /* เปลี่ยนเป็น $fg_mat_total */ $fg['Cost_DL'], 
                     $fg_oh_total, 
                     $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'],
                     $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
@@ -694,7 +699,7 @@ try {
                     $consume_note = "Auto-consumed for production ID: {$transaction_id}";
 
                     foreach ($rmToDeduct as $rm) {
-                        // 6.1 อัปเดตสต็อก RM (ยอมให้ตัดจนติดลบได้)
+                        // 6.1 อัปเดตสต็อก RM
                         $updateStockStmt->execute([$rm['item']['component_item_id'], $location_id, -$rm['req_qty']]);
                         
                         $oh_total = (float)$rm['item']['Cost_OH_Machine'] + (float)$rm['item']['Cost_OH_Utilities'] + (float)$rm['item']['Cost_OH_Indirect'] + 
@@ -810,26 +815,60 @@ try {
                     $new_count_type = strtoupper($input['count_type'] ?? '');
                     $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
-                    $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=? WHERE transaction_id=?";
+                    // [🔥 แก้ไข] ดึงข้อมูล FG มาอัปเดต Snapshot ให้ถูกต้อง
+                    $fgStmt = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WHERE item_id = ?");
+                    $fgStmt->execute([$old_transaction['parameter_id']]);
+                    $fg = $fgStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    $fg_mat_total = (float)($fg['Cost_RM'] ?? 0) + (float)($fg['Cost_PKG'] ?? 0) + (float)($fg['Cost_SUB'] ?? 0);
+                    $fg_oh_total = (float)($fg['Cost_OH_Machine'] ?? 0) + (float)($fg['Cost_OH_Utilities'] ?? 0) + (float)($fg['Cost_OH_Indirect'] ?? 0) + 
+                                   (float)($fg['Cost_OH_Staff'] ?? 0) + (float)($fg['Cost_OH_Accessory'] ?? 0) + (float)($fg['Cost_OH_Others'] ?? 0);
+
+                    $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " 
+                                  SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=?,
+                                      std_price_snapshot=?, std_price_usd_snapshot=?, std_cost_mat_snapshot=?, std_cost_dl_snapshot=?, std_cost_oh_snapshot=?,
+                                      std_cost_oh_machine_snapshot=?, std_cost_oh_util_snapshot=?, std_cost_oh_indirect_snapshot=?, std_cost_oh_staff_snapshot=?, std_cost_oh_acc_snapshot=?, std_cost_oh_other_snapshot=?
+                                  WHERE transaction_id=?";
                     $updateStmt = $pdo->prepare($updateSql);
-                    $updateStmt->execute([$new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $transaction_id]);
+                    $updateStmt->execute([
+                        $new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time,
+                        $fg['StandardPrice'], $fg['Price_USD'], $fg_mat_total, $fg['Cost_DL'], $fg_oh_total,
+                        $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'], $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
+                        $transaction_id
+                    ]);
 
                     $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
 
                     if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
-                        $bomSql = "SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND bom_status = 'ACTIVE'";
+                        // [🔥 แก้ไข] ดึงค่าต้นทุน Snapshot ของ Components มาด้วย
+                        $bomSql = "SELECT b.component_item_id, b.quantity_required, c.Cost_RM, c.Cost_DL, c.Cost_OH_Machine, c.Cost_OH_Utilities, c.Cost_OH_Indirect, c.Cost_OH_Staff, c.Cost_OH_Accessory, c.Cost_OH_Others 
+                                   FROM " . BOM_TABLE . " b JOIN " . ITEMS_TABLE . " c ON b.component_item_id = c.item_id 
+                                   WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'";
                         $bomStmt = $pdo->prepare($bomSql);
                         $bomStmt->execute([$old_transaction['parameter_id']]);
                         $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
                         if (!empty($components)) {
-                            $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?)";
+                            // [🔥 แก้ไข] Insert Snapshot ของ RM เข้าไปด้วย
+                            $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (
+                                            parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time,
+                                            std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot,
+                                            std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot
+                                        ) VALUES (?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                             $consumeStmt = $pdo->prepare($consumeSql);
                             $consume_note = "Auto-consumed for production ID: {$transaction_id}";
 
                             foreach ($components as $comp) {
                                 $qty_to_consume = bcmul($new_quantity, $comp['quantity_required'], 6);
-                                $consumeStmt->execute([$comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time]);
+                                $oh_total = (float)$comp['Cost_OH_Machine'] + (float)$comp['Cost_OH_Utilities'] + (float)$comp['Cost_OH_Indirect'] + 
+                                            (float)$comp['Cost_OH_Staff'] + (float)$comp['Cost_OH_Accessory'] + (float)$comp['Cost_OH_Others'];
+
+                                $consumeStmt->execute([
+                                    $comp['component_item_id'], -$qty_to_consume, $new_location_id, $currentUser['id'], $consume_note, $new_lot_no, $new_timestamp, $new_start_time, $new_end_time,
+                                    $comp['Cost_RM'], $comp['Cost_DL'], $oh_total,
+                                    $comp['Cost_OH_Machine'], $comp['Cost_OH_Utilities'], $comp['Cost_OH_Indirect'],
+                                    $comp['Cost_OH_Staff'], $comp['Cost_OH_Accessory'], $comp['Cost_OH_Others']
+                                ]);
                                 $spStock->execute([$comp['component_item_id'], $new_location_id, -$qty_to_consume]);
                             }
                         }
