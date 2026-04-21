@@ -42,12 +42,38 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
         .table-settings th { font-size: 0.75rem; letter-spacing: 0.5px; vertical-align: middle; text-transform: uppercase; }
         .table-settings td { font-size: 0.8rem; vertical-align: middle; }
         
-        /* Custom Nav Pills */
+        /* 🚀 1. ปรับแต่ง Nav Pills ให้เลื่อนซ้าย-ขวาได้บนมือถือ */
+        .nav-pills.custom-pills {
+            flex-wrap: nowrap; /* ห้ามตกบรรทัด */
+            overflow-x: auto; /* เลื่อนซ้ายขวาได้ */
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch; /* ปัดลื่นๆ บนมือถือ */
+            border-bottom: 1px solid var(--bs-border-color);
+            padding-bottom: 0.5rem;
+            -ms-overflow-style: none; /* ซ่อน scrollbar IE/Edge */
+            scrollbar-width: none; /* ซ่อน scrollbar Firefox */
+        }
+        .nav-pills.custom-pills::-webkit-scrollbar {
+            display: none; /* ซ่อน scrollbar Chrome/Safari */
+        }
+        .nav-pills.custom-pills .nav-item {
+            flex: 0 0 auto; /* ป้องกันแท็บหดตัว */
+        }
         .nav-pills.custom-pills .nav-link {
             color: #6c757d; font-weight: 600; font-size: 0.85rem; border-radius: 50rem; padding: 0.4rem 1rem; margin-right: 0.5rem;
+            white-space: nowrap; /* ห้ามข้อความในแท็บตกบรรทัด */
         }
         .nav-pills.custom-pills .nav-link.active {
             background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; border: 1px solid #0d6efd;
+        }
+
+        /* 🚀 ซ่อน Scrollbar แนวนอนของปุ่ม Toolbar บนมือถือ */
+        .custom-scrollbar-hide {
+            -ms-overflow-style: none; /* IE/Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .custom-scrollbar-hide::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
         }
 
         /* FAB Button (Mobile Only) */
@@ -60,6 +86,49 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
             }
             .fab-btn:active { transform: scale(0.95); }
         }
+
+        /* 🚀 ซ่อนข้อความปุ่มใน Toolbar บนมือถือ และขยายให้เต็มพื้นที่ (รองรับปุ่ม Dropdown) */
+        @media (max-width: 767.98px) {
+            #dynamic-button-group {
+                width: 100%;
+            }
+            
+            /* 🚀 บังคับให้ปุ่มธรรมดา หรือ กล่อง Dropdown ขยายตัวแบ่งพื้นที่เท่าๆ กัน */
+            #dynamic-button-group > .btn,
+            #dynamic-button-group > .dropdown {
+                flex: 1;
+                display: flex;
+            }
+            
+            #dynamic-button-group .btn {
+                width: 100%; /* ให้ปุ่มกางเต็มกล่องครอบ */
+                font-size: 0 !important; 
+                padding: 0.45rem 0 !important; 
+                min-width: 36px; 
+                text-align: center;
+                justify-content: center;
+                display: flex;
+                align-items: center;
+            }
+            
+            #dynamic-button-group .btn i,
+            #dynamic-button-group .btn svg {
+                font-size: 1.1rem !important; 
+                margin: 0 !important; 
+            }
+
+            /* ซ่อนลูกศร Dropdown (Caret) เพราะเราโชว์แค่ไอคอนแล้ว */
+            #dynamic-button-group .dropdown-toggle::after {
+                display: none !important;
+            }
+
+            /* 🚀 ป้องกัน Dropdown Menu โดนบัง */
+            #dynamic-button-group .dropdown-menu {
+                z-index: 1060 !important;
+                position: absolute !important;
+            }
+        }
+
         @media (min-width: 992px) { .fab-container { display: none !important; } }
     </style>
 </head>
@@ -73,7 +142,7 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
             
             <div class="bg-white border rounded-3 shadow-sm p-3 mb-3">
                 
-                <ul class="nav nav-pills custom-pills mb-3 flex-nowrap overflow-auto hide-scrollbar pb-2 border-bottom" id="mainTab" role="tablist">
+                <ul class="nav nav-pills custom-pills mb-3" id="mainTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="production-history-tab" data-bs-toggle="tab" data-bs-target="#production-history-pane" type="button" role="tab"><i class="fas fa-industry me-1"></i> Production (OUT)</button>
                     </li>
@@ -98,31 +167,47 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                 </ul>
 
                 <div class="row g-2 align-items-center mb-3">
-                    <div class="col-12 col-xl-8 d-flex flex-wrap align-items-center gap-2">
-                        <div class="input-group input-group-sm shadow-sm" style="max-width: 300px;">
+                    
+                    <div class="col-12 col-md-6 col-lg-5 d-flex gap-2">
+                        <div class="input-group input-group-sm shadow-sm flex-grow-1">
                             <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" class="form-control border-start-0" id="filterSearch" placeholder="Search SAP, Part No..." autocomplete="off">
                         </div>
                         
-                        <select class="form-select form-select-sm w-auto shadow-sm fw-bold text-primary border-primary" id="filterCountType" style="display:none;">
-                            <option value="">All Types</option>
-                            <option value="FG">FG (ดี)</option>
-                            <option value="HOLD">HOLD (รอตรวจสอบ)</option>
-                            <option value="SCRAP">SCRAP (ของเสีย)</option>
-                        </select>
-
-                        <div class="input-group input-group-sm w-auto shadow-sm" id="date-range-filter" style="display:none;">
-                            <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
-                            <input type="date" class="form-control fw-bold" id="filterStartDate">
-                            <span class="input-group-text bg-light text-muted">to</span>
-                            <input type="date" class="form-control fw-bold" id="filterEndDate">
-                        </div>
+                        <button class="btn btn-sm btn-outline-primary shadow-sm text-nowrap" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false">
+                            <i class="fas fa-filter"></i> <span class="d-none d-sm-inline">ตัวกรอง</span>
+                        </button>
                     </div>
 
-                    <div class="col-12 col-xl-4 text-xl-end d-flex justify-content-xl-end gap-2 flex-wrap" id="dynamic-button-group">
+                    <div class="col-12 col-md-6 col-lg-7 d-flex justify-content-start justify-content-md-end gap-2" id="dynamic-button-group">
                         </div>
                 </div>
 
+                <div class="collapse mb-3" id="advancedFilters">
+                    <div class="card card-body bg-light border-0 p-3 shadow-sm">
+                        <div class="row g-2 align-items-start">
+                            <div class="col-12 col-md-auto">
+                                <label class="form-label small text-muted mb-1">ประเภทรายการ</label>
+                                <select class="form-select form-select-sm shadow-sm fw-bold text-primary border-primary" id="filterCountType">
+                                    <option value="">All Types</option>
+                                    <option value="FG">FG (ดี)</option>
+                                    <option value="HOLD">HOLD (รอตรวจสอบ)</option>
+                                    <option value="SCRAP">SCRAP (ของเสีย)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-auto" id="date-range-filter">
+                                <label class="form-label small text-muted mb-1">ช่วงวันที่</label>
+                                <div class="input-group input-group-sm shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
+                                    <input type="date" class="form-control fw-bold" id="filterStartDate">
+                                    <span class="input-group-text bg-light text-muted">to</span>
+                                    <input type="date" class="form-control fw-bold" id="filterEndDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div id="dynamic-summary-container" class="mb-3"></div>
 
                 <div class="tab-content" id="mainTabContent">
