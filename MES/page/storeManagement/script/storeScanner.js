@@ -102,9 +102,9 @@ async function loadLocations() {
                     wipSelected = true;
                 }
 
-                const filterOption = `<option value="${loc.location_id}">${escapeHTML(loc.location_name)}</option>`;
-                const receiveOption = `<option value="${loc.location_id}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
-                const issueOption = `<option value="${loc.location_id}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
+                const filterOption = `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
+                const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
+                const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
                 
                 if (filterSelect) filterSelect.innerHTML += filterOption;
                 if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
@@ -227,7 +227,7 @@ window.executeTraceScan = async function() {
         }
     } catch (err) {
         document.getElementById('traceLoading').classList.add('d-none');
-        Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${serialNo}`, 'warning').then(() => {
+        Swal.fire('ไม่พบข้อมูล', `ไม่มีประวัติของแท็ก: ${escapeHTML(serialNo)}`, 'warning').then(() => {
             setTimeout(() => {
                 resumeScanning();
             }, 300);
@@ -265,8 +265,8 @@ function renderTraceData(data) {
             let sign = typeColor === 'text-success' ? '+' : '-';
             tbody.innerHTML += `
                 <tr>
-                    <td class="py-2 px-3"><div class="fw-bold text-dark">${row.transaction_timestamp.substring(11, 16)}</div><small class="text-muted">${row.transaction_timestamp.substring(0, 10)}</small></td>
-                    <td class="py-2"><span class="badge bg-light text-dark border">${row.transaction_type}</span></td>
+                    <td class="py-2 px-3"><div class="fw-bold text-dark">${escapeHTML(row.transaction_timestamp.substring(11, 16))}</div><small class="text-muted">${escapeHTML(row.transaction_timestamp.substring(0, 10))}</small></td>
+                    <td class="py-2"><span class="badge bg-light text-dark border">${escapeHTML(row.transaction_type)}</span></td>
                     <td class="text-end fw-bold ${typeColor} py-2 px-3 fs-6">${sign}${parseFloat(row.quantity).toLocaleString()}</td>
                 </tr>
             `;
@@ -453,6 +453,8 @@ window.renderMasterPalletTag = function(masterData) {
     let isMixed = (masterData.distinct_items > 1);
     let displayItemNo = isMixed ? `MIXED PARTS` : escapeHTML(masterData.item_no || masterData.part_no || 'MIXED');
     let displayDesc = isMixed ? 'พาเลทรวมสินค้าหลายชนิด' : escapeHTML(masterData.part_description || masterData.description_ref || '');
+    let safeMasterPalletNo = escapeHTML(masterData.master_pallet_no || '');
+    let safeMasterPalletId = safeMasterPalletNo.replace(/[^a-zA-Z0-9-]/g, '');
 
     let tagHTML = `
     <div class="tag-card">
@@ -463,7 +465,7 @@ window.renderMasterPalletTag = function(masterData) {
             <table class="t-table">
                 <tr>
                     <td style="width: 55%;"><b>Total QTY:</b> <span class="t-hl">${parseFloat(masterData.total_qty).toLocaleString()}</span></td>
-                    <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${masterData.total_tags || 1}</span></td>
+                    <td style="width: 45%;"><b>Tags:</b> <span style="font-size: 1rem; font-weight: bold;">${escapeHTML(masterData.total_tags || 1)}</span></td>
                 </tr>
                 <tr>
                     <td colspan="2"><b>PO:</b> <span style="display:inline-block; max-width:115px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;" title="${escapeHTML(masterData.po_number || '-')}">${escapeHTML(masterData.po_number || '-')}</span></td>
@@ -479,15 +481,15 @@ window.renderMasterPalletTag = function(masterData) {
             </table>
         </div>
         <div class="tag-qr">
-            <div id="qr-${masterData.master_pallet_no}"></div>
-            <div class="t-serial">${masterData.master_pallet_no}</div>
+            <div id="qr-${safeMasterPalletId}"></div>
+            <div class="t-serial">${safeMasterPalletNo}</div>
         </div>
     </div>`;
     
     printArea.innerHTML = tagHTML;
     
     if(typeof QRCode !== 'undefined') {
-        new QRCode(document.getElementById(`qr-${masterData.master_pallet_no}`), { text: masterData.master_pallet_no, width: 85, height: 85 });
+        new QRCode(document.getElementById(`qr-${safeMasterPalletId}`), { text: masterData.master_pallet_no, width: 85, height: 85 });
     }
 
     setTimeout(() => {

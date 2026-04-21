@@ -132,15 +132,21 @@ async function loadStockOrders(isSilent) {
                 else { sClass = 'status-rej'; sBadge = '<span class="badge bg-secondary">REJECTED</span>'; }
                 const isActive = (currentReqId == order.id) ? 'active' : '';
 
+                // 🛡️ XSS Protection
+                const safeReqNumber = escapeHTML(order.req_number);
+                const safeRequester = escapeHTML(order.requester_name || 'Unknown');
+                const safeReqTime = escapeHTML(order.req_time);
+                const safeTotalItems = escapeHTML(order.total_items);
+
                 html += `
                 <div class="order-card ${sClass} ${isActive} ${isPulse} w-100 p-2" id="order-card-${order.id}" onclick="openStockOrder(${order.id})">
                     <div class="d-flex justify-content-between align-items-start mb-1">
-                        <span class="fw-bold text-dark mb-0 small">${order.req_number}</span><div>${sBadge}</div>
+                        <span class="fw-bold text-dark mb-0 small">${safeReqNumber}</span><div>${sBadge}</div>
                     </div>
-                    <div class="small text-muted mb-1 text-truncate" style="font-size:0.75rem;"><i class="fas fa-user me-1 text-primary"></i> ${order.requester_name || 'Unknown'}</div>
+                    <div class="small text-muted mb-1 text-truncate" style="font-size:0.75rem;"><i class="fas fa-user me-1 text-primary"></i> ${safeRequester}</div>
                     <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.7rem;">
-                        <span><i class="far fa-clock me-1"></i> ${order.req_time}</span>
-                        <span class="fw-bold text-secondary">${order.total_items} Items</span>
+                        <span><i class="far fa-clock me-1"></i> ${safeReqTime}</span>
+                        <span class="fw-bold text-secondary">${safeTotalItems} Items</span>
                     </div>
                 </div>`;
             });
@@ -164,7 +170,7 @@ window.openStockOrder = async function(reqId) {
         const h = res.header; currentItems = res.items;
 
         document.getElementById('disp_req_no').innerText = h.req_number;
-        document.getElementById('disp_time').innerHTML = `<i class="far fa-clock"></i> ${h.req_time}`;
+        document.getElementById('disp_time').innerHTML = `<i class="far fa-clock"></i> ${escapeHTML(h.req_time)}`;
         document.getElementById('disp_requester').innerText = h.requester_name || '-';
         document.getElementById('disp_remark').innerText = h.remark || '-';
         
@@ -192,7 +198,12 @@ window.openStockOrder = async function(reqId) {
             let issueClass = 'text-success';
             if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
-            const safeCategory = item.item_category || 'OTHER';
+            
+            // 🛡️ XSS Protection
+            const safeCategory = escapeHTML(item.item_category || 'OTHER');
+            const safeDesc = escapeHTML(item.description || '-');
+            const safeItemCode = escapeHTML(item.item_code);
+
             const imgHtml = item.image_path 
                 ? `<img src="../../uploads/items/${item.image_path}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
                 : getIconPlaceholder(safeCategory);
@@ -203,9 +214,9 @@ window.openStockOrder = async function(reqId) {
                     <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 w-100">
                         <div class="flex-shrink-0">${imgHtml}</div>
                         <div class="min-w-0 flex-grow-1">
-                            <div class="fw-bold text-dark text-truncate mb-1 small" title="${item.description}">${item.description}</div>
+                            <div class="fw-bold text-dark text-truncate mb-1 small" title="${safeDesc}">${safeDesc}</div>
                             <div class="small text-muted" style="font-size:0.75rem;">
-                                SAP: ${item.item_code} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลัง: ${onHand}</span>` : ''}
+                                SAP: ${safeItemCode} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลัง: ${onHand}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -223,7 +234,7 @@ window.openStockOrder = async function(reqId) {
                             <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
                                 <input type="number" 
                                     class="text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
-                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${item.item_code}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
                                     style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
                             </div>
                         </div>
@@ -242,7 +253,6 @@ window.openStockOrder = async function(reqId) {
         const actionBar = document.getElementById('action-bar-mobile');
         let btnHtml = '';
         if (h.status === 'NEW ORDER') {
-            // 🛡️ ใส่ ID ให้ปุ่มเพื่อให้ fetchAPI ไปปิดการทำงานกัน User กดย้ำ
             btnHtml = `<button id="btnRejectOrder" class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> Reject</button>
                        <button id="btnAcceptOrder" class="btn btn-sm btn-warning text-dark fw-bold px-4" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>`;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
@@ -320,18 +330,29 @@ async function loadK2Summary(isSilent) {
             res.data.forEach(item => {
                 const isActive = (currentReqId === item.item_code) ? 'active' : '';
                 const isPulse = (filterStatus === 'WAITING') ? 'pulse-alert border-warning' : '';
+                
+                // 🛡️ XSS Protection
+                const safeK2Ref = escapeHTML(item.k2_ref || '');
+                const safeDesc = escapeHTML(item.description || '-');
+                const safeDescJS = safeDesc.replace(/&#39;/g, "\\'"); // กัน error ใน onclick JS param
+                const safeItemCode = escapeHTML(item.item_code);
+                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+                const safeReqCount = escapeHTML(item.request_count);
+                const safeTotalQty = escapeHTML(item.total_qty);
+                const safeImgPath = item.image_path ? escapeHTML(item.image_path) : 'null';
+
                 let badge = filterStatus === 'WAITING' 
                             ? `<span class="badge bg-warning text-dark">รอเปิด K2</span>`
-                            : `<span class="badge bg-success"><i class="fas fa-check"></i> ${item.k2_ref}</span>`;
-                const safeCategory = item.item_category || 'OTHER';
+                            : `<span class="badge bg-success"><i class="fas fa-check"></i> ${safeK2Ref}</span>`;
+
                 html += `
-                <div class="order-card ${isActive} ${isPulse} w-100 p-2" id="k2-card-${item.item_code}" onclick="openK2Detail('${item.item_code}', '${item.description.replace(/'/g, "\\'")}', '${safeCategory}', '${item.image_path}')">
+                <div class="order-card ${isActive} ${isPulse} w-100 p-2" id="k2-card-${safeItemCode}" onclick="openK2Detail('${safeItemCode}', '${safeDescJS}', '${safeCategory}', '${safeImgPath}')">
                     <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="pe-2 text-truncate" style="max-width: 70%;"><span class="fw-bold text-dark mb-0 small text-truncate">${item.description}</span></div><div>${badge}</div>
+                        <div class="pe-2 text-truncate" style="max-width: 70%;"><span class="fw-bold text-dark mb-0 small text-truncate" title="${safeDesc}">${safeDesc}</span></div><div>${badge}</div>
                     </div>
-                    <div class="small text-primary mb-1 fw-bold" style="font-size:0.75rem;">SAP: ${item.item_code}</div>
+                    <div class="small text-primary mb-1 fw-bold" style="font-size:0.75rem;">SAP: ${safeItemCode}</div>
                     <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.7rem;">
-                        <span><i class="fas fa-users me-1 text-info"></i> ${item.request_count} ใบเบิก</span><span class="fw-bold text-warning-emphasis">รวม: ${item.total_qty}</span>
+                        <span><i class="fas fa-users me-1 text-info"></i> ${safeReqCount} ใบเบิก</span><span class="fw-bold text-warning-emphasis">รวม: ${safeTotalQty}</span>
                     </div>
                 </div>`;
             });
@@ -347,13 +368,14 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
     if (activeCard) { activeCard.classList.add('active'); activeCard.classList.remove('pulse-alert'); }
     document.getElementById('current_req_id').value = itemCode;
 
-    const safeCategory = category || 'OTHER';
-    const imgHtml = imgPath && imgPath !== 'null' 
-        ? `<img src="../../uploads/items/${imgPath}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
+    const safeCategory = escapeHTML(category || 'OTHER');
+    const safeImgPath = escapeHTML(imgPath || '');
+    const imgHtml = safeImgPath && safeImgPath !== 'null' 
+        ? `<img src="../../uploads/items/${safeImgPath}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
         : getIconPlaceholder(safeCategory);
         
     document.getElementById('k2_disp_img').innerHTML = imgHtml;
-    document.getElementById('k2_disp_desc').innerText = description;
+    document.getElementById('k2_disp_desc').innerText = description; // innerText is safe
     document.getElementById('k2_disp_sap').innerText = itemCode;
     document.getElementById('input_k2_pr').value = '';
 
@@ -371,7 +393,7 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
         let html = ''; let totalQty = 0;
         res.data.forEach(u => {
             totalQty += parseFloat(u.qty_requested);
-            html += `<tr><td class="text-muted">${u.req_date}</td><td class="fw-bold text-dark">${u.req_number}</td><td><i class="fas fa-user text-primary me-1"></i>${u.fullname || 'Unknown'}</td><td class="text-end fw-bold text-warning-emphasis">${parseFloat(u.qty_requested)}</td></tr>`;
+            html += `<tr><td class="text-muted">${escapeHTML(u.req_date)}</td><td class="fw-bold text-dark">${escapeHTML(u.req_number)}</td><td><i class="fas fa-user text-primary me-1"></i>${escapeHTML(u.fullname || 'Unknown')}</td><td class="text-end fw-bold text-warning-emphasis">${parseFloat(u.qty_requested)}</td></tr>`;
         });
         document.getElementById('k2UsersList').innerHTML = html;
         document.getElementById('k2_disp_total').innerText = totalQty;

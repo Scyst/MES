@@ -35,7 +35,7 @@ async function loadLocations() {
         
         if (result.data && result.data.locations) {
             result.data.locations.forEach(loc => {
-                filterSelect.innerHTML += `<option value="${loc.location_id}">${escapeHTML(loc.location_name)}</option>`;
+                filterSelect.innerHTML += `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
             });
         }
     } catch (err) { console.error("Failed to load locations:", err); }
@@ -75,7 +75,7 @@ async function loadLedgerData() {
         result.data.forEach((row, index) => {
             const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
             const qty = parseFloat(row.quantity);
-            const timeStr = row.transaction_timestamp.substring(0, 16); // ตัดเอาแค่วันและเวลา
+            const timeStr = escapeHTML(row.transaction_timestamp.substring(0, 16)); // ตัดเอาแค่วันและเวลา
             
             // จัดการแสดงผล IN / OUT
             let inQty = '-';
@@ -175,8 +175,6 @@ function exportLedgerToExcel() {
 
     const exportUrl = `api/api_store.php?action=get_stock_ledger&start_date=${startDate}&end_date=${endDate}&location_id=${locId}&type_filter=${typeFilter}&search=${searchStr}&export=true`;
     
-    // เด้งหน้าต่างใหม่เพื่อดาวน์โหลด Excel (ฝั่ง API ต้องสร้างไฟล์ Excel หรือให้ Front-end ใช้ Library แปลง)
-    // สำหรับโครงสร้างเดิมของคุณใช้วิธีเรียก API แล้วใช้ JS แปลงเป็น Excel
     Swal.fire({
         title: 'กำลังเตรียมไฟล์ Excel...',
         text: 'กรุณารอสักครู่',

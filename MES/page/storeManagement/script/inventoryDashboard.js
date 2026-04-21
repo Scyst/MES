@@ -111,7 +111,6 @@ async function loadDashboardData() {
                 </tr>
             `;
 
-            // 🔥 แก้ไขส่วนปุ่มในการ์ดมือถือ (รวมเป็น btn-group ก้อนเดียว)
             htmlCards += `
                 <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
                     <div class="card-body p-3">
@@ -348,7 +347,7 @@ async function openApprovalModal() {
             const tr = `
                 <tr>
                     <td class="text-muted small d-none d-md-table-cell">${row.counted_at.substring(0,16)}</td>
-                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${row.item_no}</td>
+                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</td>
                     <td>${escapeHTML(row.location_name)}</td>
                     <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold text-primary fs-6">${parseFloat(row.actual_qty).toLocaleString()}</td>
@@ -416,7 +415,7 @@ async function openCcHistoryModal() {
             const tr = `
                 <tr>
                     <td class="text-muted small d-none d-md-table-cell">${timeStr}</td>
-                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${row.item_no}</td>
+                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</td>
                     <td>${escapeHTML(row.location_name)}</td>
                     <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold text-dark">${parseFloat(row.actual_qty).toLocaleString()}</td>

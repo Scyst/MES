@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('filterStartDate')?.addEventListener('change', () => { currentPage = 1; loadHistory(); });
     document.getElementById('filterEndDate')?.addEventListener('change', () => { currentPage = 1; loadHistory(); });
-    document.getElementById('statusFilter')?.addEventListener('change', () => { currentPage = 1; loadHistory(); }); // ดักจับตอนเปลี่ยนสถานะ
+    document.getElementById('statusFilter')?.addEventListener('change', () => { currentPage = 1; loadHistory(); }); 
 
     loadHistory();
 
@@ -52,7 +52,6 @@ function openManualAddModal() {
 async function submitManualAdd(e) {
     e.preventDefault();
     
-    // Client-side Validation 
     const qty = parseFloat(document.getElementById('man_qty').value);
     const packQty = parseInt(document.getElementById('man_pack').value);
     
@@ -68,28 +67,26 @@ async function submitManualAdd(e) {
         return;
     }
 
-    // วนลูปจำลอง Data ให้อยู่ในฟอร์แมตเดียวกับการแกะไฟล์ Excel 
     let manualData = [];
     for(let i = 0; i < packQty; i++) {
         manualData.push({
             item_no: item_no,
             po_number: po_number,
-            category: document.getElementById('man_category').value.trim() || 'MANUAL_ENTRY', // 英文名称
-            des: document.getElementById('man_desc').value.trim(),                            // Des.
-            received_date: document.getElementById('man_date').value,                         // Date
-            warehouse_no: document.getElementById('man_inv').value.trim(),                    // Invoice No.
-            qty: qty,                                                                         // Carton/Package
-            pallet_no: document.getElementById('man_pallet').value.trim(),                    // Pallet/Carton
-            ctn_number: document.getElementById('man_ctn').value.trim(),                      // CTN Number
-            week: document.getElementById('man_week').value.trim(),                           // Week
-            remark: document.getElementById('man_remark').value.trim()                        // Remark
+            category: document.getElementById('man_category').value.trim() || 'MANUAL_ENTRY', 
+            des: document.getElementById('man_desc').value.trim(),                            
+            received_date: document.getElementById('man_date').value,                         
+            warehouse_no: document.getElementById('man_inv').value.trim(),                    
+            qty: qty,                                                                         
+            pallet_no: document.getElementById('man_pallet').value.trim(),                    
+            ctn_number: document.getElementById('man_ctn').value.trim(),                      
+            week: document.getElementById('man_week').value.trim(),                           
+            remark: document.getElementById('man_remark').value.trim()                        
         });
     }
 
     const formData = new FormData();
     formData.append('data', JSON.stringify(manualData)); 
 
-    // ใช้ API ตัวเดียวกับ Import Excel เพื่อทำการรับเข้าและสร้าง Tag (Re-use SP logic)
     const res = await fetchAPI('import_excel', 'POST', formData, 'btnSubmitManual');
     
     if (res) {
@@ -124,7 +121,7 @@ async function loadHistory() {
     
     const startDate = document.getElementById('filterStartDate')?.value || '';
     const endDate = document.getElementById('filterEndDate')?.value || '';
-    const statusFilter = document.getElementById('statusFilter')?.value || 'ALL'; // อ่านค่า Status
+    const statusFilter = document.getElementById('statusFilter')?.value || 'ALL'; 
     const search = encodeURIComponent(document.getElementById('searchInput')?.value.trim() || '');
     
     try {
@@ -151,13 +148,26 @@ async function loadHistory() {
 
         result.data.forEach(row => {
             let badgeClass = row.status === 'AVAILABLE' ? 'bg-success' : (row.status === 'EMPTY' ? 'bg-secondary' : (row.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-info'));
-            let displayTime = row.created_at ? row.created_at.substring(0,16) : '-';
+            let displayTime = row.created_at ? escapeHTML(row.created_at.substring(0,16)) : '-';
             let receiveDate = '-';
             if (row.actual_receive_date) {
-                receiveDate = typeof formatDateForPrint === 'function' ? formatDateForPrint(row.actual_receive_date) : String(row.actual_receive_date).substring(0,10);
+                receiveDate = typeof formatDateForPrint === 'function' ? escapeHTML(formatDateForPrint(row.actual_receive_date)) : escapeHTML(String(row.actual_receive_date).substring(0,10));
             }
             let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
             
+            // 🛡️ XSS Protection Variables
+            const safeSerialNo = escapeHTML(row.serial_no);
+            const safeMasterPallet = row.master_pallet_no ? escapeHTML(row.master_pallet_no) : '';
+            const safeItemNo = escapeHTML(row.item_no);
+            const safeCategory = escapeHTML(row.category || '');
+            const safePoNumber = escapeHTML(row.po_number || '-');
+            const safeWarehouse = escapeHTML(row.warehouse_no || '-');
+            const safePallet = escapeHTML(row.pallet_no || '-');
+            const safeCtn = escapeHTML(row.ctn_number || '-');
+            const safeWeek = escapeHTML(row.week_no || '-');
+            const safeRemark = escapeHTML(row.remark || '');
+            const safeStatus = escapeHTML(row.status === 'AVAILABLE' ? 'COMPLETED' : row.status);
+
             // 1. สร้าง ROW สำหรับ Desktop
             htmlTable += `
                 <tr class="align-middle">
@@ -165,32 +175,32 @@ async function loadHistory() {
                     <td class="text-muted"><small>${displayTime}</small></td>
                     <td>${receiveDate}</td>
                     <td class="text-center fw-bold text-primary">
-                        ${escapeHTML(row.serial_no)}
-                        ${row.master_pallet_no ? `<br><span class="badge bg-primary bg-opacity-10 text-primary border border-primary mt-1" title="Pallet Tag"><i class="fas fa-boxes"></i> ${escapeHTML(row.master_pallet_no)}</span>` : ''}
+                        ${safeSerialNo}
+                        ${safeMasterPallet ? `<br><span class="badge bg-primary bg-opacity-10 text-primary border border-primary mt-1" title="Pallet Tag"><i class="fas fa-boxes"></i> ${safeMasterPallet}</span>` : ''}
                     </td>
-                    <td class="text-truncate text-center" style="max-width: 100px;" title="${escapeHTML(row.item_no)} | ${escapeHTML(row.category || '')}">
-                        ${escapeHTML(row.item_no)} <br> <small class="text-muted">${escapeHTML(row.category || '')}</small>
+                    <td class="text-truncate text-center" style="max-width: 100px;" title="${safeItemNo} | ${safeCategory}">
+                        ${safeItemNo} <br> <small class="text-muted">${safeCategory}</small>
                     </td>
-                    <td class="text-truncate text-center" style="max-width: 350px;">${escapeHTML(row.po_number) || '-'}</td>
-                    <td class="text-truncate text-center" style="max-width: 120px;">${escapeHTML(row.warehouse_no) || '-'}</td>
-                    <td class="text-center">${escapeHTML(row.pallet_no) || '-'} / ${escapeHTML(row.ctn_number) || '-'}</td>
-                    <td class="text-center">${escapeHTML(row.week_no) || '-'}</td>
+                    <td class="text-truncate text-center" style="max-width: 350px;">${safePoNumber}</td>
+                    <td class="text-truncate text-center" style="max-width: 120px;">${safeWarehouse}</td>
+                    <td class="text-center">${safePallet} / ${safeCtn}</td>
+                    <td class="text-center">${safeWeek}</td>
                     <td class="text-center fw-bold">${parseFloat(row.qty_per_pallet).toLocaleString()}</td>
-                    <td class="text-center text-truncate text-danger small" style="max-width: 250px;" title="${escapeHTML(row.remark || '')}">${escapeHTML(row.remark || '')}</td>
+                    <td class="text-center text-truncate text-danger small" style="max-width: 250px;" title="${safeRemark}">${safeRemark}</td>
                     <td class="text-center">
                         ${row.print_count > 0 ? `<span class="badge bg-info text-dark"><i class="fas fa-print me-1"></i>${row.print_count}</span>` : `<span class="badge bg-light text-muted border"><i class="fas fa-print"></i> 0</span>`}
                     </td>
-                    <td class="text-center"><span class="badge ${badgeClass}">${escapeHTML(row.status === 'AVAILABLE' ? 'COMPLETED' : row.status)}</span></td>
+                    <td class="text-center"><span class="badge ${badgeClass}">${safeStatus}</span></td>
                     <td class="text-center align-middle">
                         <div class="dropdown">
                             <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.9rem;">
                                 <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag</a></li>
-                                ${row.master_pallet_no ? `<li><a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${escapeHTML(row.master_pallet_no)}'); return false;"><i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet</a></li>` : ''}
+                                ${safeMasterPallet ? `<li><a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${safeMasterPallet}'); return false;"><i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet</a></li>` : ''}
                                 ${typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM ? `
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="editTag('${rowDataEncoded}'); return false;"><i class="fas fa-edit text-primary fa-fw me-2"></i> แก้ไขข้อมูล</a></li>
-                                <li><a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${escapeHTML(row.serial_no)}'); return false;"><i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล</a></li>
+                                <li><a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="deleteTag('${safeSerialNo}'); return false;"><i class="fas fa-trash fa-fw me-2"></i> ลบข้อมูล</a></li>
                                 ` : ''}
                             </ul>
                         </div>
@@ -206,37 +216,37 @@ async function loadHistory() {
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center gap-2">
                                 <input class="form-check-input mt-0 row-checkbox" type="checkbox" value="${rowDataEncoded}" onchange="syncCheckbox(this); updateBatchPrintBtn()" style="transform: scale(1.3);">
-                                <span class="badge ${badgeClass}">${escapeHTML(row.status === 'AVAILABLE' ? 'COMPLETED' : row.status)}</span>
+                                <span class="badge ${badgeClass}">${safeStatus}</span>
                             </div>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-light border-0 shadow-sm" data-bs-toggle="dropdown" style="width: 30px; height: 30px; border-radius: 50%;"><i class="fas fa-ellipsis-v"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                                     <li><a class="dropdown-item fw-bold py-2" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print me-2 text-dark"></i>พิมพ์ Tag</a></li>
-                                    ${row.master_pallet_no ? `<li><a class="dropdown-item fw-bold text-primary py-2 bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${escapeHTML(row.master_pallet_no)}'); return false;"><i class="fas fa-boxes me-2"></i>พิมพ์ Pallet</a></li>` : ''}
+                                    ${safeMasterPallet ? `<li><a class="dropdown-item fw-bold text-primary py-2 bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${safeMasterPallet}'); return false;"><i class="fas fa-boxes me-2"></i>พิมพ์ Pallet</a></li>` : ''}
                                     ${typeof CAN_MANAGE_RM !== 'undefined' && CAN_MANAGE_RM ? `
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item fw-bold py-2" href="#" onclick="editTag('${rowDataEncoded}'); return false;"><i class="fas fa-edit me-2 text-primary"></i>แก้ไขข้อมูล</a></li>
-                                    <li><a class="dropdown-item fw-bold text-danger py-2" href="#" onclick="deleteTag('${escapeHTML(row.serial_no)}'); return false;"><i class="fas fa-trash me-2"></i>ลบข้อมูล</a></li>
+                                    <li><a class="dropdown-item fw-bold text-danger py-2" href="#" onclick="deleteTag('${safeSerialNo}'); return false;"><i class="fas fa-trash me-2"></i>ลบข้อมูล</a></li>
                                     ` : ''}
                                 </ul>
                             </div>
                         </div>
                         
-                        <h6 class="fw-bold text-primary mb-1" style="font-size: 1.1rem;">${escapeHTML(row.serial_no)}</h6>
+                        <h6 class="fw-bold text-primary mb-1" style="font-size: 1.1rem;">${safeSerialNo}</h6>
                         
                         <div class="row g-2 text-muted mt-1" style="font-size: 0.85rem;">
-                            <div class="col-8 text-truncate fw-bold text-dark"><i class="fas fa-cube me-1 text-secondary"></i> ${escapeHTML(row.item_no)}</div>
+                            <div class="col-8 text-truncate fw-bold text-dark"><i class="fas fa-cube me-1 text-secondary"></i> ${safeItemNo}</div>
                             <div class="col-4 text-end fw-bold text-dark" style="font-size: 1rem;">${parseFloat(row.qty_per_pallet).toLocaleString()}</div>
                             
-                            <div class="col-6 text-truncate"><i class="fas fa-file-invoice me-1"></i> ${escapeHTML(row.po_number) || '-'}</div>
+                            <div class="col-6 text-truncate"><i class="fas fa-file-invoice me-1"></i> ${safePoNumber}</div>
                             <div class="col-6 text-end"><i class="far fa-calendar-alt me-1"></i> ${receiveDate}</div>
                             
-                            <div class="col-12 text-truncate"><i class="fas fa-pallet me-1"></i> Pallet: ${escapeHTML(row.pallet_no) || '-'} / CTN: ${escapeHTML(row.ctn_number) || '-'}</div>
+                            <div class="col-12 text-truncate"><i class="fas fa-pallet me-1"></i> Pallet: ${safePallet} / CTN: ${safeCtn}</div>
                             
-                            ${row.remark ? `
+                            ${safeRemark ? `
                             <div class="col-12 mt-2">
                                 <div class="p-2 bg-danger bg-opacity-10 text-danger rounded border border-danger border-opacity-25 small">
-                                    <i class="fas fa-exclamation-circle me-1"></i> ${escapeHTML(row.remark)}
+                                    <i class="fas fa-exclamation-circle me-1"></i> ${safeRemark}
                                 </div>
                             </div>` : ''}
                         </div>
@@ -255,8 +265,8 @@ async function loadHistory() {
 
     } catch (err) {
         console.error("Load History Error:", err); 
-        if (tbody) tbody.innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i> โหลดประวัติล้มเหลว: ${err.message}</td></tr>`;
-        if (cardContainer) cardContainer.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-50"></i><br>โหลดประวัติล้มเหลว<br><small>${err.message}</small></div>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="14" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i> โหลดประวัติล้มเหลว: ${escapeHTML(err.message)}</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-50"></i><br>โหลดประวัติล้มเหลว<br><small>${escapeHTML(err.message)}</small></div>`;
     }
 }
 
@@ -294,7 +304,6 @@ function changePage(page, event) {
     loadHistory();
 }
 
-// อัปเดตให้รองรับ Status Filter
 window.exportToExcel = async function() {
     const startDate = document.getElementById('filterStartDate')?.value || '';
     const endDate = document.getElementById('filterEndDate')?.value || '';
@@ -744,7 +753,7 @@ async function logPrintStatus(serials) {
 window.deleteTag = function(serialNo) {
     Swal.fire({
         title: 'ยืนยันการลบข้อมูล?',
-        text: `คุณต้องการลบ Tag: ${serialNo} ใช่หรือไม่?`,
+        text: `คุณต้องการลบ Tag: ${escapeHTML(serialNo)} ใช่หรือไม่?`,
         icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
         confirmButtonText: 'ใช่, ลบทิ้งเลย!', cancelButtonText: 'ยกเลิก'
     }).then(async (result) => {

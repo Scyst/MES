@@ -9,13 +9,12 @@ let hasMoreItems = true;
 let searchTimeout;
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCatalog('ALL'); // ตอนโหลดครั้งแรก อาจจะส่ง string ไปแต่ฟังก์ชันรับ Boolean ไว้ ควรรันแค่ loadCatalog(false) เพื่อความชัวร์ แต่แบบนี้ JS ประเมินเป็น true (โหลดข้อมูล) ก็ไม่เป็นไร
+    loadCatalog('ALL'); 
 
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            // แก้ไข: ส่งพารามิเตอร์เดียว (isLoadMore = false)
             searchTimeout = setTimeout(() => { loadCatalog(false); }, 500);
         });
     }
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && !isLoading && hasMoreItems) {
-                // แก้ไข: ส่งพารามิเตอร์เดียว (isLoadMore = true)
                 loadCatalog(true);
             }
         }, { rootMargin: "200px" });
@@ -195,12 +193,16 @@ window.loadCatalog = async function(isLoadMore = false) {
             res.data.forEach(item => {
                 const onHand = parseFloat(item.onhand_qty || 0);
                 const isOutOfStock = onHand <= 0;
-                const safeDesc = item.description ? item.description.replace(/'/g, "\\'") : 'N/A';
-                const safeCategory = item.item_category || 'OTHER'; 
+                
+                // 🛡️ ป้องกัน XSS & การหลุด Quote ของ JS Function Call
+                const displayDesc = escapeHTML(item.description || '-');
+                const displayCode = escapeHTML(item.item_code);
+                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+                const safeDescForJS = escapeHTML(item.description || 'N/A').replace(/&#39;/g, "\\'"); 
                 
                 const imgHtml = item.image_path 
-                        ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" id="img_element_${item.item_code}" class="product-img" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${item.item_code}')">` 
-                        : getPlaceholderHTML(safeCategory, item.item_code, `img_element_${item.item_code}`);
+                        ? `<img src="../../uploads/items/${item.image_path}?v=${new Date().getTime()}" id="img_element_${displayCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${displayCode}')">` 
+                        : getPlaceholderHTML(safeCategory, displayCode, `img_element_${displayCode}`);
 
                 const badgeHtml = isOutOfStock 
                     ? `<span class="badge bg-danger stock-badge px-2 py-1"><i class="fas fa-times-circle me-1"></i> สินค้าหมด</span>`
@@ -208,8 +210,8 @@ window.loadCatalog = async function(isLoadMore = false) {
 
                 const editBtnHtml = typeof CAN_MANAGE_IMAGE !== 'undefined' && CAN_MANAGE_IMAGE 
                     ? `<div class="position-absolute top-0 end-0 p-2 z-3 d-flex gap-1">
-                           <button class="btn btn-sm btn-light border shadow-sm text-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="openEditItemModal('${item.item_code}')" title="ตั้งค่าข้อมูลสินค้า"><i class="fas fa-cog"></i></button>
-                           <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="triggerImageUpload('${item.item_code}')" title="เปลี่ยน/อัปโหลดรูปภาพ"><i class="fas fa-camera"></i></button>
+                           <button class="btn btn-sm btn-light border shadow-sm text-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="openEditItemModal('${displayCode}')" title="ตั้งค่าข้อมูลสินค้า"><i class="fas fa-cog"></i></button>
+                           <button class="btn btn-sm btn-light border shadow-sm text-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="triggerImageUpload('${displayCode}')" title="เปลี่ยน/อัปโหลดรูปภาพ"><i class="fas fa-camera"></i></button>
                        </div>` : '';
 
                 const cardOpacity = isOutOfStock ? 'opacity: 0.85;' : '';
@@ -218,19 +220,19 @@ window.loadCatalog = async function(isLoadMore = false) {
                 html += `
                 <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2 col-xxl-2">
                     <div class="product-card" style="${cardOpacity}">
-                        <div class="product-img-wrapper" id="img_wrapper_${item.item_code}">
+                        <div class="product-img-wrapper" id="img_wrapper_${displayCode}">
                             ${badgeHtml}${editBtnHtml}${imgHtml}
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
                         <div class="card-body-flex pt-2">
-                            <div class="small text-primary fw-bold mb-1">SAP: ${item.item_code}</div>
-                            <div class="product-title" title="${item.description}">${item.description || '-'}</div>
+                            <div class="small text-primary fw-bold mb-1">SAP: ${displayCode}</div>
+                            <div class="product-title" title="${displayDesc}">${displayDesc}</div>
                             <div class="mt-auto pt-3 border-top">
                                 <div class="input-group input-group-sm shadow-sm">
-                                    <button class="btn btn-light border px-2 text-secondary fw-bold" type="button" onclick="updateInputQty('${item.item_code}', -1)"><i class="fas fa-minus"></i></button>
-                                    <input type="number" id="input_qty_${item.item_code}" class="form-control text-center fw-bold text-primary px-1" value="${currentCartQty}" min="1" max="99999">
-                                    <button class="btn btn-light border px-2 text-secondary fw-bold" type="button" onclick="updateInputQty('${item.item_code}', 1)"><i class="fas fa-plus"></i></button>
-                                    <button class="btn btn-primary px-2 fw-bold" type="button" onclick="addToCart('${item.item_code}', '${safeDesc}', ${onHand})"><i class="fas fa-cart-plus"></i></button>
+                                    <button class="btn btn-light border px-2 text-secondary fw-bold" type="button" onclick="updateInputQty('${displayCode}', -1)"><i class="fas fa-minus"></i></button>
+                                    <input type="number" id="input_qty_${displayCode}" class="form-control text-center fw-bold text-primary px-1" value="${currentCartQty}" min="1" max="99999">
+                                    <button class="btn btn-light border px-2 text-secondary fw-bold" type="button" onclick="updateInputQty('${displayCode}', 1)"><i class="fas fa-plus"></i></button>
+                                    <button class="btn btn-primary px-2 fw-bold" type="button" onclick="addToCart('${displayCode}', '${safeDescForJS}', ${onHand})"><i class="fas fa-cart-plus"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -311,6 +313,9 @@ function renderCartUI() {
     
     itemCodes.forEach(code => {
         let item = cart[code];
+        let displayDesc = escapeHTML(item.description);
+        let displayCode = escapeHTML(code);
+
         let warningHtml = (reqType === 'STOCK' && item.qty > item.maxQty) 
             ? `<div class="small text-danger fw-bold mt-1"><i class="fas fa-exclamation-triangle"></i> สต๊อกมีแค่ ${item.maxQty} ชิ้น (ต้องเปิด K2)</div>` : '';
 
@@ -318,13 +323,13 @@ function renderCartUI() {
         <div class="card shadow-sm border-0 mb-2">
             <div class="card-body p-2 d-flex justify-content-between align-items-center">
                 <div class="pe-2" style="width: 70%;">
-                    <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;">${item.description}</div>
-                    <small class="text-primary fw-bold">${code}</small>
+                    <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;" title="${displayDesc}">${displayDesc}</div>
+                    <small class="text-primary fw-bold">${displayCode}</small>
                     ${warningHtml}
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                     <span class="badge bg-light text-dark border px-2 py-1 fs-6 shadow-sm">x ${item.qty}</span>
-                    <button class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="removeFromCart('${code}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="removeFromCart('${displayCode}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>`;
@@ -349,7 +354,7 @@ window.submitRequisition = function() {
             if (item.qty > item.maxQty) {
                 Swal.fire({
                     title: 'สต๊อกไม่เพียงพอ!',
-                    html: `คุณกำลังขอเบิก <b>"${item.description}"</b> จำนวน ${item.qty} ชิ้น<br>แต่ในคลังมีเพียง <b class="text-danger">${item.maxQty}</b> ชิ้น<br><br><span class="text-muted small">หากต้องการสั่งซื้อ กรุณาเปลี่ยนประเภทคำขอเป็น "ขอสั่งซื้อ (K2)" ด้านล่างครับ</span>`,
+                    html: `คุณกำลังขอเบิก <b>"${escapeHTML(item.description)}"</b> จำนวน ${item.qty} ชิ้น<br>แต่ในคลังมีเพียง <b class="text-danger">${item.maxQty}</b> ชิ้น<br><br><span class="text-muted small">หากต้องการสั่งซื้อ กรุณาเปลี่ยนประเภทคำขอเป็น "ขอสั่งซื้อ (K2)" ด้านล่างครับ</span>`,
                     icon: 'warning', confirmButtonText: 'เข้าใจแล้ว'
                 });
                 return; 
@@ -370,14 +375,12 @@ window.submitRequisition = function() {
             const payloadCart = itemCodes.map(code => ({ item_code: code, qty: cart[code].qty }));
 
             try {
-                // 🛡️ ป้องกัน Double Submit โดยส่ง ID ปุ่ม btnCheckout เข้าไปที่ fetchAPI
                 const res = await fetchAPI('submit_requisition', 'POST', { 
                     cart: JSON.stringify(payloadCart), 
                     remark: remark, 
                     request_type: reqType 
                 }, 'btnCheckout');
 
-                // แก้ไข: เคลียร์ค่า UI ทันที ก่อนให้ Swal.fire เด้ง เพื่อบล็อกการกดย้ำ
                 cart = {}; 
                 if (remarkEl) remarkEl.value = ''; 
                 renderCartUI();
@@ -385,11 +388,11 @@ window.submitRequisition = function() {
                 const offcanvasEl = document.getElementById('cartOffcanvas');
                 if (offcanvasEl) bootstrap.Offcanvas.getInstance(offcanvasEl)?.hide();
                 
-                loadCatalog(false); // แก้ไข: ลบ null ออก
+                loadCatalog(false); 
 
                 Swal.fire({ 
                     title: 'Success!', 
-                    html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${res.req_number}</b>`, 
+                    html: `ส่งคำขอสำเร็จ<br><b class="text-success fs-3 mt-2 d-block">${escapeHTML(res.req_number)}</b>`, 
                     icon: 'success' 
                 });
             } catch (error) {
@@ -432,10 +435,10 @@ window.openHistoryModal = async function() {
                 <div class="col-12 col-md-6">
                     <div class="order-card-hist p-3 h-100 d-flex flex-column" onclick="viewOrderDetails(${order.id})">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="fw-bold text-dark mb-0">${order.req_number}</h6>
+                            <h6 class="fw-bold text-dark mb-0">${escapeHTML(order.req_number)}</h6>
                             <span class="badge ${badgeClass}"><i class="fas ${icon}"></i> ${statusTH}</span>
                         </div>
-                        <small class="text-muted mb-2"><i class="far fa-clock"></i> ${order.req_time}</small>
+                        <small class="text-muted mb-2"><i class="far fa-clock"></i> ${escapeHTML(order.req_time)}</small>
                         <div class="mt-auto border-top pt-2 d-flex justify-content-between align-items-center">
                             <span class="small fw-bold text-secondary">${order.total_items} รายการ</span>
                             <span class="small text-primary fw-bold">คลิกดู <i class="fas fa-chevron-right ms-1"></i></span>
@@ -462,8 +465,8 @@ window.viewOrderDetails = async function(reqId) {
             const res = await fetchAPI(`get_my_order_details&req_id=${reqId}`, 'GET');
 
             const h = res.header;
-            document.getElementById('modalReqNo').innerText = h.req_number;
-            document.getElementById('modalReqTime').innerHTML = `<i class="far fa-clock"></i> สั่งเบิก: ${h.req_time}`;
+            document.getElementById('modalReqNo').innerText = h.req_number; // innerText is safe
+            document.getElementById('modalReqTime').innerHTML = `<i class="far fa-clock"></i> สั่งเบิก: ${escapeHTML(h.req_time)}`;
 
             let step1 = 'completed', step2 = '', step3 = '';
             let step3Icon = 'fa-check', step3Label = 'เสร็จสิ้น';
@@ -474,16 +477,16 @@ window.viewOrderDetails = async function(reqId) {
             else if (h.status === 'REJECTED') { step2 = 'rejected'; step3 = 'rejected'; step3Icon = 'fa-times'; step3Label = 'ถูกปฏิเสธ'; }
 
             document.getElementById('trackingTimeline').innerHTML = `
-                <div class="tracking-step ${step1}"><div class="step-icon"><i class="fas fa-clipboard-list"></i></div><div class="step-label">ส่งคำสั่ง</div><div class="step-time">${h.req_time}</div></div>
+                <div class="tracking-step ${step1}"><div class="step-icon"><i class="fas fa-clipboard-list"></i></div><div class="step-label">ส่งคำสั่ง</div><div class="step-time">${escapeHTML(h.req_time)}</div></div>
                 <div class="tracking-step ${step2}"><div class="step-icon"><i class="fas fa-box-open"></i></div><div class="step-label">กำลังจัดของ</div><div class="step-time"></div></div>
-                <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${step3Label}</div><div class="step-time">${h.issue_time || ''}</div></div>
+                <div class="tracking-step ${step3}"><div class="step-icon"><i class="fas ${step3Icon}"></i></div><div class="step-label">${step3Label}</div><div class="step-time">${escapeHTML(h.issue_time || '')}</div></div>
             `;
 
             const rejectAlert = document.getElementById('rejectAlert');
             if (h.status === 'REJECTED') {
                 if (rejectAlert) rejectAlert.classList.remove('d-none');
                 const match = (h.remark || '').match(/\[Reject:\s(.*?)\]/);
-                document.getElementById('rejectReason').innerText = match ? match[1] : 'ไม่ระบุเหตุผล';
+                document.getElementById('rejectReason').innerText = match ? match[1] : 'ไม่ระบุเหตุผล'; // innerText is safe
             } else { 
                 if (rejectAlert) rejectAlert.classList.add('d-none'); 
             }
@@ -495,9 +498,12 @@ window.viewOrderDetails = async function(reqId) {
                 let issueClass = (issueQty !== '-' && issueQty < reqQty) ? 'text-warning text-dark' : 'text-success';
                 if (issueQty === 0) issueClass = 'text-danger';
 
-                const safeCategory = item.item_category || 'OTHER';
+                const displayDesc = escapeHTML(item.description);
+                const displayCode = escapeHTML(item.item_code);
+                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+
                 const imgHtml = item.image_path 
-                    ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${item.item_code}')">` 
+                    ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${displayCode}')">` 
                     : getIconPlaceholder(safeCategory);
 
                 itemsHtml += `
@@ -505,8 +511,8 @@ window.viewOrderDetails = async function(reqId) {
                     <div class="d-flex align-items-center gap-2">
                         ${imgHtml}
                         <div>
-                            <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;">${item.description}</div>
-                            <small class="text-primary">${item.item_code}</small>
+                            <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem; max-width: 150px;" title="${displayDesc}">${displayDesc}</div>
+                            <small class="text-primary">${displayCode}</small>
                         </div>
                     </div>
                     <div class="text-end">
@@ -568,7 +574,6 @@ window.saveItemConfig = async function() {
 
         editItemModalInst.hide();
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
-        // แก้ไข: ลบ null ออก
         loadCatalog(false); 
     } catch (error) {
         // error managed by fetchAPI
@@ -580,7 +585,7 @@ window.triggerImageUpload = function(itemCode) {
     
     Swal.fire({
         title: 'เปลี่ยนรูปภาพสินค้า',
-        html: `คุณต้องการอัปเดตรูปภาพสำหรับ <b class="text-primary">${itemCode}</b> ด้วยวิธีใด?`,
+        html: `คุณต้องการอัปเดตรูปภาพสำหรับ <b class="text-primary">${escapeHTML(itemCode)}</b> ด้วยวิธีใด?`,
         icon: 'question',
         showCancelButton: true, showDenyButton: true,
         confirmButtonText: '<i class="fas fa-camera fa-lg mb-1 d-block"></i> ถ่ายรูป',
@@ -666,11 +671,12 @@ async function handleImageUploadEvent() {
         if (wrapper) {
             const newImgUrl = `../../uploads/items/${res.image_path}?v=${new Date().getTime()}`;
             const existingImg = document.getElementById(`img_element_${itemCode}`);
+            const safeCode = escapeHTML(itemCode);
             
             if (existingImg && existingImg.tagName === 'IMG') {
                 existingImg.src = newImgUrl;
             } else {
-                const newImgHtml = `<img src="${newImgUrl}" id="img_element_${itemCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${itemCode}')">`;
+                const newImgHtml = `<img src="${newImgUrl}" id="img_element_${safeCode}" class="product-img" loading="lazy" onerror="handleImageError(this, '', '${safeCode}')">`;
                 if (existingImg) existingImg.remove(); 
                 wrapper.insertAdjacentHTML('beforeend', newImgHtml);
             }
@@ -697,14 +703,14 @@ function getPlaceholderHTML(category, sapNo, idAttr = '') {
             <i class="fas ${icon} fa-4x mb-3" style="color: ${color}; opacity: 0.3;"></i>
             <span class="small fw-bold px-2 w-100 text-center text-truncate" 
                   style="color: ${color}; opacity: 0.4; letter-spacing: 1px;">
-                ${sapNo}
+                ${escapeHTML(sapNo)}
             </span>
         </div>
     `;
 }
 
 window.handleImageError = function(imgElement, category, sapNo) {
-    imgElement.outerHTML = getPlaceholderHTML(category, sapNo, `img_element_${sapNo}`);
+    imgElement.outerHTML = getPlaceholderHTML(category, sapNo, `img_element_${escapeHTML(sapNo)}`);
 };
 
 function getIconPlaceholder(category) {

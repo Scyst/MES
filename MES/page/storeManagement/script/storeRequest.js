@@ -97,7 +97,7 @@ async function initData() {
                     if (loc.location_type === 'STORE' || loc.location_type === 'WAREHOUSE') {
                         const btn = document.createElement('div');
                         btn.className = 'btn-custom-select'; 
-                        btn.innerText = loc.location_name;
+                        btn.innerText = loc.location_name; // innerText is safe
                         
                         btn.onclick = () => {
                             storeInput.value = loc.location_id;
@@ -147,12 +147,17 @@ if (searchInp && listDiv) {
         matches.forEach(item => {
             const div = document.createElement('div');
             div.className = 'autocomplete-item'; 
+            // 🛡️ XSS Protection for Autocomplete
+            const safeSap = escapeHTML(item.sap_no);
+            const safePartNo = escapeHTML(item.part_no);
+            const safeDesc = escapeHTML(item.part_description || '-');
+
             div.innerHTML = `
                 <div class="d-flex justify-content-between">
-                    <span class="fw-bold text-dark">${item.sap_no}</span>
-                    <span class="text-secondary small">${item.part_no}</span>
+                    <span class="fw-bold text-dark">${safeSap}</span>
+                    <span class="text-secondary small">${safePartNo}</span>
                 </div>
-                <div class="small text-muted text-truncate">${item.part_description || '-'}</div>
+                <div class="small text-muted text-truncate">${safeDesc}</div>
             `;
             div.onclick = () => {
                 searchInp.value = `${item.sap_no} | ${item.part_no}`;
@@ -267,11 +272,17 @@ function renderTableHTML(data) {
                 icon = '<i class="fas fa-times-circle me-1"></i>';
             }
 
-            const statusBadge = `<span class="badge ${badgeClass} rounded-pill fw-normal text-dark px-2 py-1">${icon}${row.status}</span>`;
-            const createdDate = row.created_at ? row.created_at.substring(0, 16) : '-';
-            const requesterName = row.requester || '-';
+            const statusBadge = `<span class="badge ${badgeClass} rounded-pill fw-normal text-dark px-2 py-1">${icon}${escapeHTML(row.status)}</span>`;
+            const createdDate = row.created_at ? escapeHTML(row.created_at.substring(0, 16)) : '-';
+            const requesterName = escapeHTML(row.requester || '-');
             const unitCost = parseFloat(row.unit_cost || 0);
             const totalCost = parseFloat(row.quantity) * unitCost;
+
+            // 🛡️ XSS Protection for Table Data
+            const safeSap = escapeHTML(row.sap_no);
+            const safePartNo = escapeHTML(row.part_no);
+            const safeDesc = escapeHTML(row.part_description || '-');
+            const safeReason = escapeHTML(reason);
 
             let btnAction = '';
             if (typeof IS_STORE_ROLE !== 'undefined' && IS_STORE_ROLE && row.status === 'PENDING') {
@@ -285,36 +296,36 @@ function renderTableHTML(data) {
             tableRowsHTML += `
                 <tr>
                     <td class="text-secondary small text-nowrap">${createdDate}</td>
-                    <td class="fw-bold text-primary">${row.sap_no}</td>
-                    <td class="text-dark">${row.part_no}</td>
-                    <td class="small text-secondary text-truncate" style="max-width: 150px;" title="${row.part_description || ''}">${row.part_description || '-'}</td>
+                    <td class="fw-bold text-primary">${safeSap}</td>
+                    <td class="text-dark">${safePartNo}</td>
+                    <td class="small text-secondary text-truncate" style="max-width: 150px;" title="${safeDesc}">${safeDesc}</td>
                     <td class="fw-bold text-center text-danger fs-6">${fmtNum.format(row.quantity)}</td>
                     <td class="text-end small text-muted">${fmtNum.format(totalCost)}</td>
-                    <td class="small text-secondary text-truncate" style="max-width: 120px;" title="${reason}">${reason}</td>
+                    <td class="small text-secondary text-truncate" style="max-width: 120px;" title="${safeReason}">${safeReason}</td>
                     <td class="small text-secondary text-nowrap text-center">${requesterName}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center">${btnAction}</td>
                 </tr>`;
 
             mobileCardsHTML += `
-                <div class="card req-card status-${row.status} border-0 shadow-sm mb-3">
+                <div class="card req-card status-${escapeHTML(row.status)} border-0 shadow-sm mb-3">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="text-truncate pe-2">
-                                <strong class="text-primary d-block" style="font-size: 1.1rem;">${row.sap_no}</strong>
-                                <span class="small text-secondary">${row.part_no}</span>
+                                <strong class="text-primary d-block" style="font-size: 1.1rem;">${safeSap}</strong>
+                                <span class="small text-secondary">${safePartNo}</span>
                             </div>
                             <div class="flex-shrink-0 ms-2">${statusBadge}</div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded border bg-light">
-                            <div class="small text-secondary text-truncate me-2" style="max-width: 60%;">${row.part_description || '-'}</div>
+                            <div class="small text-secondary text-truncate me-2" style="max-width: 60%;">${safeDesc}</div>
                             <div class="text-end">
                                 <div class="fw-bold fs-4 text-danger" style="line-height: 1;">${fmtNum.format(row.quantity)}</div>
                                 <small class="text-muted" style="font-size: 0.7rem;">Est: ${fmtNum.format(totalCost)} ฿</small>
                             </div>
                         </div>
                         <div class="mb-2 small"><span class="text-muted">Req:</span> <strong class="text-dark ms-1">${requesterName}</strong></div>
-                        <div class="mb-3 small text-secondary text-truncate"><span class="text-muted me-1">Note:</span> ${reason}</div>
+                        <div class="mb-3 small text-secondary text-truncate"><span class="text-muted me-1">Note:</span> <span title="${safeReason}">${safeReason}</span></div>
                         <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                             <small class="text-muted">${createdDate}</small>
                             <div>${btnAction}</div>
@@ -479,7 +490,7 @@ function showToast(msg, color) {
     const t = document.getElementById('liveToast');
     const tb = document.getElementById('toastMessage');
     if (t && tb) {
-        tb.innerText = msg;
+        tb.innerText = msg; // innerText is safe
         t.className = `toast align-items-center text-white border-0 ${color.replace('var(--bs-','bg-')}`;
         new bootstrap.Toast(t).show();
     }
