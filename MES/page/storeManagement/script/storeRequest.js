@@ -7,58 +7,6 @@ let currentPage = 1;
 let rowsPerPage = 100;
 let totalPages = 1;
 
-async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null) {
-    let btn = null;
-    let originalHtml = '';
-    
-    if (buttonId) {
-        btn = document.getElementById(buttonId);
-        if (btn) {
-            if (btn.disabled) return null; 
-            originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        }
-    }
-
-    try {
-        const url = `api/api_store.php?action=${action}`;
-        const options = { method: method };
-
-        if (method === 'POST') {
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-            
-            if (bodyData instanceof FormData) {
-                bodyData.append('csrf_token', csrfToken);
-                options.body = bodyData;
-            } else {
-                bodyData = bodyData || {};
-                bodyData.csrf_token = csrfToken;
-                options.headers = { 'Content-Type': 'application/json' };
-                options.body = JSON.stringify(bodyData);
-            }
-        }
-
-        const response = await fetch(url, options);
-        const result = await response.json();
-        
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || `HTTP Error: ${response.status}`);
-        }
-        return result;
-        
-    } catch (error) {
-        showToast(error.message, 'var(--bs-danger)');
-        throw error;
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     await initData();
     

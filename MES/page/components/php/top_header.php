@@ -56,8 +56,8 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
         <?php endif; ?>
 
         <div class="d-none d-lg-flex align-items-center text-muted small pe-3 me-1 border-end">
-            <span class="me-3"><?php echo getThaiDateHeader(); ?></span>
-            <span id="realTimeClock" style="font-variant-numeric: tabular-nums;">00:00:00</span>
+            <span id="realTimeClock" class="me-2" style="font-variant-numeric: tabular-nums;">00:00:00</span>
+            <span><?php echo getThaiDateHeader(); ?></span>
         </div>
 
         <?php if (isset($_SESSION['user'])): ?>

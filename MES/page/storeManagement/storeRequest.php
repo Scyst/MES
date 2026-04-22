@@ -155,6 +155,7 @@ $pageHeaderSubtitle = "ระบบเบิกทดแทนของเสี
     </script>
     
     <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
 </body>
 </html>

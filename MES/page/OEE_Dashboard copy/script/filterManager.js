@@ -4,17 +4,19 @@ let dashboardAutoUpdateInterval;
 function formatNumber(value, isPercent = false, decimals = 2) {
     const num = parseFloat(value);
     if (isNaN(num)) return isPercent ? '-- %' : '--';
-    return isPercent ? `${num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} %` 
+    return isPercent ? `${num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%` 
                      : num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 async function fetchAndRenderCostSummary() {
     if (!isLoggedIn) return;
-    const startDate = document.getElementById("startDate")?.value || '';
-    const endDate = document.getElementById("endDate")?.value || '';
-    const line = document.getElementById("lineFilter")?.value || '';
-    const model = document.getElementById("modelFilter")?.value || '';
-    const params = new URLSearchParams({ action: 'getCostSummary', startDate, endDate, line, model });
+    const params = new URLSearchParams({ 
+        action: 'getCostSummary', 
+        startDate: document.getElementById("startDate")?.value || '', 
+        endDate: document.getElementById("endDate")?.value || '', 
+        line: document.getElementById("lineFilter")?.value || '', 
+        model: document.getElementById("modelFilter")?.value || '' 
+    });
 
     try {
         const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
@@ -22,17 +24,44 @@ async function fetchAndRenderCostSummary() {
         if (result.success && result.data) {
             const d = result.data;
             const gp = (d.TotalStdRevenue || 0) - (d.TotalStdCost || 0);
-            document.getElementById('prodCostMat').textContent = formatNumber(d.TotalMatCost, false, 2);
-            document.getElementById('prodCostPercentRM').textContent = formatNumber(d.PercentRM, true, 1);
-            document.getElementById('prodCostDL').textContent = formatNumber(d.TotalDLCost, false, 2);
-            document.getElementById('valDL').textContent = formatNumber(d.TotalActualDL || 0, false, 0);
-            document.getElementById('valOT').textContent = formatNumber(d.TotalActualOT || 0, false, 0);
-            document.getElementById('prodCostTotal').textContent = formatNumber(d.TotalStdCost, false, 2);
-            document.getElementById('prodRevenueStd').textContent = formatNumber(d.TotalStdRevenue, false, 2);
-            document.getElementById('prodGPStd').textContent = formatNumber(gp, false, 2);
-            document.getElementById('prodPercentGPStd').textContent = formatNumber(d.PercentGPStd, true, 1);
+            
+            const safeSetText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
+
+            // แสดงเวลาที่อัปเดตล่าสุด
+            safeSetText('lastUpdate', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+            // 1. REVENUE
+            safeSetText('prodRevenueStd', formatNumber(d.TotalStdRevenue, false, 0));
+            
+            // 2. COGS & CPU (ของใหม่)
+            safeSetText('prodCostTotal', formatNumber(d.TotalStdCost, false, 0));
+            safeSetText('valCPU', formatNumber(d.CostPerUnit, false, 2));
+            
+            // 3. MATERIAL (กู้คืน %RM + เพิ่ม Scrap Cost)
+            safeSetText('prodCostMat', formatNumber(d.TotalMatCost, false, 0));
+            safeSetText('prodCostPercentRM', formatNumber(d.PercentRM, true, 1));
+            safeSetText('valScrapCost', formatNumber(d.ScrapCostValue, false, 0));
+            
+            // 4. LABOR (กู้คืน DL/OT + เพิ่ม Efficiency)
+            safeSetText('prodCostDL', formatNumber(d.TotalDLCost, false, 0));
+            safeSetText('valDL', formatNumber(d.TotalActualDL || 0, false, 0));
+            safeSetText('valOT', formatNumber(d.TotalActualOT || 0, false, 0));
+            safeSetText('valLaborEff', formatNumber(d.LaborEfficiency, false, 1) + 'x');
+            
+            // 5. OVERHEAD
+            safeSetText('prodCostOH', formatNumber(d.TotalOHCost, false, 0));
+            safeSetText('prodCostPercentOH', formatNumber(d.PercentOH, true, 1));
+            
+            // 6. GROSS PROFIT
+            safeSetText('prodGPStd', formatNumber(gp, false, 0));
+            safeSetText('prodPercentGPStd', formatNumber(d.PercentGPStd, true, 1));
         }
-    } catch (error) { console.error("Cost fetch failed:", error); }
+    } catch (error) { 
+        console.error("Cost fetch failed:", error); 
+    }
 }
 
 function populateSelectWithOptions(selectElement, optionsArray, label, selectedValue = "") {
@@ -75,9 +104,9 @@ function handleFilterChange() {
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
     // Call renders
-    fetchAndRenderPieCharts?.();
-    fetchAndRenderLineCharts?.();
-    fetchAndRenderBarAndTable?.(); // ฟังก์ชันใหม่ที่เราจะทำใน OEE_barchart.js
+    if(typeof fetchAndRenderPieCharts === 'function') fetchAndRenderPieCharts();
+    if(typeof fetchAndRenderLineCharts === 'function') fetchAndRenderLineCharts();
+    if(typeof fetchAndRenderBarAndTable === 'function') fetchAndRenderBarAndTable();
     if (isLoggedIn) fetchAndRenderCostSummary();
 }
 
