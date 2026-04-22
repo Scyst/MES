@@ -41,14 +41,25 @@ try {
                 "planned_time" => (float)($res['PlannedTime'] ?? 0),
                 "downtime" => (float)($res['Downtime'] ?? 0),
                 "actual_output" => (int)($res['ActualOutput'] ?? 0),
-                "total_theoretical_minutes" => round((float)($res['TotalTheoreticalMinutes'] ?? 0), 2)
+                "total_theoretical_minutes" => round((float)($res['TotalTheoreticalMinutes'] ?? 0), 2),
+                "TargetQty" => (float)($res['TargetQty'] ?? 0)
             ];
             $response['success'] = true;
             break;
 
         case 'getLineChart':
+            $viewType = $_GET['viewType'] ?? 'daily';
+            
+            if ($viewType === 'daily') {
+                $targetEndDate = $endDate;
+                $targetStartDate = date('Y-m-d', strtotime($targetEndDate . ' -30 days'));
+            } else {
+                $targetStartDate = $startDate;
+                $targetEndDate = $endDate;
+            }
+
             $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?");
-            $stmt->execute([$startDate, $endDate, $line, $model]);
+            $stmt->execute([$targetStartDate, $targetEndDate, $line, $model]);
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($records as &$row) {
                 if (isset($row['date'])) {

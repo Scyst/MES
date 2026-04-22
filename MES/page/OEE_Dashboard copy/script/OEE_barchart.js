@@ -67,38 +67,62 @@ async function fetchAndRenderBarAndTable() {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No production data</td></tr>';
             } else {
                 tbody.innerHTML = '';
-                const maxFg = Math.max(...partResults.map(r => parseInt(r.FG) || 0), 1);
-                const maxHold = Math.max(...partResults.map(r => parseInt(r.HOLD) || 0), 1);
-                const maxScrap = Math.max(...partResults.map(r => parseInt(r.SCRAP) || 0), 1);
+                const globalMax = Math.max(
+                    ...partResults.map(r => Math.max(parseInt(r.FG)||0, parseInt(r.HOLD)||0, parseInt(r.SCRAP)||0)), 
+                    1 
+                );
 
                 partResults.forEach(row => {
-                    // บังคับให้เป็นจำนวนเต็ม (Integer)
                     const fgVal = parseInt(row.FG) || 0;
                     const holdVal = parseInt(row.HOLD) || 0;
                     const scrapVal = parseInt(row.SCRAP) || 0;
+                    
+                    const totalVal = fgVal + holdVal + scrapVal;
 
-                    const fgPercent = (fgVal / maxFg) * 100;
-                    const holdPercent = (holdVal / maxHold) * 100;
-                    const scrapPercent = (scrapVal / maxScrap) * 100;
+                    const fgPct = totalVal > 0 ? ((fgVal / totalVal) * 100).toFixed(1) : '0.0';
+                    const holdPct = totalVal > 0 ? ((holdVal / totalVal) * 100).toFixed(1) : '0.0';
+                    const scrapPct = totalVal > 0 ? ((scrapVal / totalVal) * 100).toFixed(1) : '0.0';
+
+                    const fgBar = (fgVal / globalMax) * 100;
+                    const holdBar = (holdVal / globalMax) * 100;
+                    const scrapBar = (scrapVal / globalMax) * 100;
 
                     tbody.innerHTML += `
-                        <tr>
+                        <tr class="align-middle">
                             <td class="fw-bold text-primary">${row.part_no}</td>
                             <td class="text-muted small">${row.production_line} | ${row.model}</td>
-                            <td class="data-bar-cell text-success">
-                                ${fgVal.toLocaleString()}
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${fgVal.toLocaleString()}</span>
+                                </div>
                                 <div class="data-bar-bg" style="width: 100%;"></div>
-                                <div class="data-bar-fill fill-fg" style="width: ${fgPercent}%;"></div>
+                                <div class="data-bar-fill fill-fg" style="width: ${fgBar}%;"></div>
                             </td>
-                            <td class="data-bar-cell text-warning">
-                                ${holdVal.toLocaleString()}
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${holdVal.toLocaleString()}</span>
+                                </div>
                                 <div class="data-bar-bg" style="width: 100%;"></div>
-                                <div class="data-bar-fill fill-hold" style="width: ${holdPercent}%;"></div>
+                                <div class="data-bar-fill fill-hold" style="width: ${holdBar}%;"></div>
                             </td>
-                            <td class="data-bar-cell text-danger">
-                                ${scrapVal.toLocaleString()}
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${scrapVal.toLocaleString()}</span>
+                                </div>
                                 <div class="data-bar-bg" style="width: 100%;"></div>
-                                <div class="data-bar-fill fill-scrap" style="width: ${scrapPercent}%;"></div>
+                                <div class="data-bar-fill fill-scrap" style="width: ${scrapBar}%;"></div>
+                            </td>
+
+                            <td class="text-end border-start pe-3 bg-light bg-opacity-50 py-2">
+                                <div class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${totalVal.toLocaleString()}</div>
+                                <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                    <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 0.6rem;" title="FG %">${fgPct}%</span>
+                                    <span class="badge rounded-pill bg-warning bg-opacity-10 border border-warning border-opacity-50" style="font-size: 0.6rem; color: #b45309;" title="Hold %">${holdPct}%</span>
+                                    <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.6rem;" title="Scrap %">${scrapPct}%</span>
+                                </div>
                             </td>
                         </tr>
                     `;

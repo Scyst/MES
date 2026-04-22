@@ -48,6 +48,16 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         .metric-mini-box { background: #f8f9fa; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; text-align: center; border: 1px solid #e9ecef; }
         .metric-mini-label { color: #6c757d; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;}
         .metric-mini-value { font-weight: 700; color: #212529; font-size: 0.85rem; }
+        /* 🚀 Live Pulsing Dot */
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+        .live-indicator {
+            width: 10px; height: 10px; background-color: #198754; border-radius: 50%;
+            display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px;
+        }
     </style>
 </head>
 <body class="layout-top-header">
@@ -57,8 +67,16 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         <main id="main-content">
             <div class="content-wrapper p-3">
                 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                    <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-chart-line me-2 text-primary"></i> Performance Overview</h5>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2">
+                    <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center bg-white px-3 py-1 rounded shadow-sm border dashboard-toolbar">
+                            <span class="live-indicator"></span>
+                            <span class="fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 0.5px;">SYSTEM LIVE</span>
+                            <div class="vr mx-3 text-muted" style="opacity: 0.2;"></div>
+                            <i class="far fa-clock text-muted me-2" style="font-size: 0.85rem;"></i>
+                            <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="liveClock">--:--:--</span>
+                        </div>
+                    </div>
                     <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                         <div class="d-flex align-items-center px-2 border-end">
                             <select id="lineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Lines</option></select>
@@ -84,7 +102,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         .financial-col:not(:last-child) { border-right: 1px solid #f1f5f9; } 
                     }
                     .fin-label { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.5rem; }
-                    .fin-value { font-size: 1.35rem; font-weight: 800; color: #1e293b; margin-bottom: 0.3rem; line-height: 1; }
+                    .fin-value { font-size: 1.35rem; font-weight: 600; color: #1e293b; margin-bottom: 0.3rem; line-height: 1; }
                     .fin-sub-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
                     .fin-sub-item { font-size: 0.7rem; color: #64748b; font-weight: 500; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #f1f5f9; }
                     .highlight-green { color: #16a34a !important; }
@@ -192,8 +210,14 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                 <div class="row g-3 mb-3">
                     <div class="col-xl-8">
                         <div class="chart-card p-3 h-100">
-                            <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="fas fa-chart-area me-2 text-primary"></i>OEE Trend (Last 30 Days)</h6>
-                            <div style="height: 300px; position: relative;"><canvas id="oeeLineChart"></canvas></div>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-2 gap-2">
+                                <h6 class="fw-bold mb-0"><i class="fas fa-chart-area me-2 text-primary"></i>OEE Trend</h6>
+                                <div class="btn-group btn-group-sm shadow-sm" id="oeeTrendToggle">
+                                    <button class="btn btn-outline-primary active" data-view="daily">Daily (30 Days)</button>
+                                    <button class="btn btn-outline-primary" data-view="hourly">Hourly (Selected Date)</button>
+                                </div>
+                            </div>
+                            <div style="height: 280px; position: relative;"><canvas id="oeeLineChart"></canvas></div>
                         </div>
                     </div>
                     <div class="col-xl-4">
@@ -225,9 +249,10 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                         <tr>
                                             <th>Part No.</th>
                                             <th>Line / Model</th>
-                                            <th class="text-end" style="width: 20%;">FG (Good)</th>
-                                            <th class="text-end" style="width: 20%;">Hold</th>
-                                            <th class="text-end" style="width: 20%;">Scrap</th>
+                                            <th class="text-end" style="width: 16%;">FG (Good)</th>
+                                            <th class="text-end" style="width: 16%;">Hold</th>
+                                            <th class="text-end" style="width: 16%;">Scrap</th>
+                                            <th class="text-end border-start pe-3" style="width: 22%;">Total Qty (Breakdown)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="productionTableBody">

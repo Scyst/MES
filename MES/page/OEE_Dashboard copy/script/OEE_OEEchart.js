@@ -22,7 +22,7 @@ function createMiniMetrics(dataObj) {
     return html;
 }
 
-// ⭐️ ปรับตั้งค่า Gauge ไม่ให้ขยายล้น (ใช้ cutout 80% ให้ดูเพรียวบาง)
+// ⭐️ ปรับตั้งค่า Gauge และแก้ปัญหา Closure Trap ให้ตัวเลขอัปเดตตาม Filter
 function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
     const ctx = document.getElementById(canvasId)?.getContext("2d");
     if (!ctx) return;
@@ -32,36 +32,59 @@ function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
     const txtColor = isSuccess ? theme.successColor : theme.warningColor;
     const lossValue = Math.max(0, 100 - value);
 
-    const config = {
-        type: 'doughnut',
-        data: { labels: ['Value', 'Loss'], datasets: [{ data: [value, lossValue], backgroundColor: [colorMain, theme.lossBg], borderWidth: 0 }] },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            circumference: 180, rotation: 270, 
-            cutout: '82%', // ทำให้ขอบบางลงดู Modern ขึ้น
-            plugins: { legend: { display: false }, tooltip: { enabled: false } }
-        },
-        plugins: [{
-            id: 'centerText',
-            beforeDraw(chart) {
-                const { width, height, ctx, chartArea } = chart;
-                ctx.restore();
-                ctx.font = `900 1.6rem "Prompt", sans-serif`; // ฟิกซ์ขนาดฟอนต์ไม่ให้เพี้ยน
-                ctx.textBaseline = "bottom";
-                ctx.fillStyle = txtColor;
-                const text = `${value.toFixed(1)}%`;
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = chartArea.bottom - 5; 
-                ctx.fillText(text, textX, textY);
-                ctx.save();
-            }
-        }]
-    };
-
     if (charts[chartName]) {
+        // ⭐️ 1. อัปเดตข้อมูลขนาดของหลอดกราฟ
         charts[chartName].data.datasets[0].data = [value, lossValue];
+        
+        // ⭐️ 2. อัปเดตสีของหลอดกราฟ (เผื่อเปลี่ยนสถานะจากผ่านเป้า เป็นตกเป้า)
+        charts[chartName].data.datasets[0].backgroundColor = [colorMain, theme.lossBg];
+        
+        // ⭐️ 3. อัดค่าตัวเลขและสีใหม่เข้าไปใน Options เพื่อให้ Plugin วาดข้อความหยิบไปใช้
+        charts[chartName].options.plugins.centerTextData = { val: value, color: txtColor };
+        
         charts[chartName].update();
     } else {
+        const config = {
+            type: 'doughnut',
+            data: { 
+                labels: ['Value', 'Loss'], 
+                datasets: [{ data: [value, lossValue], backgroundColor: [colorMain, theme.lossBg], borderWidth: 0 }] 
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                circumference: 180, rotation: 270, 
+                cutout: '82%', 
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { enabled: false },
+                    // ⭐️ เก็บข้อมูลไว้ใน options ตั้งแต่ตอนสร้างกราฟ
+                    centerTextData: { val: value, color: txtColor } 
+                }
+            },
+            plugins: [{
+                id: 'centerTextPlugin',
+                beforeDraw(chart) {
+                    const { width, height, ctx, chartArea } = chart;
+                    
+                    // ⭐️ อ่านค่าปัจจุบันจาก Options เสมอ (ลืมค่าเก่าไปเลย)
+                    const currentData = chart.options.plugins.centerTextData;
+                    const displayValue = currentData ? currentData.val : 0;
+                    const displayColor = currentData ? currentData.color : '#000';
+
+                    ctx.restore();
+                    ctx.font = `900 1.6rem "Prompt", sans-serif`;
+                    ctx.textBaseline = "bottom";
+                    ctx.fillStyle = displayColor;
+                    
+                    const text = `${displayValue.toFixed(1)}%`;
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = chartArea.bottom - 5; 
+                    
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        };
         charts[chartName] = new Chart(ctx, config);
     }
 }
@@ -102,22 +125,26 @@ async function fetchAndRenderPieCharts() {
             renderGaugeChart('performance', 'performancePieChart', d.performance || 0, 90, '#ffc107');
             document.getElementById("performanceInfo").innerHTML = createMiniMetrics([
                 { label: 'Total Qty', value: totalOut.toLocaleString() },
-                { label: 'Target Qty', value: (d.planned_output||0).toLocaleString() }
+                { label: 'Target Qty', value: Math.round(d.TargetQty || d.targetqty || 0).toLocaleString() }
             ]);
 
             // 4. AVAILABILITY
             renderGaugeChart('availability', 'availabilityPieChart', d.availability || 0, 95, '#0dcaf0');
             document.getElementById("availabilityInfo").innerHTML = createMiniMetrics([
-                { label: 'Runtime', value: `${d.runtime||0} m`, color: 'text-info' },
-                { label: 'Downtime', value: `${d.downtime||0} m`, color: 'text-danger' }
+                { label: 'Runtime', value: `${parseFloat(d.runtime||0).toFixed(0)} m`, color: 'text-info' },
+                { label: 'Downtime', value: `${parseFloat(d.downtime||0).toFixed(0)} m`, color: 'text-danger' }
             ]);
         }
     } catch (e) { console.error(e); }
 }
 
 async function fetchAndRenderLineCharts() {
+    const activeToggle = document.querySelector('#oeeTrendToggle .btn.active');
+    const viewType = activeToggle ? activeToggle.dataset.view : 'daily';
+    const actionUrl = viewType === 'hourly' ? 'getHourlySparklines' : 'getLineChart';
+
     const params = new URLSearchParams({
-        action: 'getLineChart',
+        action: actionUrl,
         startDate: document.getElementById("startDate").value,
         endDate: document.getElementById("endDate").value,
         line: document.getElementById("lineFilter").value,
@@ -127,20 +154,25 @@ async function fetchAndRenderLineCharts() {
     try {
         const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
         const result = await response.json();
+        
         if (result.success) {
             const records = result.data || [];
-            const labels = records.map(r => r.date);
+            console.log("Chart Data:", records);
+            const labels = records.map(r => 
+                r.Hour || r.hour || r.Time || r.time || r.Period || r.date || r.Date || 
+                r.HourInterval || r.HourRange || r.time_label || 'N/A'
+            );
+            
             const data = { 
-                oee: records.map(r=>r.oee), 
-                quality: records.map(r=>r.quality), 
-                performance: records.map(r=>r.performance), 
-                availability: records.map(r=>r.availability) 
+                oee: records.map(r => parseFloat(r.OEE || r.oee || 0)), 
+                quality: records.map(r => parseFloat(r.Quality || r.quality || 0)), 
+                performance: records.map(r => parseFloat(r.Performance || r.performance || 0)), 
+                availability: records.map(r => parseFloat(r.Availability || r.availability || 0)) 
             };
             
             const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
 
             if (!oeeLineChart) {
-                // สร้างกราฟครั้งแรก
                 oeeLineChart = new Chart(ctx, {
                     type: "line", 
                     data: { 
@@ -153,26 +185,38 @@ async function fetchAndRenderLineCharts() {
                         ]
                     },
                     options: { 
-                        responsive: true, maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } } },
-                        scales: { y: { min: 0, max: 100, ticks: { callback: (val) => val + '%' } }, x: { grid: { display: false } } }
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { min: 0, max: 100, ticks: { callback: (val) => val + '%' } }, 
+                            x: { 
+                                grid: { display: false },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    maxRotation: 0,
+                                    minRotation: 0
+                                }
+                            } 
+                        }
                     }
                 });
             } else {
-                // ⭐️ อัปเดตเฉพาะ Data ข้างใน กราฟจะเลื่อนสมูทและไม่กระตุกแล้ว!
                 oeeLineChart.data.labels = labels;
                 oeeLineChart.data.datasets[0].data = data.oee;
                 oeeLineChart.data.datasets[1].data = data.availability;
                 oeeLineChart.data.datasets[2].data = data.performance;
                 oeeLineChart.data.datasets[3].data = data.quality;
-                oeeLineChart.update('active'); // บังคับให้ animate แบบ smooth
+                oeeLineChart.update();
             }
         }
     } catch(e) { console.error(e); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const observer = new MutationObserver(() => { if (oeeLineChart) oeeLineChart.update('none'); });
-    observer.observe(document.documentElement, { attributes: true });
+document.getElementById('oeeTrendToggle')?.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button || button.classList.contains('active')) return;
+    document.querySelector('#oeeTrendToggle .active')?.classList.remove('active');
+    button.classList.add('active');
+    fetchAndRenderLineCharts(); // เรียกโหลดข้อมูลกราฟใหม่ทันที
 });
