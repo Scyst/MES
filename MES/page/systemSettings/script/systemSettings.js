@@ -50,9 +50,12 @@ function toggleButtonState(btnElement, isLoading, loadingText = 'Processing...')
 async function fetchAPI(endpoint, action, method = 'GET', body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
+        url += `&_t=${new Date().getTime()}`; 
+
         if (params) url += `&${new URLSearchParams(params).toString()}`;
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const options = { method, headers: {} };
+        const options = { method, headers: {}, cache: 'no-store' }; 
+        
         if (method.toUpperCase() !== 'GET' && csrfToken) {
             options.headers['X-CSRF-TOKEN'] = csrfToken;
         }
@@ -1047,6 +1050,7 @@ const BomManagerModule = {
             
             await this.loadBomDetails();
         } else {
+            this.versionSelect.innerHTML = ''; 
             this.currentVersion = 1;
             this.currentStatus = 'DRAFT';
             this.versionSelect.classList.add('d-none');
@@ -1061,6 +1065,7 @@ const BomManagerModule = {
         this.currentStatus = opt ? opt.dataset.status : 'DRAFT';
         const ecn = opt ? opt.dataset.ecn : '';
 
+        // อัปเดตสี Badge ตามสถานะ
         this.statusBadge.className = 'badge ms-2 ' + 
             (this.currentStatus === 'ACTIVE' ? 'bg-success' : 
              this.currentStatus === 'DRAFT' ? 'bg-warning text-dark' : 'bg-secondary');
@@ -1073,22 +1078,26 @@ const BomManagerModule = {
             this.ecnLabel.classList.add('d-none');
         }
 
+        // จัดการปุ่มต่างๆ ตามสิทธิ์ (Read-Only)
         if (this.currentStatus === 'ACTIVE') {
             this.btnCreateRevision.classList.remove('d-none');
             this.btnApproveRevision.classList.add('d-none');
-            this.btnOpenCatalog.classList.add('d-none');
-            this.btnDeleteAll.classList.add('d-none');
+            this.btnOpenCatalog.classList.add('d-none'); 
+            this.btnDeleteAll.classList.add('d-none');   
             this.btnRollupCost.classList.remove('d-none'); 
         } else if (this.currentStatus === 'DRAFT') {
             this.btnCreateRevision.classList.add('d-none');
             this.btnApproveRevision.classList.remove('d-none');
-            this.btnOpenCatalog.classList.remove('d-none');
+            this.btnOpenCatalog.classList.remove('d-none'); 
             this.btnDeleteAll.classList.remove('d-none');
             this.btnRollupCost.classList.add('d-none');     
         } else {
-            this.btnCreateRevision.classList.add('d-none');
+            // OBSOLETE 
+            // 🌟 แก้ไขตรงนี้: ปลดล็อคปุ่มให้กดสร้าง Revision ใหม่ (ชุบชีวิต) ได้!
+            this.btnCreateRevision.classList.remove('d-none'); 
+            
             this.btnApproveRevision.classList.add('d-none');
-            this.btnOpenCatalog.classList.add('d-none');
+            this.btnOpenCatalog.classList.add('d-none'); // ล็อกห้ามแก้สูตร
             this.btnDeleteAll.classList.add('d-none');
             this.btnRollupCost.classList.add('d-none');
         }

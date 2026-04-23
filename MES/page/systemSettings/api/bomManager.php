@@ -26,22 +26,27 @@ function checkCircularDependency($pdo, $fg_id, $comp_id) {
     if ($fg_id == $comp_id) return true;
     $sql = "
         WITH CTE AS (
-            SELECT component_item_id 
+            SELECT component_item_id, 1 AS depth
             FROM " . BOM_TABLE . " WITH (NOLOCK) 
             WHERE fg_item_id = ?
             
             UNION ALL
             
-            SELECT b.component_item_id 
+            SELECT b.component_item_id, c.depth + 1
             FROM " . BOM_TABLE . " b WITH (NOLOCK)
             INNER JOIN CTE c ON b.fg_item_id = c.component_item_id
+            WHERE c.depth < 50 -- 🔒 เบรกเกอร์: ถ้าลึกเกิน 50 ชั้นให้หยุดมุดทันที (ป้องกัน DB ค้าง)
         )
         SELECT TOP 1 1 FROM CTE WHERE component_item_id = ?
     ";
     
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$comp_id, $fg_id]);
-    return (bool) $stmt->fetchColumn();
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$comp_id, $fg_id]);
+        return (bool) $stmt->fetchColumn();
+    } catch (Exception $e) {
+        return true; 
+    }
 }
 
 try {
@@ -203,8 +208,8 @@ try {
                     throw new Exception("🔒 ไม่สามารถแก้ไขสูตรสถานะ [{$currentStatus}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
                 }
 
-                // ถ้าเป็นสินค้าที่ยังไม่เคยมีสูตรเลย (v1) จะให้เป็น ACTIVE เลย, แต่ถ้าเป็นเวอร์ชัน > 1 ต้องเป็น DRAFT เสมอ
-                $bom_status = $currentStatus ? $currentStatus : ($bom_version > 1 ? 'DRAFT' : 'ACTIVE');
+                // 🌟 แก้ไขตรงนี้: ให้เป็น DRAFT เสมอ เพื่อไม่ให้มันล็อกตัวเองตอนแอดชิ้นที่ 2
+                $bom_status = $currentStatus ? $currentStatus : 'DRAFT';
 
                 $checkStmt = $pdo->prepare("SELECT 1 FROM " . BOM_TABLE . " WITH (UPDLOCK) WHERE fg_item_id = ? AND component_item_id = ? AND bom_version = ?");
                 $checkStmt->execute([$fg_id, $comp_id, $bom_version]);
@@ -355,17 +360,28 @@ try {
 
             $pdo->beginTransaction();
             try {
+                // 1. เช็คว่ามี DRAFT ค้างอยู่ไหม
                 $checkDraft = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'DRAFT'");
                 $checkDraft->execute([$fg_id]);
                 if ($checkDraft->fetchColumn()) {
                     throw new Exception("ไม่สามารถสร้างได้! มีสูตรเวอร์ชัน DRAFT ค้างรออนุมัติอยู่ กรุณาจัดการของเดิมให้เสร็จก่อน");
                 }
 
+                // 2. ดึงเวอร์ชันล่าสุดของ ACTIVE มา
                 $getActive = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'ACTIVE' ORDER BY bom_version DESC");
                 $getActive->execute([$fg_id]);
                 $activeVer = (int)$getActive->fetchColumn();
-                $newVer = $activeVer + 1;
+                
+                // ถ้ายกเลิกหมดแล้ว (OBSOLETE อย่างเดียว) ให้ดึงตัวล่าสุดมาแทน
+                if ($activeVer === 0) {
+                     $getObs = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? ORDER BY bom_version DESC");
+                     $getObs->execute([$fg_id]);
+                     $activeVer = (int)$getObs->fetchColumn();
+                }
 
+                $newVer = $activeVer > 0 ? $activeVer + 1 : 1;
+
+                // 3. ก๊อปปี้สูตรเดิมมาสร้างเป็นเวอร์ชันใหม่สถานะ DRAFT
                 if ($activeVer > 0) {
                     $sql = "INSERT INTO " . BOM_TABLE . " 
                             (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at, bom_version, bom_status, ecn_number)
@@ -375,7 +391,8 @@ try {
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([$currentUser['username'], $newVer, $ecn_no, $fg_id, $activeVer]);
                 } else {
-                    // กรณี FG นี้ยังไม่เคยมีสูตรเลย จะปล่อยผ่านเพื่อให้ User ไปเพิ่ม Component เองในหน้า UI
+                    // กรณี FG นี้ยังไม่เคยมีสูตรเลย จะสร้างเปล่าๆ เพื่อให้ User ไปเพิ่ม Component เองในหน้า UI
+                    // แต่เราต้องจำ ecn_number และเวอร์ชันตั้งต้นไว้ด้วย
                 }
 
                 logAction($pdo, $currentUser['username'], 'CREATE BOM REVISION', $fg_id, "Created Version: v{$newVer}, ECN: {$ecn_no}");

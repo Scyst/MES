@@ -1,522 +1,222 @@
 "use strict";
 
-// =================================================================
-// ส่วนที่ 1: กราฟเส้น OEE ตัวใหญ่ (Main Line Chart)
-// =================================================================
 const OEE_MAIN_TARGET = 85.0;
 let oeeLineChart;
+const charts = { oee: null, quality: null, performance: null, availability: null };
 
-function getLineChartThemeColors() {
-    const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-    if (theme === 'dark') {
-        return {
-            ticksColor: '#ccc',
-            gridColor: '#495057',
-            legendColor: '#ccc',
-            targetLineColor: 'rgba(255, 107, 107, 0.7)',
-            targetLabelBg: 'rgba(255, 107, 107, 0.7)',
-            targetLabelColor: '#fff'
-        };
-    } else {
-        return {
-            ticksColor: '#6c757d',
-            gridColor: '#dee2e6',
-            legendColor: '#212529',
-            targetLineColor: 'rgba(220, 53, 69, 0.7)',
-            targetLabelBg: 'rgba(220, 53, 69, 0.7)',
-            targetLabelColor: '#fff'
-        };
-    }
+function getThemeColors() {
+    return { ticksColor: '#6c757d', gridColor: '#f1f5f9', successColor: '#198754', warningColor: '#dc3545', lossBg: '#f1f5f9' };
 }
 
-function initializeLineChart(labels, data, themeColors) {
-    const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
+// ⭐️ ฟังก์ชันใหม่สำหรับสร้างกล่องตัวเลขใต้ Gauge สไตล์ PowerBI
+function createMiniMetrics(dataObj) {
+    let html = '<div class="d-flex justify-content-center gap-2 w-100">';
+    dataObj.forEach(item => {
+        html += `
+            <div class="metric-mini-box flex-fill">
+                <div class="metric-mini-label">${item.label}</div>
+                <div class="metric-mini-value ${item.color || ''}">${item.value}</div>
+            </div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
+// ⭐️ ปรับตั้งค่า Gauge และแก้ปัญหา Closure Trap ให้ตัวเลขอัปเดตตาม Filter
+function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
+    const ctx = document.getElementById(canvasId)?.getContext("2d");
     if (!ctx) return;
+    
+    const theme = getThemeColors();
+    const isSuccess = value >= target;
+    const txtColor = isSuccess ? theme.successColor : theme.warningColor;
+    const lossValue = Math.max(0, 100 - value);
 
-    if (oeeLineChart && typeof oeeLineChart.destroy === 'function') {
-        oeeLineChart.destroy();
-    }
-
-    const oeeColor = getCssVar('--mes-chart-color-1');
-    const qualityColor = getCssVar('--mes-chart-color-2');
-    const performanceColor = getCssVar('--mes-chart-color-3');
-    const availabilityColor = getCssVar('--mes-chart-color-4');
-
-    const datasets = [
-        {
-            label: "OEE (%)",
-            data: data.oee || [], 
-            borderColor: oeeColor,
-            backgroundColor: oeeColor + '20',
-            tension: 0.3,
-            fill: true
-        },
-        {
-            label: "Quality (%)",
-            data: data.quality || [],
-            borderColor: qualityColor,
-            backgroundColor: qualityColor + '20',
-            tension: 0.3,
-            fill: true
-        },
-        {
-            label: "Performance (%)",
-            data: data.performance || [],
-            borderColor: performanceColor,
-            backgroundColor: performanceColor + '20',
-            tension: 0.3,
-            fill: true
-        },
-        {
-            label: "Availability (%)",
-            data: data.availability || [],
-            borderColor: availabilityColor,
-            backgroundColor: availabilityColor + '20',
-            tension: 0.3,
-            fill: true
-        }
-    ];
-
-    oeeLineChart = new Chart(ctx, { 
-        type: "line",
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 800 },
-            plugins: {
-                title: { display: false },
-                legend: {
-                    display: true,
-                    labels: { color: themeColors.legendColor }
-                },
-                annotation: {
-                    annotations: {
-                        targetLine: {
-                            type: 'line',
-                            yMin: OEE_MAIN_TARGET,
-                            yMax: OEE_MAIN_TARGET,
-                            borderColor: themeColors.targetLineColor,
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                content: `Target: ${OEE_MAIN_TARGET}%`,
-                                enabled: true,
-                                position: 'end',
-                                backgroundColor: themeColors.targetLabelBg,
-                                color: themeColors.targetLabelColor,
-                                font: { weight: 'bold' }
-                            }
-                        }
-                    }
-                },
-                zoom: { 
-                    pan: { enabled: true, mode: 'x' },
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+    if (charts[chartName]) {
+        // ⭐️ 1. อัปเดตข้อมูลขนาดของหลอดกราฟ
+        charts[chartName].data.datasets[0].data = [value, lossValue];
+        
+        // ⭐️ 2. อัปเดตสีของหลอดกราฟ (เผื่อเปลี่ยนสถานะจากผ่านเป้า เป็นตกเป้า)
+        charts[chartName].data.datasets[0].backgroundColor = [colorMain, theme.lossBg];
+        
+        // ⭐️ 3. อัดค่าตัวเลขและสีใหม่เข้าไปใน Options เพื่อให้ Plugin วาดข้อความหยิบไปใช้
+        charts[chartName].options.plugins.centerTextData = { val: value, color: txtColor };
+        
+        charts[chartName].update();
+    } else {
+        const config = {
+            type: 'doughnut',
+            data: { 
+                labels: ['Value', 'Loss'], 
+                datasets: [{ data: [value, lossValue], backgroundColor: [colorMain, theme.lossBg], borderWidth: 0 }] 
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                circumference: 180, rotation: 270, 
+                cutout: '82%', 
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { enabled: false },
+                    // ⭐️ เก็บข้อมูลไว้ใน options ตั้งแต่ตอนสร้างกราฟ
+                    centerTextData: { val: value, color: txtColor } 
                 }
             },
-            scales: {
-                x: { ticks: { color: themeColors.ticksColor, font: { size: 10 } }, grid: { display: false } },
-                y: { beginAtZero: true, max: 100, ticks: { color: themeColors.ticksColor, font: { size: 10 } }, grid: { color: themeColors.gridColor } }
-            },
-            layout: { padding: 10 }
-        }
-    });
+            plugins: [{
+                id: 'centerTextPlugin',
+                beforeDraw(chart) {
+                    const { width, height, ctx, chartArea } = chart;
+                    
+                    // ⭐️ อ่านค่าปัจจุบันจาก Options เสมอ (ลืมค่าเก่าไปเลย)
+                    const currentData = chart.options.plugins.centerTextData;
+                    const displayValue = currentData ? currentData.val : 0;
+                    const displayColor = currentData ? currentData.color : '#000';
+
+                    ctx.restore();
+                    ctx.font = `900 1.6rem "Prompt", sans-serif`;
+                    ctx.textBaseline = "bottom";
+                    ctx.fillStyle = displayColor;
+                    
+                    const text = `${displayValue.toFixed(1)}%`;
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = chartArea.bottom - 5; 
+                    
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        };
+        charts[chartName] = new Chart(ctx, config);
+    }
 }
 
-/**
- * ฟังก์ชันสำหรับดึงข้อมูล Line Chart 30 วัน
- */
-async function fetchAndRenderLineCharts() {
-    toggleLoadingState("oeeLineChart", true); 
-    toggleErrorMessage("oeeLineChart", false);
-    
-    // 1. อ่านค่า Filter
-    const userStartDateStr = document.getElementById("startDate")?.value || '';
-    const userEndDateStr = document.getElementById("endDate")?.value || '';
-    const line = document.getElementById("lineFilter")?.value || '';
-    const model = document.getElementById("modelFilter")?.value || '';
-    
-    // 2. คำนวณ Date Range (Min 30 days)
-    const endDate = new Date(userEndDateStr);
-    const minLineStartDate = new Date(endDate);
-    minLineStartDate.setDate(endDate.getDate() - 29); 
-    const userStartDate = new Date(userStartDateStr);
-    
-    const apiStartDate = userStartDate < minLineStartDate ? userStartDate : minLineStartDate;
-    const apiStartDateStr = apiStartDate.toISOString().split('T')[0];
-
-    // 3. เรียก API ใหม่ (api/oeeDashboardApi.php)
+async function fetchAndRenderPieCharts() {
     const params = new URLSearchParams({
-        action: 'getLineChart', // ✅ เพิ่ม action
-        startDate: apiStartDateStr,
-        endDate: userEndDateStr,    
-        line: line,
-        model: model
+        action: 'getPieChart',
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value,
+        line: document.getElementById("lineFilter").value,
+        model: document.getElementById("modelFilter").value
     });
 
     try {
         const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
-        if (!response.ok) throw new Error(`Linechart API: Network response was not ok`);
         const result = await response.json();
-        
-        if (!result.success) throw new Error(result.message || "Linechart API: API error");
+        if (result.success) {
+            const d = result.data;
+            const actualOut = d.actual_output || 0;
+            const totalOut = (d.fg || 0) + (d.scrap || 0) + (d.hold || 0);
+            
+            // 1. OEE
+            renderGaugeChart('oee', 'oeePieChart', d.oee || 0, 85, '#0d6efd');
+            document.getElementById("oeeInfo").innerHTML = createMiniMetrics([
+                { label: 'Target', value: '85%' },
+                { label: 'Actual', value: `${(d.oee||0).toFixed(1)}%`, color: 'text-primary' }
+            ]);
 
-        const records = result.data || []; // ✅ เปลี่ยนเป็น result.data
-        const hasLineData = records.length > 0;
-        
-        toggleNoDataMessage("oeeLineChart", !hasLineData);
-        
-        // 4. เตรียมข้อมูลสำหรับ Chart.js
-        const labels = records.map(r => r.date); 
-        const chartData = {
-            oee: records.map(r => r.oee),
-            quality: records.map(r => r.quality),
-            performance: records.map(r => r.performance),
-            availability: records.map(r => r.availability)
-        };
-        const lineThemeColors = getLineChartThemeColors(); 
+            // 2. QUALITY (โชว์ FG, Hold, Scrap)
+            renderGaugeChart('quality', 'qualityPieChart', d.quality || 0, 99, '#198754');
+            document.getElementById("qualityInfo").innerHTML = createMiniMetrics([
+                { label: 'Good (FG)', value: (d.fg||0).toLocaleString(), color: 'text-success' },
+                { label: 'Hold', value: (d.hold||0).toLocaleString(), color: 'text-warning' },
+                { label: 'Scrap', value: (d.scrap||0).toLocaleString(), color: 'text-danger' }
+            ]);
 
-        // 5. Render กราฟเส้นตัวใหญ่
-        if (!oeeLineChart || (oeeLineChart && typeof oeeLineChart.destroy === 'function' && oeeLineChart.ctx === null)) {
-            initializeLineChart(labels, chartData, lineThemeColors); 
-        } else {
-            oeeLineChart.data.labels = labels;
-            oeeLineChart.data.datasets.forEach((dataset, index) => {
-                const key = Object.keys(chartData)[index];
-                dataset.data = chartData[key] || [];
-            });
-            oeeLineChart.options.plugins.legend.labels.color = lineThemeColors.legendColor;
-            oeeLineChart.options.scales.x.ticks.color = lineThemeColors.ticksColor;
-            oeeLineChart.options.scales.y.ticks.color = lineThemeColors.ticksColor;
-            oeeLineChart.options.scales.y.grid.color = lineThemeColors.gridColor;
-            if (oeeLineChart.options.plugins.annotation) {
-                oeeLineChart.options.plugins.annotation.annotations.targetLine.borderColor = lineThemeColors.targetLineColor;
-                oeeLineChart.options.plugins.annotation.annotations.targetLine.label.backgroundColor = lineThemeColors.targetLabelBg;
-                oeeLineChart.options.plugins.annotation.annotations.targetLine.label.color = lineThemeColors.targetLabelColor;
-            }
-            oeeLineChart.update();
+            // 3. PERFORMANCE
+            renderGaugeChart('performance', 'performancePieChart', d.performance || 0, 90, '#ffc107');
+            document.getElementById("performanceInfo").innerHTML = createMiniMetrics([
+                { label: 'Total Qty', value: totalOut.toLocaleString() },
+                { label: 'Target Qty', value: Math.round(d.TargetQty || d.targetqty || 0).toLocaleString() }
+            ]);
+
+            // 4. AVAILABILITY
+            renderGaugeChart('availability', 'availabilityPieChart', d.availability || 0, 95, '#0dcaf0');
+            document.getElementById("availabilityInfo").innerHTML = createMiniMetrics([
+                { label: 'Runtime', value: `${parseFloat(d.runtime||0).toFixed(0)} m`, color: 'text-info' },
+                { label: 'Downtime', value: `${parseFloat(d.downtime||0).toFixed(0)} m`, color: 'text-danger' }
+            ]);
         }
-    } catch (err) {
-        console.error("Line chart (30d) update failed:", err);
-        toggleErrorMessage("oeeLineChart", true);
-        
-        // Clear main line chart on error
-        if (oeeLineChart) {
-            oeeLineChart.data.labels = [];
-            oeeLineChart.data.datasets.forEach(dataset => dataset.data = []);
-            oeeLineChart.update();
-        }
-    } finally {
-        toggleLoadingState("oeeLineChart", false);
-    }
+    } catch (e) { console.error(e); }
 }
 
+async function fetchAndRenderLineCharts() {
+    const activeToggle = document.querySelector('#oeeTrendToggle .btn.active');
+    const viewType = activeToggle ? activeToggle.dataset.view : 'daily';
+    const actionUrl = viewType === 'hourly' ? 'getHourlySparklines' : 'getLineChart';
 
-// =================================================================
-// ส่วนที่ 3: Sparklines (Hourly Trend 24 ชั่วโมง)
-// =================================================================
-async function fetchAndRenderHourlySparklines() {
-    // 1. อ่านค่า Filter
-    const targetDate = document.getElementById("endDate")?.value || '';
-    const line = document.getElementById("lineFilter")?.value || '';
-    const model = document.getElementById("modelFilter")?.value || '';
-
-    // 2. เรียก API ใหม่
     const params = new URLSearchParams({
-        action: 'getHourlySparklines', // ✅ เพิ่ม action
-        endDate: targetDate, 
-        line: line,
-        model: model
+        action: actionUrl,
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value,
+        line: document.getElementById("lineFilter").value,
+        model: document.getElementById("modelFilter").value
     });
 
-    let records = [];
     try {
-        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}&t=${new Date().getTime()}`);
-        if (!response.ok) throw new Error(`Hourly Sparkline API: Network response was not ok`);
-        
+        const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
         const result = await response.json();
-        if (result.success && result.data) { // ✅ เปลี่ยนเป็น result.data
-            records = result.data;
-        } else {
-            console.error("Hourly Sparkline API Failed:", result.message || "No records returned");
-        }
-
-    } catch (err) {
-        console.error("Hourly Sparkline fetch failed:", err);
-    }
-
-    // 3. Render Sparklines
-    renderSparkline('oeeSparklineChart', records.map(r => ({date: r.hour, value: r.oee})), getCssVar('--mes-chart-color-1'));
-    renderSparkline('qualitySparklineChart', records.map(r => ({date: r.hour, value: r.quality})), getCssVar('--mes-chart-color-2'));
-    renderSparkline('performanceSparklineChart', records.map(r => ({date: r.hour, value: r.performance})), getCssVar('--mes-chart-color-3'));
-    renderSparkline('availabilitySparklineChart', records.map(r => ({date: r.hour, value: r.availability})), getCssVar('--mes-chart-color-4'));
-}
-
-
-// =================================================================
-// ส่วนที่ 4: กราฟวงกลม (Pie Charts / Scorecards)
-// =================================================================
-const OEE_TARGETS = {
-    oee: 85.0,
-    quality: 99.0,
-    performance: 90.0,
-    availability: 95.0
-};
-
-const charts = { oee: null, quality: null, performance: null, availability: null };
-
-function toggleLoadingState(elementId, isLoading) {
-    const element = document.getElementById(elementId);
-    const card = element ? element.closest('.chart-card') : null;
-    if (card) {
-        isLoading ? card.classList.add('is-loading') : card.classList.remove('is-loading');
-    }
-}
-
-function toggleNoDataMessage(canvasId, show) {
-    const canvas = document.getElementById(canvasId);
-    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
-    if (wrapper) {
-        wrapper.classList.remove('has-error');
-        show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
-    }
-}
-
-function toggleErrorMessage(canvasId, show) {
-    const canvas = document.getElementById(canvasId);
-    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
-    if (wrapper) {
-        wrapper.classList.remove('has-no-data');
-        show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
-    }
-}
-
-function getCssVar(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-}
-
-function getChartThemeColors() {
-    const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-    if (theme === 'dark') {
-        return {
-            centerTextColor: '#dee2e6', lossBgColor: '#495057',
-            successColor: '#66bb6a', warningColor: '#ffa726',
-            secondaryTextColor: '#adb5bd'
-        };
-    } else {
-        return {
-            centerTextColor: '#212529', lossBgColor: '#e9ecef',
-            successColor: '#198754', warningColor: '#dc3545',
-            secondaryTextColor: '#6c757d'
-        };
-    }
-}
-
-function formatMinutes(totalMinutes) {
-    if (isNaN(totalMinutes) || totalMinutes < 0) return '0h 0m';
-    const h = Math.floor(totalMinutes / 60);
-    const m = Math.round(totalMinutes % 60);
-    return `${h}h ${m}m`;
-}
-
-function updateInfoBox(infoId, lines, targetValue) {
-    const infoBox = document.getElementById(infoId);
-    if (!infoBox) return;
-    const gridHtml = lines.map(line => {
-        const parts = line.split(':');
-        const label = parts[0] ? parts[0].trim() : '';
-        const value = parts[1] ? parts[1].trim() : '';
-        return `
-            <div class="info-label">${label}</div>
-            <div class="info-value">${value}</div>
-        `;
-    }).join('');
-    infoBox.innerHTML = `<div class="info-grid">${gridHtml}</div>`;
-}
-
-function renderSimplePieChart(chartName, ctx, labels, data, colors, targetValue, secondaryText = '', hasData = true) {
-    if (!ctx) return;
-    const themeColors = getChartThemeColors();
-    const value = data[0];
-    const centerTextColor = value >= targetValue ? themeColors.successColor : themeColors.warningColor;
-    const chartConfig = {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: colors, cutout: '80%', borderWidth: 0 }] },
-        options: {
-            responsive: true, maintainAspectRatio: true, animation: { duration: 800 },
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (context) => `${context.label}: ${context.parsed.toFixed(1)}%` } },
-                centerText: {
-                    color: centerTextColor,
-                    secondaryColor: themeColors.secondaryTextColor,
-                    secondaryText: secondaryText,
-                    shouldDraw: hasData
-                }
-            }
-        },
-        plugins: [{
-            id: 'centerText',
-            beforeDraw(chart) {
-                const opts = chart.options.plugins.centerText;
-                if (!opts.shouldDraw) return;
-                const { width, height, ctx } = chart;
-                ctx.restore();
-                const mainFontSize = (height / 140).toFixed(2);
-                ctx.font = `900 ${mainFontSize}em sans-serif`;
-                ctx.textBaseline = "middle";
-                const mainText = `${chart.data.datasets[0].data[0].toFixed(1)}%`;
-                const mainTextX = Math.round((width - ctx.measureText(mainText).width) / 2);
-                const mainTextY = height / 2 - (opts.secondaryText ? 10 : 0);
-                ctx.fillStyle = opts.color || '#000';
-                ctx.fillText(mainText, mainTextX, mainTextY);
-                if (opts.secondaryText) {
-                    const secondaryFontSize = (height / 280).toFixed(2);
-                    ctx.font = `400 ${secondaryFontSize}em sans-serif`;
-                    const secondaryText = opts.secondaryText;
-                    const secondaryTextX = Math.round((width - ctx.measureText(secondaryText).width) / 2);
-                    const secondaryTextY = mainTextY + (height * 0.15);
-                    ctx.fillStyle = opts.secondaryColor || '#888';
-                    ctx.fillText(secondaryText, secondaryTextX, secondaryTextY);
-                }
-                ctx.save();
-            }
-        }]
-    };
-
-    if (charts[chartName]) {
-        charts[chartName].data.labels = labels;
-        charts[chartName].data.datasets[0].data = data;
-        charts[chartName].options.plugins.centerText.color = centerTextColor;
-        charts[chartName].options.plugins.centerText.secondaryText = secondaryText;
-        charts[chartName].options.plugins.centerText.shouldDraw = hasData;
-        charts[chartName].update();
-    } else {
-        charts[chartName] = new Chart(ctx, chartConfig);
-    }
-}
-
-/**
- * ดึงข้อมูล Pie Charts ด้วย Unified API
- */
-async function fetchAndRenderPieCharts() {
-    const chartIds = ["oeePieChart", "qualityPieChart", "performancePieChart", "availabilityPieChart"];
-    chartIds.forEach(id => {
-        toggleLoadingState(id, true);
-        toggleErrorMessage(id, false);
-    });
-
-    const filterStartDateStr = document.getElementById("startDate")?.value || '';
-    const filterEndDateStr = document.getElementById("endDate")?.value || '';
-    const filterLine = document.getElementById("lineFilter")?.value || '';
-    const filterModel = document.getElementById("modelFilter")?.value || '';
-
-    try {
-        console.log(`Pie Charts: Fetching data from ${filterStartDateStr} to ${filterEndDateStr}`);
-        const pieParams = new URLSearchParams({
-            action: 'getPieChart', // ✅ เพิ่ม action
-            startDate: filterStartDateStr,
-            endDate: filterEndDateStr,
-            line: filterLine,
-            model: filterModel
-        });
         
-        const response = await fetch(`api/oeeDashboardApi.php?${pieParams.toString()}&_=${new Date().getTime()}`);
-        if (!response.ok) throw new Error(`Piechart API: Network response was not ok`);
+        if (result.success) {
+            const records = result.data || [];
+            console.log("Chart Data:", records);
+            const labels = records.map(r => 
+                r.Hour || r.hour || r.Time || r.time || r.Period || r.date || r.Date || 
+                r.HourInterval || r.HourRange || r.time_label || 'N/A'
+            );
+            
+            const data = { 
+                oee: records.map(r => parseFloat(r.OEE || r.oee || 0)), 
+                quality: records.map(r => parseFloat(r.Quality || r.quality || 0)), 
+                performance: records.map(r => parseFloat(r.Performance || r.performance || 0)), 
+                availability: records.map(r => parseFloat(r.Availability || r.availability || 0)) 
+            };
+            
+            const ctx = document.getElementById("oeeLineChart")?.getContext("2d");
 
-        const result = await response.json(); 
-        if (!result.success) throw new Error(result.message || "Piechart API: API error");
-        
-        const data = result.data; // ✅ แกะเอา data ออกมาจาก JSON ก้อนใหญ่
-
-        const themeColors = getChartThemeColors();
-        const lossColor = themeColors.lossBgColor;
-        const totalLoss = Math.max(0, 100 - (data.oee || 0));
-        const qualityLossRatio = Math.max(0, 1 - ((data.quality || 0) / 100));
-        const performanceLossRatio = Math.max(0, 1 - ((data.performance || 0) / 100));
-        const availabilityLossRatio = Math.max(0, 1 - ((data.availability || 0) / 100));
-        const totalRatio = qualityLossRatio + performanceLossRatio + availabilityLossRatio;
-
-        const oeeHasData = data.oee !== undefined && data.oee !== null;
-        toggleNoDataMessage("oeePieChart", !oeeHasData || data.oee <= 0);
-        renderSimplePieChart('oee', document.getElementById("oeePieChart")?.getContext("2d"),
-            ['OEE', 'Loss'], [data.oee || 0, totalLoss],
-            [getCssVar('--mes-chart-color-1'), lossColor], OEE_TARGETS.oee,
-            '', oeeHasData && data.oee > 0
-        );
-         updateInfoBox("oeeInfo", [
-            `OEE Loss: <b>${totalLoss.toFixed(1)} %</b>`,
-            `Q Contrib: <b>${(totalRatio > 0 ? (qualityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
-            `P Contrib: <b>${(totalRatio > 0 ? (performanceLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`,
-            `A Contrib: <b>${(totalRatio > 0 ? (availabilityLossRatio / totalRatio) * totalLoss : 0).toFixed(1)} %</b>`
-        ], OEE_TARGETS.oee);
-
-        const qualityHasData = (data.actual_output || 0) > 0;
-        toggleNoDataMessage("qualityPieChart", !qualityHasData);
-        renderSimplePieChart('quality', document.getElementById("qualityPieChart")?.getContext("2d"),
-            ['Good (FG)', 'Defects'], [data.quality || 0, Math.max(0, 100 - (data.quality || 0))],
-            [getCssVar('--mes-chart-color-2'), lossColor], OEE_TARGETS.quality,
-            `FG: ${(data.fg || 0).toLocaleString()} pcs`, qualityHasData
-        );
-        updateInfoBox("qualityInfo", [
-             `Good (FG): <b>${(data.fg || 0).toLocaleString()}</b> pcs`,
-             `Total Defects: <b>${(data.defects || 0).toLocaleString()}</b> pcs`,
-             `&nbsp; └ Hold: <b>${(data.hold || 0).toLocaleString()}</b> pcs`,
-             `&nbsp; └ Scrap: <b>${(data.scrap || 0).toLocaleString()}</b> pcs`
-        ], OEE_TARGETS.quality);
-
-        const performanceHasData = (data.actual_output || 0) > 0;
-        toggleNoDataMessage("performancePieChart", !performanceHasData);
-        renderSimplePieChart('performance', document.getElementById("performancePieChart")?.getContext("2d"),
-            ['Performance', 'Loss'], [data.performance || 0, Math.max(0, 100 - (data.performance || 0))],
-            [getCssVar('--mes-chart-color-3'), lossColor], OEE_TARGETS.performance,
-            `Actual: ${(data.actual_output || 0).toLocaleString()} pcs`, performanceHasData && (data.performance || 0) > 0
-        );
-         updateInfoBox("performanceInfo", [
-            `Actual: <b>${(data.actual_output || 0).toLocaleString()}</b> pcs`,
-            `Theo. Time: <b>${formatMinutes(data.total_theoretical_minutes || 0)}</b>`,
-            `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
-        ], OEE_TARGETS.performance);
-
-        const availabilityHasData = data.planned_time !== undefined && data.planned_time !== null && data.planned_time > 0;
-        const runtimePercent = availabilityHasData ? Math.max(0, Math.min(100, ((data.runtime || 0) / data.planned_time) * 100)) : 0;
-        const downtimePercent = 100 - runtimePercent;
-        toggleNoDataMessage("availabilityPieChart", !availabilityHasData);
-        renderSimplePieChart('availability', document.getElementById("availabilityPieChart")?.getContext("2d"),
-            ['Runtime', 'Downtime'], [runtimePercent, downtimePercent],
-            [getCssVar('--mes-chart-color-4'), lossColor], OEE_TARGETS.availability,
-            `Downtime: ${formatMinutes(data.downtime || 0)}`, availabilityHasData
-        );
-         updateInfoBox("availabilityInfo", [
-            `Planned: <b>${formatMinutes(data.planned_time || 0)}</b>`,
-            `Downtime: <b>${formatMinutes(data.downtime || 0)}</b>`,
-            `Runtime: <b>${formatMinutes(data.runtime || 0)}</b>`
-        ], OEE_TARGETS.availability);
-        
-    } catch (err) {
-        console.error("Pie chart update failed:", err);
-        chartIds.forEach(id => toggleErrorMessage(id, true));
-    } finally {
-        chartIds.forEach(id => toggleLoadingState(id, false));
-    }
-}
-
-// =================================================================
-// ส่วนที่ 5: Theme Change Listener
-// =================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    const observer = new MutationObserver((mutationsList) => {
-        for (const mutation of mutationsList) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                console.log("Theme changed, re-rendering ALL charts...");
-                fetchAndRenderPieCharts?.(); 
-                fetchAndRenderLineCharts?.();
-                fetchAndRenderHourlySparklines?.();
-                fetchAndRenderBarCharts?.();
-                fetchAndRenderDailyProductionChart?.();
+            if (!oeeLineChart) {
+                oeeLineChart = new Chart(ctx, {
+                    type: "line", 
+                    data: { 
+                        labels: labels,
+                        datasets: [
+                            { label: "OEE", data: data.oee, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', tension: 0.4, fill: true, borderWidth: 3 },
+                            { label: "Availability", data: data.availability, borderColor: '#0dcaf0', tension: 0.4, borderDash: [5, 5], borderWidth: 2 },
+                            { label: "Performance", data: data.performance, borderColor: '#ffc107', tension: 0.4, borderDash: [5, 5], borderWidth: 2 },
+                            { label: "Quality", data: data.quality, borderColor: '#198754', tension: 0.4, borderDash: [5, 5], borderWidth: 2 }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { min: 0, max: 100, ticks: { callback: (val) => val + '%' } }, 
+                            x: { 
+                                grid: { display: false },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    maxRotation: 0,
+                                    minRotation: 0
+                                }
+                            } 
+                        }
+                    }
+                });
+            } else {
+                oeeLineChart.data.labels = labels;
+                oeeLineChart.data.datasets[0].data = data.oee;
+                oeeLineChart.data.datasets[1].data = data.availability;
+                oeeLineChart.data.datasets[2].data = data.performance;
+                oeeLineChart.data.datasets[3].data = data.quality;
+                oeeLineChart.update();
             }
         }
-    });
-    observer.observe(document.documentElement, { attributes: true });
+    } catch(e) { console.error(e); }
+}
+
+document.getElementById('oeeTrendToggle')?.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button || button.classList.contains('active')) return;
+    document.querySelector('#oeeTrendToggle .active')?.classList.remove('active');
+    button.classList.add('active');
+    fetchAndRenderLineCharts(); // เรียกโหลดข้อมูลกราฟใหม่ทันที
 });

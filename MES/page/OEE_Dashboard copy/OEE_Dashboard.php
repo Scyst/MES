@@ -58,6 +58,25 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
             width: 10px; height: 10px; background-color: #198754; border-radius: 50%;
             display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px;
         }
+        /* 📱 Mobile Responsive Improvements */
+        @media (max-width: 767.98px) {
+            /* 1. จัดระเบียบ Toolbar ให้ซ้อนกันเรียบร้อยในมือถือ */
+            .dashboard-toolbar { flex-direction: column; align-items: stretch !important; padding: 8px; }
+            .dashboard-toolbar > div { border-right: none !important; border-bottom: 1px solid #f1f5f9; padding: 8px 0; justify-content: space-between; width: 100%; }
+            .dashboard-toolbar > div:last-child { border-bottom: none; }
+            .dashboard-toolbar select, .dashboard-toolbar input[type="date"] { width: 100% !important; text-align: right; }
+            .dashboard-toolbar button { width: 100%; margin-top: 8px; margin-left: 0 !important; }
+
+            /* 2. Freeze แช่แข็งคอลัมน์แรกของตาราง (เหมือน Excel) */
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.05); }
+            #productionTable th:nth-child(1), 
+            #productionTable td:nth-child(1) {
+                position: sticky; left: 0; z-index: 10; 
+                background-color: #ffffff; /* บังคับพื้นหลังทึบเพื่อไม่ให้ตัวหนังสือทะลุ */
+                box-shadow: 2px 0 4px -2px rgba(0,0,0,0.1); 
+            }
+            #productionTable th:nth-child(1) { z-index: 12; background-color: #f8f9fa; }
+        }
     </style>
 </head>
 <body class="layout-top-header">
@@ -245,18 +264,18 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="fas fa-boxes me-2 text-success"></i>Production Output by Part</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover align-middle mb-0" id="productionTable">
-                                    <thead class="table-light sticky-top">
+                                    <thead class="table-light sticky-top" style="z-index: 11;">
                                         <tr>
-                                            <th>Part No.</th>
-                                            <th>Line / Model</th>
-                                            <th class="text-end" style="width: 16%;">FG (Good)</th>
-                                            <th class="text-end" style="width: 16%;">Hold</th>
-                                            <th class="text-end" style="width: 16%;">Scrap</th>
-                                            <th class="text-end border-start pe-3" style="width: 22%;">Total Qty (Breakdown)</th>
+                                            <th style="min-width: 100px;">Part No.</th>
+                                            <th style="min-width: 120px;">Line / Model</th>
+                                            <th class="text-end" style="min-width: 130px;">FG (Good)</th>
+                                            <th class="text-end" style="min-width: 130px;">Hold</th>
+                                            <th class="text-end" style="min-width: 130px;">Scrap</th>
+                                            <th class="text-end border-start pe-3" style="min-width: 180px;">Total Qty (Breakdown)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="productionTableBody">
-                                        <tr><td colspan="5" class="text-center text-muted py-4">Loading data...</td></tr>
+                                        <tr><td colspan="6" class="text-center text-muted py-4">Loading data...</td></tr>
                                     </tbody>
                                 </table>
                             </div>

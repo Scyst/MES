@@ -1,284 +1,141 @@
 ﻿"use strict";
+let stopBarChartInstance = null;
 
-const barChartInstances = {};
+async function fetchAndRenderBarAndTable() {
+    const activeToggle = document.querySelector('#stopCauseToggle .btn.active');
+    const stopCauseGroupBy = activeToggle ? activeToggle.dataset.group : 'cause';
 
-/**
- * Toggles the loading state of a chart card.
- */
-function toggleLoadingState(elementId, isLoading) {
-    const element = document.getElementById(elementId);
-    const card = element ? element.closest('.chart-card') : null;
-    if (card) {
-        isLoading ? card.classList.add('is-loading') : card.classList.remove('is-loading');
-    }
-}
-
-function toggleNoDataMessage(canvasId, show) {
-    const canvas = document.getElementById(canvasId);
-    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
-    if (wrapper) {
-        wrapper.classList.remove('has-error');
-        show ? wrapper.classList.add('has-no-data') : wrapper.classList.remove('has-no-data');
-    }
-}
-
-function toggleErrorMessage(canvasId, show) {
-    const canvas = document.getElementById(canvasId);
-    const wrapper = canvas ? canvas.closest('.chart-wrapper') : null;
-    if (wrapper) {
-        wrapper.classList.remove('has-no-data');
-        show ? wrapper.classList.add('has-error') : wrapper.classList.remove('has-error');
-    }
-}
-
-/**
- * Helper function to get CSS variable values.
- */
-function getCssVar(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-}
-
-function getBarChartThemeColors() {
-    const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-    return theme === 'dark'
-        ? { ticksColor: '#ccc', gridColor: '#444', legendColor: '#ccc' }
-        : { ticksColor: '#6c757d', gridColor: '#dee2e6', legendColor: '#212529' };
-}
-
-function truncateLabel(label, maxLength = 8) {
-    if (typeof label !== 'string') return '';
-    return label.length > maxLength ? label.substring(0, maxLength) + '...' : label;
-}
-
-function renderBarChart(canvasId, labels, datasets, options = {}) {
-    const { isStacked, originalLabels, unitLabel } = options;
-    const themeColors = getBarChartThemeColors();
-    const ctx = document.getElementById(canvasId)?.getContext("2d");
-    if (!ctx) return;
-
-    let chartInstance = barChartInstances[canvasId];
-
-    if (chartInstance && chartInstance.destroyed) {
-        chartInstance = null;
-    }
-
-    if (!chartInstance) {
-        console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Creating NEW chart.`);
-        barChartInstances[canvasId] = new Chart(ctx, {
-            type: 'bar',
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 500 },
-                plugins: {
-                    legend: { display: isStacked },
-                    zoom: {
-                        pan: { enabled: true, mode: 'x' },
-                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            title: (tooltipItems) => {
-                                if (tooltipItems.length > 0 && originalLabels) {
-                                    return originalLabels[tooltipItems[0].dataIndex];
-                                }
-                                return '';
-                            },
-                            label: (context) => {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed.y !== null) {
-                                    label += context.parsed.y.toLocaleString();
-                                    if (unitLabel) label += ' ' + unitLabel;
-                                }
-                                return label;
-                            },
-                            footer: (tooltipItems) => {
-                                if (!isStacked) return '';
-                                let sum = 0;
-                                tooltipItems.forEach(item => { sum += item.parsed.y || 0; });
-                                let footerText = 'Total: ' + sum.toLocaleString();
-                                if (unitLabel) footerText += ' ' + unitLabel;
-                                return footerText;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { 
-                        stacked: isStacked, 
-                        ticks: { 
-                            color: themeColors.ticksColor,
-                            maxRotation: 0,
-                            minRotation: 0,
-                            autoSkip: true,
-                            autoSkipPadding: 15,
-                            maxTicksLimit: 10,
-                            align: 'center'
-                        } 
-                    },
-                    y: { stacked: isStacked, beginAtZero: true, ticks: { color: themeColors.ticksColor } }
-                }
-            }
-        });
-    } else {
-        console.log(`[${new Date().toLocaleTimeString()}] Chart '${canvasId}': Updating existing chart.`);
-        
-        chartInstance.data.labels = labels;
-        chartInstance.data.datasets.forEach((oldDataset, index) => {
-            const newDataset = datasets[index];
-            if (newDataset) {
-                oldDataset.label = newDataset.label;
-                oldDataset.data = newDataset.data;
-                oldDataset.backgroundColor = newDataset.backgroundColor;
-            }
-        });
-        
-        if (datasets.length > chartInstance.data.datasets.length) {
-            for (let i = chartInstance.data.datasets.length; i < datasets.length; i++) {
-                chartInstance.data.datasets.push(datasets[i]);
-            }
-        } 
-        else if (datasets.length < chartInstance.data.datasets.length) {
-             chartInstance.data.datasets.length = datasets.length;
-        }
-
-        chartInstance.options.scales.x.ticks.color = themeColors.ticksColor;
-        chartInstance.options.scales.y.ticks.color = themeColors.ticksColor;
-        chartInstance.options.plugins.legend.labels.color = themeColors.legendColor;
-        
-        chartInstance.update(); 
-    }
-}
-
-async function fetchAndRenderBarCharts() {
-    toggleLoadingState("partsBarChart", true);
-    toggleLoadingState("stopCauseBarChart", true);
-    toggleErrorMessage("partsBarChart", false);
-    toggleErrorMessage("stopCauseBarChart", false);
+    const params = new URLSearchParams({
+        action: 'getBarCharts',
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value,
+        line: document.getElementById("lineFilter").value,
+        model: document.getElementById("modelFilter").value,
+        stopCauseGroupBy: stopCauseGroupBy
+    });
 
     try {
-        const activeToggle = document.querySelector('#stopCauseToggle .btn.active');
-        const stopCauseGroupBy = activeToggle ? activeToggle.dataset.group : 'cause';
-
-        // ✅ แก้ไข: เพิ่ม action: 'getBarCharts' ลงใน params
-        const params = new URLSearchParams({
-            action: 'getBarCharts',
-            startDate: document.getElementById("startDate")?.value || '',
-            endDate: document.getElementById("endDate")?.value || '',
-            line: document.getElementById("lineFilter")?.value || '',
-            model: document.getElementById("modelFilter")?.value || '',
-            stopCauseGroupBy: stopCauseGroupBy
-        });
-        
-        // ✅ แก้ไข: เปลี่ยน Endpoint ชี้ไปที่ Unified API
         const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
-        const responseData = await response.json();
+        const result = await response.json();
+        if (!result.success) return;
+
+        // 1. วาดกราฟแนวนอน (Downtime)
+        const stopData = result.data.stopCause;
+        const ctx = document.getElementById("stopCauseBarChart")?.getContext("2d");
         
-        // ✅ แก้ไข: ใช้ responseData.message แทน responseData.error เพื่อให้ตรงกับมาตรฐาน
-        if (!responseData.success) throw new Error(responseData.message || "Barchart API: Failed to fetch bar chart data.");
-
-        const partResults = responseData.data?.partResults;
-        const hasPartsData = partResults && partResults.length > 0;
-        toggleNoDataMessage("partsBarChart", !hasPartsData);
-
-        let partLabels = [];
-        let originalPartLabels = [];
-        let fgData = [];
-        let holdData = [];
-        let scrapData = [];
-        let partDatasets = [];
-
-        if (hasPartsData) {
-            partResults.forEach(row => {
-                partLabels.push(row.part_no);
-                originalPartLabels.push(`${row.part_no} (${row.production_line} / ${row.model})`);
-                
-                fgData.push(row.FG);
-                holdData.push(row.HOLD);
-                scrapData.push(row.SCRAP);
-            });
-
-            const countTypes = { FG: fgData, HOLD: holdData, SCRAP: scrapData };
-            const colors = { 
-                FG: 'rgba(75, 192, 192, 0.7)',
-                HOLD: 'rgba(255, 159, 64, 0.7)',
-                SCRAP: 'rgba(255, 99, 132, 0.7)'
-            };
+        const wrapper = document.getElementById("downtimeChartWrapper");
+        const emptyState = document.getElementById("downtimeEmptyState");
+        
+        // ⭐️ ถ้าไม่มีข้อมูล Downtime ให้โชว์ Empty State
+        if (!stopData || stopData.labels.length === 0) {
+            wrapper.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            wrapper.style.display = 'block';
+            emptyState.style.display = 'none';
             
-            partDatasets = Object.keys(countTypes)
-                .map(type => ({
-                    label: type,
-                    data: countTypes[type],
-                    backgroundColor: colors[type],
-                    borderColor: colors[type].replace('0.7', '1'),
-                    borderWidth: 1
-                }))
-                .filter(ds => ds.data.some(val => val > 0)); 
-        }
-        
-        renderBarChart('partsBarChart', partLabels, partDatasets, { 
-            isStacked: true, 
-            originalLabels: originalPartLabels,
-            unitLabel: 'pcs' 
-        });
-        
-        // --- Stop Cause Bar Chart ---
-        const stopCauseData = responseData.data?.stopCause;
-        const hasStopCauseData = stopCauseData && stopCauseData.labels && stopCauseData.labels.length > 0;
-        toggleNoDataMessage("stopCauseBarChart", !hasStopCauseData);
-
-        const stopCauseDatasets = hasStopCauseData ? stopCauseData.datasets : [];
-        if (hasStopCauseData) {
-            const stopColor = 'rgba(255, 99, 132, 0.7)'; // Red
-            stopCauseDatasets[0].backgroundColor = stopColor;
-            stopCauseDatasets[0].borderColor = stopColor.replace('0.7', '1');
-            stopCauseDatasets[0].borderWidth = 1;
-        }
-
-        renderBarChart('stopCauseBarChart', hasStopCauseData ? stopCauseData.labels : [], stopCauseDatasets, { 
-            isStacked: true, 
-            unitLabel: 'min', 
-            originalLabels: hasStopCauseData ? stopCauseData.labels : [] 
-        });
-
-    } catch (err) {
-        console.error("Bar chart fetch failed:", err);
-        toggleErrorMessage("partsBarChart", true);
-        toggleErrorMessage("stopCauseBarChart", true);
-    } finally {
-        toggleLoadingState("partsBarChart", false);
-        toggleLoadingState("stopCauseBarChart", false);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const observer = new MutationObserver((mutationsList) => {
-        for (const mutation of mutationsList) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                if (Object.keys(barChartInstances).length > 0) {
-                    fetchAndRenderBarCharts();
+            if (ctx) {
+                if (!stopBarChartInstance) {
+                    // ⭐️ สร้างกราฟแค่ครั้งแรกครั้งเดียว
+                    stopBarChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: stopData.labels,
+                            datasets: [{ label: 'Downtime (min)', data: stopData.datasets[0].data, backgroundColor: '#cbd5e1', hoverBackgroundColor: '#dc3545', borderRadius: 4 }]
+                        },
+                        options: {
+                            indexAxis: 'y', 
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { grid: { display: false } }, y: { grid: { display: false } } }
+                        }
+                    });
+                } else {
+                    // ⭐️ ครั้งต่อๆ ไปให้อัปเดตแค่ไส้ใน กราฟจะได้สมูท ไม่กระตุก
+                    stopBarChartInstance.data.labels = stopData.labels;
+                    stopBarChartInstance.data.datasets[0].data = stopData.datasets[0].data;
+                    stopBarChartInstance.update();
                 }
             }
         }
-    });
-    observer.observe(document.documentElement, { attributes: true });
 
-    const stopCauseToggle = document.getElementById('stopCauseToggle');
-    if (stopCauseToggle) {
-        stopCauseToggle.addEventListener('click', (event) => {
-            const button = event.target.closest('button');
-            if (!button || button.classList.contains('active')) {
-                return;
+        // 2. วาดตาราง Data Bar แบบ PowerBI
+        const partResults = result.data.partResults;
+        const tbody = document.getElementById('productionTableBody');
+        if (tbody) {
+            if (!partResults || partResults.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No production data</td></tr>';
+            } else {
+                tbody.innerHTML = '';
+                const globalMax = Math.max(
+                    ...partResults.map(r => Math.max(parseInt(r.FG)||0, parseInt(r.HOLD)||0, parseInt(r.SCRAP)||0)), 
+                    1 
+                );
+
+                partResults.forEach(row => {
+                    const fgVal = parseInt(row.FG) || 0;
+                    const holdVal = parseInt(row.HOLD) || 0;
+                    const scrapVal = parseInt(row.SCRAP) || 0;
+                    
+                    const totalVal = fgVal + holdVal + scrapVal;
+
+                    const fgPct = totalVal > 0 ? ((fgVal / totalVal) * 100).toFixed(1) : '0.0';
+                    const holdPct = totalVal > 0 ? ((holdVal / totalVal) * 100).toFixed(1) : '0.0';
+                    const scrapPct = totalVal > 0 ? ((scrapVal / totalVal) * 100).toFixed(1) : '0.0';
+
+                    const fgBar = (fgVal / globalMax) * 100;
+                    const holdBar = (holdVal / globalMax) * 100;
+                    const scrapBar = (scrapVal / globalMax) * 100;
+
+                    tbody.innerHTML += `
+                        <tr class="align-middle">
+                            <td class="fw-bold text-primary">${row.part_no}</td>
+                            <td class="text-muted small">${row.production_line} | ${row.model}</td>
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${fgVal.toLocaleString()}</span>
+                                </div>
+                                <div class="data-bar-bg" style="width: 100%;"></div>
+                                <div class="data-bar-fill fill-fg" style="width: ${fgBar}%;"></div>
+                            </td>
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${holdVal.toLocaleString()}</span>
+                                </div>
+                                <div class="data-bar-bg" style="width: 100%;"></div>
+                                <div class="data-bar-fill fill-hold" style="width: ${holdBar}%;"></div>
+                            </td>
+                            
+                            <td class="data-bar-cell ps-2 py-2">
+                                <div class="position-relative mb-1 pe-2 text-end" style="z-index: 2;">
+                                    <span class="fw-bold" style="color: #334155;">${scrapVal.toLocaleString()}</span>
+                                </div>
+                                <div class="data-bar-bg" style="width: 100%;"></div>
+                                <div class="data-bar-fill fill-scrap" style="width: ${scrapBar}%;"></div>
+                            </td>
+
+                            <td class="text-end border-start pe-3 bg-light bg-opacity-50 py-2">
+                                <div class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${totalVal.toLocaleString()}</div>
+                                <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                    <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 0.6rem;" title="FG %">${fgPct}%</span>
+                                    <span class="badge rounded-pill bg-warning bg-opacity-10 border border-warning border-opacity-50" style="font-size: 0.6rem; color: #b45309;" title="Hold %">${holdPct}%</span>
+                                    <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.6rem;" title="Scrap %">${scrapPct}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
             }
+        }
+    } catch (e) { console.error(e); }
+}
 
-            stopCauseToggle.querySelector('.active')?.classList.remove('active');
-            button.classList.add('active');
-
-            fetchAndRenderBarCharts();
-        });
-    }
+document.getElementById('stopCauseToggle')?.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button || button.classList.contains('active')) return;
+    document.querySelector('#stopCauseToggle .active')?.classList.remove('active');
+    button.classList.add('active');
+    fetchAndRenderBarAndTable();
 });
