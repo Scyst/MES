@@ -89,7 +89,7 @@ async function fetchAndRenderBarAndTable() {
 
                     tbody.innerHTML += `
                         <tr class="align-middle">
-                            <td class="fw-bold text-primary">${row.part_no}</td>
+                            <td class="fw-bold text-primary bg-white">${row.part_no}</td>
                             <td class="text-muted small">${row.production_line} | ${row.model}</td>
                             
                             <td class="data-bar-cell ps-2 py-2">

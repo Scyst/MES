@@ -16,7 +16,6 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     <style>
-        /* 🚀 Soft UI & PowerBI Style */
         html, body.layout-top-header { height: auto !important; min-height: 100vh; overflow-x: hidden; overflow-y: auto !important; background-color: #f8f9fa; }
         .page-container, #main-content { height: auto !important; min-height: 100%; overflow: visible !important; }
         
@@ -24,16 +23,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         .dashboard-toolbar select, .dashboard-toolbar input[type="date"] { font-family: 'Prompt', sans-serif; font-size: 0.85rem; border-radius: 6px; }
         .dashboard-toolbar select:hover, .dashboard-toolbar input[type="date"]:hover { background-color: #f1f5f9 !important; }
         
-        .chart-card {
-            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column;
-        }
+        .chart-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; }
         .chart-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.08); transform: translateY(-2px); }
         
-        /* ล็อคขนาด Gauge Chart ให้พอดีเป๊ะ */
         .gauge-container { height: 110px !important; position: relative; width: 100%; display: flex; justify-content: center; }
         
-        /* Data Bar in Table */
         .table-responsive { max-height: 400px; overflow-y: auto; }
         .table-responsive::-webkit-scrollbar { width: 6px; }
         .table-responsive::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -44,19 +38,92 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         .fill-hold { background-color: rgba(253, 126, 20, 0.2); border-right: 3px solid rgba(253, 126, 20, 0.9); }
         .fill-scrap { background-color: rgba(220, 53, 69, 0.2); border-right: 3px solid rgba(220, 53, 69, 0.9); }
         
-        /* สไตล์ Info ใต้ Gauge */
         .metric-mini-box { background: #f8f9fa; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; text-align: center; border: 1px solid #e9ecef; }
         .metric-mini-label { color: #6c757d; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;}
         .metric-mini-value { font-weight: 700; color: #212529; font-size: 0.85rem; }
-        /* 🚀 Live Pulsing Dot */
+        
         @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
             70% { box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
             100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
         }
-        .live-indicator {
-            width: 10px; height: 10px; background-color: #198754; border-radius: 50%;
-            display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px;
+        .live-indicator { width: 10px; height: 10px; background-color: #198754; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px; }
+        
+        /* =========================================
+           💻 Desktop Base Fix (ซ่อม PC ให้แยกซ้าย-ขวา)
+           ========================================= */
+        .top-controls-wrapper { width: 100%; overflow-x: hidden; }
+        .dashboard-toolbar { width: 100%; display: flex; flex-wrap: wrap; align-items: center; }
+        .live-status-item { margin-right: auto !important; }
+
+        /* =========================================
+           📱 Mobile Portrait (แนวตั้ง - หน้าจอแคบ)
+           ========================================= */
+        @media (max-width: 767.98px) and (orientation: portrait) {
+            .dashboard-toolbar { display: grid !important; grid-template-columns: 1fr 1fr; gap: 12px 8px; padding: 12px !important; }
+            .live-status-item { margin: 0 0 4px 0 !important; grid-column: 1 / span 2; justify-content: center !important; border-right: none !important; border-bottom: 1px solid #f1f5f9 !important; padding-bottom: 12px !important; }
+            .filter-item { width: 100% !important; border-right: none !important; padding: 0 !important; margin-left: 0 !important; }
+            .date-item { grid-column: 1 / span 2; display: flex !important; justify-content: space-between; padding: 0 !important; }
+            .date-item input { flex: 1; min-width: 0; }
+            .update-btn { grid-column: 1 / span 2; width: 100% !important; margin: 0 !important; }
+            .dashboard-toolbar select, .dashboard-toolbar input[type="date"] { width: 100% !important; padding: 8px 10px !important; }
+            
+            .chart-card .row.g-0 { display: flex !important; flex-wrap: wrap !important; }
+            .financial-col { flex: 0 0 50% !important; max-width: 50% !important; border-bottom: 1px solid #f1f5f9 !important; height: auto !important; padding: 10px 4px !important; }
+            .financial-col:nth-child(odd) { border-right: 1px solid #f1f5f9 !important; }
+            .financial-col:nth-child(even) { border-right: none !important; }
+            .financial-col:nth-child(5), .financial-col:nth-child(6) { border-bottom: none !important; }
+            .fin-value { font-size: 1.1rem !important; }
+            .fin-label { font-size: 0.6rem !important; }
+
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.05); }
+            #productionTable th:nth-child(1), #productionTable td:nth-child(1) { position: sticky; left: 0; z-index: 10; background-color: #ffffff; box-shadow: 2px 0 4px -2px rgba(0,0,0,0.1); }
+            #productionTable th:nth-child(1) { z-index: 12; background-color: #f8f9fa; }
+        }
+
+        /* =========================================
+           📱 Mobile Landscape (แนวนอน - พื้นที่เตี้ย)
+           ========================================= */
+        @media (max-width: 950px) and (orientation: landscape) {
+            .top-controls-wrapper { overflow-x: auto !important; -webkit-overflow-scrolling: touch; margin-bottom: 8px !important; width: 100%; }
+            .top-controls-wrapper::-webkit-scrollbar { display: none; }
+            
+            .dashboard-toolbar { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; min-width: 100% !important; width: max-content !important; padding: 4px !important; gap: 4px !important; }
+            .live-status-item { margin-right: auto !important; padding: 0 8px !important; border-right: none !important; }
+            .live-text, .live-vr { display: none !important; }
+            #liveClock { font-size: 0.85rem !important; }
+            
+            .filter-item, .date-item { border-right: 1px solid #e2e8f0 !important; padding: 0 8px !important; display: flex !important; align-items: center; }
+            .update-btn { margin: 0 4px !important; }
+
+            .chart-card { height: auto !important; overflow: visible !important; }
+            .content-wrapper { padding: 4px 8px !important; }
+            .chart-card .row.g-0 { display: flex !important; flex-wrap: wrap !important; }
+            .financial-col { flex: 0 0 33.3333% !important; max-width: 33.3333% !important; padding: 4px !important; border-bottom: 1px solid #f1f5f9 !important; }
+            .financial-col:nth-child(3n) { border-right: none !important; }
+            .financial-col:not(:nth-child(3n)) { border-right: 1px solid #f1f5f9 !important; }
+            .financial-col:nth-child(n+4) { border-bottom: none !important; }
+            .fin-value { font-size: 0.95rem !important; margin-bottom: 2px !important; }
+            .fin-label { font-size: 0.6rem !important; margin-bottom: 0 !important; }
+            .fin-sub-item { font-size: 0.55rem !important; padding: 1px 4px !important; }
+
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.05); }
+            #productionTable th:nth-child(1), #productionTable td:nth-child(1) { position: sticky; left: 0; z-index: 10; background-color: #ffffff; box-shadow: 2px 0 4px -2px rgba(0,0,0,0.1); }
+            #productionTable th:nth-child(1) { z-index: 12; background-color: #f8f9fa; }
+        }
+
+        /* =========================================
+           📟 Tablet / iPad Pro (หน้าจอ 768px ถึง 1199px)
+           ========================================= */
+        @media (min-width: 768px) and (max-width: 1199.98px) {
+            /* ⭐️ ปลดล็อกความสูง ให้ข้อมูลแถวที่ 2 โผล่ออกมาได้ */
+            .chart-card { height: auto !important; overflow: visible !important; }
+            
+            /* ⭐️ ตีเส้นตารางให้เนียนกริบสำหรับ 3 คอลัมน์ 2 แถว */
+            .financial-col { border-bottom: 1px solid #f1f5f9; padding: 16px 8px !important; }
+            .financial-col:nth-child(3n) { border-right: none !important; } 
+            .financial-col:not(:nth-child(3n)) { border-right: 1px solid #f1f5f9 !important; }
+            .financial-col:nth-child(n+4) { border-bottom: none !important; } /* แถวล่างสุดไม่ต้องมีเส้นใต้ */
         }
     </style>
 </head>
@@ -67,29 +134,29 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         <main id="main-content">
             <div class="content-wrapper p-3">
                 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2">
-                    <div class="d-flex align-items-center">
-                        <div class="d-flex align-items-center bg-white px-3 py-1 rounded shadow-sm border dashboard-toolbar">
+                <div class="top-controls-wrapper mb-3">
+                    <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
+                        
+                        <div class="d-flex align-items-center px-3 py-1 border-end live-status-item">
                             <span class="live-indicator"></span>
-                            <span class="fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 0.5px;">SYSTEM LIVE</span>
-                            <div class="vr mx-3 text-muted" style="opacity: 0.2;"></div>
+                            <span class="fw-bold text-success live-text" style="font-size: 0.8rem; letter-spacing: 0.5px; margin-right: 12px;">SYSTEM LIVE</span>
+                            <div class="vr mx-2 text-muted live-vr" style="opacity: 0.2;"></div>
                             <i class="far fa-clock text-muted me-2" style="font-size: 0.85rem;"></i>
                             <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="liveClock">--:--:--</span>
                         </div>
-                    </div>
-                    <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
-                        <div class="d-flex align-items-center px-2 border-end">
+
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="lineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Lines</option></select>
                         </div>
-                        <div class="d-flex align-items-center px-2 border-end">
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="modelFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Models</option></select>
                         </div>
-                        <div class="d-flex align-items-center px-2">
-                            <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 110px;">
+                        <div class="d-flex align-items-center px-2 date-item">
+                            <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
                             <span class="text-muted mx-1"><i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></span>
-                            <input type="date" id="endDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 110px;">
+                            <input type="date" id="endDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
                         </div>
-                        <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="handleFilterChange()">
+                        <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm update-btn" onclick="handleFilterChange()">
                             <i class="fas fa-sync-alt me-1"></i> Update
                         </button>
                     </div>
@@ -245,14 +312,14 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="fas fa-boxes me-2 text-success"></i>Production Output by Part</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover align-middle mb-0" id="productionTable">
-                                    <thead class="table-light sticky-top">
+                                    <thead class="table-light sticky-top" style="z-index: 11;">
                                         <tr>
-                                            <th>Part No.</th>
-                                            <th>Line / Model</th>
-                                            <th class="text-end" style="width: 16%;">FG (Good)</th>
-                                            <th class="text-end" style="width: 16%;">Hold</th>
-                                            <th class="text-end" style="width: 16%;">Scrap</th>
-                                            <th class="text-end border-start pe-3" style="width: 22%;">Total Qty (Breakdown)</th>
+                                            <th style="min-width: 100px;">Part No.</th>
+                                            <th style="min-width: 120px;">Line / Model</th>
+                                            <th class="text-end" style="min-width: 130px;">FG (Good)</th>
+                                            <th class="text-end" style="min-width: 130px;">Hold</th>
+                                            <th class="text-end" style="min-width: 130px;">Scrap</th>
+                                            <th class="text-end border-start pe-3" style="min-width: 180px;">Total Qty (Breakdown)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="productionTableBody">
