@@ -63,7 +63,7 @@ $defaultEnd = date('Y-m-t');
             <div class="px-2 px-md-3 pt-3">
                 <div class="row g-2 mb-2 flex-nowrap overflow-x-auto pb-1 hide-scrollbar align-items-stretch">
                     
-                    <div class="col-10 col-md-4" style="min-width: 260px;">
+                    <div class="col-10 col-md-3" style="min-width: 260px;">
                         <div class="card shadow-sm kpi-card border-primary h-100">
                             <div class="card-body p-3 d-flex flex-column justify-content-center">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -80,7 +80,7 @@ $defaultEnd = date('Y-m-t');
                         </div>
                     </div>
 
-                    <div class="col-10 col-md-4" style="min-width: 260px;">
+                    <div class="col-10 col-md-3" style="min-width: 260px;">
                         <div class="card shadow-sm kpi-card border-warning h-100">
                             <div class="card-body p-3 d-flex flex-column justify-content-center">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -97,7 +97,7 @@ $defaultEnd = date('Y-m-t');
                         </div>
                     </div>
 
-                    <div class="col-10 col-md-4" style="min-width: 260px;">
+                    <div class="col-10 col-md-3" style="min-width: 260px;">
                         <div class="card shadow-sm kpi-card border-success h-100">
                             <div class="card-body p-3 d-flex flex-column justify-content-center">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -109,6 +109,23 @@ $defaultEnd = date('Y-m-t');
                                 </div>
                                 <div class="mt-auto pt-2 border-top border-success-subtle">
                                     <div id="breakdownSnc" class="d-flex flex-wrap gap-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-10 col-md-3" style="min-width: 260px;">
+                        <div class="card shadow-sm kpi-card border-danger h-100">
+                            <div class="card-body p-3 d-flex flex-column justify-content-center">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <div class="text-uppercase text-danger fw-bold mb-1" style="font-size: 1rem;">ค่าขนส่งรวม (THB)</div>
+                                        <h3 class="text-danger fw-bold mb-0" id="kpiTotalCost">0.00</h3>
+                                    </div>
+                                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle"><i class="fas fa-money-bill-wave fa-lg"></i></div>
+                                </div>
+                                <div class="mt-auto pt-2 border-top border-danger-subtle text-muted small fw-bold">
+                                    *เฉพาะรายการที่ระบุค่าใช้จ่าย
                                 </div>
                             </div>
                         </div>
@@ -152,13 +169,14 @@ $defaultEnd = date('Y-m-t');
                                     <th Class="text-center">ประเภทรถ/ตู้</th>
                                     <th>ทะเบียนรถ / เอกสาร</th>
                                     <th>เลขตู้ & ซีล</th>
+                                    <th class="text-end">ค่าขนส่ง (฿)</th>
                                     <th>หมายเหตุ</th>
                                     <th Class="text-center">ผู้บันทึก</th>
                                     <th class="text-center" style="width: 80px;"><i class="fas fa-cog"></i></th> 
                                 </tr>
                             </thead>
                             <tbody id="logTbody">
-                                <tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลด...</td></tr>
+                                <tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลด...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -236,10 +254,15 @@ $defaultEnd = date('Y-m-t');
                         </div>
 
                         <div class="row g-2 mb-2">
-                            <div class="col-12 col-sm-12">
+                            <div class="col-12 col-sm-8">
                                 <label class="form-label small fw-bold text-secondary mb-1">ทะเบียนรถ (License Plate)</label>
                                 <input type="text" id="man_car_license" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold" placeholder="(ไม่บังคับ)">
                             </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB)</label>
+                                <input type="number" id="man_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0">
+                            </div>
+
                             <div class="col-12 col-sm-6">
                                 <label class="form-label small fw-bold text-secondary mb-1">วันที่และเวลา</label>
                                 <input type="datetime-local" id="man_log_time" class="form-control form-control-sm border-secondary-subtle shadow-sm" required>
@@ -328,10 +351,15 @@ $defaultEnd = date('Y-m-t');
                         </div>
 
                         <div class="row g-2 mb-2">
-                            <div class="col-12 col-sm-12">
+                            <div class="col-12 col-sm-8">
                                 <label class="form-label small fw-bold text-secondary mb-1">ทะเบียนรถ (License Plate)</label>
                                 <input type="text" id="edit_car_license" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold">
                             </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB)</label>
+                                <input type="number" id="edit_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0">
+                            </div>
+
                             <div class="col-12 col-sm-6">
                                 <label class="form-label small fw-bold text-secondary mb-1">วันที่และเวลา</label>
                                 <input type="datetime-local" id="edit_log_time" class="form-control form-control-sm border-secondary-subtle shadow-sm" required>
@@ -354,10 +382,45 @@ $defaultEnd = date('Y-m-t');
         </div>
     </div>
 
+    <div class="modal fade" id="quickCostModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white py-2 px-3">
+                    <h6 class="modal-title fw-bold mb-0"><i class="fas fa-hand-holding-usd me-2"></i> บันทึกค่าขนส่ง</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="quickCostForm" onsubmit="submitQuickCost(event)">
+                    <input type="hidden" id="quick_cost_log_id">
+                    <div class="modal-body p-4 bg-light">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB) <span class="text-danger">*</span></label>
+                            <input type="number" id="quick_transport_cost" class="form-control form-control-lg border-danger-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small fw-bold text-secondary mb-1">หมายเหตุเพิ่มเติม</label>
+                            <input type="text" id="quick_remark" class="form-control form-control-sm border-secondary-subtle shadow-sm" placeholder="(ไม่บังคับ)">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white border-top py-2 px-3">
+                        <button type="button" class="btn btn-sm btn-light text-secondary shadow-sm fw-bold px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" id="btnSubmitQuickCost" class="btn btn-sm btn-danger shadow-sm fw-bold px-4">
+                            <i class="fas fa-save me-1"></i> บันทึก
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="../../utils/libs/xlsx.full.min.js"></script>
 
     <script>
         const API_URL = 'api/apiFleetLog.php';
+        
+        // ฟังก์ชันจัดฟอร์แมตตัวเลขสกุลเงิน
+        const formatCurrency = (amount) => {
+            return parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             loadLogs();
@@ -378,7 +441,6 @@ $defaultEnd = date('Y-m-t');
             }
         }
 
-        // 🟢 ฟังก์ชัน Render ป้าย Badge เข้าไปในการ์ดแต่ละใบ 🟢
         function renderBreakdownBadges(containerId, dataObj, colorClass) {
             const box = document.getElementById(containerId);
             if (!dataObj || Object.keys(dataObj).length === 0) {
@@ -400,7 +462,7 @@ $defaultEnd = date('Y-m-t');
             const dEnd = document.getElementById('filter_end').value;
             if(!dStart || !dEnd) return;
 
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลด...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลด...</td></tr>';
 
             try {
                 const fd = new FormData(); 
@@ -415,14 +477,16 @@ $defaultEnd = date('Y-m-t');
                     document.getElementById('kpiTotal').innerText = json.kpi.total || 0;
                     document.getElementById('kpiVendor').innerText = json.kpi.vendor || 0;
                     document.getElementById('kpiSnc').innerText = json.kpi.snc || 0;
+                    
+                    // อัปเดต KPI ค่าใช้จ่าย
+                    document.getElementById('kpiTotalCost').innerText = formatCurrency(json.kpi.total_cost);
 
-                    // 🟢 เรียกใช้ฟังก์ชัน Render Badge ให้การ์ดทั้ง 3 ใบ 🟢
                     renderBreakdownBadges('breakdownTotal', json.kpi.breakdown.total, 'primary');
                     renderBreakdownBadges('breakdownVendor', json.kpi.breakdown.vendor, 'warning');
                     renderBreakdownBadges('breakdownSnc', json.kpi.breakdown.snc, 'success');
 
                     if (json.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่มีเที่ยวรถในช่วงวันที่เลือก</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่มีเที่ยวรถในช่วงวันที่เลือก</td></tr>';
                         return;
                     }
 
@@ -443,18 +507,35 @@ $defaultEnd = date('Y-m-t');
                         let actionBtn = '';
                         if (!isAuto) {
                             actionBtn = `
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-light border text-secondary shadow-sm" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <button class="btn btn-sm btn-outline-danger border-0 px-2" onclick="editQuickCost(${r.log_id})" title="อัปเดตค่าขนส่ง">
+                                    <i class="fas fa-hand-holding-usd"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2">
-                                    <li><a class="dropdown-item text-primary fw-bold py-2" href="#" onclick="editLog(${r.log_id})"><i class="fas fa-edit me-2"></i> แก้ไขข้อมูล</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger fw-bold py-2" href="#" onclick="deleteLog(${r.log_id})"><i class="fas fa-trash-alt me-2"></i> ลบรายการ</a></li>
-                                </ul>
+                                
+                                <div class="dropdown" style="width: 65px;">
+                                    <button class="btn btn-sm btn-light border text-secondary shadow-sm w-100" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2">
+                                        <li><a class="dropdown-item text-primary fw-bold py-2" href="#" onclick="editLog(${r.log_id})"><i class="fas fa-edit me-2"></i> แก้ไขข้อมูล (Full)</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger fw-bold py-2" href="#" onclick="deleteLog(${r.log_id})"><i class="fas fa-trash-alt me-2"></i> ลบรายการ</a></li>
+                                    </ul>
+                                </div>
                             </div>`;
                         } else {
-                            actionBtn = `<span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1" title="ดึงข้อมูลอัตโนมัติจาก C-TPAT"><i class="fas fa-link"></i> Auto</span>`;
+                            actionBtn = `
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <button class="btn btn-sm btn-outline-danger border-0 px-2" onclick="editQuickCost(${r.log_id})" title="อัปเดตค่าขนส่ง">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                </button>
+                                
+                                <div style="width: 65px;">
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border w-100 py-1" style="font-size: 0.75rem;" title="ดึงข้อมูลอัตโนมัติจาก C-TPAT">
+                                        <i class="fas fa-link"></i> Auto
+                                    </span>
+                                </div>
+                            </div>`;
                         }
 
                         html += `
@@ -471,6 +552,7 @@ $defaultEnd = date('Y-m-t');
                                     ${r.container_no ? `<span class="d-block fw-bold">${r.container_no}</span>` : '-'}
                                     ${r.seal_no ? `<small class="text-success"><i class="fas fa-lock"></i> ${r.seal_no}</small>` : ''}
                                 </td>
+                                <td class="text-end fw-bold text-danger">${r.transport_cost > 0 ? formatCurrency(r.transport_cost) : '-'}</td>
                                 <td><small class="text-muted text-break">${r.remark || '-'}</small></td>
                                 <td class="text-center"><small class="text-muted">${r.admin_name}</small></td>
                                 <td class="text-center">${actionBtn}</td>
@@ -480,7 +562,7 @@ $defaultEnd = date('Y-m-t');
                     tbody.innerHTML = html;
                 }
             } catch(e) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
             }
         }
 
@@ -493,6 +575,7 @@ $defaultEnd = date('Y-m-t');
             const provider = document.querySelector('input[name="provider_type"]:checked').value;
             const logTime = document.getElementById('man_log_time').value;
             const carLicense = document.getElementById('man_car_license').value;
+            const transportCost = document.getElementById('man_transport_cost').value || 0;
             const remark = document.getElementById('man_remark').value;
             
             let vehicle = document.getElementById('man_vehicle_type').value;
@@ -505,6 +588,7 @@ $defaultEnd = date('Y-m-t');
             fd.append('provider_type', provider);
             fd.append('vehicle_type', vehicle);
             fd.append('car_license', carLicense);
+            fd.append('transport_cost', transportCost);
             fd.append('remark', remark);
 
             try {
@@ -515,6 +599,7 @@ $defaultEnd = date('Y-m-t');
                     Swal.fire({ icon: 'success', title: json.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
                     
                     document.getElementById('man_car_license').value = '';
+                    document.getElementById('man_transport_cost').value = '';
                     document.getElementById('man_remark').value = '';
                     document.getElementById('man_vehicle_type').value = '';
                     toggleContainerOther('man'); 
@@ -544,6 +629,7 @@ $defaultEnd = date('Y-m-t');
                     document.getElementById('edit_log_id').value = r.log_id;
                     document.getElementById('edit_log_time').value = r.log_timestamp.substring(0, 16);
                     document.getElementById('edit_car_license').value = r.car_license || '';
+                    document.getElementById('edit_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '';
                     document.getElementById('edit_remark').value = r.remark || '';
                     
                     if(r.trans_type === 'OUTBOUND') document.getElementById('edit_trans_out').checked = true;
@@ -587,6 +673,7 @@ $defaultEnd = date('Y-m-t');
             const provider = document.querySelector('input[name="edit_provider_type"]:checked').value;
             const logTime = document.getElementById('edit_log_time').value;
             const carLicense = document.getElementById('edit_car_license').value;
+            const transportCost = document.getElementById('edit_transport_cost').value || 0;
             const remark = document.getElementById('edit_remark').value;
             
             let vehicle = document.getElementById('edit_vehicle_type').value;
@@ -600,6 +687,7 @@ $defaultEnd = date('Y-m-t');
             fd.append('provider_type', provider);
             fd.append('vehicle_type', vehicle);
             fd.append('car_license', carLicense);
+            fd.append('transport_cost', transportCost);
             fd.append('remark', remark);
 
             try {
@@ -657,11 +745,12 @@ $defaultEnd = date('Y-m-t');
             }
 
             let wsData = [
-                ['วัน/เวลา', 'ประเภทรายการ', 'ผู้ให้บริการ', 'ประเภทรถ/ตู้', 'ทะเบียนรถ', 'เอกสารอ้างอิง', 'หมายเลขตู้', 'หมายเลขซีล', 'หมายเหตุ', 'ผู้บันทึก']
+                ['วัน/เวลา', 'ประเภทรายการ', 'ผู้ให้บริการ', 'ประเภทรถ/ตู้', 'ทะเบียนรถ', 'เอกสารอ้างอิง', 'หมายเลขตู้', 'หมายเลขซีล', 'ค่าขนส่ง (THB)', 'หมายเหตุ', 'ผู้บันทึก']
             ];
 
             Array.from(tbody.rows).forEach(row => {
-                if (row.cells.length < 9) return;
+                // อัปเดตเงื่อนไขให้ตรวจสอบที่ 10 คอลัมน์
+                if (row.cells.length < 10) return;
                 
                 const time = row.cells[0].innerText.trim();
                 let type = '';
@@ -680,18 +769,23 @@ $defaultEnd = date('Y-m-t');
                 const ctnNo = ctnData[0] === '-' ? '' : ctnData[0].trim();
                 const sealNo = ctnData.length > 1 ? ctnData[1].trim() : '';
 
-                const remark = row.cells[6].innerText.trim();
-                const admin = row.cells[7].innerText.trim();
+                // ดึงค่าขนส่งและแปลงเป็นตัวเลขเพื่อ Export
+                const costStr = row.cells[6].innerText.trim();
+                const cost = costStr === '-' ? 0 : parseFloat(costStr.replace(/,/g, ''));
 
-                wsData.push([time, type, provider, vehicle, license, refDoc, ctnNo, sealNo, remark, admin]);
+                const remark = row.cells[7].innerText.trim();
+                const admin = row.cells[8].innerText.trim();
+
+                wsData.push([time, type, provider, vehicle, license, refDoc, ctnNo, sealNo, cost, remark, admin]);
             });
 
             try {
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
                 
+                // ขยายจำนวนคอลัมน์และขนาดให้ครบ
                 ws['!cols'] = [
                     { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, 
-                    { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 20 } 
+                    { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 20 } 
                 ];
 
                 const wb = XLSX.utils.book_new();
@@ -704,6 +798,66 @@ $defaultEnd = date('Y-m-t');
                 XLSX.writeFile(wb, `Logistics_Fleet_Log_${dateStr}.xlsx`);
             } catch(e) {
                 Swal.fire('Error', 'ไม่พบ Library XLSX สำหรับ Export', 'error');
+            }
+        }
+
+        async function editQuickCost(logId) {
+            try {
+                const fd = new FormData();
+                fd.append('action', 'get_log_detail');
+                fd.append('log_id', logId);
+                
+                const res = await fetch(API_URL, { method: 'POST', body: fd });
+                const json = await res.json();
+                
+                if (json.success) {
+                    const r = json.data;
+                    document.getElementById('quick_cost_log_id').value = r.log_id;
+                    document.getElementById('quick_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '';
+                    document.getElementById('quick_remark').value = r.remark || '';
+                    
+                    new bootstrap.Modal(document.getElementById('quickCostModal')).show();
+                    
+                    setTimeout(() => {
+                        document.getElementById('quick_transport_cost').focus();
+                    }, 500);
+                } else {
+                    Swal.fire('Error', json.message, 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Network Error', 'error');
+            }
+        }
+
+        async function submitQuickCost(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitQuickCost');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> บันทึก...';
+
+            const logId = document.getElementById('quick_cost_log_id').value;
+            const transportCost = document.getElementById('quick_transport_cost').value || 0;
+            const remark = document.getElementById('quick_remark').value;
+
+            const fd = new FormData();
+            fd.append('action', 'update_quick_cost'); // ตรงกับ API ที่แก้ใหม่
+            fd.append('log_id', logId);
+            fd.append('transport_cost', transportCost);
+            fd.append('remark', remark);
+
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: fd });
+                const json = await res.json();
+                if(json.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('quickCostModal')).hide();
+                    Swal.fire({ icon: 'success', title: json.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+                    loadLogs();
+                } else {
+                    Swal.fire('Error', json.message, 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Network error', 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i> บันทึก';
             }
         }
     </script>

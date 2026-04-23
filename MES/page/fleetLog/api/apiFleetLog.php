@@ -42,14 +42,19 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$start_date, $end_date_full]);
             $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // เพิ่ม total_cost ลงใน KPI array
             $kpi = [
-                'total' => count($logs), 'vendor' => 0, 'snc' => 0,
+                'total' => count($logs), 'vendor' => 0, 'snc' => 0, 'total_cost' => 0,
                 'breakdown' => [ 'total' => [], 'vendor' => [], 'snc' => [] ]
             ];
             
             foreach ($logs as $log) {
                 $provider = $log['provider_type'];
                 $vType = $log['vehicle_type'] ?: 'UNKNOWN';
+                
+                // รวมยอดเงินค่าขนส่ง
+                $kpi['total_cost'] += (float)$log['transport_cost'];
 
                 if (!isset($kpi['breakdown']['total'][$vType])) $kpi['breakdown']['total'][$vType] = 0;
                 $kpi['breakdown']['total'][$vType]++;
@@ -80,12 +85,13 @@ try {
             $vehicle = $_POST['vehicle_type'] ?? 'OTHER';
             $car_license = trim($_POST['car_license'] ?? '');
             $remark = trim($_POST['remark'] ?? '');
+            $transportCost = floatval($_POST['transport_cost'] ?? 0); // รับค่า transport_cost
 
             $sql = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
-                    (log_timestamp, trans_type, provider_type, vehicle_type, car_license, remark, created_by_user_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    (log_timestamp, trans_type, provider_type, vehicle_type, car_license, remark, transport_cost, created_by_user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
-            $pdo->prepare($sql)->execute([$log_time, $trans_type, $provider, $vehicle, $car_license, $remark, $user_id]);
+            $pdo->prepare($sql)->execute([$log_time, $trans_type, $provider, $vehicle, $car_license, $remark, $transportCost, $user_id]);
 
             echo json_encode(['success' => true, 'message' => 'บันทึกข้อมูลสำเร็จ']);
             break;
@@ -159,10 +165,12 @@ try {
             $vehicle = $_POST['vehicle_type'] ?? 'OTHER';
             $car_license = trim($_POST['car_license'] ?? '');
             $remark = trim($_POST['remark'] ?? '');
+            $transportCost = floatval($_POST['transport_cost'] ?? 0); // รับค่า transport_cost
+
             $sql = "UPDATE dbo.LOGISTICS_FLEET_LOGS 
-                    SET log_timestamp = ?, trans_type = ?, provider_type = ?, vehicle_type = ?, car_license = ?, remark = ?, updated_at = GETDATE()
+                    SET log_timestamp = ?, trans_type = ?, provider_type = ?, vehicle_type = ?, car_license = ?, remark = ?, transport_cost = ?, updated_at = GETDATE()
                     WHERE log_id = ? AND loading_report_id IS NULL";
-            $pdo->prepare($sql)->execute([$log_time, $trans_type, $provider, $vehicle, $car_license, $remark, $log_id]);
+            $pdo->prepare($sql)->execute([$log_time, $trans_type, $provider, $vehicle, $car_license, $remark, $transportCost, $log_id]);
 
             echo json_encode(['success' => true, 'message' => 'แก้ไขข้อมูลสำเร็จ']);
             break;
@@ -179,6 +187,21 @@ try {
             } else {
                 throw new Exception("ปฏิเสธการลบ: รายการนี้ถูกดึงมาจากระบบ C-TPAT อัตโนมัติ (กรุณายกเลิกใบโหลดที่ต้นทาง)");
             }
+            break;
+
+        // 8. อัปเดตเฉพาะค่าขนส่งและหมายเหตุ (Quick Update ใช้ได้ทั้ง Auto และ Manual)
+        case 'update_quick_cost':
+            $log_id = $_POST['log_id'] ?? 0;
+            $transportCost = floatval($_POST['transport_cost'] ?? 0);
+            $remark = trim($_POST['remark'] ?? '');
+
+            // ตัดเงื่อนไข loading_report_id IS NOT NULL ออก เพื่อให้ Reusable
+            $sql = "UPDATE dbo.LOGISTICS_FLEET_LOGS 
+                    SET transport_cost = ?, remark = ?, updated_at = GETDATE()
+                    WHERE log_id = ?";
+            $pdo->prepare($sql)->execute([$transportCost, $remark, $log_id]);
+
+            echo json_encode(['success' => true, 'message' => 'อัปเดตค่าขนส่งสำเร็จ']);
             break;
 
         default:
