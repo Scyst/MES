@@ -172,7 +172,7 @@ if (isset($_SESSION['user']) && defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === 
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Redirecting to Production...</title>
-                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                <script src="../../utils/libs/sweetalert2.all.min.js"></script>
                 <style>body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; }</style>
             </head>
             <body>

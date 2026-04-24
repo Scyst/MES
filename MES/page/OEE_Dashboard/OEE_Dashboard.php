@@ -56,6 +56,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
         .dashboard-toolbar { width: 100%; display: flex; flex-wrap: wrap; align-items: center; }
         .live-status-item { margin-right: auto !important; }
 
+        /* 📱 ซ่อนข้อความ Shortcut สำหรับหน้าจอที่เล็กกว่า 950px ทุกกรณี */
+        @media (max-width: 950px) {
+            .shortcut-text { display: none !important; }
+        }
+        
         /* =========================================
            📱 Mobile Portrait (แนวตั้ง - หน้าจอแคบ)
            ========================================= */
@@ -143,6 +148,12 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             <div class="vr mx-2 text-muted live-vr" style="opacity: 0.2;"></div>
                             <i class="far fa-clock text-muted me-2" style="font-size: 0.85rem;"></i>
                             <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="liveClock">--:--:--</span>
+                            
+                            <div class="vr mx-2 text-muted" style="opacity: 0.2;"></div>
+                            <a href="../production/productionUI.php" class="btn btn-light btn-sm border d-flex align-items-center text-decoration-none shadow-sm" style="padding: 2px 8px; border-radius: 6px; background-color: #f8fafc;" title="Production & Inventory">
+                                <i class="fas fa-boxes text-primary"></i>
+                                <span class="ms-1 fw-bold text-secondary shortcut-text" style="font-size: 0.7rem;"> Production Entry</span>
+                            </a>
                         </div>
 
                         <div class="d-flex align-items-center px-2 border-end filter-item">
