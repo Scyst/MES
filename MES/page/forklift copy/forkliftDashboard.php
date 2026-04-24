@@ -8,7 +8,7 @@ require_once __DIR__ . '/../components/init.php';
 $pageTitle = "Forklift Command Center";
 $pageIcon = "fas fa-map-marked-alt"; 
 $pageHeaderTitle = "Forklift Command Center";
-$pageHeaderSubtitle = "ระบบติดตามและจัดการรถโฟล์คลิฟต์แบบครบวงจร";
+$pageHeaderSubtitle = "ระบบติดตามและจัดการรถโฟล์คลิฟต์แบบ Real-time";
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -27,41 +27,42 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
         const IS_ADMIN = <?php echo in_array($_SESSION['user']['role'], ['admin', 'supervisor', 'creator']) ? 'true' : 'false'; ?>;
     </script>
     <style>
-        /* Map Styles */
-        .map-wrapper { position: relative; width: 100%; height: 100%; margin: 0 auto; background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: 8px; overflow: hidden; min-height: 450px; }
-        .custom-grid-label { pointer-events: none; }
-        .custom-leaflet-icon { background: transparent; border: none; }
-        .forklift-marker-wrapper { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); font-size: 14px; transition: transform 0.3s ease; }
-        .forklift-marker-wrapper:hover { transform: scale(1.15); }
-        .marker-label-floating { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; pointer-events: none; border: 1px solid rgba(255,255,255,0.2); }
+        /* ⭐️ ล็อกความสูงหน้าจอ 100% (หักลบ Header ออก) */
+        body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        #main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
         
+        /* Map Styles - Absolute Fill แก้ปัญหาแผนที่ดันจอล้น */
+        .map-wrapper { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            background-color: var(--bs-tertiary-bg); 
+            border-bottom-left-radius: 8px; 
+            border-bottom-right-radius: 8px; 
+            overflow: hidden; 
+        }
+        #map-container { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: 1; 
+        }
+        
+        .d-flex.flex-column { min-height: 0; }
+
         /* List Item Redesign */
         .fleet-list-item { transition: all 0.2s ease; border-left: 4px solid transparent; }
         .fleet-list-item:hover { background-color: rgba(13, 110, 253, 0.05); border-left-color: var(--bs-primary); }
         .fleet-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.8rem; color: var(--bs-gray-600); margin: 8px 0; }
         .fleet-info-grid i { width: 14px; text-align: center; margin-right: 4px; }
         
-        /* Timeline Redesign */
-        .timeline-container { position: relative; overflow-x: auto; background: #fff; border-radius: 6px; border: 1px solid var(--bs-border-color); }
-        .timeline-header { display: flex; position: sticky; top: 0; background: #f8f9fa; z-index: 10; border-bottom: 2px solid var(--bs-border-color); }
-        .time-slot { flex: 1; min-width: 60px; text-align: center; font-size: 0.75rem; font-weight: bold; color: var(--bs-gray-600); padding: 8px 0; border-right: 1px dashed var(--bs-gray-300); }
-        .timeline-label-col { width: 120px; min-width: 120px; position: sticky; left: 0; background: #f8f9fa; z-index: 11; font-weight: bold; font-size: 0.8rem; padding: 8px 10px; border-right: 2px solid var(--bs-border-color); display: flex; align-items: center; }
-        .timeline-row { display: flex; border-bottom: 1px solid var(--bs-gray-200); position: relative; min-height: 40px; }
-        .timeline-track { flex: 1; display: flex; position: relative; background: repeating-linear-gradient(to right, transparent, transparent 59px, rgba(0,0,0,0.03) 59px, rgba(0,0,0,0.03) 60px); }
-        .booking-bar { position: absolute; top: 5px; height: 30px; border-radius: 4px; font-size: 0.7rem; color: #fff; font-weight: bold; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.15); cursor: pointer; transition: filter 0.2s; }
-        .booking-bar:hover { filter: brightness(1.1); }
-        .booking-bar.active { background-color: #0d6efd; border-left: 3px solid #0a58ca; }
-        .booking-bar.booked { background-color: #8b0faa; border-left: 3px solid #6f0c88; opacity: 0.85; }
-        .booking-bar.completed { background-color: #6c757d; border-left: 3px solid #495057; opacity: 0.7; }
-        .current-time-line { position: absolute; top: 0; bottom: 0; width: 2px; background-color: #dc3545; z-index: 5; box-shadow: 0 0 5px rgba(220, 53, 69, 0.6); }
-        .current-time-line::after { content: ''; position: absolute; top: 0; left: -4px; width: 10px; height: 10px; border-radius: 50%; background-color: #dc3545; border: 2px solid #fff; }
-        
         /* KPI Cards */
         .kpi-card { border-radius: 10px; padding: 15px; display: flex; align-items: center; border: 1px solid var(--bs-border-color); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s; }
         .kpi-card:hover { transform: translateY(-3px); }
         .kpi-icon { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-right: 15px; }
         
-        #map-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-height: 450px; z-index: 1; }
+        .custom-grid-label { pointer-events: none; }
+        .custom-leaflet-icon { background: transparent; border: none; }
+        .forklift-marker-wrapper { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); font-size: 14px; transition: transform 0.3s ease; }
+        .marker-label-floating { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; pointer-events: none; border: 1px solid rgba(255,255,255,0.2); }
     </style>
 </head>
 
@@ -70,22 +71,29 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
     <?php include('../components/php/top_header.php'); ?>
 
     <main id="main-content">
-        <div class="container-fluid p-3 h-100 d-flex flex-column" style="max-width: 1800px;">
+        <div class="container-fluid p-3 d-flex flex-column h-100" style="max-width: 1800px;">
             
-            <div class="row g-3 mb-3">
+            <div class="row g-3 mb-3 flex-shrink-0">
                 <div class="col-6 col-md-3"><div class="kpi-card border-primary border-start border-4"><div class="kpi-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-truck-loading"></i></div><div><div class="text-muted small fw-bold text-uppercase">Total Fleet</div><h4 class="mb-0 fw-bold" id="kpi-total">0</h4></div></div></div>
                 <div class="col-6 col-md-3"><div class="kpi-card border-success border-start border-4"><div class="kpi-icon bg-success bg-opacity-10 text-success"><i class="fas fa-check-circle"></i></div><div><div class="text-muted small fw-bold text-uppercase">Available</div><h4 class="mb-0 fw-bold" id="kpi-avail">0</h4></div></div></div>
                 <div class="col-6 col-md-3"><div class="kpi-card border-info border-start border-4"><div class="kpi-icon bg-info bg-opacity-10 text-info"><i class="fas fa-cogs"></i></div><div><div class="text-muted small fw-bold text-uppercase">In Use</div><h4 class="mb-0 fw-bold" id="kpi-use">0</h4></div></div></div>
                 <div class="col-6 col-md-3"><div class="kpi-card border-secondary border-start border-4"><div class="kpi-icon bg-secondary bg-opacity-10 text-secondary"><i class="fas fa-tools"></i></div><div><div class="text-muted small fw-bold text-uppercase">Maintenance</div><h4 class="mb-0 fw-bold" id="kpi-maint">0</h4></div></div></div>
             </div>
 
-            <div class="row g-3 flex-grow-1 overflow-hidden">
-                <div class="col-lg-8 col-xl-9 d-flex flex-column">
-                    <div class="card border-0 shadow-sm flex-grow-1 position-relative rounded-3">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom-0">
+            <div class="row g-3 flex-grow-1" style="min-height: 0;"> 
+                
+                <div class="col-lg-8 col-xl-9 d-flex flex-column" style=" max-height: calc(100% - 10px);">
+                    <div class="card border-0 shadow-sm flex-grow-1 position-relative rounded-3 d-flex flex-column">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom-0 flex-shrink-0">
                             <h6 class="mb-0 fw-bold"><i class="fas fa-map-marked-alt text-primary me-2"></i>Live Tracking Map</h6>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('historyModal')).show()"><i class="fas fa-history me-1"></i> ประวัติ</button>
+                                <?php if (in_array($_SESSION['user']['role'], ['admin', 'supervisor', 'creator'])): ?>
+                                <button class="btn btn-sm btn-outline-dark fw-bold ms-1" onclick="openManageModal()"><i class="fas fa-cog me-1"></i> จัดการ</button>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="card-body p-0 position-relative">
+                        <div class="card-body p-0 position-relative flex-grow-1">
                             <div class="map-wrapper rounded-bottom">
                                 <div id="map-container"></div>
                                 
@@ -106,27 +114,25 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
                     </div>
                 </div>
 
-                <div class="col-lg-4 col-xl-3 d-flex flex-column">
-                    <div class="card border-0 shadow-sm h-100 d-flex flex-column rounded-3">
-                        <div class="card-header bg-white py-3 border-bottom-0">
+                <div class="col-lg-4 col-xl-3 d-flex flex-column" style=" max-height: calc(100% - 10px);">
+                    <div class="card border-0 shadow-sm d-flex flex-column rounded-3 flex-grow-1">
+                        <div class="card-header bg-white py-3 border-bottom-0 flex-shrink-0">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0 fw-bold"><i class="fas fa-list text-primary me-2"></i>Fleet Status</h6>
                                 <small class="text-muted" style="font-size: 0.75rem;"><i class="far fa-clock me-1"></i><span id="last-update-time">-</span></small>
                             </div>
-                            
                             <div class="btn-group w-100 mb-2 shadow-sm" role="group">
                                 <button type="button" class="btn btn-outline-secondary btn-sm active" onclick="filterByStatus('ALL', this)">ทั้งหมด</button>
                                 <button type="button" class="btn btn-outline-success btn-sm" onclick="filterByStatus('ONLINE', this)">Online</button>
                                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="filterByStatus('LOW_BAT', this)">แบตต่ำ</button>
                             </div>
-                            
                             <div class="input-group input-group-sm mb-0 shadow-sm">
                                 <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
                                 <input type="text" id="search-forklift" class="form-control border-start-0 ps-0 bg-light" placeholder="ค้นหารหัสรถ หรือโซน..." onkeyup="filterForkliftList()">
                             </div>
                         </div>
                         
-                        <div class="card-body p-0 overflow-auto" style="height: 450px;">
+                        <div class="card-body p-0 flex-grow-1" style="overflow-y: auto;">
                             <ul class="list-group list-group-flush" id="forklift-list">
                                 <li class="list-group-item text-center text-muted py-5">
                                     <div class="spinner-border text-primary mb-3"></div><br>
@@ -136,6 +142,7 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>

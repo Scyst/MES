@@ -43,6 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.hidden) stopPolling();
         else { loadAllData(); startPolling(); }
     });
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', stopPolling);
+        modal.addEventListener('hidden.bs.modal', () => {
+            loadAllData();
+            startPolling();
+        });
+    });
 });
 
 function startPolling() {
@@ -612,14 +620,74 @@ async function openHistoryModal() {
     } catch (e) { console.error(e); }
 }
 
+// 🟢 อัปเกรดตาราง จัดการข้อมูลรถ ให้มีปุ่มสร้าง QR Code
 function openManageModal() {
     let tbody = '';
     globalForkliftData.forEach(fl => {
         let stClass = fl.status === 'AVAILABLE' ? 'text-success' : (fl.status === 'MAINTENANCE' ? 'text-secondary' : 'text-primary');
-        tbody += `<tr><td class="ps-3 fw-bold">${fl.code}</td><td>${fl.name}</td><td class="${stClass} fw-bold">${fl.status}</td><td>${fl.last_location || '-'}</td><td class="text-end pe-3"><button class="btn btn-sm btn-outline-primary" onclick="editForklift(${fl.id}, '${fl.code}', '${fl.name}', '${fl.status}', '${fl.last_location||''}')"><i class="fas fa-edit"></i> Edit</button></td></tr>`;
+        
+        tbody += `<tr>
+            <td class="ps-4 fw-bold">${fl.code}</td>
+            <td>${fl.name}</td>
+            <td class="${stClass} fw-bold">${fl.status}</td>
+            <td>${fl.last_location || '-'}</td>
+            <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-dark me-1" onclick="generateQRCode('${fl.code}')" title="สร้าง QR Code">
+                    <i class="fas fa-qrcode"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="editForklift(${fl.id}, '${fl.code}', '${fl.name}', '${fl.status}', '${fl.last_location||''}')" title="แก้ไข">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        </tr>`;
     });
+    
     document.getElementById('manageTableBody').innerHTML = tbody;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('manageModal')).show();
+}
+
+// 🟢 ฟังก์ชันใหม่: จำลองสร้าง QR Code สำหรับเอาไปแปะรถ
+function generateQRCode(code) {
+    // ดึงโดเมนหลักของระบบคุณ (เช่น http://192.168.1.100)
+    const host = window.location.origin;
+    
+    // ⭐️ นำมารวมกับ Path ที่คุณแจ้งว่าเก็บไฟล์ scan ไว้
+    const mobileUrl = `${host}/MES/page/forklift copy/scan.php?code=${encodeURIComponent(code)}`;
+    
+    // ใช้ API สร้างรูป QR Code ฟรี (ใช้ในการทำงานแบบมีอินเทอร์เน็ต)
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(mobileUrl)}`;
+
+    Swal.fire({
+        title: `<h5 class="fw-bold mb-0">QR Code ประจำรถ: <span class="text-primary">${code}</span></h5>`,
+        html: `
+            <div class="text-center mt-3">
+                <div class="d-inline-block p-2 bg-white border rounded-3 shadow-sm mb-3">
+                    <img src="${qrApiUrl}" alt="QR Code ${code}" style="width: 250px; height: 250px; object-fit: contain;">
+                </div>
+                <div class="bg-light p-2 rounded border small text-break user-select-all" style="font-family: monospace;">
+                    ${mobileUrl}
+                </div>
+                <button class="btn btn-sm btn-dark mt-3 w-100 fw-bold" onclick="copyToClipboard('${mobileUrl}')">
+                    <i class="fas fa-copy me-2"></i> คัดลอก URL
+                </button>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'ปิด (Close)',
+        confirmButtonColor: '#6c757d'
+    });
+}
+
+// Helper: คัดลอกลิงก์ลง Clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success', 
+            title: 'คัดลอก URL แล้ว!', showConfirmButton: false, timer: 1500
+        });
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
 }
 
 function editForklift(id, code, name, status, loc) {
