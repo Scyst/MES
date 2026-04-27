@@ -123,4 +123,47 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) bootstrap.Offcanvas.getOrCreateInstance(el).toggle();
         });
     }
+
+    const originalFetch = window.fetch;
+    window.fetch = async function() {
+        try {
+            const response = await originalFetch.apply(this, arguments);
+            
+            if (response.status === 401) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'เซสชั่นหมดอายุ',
+                        text: 'กรุณาเข้าสู่ระบบใหม่อีกครั้งเพื่อความปลอดภัย',
+                        confirmButtonText: 'ตกลง',
+                        allowOutsideClick: false
+                    }).then(() => {
+                        window.location.href = '../../auth/logout.php';
+                    });
+                } else {
+                    window.location.href = '../../auth/logout.php';
+                }
+                return Promise.reject('Unauthorized 401');
+            }
+
+            if (response.status === 500) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'System Error',
+                        text: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์ กรุณาลองใหม่หรือติดต่อ IT',
+                        confirmButtonText: 'ปิด'
+                    });
+                }
+                return Promise.reject('Server Error 500'); 
+            }
+
+            return response;
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                console.error('Network or CORS error:', error);
+            }
+            throw error;
+        }
+    };
 });

@@ -107,6 +107,7 @@ $targetCode = $_GET['code'] ?? '';
             const actions = document.getElementById('m-actions');
             let btnHtml = '';
 
+            // 🛡️ ปรับให้ปุ่มส่ง this (ตัวมันเอง) เข้าไปในฟังก์ชันป้องกันการกดย้ำ
             if(fl.status === 'MAINTENANCE') {
                 badge.className = 'badge p-2 px-3 rounded-pill bg-secondary';
                 badge.innerText = 'ปิดปรับปรุง (Maintenance)';
@@ -115,19 +116,37 @@ $targetCode = $_GET['code'] ?? '';
                 if(fl.current_driver === CURRENT_USER_NAME) {
                     badge.className = 'badge p-2 px-3 rounded-pill bg-primary';
                     badge.innerText = 'คุณกำลังใช้งานคันนี้';
-                    btnHtml = `<button class="action-btn btn-warning shadow" onclick="checkAction(${fl.id})"><i class="fas fa-undo me-2"></i>คืนรถทันที</button>`;
+                    btnHtml = `<button class="action-btn btn-warning shadow" onclick="handleMobileClick(this, ${fl.id})"><i class="fas fa-undo me-2"></i>คืนรถทันที</button>`;
                 } else {
                     badge.className = 'badge p-2 px-3 rounded-pill bg-danger';
                     badge.innerText = 'กำลังถูกใช้งานโดย ' + fl.current_driver;
-                    btnHtml = `<button class="action-btn btn-primary shadow" onclick="openBookingModal(${fl.id}, '${fl.code}', '${fl.name}')"><i class="far fa-clock me-2"></i>จองคิวต่อ</button>`;
+                    btnHtml = `<button class="action-btn btn-primary shadow" onclick="handleMobileClick(this, ${fl.id}, true, '${fl.code}', '${fl.name}')"><i class="far fa-clock me-2"></i>จองคิวต่อ</button>`;
                 }
             } else {
                 badge.className = 'badge p-2 px-3 rounded-pill bg-success';
                 badge.innerText = 'ว่าง (Available)';
-                btnHtml = `<button class="action-btn btn-success shadow" onclick="checkAction(${fl.id})"><i class="fas fa-key me-2"></i>เบิกใช้รถคันนี้</button>`;
+                btnHtml = `<button class="action-btn btn-success shadow" onclick="handleMobileClick(this, ${fl.id})"><i class="fas fa-key me-2"></i>เบิกใช้รถคันนี้</button>`;
             }
 
             actions.innerHTML = btnHtml;
+        }
+
+        // 🛡️ ฟังก์ชันป้องกันกดย้ำ (Operator Proofing)
+        function handleMobileClick(btn, id, isBooking = false, code = '', name = '') {
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังโหลด...';
+            
+            setTimeout(() => {
+                if(isBooking) openBookingModal(id, code, name);
+                else checkAction(id);
+                
+                // คืนค่าปุ่มกลับเผื่อ User ปิด Modal ทิ้งโดยไม่ทำรายการ
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }, 1000);
+            }, 200);
         }
 
         function reportIssue() {

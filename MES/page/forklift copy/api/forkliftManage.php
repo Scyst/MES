@@ -1,18 +1,31 @@
 <?php
+// api/forkliftManage.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php'; 
+require_once __DIR__ . '/../../components/php/logger.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
+
 if (!isset($_SESSION['user'])) { 
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']); exit; 
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized: Session expired.']); 
+    exit; 
+}
+
+// ตรวจสอบ HTTP Method ป้องกันการยิง GET เข้ามารัน Action
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
+    exit;
 }
 
 $action = $_POST['action'] ?? '';
-$response = ['success' => false, 'message' => 'Invalid action'];
+$response = ['success' => false, 'message' => 'Invalid action requested.'];
 
 try {
     switch ($action) {
         case 'get_dashboard':
+            // ดึงข้อมูลหลัก (NOLOCK ถูกใช้ใน SP หรือ View อยู่แล้ว แต่ถ้า Query สดต้องใส่เสมอ)
             $stmt = $pdo->query("SELECT *, CASE WHEN DATEDIFF(MINUTE, last_updated, GETDATE()) > 3 THEN 1 ELSE 0 END as is_offline 
                                  FROM " . FORKLIFTS_TABLE . " WITH (NOLOCK) ORDER BY code ASC");
             $forklifts = $stmt->fetchAll();
@@ -32,7 +45,7 @@ try {
                 }
                 if(empty($fl['status'])) $fl['status'] = 'AVAILABLE';
             }
-            $response = ['success' => true, 'data' => $forklifts];
+            $response = ['success' => true, 'data' => $forklifts, 'message' => 'Success'];
             break;
 
         case 'book_forklift':
@@ -62,7 +75,7 @@ try {
                 $_POST['start_battery'] ?? $_POST['end_battery'] ?? null,
                 $_POST['booking_id'] ?? null
             ]);
-            $response = ['success' => true, 'message' => 'ดำเนินการสำเร็จ'];
+            $response = ['success' => true, 'data' => null, 'message' => 'ดำเนินการสำเร็จ'];
             break;
 
         case 'get_timeline':
@@ -70,7 +83,7 @@ try {
                                  JOIN " . FORKLIFTS_TABLE . " f WITH (NOLOCK) ON b.forklift_id = f.id 
                                  WHERE b.end_time_est >= DATEADD(HOUR, -24, GETDATE()) OR b.status = 'ACTIVE'
                                  ORDER BY b.start_time ASC");
-            $response = ['success' => true, 'data' => $stmt->fetchAll()];
+            $response = ['success' => true, 'data' => $stmt->fetchAll(), 'message' => 'Success'];
             break;
 
         case 'get_history':
@@ -83,24 +96,25 @@ try {
                                          WHEN b.status = 'BOOKED' THEN 2 
                                          ELSE 3 END ASC, 
                                     b.start_time DESC");
-            $response = ['success' => true, 'message' => 'History loaded', 'data' => $stmt->fetchAll()];
+            $response = ['success' => true, 'data' => $stmt->fetchAll(), 'message' => 'History loaded'];
             break;
 
         case 'update_forklift':
             $stmt = $pdo->prepare("UPDATE " . FORKLIFTS_TABLE . " SET code = ?, name = ?, status = ?, last_location = ? WHERE id = ?");
             $stmt->execute([$_POST['code'], $_POST['name'], $_POST['status'], $_POST['last_location'], $_POST['id']]);
-            $response = ['success' => true, 'message' => 'Updated successfully'];
+            $response = ['success' => true, 'data' => null, 'message' => 'Updated successfully'];
             break;
 
         case 'get_alerts':
             $stmt = $pdo->query("SELECT a.*, f.code as forklift_code FROM dbo.FORKLIFT_ALERTS a WITH (NOLOCK)
                                  JOIN dbo.FORKLIFTS f WITH (NOLOCK) ON a.forklift_id = f.id 
                                  WHERE a.is_resolved = 0 ORDER BY a.created_at DESC");
-            $response = ['success' => true, 'data' => $stmt->fetchAll()];
+            $response = ['success' => true, 'data' => $stmt->fetchAll(), 'message' => 'Success'];
             break;
 
         case 'get_utilization':
             $days = isset($_POST['days']) ? (int)$_POST['days'] : 1;
+            // Parameterized Query สำหรับ Dynamic Days
             $sql = "DECLARE @Days INT = ?;
                     DECLARE @TotalMinutes FLOAT = @Days * 1440.0;
                     SELECT f.id as forklift_id, f.code, f.name, f.status as current_status,
@@ -124,11 +138,22 @@ try {
                 $r['utilization_percent'] = round(($r['run_time_minutes'] / $totalMins) * 100, 2);
                 $r['machine_state'] = ($r['current_status'] === 'MAINTENANCE') ? 'DOWN' : 'READY';
             }
-            $response = ['success' => true, 'data' => $rows];
+            $response = ['success' => true, 'data' => $rows, 'message' => 'Success'];
+            break;
+            
+        default:
+            $response = ['success' => false, 'message' => 'Invalid action requested.'];
             break;
     }
+} catch (PDOException $e) {
+    writeErrorLog($pdo, 'FORKLIFT_API', $e->getMessage(), $_POST);
+    http_response_code(500);
+    $response = ['success' => false, 'message' => 'System error occurred while processing your request.'];
 } catch (Exception $e) {
+    http_response_code(400);
     $response = ['success' => false, 'message' => $e->getMessage()];
 }
 
 echo json_encode($response);
+exit;
+?>

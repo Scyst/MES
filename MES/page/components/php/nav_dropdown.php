@@ -14,7 +14,7 @@
         </li>
 
         <li><a class="dropdown-item-icon" href="../dailyLog/dailyLogUI.php"><i class="fas fa-home fa-fw"></i><span>TOOLBOX OS (Home)</span></a></li>
-        <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Dashboard.php"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
+        <li><a class="dropdown-item-icon" href="../OEE_Dashboard/OEE_Shopfloor.php"><i class="fas fa-chart-line fa-fw"></i><span>OEE Dashboard</span></a></li>
         <li><a class="dropdown-item-icon" href="../storeManagement/materialReq.php"><i class="fas fa-cart-plus fa-fw"></i><span>Material Request</span></a></li>
         <li><a class="dropdown-item-icon" href="../forklift/forkliftUI.php"><i class="fas fa-truck-pickup fa-fw"></i><span>Forklift Booking</span></a></li>
         <li><a class="dropdown-item-icon" href="../documentCenter/documentCenterUI.php"><i class="fas fa-folder-open fa-fw"></i><span>Document Center</span></a></li>
@@ -142,7 +142,7 @@
         <div class="list-group list-group-flush" id="mobileAccordionMenu">
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase">COMMON SERVICES</div>
             <a class="list-group-item list-group-item-action text-dark" href="../dailyLog/dailyLogUI.php"><i class="fas fa-home fa-fw me-3"></i> TOOLBOX OS (Home)</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../OEE_Dashboard/OEE_Dashboard.php"><i class="fas fa-chart-line fa-fw me-3"></i> OEE Dashboard</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../OEE_Dashboard/OEE_Shopfloor.php"><i class="fas fa-chart-line fa-fw me-3"></i> OEE Dashboard</a>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/materialReq.php"><i class="fas fa-cart-plus fa-fw me-3"></i> Material Request</a>
             <a class="list-group-item list-group-item-action text-dark" href="../forklift/forkliftUI.php"><i class="fas fa-truck-pickup fa-fw me-3"></i> Forklift Booking</a>
             <a class="list-group-item list-group-item-action text-dark" href="../documentCenter/documentCenterUI.php"><i class="fas fa-folder-open fa-fw me-3"></i> Document Center</a>

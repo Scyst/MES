@@ -1,0 +1,729 @@
+[
+    {
+        "id": "cc3ed6cb9d327d93",
+        "type": "tab",
+        "label": "Toolbox",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "07cbbf2f519ff7b3",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "🔥 MASTER SYNC V2: Auto-Run (Supports New Logic)",
+        "style": {
+            "stroke": "#ff0000",
+            "fill": "#e3f2fd",
+            "label": true
+        },
+        "nodes": [
+            "6623dac7d8cea519",
+            "6a94bf953548fa05",
+            "dd71f733a63878f4",
+            "175665be52f15450"
+        ],
+        "x": 114,
+        "y": 179,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "manual_sync_group_v2",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "🛠️ MANUAL RANGE SYNC: 01 Jan - 20 Jan",
+        "style": {
+            "stroke": "#007bff",
+            "fill": "#e3f2fd",
+            "label": true
+        },
+        "nodes": [
+            "inject_manual_range",
+            "func_manual_range",
+            "http_manual_range",
+            "debug_manual_range"
+        ],
+        "x": 114,
+        "y": 279,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "group_auto_co_calc",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "🤖 AUTO CARRY OVER: 08:30 & 20:30",
+        "style": {
+            "stroke": "#ff9800",
+            "fill": "#fff3e0",
+            "label": true
+        },
+        "nodes": [
+            "inject_schedule_co",
+            "func_prepare_co_req",
+            "http_call_co_api",
+            "debug_co_result"
+        ],
+        "x": 114,
+        "y": 379,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "group_mqtt_utility",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "⚡ UTILITY DATA INGESTION (MQTT -> PHP API)",
+        "style": {
+            "stroke": "#009688",
+            "fill": "#e0f2f1",
+            "label": true
+        },
+        "nodes": [
+            "mqtt_in_utility",
+            "json_parse_utility",
+            "func_prepare_utility",
+            "http_post_utility",
+            "debug_utility_api"
+        ],
+        "x": 114,
+        "y": 479,
+        "w": 982,
+        "h": 82
+    },
+    {
+        "id": "group_utility_cron",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "⏱️ AUTO UTILITY SUMMARY (Aggregate Data Every 15 Mins)",
+        "style": {
+            "stroke": "#9c27b0",
+            "fill": "#f3e5f5",
+            "label": true
+        },
+        "nodes": [
+            "inject_utility_cron",
+            "func_utility_cron",
+            "http_utility_cron",
+            "debug_utility_cron"
+        ],
+        "x": 114,
+        "y": 579,
+        "w": 972,
+        "h": 82
+    },
+    {
+        "id": "group_area_ghost_clear",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "👻 AUTO CLEAR GHOST SESSION (Store Area)",
+        "style": {
+            "stroke": "#d32f2f",
+            "fill": "#ffebee",
+            "label": true
+        },
+        "nodes": [
+            "inject_ghost_clear",
+            "func_prep_ghost_api",
+            "http_ghost_api",
+            "debug_ghost_api"
+        ],
+        "x": 114,
+        "y": 679,
+        "w": 962,
+        "h": 82
+    },
+    {
+        "id": "6623dac7d8cea519",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Every 30 Mins",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1800",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 220,
+        "wires": [
+            [
+                "6a94bf953548fa05"
+            ]
+        ]
+    },
+    {
+        "id": "6a94bf953548fa05",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Set Params & Bypass Headers",
+        "func": "var now = new Date();\nvar yesterday = new Date(now);\nyesterday.setDate(now.getDate() - 1);\n\nfunction fmt(d) {\n    var month = '' + (d.getMonth() + 1);\n    var day = '' + d.getDate();\n    var year = d.getFullYear();\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    return [year, month, day].join('-');\n}\n\nvar sDate = fmt(yesterday);\nvar eDate = fmt(now);\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php\";\n\nmsg.url = baseUrl + \"?startDate=\" + sDate + \"&endDate=\" + eDate;\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-Scheduler\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 220,
+        "wires": [
+            [
+                "dd71f733a63878f4"
+            ]
+        ]
+    },
+    {
+        "id": "dd71f733a63878f4",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Call PHP Sync",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 220,
+        "wires": [
+            [
+                "175665be52f15450"
+            ]
+        ]
+    },
+    {
+        "id": "175665be52f15450",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Sync Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "inject_manual_range",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Set Date Range",
+        "props": [
+            {
+                "p": "startDate",
+                "v": "2026-03-30",
+                "vt": "str"
+            },
+            {
+                "p": "endDate",
+                "v": "2026-03-31",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 240,
+        "y": 320,
+        "wires": [
+            [
+                "func_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "func_manual_range",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Format URL & Headers",
+        "func": "// 1. ดึงค่าจาก Inject Node\nvar sDate = msg.startDate;\nvar eDate = msg.endDate;\n\n// 2. ตั้งค่า URL ปลายทาง (PHP API)\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php\";\n\nmsg.url = baseUrl + \"?startDate=\" + sDate + \"&endDate=\" + eDate;\n\n// 3. ตั้งค่า Header (X-Mode สำคัญมากเพื่อให้ PHP ยอมรับการรันอัตโนมัติ)\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-Manual-Backfill\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\"\n};\n\n// 4. เตรียมข้อมูล Payload ไว้ดูใน Debug\nmsg.payload = {\n    action: \"Manual Backfill Sync\",\n    range: sDate + \" to \" + eDate,\n    url_called: msg.url\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 320,
+        "wires": [
+            [
+                "http_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "http_manual_range",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Call PHP Sync",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 320,
+        "wires": [
+            [
+                "debug_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "debug_manual_range",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Sync Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "inject_schedule_co",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "08:30, 20:30 Daily",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "0 0-20 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 250,
+        "y": 420,
+        "wires": [
+            [
+                "func_prepare_co_req"
+            ]
+        ]
+    },
+    {
+        "id": "func_prepare_co_req",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "Set API & Secret Key",
+        "func": "// 1. กำหนด URL\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/planManage.php\".trim();\n\n// 2. กำหนด Action\nmsg.url = baseUrl + \"?action=calculate_carry_over\";\n\n// 3. กำหนด Headers\nmsg.headers = {\n    \"X-API-KEY\": \"MESKey2026\",\n    \"User-Agent\": \"Node-RED-AutoCalc\"\n};\n\nmsg.requestTimeout = 300000;\nmsg.payload = {};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 420,
+        "wires": [
+            [
+                "http_call_co_api"
+            ]
+        ]
+    },
+    {
+        "id": "http_call_co_api",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "Call PHP Calc C/O",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 420,
+        "wires": [
+            [
+                "debug_co_result"
+            ]
+        ]
+    },
+    {
+        "id": "debug_co_result",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "C/O Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "mqtt_in_utility",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "MQTT: /B9/iPSS/#",
+        "topic": "/B9/iPSS/#",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqtt_broker_snc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 230,
+        "y": 520,
+        "wires": [
+            [
+                "json_parse_utility"
+            ]
+        ]
+    },
+    {
+        "id": "json_parse_utility",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 400,
+        "y": 520,
+        "wires": [
+            [
+                "func_prepare_utility"
+            ]
+        ]
+    },
+    {
+        "id": "func_prepare_utility",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "Extract & Format Payload",
+        "func": "var topic = msg.topic;\nvar payload = msg.payload;\n\nif (!Array.isArray(payload) || payload.length === 0) return null;\n\nvar parts = topic.split('/');\nif (parts.length < 4) return null;\nvar meterName = parts[3];\n\nvar utilityType = \"UNKNOWN\";\nif (payload[0].voltage !== undefined) utilityType = \"ELECTRIC\";\nelse if (payload[0].flow !== undefined) utilityType = \"LPG\";\n\nif (utilityType === \"UNKNOWN\") return null;\n\nmsg.payload = {\n    action: \"insert_log\",\n    meter_name: meterName,\n    utility_type: utilityType,\n    data_batch: payload\n};\n\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/api_utility.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"X-API-KEY\": \"MESKey2026\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 520,
+        "wires": [
+            [
+                "http_post_utility"
+            ]
+        ]
+    },
+    {
+        "id": "http_post_utility",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "POST to PHP",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 800,
+        "y": 520,
+        "wires": [
+            [
+                "debug_utility_api"
+            ]
+        ]
+    },
+    {
+        "id": "debug_utility_api",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "API Response",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "59fefd491e1a7249",
+        "type": "comment",
+        "z": "cc3ed6cb9d327d93",
+        "name": "script ลบ log manpower แบบรายไอดี",
+        "info": "USE [IIOT_TOOLBOX]\nGO\n\nDELETE FROM [dbo].[MANPOWER_DAILY_LOGS]\nWHERE log_id IN (\n    45465, 45551, 45485, 45556, 45554, 45505, 45515, 45513, 45550, 45491, \n    45428, 45572, 45560, 45569, 45508, 45446, 45531, 45448, 45526, 45528, \n    45442, 45516, 45462, 45546, 45430, 45478, 45506, 45433, 45455, 45535, \n    45545, 45449, 45450, 45490, 45507, 45511, 45543, 45570, 45542, 45492, \n    45538, 45567, 45498, 45456, 45574, 45580, 45581, 45582, 45585, 45583, 45584\n);",
+        "x": 1200,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "inject_utility_cron",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Every 15 Mins",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "900",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 620,
+        "wires": [
+            [
+                "func_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "func_utility_cron",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Set API Action (aggregate_summary)",
+        "func": "// ชี้ไปยัง API ตัวเดิมของคุณ\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/api_utility.php\";\n\n// ส่ง Action ไปบอกให้มันคำนวณ\nmsg.url = baseUrl + \"?action=aggregate_summary\";\n\n// แนบ API Key ไปด้วยเพื่อความปลอดภัย\nmsg.headers = {\n    \"X-API-KEY\": \"MESKey2026\",\n    \"User-Agent\": \"Node-RED-Utility-Cron\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 620,
+        "wires": [
+            [
+                "http_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "http_utility_cron",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Trigger PHP SP",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 780,
+        "y": 620,
+        "wires": [
+            [
+                "debug_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "debug_utility_cron",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Cron Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "inject_ghost_clear",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Every 1 Hour",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 720,
+        "wires": [
+            [
+                "func_prep_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "func_prep_ghost_api",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Set POST Params & API Key",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/api/apiAreaAccess.php\";\n\nmsg.url = baseUrl;\n\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-AutoClear\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\",\n    \"Content-Type\": \"application/x-www-form-urlencoded\"\n};\n\nmsg.payload = \"action=auto_clear_ghost\";\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 720,
+        "wires": [
+            [
+                "http_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "http_ghost_api",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Call PHP Clear Ghost",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 770,
+        "y": 720,
+        "wires": [
+            [
+                "debug_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "debug_ghost_api",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Clear Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "mqtt_broker_snc",
+        "type": "mqtt-broker",
+        "name": "SNC Utility Broker",
+        "broker": "10.1.68.100",
+        "port": "1884",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

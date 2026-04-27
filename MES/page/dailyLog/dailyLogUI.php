@@ -151,12 +151,10 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                     <div class="service-grid">
                         <?php 
                         $themeCommon = 'text-dark bg-light border';
-                        // ทุกคนเข้าถึงได้ หรือใช้สิทธิ์พื้นฐาน
-                        renderServiceLink('OEE Dashboard', 'ดูประสิทธิภาพ (ภาพรวม)', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Dashboard.php', '', $themeCommon);
+                        renderServiceLink('OEE Dashboard', 'ดูประสิทธิภาพ (ภาพรวม)', '<i class="fas fa-chart-line"></i>', '../OEE_Dashboard/OEE_Shopfloor.php', '', $themeCommon);
                         renderServiceLink('Material Request', 'ระบบขอเบิกพัสดุ/อุปกรณ์', '<i class="fas fa-cart-plus"></i>', '../storeManagement/materialReq.php', '', $themeCommon);
                         renderServiceLink('Forklift Booking', 'จองรถและติดตามสถานะโฟร์คลิฟต์', '<i class="fas fa-truck-loading"></i>', '../forklift/forkliftUI.php', '', $themeCommon);
                         renderServiceLink('Document Center', 'คู่มือและเอกสาร', '<i class="fas fa-folder-open"></i>', '../documentCenter/documentCenterUI.php', 'view_documents', $themeCommon);
-                        // ถ้ามีระบบแจ้งซ่อม (MT Request) ในอนาคต ให้เอามาใส่ตรงนี้
                         ?>
                     </div>
                 </div>

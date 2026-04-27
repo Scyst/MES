@@ -1,5 +1,11 @@
 <?php 
 require_once __DIR__ . '/../components/init.php'; 
+require_once __DIR__ . '/../../auth/check_auth.php';
+
+if (!hasPermission('view_executive')) {
+    header("Location: OEE_Shopfloor.php");
+    exit;
+}
 
 $pageTitle = 'OEE Real-time Dashboard';
 $pageHeaderTitle = 'OEE & Cost Monitoring';
@@ -150,6 +156,10 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                             <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="liveClock">--:--:--</span>
                             
                             <div class="vr mx-2 text-muted" style="opacity: 0.2;"></div>
+                            <a href="OEE_Shopfloor.php" class="btn btn-outline-success btn-sm d-flex align-items-center shadow-sm" style="padding: 2px 8px; border-radius: 6px;">
+                                <i class="fas fa-desktop me-1"></i>
+                                <span class="ms-1 fw-bold shortcut-text" style="font-size: 0.7rem;">Shop Floor View</span>
+                            </a>
                             <a href="../production/productionUI.php" class="btn btn-light btn-sm border d-flex align-items-center text-decoration-none shadow-sm" style="padding: 2px 8px; border-radius: 6px; background-color: #f8fafc;" title="Production & Inventory">
                                 <i class="fas fa-boxes text-primary"></i>
                                 <span class="ms-1 fw-bold text-secondary shortcut-text" style="font-size: 0.7rem;"> Production Entry</span>

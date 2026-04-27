@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
-if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
+if (!hasRole(['admin', 'creator', 'supervisor', 'operator', 'qc'])) {
     header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }

@@ -1,5 +1,7 @@
 let map;
 let gridLayerGroup;
+let mapInterval;
+let timelineInterval;
 let heatmapLayer = null;
 let forkliftMarkers = {};
 let mappedZones = [];
@@ -54,50 +56,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function startPolling() {
-    if (dashboardInterval) clearInterval(dashboardInterval);
-    dashboardInterval = setInterval(loadAllData, 5000); 
-}
-function stopPolling() {
-    if (dashboardInterval) { clearInterval(dashboardInterval); dashboardInterval = null; }
+    stopPolling();
+    mapInterval = setInterval(loadMapDataOnly, 5000); 
+    timelineInterval = setInterval(loadTimelineDataOnly, 30000); 
 }
 
-async function loadAllData() {
+function stopPolling() {
+    if (mapInterval) clearInterval(mapInterval);
+    if (timelineInterval) clearInterval(timelineInterval);
+}
+
+async function loadMapDataOnly() {
     try {
         const formData = new FormData();
         formData.append('action', 'get_dashboard');
-        
         const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
             globalForkliftData = json.data;
             updateKPIs(globalForkliftData);
-            
-            const fdTime = new FormData();
-            fdTime.append('action', 'get_timeline');
-            const resTime = await fetch('api/forkliftManage.php', { method: 'POST', body: fdTime });
-            const jsonTime = await resTime.json();
-            
-            if(jsonTime.success) {
-                globalBookings = jsonTime.data;
-                renderTimelineChart(globalForkliftData, globalBookings);
-            }
-
             renderList(globalForkliftData); 
             renderMapMarkers(globalForkliftData);
-            loadAlerts();
             
             const timeEl = document.getElementById('last-update-time');
             if(timeEl) timeEl.innerText = new Date().toLocaleTimeString('th-TH');
-
-            isFirstLoad = false;
-        } else if (isFirstLoad) {
-            const grid = document.getElementById('forklift-list');
-            if(grid) grid.innerHTML = `<li class="list-group-item text-center text-danger py-4"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>${json.message}</li>`;
         }
-    } catch (e) { 
-        console.error('Data Fetch Error:', e);
-    }
+    } catch (e) { console.error('Map Data Fetch Error:', e); }
+}
+
+async function loadTimelineDataOnly() {
+    try {
+        const fdTime = new FormData();
+        fdTime.append('action', 'get_timeline');
+        const resTime = await fetch('api/forkliftManage.php', { method: 'POST', body: fdTime });
+        const jsonTime = await resTime.json();
+        
+        if(jsonTime.success) {
+            globalBookings = jsonTime.data;
+            renderTimelineChart(globalForkliftData, globalBookings);
+            loadAlerts();
+        }
+    } catch (e) { console.error('Timeline Fetch Error:', e); }
+}
+
+async function loadAllData() {
+    await loadMapDataOnly();
+    await loadTimelineDataOnly();
+    isFirstLoad = false;
 }
 
 function updateKPIs(data) {

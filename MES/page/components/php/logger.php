@@ -46,4 +46,35 @@ function writeLog($pdo, $action, $module, $refId, $oldData = null, $newData = nu
         error_log("Audit Log Error: " . $e->getMessage());
     }
 }
+/**
+ * Global Error Log Function
+ * ใช้สำหรับบันทึก Exception หรือ DB Error โดยไม่เปิดเผยให้ User เห็น
+ */
+function writeErrorLog($pdo, $module, $errorMessage, $payloadData = null) {
+    try {
+        $userId = $_SESSION['user']['id'] ?? 'SYSTEM';
+        $username = $_SESSION['user']['username'] ?? 'SYSTEM';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN';
+        
+        $payloadJson = $payloadData ? json_encode($payloadData, JSON_UNESCAPED_UNICODE) : null;
+
+        $sql = "INSERT INTO SYSTEM_LOGS 
+                (user_id, username, role, action, module, ref_id, old_value, new_value, remark, ip_address, user_agent) 
+                VALUES (?, ?, 'system', 'SYSTEM_ERROR', ?, 'ERROR', ?, NULL, ?, ?, ?)";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $userId, $username, $module, 
+            $payloadJson, $errorMessage, 
+            $ip, $userAgent
+        ]);
+        
+        // เขียนลง PHP Error Log ด้วยเผื่อกรณี Database ล่ม (Hard Crash)
+        error_log("[$module] SYSTEM_ERROR: " . $errorMessage);
+
+    } catch (Exception $e) {
+        error_log("Failed to write Error Log: " . $e->getMessage());
+    }
+}
 ?>

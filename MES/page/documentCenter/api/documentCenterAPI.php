@@ -41,7 +41,7 @@ try {
         //  GET DOCUMENTS
         //==================================
         case 'get_documents':
-            if (!hasRole(['admin', 'creator', 'supervisor', 'operator'])) {
+            if (!hasRole(['admin', 'creator', 'supervisor', 'operator', 'qc'])) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Permission denied']);
                 exit;

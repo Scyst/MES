@@ -315,18 +315,19 @@ function formatDocDate($dateStr) {
             <tbody>
                 <?php 
                 $sumQty = 0; $sumTotal = 0;
-                $currentProductType = null; // 📌 ตัวแปรเก็บหัวข้อปัจจุบัน (Product Type)
+                $currentProductType = null;
                 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
                         $sumQty += (float)($row['qty_carton'] ?? 0);
-                        $sumTotal += (float)($row['line_total'] ?? 0);
+                        
+                        $lineTotal = round((float)($row['line_total'] ?? 0), 2);
+                        $sumTotal += $lineTotal;
                         
                         $rowProductType = trim($row['product_type'] ?? '');
                         
-                        // 📌 ตรวจสอบว่า Product Type เปลี่ยนไปจากบรรทัดที่แล้วหรือไม่
                         if ($rowProductType !== $currentProductType && $rowProductType !== ''):
-                            $currentProductType = $rowProductType; // อัปเดตสถานะล่าสุด
+                            $currentProductType = $rowProductType;
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
@@ -338,7 +339,7 @@ function formatDocDate($dateStr) {
                     <td style="border-right: none;"></td>
                 </tr>
                 <?php 
-                        endif; // จบเงื่อนไขการพิมพ์หัวข้อ
+                        endif;
                 ?>
                 
                 <tr>
@@ -354,7 +355,7 @@ function formatDocDate($dateStr) {
                     </td>
                     <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
                     <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 3) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format((float)($row['line_total'] ?? 0), 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($lineTotal, 2) ?></td>
                 </tr>
                 <?php 
                     endforeach; 
