@@ -1,15 +1,14 @@
-<?php 
-define('SYSTEM_INJECTION_LOADED', true);
+<?php
+//MES/page/OEE_Dashboard/OEE_Shopfloor.php
+define('ALLOW_GUEST_ACCESS', true);
+
 require_once __DIR__ . '/../components/init.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
-requirePermission('view_dashboard');
 
 $pageTitle = 'Production Live Board';
 $pageHeaderTitle = 'Production Monitor';
 $pageIcon = 'fas fa-tv';
 $pageHeaderSubtitle = 'ติดตามสถานะการผลิตและยอดขายแบบเรียลไทม์ (Shop Floor View)';
-
-$isLoggedIn = true;
 ?>
 
 <!DOCTYPE html>
@@ -19,7 +18,6 @@ $isLoggedIn = true;
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     <style>
-        /* 🚀 Base Dashboard Styles */
         html, body.layout-top-header { height: auto !important; min-height: 100vh; overflow-x: hidden; overflow-y: auto !important; background-color: #f8f9fa; }
         .page-container, #main-content { height: auto !important; min-height: 100%; overflow: visible !important; }
         .dashboard-toolbar { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -44,12 +42,17 @@ $isLoggedIn = true;
             70% { box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
             100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
         }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        .live-indicator.offline { background-color: #dc3545 !important; animation: pulse-red 2s infinite !important; }
+        .live-text.offline { color: #dc3545 !important; }
         .live-indicator { width: 10px; height: 10px; background-color: #198754; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px; }
 
-        /* 🚀 Shop Floor Specific Styles (ป้ายไฟ) */
         .sf-card { border-radius: 16px; border-left: 6px solid #e2e8f0; text-align: center; padding: 20px !important; justify-content: center; }
-        
-        /* เพิ่มสีของ Revenue */
         .sf-card.revenue { border-color: #0d6efd; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
         .sf-card.good { border-color: #198754; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
         .sf-card.hold { border-color: #fd7e14; background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); }
@@ -66,7 +69,6 @@ $isLoggedIn = true;
         .sf-unit { font-size: 1.2rem; font-weight: bold; color: #94a3b8; }
         .sf-target { font-size: 0.95rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 12px; border-radius: 20px; display: inline-block; margin-top: 5px; }
 
-        /* Responsive Layouts */
         .top-controls-wrapper { width: 100%; overflow-x: hidden; }
         .dashboard-toolbar { width: 100%; display: flex; flex-wrap: wrap; align-items: center; }
         .live-status-item { margin-right: auto !important; }
@@ -79,7 +81,6 @@ $isLoggedIn = true;
             .date-item input { flex: 1; min-width: 0; }
             .update-btn { grid-column: 1 / span 2; width: 100% !important; margin: 0 !important; }
             .dashboard-toolbar select, .dashboard-toolbar input[type="date"] { width: 100% !important; padding: 8px 10px !important; }
-            
             .sf-value { font-size: 2.2rem; }
             .table-responsive { overflow-x: auto; border-radius: 8px; }
             #productionTable th:nth-child(1), #productionTable td:nth-child(1) { position: sticky; left: 0; z-index: 10; background-color: #ffffff; }
@@ -93,7 +94,6 @@ $isLoggedIn = true;
             .live-text, .live-vr, .shortcut-text { display: none !important; }
             .filter-item, .date-item { border-right: 1px solid #e2e8f0 !important; padding: 0 8px !important; display: flex !important; align-items: center; }
             .update-btn { margin: 0 4px !important; }
-            
             .sf-value { font-size: 2rem; }
             .sf-card { padding: 10px !important; }
         }
@@ -116,7 +116,7 @@ $isLoggedIn = true;
                             <i class="far fa-clock text-muted me-2" style="font-size: 0.85rem;"></i>
                             <span class="fw-bold text-dark" style="font-size: 0.95rem;" id="liveClock">--:--:--</span>
                             
-                            <?php if (hasPermission('view_executive')): ?>
+                            <?php if (isset($_SESSION['user']) && hasPermission('view_executive')): ?>
                                 <div class="vr mx-2 text-muted" style="opacity: 0.2;"></div>
                                 <a href="OEE_Dashboard.php" class="btn btn-dark btn-sm d-flex align-items-center shadow-sm" style="padding: 2px 8px; border-radius: 6px;" title="กลับไปหน้าหลัก">
                                     <i class="fas fa-user-tie text-warning"></i>
@@ -161,7 +161,7 @@ $isLoggedIn = true;
                             <div class="sf-label"><i class="fas fa-check-circle text-success me-2"></i>Good Output</div>
                             <div class="sf-value" id="sf-good">0</div>
                             <div class="sf-unit">PCS</div>
-                            <div class="sf-target">Target: <span id="sf-target-good">--</span> (Phase 2)</div>
+                            <!-- <div class="sf-target">Target: <span id="sf-target-good">--</span> (Phase 2)</div> -->
                         </div>
                     </div>
                     <div class="col-12 col-md-6 col-xl-3">
@@ -235,6 +235,7 @@ $isLoggedIn = true;
                         </div>
                     </div>
                 </div>
+                
                 <div style="position: absolute; width: 10px; height: 10px; overflow: hidden; opacity: 0; pointer-events: none; z-index: -999;">
                     <div id="oeeTrendToggle"></div>
                     <canvas id="oeeLineChart" width="10" height="10"></canvas>
@@ -256,15 +257,49 @@ $isLoggedIn = true;
         </main>
     </div>
 
-    <script>const isLoggedIn = <?php echo json_encode($isLoggedIn); ?>;</script>
+    <script>
+        const isLoggedIn = true;
+        const API_KEY = 'SNC_TV_2026_x9f8a2mPLQ';
+        const originalFetch = window.fetch;
+        window.fetch = async function() {
+            let url = arguments[0];
+            if (typeof url === 'string' && url.includes('oeeDashboardApi.php')) {
+                url = url.replace('oeeDashboardApi.php', 'oeeShopfloorApi.php');
+                const urlObj = new URL(url, window.location.href);
+                urlObj.searchParams.set('key', API_KEY);
+                arguments[0] = urlObj.toString();
+            }
+            return originalFetch.apply(this, arguments);
+        };
+    </script>
+
     <script src="script/OEE_OEEchart.js?v=<?php echo filemtime('script/OEE_OEEchart.js'); ?>"></script>
     <script src="script/OEE_barchart.js?v=<?php echo filemtime('script/OEE_barchart.js'); ?>"></script>
     <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
 
     <script>
+        function setConnectionStatus(isOnline) {
+            const indicator = document.querySelector('.live-indicator');
+            const text = document.querySelector('.live-text');
+            if (!indicator || !text) return;
+
+            if (isOnline) {
+                indicator.classList.remove('offline');
+                text.classList.remove('offline');
+                text.textContent = 'LIVE MONITOR';
+                document.querySelectorAll('.sf-value').forEach(el => el.style.opacity = '1');
+            } else {
+                indicator.classList.add('offline');
+                text.classList.add('offline');
+                text.textContent = 'CONNECTION LOST';
+                document.querySelectorAll('.sf-value').forEach(el => el.style.opacity = '0.4');
+            }
+        }
+
         async function fetchShopfloorTotals() {
             const params = new URLSearchParams({ 
-                action: 'getBarAndTable', 
+                key: API_KEY, 
+                action: 'getBarCharts', 
                 startDate: document.getElementById("startDate")?.value || '', 
                 endDate: document.getElementById("endDate")?.value || '', 
                 line: document.getElementById("lineFilter")?.value || '', 
@@ -272,27 +307,34 @@ $isLoggedIn = true;
             });
 
             try {
-                const res = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
+                const res = await fetch(`api/oeeShopfloorApi.php?${params.toString()}`);
+                if (!res.ok) throw new Error("HTTP Status " + res.status);
+                
                 const json = await res.json();
                 
-                if (json.success && json.data && json.data.table) {
+                if (json.success && json.data && json.data.partResults) {
                     let totalGood = 0, totalHold = 0, totalScrap = 0;
                     
-                    json.data.table.forEach(r => {
-                        totalGood += parseFloat(r.good_qty) || 0;
-                        totalHold += parseFloat(r.hold_qty) || 0;
-                        totalScrap += parseFloat(r.scrap_qty) || 0;
+                    json.data.partResults.forEach(r => {
+                        totalGood += parseFloat(r.FG) || 0;
+                        totalHold += parseFloat(r.HOLD) || 0;
+                        totalScrap += parseFloat(r.SCRAP) || 0;
                     });
                     
-                    // อัปเดตตัวเลขแบบมีจุลภาค
                     document.getElementById('sf-good').textContent = totalGood.toLocaleString();
                     document.getElementById('sf-hold').textContent = totalHold.toLocaleString();
                     document.getElementById('sf-scrap').textContent = totalScrap.toLocaleString();
+                    
+                    setConnectionStatus(true);
+                } else {
+                    throw new Error("API returned false or invalid data");
                 }
-            } catch(e) { console.error("Failed to fetch shopfloor totals", e); }
+            } catch(e) { 
+                console.error("Failed to fetch shopfloor totals:", e);
+                setConnectionStatus(false); 
+            }
         }
 
-        // แทรกการดึงข้อมูลเพิ่มเมื่อมีการกด Filter
         window.addEventListener('load', () => {
             const originalHandleFilter = window.handleFilterChange;
             window.handleFilterChange = function() {
@@ -300,11 +342,17 @@ $isLoggedIn = true;
                 fetchShopfloorTotals();
             };
             
-            // เรียกครั้งแรก
             setTimeout(fetchShopfloorTotals, 500); 
-        });
+            setInterval(() => {
+                if (typeof handleFilterChange === 'function') handleFilterChange();
+            }, 60000);
 
-        setInterval(() => fetch(window.location.href, { method: 'HEAD' }), 15 * 60 * 1000);
+            window.addEventListener('offline', () => setConnectionStatus(false));
+            window.addEventListener('online', () => {
+                setConnectionStatus(true);
+                fetchShopfloorTotals();
+            });
+        });
     </script>
 </body>
 </html>
