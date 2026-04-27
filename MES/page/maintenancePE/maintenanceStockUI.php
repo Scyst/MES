@@ -1,0 +1,218 @@
+<?php 
+// MES/page/maintenancePE/maintenanceStockUI.php
+require_once __DIR__ . '/../components/init.php';
+
+requirePermission(['view_maintenance', 'manage_maintenance']);
+
+$pageTitle = "Spare Parts Management";
+$pageIcon = "fas fa-tools"; 
+$pageHeaderTitle = "Maintenance Spare Parts";
+$pageHeaderSubtitle = "ระบบจัดการสต๊อกอะไหล่และอุปกรณ์ซ่อมบำรุง";
+$currentUser = $_SESSION['user'];
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <title><?php echo $pageTitle; ?></title>
+    <?php include_once '../components/common_head.php'; ?>
+    <style>
+        /* สไตล์สำหรับแจ้งเตือน Min Stock */
+        .badge-min-alert { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red { 
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        /* ลบเส้นขอบตารางด้านบนให้ดูสะอาดเหมือน Template ต้นฉบับ */
+        .table > :not(caption) > * > * { border-bottom-color: var(--bs-border-color); }
+        .nav-tabs .nav-link { color: var(--bs-secondary-color); font-weight: 600; }
+        .nav-tabs .nav-link.active { color: var(--bs-primary); border-bottom: 3px solid var(--bs-primary); }
+    </style>
+</head>
+
+<body class="dashboard-page layout-top-header">
+    
+    <?php include '../components/php/top_header.php'; ?>
+
+    <main id="main-content">
+        <div class="container-fluid p-3">
+
+            <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="onhand-tab" data-bs-toggle="tab" data-bs-target="#onhand-tab-pane" type="button" role="tab" aria-selected="true">
+                        <i class="fas fa-boxes me-2"></i>Stock On-Hand
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="master-tab" data-bs-toggle="tab" data-bs-target="#master-tab-pane" type="button" role="tab" aria-selected="false" tabindex="-1">
+                        <i class="fas fa-database me-2"></i>Item Master
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="myTabContent">
+                
+                <div class="tab-pane fade active show" id="onhand-tab-pane" role="tabpanel" aria-labelledby="onhand-tab">
+                    
+                    <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-3">
+                            <div class="row align-items-center g-2">
+                                <div class="col-lg-8 d-flex flex-wrap align-items-center gap-2">
+                                    
+                                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 350px;">
+                                        <span class="input-group-text bg-white text-muted border-end-0 px-2">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" id="onhandSearch" class="form-control border-start-0 ps-0" placeholder="Search Item Code, Name, Location...">
+                                    </div>
+
+                                    <button class="btn btn-sm btn-light border shadow-sm" onclick="MtApp.refreshData()" title="Refresh">
+                                        <i class="fas fa-sync-alt text-secondary"></i>
+                                    </button>
+
+                                </div>
+                                
+                                <div class="col-lg-4 text-end d-none d-lg-block">
+                                    <button class="btn btn-sm btn-outline-success fw-bold shadow-sm px-3 me-1" onclick="window.StockManager.openReceiveModal()">
+                                        <i class="fas fa-arrow-down me-1"></i> Receive (รับเข้า)
+                                    </button>
+                                    
+                                    <button class="btn btn-sm btn-dark fw-bold shadow-sm px-3" onclick="window.StockManager.openIssueModal()">
+                                        <i class="fas fa-arrow-up me-1"></i> Issue (เบิกออก)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mtSummaryPanel" class="row g-3 mb-3">
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Total Items (SKU)</div>
+                                            <div class="h3 mb-0 fw-bold text-primary" id="stat_total_items">0</div>
+                                        </div>
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-cogs"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small fw-bold text-uppercase">Low Stock Alert</div>
+                                            <div class="h3 mb-0 fw-bold text-danger" id="stat_low_stock">0</div>
+                                        </div>
+                                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0"><i class="fas fa-list-alt me-2"></i>Stock On-Hand List</h6>
+                            <span class="text-muted small" style="font-size: 0.75rem;">Last update: <span id="lastSyncTime">Just now</span></span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table id="onhandTable" class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light sticky-top" style="top: 0; z-index: 5;">
+                                        <tr class="text-muted small text-uppercase">
+                                            <th class="ps-3" style="width: 15%;">Item Code</th>
+                                            <th style="width: 30%;">Description</th>
+                                            <th style="width: 15%;">Location</th>
+                                            <th class="text-center" style="width: 15%;">Min / Max</th>
+                                            <th class="text-end" style="width: 15%;">On-Hand</th>
+                                            <th class="text-center pe-3" style="width: 10%;">Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="onhandTableBody" class="border-top-0">
+                                        <tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>Loading data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="tab-pane fade" id="master-tab-pane" role="tabpanel" aria-labelledby="master-tab">
+                    
+                    <div class="card border-0 shadow-sm mb-3 flex-shrink-0" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-3">
+                            <div class="row align-items-center g-2">
+                                <div class="col-lg-8 d-flex flex-wrap align-items-center gap-2">
+                                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 350px;">
+                                        <span class="input-group-text bg-white text-muted border-end-0 px-2">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" id="masterSearch" class="form-control border-start-0 ps-0" placeholder="Search Master Data...">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 text-end d-none d-lg-block">
+                                    <button class="btn btn-sm btn-primary fw-bold shadow-sm px-3" onclick="window.MtMasterCtrl.openModal()">
+                                        <i class="fas fa-plus me-1"></i> Add Item
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent border-0 pt-3 pb-2">
+                            <h6 class="fw-bold mb-0"><i class="fas fa-database me-2"></i>Item Master List</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table id="masterTable" class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light sticky-top" style="top: 0; z-index: 5;">
+                                        <tr class="text-muted small text-uppercase">
+                                            <th class="ps-3" style="width: 15%;">Item Code</th>
+                                            <th style="width: 25%;">Item Name / Description</th>
+                                            <th style="width: 15%;">Supplier</th>
+                                            <th class="text-end" style="width: 10%;">Price (฿)</th>
+                                            <th class="text-center" style="width: 15%;">Min / Max</th>
+                                            <th class="text-center" style="width: 10%;">Status</th>
+                                            <th class="text-center pe-3" style="width: 10%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="border-top-0">
+                                        <tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>Loading data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <?php include 'components/modalReceive.php'; ?>
+    <?php include 'components/modalIssue.php'; ?>
+    <?php include 'components/modalMtItem.php'; ?>
+
+    <script src="script/maintenanceStock.js?v=<?php echo filemtime('script/maintenanceStock.js'); ?>"></script>
+    <script>
+        setInterval(() => {
+            const timeEl = document.getElementById('lastSyncTime');
+            if(timeEl && timeEl.textContent === 'Just now') {
+                timeEl.textContent = new Date().toLocaleTimeString('th-TH');
+            }
+        }, 60000);
+    </script>
+</body>
+</html>

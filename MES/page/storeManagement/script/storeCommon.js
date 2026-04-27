@@ -35,16 +35,34 @@ async function fetchAPI(action, method = 'GET', bodyData = null, buttonId = null
         }
 
         const response = await fetch(url, options);
-        const result = await response.json();
+        const contentType = response.headers.get("content-type");
+        let result;
+        if (contentType && contentType.includes("application/json")) {
+            result = await response.json();
+        } else {
+            throw new Error("เซิร์ฟเวอร์ไม่ได้ตอบกลับเป็นรูปแบบ JSON (อาจหมดเวลา Session หรือ Network ขัดข้อง)");
+        }
         
         if (!response.ok || !result.success) {
-            throw new Error(result.message || `HTTP Error: ${response.status}`);
+            throw new Error(result.message || `เกิดข้อผิดพลาดรหัส: ${response.status}`);
         }
         return result;
         
     } catch (error) {
-        Swal.fire('Error', error.message, 'error');
-        throw error;
+        Swal.fire({
+            title: 'แจ้งเตือนจากระบบ',
+            html: `<div class="text-danger p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25" style="font-size: 1rem; text-align: left; line-height: 1.5;">
+                     <i class="fas fa-exclamation-triangle me-1"></i> ${escapeHTML(error.message)}
+                   </div>
+                   <div class="small text-muted mt-3 text-start">กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง</div>`,
+            icon: 'warning',
+            confirmButtonText: 'รับทราบ',
+            confirmButtonColor: '#6c757d',
+            width: '500px'
+        });
+        
+        return null; 
+        
     } finally {
         if (btn) {
             btn.disabled = false;
