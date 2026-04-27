@@ -1,5 +1,5 @@
 <div class="modal fade" id="modalMtItem" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <form id="formMtItem" class="modal-content border-0 shadow-lg border-top border-5 border-primary">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-cog me-2"></i>จัดการข้อมูลอะไหล่ (Item Master)</h5>
@@ -32,8 +32,20 @@
                         <input type="number" name="unit_price" id="mt_unit_price" class="form-control" step="0.01" min="0" value="0">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label fw-bold small text-muted mb-1">หน่วยนับ (UOM)</label>
-                        <input type="text" name="uom" id="mt_uom" class="form-control text-uppercase" required value="PCS" placeholder="PCS, SET, M">
+                        <label class="form-label fw-bold small text-muted mb-1">หน่วยนับ (UOM) <span class="text-danger">*</span></label>
+                        <select name="uom" id="mt_uom" class="form-select fw-bold" required>
+                            <option value="PCS">PCS (ชิ้น/ตัว)</option>
+                            <option value="SET">SET (ชุด)</option>
+                            <option value="M">m (เมตร)</option>
+                            <option value="KG">kg (กิโลกรัม)</option>
+                            <option value="LITER">L (ลิตร)</option>
+                            <option value="ROLL">ROLL (ม้วน)</option>
+                            <option value="BOX">BOX (กล่อง)</option>
+                            <option value="PACK">PACK (แพ็ค)</option>
+                            <option value="BOTTLE">BOTTLE (ขวด)</option>
+                            <option value="CAN">CAN (กระป๋อง)</option>
+                            <option value="TUBE">TUBE (หลอด)</option>
+                        </select>
                     </div>
 
                     <div class="col-md-6">

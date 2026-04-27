@@ -343,9 +343,50 @@ function viewMaintenanceDetails(id) {
         const btnEmail = document.getElementById('btn_resend_email');
         if(btnEmail) btnEmail.onclick = () => resendEmail(id);
     }
+    loadJobSpareParts(id);
 
     if(typeof showBootstrapModal === 'function') showBootstrapModal('viewMaintenanceModal');
     else new bootstrap.Modal(document.getElementById('viewMaintenanceModal')).show();
+}
+
+async function loadJobSpareParts(jobId) {
+    const tbody = document.querySelector('#jobPartsTable tbody');
+    const totalEl = document.getElementById('jobGrandTotal');
+    
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดรายการอะไหล่...</td></tr>';
+    if (totalEl) totalEl.textContent = '0.00';
+
+    try {
+        const res = await fetch(`../maintenancePE/api/mtStockAPI.php?action=get_job_parts_cost&job_id=${jobId}`);
+        const json = await res.json();
+
+        if (json.success) {
+            const data = json.data;
+            
+            if (totalEl) totalEl.textContent = parseFloat(data.grand_total).toLocaleString('en-US', {minimumFractionDigits: 2});
+            if (data.parts_used.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3 small">ไม่มีการเบิกอะไหล่ (จากระบบสต๊อก) สำหรับงานซ่อมนี้</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.parts_used.map(part => `
+                <tr>
+                    <td class="ps-2 font-monospace fw-bold text-primary">${part.item_code}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${part.item_name}</div>
+                        <div class="small text-muted" style="font-size: 0.7rem;"><i class="fas fa-user-circle me-1"></i> ${part.issued_by || 'System'}</div>
+                    </td>
+                    <td class="text-end fw-bold">${parseFloat(part.quantity)} <span class="small fw-normal text-muted">${part.uom}</span></td>
+                    <td class="text-end text-muted">${parseFloat(part.unit_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="text-end pe-2 fw-bold text-danger">${parseFloat(part.total_cost).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading parts cost:', error);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-3"><i class="fas fa-exclamation-triangle me-1"></i> ไม่สามารถดึงข้อมูลจากระบบสต๊อกได้</td></tr>`;
+    }
 }
 
 window.openCompleteModal = function(id) {
@@ -559,6 +600,113 @@ const compressImage = (file, maxWidth = 1280, maxHeight = 1280, quality = 0.8) =
     });
 };
 
+// ==========================================
+// 🛠️ ระบบเบิกอะไหล่ Dynamic Rows สำหรับหน้าแจ้งซ่อม
+// ==========================================
+
+let stockItemsMaster = [];
+
+// โหลดรายชื่ออะไหล่มาเตรียมไว้ใน Datalist
+async function initStockLookup() {
+    try {
+        const res = await fetch('../maintenancePE/api/mtStockAPI.php?action=get_master_data');
+        const json = await res.json();
+        if (json.success) {
+            stockItemsMaster = json.data.items;
+            
+            // 🚀 อัปเดตใหม่: ให้ JS สร้าง Datalist เองเลยถ้าหาไม่เจอ
+            let datalist = document.getElementById('stockItemDatalist');
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = 'stockItemDatalist';
+                document.body.appendChild(datalist); // ฝังไว้ใน Body
+            }
+            
+            datalist.innerHTML = stockItemsMaster.map(i => 
+                `<option data-id="${i.item_id}" data-uom="${i.uom}" value="${i.item_code} | ${i.item_name}"></option>`
+            ).join('');
+        }
+    } catch (e) { console.error("Load stock items failed", e); }
+}
+
+// เช็คเมื่อเลือกอะไหล่ (เพิ่มตัวดักจับกัน Error)
+function onSelectPart(input) {
+    const val = input.value;
+    const row = input.closest('.part-item-row');
+    const hiddenId = row.querySelector('.part-hidden-id');
+    const uomLabel = row.querySelector('.part-uom');
+    
+    const datalist = document.getElementById('stockItemDatalist');
+    if (!datalist) return; // 🚀 กัน Error ถ้ายังโหลดไม่เสร็จ
+    
+    const option = Array.from(datalist.options).find(opt => opt.value === val);
+    
+    if (option) {
+        hiddenId.value = option.dataset.id;
+        uomLabel.textContent = option.dataset.uom;
+    } else {
+        hiddenId.value = '';
+        uomLabel.textContent = 'Unit';
+    }
+}
+
+// ฟังก์ชันเพิ่มแถวเบิกอะไหล่
+function addPartRow(btn) {
+    const container = btn.closest('.border.rounded.bg-light').querySelector('.parts-container');
+    const div = document.createElement('div');
+    div.className = 'row g-1 mb-2 align-items-center part-item-row';
+    div.innerHTML = `
+        <div class="col-7">
+            <input type="hidden" name="part_id[]" class="part-hidden-id">
+            <input class="form-control form-control-sm border-primary" list="stockItemDatalist" placeholder="พิมพ์ค้นหาอะไหล่..." oninput="onSelectPart(this)" autocomplete="off">
+        </div>
+        <div class="col-4">
+            <div class="input-group input-group-sm">
+                <input type="number" name="part_qty[]" class="form-control text-center fw-bold border-primary" placeholder="จำนวน" step="0.01" min="0.01">
+                <span class="input-group-text bg-white text-muted part-uom" style="font-size: 0.7rem;">Unit</span>
+            </div>
+        </div>
+        <div class="col-1 text-end">
+            <button type="button" class="btn btn-sm text-danger" onclick="this.closest('.part-item-row').remove()"><i class="fas fa-times"></i></button>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// สั่งทำงานตอนเปิดหน้าเว็บ
+document.addEventListener('DOMContentLoaded', initStockLookup);
+
+// ==========================================
+// 🚀 ฟังก์ชันยิง API ตัดสต๊อกเบื้องหลัง
+// ==========================================
+async function processAutoStockDeduction(formData, jobId) {
+    const partsRows = formData.getAll('part_id[]'); 
+    const partsQty = formData.getAll('part_qty[]'); 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    if (partsRows.length > 0) {
+        for (let i = 0; i < partsRows.length; i++) {
+            if (partsRows[i] && parseFloat(partsQty[i]) > 0) {
+                try {
+                    await fetch('../maintenancePE/api/mtStockAPI.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({
+                            action: 'process_transaction',
+                            item_id: partsRows[i],
+                            location_id: 1, // 👈 บังคับดึงจากคลังหลัก (ID = 1)
+                            quantity: partsQty[i],
+                            transaction_type: 'ISSUE',
+                            ref_job_id: jobId,
+                            notes: 'Auto-Issue from Maintenance Page'
+                        })
+                    });
+                } catch (e) { console.error("Auto deduction failed for item", partsRows[i]); }
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadStandardLines();
     loadMaintenanceMachines();
@@ -679,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await response.json();
 
                 if (res.success) {
+                    await processAutoStockDeduction(formData, document.getElementById('complete_req_id').value);
                     if (typeof showToast === 'function') showToast('ปิดงานซ่อมเสร็จสมบูรณ์', '#28a745');
                     const modalInst = bootstrap.Modal.getInstance(document.getElementById('completeMaintenanceModal'));
                     if (modalInst) modalInst.hide();
@@ -761,6 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const res = await response.json();
                 if (res.success) {
+                    await processAutoStockDeduction(formData, document.getElementById('prog_req_id').value);
                     if(typeof showToast === 'function') showToast('อัปเดตความคืบหน้าเรียบร้อย', '#17a2b8');
                     bootstrap.Modal.getInstance(document.getElementById('updateProgressModal')).hide();
                     fetchMaintenanceData();

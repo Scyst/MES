@@ -1,5 +1,5 @@
 <div class="modal fade" id="modalReceive" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <form id="formReceive" class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>รับอะไหล่เข้าสต๊อก</h5>

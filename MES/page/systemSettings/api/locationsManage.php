@@ -24,9 +24,6 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-        // =========================================================================
-        // [1] GET LOCATIONS (READ)
-        // =========================================================================
         case 'get_locations':
             $sql = "
                 SELECT 
@@ -39,9 +36,6 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
-        // =========================================================================
-        // [2] SAVE LOCATION (INSERT / UPDATE)
-        // =========================================================================
         case 'save_location':
             $id = (int)($input['location_id'] ?? 0);
             $name = trim($input['location_name'] ?? '');
@@ -66,7 +60,7 @@ try {
             if ($id > 0) {
                 $sql = "UPDATE " . LOCATIONS_TABLE . " 
                         SET location_name = ?, location_description = ?, production_line = ?, 
-                            location_type = ?, is_active = ?, updated_at = GETDATE() 
+                            location_type = ?, is_active = ? 
                         WHERE location_id = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $desc, $line, $type, $is_active, $id]);
@@ -75,8 +69,8 @@ try {
                 $msg = 'Location updated successfully.';
             } else {
                 $sql = "INSERT INTO " . LOCATIONS_TABLE . " 
-                        (location_name, location_description, production_line, location_type, is_active, created_at) 
-                        VALUES (?, ?, ?, ?, ?, GETDATE())";
+                        (location_name, location_description, production_line, location_type, is_active) 
+                        VALUES (?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $desc, $line, $type, $is_active]);
                 $newId = $pdo->lastInsertId();

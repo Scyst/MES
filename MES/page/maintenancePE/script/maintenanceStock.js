@@ -1,8 +1,6 @@
+//MES/page/maintenancePE/script/maintenanceStock.js
 "use strict";
 
-// =========================================================
-// 1. API SERVICE (จัดการการเชื่อมต่อ Backend)
-// =========================================================
 const MtAPI = {
     url: 'api/mtStockAPI.php',
     
@@ -45,9 +43,6 @@ const MtAPI = {
     }
 };
 
-// =========================================================
-// 2. UI RENDERER (จัดการการวาดตารางและสถิติ สำหรับ On-Hand)
-// =========================================================
 const MtUI = {
     renderTable(data, searchTerm = '') {
         const tbody = document.querySelector('#onhandTable tbody');
@@ -103,9 +98,6 @@ const MtUI = {
     }
 };
 
-// =========================================================
-// 3. MODAL CONTROLLER (จัดการฟอร์ม รับเข้า/เบิกออก)
-// =========================================================
 const MtModal = {
     masterData: null,
 
@@ -128,17 +120,18 @@ const MtModal = {
 
         const rcvItemOptsEl = document.getElementById('rcvItemOptions');
         const issItemOptsEl = document.getElementById('issItemOptions');
+        const adjItemOptsEl = document.getElementById('adjItemOptions');
         const issJobOptsEl = document.getElementById('issJobOptions');
 
         if(rcvItemOptsEl) rcvItemOptsEl.innerHTML = itemOpts;
         if(issItemOptsEl) issItemOptsEl.innerHTML = itemOpts;
+        if(adjItemOptsEl) adjItemOptsEl.innerHTML = itemOpts;
         if(issJobOptsEl) issJobOptsEl.innerHTML = jobOpts;
         
         document.querySelectorAll('select[name="location_id"]').forEach(s => s.innerHTML = '<option value="">-- เลือกคลัง --</option>' + locOpts);
     },
 
     bindDatalistEvents() {
-        // [Receive] Item
         document.getElementById('rcv_item_input')?.addEventListener('input', (e) => {
             const val = e.target.value;
             const options = document.getElementById('rcvItemOptions').options;
@@ -154,7 +147,6 @@ const MtModal = {
             }
         });
 
-        // [Issue] Job
         document.getElementById('iss_job_input')?.addEventListener('input', (e) => {
             const val = e.target.value;
             const options = document.getElementById('issJobOptions').options;
@@ -167,7 +159,6 @@ const MtModal = {
             }
         });
 
-        // [Issue] Item (มีโชว์ยอดคงเหลือ)
         document.getElementById('iss_item_input')?.addEventListener('input', (e) => {
             const val = e.target.value;
             const options = document.getElementById('issItemOptions').options;
@@ -194,12 +185,60 @@ const MtModal = {
                 }
             }
         });
+
+        document.getElementById('adj_item_input')?.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const options = document.getElementById('adjItemOptions').options;
+            const hintEl = document.querySelector('#adj_onhand_hint span');
+            
+            document.getElementById('adj_hidden_item_id').value = '';
+            if(hintEl) hintEl.textContent = '-';
+            
+            for(let i=0; i<options.length; i++) {
+                if(options[i].value === val) {
+                    const itemId = options[i].dataset.id;
+                    document.getElementById('adj_hidden_item_id').value = itemId;
+                    
+                    const stockItem = MtApp.stockData.find(item => item.item_id == itemId);
+                    const onhand = stockItem ? parseFloat(stockItem.onhand_qty) : 0;
+                    if (hintEl) hintEl.textContent = onhand.toLocaleString();
+                    
+                    document.getElementById('adj_actual_qty').dataset.currentOnhand = onhand;
+                    break;
+                }
+            }
+        });
+
+        document.getElementById('adj_actual_qty')?.addEventListener('input', function(e) {
+            const currentOnhand = parseFloat(document.getElementById('adj_actual_qty').dataset.currentOnhand) || 0;
+            const actualQty = parseFloat(e.target.value) || 0;
+            const diff = actualQty - currentOnhand;
+            
+            const diffDisplay = document.getElementById('adj_diff_value');
+            const finalInput = document.getElementById('adj_final_diff');
+            
+            if (diffDisplay) {
+                if (e.target.value === '') {
+                    diffDisplay.textContent = '-';
+                    diffDisplay.className = 'fw-bold';
+                } else {
+                    diffDisplay.textContent = (diff > 0 ? '+' : '') + diff.toLocaleString();
+                    diffDisplay.className = diff >= 0 ? 'fw-bold text-success' : 'fw-bold text-danger';
+                }
+            }
+            
+            if (finalInput) finalInput.value = diff; 
+        });
     },
 
     async openModal(type) {
         await this.prepareMasterData();
         
-        const modalId = type === 'RECEIVE' ? 'modalReceive' : 'modalIssue';
+        let modalId = '';
+        if (type === 'RECEIVE') modalId = 'modalReceive';
+        else if (type === 'ISSUE') modalId = 'modalIssue';
+        else if (type === 'ADJUST') modalId = 'modalMtAdjust';
+        
         const modalEl = document.getElementById(modalId);
         
         if (!modalEl) {
@@ -209,6 +248,9 @@ const MtModal = {
 
         if (type === 'ISSUE') {
             const hintEl = document.querySelector('#issue_onhand_hint span');
+            if(hintEl) { hintEl.textContent = '-'; hintEl.className = 'fw-bold'; }
+        } else if (type === 'ADJUST') {
+            const hintEl = document.querySelector('#adj_onhand_hint span');
             if(hintEl) { hintEl.textContent = '-'; hintEl.className = 'fw-bold'; }
         }
 
@@ -230,11 +272,16 @@ const MtModal = {
         MtUI.setButtonLoading(submitBtn, true);
 
         const formData = new FormData(form);
+        let qty = formData.get('quantity');
+        if (transactionType === 'ADJUST') {
+            qty = document.getElementById('adj_final_diff').value;
+        }
+
         const payload = {
             action: 'process_transaction',
             item_id: hiddenItemId,
             location_id: formData.get('location_id'),
-            quantity: formData.get('quantity'),
+            quantity: qty,
             ref_job_id: formData.get('ref_job_id') || null,
             notes: formData.get('notes'),
             transaction_type: transactionType
@@ -258,9 +305,6 @@ const MtModal = {
     }
 };
 
-// =========================================================
-// 4. MASTER DATA CONTROLLER (จัดการหน้า Item Master)
-// =========================================================
 const MtMasterCtrl = {
     masterDataList: [],
 
@@ -407,34 +451,98 @@ const MtMasterCtrl = {
     }
 };
 
-// =========================================================
-// 5. MAIN APP (ตัวควบคุมหลัก)
-// =========================================================
+const MtHistoryCtrl = {
+    historyData: [],
+
+    async loadData() {
+        try {
+            const res = await fetch(`${MtAPI.url}?action=get_transactions`);
+            const json = await res.json();
+            if (json.success) {
+                this.historyData = json.data;
+                this.renderTable();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    renderTable(searchTerm = '') {
+        const tbody = document.querySelector('#historyTable tbody');
+        if (!tbody) return;
+
+        const filtered = this.historyData.filter(item => 
+            item.item_code.toLowerCase().includes(searchTerm) ||
+            item.item_name.toLowerCase().includes(searchTerm) ||
+            (item.created_by_name && item.created_by_name.toLowerCase().includes(searchTerm)) ||
+            (item.machine && item.machine.toLowerCase().includes(searchTerm))
+        );
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">ไม่พบประวัติการทำรายการ</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(row => {
+            let typeBadge = '';
+            if (row.transaction_type === 'RECEIVE') typeBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="fas fa-arrow-down me-1"></i> IN</span>';
+            else if (row.transaction_type === 'ISSUE') typeBadge = '<span class="badge bg-dark bg-opacity-10 text-dark border border-dark"><i class="fas fa-arrow-up me-1"></i> OUT</span>';
+            else typeBadge = `<span class="badge bg-secondary">${row.transaction_type}</span>`;
+
+            const dateObj = new Date(row.created_at);
+            const dateStr = dateObj.toLocaleDateString('th-TH', { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            let refHtml = row.notes || '-';
+            if (row.machine) {
+                refHtml = `<div class="fw-bold text-primary"><i class="fas fa-tools me-1"></i> ${row.machine}</div><div class="small text-muted text-truncate" style="max-width: 250px;" title="${row.issue_description}">${row.issue_description}</div>`;
+            }
+
+            return `
+                <tr>
+                    <td class="text-muted">${dateStr}</td>
+                    <td>${typeBadge}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${row.item_code}</div>
+                        <div class="small text-muted text-truncate" style="max-width: 200px;" title="${row.item_name}">${row.item_name}</div>
+                    </td>
+                    <td class="text-end fw-bold ${row.quantity > 0 ? 'text-success' : 'text-danger'}">
+                        ${parseFloat(row.quantity).toLocaleString()} <span class="small fw-normal text-muted">${row.uom}</span>
+                    </td>
+                    <td><span class="small"><i class="fas fa-user-circle text-muted me-1"></i> ${row.created_by_name || 'System'}</span></td>
+                    <td>${refHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+};
+
 const MtApp = {
     stockData: [],
 
     async init() {
         this.setupEvents();
         await this.refreshData();
-        await MtMasterCtrl.loadData(); // โหลดข้อมูล Master เมื่อเปิดหน้า
+        await MtMasterCtrl.loadData();
+        await MtHistoryCtrl.loadData();
         MtModal.bindDatalistEvents(); 
     },
 
     setupEvents() {
-        // Search On-Hand Table
         document.getElementById('onhandSearch')?.addEventListener('input', (e) => {
             MtUI.renderTable(this.stockData, e.target.value.toLowerCase());
         });
 
-        // Search Master Table
         document.getElementById('masterSearch')?.addEventListener('input', (e) => {
             MtMasterCtrl.renderTable(e.target.value.toLowerCase());
         });
 
-        // Submit Forms
         document.getElementById('formReceive')?.addEventListener('submit', (e) => MtModal.submitTransaction(e, 'formReceive', 'RECEIVE'));
         document.getElementById('formIssue')?.addEventListener('submit', (e) => MtModal.submitTransaction(e, 'formIssue', 'ISSUE'));
+        document.getElementById('formMtAdjust')?.addEventListener('submit', (e) => MtModal.submitTransaction(e, 'formMtAdjust', 'ADJUST'));
         document.getElementById('formMtItem')?.addEventListener('submit', (e) => MtMasterCtrl.submit(e));
+        document.getElementById('historySearch')?.addEventListener('input', (e) => {
+            MtHistoryCtrl.renderTable(e.target.value.toLowerCase());
+        });
     },
 
     async refreshData() {
@@ -452,16 +560,14 @@ const MtApp = {
     }
 };
 
-// =========================================================
-// 6. GLOBAL EXPORTS (เพื่อให้ HTML เรียกใช้งานผ่าน onclick ได้)
-// =========================================================
 window.StockManager = {
     openReceiveModal: () => MtModal.openModal('RECEIVE'),
-    openIssueModal: () => MtModal.openModal('ISSUE')
+    openIssueModal: () => MtModal.openModal('ISSUE'),
+    openAdjustModal: () => MtModal.openModal('ADJUST')
 };
 
 window.MtMasterCtrl = MtMasterCtrl;
+window.MtHistoryCtrl = MtHistoryCtrl;
 window.MtApp = MtApp;
 
-// เริ่มต้นระบบ
 document.addEventListener('DOMContentLoaded', () => MtApp.init());

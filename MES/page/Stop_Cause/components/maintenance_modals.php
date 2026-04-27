@@ -171,6 +171,33 @@
                                     <div id="view_spare_parts" class="text-body font-monospace small ps-2">-</div>
                                 </div>
 
+                                <div class="mt-3 mb-3 border-top pt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="small text-secondary fw-bold mb-0">
+                                            <i class="fas fa-cogs text-warning me-1"></i> Stock Spare Parts Used:
+                                        </label>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1">
+                                            Total: <span id="jobGrandTotal">0.00</span> ฿
+                                        </span>
+                                    </div>
+                                    <div class="table-responsive bg-body border rounded">
+                                        <table class="table table-sm table-hover align-middle mb-0" id="jobPartsTable">
+                                            <thead class="bg-body-tertiary text-muted" style="font-size: 0.75rem;">
+                                                <tr class="text-uppercase">
+                                                    <th class="ps-2">Item</th>
+                                                    <th>Name</th>
+                                                    <th class="text-end">Qty</th>
+                                                    <th class="text-end">Price</th>
+                                                    <th class="text-end pe-2">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody style="font-size: 0.8rem;">
+                                                <tr><td colspan="5" class="text-center text-muted py-2">กำลังโหลดข้อมูล...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                                 <div class="pt-2 mt-2 border-top">
                                     <div class="row g-2" style="font-size: 0.85rem;">
                                         <div class="col-6">
@@ -270,9 +297,19 @@
                             <textarea name="technician_note" class="form-control" rows="3" placeholder="อธิบายสิ่งที่ทำไป..." required></textarea>
                         </div>
 
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Spare Parts (รายการอะไหล่ที่ใช้)</label>
-                            <textarea name="spare_parts_list" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร&#10;- เบรคเกอร์ 1 ตัว"></textarea>
+                        <div class="col-12 mt-2">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-bold mb-0 small"><i class="fas fa-box-open me-1 text-primary"></i> เบิกอะไหล่จากสต๊อก (Auto-Deduction)</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm" onclick="addPartRow(this)" style="width: 28px; height: 28px; padding: 0;" title="เพิ่มรายการอะไหล่">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="parts-container"></div>
+                                
+                                <div class="form-text mt-1 text-muted" style="font-size: 0.75rem;">* กดปุ่ม [+] เพื่อค้นหาและเบิกอะไหล่ ระบบจะตัดสต๊อกทันทีเมื่อกดบันทึก</div>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -342,8 +379,18 @@
                             <textarea name="technician_note" id="edit_technician_note" class="form-control" rows="2" placeholder="อธิบายสิ่งที่ทำไป..."></textarea>
                         </div>
                         <div class="col-12 mt-2">
-                            <label class="form-label small fw-bold text-muted">Spare Parts (รายการอะไหล่ที่ใช้)</label>
-                            <textarea name="spare_parts_list" id="edit_spare_parts" class="form-control" rows="2" placeholder="- สายไฟ 2 เมตร..."></textarea>
+                            <div class="p-3 border rounded bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-bold mb-0 small"><i class="fas fa-box-open me-1 text-primary"></i> เบิกอะไหล่จากสต๊อก (Auto-Deduction)</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm" onclick="addPartRow(this)" style="width: 28px; height: 28px; padding: 0;" title="เพิ่มรายการอะไหล่">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="parts-container"></div>
+                                
+                                <div class="form-text mt-1 text-muted" style="font-size: 0.75rem;">* กดปุ่ม [+] เพื่อค้นหาและเบิกอะไหล่ ระบบจะตัดสต๊อกทันทีเมื่อกดบันทึก</div>
+                            </div>
                         </div>
 
                         <div class="col-12 col-md-6">
@@ -428,9 +475,19 @@
                         <label class="form-label small fw-bold text-muted">Technician Note (บันทึกการซ่อม/สาเหตุที่รอ)</label>
                         <textarea name="technician_note" id="prog_tech_note" class="form-control" rows="4" required placeholder="เช่น ถอดมอเตอร์แล้ว กำลังรอเบิกอะไหล่..."></textarea>
                     </div>
-                    <div class="mb-0">
-                        <label class="form-label small fw-bold text-muted">Spare Parts (อะไหล่ที่เบิกมาใช้ชั่วคราว)</label>
-                        <textarea name="spare_parts_list" id="prog_spare_parts" class="form-control" rows="2" placeholder="- สายพาน 1 เส้น"></textarea>
+                    <div class="col-12 mt-2">
+                        <div class="p-3 border rounded bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold mb-0 small"><i class="fas fa-box-open me-1 text-primary"></i> เบิกอะไหล่จากสต๊อก (Auto-Deduction)</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm" onclick="addPartRow(this)" style="width: 28px; height: 28px; padding: 0;" title="เพิ่มรายการอะไหล่">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="parts-container"></div>
+                            
+                            <div class="form-text mt-1 text-muted" style="font-size: 0.75rem;">* กดปุ่ม [+] เพื่อค้นหาและเบิกอะไหล่ ระบบจะตัดสต๊อกทันทีเมื่อกดบันทึก</div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-top-0">

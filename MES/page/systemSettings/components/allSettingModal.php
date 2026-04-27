@@ -221,7 +221,9 @@
                                 <option value="RM">RM (Raw Material)</option>
                                 <option value="SEMI">SEMI (Semi-Finished)</option>
                                 <option value="FG">FG (Finished Goods)</option>
-                                <option value="STORE">STORE (คลังอะไหล่)</option>
+                                <option value="STORE">STORE (คลังทั่วไป)</option>
+                                <option value="MAINTENANCE">MAINTENANCE (คลังอะไหล่ซ่อมบำรุง)</option>
+                                <option value="TOOL">TOOL (ห้องเก็บเครื่องมือ)</option>
                             </select>
                         </div>
                         <div class="col-12">

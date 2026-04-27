@@ -1,5 +1,5 @@
 <div class="modal fade" id="modalIssue" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <form id="formIssue" class="modal-content border-0 shadow-lg border-start border-5 border-dark">
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title"><i class="fas fa-tools me-2"></i>เบิกอะไหล่เพื่อซ่อมบำรุง</h5>

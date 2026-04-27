@@ -68,6 +68,14 @@ thead.sticky-top {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
+.modal.fade .modal-dialog {
+    transform: scale(0.9); /* ย่อขนาดลงนิดนึงตอนซ่อน */
+    transition: transform 0.2s ease-out;
+}
+.modal.show .modal-dialog {
+    transform: scale(1); /* ขยายกลับมาปกติเมื่อแสดง */
+}
+
 /* Mobile Adjustments */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

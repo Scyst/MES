@@ -128,6 +128,68 @@ try {
             echo json_encode(['success' => true, 'message' => 'เปลี่ยนสถานะการใช้งานสำเร็จ']);
             break;
 
+        case 'get_transactions':
+            $limit = (int)($input['limit'] ?? 200);
+            
+            $sql = "SELECT 
+                        t.transaction_id, 
+                        t.transaction_type, 
+                        t.quantity, 
+                        t.notes, 
+                        t.created_at,
+                        i.item_code, 
+                        i.item_name, 
+                        i.uom,
+                        l.location_name,
+                        u.fullname AS created_by_name,
+                        j.machine, 
+                        j.issue_description
+                    FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
+                    JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN dbo.MAINTENANCE_REQUESTS j WITH (NOLOCK) ON t.ref_job_id = j.id
+                    ORDER BY t.created_at DESC
+                    OFFSET 0 ROWS FETCH NEXT $limit ROWS ONLY";
+            
+            $stmt = $pdo->query($sql);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+            break;
+
+        case 'get_job_parts_cost':
+            $jobId = $input['job_id'] ?? $_GET['job_id'] ?? null;
+            if (!$jobId) throw new Exception("Job ID is required");
+
+            $sql = "SELECT 
+                        t.transaction_id, 
+                        t.created_at, 
+                        t.quantity, 
+                        i.item_code, 
+                        i.item_name, 
+                        i.uom, 
+                        i.unit_price,
+                        (t.quantity * i.unit_price) AS total_cost,
+                        u.fullname AS issued_by
+                    FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
+                    JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    WHERE t.ref_job_id = ? AND t.transaction_type = 'ISSUE'
+                    ORDER BY t.created_at ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$jobId]);
+            $parts = $stmt->fetchAll();
+            $grandTotal = array_sum(array_column($parts, 'total_cost'));
+
+            echo json_encode([
+                'success' => true, 
+                'data' => [
+                    'parts_used' => $parts,
+                    'grand_total' => $grandTotal
+                ]
+            ]);
+            break;
+
         default:
             throw new Exception("Invalid Action");
     }
