@@ -1,42 +1,13 @@
-/* MES/page/maintenancePE/css/maintenanceStock.css */
-
-.kpi-card { transition: transform 0.2s; border-left: 4px solid; }
-.kpi-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
-
-.custom-tabs-wrapper {
-    background-color: var(--bs-tertiary-bg);
-    padding: 4px;
-    border-radius: 8px;
-    display: inline-flex;
-    gap: 2px;
-}
-.custom-tabs-wrapper .nav-link {
-    border: none;
-    border-radius: 6px;
-    color: var(--bs-secondary-color);
-    padding: 8px 24px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    background: transparent;
-}
-.custom-tabs-wrapper .nav-link:hover:not(.active) {
-    color: var(--bs-body-color);
-    background-color: rgba(0,0,0,0.03);
-}
-.custom-tabs-wrapper .nav-link.active {
-    background-color: #fff;
-    color: var(--bs-primary);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-}
-
+/* ------------------------------------------
+   1. Structure & Layout
+------------------------------------------ */
 .dashboard-header-sticky {
     position: sticky;
     top: 0;
     z-index: 1000;
     background-color: var(--bs-body-bg);
-    padding: 1rem;
-    padding-bottom: 0.5rem;
-    transition: background-color 0.3s;
+    padding: 1rem 1rem 0.5rem 1rem;
+    transition: background-color 0.3s ease;
 }
 
 .content-wrapper {
@@ -51,30 +22,134 @@
     flex-direction: column;
     overflow: hidden;
     margin-bottom: 0;
-    border-radius: 0.5rem;
+    border-radius: 3px; /* ขอบคมขึ้นแบบ Enterprise */
 }
 
+/* ------------------------------------------
+   2. UI Elements Override (Enterprise Look)
+------------------------------------------ */
+.form-control, .btn, .input-group-text, .card {
+    border-radius: 3px !important;
+}
+
+.input-group-sm > .form-control,
+.input-group-sm > .input-group-text,
+.btn-sm {
+    height: 30px;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    font-size: 0.85rem;
+}
+
+/* ------------------------------------------
+   3. Tabs Navigation
+------------------------------------------ */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.nav-tabs .nav-link { 
+    color: #495057; 
+    font-weight: 600; 
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.5rem 1rem;
+    border-radius: 0;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    color: #212529;
+    border-bottom: 2px solid #adb5bd;
+    background-color: transparent;
+}
+
+.nav-tabs .nav-link.active { 
+    color: #0d6efd; 
+    border-bottom: 2px solid #0d6efd; 
+    background-color: transparent;
+}
+
+/* ------------------------------------------
+   4. Data Tables (Enterprise Grid)
+------------------------------------------ */
 .table-responsive-custom { 
     flex-grow: 1;
     overflow-y: auto;
     border-bottom: 1px solid var(--bs-border-color);
 }
 
-thead.sticky-top {
+.table-enterprise {
+    border: 1px solid #dee2e6;
+}
+
+.table-enterprise > :not(caption) > * > * { 
+    border-bottom-color: var(--bs-border-color); 
+}
+
+.table-enterprise thead.sticky-top th {
     position: sticky;
     top: 0;
     z-index: 20;
-    background-color: var(--bs-light);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    background-color: #f4f6f9;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #ced4da;
+    vertical-align: middle;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.table-enterprise tbody td {
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* ------------------------------------------
+   5. Indicators & Utilities
+------------------------------------------ */
+.kpi-card { 
+    transition: transform 0.2s ease, box-shadow 0.2s ease; 
+    border-left: 4px solid; 
+    border-radius: 3px;
+}
+
+.kpi-card:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.1) !important; 
+}
+
+.badge-min-alert { 
+    background-color: #dc3545; 
+    color: white !important;
+    border-radius: 2px;
+    padding: 2px 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+    font-size: 0.85rem;
+}
+
+.modal-content {
+    border-radius: 2px !important;
+}
+.form-control, .form-select, .btn {
+    border-radius: 2px !important;
+    font-size: 0.875rem;
+}
+.modal-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6;
+}
+.modal-footer {
+    background-color: #f8f9fa !important;
+}
+.form-label {
+    margin-bottom: 0.25rem;
+    color: #495057;
 }
 
 /* Mobile Adjustments */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-.badge-min-alert { animation: pulse-red 2s infinite; }
-@keyframes pulse-red { 
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
-    70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-}

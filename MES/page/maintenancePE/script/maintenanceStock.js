@@ -44,22 +44,28 @@ const MtAPI = {
 };
 
 const MtUI = {
-    renderTable(data, searchTerm = '') {
+    renderTable(data, searchTerm = '', locationFilter = '') {
         const tbody = document.getElementById('onhandTableBody');
         if (!tbody) return;
+
         if (!data || !Array.isArray(data)) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5">ไม่พบข้อมูล</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">ไม่พบข้อมูล</td></tr>`;
+            this.updateStats([]);
             return;
         }
 
-        const filtered = data.filter(item => 
-            (item.item_code || '').toLowerCase().includes(searchTerm) ||
-            (item.item_name || '').toLowerCase().includes(searchTerm) ||
-            (item.location_name || '').toLowerCase().includes(searchTerm)
-        );
+        const filtered = data.filter(item => {
+            const matchSearch = (item.item_code || '').toLowerCase().includes(searchTerm) ||
+                                (item.item_name || '').toLowerCase().includes(searchTerm) ||
+                                (item.location_name || '').toLowerCase().includes(searchTerm);
+            const matchLoc = locationFilter === '' || String(item.location_id) === locationFilter;
+            return matchSearch && matchLoc;
+        });
+
+        this.updateStats(filtered);
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><br>ไม่พบรายการอะไหล่ที่ค้นหา</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><br>ไม่พบรายการอะไหล่ที่ค้นหา</td></tr>`;
             return;
         }
 
@@ -71,8 +77,9 @@ const MtUI = {
 
             return `
                 <tr>
-                    <td class="font-monospace fw-bold text-primary">${row.item_code}</td>
-                    <td><div class="fw-bold text-dark">${row.item_name}</div></td>
+                    <td class="font-monospace fw-bold text-primary ps-3">${row.item_code}</td>
+                    <td><div class="fw-bold text-dark text-truncate" style="max-width: 200px;" title="${row.item_name}">${row.item_name}</div></td>
+                    <td><div class="small text-muted text-truncate" style="max-width: 200px;" title="${row.description || '-'}">${row.description || '-'}</div></td>
                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">${row.location_name || 'N/A'}</span></td>
                     <td class="text-center small text-muted">${min.toLocaleString()} / ${max.toLocaleString()}</td>
                     <td class="text-end">
@@ -81,6 +88,13 @@ const MtUI = {
                         </span>
                     </td>
                     <td class="text-center"><span class="small text-muted text-uppercase">${row.uom || ''}</span></td>
+                    <td class="text-center pe-3">
+                        <button class="btn btn-sm btn-outline-warning py-0 px-2 shadow-none" 
+                                onclick="window.StockManager.openSpecificAdjust(${row.item_id}, ${row.location_id})" 
+                                title="ปรับปรุงยอด (Spot Check)">
+                            <i class="fas fa-sliders-h"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -91,12 +105,23 @@ const MtUI = {
         
         const elTotal = document.getElementById('stat_total_items');
         const elLow = document.getElementById('stat_low_stock');
+        const elValue = document.getElementById('stat_total_value');
         
+        let lowCount = 0;
+        let totalValue = 0;
+
+        data.forEach(i => {
+            const qty = parseFloat(i.onhand_qty) || 0;
+            const min = parseFloat(i.min_stock) || 0;
+            const price = parseFloat(i.unit_price) || 0;
+            
+            if (qty <= min) lowCount++;
+            totalValue += (qty * price);
+        });
+
         if (elTotal) elTotal.textContent = data.length.toLocaleString();
-        if (elLow) {
-            const lowCount = data.filter(i => (parseFloat(i.onhand_qty) || 0) <= (parseFloat(i.min_stock) || 0)).length;
-            elLow.textContent = lowCount.toLocaleString();
-        }
+        if (elLow) elLow.textContent = lowCount.toLocaleString();
+        if (elValue) elValue.textContent = '฿' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
 
     setButtonLoading(btn, isLoading) {
@@ -144,6 +169,48 @@ const MtModal = {
         updateEl('issJobOptions', jobOpts);
         
         document.querySelectorAll('select[name="location_id"]').forEach(s => s.innerHTML = '<option value="">-- เลือกคลัง --</option>' + locOpts);
+        const filterEl = document.getElementById('onhandLocationFilter');
+        if (filterEl) filterEl.innerHTML = '<option value="">-- ทุกคลังเก็บ --</option>' + locOpts;
+    },
+
+    updateAdjustCalculation() {
+        const itemId = document.getElementById('adj_hidden_item_id').value;
+        const locId = document.querySelector('#formMtAdjust select[name="location_id"]').value;
+        const actualInput = document.getElementById('adj_actual_qty');
+        const actualQty = parseFloat(actualInput.value);
+
+        let currentOnhand = 0;
+
+        if (itemId) {
+            if (locId) {
+                const stockItem = MtApp.stockData.find(i => i.item_id == itemId && i.location_id == locId);
+                currentOnhand = stockItem ? parseFloat(stockItem.onhand_qty) : 0;
+            } else {
+                const stockItems = MtApp.stockData.filter(i => i.item_id == itemId);
+                currentOnhand = stockItems.reduce((sum, i) => sum + (parseFloat(i.onhand_qty) || 0), 0);
+            }
+        }
+
+        const hintEl = document.querySelector('#adj_onhand_hint span');
+        if (hintEl) hintEl.textContent = currentOnhand.toLocaleString();
+
+        const diffDisplay = document.getElementById('adj_diff_value');
+        const finalInput = document.getElementById('adj_final_diff');
+
+        if (!isNaN(actualQty) && actualInput.value !== "") {
+            const diff = actualQty - currentOnhand;
+            if (diffDisplay) {
+                diffDisplay.textContent = (diff > 0 ? '+' : '') + diff.toLocaleString();
+                diffDisplay.className = diff >= 0 ? 'fw-bold text-success' : 'fw-bold text-danger';
+            }
+            if (finalInput) finalInput.value = diff;
+        } else {
+            if (diffDisplay) {
+                diffDisplay.textContent = '-';
+                diffDisplay.className = 'fw-bold';
+            }
+            if (finalInput) finalInput.value = '';
+        }
     },
 
     bindDatalistEvents() {
@@ -252,21 +319,20 @@ const MtModal = {
             const val = e.target.value;
             const options = document.getElementById('adjItemOptions').options;
             document.getElementById('adj_hidden_item_id').value = '';
-            
             for(let i=0; i<options.length; i++) {
                 if(options[i].value === val) {
                     document.getElementById('adj_hidden_item_id').value = options[i].dataset.id;
                     break;
                 }
             }
-            updateAdjustCalculation();
+            this.updateAdjustCalculation();
         });
 
-        document.querySelector('#formMtAdjust select[name="location_id"]')?.addEventListener('change', updateAdjustCalculation);
-        document.getElementById('adj_actual_qty')?.addEventListener('input', updateAdjustCalculation);
+        document.querySelector('#formMtAdjust select[name="location_id"]')?.addEventListener('change', () => this.updateAdjustCalculation());
+        document.getElementById('adj_actual_qty')?.addEventListener('input', () => this.updateAdjustCalculation());
     },
 
-    async openModal(type) {
+    async openModal(type, extraItemId = null, extraLocId = null) {
         await this.prepareMasterData();
         
         let modalId = '';
@@ -277,10 +343,7 @@ const MtModal = {
         else if (type === 'ADJUST') { modalId = 'modalMtAdjust'; formId = 'formMtAdjust'; }
         
         const modalEl = document.getElementById(modalId);
-        if (!modalEl) {
-            console.error(`Component ${modalId} not found.`);
-            return;
-        }
+        if (!modalEl) return;
     
         const formEl = document.getElementById(formId);
         if (formEl) formEl.reset();
@@ -297,6 +360,16 @@ const MtModal = {
             resetHint('#adj_diff_value');
             const finalInput = document.getElementById('adj_final_diff');
             if(finalInput) finalInput.value = '';
+            if (extraItemId && extraLocId) {
+                const itemObj = this.masterData.items.find(i => i.item_id == extraItemId);
+                if (itemObj) {
+                    document.getElementById('adj_item_input').value = `${itemObj.item_code} | ${itemObj.item_name}`;
+                    document.getElementById('adj_hidden_item_id').value = extraItemId;
+                }
+                const locSelect = document.querySelector('#formMtAdjust select[name="location_id"]');
+                if (locSelect) locSelect.value = extraLocId;
+                setTimeout(() => this.updateAdjustCalculation(), 100);
+            }
         }
 
         const modal = new bootstrap.Modal(modalEl);
@@ -402,10 +475,8 @@ const MtMasterCtrl = {
         tbody.innerHTML = filtered.map(row => `
             <tr class="${row.is_active == 0 ? 'opacity-50' : ''}">
                 <td class="font-monospace fw-bold ${row.is_active == 1 ? 'text-primary' : 'text-muted'}">${row.item_code}</td>
-                <td>
-                    <div class="fw-bold text-dark">${row.item_name}</div>
-                    <div class="small text-muted text-truncate" style="max-width: 300px;" title="${row.description || '-'}">${row.description || '-'}</div>
-                </td>
+                <td><div class="fw-bold text-dark text-truncate" style="max-width: 200px;" title="${row.item_name}">${row.item_name}</div></td>
+                <td><div class="small text-muted text-truncate" style="max-width: 250px;" title="${row.description || '-'}">${row.description || '-'}</div></td>
                 <td><span class="small">${row.supplier || '-'}</span></td>
                 <td class="text-end fw-bold">${parseFloat(row.unit_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td class="text-center small"><span class="text-danger">${parseFloat(row.min_stock)}</span> / <span class="text-success">${parseFloat(row.max_stock)}</span> ${row.uom || ''}</td>
@@ -974,6 +1045,8 @@ const MtApp = {
 
     async init() {
         this.setupEvents();
+        await MtModal.prepareMasterData(); 
+        
         await this.refreshData();
         await MtMasterCtrl.loadData();
         await MtHistoryCtrl.loadData();
@@ -981,9 +1054,14 @@ const MtApp = {
     },
 
     setupEvents() {
-        document.getElementById('onhandSearch')?.addEventListener('input', (e) => {
-            MtUI.renderTable(this.stockData, e.target.value.toLowerCase());
-        });
+        const triggerOnhandFilter = () => {
+            const searchTerm = document.getElementById('onhandSearch')?.value.toLowerCase() || '';
+            const locId = document.getElementById('onhandLocationFilter')?.value || '';
+            MtUI.renderTable(this.stockData, searchTerm, locId);
+        };
+
+        document.getElementById('onhandSearch')?.addEventListener('input', triggerOnhandFilter);
+        document.getElementById('onhandLocationFilter')?.addEventListener('change', triggerOnhandFilter);
 
         document.getElementById('masterSearch')?.addEventListener('input', (e) => {
             MtMasterCtrl.renderTable(e.target.value.toLowerCase());
@@ -1005,14 +1083,13 @@ const MtApp = {
         
         if (json.success) {
             this.stockData = json.data;
-            
             const searchTerm = document.getElementById('onhandSearch')?.value.toLowerCase() || '';
-            MtUI.renderTable(this.stockData, searchTerm);
+            const locId = document.getElementById('onhandLocationFilter')?.value || '';
+            MtUI.renderTable(this.stockData, searchTerm, locId);
             MtUI.updateStats(this.stockData);
 
             const timeEl = document.getElementById('lastSyncTime');
             if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('th-TH');
-
         } else {
             if(typeof showToast === 'function') showToast('ไม่สามารถโหลดข้อมูลสต๊อกได้', 'danger');
         }
@@ -1023,7 +1100,8 @@ const MtApp = {
 window.StockManager = {
     openReceiveModal: () => MtModal.openModal('RECEIVE'),
     openIssueModal: () => MtModal.openModal('ISSUE'),
-    openAdjustModal: () => MtModal.openModal('ADJUST')
+    openAdjustModal: () => MtModal.openModal('ADJUST'),
+    openSpecificAdjust: (itemId, locId) => MtModal.openModal('ADJUST', itemId, locId)
 };
 
 window.MtMasterCtrl = MtMasterCtrl;
