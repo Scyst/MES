@@ -38,13 +38,14 @@ try {
         case 'get_onhand':
             $sql = "SELECT 
                         i.item_id, i.item_code, i.item_name, i.uom,
+                        l.location_id,
                         l.location_name, 
                         i.min_stock, i.max_stock, 
                         ISNULL(o.quantity, 0) AS onhand_qty
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
                     LEFT JOIN dbo.MT_INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.item_id
                     LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id
-                    WHERE i.is_active = 1
+                    WHERE i.is_active = 1 AND ISNULL(o.quantity, 0) > 0 
                     ORDER BY i.item_code ASC";
             $stmt = $pdo->query($sql);
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
@@ -58,8 +59,8 @@ try {
             $refJobId = !empty($input['ref_job_id']) ? $input['ref_job_id'] : null;
             $notes = $input['notes'] ?? '';
 
-            if (!$itemId || !$locationId || $quantity <= 0 || !in_array($type, ['RECEIVE', 'ISSUE', 'ADJUST'])) {
-                throw new Exception("ข้อมูลไม่ครบถ้วน หรือประเภทธุรกรรมไม่ถูกต้อง");
+            if (!$itemId || !$locationId || $quantity == 0 || !in_array($type, ['RECEIVE', 'ISSUE', 'ADJUST'])) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน หรือประเภทธุรกรรมไม่ถูกต้อง (Quantity ห้ามเป็น 0)");
             }
 
             $stmt = $pdo->prepare("EXEC sp_MT_ProcessTransaction @item_id=?, @location_id=?, @quantity=?, @transaction_type=?, @ref_job_id=?, @notes=?, @user_id=?");
@@ -188,6 +189,126 @@ try {
                     'grand_total' => $grandTotal
                 ]
             ]);
+            break;
+
+        case 'import_mt_items':
+            $items = $input['items'] ?? [];
+            if (empty($items)) {
+                throw new Exception("ไม่พบข้อมูลสำหรับนำเข้า");
+            }
+
+            $pdo->beginTransaction();
+            $updatedCount = 0;
+            $insertedCount = 0;
+            $checkSql = "SELECT item_id FROM MT_ITEMS WITH (NOLOCK) WHERE item_code = ?";
+            $checkStmt = $pdo->prepare($checkSql);
+            $updateSql = "UPDATE MT_ITEMS 
+                          SET item_name = ?, description = ?, supplier = ?, unit_price = ?, 
+                              uom = ?, min_stock = ?, max_stock = ?, is_active = 1
+                          WHERE item_id = ?";
+            $updateStmt = $pdo->prepare($updateSql);
+            $insertSql = "INSERT INTO MT_ITEMS 
+                          (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock, is_active) 
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
+            $insertStmt = $pdo->prepare($insertSql);
+
+            foreach ($items as $item) {
+                $code = trim($item['item_code']);
+                $name = trim($item['item_name']);
+                $desc = trim($item['description']);
+                $supplier = trim($item['supplier']);
+                $price = (float)($item['unit_price'] ?? 0);
+                $uom = trim($item['uom'] ?? 'PCS');
+                $min = (float)($item['min_stock'] ?? 0);
+                $max = (float)($item['max_stock'] ?? 0);
+
+                if (empty($code) || empty($name)) continue;
+                $checkStmt->execute([$code]);
+                $existingId = $checkStmt->fetchColumn();
+
+                if ($existingId) {
+                    $updateStmt->execute([$name, $desc, $supplier, $price, $uom, $min, $max, $existingId]);
+                    $updatedCount++;
+                } else {
+                    $insertStmt->execute([$code, $name, $desc, $supplier, $price, $uom, $min, $max]);
+                    $insertedCount++;
+                }
+            }
+
+            $pdo->commit();
+            logAction($pdo, $currentUser['username'], 'IMPORT ITEMS', 0, "Imported $insertedCount new items, Updated $updatedCount items.");
+
+            echo json_encode([
+                'success' => true, 
+                'message' => "บันทึกสำเร็จ! (เพิ่มใหม่ $insertedCount รายการ, อัปเดต $updatedCount รายการ)"
+            ]);
+            break;
+
+        // =========================================================================
+        // 📦 [ADJUST] BULK STOCK TAKE (นำเข้ายอดนับสต๊อกผ่าน Excel)
+        // =========================================================================
+        case 'bulk_stock_take':
+            $adjustments = $input['adjustments'] ?? [];
+            if (empty($adjustments)) throw new Exception("ไม่พบรายการที่ต้องปรับยอด");
+
+            $pdo->beginTransaction();
+            $processedCount = 0;
+
+            // 1. เตรียม SQL หา Item ID จาก Item Code
+            $itemSql = "SELECT item_id FROM MT_ITEMS WITH (NOLOCK) WHERE item_code = ?";
+            $itemStmt = $pdo->prepare($itemSql);
+
+            // 2. เตรียม SQL อัปเดตยอดคงเหลือ (เปลี่ยนเป็น quantity)
+            $updateSql = "
+                UPDATE MT_INVENTORY_ONHAND 
+                SET quantity = quantity + ?, last_updated = GETDATE()
+                WHERE item_id = ? AND location_id = ?
+            ";
+            $updateStmt = $pdo->prepare($updateSql);
+
+            // 3. เตรียม SQL ถ้าของไม่เคยมีในคลังเลย ให้ Insert ใหม่ (เปลี่ยนเป็น quantity)
+            $insertOnhandSql = "
+                INSERT INTO MT_INVENTORY_ONHAND (item_id, location_id, quantity, last_updated)
+                VALUES (?, ?, ?, GETDATE())
+            ";
+            $insertOnhandStmt = $pdo->prepare($insertOnhandSql);
+
+            // 4. เตรียม SQL ลงประวัติ Transactions (เหมือนเดิม)
+            $transSql = "
+                INSERT INTO MT_TRANSACTIONS 
+                (transaction_type, item_id, location_id, quantity, notes, created_by_user_id, created_at)
+                VALUES ('ADJUST', ?, ?, ?, ?, ?, GETDATE())
+            ";
+            $transStmt = $pdo->prepare($transSql);
+
+            foreach ($adjustments as $adj) {
+                $code = trim($adj['item_code']);
+                $locId = (int)($adj['location_id'] ?? 0);
+                $diff = (float)($adj['diff'] ?? 0);
+                $notes = trim($adj['remark']);
+
+                if ($locId <= 0 || $diff == 0) continue;
+
+                $itemStmt->execute([$code]);
+                $itemId = $itemStmt->fetchColumn();
+
+                if (!$itemId) continue; 
+
+                // อัปเดตสต๊อกคงเหลือ
+                $updateStmt->execute([$diff, $itemId, $locId]);
+                
+                // ถ้าอัปเดตไม่ได้ผล ให้ Insert ใหม่
+                if ($updateStmt->rowCount() === 0) {
+                    $insertOnhandStmt->execute([$itemId, $locId, $adj['actual_qty']]);
+                }
+
+                // บันทึก Log Transaction
+                $transStmt->execute([$itemId, $locId, $diff, $notes, $userId]); // ใช้ $userId ตามที่คุณประกาศไว้ด้านบน
+                $processedCount++;
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "บันทึกและปรับยอดจำนวน $processedCount รายการ เรียบร้อย"]);
             break;
 
         default:
