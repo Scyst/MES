@@ -317,60 +317,70 @@ function formatDocDate($dateStr) {
                 $sumQty = 0; $sumTotal = 0;
                 $currentProductType = null;
                 
+                // 📌 เตรียม Array เลขตู้และซีลจากหัวเรือ
+                $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
+                $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
+
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        $sumQty += (float)($row['qty_carton'] ?? 0);
-                        
+                        // ปัดเศษ Amount แต่ละบรรทัดให้ตรงเครื่องคิดเลข
                         $lineTotal = round((float)($row['line_total'] ?? 0), 2);
+                        $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumTotal += $lineTotal;
                         
                         $rowProductType = trim($row['product_type'] ?? '');
                         
+                        // แสดงหัวข้อกลุ่มสินค้า (ถ้าเปลี่ยนหมวด)
                         if ($rowProductType !== $currentProductType && $rowProductType !== ''):
                             $currentProductType = $rowProductType;
                 ?>
                 <tr>
                     <td style="border-left: none;"></td>
                     <td style="color: #ff0702; padding-top: 8px;">
-                        <b><?= htmlspecialchars($rowProductType) ?></b><br>
+                        <b><?= htmlspecialchars($rowProductType) ?></b>
                     </td>
-                    <td></td>
-                    <td></td>
-                    <td style="border-right: none;"></td>
+                    <td></td><td></td><td style="border-right: none;"></td>
                 </tr>
-                <?php 
-                        endif;
-                ?>
+                <?php endif; ?>
                 
                 <tr>
-                    <td class="text-center address-box" style="border-left: none;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
-                    <td> 
-                        <span class="address-box">
-                            <?php 
-                                $skuVal = trim($row['sku'] ?? '');
-                                $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
-                            ?>
-                            <b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?>
-                        </span>
+                    <td class="text-center address-box" style="border-left: none; vertical-align: top; padding-top: 5px;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
+                    
+                    <td style="vertical-align: top; padding-top: 5px;"> 
+                        <?php 
+                            // ย้ายการคำนวณมาไว้ด้านบนเพื่อไม่ให้ HTML เว้นบรรทัด
+                            $skuVal = trim($row['sku'] ?? '');
+                            $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
+                        ?>
+                        <div class="address-box" style="margin-bottom: 4px;"><b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></div>
+
+                        <?php 
+                            // 📌 แทรกเลขตู้และ Seal ให้อยู่ใต้ Description ในช่องเดียวกัน
+                            if (isset($containers[$index])): 
+                                $cNo = $containers[$index];
+                                $sNo = $seals[$index] ?? '-';
+                                $num = $index + 1;
+                                
+                                $suffix = "TH";
+                                if ($num % 10 == 1 && $num % 100 != 11) $suffix = "ST";
+                                elseif ($num % 10 == 2 && $num % 100 != 12) $suffix = "ND";
+                                elseif ($num % 10 == 3 && $num % 100 != 13) $suffix = "RD";
+                        ?>
+                        <div style="font-weight: bold; color: #333; padding-left: 20px;">
+                            <?= $num . $suffix ?>, CONTAINER NO. <?= htmlspecialchars($cNo) ?> SEAL NO. <?= htmlspecialchars($sNo) ?>
+                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right"><?= number_format((float)($row['unit_price'] ?? 0), 3) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($lineTotal, 2) ?></td>
+                    
+                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($lineTotal, 2) ?></td>
                 </tr>
+
                 <?php 
                     endforeach; 
                 endif; 
                 ?>
-                
-                <tr>
-                    <td style="border-left: none;"></td>
-                    <td style="padding-bottom: 2px;">
-                        1ST,CONTAINER NO. <?= htmlspecialchars($shipping['container_no'] ?? '-') ?> SEAL NO <?= htmlspecialchars($shipping['seal_no'] ?? '-') ?>
-                    </td>
-                    <td></td>
-                    <td></td>
-                    <td style="border-right: none;"></td>
-                </tr>
 
                 <tr class="sub-total-row">
                     <td style="border-left: none;"></td>
@@ -383,7 +393,6 @@ function formatDocDate($dateStr) {
                         <?= number_format($sumTotal, 2) ?>
                     </td>
                 </tr>
-
                 <tr class="total-text-row bg-light">
                     <td colspan="5" style="border-left: none; border-right: none;">
                         <span class="fw-bold">TOTAL AMOUNT:</span> &nbsp;&nbsp;&nbsp; <?= numberToWordsUsd($sumTotal) ?>

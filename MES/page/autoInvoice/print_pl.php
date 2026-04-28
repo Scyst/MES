@@ -31,6 +31,8 @@ try {
     $stmtDet = $pdo->prepare($sqlDetails);
     $stmtDet->execute([$invoice_id]);
     $details = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 📌 ดึงเลข PO ทั้งหมดแบบไม่ซ้ำ
     $all_pos = array_column($details, 'po_number');
     $unique_pos = array_filter(array_unique($all_pos), function($val) {
         return !empty(trim($val)) && trim($val) !== '-';
@@ -42,37 +44,23 @@ try {
     die("Database Error: " . $e->getMessage());
 }
 
-// Helper: แปลงข้อความให้รองรับการขึ้นบรรทัดใหม่ (Enter) และตัวหนา (*ข้อความ*)
+// Helper: แปลงข้อความให้รองรับการขึ้นบรรทัดใหม่
 function formatAddressText($text) {
     if (empty($text) || $text === '-') return '-';
-    
-    // 1. ป้องกัน XSS (แปลง Tag HTML อันตรายเป็น Text ธรรมดา)
     $safe_text = htmlspecialchars(trim($text));
-    
-    // 2. แปลง *ข้อความ* ให้กลายเป็น <b>ข้อความ</b>
     $bold_text = preg_replace('/\*(.*?)\*/', '<b>$1</b>', $safe_text);
-    
-    // 3. แปลงการเคาะ Enter (\n) ให้เป็นแท็ก <br> ของ HTML
     return nl2br($bold_text);
 }
 
-// Helper: แปลงวันที่จาก DD/MM/YYYY เป็นเดือนภาษาอังกฤษ (เช่น FEBRUARY 20, 2026)
+// Helper: แปลงวันที่
 function formatDocDate($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
-    
-    // ลองแปลงจากรูปแบบ DD/MM/YYYY (ที่มาจากระบบ Import ของเรา)
     $d = DateTime::createFromFormat('d/m/Y', $dateStr);
-    if ($d) {
-        return strtoupper($d->format('F d, Y')); // F = Full month, d = Day, Y = Year
-    }
+    if ($d) return strtoupper($d->format('F d, Y')); 
     
-    // สำรอง: ถ้ามาเป็นรูปแบบ YYYY-MM-DD
     $timestamp = strtotime($dateStr);
-    if ($timestamp) {
-        return strtoupper(date('F d, Y', $timestamp));
-    }
+    if ($timestamp) return strtoupper(date('F d, Y', $timestamp));
     
-    // ถ้าแปลงไม่ได้เลย ให้คืนค่าเดิมกลับไป
     return htmlspecialchars($dateStr);
 }
 ?>
@@ -129,16 +117,13 @@ function formatDocDate($dateStr) {
         table.inner-table td { padding: 2px 0; vertical-align: top; border: none !important; }
         .lbl-col { display: inline-block; font-weight: bold; }
         
-        /* --------------------------------------------------- */
-        /* Items Table (ตารางรายการสินค้า - 6 คอลัมน์) */
-        /* --------------------------------------------------- */
+        /* Items Table */
         table.items-table { 
             width: 100%; 
             border-collapse: collapse;
             font-size: 9px; 
             border: 2px solid #000; 
         }
-        
         table.items-table th { 
             text-align: center; 
             border: 1px solid #000; 
@@ -146,20 +131,16 @@ function formatDocDate($dateStr) {
             padding: 3px 5px; 
             font-weight: bold; 
         }
-        
         table.items-table td { 
             border-left: 1px solid #000; 
             border-right: 1px solid #000; 
             padding: 3px 8px; 
         }
-        
-        /* ลบเส้นแนวนอนด้านใน */
         table.items-table tbody tr td { 
             border-bottom: none; 
             border-top: none; 
         }
         
-        /* ตีเส้นคั่นเฉพาะคอลัมน์ผลรวม (คอลัมน์ที่ 3 ถึง 6) */
         table.items-table tr.sub-total-row td:nth-child(3),
         table.items-table tr.sub-total-row td:nth-child(4),
         table.items-table tr.sub-total-row td:nth-child(5),
@@ -178,7 +159,6 @@ function formatDocDate($dateStr) {
             line-height: 1.7;
         }
 
-        /* Print Settings */
         @media print {
             body { background: none; margin: 0; padding: 0; }
             .a4-page { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; border: none; }
@@ -310,13 +290,19 @@ function formatDocDate($dateStr) {
                 $sumQty = 0; $sumNW = 0; $sumGW = 0; $sumCBM = 0;
                 $currentProductType = null;
                 
+                // 📌 เตรียม Array เลขตู้และซีล
+                $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
+                $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
+                
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        $nw = (float)($row['net_weight'] ?? 0);
-                        $gw = (float)($row['gross_weight'] ?? 0);
-                        $cbm = (float)($row['cbm'] ?? 0);
-
-                        //$cbm = ceil(round($cbm * 100, 4)) / 100;
+                        // 📌 ปัดเศษลง 2 ตำแหน่งให้เรียบร้อย "ก่อน" นำไปบวก (แก้ปัญหาเศษเกิน 0.01)
+                        $nw = round((float)($row['net_weight'] ?? 0), 2);
+                        $gw = round((float)($row['gross_weight'] ?? 0), 2);
+                        
+                        // CBM ใช้ลอจิกปัดขึ้นที่เคยตกลงกันไว้
+                        $cbm_raw = (float)($row['cbm'] ?? 0);
+                        $cbm = ceil(round($cbm_raw * 100, 4)) / 100;
 
                         $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumNW  += $nw;
@@ -333,53 +319,57 @@ function formatDocDate($dateStr) {
                     <td style="color: #ff0702; padding-top: 8px;">
                         <b><?= htmlspecialchars($rowProductType) ?></b><br>
                     </td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td style="border-right: none;"></td>
+                    <td></td><td></td><td></td><td style="border-right: none;"></td>
                 </tr>
                 <?php 
-                        endif; // จบเงื่อนไขการปริ้นหัวข้อ
+                        endif; 
                 ?>
                 
                 <tr>
-                    <td class="text-center pre-line" style="border-left: none;"><?= htmlspecialchars($row['shipping_marks'] ?? '') ?></td>
-                    <td> 
-                        <span class="pre-line">
-                            <?php 
-                                $skuVal = trim($row['sku'] ?? '');
-                                $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
-                            ?>
-                            <b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?>
-                        </span>
+                    <td class="text-center pre-line" style="border-left: none; vertical-align: top; padding-top: 5px;"><?= htmlspecialchars($row['shipping_marks'] ?? '') ?></td>
+                    
+                    <td style="vertical-align: top; padding-top: 5px;"> 
+                        <?php 
+                            // 📌 ย้ายการคำนวณมาไว้ข้างนอกกล่อง เพื่อไม่ให้การจัดหน้าโค้ดกลายเป็นบรรทัดว่าง
+                            $skuVal = trim($row['sku'] ?? '');
+                            $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
+                        ?>
+                        <div class="pre-line" style="margin-bottom: 4px;"><b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></div>
+
+                        <?php 
+                            // 📌 แทรกเลขตู้และ Seal ให้อยู่ใต้ Description
+                            if (isset($containers[$index])): 
+                                $cNo = $containers[$index];
+                                $sNo = $seals[$index] ?? '-';
+                                $num = $index + 1;
+                                
+                                $suffix = "TH";
+                                if ($num % 10 == 1 && $num % 100 != 11) $suffix = "ST";
+                                elseif ($num % 10 == 2 && $num % 100 != 12) $suffix = "ND";
+                                elseif ($num % 10 == 3 && $num % 100 != 13) $suffix = "RD";
+                        ?>
+                        <div style="font-weight: bold; color: #333; padding-left: 20px;">
+                            <?= $num . $suffix ?>, CONTAINER NO. <?= htmlspecialchars($cNo) ?> SEAL NO. <?= htmlspecialchars($sNo) ?>
+                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td class="text-center"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right"><?= number_format($nw, 2) ?></td>
-                    <td class="text-right"><?= number_format($gw, 2) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none;"><?= number_format($cbm, 2) ?></td>
+                    
+                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($nw, 2) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($gw, 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($cbm, 2) ?></td>
                 </tr>
+
                 <?php 
                     endforeach; 
                 endif; 
                 ?>
-
-                <tr>
-                    <td style="border-left: none;"></td>
-                    <td style="padding-bottom: 2px;">
-                        1ST,CONTAINER NO. <?= htmlspecialchars($shipping['container_no'] ?? '-') ?> SEAL NO <?= htmlspecialchars($shipping['seal_no'] ?? '-') ?>
-                    </td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td style="border-right: none;"></td>
-                </tr>
 
                 <tr class="sub-total-row">
                     <td style="border-left: none;"></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px; padding-right: 5px;">
                         TOTAL:
                     </td>
-                    
                     <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, 0) ?></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumNW, 2) ?></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumGW, 2) ?></td>
