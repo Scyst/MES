@@ -1,6 +1,48 @@
 "use strict";
 let dashboardAutoUpdateInterval;
 
+function getWorkingDate() {
+    const now = new Date();
+    if (now.getHours() < 8) {
+        now.setDate(now.getDate() - 1);
+    }
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+let systemWorkingDate = getWorkingDate();
+function initWorkingDateUI() {
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    if (startDateInput && endDateInput) {
+        startDateInput.value = systemWorkingDate;
+        endDateInput.value = systemWorkingDate;
+    }
+}
+
+function checkDayShiftAndSync() {
+    const currentWorkingDate = getWorkingDate();
+    if (currentWorkingDate !== systemWorkingDate) {
+        const oldWorkingDate = systemWorkingDate;
+        systemWorkingDate = currentWorkingDate;
+        
+        const startDateInput = document.getElementById("startDate");
+        const endDateInput = document.getElementById("endDate");
+        if (startDateInput && endDateInput && 
+            startDateInput.value === oldWorkingDate && 
+            endDateInput.value === oldWorkingDate) {
+            
+            console.log("Auto-shifting Live Monitor to new working date: " + currentWorkingDate);
+            startDateInput.value = currentWorkingDate;
+            endDateInput.value = currentWorkingDate;
+            return true;
+        }
+    }
+    return false;
+}
+
 function formatNumber(value, isPercent = false, decimals = 2) {
     const num = parseFloat(value);
     if (isNaN(num)) return isPercent ? '-- %' : '--';
@@ -30,32 +72,19 @@ async function fetchAndRenderCostSummary() {
                 if (el) el.textContent = text;
             };
 
-            // แสดงเวลาที่อัปเดตล่าสุด
             safeSetText('lastUpdate', new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }));
-
-            // 1. REVENUE
             safeSetText('prodRevenueStd', formatNumber(d.TotalStdRevenue, false, 2));
-            
-            // 2. COGS & CPU
             safeSetText('prodCostTotal', formatNumber(d.TotalStdCost, false, 2));
             safeSetText('valCPU', formatNumber(d.CostPerUnit, false, 2));
-            
-            // 3. MATERIAL
             safeSetText('prodCostMat', formatNumber(d.TotalMatCost, false, 2));
             safeSetText('prodCostPercentRM', formatNumber(d.PercentRM, true, 1));
             safeSetText('valScrapCost', formatNumber(d.ScrapCostValue, false, 2));
-            
-            // 4. LABOR
             safeSetText('prodCostDL', formatNumber(d.TotalDLCost, false, 2));
             safeSetText('valDL', formatNumber(d.TotalActualDL || 0, false, 2));
             safeSetText('valOT', formatNumber(d.TotalActualOT || 0, false, 2));
             safeSetText('valLaborEff', formatNumber(d.LaborEfficiency, false, 1) + 'x');
-            
-            // 5. OVERHEAD
             safeSetText('prodCostOH', formatNumber(d.TotalOHCost, false, 2));
             safeSetText('prodCostPercentOH', formatNumber(d.PercentOH, true, 1));
-            
-            // 6. GROSS PROFIT
             safeSetText('prodGPStd', formatNumber(gp, false, 2));
             safeSetText('prodPercentGPStd', formatNumber(d.PercentGPStd, true, 1));
         }
@@ -81,15 +110,12 @@ async function applyFiltersAndInitCharts() {
         const res = await fetch("api/oeeDashboardApi.php?action=getFilters");
         const json = await res.json();
         if (json.success) {
-            // 1. สร้าง Dropdown ปกติไปก่อน (ยังไม่ต้องยัดค่า Default ตรงนี้)
             populateSelectWithOptions(document.getElementById("lineFilter"), json.data.lines, "Lines", "");
             populateSelectWithOptions(document.getElementById("modelFilter"), json.data.models, "Models", "");
 
-            // ⭐️ 2. สไนเปอร์ค้นหา: วนลูปหาคำว่า "assembly" (ไม่สนตัวเล็กตัวใหญ่) แล้วบังคับเลือก!
             const lineSelect = document.getElementById("lineFilter");
             if (lineSelect) {
                 for (let i = 0; i < lineSelect.options.length; i++) {
-                    // ถ้าในชื่อตัวเลือกมีคำว่า assembly ให้เลือกทันทีแล้วหยุดค้นหา
                     if (lineSelect.options[i].value.toLowerCase().includes("assembly")) {
                         lineSelect.selectedIndex = i;
                         break; 
@@ -98,28 +124,15 @@ async function applyFiltersAndInitCharts() {
             }
         }
     } catch (err) { console.error(err); }
+    initWorkingDateUI();
 
-    // ⭐️ จัดการวันที่เป็น "วันนี้"
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const d = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${y}-${m}-${d}`;
-
-    const startDateInput = document.getElementById("startDate");
-    const endDateInput = document.getElementById("endDate");
-    if (startDateInput) startDateInput.value = todayStr;
-    if (endDateInput) endDateInput.value = todayStr;
-
-    // ⭐️ ล้าง URL และเรียกข้อมูล
     window.history.replaceState({}, '', window.location.pathname);
-    handleFilterChange();
+    handleFilterChange(); 
 }
 
 setInterval(() => {
     const clockEl = document.getElementById('liveClock');
     if (clockEl) {
-        // อัปเดตเวลาทุก 1 วินาที
         clockEl.textContent = new Date().toLocaleTimeString('th-TH', { 
             hour: '2-digit', minute: '2-digit', second: '2-digit' 
         });
@@ -135,21 +148,31 @@ function handleFilterChange() {
     });
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
-    // Call renders
     if(typeof fetchAndRenderPieCharts === 'function') fetchAndRenderPieCharts();
     if(typeof fetchAndRenderLineCharts === 'function') fetchAndRenderLineCharts();
     if(typeof fetchAndRenderBarAndTable === 'function') fetchAndRenderBarAndTable();
     if (isLoggedIn) fetchAndRenderCostSummary();
 }
 
+function startDashboardAutoUpdate() {
+    clearInterval(dashboardAutoUpdateInterval);
+    dashboardAutoUpdateInterval = setInterval(() => {
+        checkDayShiftAndSync(); 
+        
+        if (typeof handleFilterChange === 'function') {
+            handleFilterChange();     
+        }
+    }, 60000);
+}
+
 window.addEventListener("load", () => {
     applyFiltersAndInitCharts();
     ["startDate", "endDate", "lineFilter", "modelFilter"].forEach(id => {
         document.getElementById(id)?.addEventListener("change", () => {
-            clearInterval(dashboardAutoUpdateInterval);
             handleFilterChange();
-            dashboardAutoUpdateInterval = setInterval(handleFilterChange, 60000);
+            startDashboardAutoUpdate(); 
         });
     });
-    dashboardAutoUpdateInterval = setInterval(handleFilterChange, 60000);
+    
+    startDashboardAutoUpdate();
 });

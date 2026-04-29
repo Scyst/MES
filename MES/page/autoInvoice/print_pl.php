@@ -31,8 +31,6 @@ try {
     $stmtDet = $pdo->prepare($sqlDetails);
     $stmtDet->execute([$invoice_id]);
     $details = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
-    
-    // 📌 ดึงเลข PO ทั้งหมดแบบไม่ซ้ำ
     $all_pos = array_column($details, 'po_number');
     $unique_pos = array_filter(array_unique($all_pos), function($val) {
         return !empty(trim($val)) && trim($val) !== '-';
@@ -101,7 +99,7 @@ function formatDocDate($dateStr) {
         .text-right { text-align: right; }
         .text-left { text-align: left; }
         .fw-bold { font-weight: bold; }
-        .pre-line { white-space: pre-line; }
+        .pre-line { white-space: pre-line; line-height: 1.7; }
         
         /* Header Section */
         .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 9px; font-weight: bold; }
@@ -289,18 +287,13 @@ function formatDocDate($dateStr) {
                 <?php 
                 $sumQty = 0; $sumNW = 0; $sumGW = 0; $sumCBM = 0;
                 $currentProductType = null;
-                
-                // 📌 เตรียม Array เลขตู้และซีล
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
                 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        // 📌 ปัดเศษลง 2 ตำแหน่งให้เรียบร้อย "ก่อน" นำไปบวก (แก้ปัญหาเศษเกิน 0.01)
                         $nw = round((float)($row['net_weight'] ?? 0), 2);
                         $gw = round((float)($row['gross_weight'] ?? 0), 2);
-                        
-                        // CBM ใช้ลอจิกปัดขึ้นที่เคยตกลงกันไว้
                         $cbm_raw = (float)($row['cbm'] ?? 0);
                         $cbm = ceil(round($cbm_raw * 100, 4)) / 100;
 
@@ -330,14 +323,12 @@ function formatDocDate($dateStr) {
                     
                     <td style="vertical-align: top; padding-top: 5px;"> 
                         <?php 
-                            // 📌 ย้ายการคำนวณมาไว้ข้างนอกกล่อง เพื่อไม่ให้การจัดหน้าโค้ดกลายเป็นบรรทัดว่าง
                             $skuVal = trim($row['sku'] ?? '');
                             $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
                         ?>
                         <div class="pre-line" style="margin-bottom: 4px;"><b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></div>
 
                         <?php 
-                            // 📌 แทรกเลขตู้และ Seal ให้อยู่ใต้ Description
                             if (isset($containers[$index])): 
                                 $cNo = $containers[$index];
                                 $sNo = $seals[$index] ?? '-';

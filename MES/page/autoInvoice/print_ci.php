@@ -38,14 +38,8 @@ try {
 
 function formatAddressText($text) {
     if (empty($text) || $text === '-') return '-';
-    
-    // 1. ป้องกัน XSS (แปลง Tag HTML อันตรายเป็น Text ธรรมดา)
     $safe_text = htmlspecialchars(trim($text));
-    
-    // 2. แปลง *ข้อความ* ให้กลายเป็น <b>ข้อความ</b>
     $bold_text = preg_replace('/\*(.*?)\*/', '<b>$1</b>', $safe_text);
-    
-    // 3. แปลงการเคาะ Enter (\n) ให้เป็นแท็ก <br> ของ HTML
     return nl2br($bold_text);
 }
 
@@ -64,23 +58,16 @@ function numberToWordsUsd($num) {
     return str_replace('-', ' ', $words);
 }
 
-// Helper: แปลงวันที่จาก DD/MM/YYYY เป็นเดือนภาษาอังกฤษ (เช่น FEBRUARY 20, 2026)
 function formatDocDate($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
-    
-    // ลองแปลงจากรูปแบบ DD/MM/YYYY (ที่มาจากระบบ Import ของเรา)
     $d = DateTime::createFromFormat('d/m/Y', $dateStr);
     if ($d) {
         return strtoupper($d->format('F d, Y')); // F = Full month, d = Day, Y = Year
     }
-    
-    // สำรอง: ถ้ามาเป็นรูปแบบ YYYY-MM-DD
     $timestamp = strtotime($dateStr);
     if ($timestamp) {
         return strtoupper(date('F d, Y', $timestamp));
     }
-    
-    // ถ้าแปลงไม่ได้เลย ให้คืนค่าเดิมกลับไป
     return htmlspecialchars($dateStr);
 }
 ?>
@@ -316,21 +303,16 @@ function formatDocDate($dateStr) {
                 <?php 
                 $sumQty = 0; $sumTotal = 0;
                 $currentProductType = null;
-                
-                // 📌 เตรียม Array เลขตู้และซีลจากหัวเรือ
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        // ปัดเศษ Amount แต่ละบรรทัดให้ตรงเครื่องคิดเลข
                         $lineTotal = round((float)($row['line_total'] ?? 0), 2);
                         $sumQty += (float)($row['qty_carton'] ?? 0);
                         $sumTotal += $lineTotal;
-                        
                         $rowProductType = trim($row['product_type'] ?? '');
                         
-                        // แสดงหัวข้อกลุ่มสินค้า (ถ้าเปลี่ยนหมวด)
                         if ($rowProductType !== $currentProductType && $rowProductType !== ''):
                             $currentProductType = $rowProductType;
                 ?>
@@ -347,15 +329,13 @@ function formatDocDate($dateStr) {
                     <td class="text-center address-box" style="border-left: none; vertical-align: top; padding-top: 5px;"><?= htmlspecialchars($row['carton_no'] ?? '') ?></td>
                     
                     <td style="vertical-align: top; padding-top: 5px;"> 
-                        <?php 
-                            // ย้ายการคำนวณมาไว้ด้านบนเพื่อไม่ให้ HTML เว้นบรรทัด
+                        <?php
                             $skuVal = trim($row['sku'] ?? '');
                             $displaySku = (is_numeric($skuVal)) ? '#' . $skuVal : $skuVal;
                         ?>
                         <div class="address-box" style="margin-bottom: 4px;"><b><?= htmlspecialchars($displaySku) ?></b> <?= htmlspecialchars($row['description'] ?? '') ?></div>
 
-                        <?php 
-                            // 📌 แทรกเลขตู้และ Seal ให้อยู่ใต้ Description ในช่องเดียวกัน
+                        <?php
                             if (isset($containers[$index])): 
                                 $cNo = $containers[$index];
                                 $sNo = $seals[$index] ?? '-';
@@ -373,7 +353,7 @@ function formatDocDate($dateStr) {
                     </td>
                     
                     <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), 2) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), 4) ?></td>
                     <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($lineTotal, 2) ?></td>
                 </tr>
 

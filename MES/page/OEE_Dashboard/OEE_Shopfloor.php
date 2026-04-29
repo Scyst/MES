@@ -257,9 +257,10 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
         </main>
     </div>
 
-    <script>
+<script>
         const isLoggedIn = true;
         const API_KEY = 'SNC_TV_2026_x9f8a2mPLQ';
+        
         const originalFetch = window.fetch;
         window.fetch = async function() {
             let url = arguments[0];
@@ -278,6 +279,7 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
     <script src="script/filterManager.js?v=<?php echo filemtime('script/filterManager.js'); ?>"></script>
 
     <script>
+        // ระบบไฟกระพริบ Offline Detection
         function setConnectionStatus(isOnline) {
             const indicator = document.querySelector('.live-indicator');
             const text = document.querySelector('.live-text');
@@ -296,6 +298,7 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
             }
         }
 
+        // ฟังก์ชันดึงยอดชิ้นงานสำหรับป้ายไฟ
         async function fetchShopfloorTotals() {
             const params = new URLSearchParams({ 
                 key: API_KEY, 
@@ -314,7 +317,6 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                 
                 if (json.success && json.data && json.data.partResults) {
                     let totalGood = 0, totalHold = 0, totalScrap = 0;
-                    
                     json.data.partResults.forEach(r => {
                         totalGood += parseFloat(r.FG) || 0;
                         totalHold += parseFloat(r.HOLD) || 0;
@@ -324,7 +326,6 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                     document.getElementById('sf-good').textContent = totalGood.toLocaleString();
                     document.getElementById('sf-hold').textContent = totalHold.toLocaleString();
                     document.getElementById('sf-scrap').textContent = totalScrap.toLocaleString();
-                    
                     setConnectionStatus(true);
                 } else {
                     throw new Error("API returned false or invalid data");
@@ -335,22 +336,19 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
             }
         }
 
+        // ผูกฟังก์ชันเข้ากับ Filter
         window.addEventListener('load', () => {
             const originalHandleFilter = window.handleFilterChange;
+            // เมื่อ Filter เปลี่ยน (รวมถึงตอนที่ filterManager.js สั่ง Auto-refresh ทุกนาที) ให้ดึงข้อมูลป้ายไฟด้วย
             window.handleFilterChange = function() {
                 if (originalHandleFilter) originalHandleFilter();
                 fetchShopfloorTotals();
             };
-            
-            setTimeout(fetchShopfloorTotals, 500); 
-            setInterval(() => {
-                if (typeof handleFilterChange === 'function') handleFilterChange();
-            }, 60000);
 
             window.addEventListener('offline', () => setConnectionStatus(false));
             window.addEventListener('online', () => {
                 setConnectionStatus(true);
-                fetchShopfloorTotals();
+                if (typeof handleFilterChange === 'function') handleFilterChange();
             });
         });
     </script>
